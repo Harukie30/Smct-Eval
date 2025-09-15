@@ -74,6 +74,12 @@ export default function EmployeeDashboard() {
   // Refresh animation modal states
   const [showRefreshModal, setShowRefreshModal] = useState(false);
   const [refreshModalMessage, setRefreshModalMessage] = useState('');
+  
+  // Delete evaluation states
+  const [isDeleteEvaluationDialogOpen, setIsDeleteEvaluationDialogOpen] = useState(false);
+  const [evaluationToDelete, setEvaluationToDelete] = useState<any>(null);
+  const [isDeletingEvaluation, setIsDeletingEvaluation] = useState(false);
+  const [showDeleteEvaluationSuccess, setShowDeleteEvaluationSuccess] = useState(false);
 
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: '📊' },
@@ -222,6 +228,43 @@ export default function EmployeeDashboard() {
     }, 3000);
   };
 
+  // Delete evaluation function
+  const handleDeleteEvaluation = async () => {
+    if (!evaluationToDelete) return;
+    
+    setIsDeletingEvaluation(true);
+    
+    // Simulate a small delay for the loading animation
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    try {
+      // Remove the evaluation from submissions
+      const updatedSubmissions = submissions.filter(submission => submission.id !== evaluationToDelete.id);
+      setSubmissions(updatedSubmissions);
+      
+      // Also remove from evaluation results if it exists there
+      const updatedResults = evaluationResults.filter(result => result.id !== evaluationToDelete.id);
+      setEvaluationResults(updatedResults);
+      
+      console.log('Evaluation deleted:', evaluationToDelete.id);
+      
+      // Show success animation
+      setIsDeletingEvaluation(false);
+      setShowDeleteEvaluationSuccess(true);
+      
+      // Close dialog after success animation
+      setTimeout(() => {
+        setIsDeleteEvaluationDialogOpen(false);
+        setEvaluationToDelete(null);
+        setShowDeleteEvaluationSuccess(false);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Error deleting evaluation:', error);
+      setIsDeletingEvaluation(false);
+    }
+  };
+
   // Helper functions for account history
   const getFilteredAccountHistory = () => {
     if (!accountHistorySearchTerm) return accountHistory;
@@ -269,8 +312,18 @@ export default function EmployeeDashboard() {
 
         // Fetch submissions data using client data service
         try {
-          const submissions = await clientDataService.getSubmissions();
-          setSubmissions(submissions);
+          const allSubmissions = await clientDataService.getSubmissions();
+          // Filter submissions to only show current user's data
+          const userSubmissions = profile?.email 
+            ? allSubmissions.filter((submission: any) => 
+                submission.employeeName === profile.name || 
+                submission.evaluationData?.employeeEmail === profile.email
+              )
+            : [];
+          
+          // If no user-specific submissions found, show all submissions for testing
+          const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
+          setSubmissions(finalSubmissions);
         } catch (error) {
           console.log('Submissions not available');
         }
@@ -358,9 +411,19 @@ export default function EmployeeDashboard() {
     try {
       // Fetch submissions data using client data service
       try {
-        const submissionsData = await clientDataService.getSubmissions();
-        setSubmissions(submissionsData);
-        console.log('Submissions refreshed:', submissionsData.length, 'items');
+        const allSubmissions = await clientDataService.getSubmissions();
+        // Filter submissions to only show current user's data
+        const userSubmissions = profile?.email 
+          ? allSubmissions.filter((submission: any) => 
+              submission.employeeName === profile.name || 
+              submission.evaluationData?.employeeEmail === profile.email
+            )
+          : [];
+        
+        // If no user-specific submissions found, show all submissions for testing
+        const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
+        setSubmissions(finalSubmissions);
+        console.log('Submissions refreshed:', userSubmissions.length, 'items');
       } catch (error) {
         console.log('Submissions not available');
       }
@@ -473,6 +536,37 @@ export default function EmployeeDashboard() {
     return 'bg-gray-100 text-gray-800';
   };
 
+  // Calculate overall rating using the same formula as ViewResultsModal
+  const calculateOverallRating = (evaluationData: any) => {
+    if (!evaluationData) return 0;
+
+    const calculateScore = (scores: string[]) => {
+      const validScores = scores.filter(score => score && score !== '').map(score => parseFloat(score));
+      if (validScores.length === 0) return 0;
+      return validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+    };
+
+    const jobKnowledgeScore = calculateScore([evaluationData.jobKnowledgeScore1, evaluationData.jobKnowledgeScore2, evaluationData.jobKnowledgeScore3]);
+    const qualityOfWorkScore = calculateScore([evaluationData.qualityOfWorkScore1, evaluationData.qualityOfWorkScore2, evaluationData.qualityOfWorkScore3, evaluationData.qualityOfWorkScore4, evaluationData.qualityOfWorkScore5]);
+    const adaptabilityScore = calculateScore([evaluationData.adaptabilityScore1, evaluationData.adaptabilityScore2, evaluationData.adaptabilityScore3]);
+    const teamworkScore = calculateScore([evaluationData.teamworkScore1, evaluationData.teamworkScore2, evaluationData.teamworkScore3]);
+    const reliabilityScore = calculateScore([evaluationData.reliabilityScore1, evaluationData.reliabilityScore2, evaluationData.reliabilityScore3, evaluationData.reliabilityScore4]);
+    const ethicalScore = calculateScore([evaluationData.ethicalScore1, evaluationData.ethicalScore2, evaluationData.ethicalScore3, evaluationData.ethicalScore4]);
+    const customerServiceScore = calculateScore([evaluationData.customerServiceScore1, evaluationData.customerServiceScore2, evaluationData.customerServiceScore3, evaluationData.customerServiceScore4, evaluationData.customerServiceScore5]);
+
+    const overallWeightedScore = (
+      (jobKnowledgeScore * 0.20) +
+      (qualityOfWorkScore * 0.20) +
+      (adaptabilityScore * 0.10) +
+      (teamworkScore * 0.10) +
+      (reliabilityScore * 0.05) +
+      (ethicalScore * 0.05) +
+      (customerServiceScore * 0.30)
+    );
+
+    return Math.round(overallWeightedScore * 10) / 10;
+  };
+
   // Show fake loading screen
   if (loading) {
     return (
@@ -574,7 +668,7 @@ export default function EmployeeDashboard() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Evaluator</TableHead>
+                        <TableHead>Immediate Supervisor</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead className="text-right">Rating</TableHead>
                         <TableHead>Date</TableHead>
@@ -585,11 +679,13 @@ export default function EmployeeDashboard() {
                     <TableBody>
                       {submissions.slice(0, 5).map((submission) => (
                         <TableRow key={submission.id}>
-                          <TableCell className="font-medium">{submission.evaluator}</TableCell>
+                          <TableCell className="font-medium">{submission.evaluationData?.supervisor || 'Not specified'}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{submission.category}</Badge>
                           </TableCell>
-                          <TableCell className="text-right font-semibold">{submission.rating}/5</TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating}/5
+                          </TableCell>
                           <TableCell>{new Date(submission.submittedAt).toLocaleDateString()}</TableCell>
                           <TableCell>
                             <Badge className={getQuarterColor(getQuarterFromDate(submission.submittedAt))}>
@@ -656,10 +752,10 @@ export default function EmployeeDashboard() {
                       {(() => {
                         // Prepare chart data from submissions
                         const chartData = submissions
-                          .filter(s => s.rating > 0)
+                          .filter(s => (s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating) > 0)
                           .map((submission, index) => ({
                             review: `Review ${submissions.length - index}`,
-                            rating: submission.rating,
+                            rating: submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating,
                             date: new Date(submission.submittedAt).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric'
@@ -775,7 +871,7 @@ export default function EmployeeDashboard() {
                             <span className="text-sm font-medium text-gray-700">Performance Rating Trend</span>
                           </div>
                           <div className="text-sm text-gray-600 bg-white px-3 py-1 rounded-md border">
-                            <span className="font-medium">{submissions.filter(s => s.rating > 0).length}</span> evaluation{submissions.filter(s => s.rating > 0).length !== 1 ? 's' : ''} tracked
+                            <span className="font-medium">{submissions.filter(s => (s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating) > 0).length}</span> evaluation{submissions.filter(s => (s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating) > 0).length !== 1 ? 's' : ''} tracked
                           </div>
                         </div>
                       </div>
@@ -792,7 +888,9 @@ export default function EmployeeDashboard() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {(() => {
-                        const ratings = submissions.map(s => s.rating).filter(r => r > 0);
+                        const ratings = submissions.map(s => 
+                          s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating
+                        ).filter(r => r > 0);
                         const averageRating = ratings.length > 0 ? (ratings.reduce((sum, r) => sum + r, 0) / ratings.length).toFixed(1) : '0.0';
                         const latestRating = ratings.length > 0 ? ratings[0] : 0;
                         const trend = ratings.length > 1 ? (latestRating - ratings[1]) : 0;
@@ -859,7 +957,9 @@ export default function EmployeeDashboard() {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {(() => {
-                        const ratings = submissions.map(s => s.rating).filter(r => r > 0);
+                        const ratings = submissions.map(s => 
+                          s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating
+                        ).filter(r => r > 0);
                         const averageRating = ratings.length > 0 ? (ratings.reduce((sum, r) => sum + r, 0) / ratings.length) : 0;
                         const latestRating = ratings.length > 0 ? ratings[0] : 0;
                         const trend = ratings.length > 1 ? (latestRating - ratings[1]) : 0;
@@ -956,7 +1056,7 @@ export default function EmployeeDashboard() {
                         <TableHeader className="sticky top-0 bg-white z-10 border-b">
                           <TableRow>
                             <TableHead className="px-6 py-4">Date</TableHead>
-                            <TableHead className="px-6 py-4">Evaluator</TableHead>
+                            <TableHead className="px-6 py-4">Immediate Supervisor</TableHead>
                             <TableHead className="px-6 py-4">Category</TableHead>
                             <TableHead className="px-6 py-4 text-right">Score</TableHead>
                             <TableHead className="px-6 py-4">Quarter</TableHead>
@@ -970,13 +1070,13 @@ export default function EmployeeDashboard() {
                                 {new Date(submission.submittedAt).toLocaleDateString()}
                               </TableCell>
                               <TableCell className="px-6 py-4 font-medium">
-                                {submission.evaluator}
+                                {submission.evaluationData?.supervisor || 'Not specified'}
                               </TableCell>
                               <TableCell className="px-6 py-4">
                                 <Badge variant="outline">{submission.category}</Badge>
                               </TableCell>
                               <TableCell className="px-6 py-4 text-right font-semibold">
-                                {submission.rating}/5
+                                {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating}/5
                               </TableCell>
                               <TableCell className="px-6 py-4">
                                 <Badge className={getQuarterColor(getQuarterFromDate(submission.submittedAt))}>
@@ -1025,6 +1125,7 @@ export default function EmployeeDashboard() {
           return (
             submission.employeeName?.toLowerCase().includes(searchLower) ||
             submission.evaluator?.toLowerCase().includes(searchLower) ||
+            submission.evaluationData?.supervisor?.toLowerCase().includes(searchLower) ||
             submission.category?.toLowerCase().includes(searchLower) ||
             submission.rating?.toString().includes(searchLower) ||
             getQuarterFromDate(submission.submittedAt)?.toLowerCase().includes(searchLower)
@@ -1115,7 +1216,11 @@ export default function EmployeeDashboard() {
                             variant={selectedQuarter === '' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => setSelectedQuarter('')}
-                            className="text-xs bg-blue-500 text-white hover:text-white hover:bg-blue-600"
+                            className={`text-xs ${
+                              selectedQuarter === '' 
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
                           >
                             All Quarters
                           </Button>
@@ -1125,7 +1230,11 @@ export default function EmployeeDashboard() {
                               variant={selectedQuarter === quarter ? 'default' : 'outline'}
                               size="sm"
                               onClick={() => setSelectedQuarter(quarter)}
-                              className={`text-xs ${getQuarterColor(quarter)}`}
+                              className={`text-xs font-medium transition-all duration-200 ${
+                                selectedQuarter === quarter 
+                                  ? `${getQuarterColor(quarter)} border-2 shadow-md transform scale-105` 
+                                  : `${getQuarterColor(quarter)} border border-gray-300 hover:shadow-sm hover:scale-102`
+                              }`}
                             >
                               {quarter}
                             </Button>
@@ -1135,7 +1244,7 @@ export default function EmployeeDashboard() {
                               variant="ghost"
                               size="sm"
                               onClick={() => setSelectedQuarter('')}
-                              className="text-xs text-white bg-blue-500 hover:text-white hover:bg-blue-600"
+                              className="text-xs text-white bg-red-500 hover:text-white hover:bg-red-600 border border-red-500 shadow-sm transition-all duration-200 hover:shadow-md"
                             >
                               Clear Filter
                             </Button>
@@ -1182,7 +1291,9 @@ export default function EmployeeDashboard() {
                             // Calculate statistics for each quarter
                             Object.keys(quarterlyData).forEach(quarter => {
                               const data = quarterlyData[quarter];
-                              const ratings = data.submissions.map((s: any) => s.rating).filter((r: any) => r > 0);
+                              const ratings = data.submissions.map((s: any) => 
+                                s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating
+                              ).filter((r: any) => r > 0);
                               data.totalEvaluations = ratings.length;
                               data.averageRating = ratings.length > 0 ? (ratings.reduce((a: any, b: any) => a + b, 0) / ratings.length).toFixed(1) : 0;
                               data.latestRating = ratings.length > 0 ? ratings[ratings.length - 1] : 0;
@@ -1330,7 +1441,7 @@ export default function EmployeeDashboard() {
                           </div>
                           <input
                             type="text"
-                            placeholder="Search by employee, evaluator, category, rating, or quarter..."
+                            placeholder="Search by employee, evaluator, supervisor, category, rating, or quarter..."
                             value={historySearchTerm}
                             onChange={(e) => setHistorySearchTerm(e.target.value)}
                             className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -1361,7 +1472,7 @@ export default function EmployeeDashboard() {
                     <TableHead>Category</TableHead>
                     <TableHead className="text-right">Rating</TableHead>
                     <TableHead>Quarter</TableHead>
-                    <TableHead>Evaluator</TableHead>
+                    <TableHead>Immediate Supervisor</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1384,7 +1495,9 @@ export default function EmployeeDashboard() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end space-x-1">
-                          <span className="font-semibold">{submission.rating}</span>
+                          <span className="font-semibold">
+                            {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating}
+                          </span>
                           <span className="text-gray-500">/5</span>
                         </div>
                       </TableCell>
@@ -1394,23 +1507,36 @@ export default function EmployeeDashboard() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">
-                        {submission.evaluator}
+                        {submission.evaluationData?.supervisor || 'Not specified'}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedEvaluation(submission);
-                            setIsViewResultsModalOpen(true);
-                            // Show success animation
-                            setShowViewSuccess(true);
-                            setTimeout(() => setShowViewSuccess(false), 2000);
-                          }}
-                          className="text-blue-600 hover:text-blue-800 border-blue-200 hover:border-blue-300"
-                        >
-                          View Details
-                        </Button>
+                        <div className="flex items-center justify-end space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedEvaluation(submission);
+                              setIsViewResultsModalOpen(true);
+                              // Show success animation
+                              setShowViewSuccess(true);
+                              setTimeout(() => setShowViewSuccess(false), 2000);
+                            }}
+                            className="text-blue-600 hover:text-blue-800 border-blue-200 hover:border-blue-300"
+                          >
+                            View Details
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEvaluationToDelete(submission);
+                              setIsDeleteEvaluationDialogOpen(true);
+                            }}
+                            className="text-red-600 hover:text-red-800 border-red-200 hover:border-red-300"
+                          >
+                            Delete
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )) : (
@@ -1474,13 +1600,13 @@ export default function EmployeeDashboard() {
                    {accountHistorySearchTerm && (
                       <button
                         onClick={() => setAccountHistorySearchTerm('')}
-                        className="absolute inset-y-0 font-medium text-white hover:bg-red-500 bg-blue-500 rounded-md px-2 right-0 pr-3 flex items-center"
+                        className="absolute inset-y-0 font-medium  px-2 right-0 pr-3 flex items-center"
                       >
                         
-                        <svg className="h-5 w-5 text-white hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-5 w-5 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M6 18L18 6M6 6l12 12" />
                         </svg>
-                        Clear
+                       
                       </button>
                     )}
                   </div>
@@ -1656,12 +1782,12 @@ export default function EmployeeDashboard() {
                     {commentsSearchTerm && (
                       <button
                         onClick={() => setCommentsSearchTerm('')}
-                        className="absolute inset-y-0 font-medium text-white hover:bg-red-500 bg-blue-500 rounded-md px-2 right-0 pr-3 flex items-center"
+                        className="absolute inset-y-0 font-medium text-white  px-2 right-0 pr-3 flex items-center"
                       >
-                        <svg className="h-5 w-5 text-white hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-5 w-5 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M6 18L18 6M6 6l12 12" />
                         </svg>
-                        Clear
+                        
                       </button>
                     )}
                   </div>
@@ -1984,6 +2110,31 @@ export default function EmployeeDashboard() {
         }}
         onConfirm={confirmLogout}
         onCancel={() => setIsLogoutDialogOpen(false)}
+      />
+
+      {/* Delete Evaluation Alert Dialog */}
+      <AlertDialog
+        open={isDeleteEvaluationDialogOpen}
+        onOpenChangeAction={setIsDeleteEvaluationDialogOpen}
+        title={showDeleteEvaluationSuccess ? "Evaluation Deleted!" : "Delete Evaluation"}
+        description={showDeleteEvaluationSuccess 
+          ? "The evaluation has been successfully removed from your history."
+          : `Are you sure you want to delete this evaluation from ${evaluationToDelete?.employeeName}? This action cannot be undone and will permanently remove the evaluation from your history.`
+        }
+        confirmText={isDeletingEvaluation ? "Deleting..." : "Delete"}
+        cancelText="Cancel"
+        isLoading={isDeletingEvaluation}
+        showSuccessAnimation={showDeleteEvaluationSuccess}
+        successAnimation={{
+          variant: 'checkmark',
+          color: 'green',
+          size: 'lg'
+        }}
+        onConfirm={handleDeleteEvaluation}
+        onCancel={() => {
+          setIsDeleteEvaluationDialogOpen(false);
+          setEvaluationToDelete(null);
+        }}
       />
 
       {/* Refresh Animation Modal */}

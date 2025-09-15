@@ -137,6 +137,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission }: 
                     <p className="text-lg">{submission.evaluator || 'Unknown Evaluator'}</p>
                   </div>
                   <div>
+                    <Label className="text-sm font-medium text-gray-600">Immediate Supervisor</Label>
+                    <p className="text-lg">{submission.evaluationData?.supervisor || 'Not specified'}</p>
+                  </div>
+                  <div>
                     <Label className="text-sm font-medium text-gray-600">Overall Rating</Label>
                     <p className="text-lg font-semibold">
                       {submission.evaluationData ? (

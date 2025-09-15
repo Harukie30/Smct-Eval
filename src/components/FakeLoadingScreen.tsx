@@ -52,7 +52,7 @@ const FakeLoadingScreen: React.FC<FakeLoadingScreenProps> = ({
   }
 
   return (
-    <div className={`fixed inset-0 bg-gradient-to-br from-blue-50 to-indigo-100 z-50 flex items-center justify-center ${className}`}>
+    <div className={`fixed inset-0 bg-gradient-to-br from-blue-50 to-indigo-100 z-50 flex items-center justify-center min-h-screen ${className}`}>
       {/* Abstract Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         {/* Floating Circles */}
@@ -74,7 +74,7 @@ const FakeLoadingScreen: React.FC<FakeLoadingScreenProps> = ({
       <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-12 max-w-md w-full mx-4 border border-gray-100 relative z-10">
         {/* Logo Section */}
         <div className="text-center mb-8">
-          <div className="w-50 h-50 mx-auto mb-4 flex items-center justify-center">
+          <div className="w-32 h-32 mx-auto mb-4 flex items-center justify-center">
             <img
               src="/smct.png"
               alt="SMCT Group of Companies"

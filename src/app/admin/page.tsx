@@ -116,15 +116,15 @@ const getQuarterFromDate = (dateString: string): string => {
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return 'Unknown';
-    
+
     const month = date.getMonth() + 1; // getMonth() returns 0-11
     const year = date.getFullYear();
-    
+
     if (month >= 1 && month <= 3) return `Q1 ${year}`;
     if (month >= 4 && month <= 6) return `Q2 ${year}`;
     if (month >= 7 && month <= 9) return `Q3 ${year}`;
     if (month >= 10 && month <= 12) return `Q4 ${year}`;
-    
+
     return 'Unknown';
   } catch (error) {
     return 'Unknown';
@@ -148,11 +148,11 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [active, setActive] = useState('overview');
-  
+
   // Refresh modal states
   const [showRefreshModal, setShowRefreshModal] = useState(false);
   const [refreshModalMessage, setRefreshModalMessage] = useState('');
-  
+
   // Handle refresh modal completion
   const handleRefreshModalComplete = () => {
     setShowRefreshModal(false);
@@ -165,7 +165,7 @@ export default function AdminDashboard() {
     console.log('🔄 Starting evaluated reviews refresh...');
     setRefreshModalMessage('Refreshing evaluated reviews...');
     setShowRefreshModal(true);
-    
+
     try {
       await loadEvaluatedReviews();
       console.log('✅ Evaluated reviews refresh completed successfully');
@@ -232,24 +232,32 @@ export default function AdminDashboard() {
   const loadEvaluatedReviews = async () => {
     try {
       const submissions = await clientDataService.getSubmissions();
-      
-      // Transform submissions data to match the expected format
+
+      // Transform submissions data to match the Review interface expected by the table
       const evaluationResults = submissions.map((submission: any) => ({
         id: submission.id,
-        employeeId: submission.evaluationData?.employeeId || submission.id,
         employeeName: submission.employeeName,
-        employeeEmail: submission.evaluationData?.employeeEmail || '',
         evaluatorName: submission.evaluator,
-        overallRating: submission.rating,
+        department: submission.evaluationData?.department || 'N/A',
+        position: submission.evaluationData?.position || 'N/A',
+        evaluationDate: submission.submittedAt,
+        overallScore: Math.round((submission.rating / 5) * 100), // Convert 5-point scale to percentage
         status: submission.status || 'completed',
+        lastUpdated: submission.submittedAt,
+        totalCriteria: 7, // Default total criteria count
+        completedCriteria: 7, // Assume all criteria are completed for submitted reviews
+        // Keep original data for other uses
+        employeeId: submission.evaluationData?.employeeId || submission.id,
+        employeeEmail: submission.evaluationData?.employeeEmail || '',
+        overallRating: submission.rating,
         period: submission.evaluationData?.period || new Date().toISOString().slice(0, 7),
         submittedAt: submission.submittedAt,
         evaluationData: submission.evaluationData
       }));
-      
+
       // Sort by submission date (newest first)
       evaluationResults.sort((a: any, b: any) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-      
+
       setEvaluatedReviews(evaluationResults);
     } catch (error) {
       console.error('Error loading evaluated reviews:', error);
@@ -262,10 +270,10 @@ export default function AdminDashboard() {
     try {
       // Load from localStorage first (for any runtime updates)
       const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-      
+
       // If localStorage has data, use it; otherwise use the imported data
       const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : accountsData;
-      
+
       // Filter out admin accounts and convert to Employee format
       const employees = accounts
         .filter((account: any) => account.role !== 'admin') // Exclude admin accounts from employee list
@@ -287,7 +295,7 @@ export default function AdminDashboard() {
           contact: account.contact,
           updatedAt: account.updatedAt
         }));
-      
+
       return employees;
     } catch (error) {
       console.error('Error loading accounts data:', error);
@@ -301,79 +309,79 @@ export default function AdminDashboard() {
     setRefreshModalMessage('Refreshing user data...');
     setShowRefreshModal(true);
     setIsRefreshing(true);
-    
+
     try {
       // Load accounts data directly (no merging needed)
       const employees = await loadAccountsData();
       console.log('📊 Loaded employees:', employees.length);
-      
+
       const filteredEmployees = filterDeletedEmployees(employees);
       console.log('✅ Filtered employees:', filteredEmployees.length);
-      
+
       setEmployees(filteredEmployees);
-        
-        // Update system metrics with actual data (will be updated by updateSystemMetrics)
-        setSystemMetrics(prev => prev ? {
-          ...prev,
-          totalUsers: filteredEmployees.length,
-          activeUsers: filteredEmployees.length
-        } : null);
-        
-        // Update dashboard stats with actual data
-        setDashboardStats(prev => prev ? {
-          ...prev,
-          employeeDashboard: {
-            ...prev.employeeDashboard,
-            activeUsers: filteredEmployees.filter((emp: any) => {
-              const role = emp.role?.toLowerCase() || '';
-              return role === 'employee' || 
-                     role.includes('representative') || 
-                     role.includes('designer') ||
-                     role.includes('developer') ||
-                     role.includes('specialist') ||
-                     role.includes('analyst') ||
-                     role.includes('coordinator') ||
-                     role.includes('assistant');
-            }).length
-          },
-          hrDashboard: {
-            ...prev.hrDashboard,
-            activeUsers: filteredEmployees.filter((emp: any) => {
-              const role = emp.role?.toLowerCase() || '';
-              return role === 'hr' || 
-                     role === 'hr-manager' ||
-                     role.includes('hr') ||
-                     role.includes('human resources');
-            }).length
-          },
-          evaluatorDashboard: {
-            ...prev.evaluatorDashboard,
-            activeUsers: filteredEmployees.filter((emp: any) => {
-              const role = emp.role?.toLowerCase() || '';
-              return role === 'evaluator' || 
-                     role.includes('manager') ||
-                     role.includes('supervisor') ||
-                     role.includes('director') ||
-                     role.includes('lead');
-            }).length
-          }
-        } : null);
-      
+
+      // Update system metrics with actual data (will be updated by updateSystemMetrics)
+      setSystemMetrics(prev => prev ? {
+        ...prev,
+        totalUsers: filteredEmployees.length,
+        activeUsers: filteredEmployees.length
+      } : null);
+
+      // Update dashboard stats with actual data
+      setDashboardStats(prev => prev ? {
+        ...prev,
+        employeeDashboard: {
+          ...prev.employeeDashboard,
+          activeUsers: filteredEmployees.filter((emp: any) => {
+            const role = emp.role?.toLowerCase() || '';
+            return role === 'employee' ||
+              role.includes('representative') ||
+              role.includes('designer') ||
+              role.includes('developer') ||
+              role.includes('specialist') ||
+              role.includes('analyst') ||
+              role.includes('coordinator') ||
+              role.includes('assistant');
+          }).length
+        },
+        hrDashboard: {
+          ...prev.hrDashboard,
+          activeUsers: filteredEmployees.filter((emp: any) => {
+            const role = emp.role?.toLowerCase() || '';
+            return role === 'hr' ||
+              role === 'hr-manager' ||
+              role.includes('hr') ||
+              role.includes('human resources');
+          }).length
+        },
+        evaluatorDashboard: {
+          ...prev.evaluatorDashboard,
+          activeUsers: filteredEmployees.filter((emp: any) => {
+            const role = emp.role?.toLowerCase() || '';
+            return role === 'evaluator' ||
+              role.includes('manager') ||
+              role.includes('supervisor') ||
+              role.includes('director') ||
+              role.includes('lead');
+          }).length
+        }
+      } : null);
+
       // Also refresh pending registrations and evaluated reviews
       await loadPendingRegistrations();
       await loadEvaluatedReviews();
-      
+
       // Update system metrics to reflect current state
       updateSystemMetrics();
-      
+
       console.log('✅ User data refresh completed successfully');
-      
+
     } catch (error) {
       console.error('❌ Error refreshing user data:', error);
-      
+
       // Show error message to user
       toastMessages.generic.error('Refresh Failed', 'Failed to refresh user data. Please try again.');
-      
+
       // Fallback: load accounts data directly
       try {
         const employees = await loadAccountsData();
@@ -419,7 +427,7 @@ export default function AdminDashboard() {
 
       // Refresh user data to get updated information
       await refreshUserData();
-        
+
       // Show success toast
       toastMessages.user.updated(updatedUser.name);
     } catch (error) {
@@ -442,7 +450,7 @@ export default function AdminDashboard() {
 
     // Show success toast
     toastMessages.user.deleted(employeeToDelete.name);
-    
+
     // Close modal
     setIsDeleteModalOpen(false);
     setEmployeeToDelete(null);
@@ -452,15 +460,15 @@ export default function AdminDashboard() {
   const handleApproveRegistration = async (registrationId: number, registrationName: string) => {
     try {
       const result = await clientDataService.approveRegistration(registrationId);
-      
+
       if (result.success) {
         // Add to approved list
         const newApproved = [...approvedRegistrations, registrationId];
         setApprovedRegistrations(newApproved);
-        
+
         // Store in localStorage for persistence
         localStorage.setItem('approvedRegistrations', JSON.stringify(newApproved));
-        
+
         // Remove from rejected list if it was there
         const newRejected = rejectedRegistrations.filter(id => id !== registrationId);
         setRejectedRegistrations(newRejected);
@@ -468,7 +476,7 @@ export default function AdminDashboard() {
 
         // Reload pending registrations to get updated data
         await loadPendingRegistrations();
-        
+
         // Refresh active users data to show the newly approved user
         await refreshUserData();
 
@@ -487,15 +495,15 @@ export default function AdminDashboard() {
   const handleRejectRegistration = async (registrationId: number, registrationName: string) => {
     try {
       const result = await clientDataService.rejectRegistration(registrationId);
-      
+
       if (result.success) {
         // Add to rejected list
         const newRejected = [...rejectedRegistrations, registrationId];
         setRejectedRegistrations(newRejected);
-        
+
         // Store in localStorage for persistence
         localStorage.setItem('rejectedRegistrations', JSON.stringify(newRejected));
-        
+
         // Remove from approved list if it was there
         const newApproved = approvedRegistrations.filter(id => id !== registrationId);
         setApprovedRegistrations(newApproved);
@@ -541,7 +549,7 @@ export default function AdminDashboard() {
     setSuspendedEmployees(prev => {
       const existingIndex = prev.findIndex(emp => emp.id === selectedEmployee.id);
       let updated;
-      
+
       if (existingIndex !== -1) {
         // Employee already exists, update the existing record
         console.log(`Updating existing suspended employee: ${selectedEmployee.name} (ID: ${selectedEmployee.id})`);
@@ -552,7 +560,7 @@ export default function AdminDashboard() {
         console.log(`Adding new suspended employee: ${selectedEmployee.name} (ID: ${selectedEmployee.id})`);
         updated = [...prev, newSuspendedEmployee];
       }
-      
+
       // Save to localStorage for login system integration
       localStorage.setItem('suspendedEmployees', JSON.stringify(updated));
       return updated;
@@ -560,10 +568,10 @@ export default function AdminDashboard() {
 
     // Show success toast
     toastMessages.user.suspended(selectedEmployee.name);
-    
+
     // Update system metrics to reflect the suspension
     updateSystemMetrics();
-    
+
     // Close modal and reset form
     setIsSuspendModalOpen(false);
     setSuspendForm({ reason: '', duration: '', suspendedBy: 'Admin' });
@@ -584,16 +592,16 @@ export default function AdminDashboard() {
   const handleReinstateEmployee = (employeeId: number) => {
     // Find the employee to get their name
     const employee = suspendedEmployees.find(emp => emp.id === employeeId);
-    
+
     setSuspendedEmployees(prev => {
-      const updated = prev.map(emp => 
-        emp.id === employeeId 
-          ? { 
-              ...emp, 
-              status: 'reinstated' as const,
-              reinstatedDate: new Date().toISOString().split('T')[0],
-              reinstatedBy: 'Admin'
-            }
+      const updated = prev.map(emp =>
+        emp.id === employeeId
+          ? {
+            ...emp,
+            status: 'reinstated' as const,
+            reinstatedDate: new Date().toISOString().split('T')[0],
+            reinstatedBy: 'Admin'
+          }
           : emp
       );
       // Update localStorage
@@ -605,7 +613,7 @@ export default function AdminDashboard() {
     if (employee) {
       toastMessages.user.reinstated(employee.name);
     }
-    
+
     // Update system metrics to reflect the reinstatement
     updateSystemMetrics();
   };
@@ -627,10 +635,10 @@ export default function AdminDashboard() {
       localStorage.setItem('suspendedEmployees', JSON.stringify(updated));
       return updated;
     });
-    
+
     // Also remove from main employees list
     setEmployees(prev => prev.filter(emp => emp.id !== reinstatedEmployeeToDelete.id));
-    
+
     // Store deleted employee ID in localStorage for persistence
     const deletedEmployees = JSON.parse(localStorage.getItem('deletedEmployees') || '[]');
     deletedEmployees.push(reinstatedEmployeeToDelete.id);
@@ -638,10 +646,10 @@ export default function AdminDashboard() {
 
     // Show success toast
     toastMessages.user.deleted(reinstatedEmployeeToDelete.name);
-    
+
     // Update system metrics to reflect the deletion
     updateSystemMetrics();
-    
+
     // Close modal
     setIsDeleteModalOpen(false);
     setReinstatedEmployeeToDelete(null);
@@ -653,7 +661,7 @@ export default function AdminDashboard() {
     const currentlySuspendedIds = suspendedEmployees
       .filter(emp => emp.status === 'suspended') // Only currently suspended
       .map(emp => emp.id);
-    
+
     return employees.filter(emp => !currentlySuspendedIds.includes(emp.id));
   };
 
@@ -672,14 +680,14 @@ export default function AdminDashboard() {
   const updateSystemMetrics = () => {
     const activeEmployees = getActiveEmployees();
     const currentlySuspendedCount = suspendedEmployees.filter(emp => emp.status === 'suspended').length;
-    
+
     setSystemMetrics(prev => prev ? {
       ...prev,
       totalUsers: employees.length, // Total users in system
       activeUsers: activeEmployees.length, // Active users (includes reinstated)
       suspendedUsers: currentlySuspendedCount // Currently suspended users
     } : null);
-    
+
     // Update dashboard stats with correct active user counts
     setDashboardStats(prev => prev ? {
       ...prev,
@@ -687,33 +695,33 @@ export default function AdminDashboard() {
         ...prev.employeeDashboard,
         activeUsers: activeEmployees.filter((emp: any) => {
           const role = emp.role?.toLowerCase() || '';
-          return role === 'employee' || 
-                 role.includes('representative') || 
-                 role.includes('designer') ||
-                 role.includes('developer') ||
-                 role.includes('analyst') ||
-                 role.includes('coordinator');
+          return role === 'employee' ||
+            role.includes('representative') ||
+            role.includes('designer') ||
+            role.includes('developer') ||
+            role.includes('analyst') ||
+            role.includes('coordinator');
         }).length
       },
       hrDashboard: {
         ...prev.hrDashboard,
         activeUsers: activeEmployees.filter((emp: any) => {
           const role = emp.role?.toLowerCase() || '';
-          return role === 'hr' || 
-                 role === 'hr-manager' ||
-                 role.includes('hr') ||
-                 role.includes('human resources');
+          return role === 'hr' ||
+            role === 'hr-manager' ||
+            role.includes('hr') ||
+            role.includes('human resources');
         }).length
       },
       evaluatorDashboard: {
         ...prev.evaluatorDashboard,
         activeUsers: activeEmployees.filter((emp: any) => {
           const role = emp.role?.toLowerCase() || '';
-          return role === 'evaluator' || 
-                 role.includes('manager') ||
-                 role.includes('supervisor') ||
-                 role.includes('director') ||
-                 role.includes('lead');
+          return role === 'evaluator' ||
+            role.includes('manager') ||
+            role.includes('supervisor') ||
+            role.includes('director') ||
+            role.includes('lead');
         }).length
       }
     } : null);
@@ -734,26 +742,26 @@ export default function AdminDashboard() {
     setSuspendedEmployees(prev => {
       const uniqueEmployees = new Map();
       const originalCount = prev.length;
-      
+
       // Process employees in reverse order to keep the latest record
       prev.reverse().forEach(emp => {
         if (!uniqueEmployees.has(emp.id)) {
           uniqueEmployees.set(emp.id, emp);
         }
       });
-      
+
       const cleaned = Array.from(uniqueEmployees.values()).reverse();
       const removedCount = originalCount - cleaned.length;
-      
+
       localStorage.setItem('suspendedEmployees', JSON.stringify(cleaned));
-      
+
       // Show success toast
       if (removedCount > 0) {
         toastMessages.generic.success('Cleanup Complete', `Removed ${removedCount} duplicate record(s).`);
       } else {
         toastMessages.generic.info('No Duplicates Found', 'All records are already unique.');
       }
-      
+
       return cleaned;
     });
   };
@@ -762,7 +770,7 @@ export default function AdminDashboard() {
   const getFilteredSuspendedEmployees = () => {
     const activeSuspended = getActiveSuspendedEmployees();
     if (!suspendedSearchTerm) return activeSuspended;
-    
+
     return activeSuspended.filter(employee =>
       employee.name.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
       employee.email.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
@@ -776,7 +784,7 @@ export default function AdminDashboard() {
   const getFilteredReinstatedEmployees = () => {
     const reinstated = getReinstatedEmployees();
     if (!reinstatedSearchTerm) return reinstated;
-    
+
     return reinstated.filter(employee =>
       employee.name.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
       employee.email.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
@@ -790,7 +798,7 @@ export default function AdminDashboard() {
   const getFilteredActiveEmployees = () => {
     const activeEmployees = getActiveEmployees();
     if (!userSearchTerm) return activeEmployees;
-    
+
     return activeEmployees.filter(employee =>
       employee.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
       employee.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
@@ -810,7 +818,7 @@ export default function AdminDashboard() {
       })
       .map(registration => {
         let status: 'pending_verification' | 'approved' | 'rejected' = 'pending_verification';
-        
+
         // Check localStorage for status overrides (only if the registration is still in pending)
         if (rejectedRegistrations.includes(registration.id)) {
           status = 'rejected';
@@ -819,7 +827,7 @@ export default function AdminDashboard() {
         }
         // Note: We don't set status to 'approved' here because approved registrations
         // should be removed from pending-registrations.json entirely
-        
+
         return {
           id: registration.id,
           name: `${registration.firstName} ${registration.lastName}`,
@@ -836,7 +844,7 @@ export default function AdminDashboard() {
   const getFilteredNewAccounts = () => {
     const newAccounts = getNewlyRegisteredAccounts();
     if (!userSearchTerm) return newAccounts;
-    
+
     return newAccounts.filter(account =>
       account.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
       account.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
@@ -891,26 +899,26 @@ export default function AdminDashboard() {
         };
 
 
-         // Initialize empty reviews array - will be populated from real evaluation data
-         const reviewsData: Review[] = [];
+        // Initialize empty reviews array - will be populated from real evaluation data
+        const reviewsData: Review[] = [];
 
-         setSystemMetrics(metrics);
-         setDashboardStats(stats);
-         setReviews(reviewsData);
+        setSystemMetrics(metrics);
+        setDashboardStats(stats);
+        setReviews(reviewsData);
 
         // Load suspended employees from localStorage
         const savedSuspendedEmployees = JSON.parse(localStorage.getItem('suspendedEmployees') || '[]');
         setSuspendedEmployees(savedSuspendedEmployees);
-        
+
         // Load pending registrations
         await loadPendingRegistrations();
-        
+
         // Load evaluated reviews
         await loadEvaluatedReviews();
-        
+
         // Update system metrics with correct active user counts
         updateSystemMetrics();
-        
+
         setLoading(false);
       } catch (error) {
         console.error('Error loading admin data:', error);
@@ -973,7 +981,7 @@ export default function AdminDashboard() {
 
     // In a real app, you would make an API call here
 
-    
+
     toastMessages.user.created(newUser.name);
     // Reset form and close modal
     setNewUser({
@@ -1014,8 +1022,8 @@ export default function AdminDashboard() {
 
   if (loading || !systemMetrics || !dashboardStats) {
     return (
-      <FakeLoadingScreen 
-        message="Loading Dashboard..." 
+      <FakeLoadingScreen
+        message="Loading Dashboard..."
         duration={1200}
         onComplete={() => setLoading(false)}
       />
@@ -1082,131 +1090,116 @@ export default function AdminDashboard() {
       topSummary={topSummary}
       profile={{ name: 'System Administrator', roleOrPosition: 'Admin' }}
     >
-             {active === 'overview' && (
-         <div className="space-y-6">
-           {/* Dashboard Performance Overview */}
-           <Card>
-             <CardHeader>
-               <CardTitle>Dashboard Performance Overview</CardTitle>
-               <CardDescription>Real-time statistics for all system dashboards</CardDescription>
-             </CardHeader>
-             <CardContent>
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 <div className="space-y-4">
-                   <div className="flex items-center space-x-3">
-                     <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                     <h3 className="font-semibold">Employee Dashboard</h3>
-                   </div>
-                   <div className="space-y-2">
-                     <div className="flex justify-between">
-                       <span className="text-sm text-gray-600">Active Users</span>
-                       <span className="font-semibold">{dashboardStats.employeeDashboard.activeUsers}</span>
-                     </div>
-                     <div className="flex justify-between">
-                       <span className="text-sm text-gray-600">Total Views</span>
-                       <span className="font-semibold">{dashboardStats.employeeDashboard.totalViews}</span>
-                     </div>
-                     <div className="flex justify-between">
-                       <span className="text-sm text-gray-600">Last Activity</span>
-                       <span className="font-semibold text-xs">
-                         {new Date(dashboardStats.employeeDashboard.lastActivity).toLocaleTimeString()}
-                       </span>
-                     </div>
-                   </div>
-                 </div>
+      {active === 'overview' && (
+        <div className="space-y-6">
+          {/* Dashboard Performance Overview */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Dashboard Performance Overview</CardTitle>
+              <CardDescription>Real-time statistics for all system dashboards</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center space-x-3">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <h3 className="font-semibold">Employee Dashboard</h3>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex flex-col items-center">
+                      <span className="text-sm text-gray-600">Active Users</span>
+                      <span className="font-semibold">{dashboardStats.employeeDashboard.activeUsers}</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-sm text-gray-600">Total Views</span>
+                      <span className="font-semibold">{dashboardStats.employeeDashboard.totalViews}</span>
+                    </div>
+                   
+                  </div>
+                </div>
 
-                 <div className="space-y-4">
-                   <div className="flex items-center space-x-3">
-                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                     <h3 className="font-semibold">HR Dashboard</h3>
-                   </div>
-                   <div className="space-y-2">
-                     <div className="flex justify-between">
-                       <span className="text-sm text-gray-600">Active Users</span>
-                       <span className="font-semibold">{dashboardStats.hrDashboard.activeUsers}</span>
-                     </div>
-                     <div className="flex justify-between">
-                       <span className="text-sm text-gray-600">Total Views</span>
-                       <span className="font-semibold">{dashboardStats.hrDashboard.totalViews}</span>
-                     </div>
-                     <div className="flex justify-between">
-                       <span className="text-sm text-gray-600">Last Activity</span>
-                       <span className="font-semibold text-xs">
-                         {new Date(dashboardStats.hrDashboard.lastActivity).toLocaleTimeString()}
-                       </span>
-                     </div>
-                   </div>
-                 </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center space-x-3">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <h3 className="font-semibold">HR Dashboard</h3>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex flex-col items-center">
+                      <span className="text-sm text-gray-600">Active Users</span>
+                      <span className="font-semibold">{dashboardStats.hrDashboard.activeUsers}</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-sm text-gray-600">Total Views</span>
+                      <span className="font-semibold">{dashboardStats.hrDashboard.totalViews}</span>
+                    </div>
+                    
+                  </div>
+                </div>
 
-                 <div className="space-y-4">
-                   <div className="flex items-center space-x-3">
-                     <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                     <h3 className="font-semibold">Evaluator Dashboard</h3>
-                   </div>
-                   <div className="space-y-2">
-                     <div className="flex justify-between">
-                       <span className="text-sm text-gray-600">Active Users</span>
-                       <span className="font-semibold">{dashboardStats.evaluatorDashboard.activeUsers}</span>
-                     </div>
-                     <div className="flex justify-between">
-                       <span className="text-sm text-gray-600">Total Views</span>
-                       <span className="font-semibold">{dashboardStats.evaluatorDashboard.totalViews}</span>
-                     </div>
-                     <div className="flex justify-between">
-                       <span className="text-sm text-gray-600">Last Activity</span>
-                       <span className="font-semibold text-xs">
-                         {new Date(dashboardStats.evaluatorDashboard.lastActivity).toLocaleTimeString()}
-                       </span>
-                     </div>
-                   </div>
-                 </div>
-               </div>
-             </CardContent>
-           </Card>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center space-x-3">
+                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                    <h3 className="font-semibold">Evaluator Dashboard</h3>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex flex-col items-center">
+                      <span className="text-sm text-gray-600">Active Users</span>
+                      <span className="font-semibold">{dashboardStats.evaluatorDashboard.activeUsers}</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-sm text-gray-600">Total Views</span>
+                      <span className="font-semibold">{dashboardStats.evaluatorDashboard.totalViews}</span>
+                    </div>
 
-           {/* Submitted Reviews */}
-           <Card>
-             <CardHeader>
-               <CardTitle>Submitted Reviews</CardTitle>
-               <CardDescription>Monitor and manage all submitted performance evaluations</CardDescription>
-             </CardHeader>
-             <CardContent>
-               <div className="space-y-4">
-                 <div className="flex justify-between items-center">
-                   <div className="flex space-x-4">
-                     <Input placeholder="Search reviews..." className="w-64" />
-                     <Select>
-                       <SelectTrigger className="w-48">
-                         <SelectValue placeholder="Filter by status" />
-                       </SelectTrigger>
-                       <SelectContent>
-                         <SelectItem value="all">All Status</SelectItem>
-                         <SelectItem value="completed">Completed</SelectItem>
-                         <SelectItem value="in_progress">In Progress</SelectItem>
-                         <SelectItem value="pending">Pending</SelectItem>
-                       </SelectContent>
-                     </Select>
-                     <Select>
-                       <SelectTrigger className="w-48">
-                         <SelectValue placeholder="Filter by department" />
-                       </SelectTrigger>
-                       <SelectContent>
-                         <SelectItem value="all">All Departments</SelectItem>
-                         {departmentsData.map(dept => (
-                           <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
-                         ))}
-                       </SelectContent>
-                     </Select>
-                   </div>
-                   <Button 
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Submitted Reviews */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Submitted Reviews</CardTitle>
+              <CardDescription>Monitor and manage all submitted performance evaluations</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex space-x-4">
+                    <Input placeholder="Search reviews..." className="w-64" />
+                    <Select>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Filter by department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Departments</SelectItem>
+                        {departmentsData.map(dept => (
+                          <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
                     variant="outline"
                     className="bg-purple-500 text-white hover:bg-purple-600 hover:text-white"
                   >
                     Export Reviews
                   </Button>
-                 </div>
+                </div>
 
-                <div className="relative max-h-[100vh] overflow-y-auto border border-gray-200 rounded-lg scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="relative max-h-[600px] overflow-y-auto border border-gray-200 rounded-lg scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   <Table>
                     <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
@@ -1222,91 +1215,91 @@ export default function AdminDashboard() {
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
-                     <TableBody>
-                       {reviews.map((review) => (
-                         <TableRow key={review.id}>
-                           <TableCell className="font-medium">{review.employeeName}</TableCell>
-                           <TableCell>{review.evaluatorName}</TableCell>
-                           <TableCell>{review.department}</TableCell>
-                           <TableCell>{review.position}</TableCell>
-                           <TableCell>{new Date(review.evaluationDate).toLocaleDateString()}</TableCell>
-                           <TableCell>
-                             <span className={`font-semibold ${getScoreColor(review.overallScore)}`}>
-                               {review.overallScore > 0 ? `${review.overallScore}%` : 'N/A'}
-                             </span>
-                           </TableCell>
-                           <TableCell>
-                             <div className="flex items-center space-x-2">
-                               <Progress 
-                                 value={(review.completedCriteria / review.totalCriteria) * 100} 
-                                 className="w-16"
-                               />
-                               <span className="text-sm text-gray-600">
-                                 {review.completedCriteria}/{review.totalCriteria}
-                               </span>
-                             </div>
-                           </TableCell>
-                           <TableCell>
-                             <Badge className={getQuarterColor(getQuarterFromDate(review.evaluationDate))}>
-                               {getQuarterFromDate(review.evaluationDate)}
-                             </Badge>
-                           </TableCell>
-                           <TableCell className="text-sm text-gray-600">
-                             {new Date(review.lastUpdated).toLocaleString()}
-                           </TableCell>
-                           <TableCell>
-                             <div className="flex space-x-2">
-                               <Button variant="ghost" size="sm">View</Button>
-                               <Button variant="ghost" size="sm">Edit</Button>
-                               <Button variant="ghost" size="sm">Delete</Button>
-                             </div>
-                           </TableCell>
-                         </TableRow>
-                       ))}
-                     </TableBody>
-                   </Table>
-                 </div>
+                    <TableBody>
+                      {evaluatedReviews.map((review) => (
+                        <TableRow key={review.id}>
+                          <TableCell className="font-medium">{review.employeeName}</TableCell>
+                          <TableCell>{review.evaluatorName}</TableCell>
+                          <TableCell>{review.department}</TableCell>
+                          <TableCell>{review.position}</TableCell>
+                          <TableCell>{new Date(review.evaluationDate).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <span className={`font-semibold ${getScoreColor(review.overallScore)}`}>
+                              {review.overallScore > 0 ? `${review.overallScore}%` : 'N/A'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Progress
+                                value={(review.completedCriteria / review.totalCriteria) * 100}
+                                className="w-16"
+                              />
+                              <span className="text-sm text-gray-600">
+                                {review.completedCriteria}/{review.totalCriteria}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getQuarterColor(getQuarterFromDate(review.evaluationDate))}>
+                              {getQuarterFromDate(review.evaluationDate)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600">
+                            {new Date(review.lastUpdated).toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button variant="ghost" size="sm">View</Button>
+                              <Button variant="ghost" size="sm">Edit</Button>
+                              <Button variant="ghost" size="sm">Delete</Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
 
-                 {reviews.length === 0 && (
-                   <div className="text-center py-8 text-gray-500">
-                     <div className="text-4xl mb-4">📊</div>
-                     <p className="text-lg font-medium">No submitted reviews found</p>
-                     <p className="text-sm">Performance evaluations will appear here once they are submitted by evaluators.</p>
-                   </div>
-                 )}
+                {reviews.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-4xl mb-4">📊</div>
+                    <p className="text-lg font-medium">No submitted reviews found</p>
+                    <p className="text-sm">Performance evaluations will appear here once they are submitted by evaluators.</p>
+                  </div>
+                )}
 
-                 {/* Summary Statistics */}
-                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
-                   <div className="text-center">
-                     <div className="text-2xl font-bold text-green-600">
-                       {reviews.filter(r => r.status === 'completed').length}
-                     </div>
-                     <div className="text-sm text-gray-600">Completed</div>
-                   </div>
-                   <div className="text-center">
-                     <div className="text-2xl font-bold text-yellow-600">
-                       {reviews.filter(r => r.status === 'in_progress').length}
-                     </div>
-                     <div className="text-sm text-gray-600">In Progress</div>
-                   </div>
-                   <div className="text-center">
-                     <div className="text-2xl font-bold text-red-600">
-                       {reviews.filter(r => r.status === 'pending').length}
-                     </div>
-                     <div className="text-sm text-gray-600">Pending</div>
-                   </div>
-                   <div className="text-center">
-                     <div className="text-2xl font-bold text-blue-600">
-                       {reviews.length}
-                     </div>
-                     <div className="text-sm text-gray-600">Total Reviews</div>
-                   </div>
-                 </div>
-               </div>
-             </CardContent>
-           </Card>
-         </div>
-       )}
+                {/* Summary Statistics */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
+                      {reviews.filter(r => r.status === 'completed').length}
+                    </div>
+                    <div className="text-sm text-gray-600">Completed</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-yellow-600">
+                      {reviews.filter(r => r.status === 'in_progress').length}
+                    </div>
+                    <div className="text-sm text-gray-600">In Progress</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">
+                      {reviews.filter(r => r.status === 'pending').length}
+                    </div>
+                    <div className="text-sm text-gray-600">Pending</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {reviews.length}
+                    </div>
+                    <div className="text-sm text-gray-600">Total Reviews</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {active === 'dashboards' && (
         <Card>
@@ -1338,133 +1331,133 @@ export default function AdminDashboard() {
             {/* Suspended Employees Tab */}
             {dashboardTab === 'suspended' && (
               <div className="space-y-4">
-                              <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center">
                   <div className="flex space-x-4">
-                    <Input 
-                      placeholder="Search suspended employees..." 
+                    <Input
+                      placeholder="Search suspended employees..."
                       className="w-64"
                       value={suspendedSearchTerm}
                       onChange={(e) => setSuspendedSearchTerm(e.target.value)}
                     />
-                  <Select>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="suspended">Suspended</SelectItem>
-                      <SelectItem value="pending_review">Pending Review</SelectItem>
-                      <SelectItem value="reinstated">Reinstated</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <Select>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="suspended">Suspended</SelectItem>
+                        <SelectItem value="pending_review">Pending Review</SelectItem>
+                        <SelectItem value="reinstated">Reinstated</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={refreshUserData}
+                      disabled={isRefreshing}
+                      className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
+                    >
+                      {isRefreshing ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Refreshing...
+                        </>
+                      ) : (
+                        <>
+                          <span>🔄</span>
+                          Refresh
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={cleanupDuplicateSuspendedEmployees}
+                      className="flex items-center gap-2 bg-orange-500 text-white hover:bg-orange-600 hover:text-white"
+                    >
+                      <span>🧹</span>
+                      Clean Duplicates
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={refreshUserData}
-                    disabled={isRefreshing}
-                    className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
-                  >
-                    {isRefreshing ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Refreshing...
-                      </>
-                    ) : (
-                      <>
-                        <span>🔄</span>
-                        Refresh
-                      </>
-                    )}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={cleanupDuplicateSuspendedEmployees}
-                    className="flex items-center gap-2 bg-orange-500 text-white hover:bg-orange-600 hover:text-white"
-                  >
-                    <span>🧹</span>
-                    Clean Duplicates
-                  </Button>       
-                </div>
-              </div>
 
-              <div className="max-h-[70vh] overflow-y-auto">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-white">
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Position</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Branch</TableHead>
-                      <TableHead>Suspension Date</TableHead>
-                      <TableHead>Reason</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Suspended By</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {getFilteredSuspendedEmployees().map((employee) => (
-                      <TableRow key={employee.id}>
-                        <TableCell className="font-medium">{employee.name}</TableCell>
-                        <TableCell>{employee.email}</TableCell>
-                        <TableCell>{employee.position}</TableCell>
-                        <TableCell>{employee.department}</TableCell>
-                        <TableCell>{employee.branch}</TableCell>
-                        <TableCell>{new Date(employee.suspensionDate).toLocaleDateString()}</TableCell>
-                        <TableCell className="max-w-xs truncate" title={employee.suspensionReason}>
-                          {employee.suspensionReason}
-                        </TableCell>
-                        <TableCell>{employee.suspensionDuration}</TableCell>
-                        <TableCell>{employee.suspendedBy}</TableCell>
-                        <TableCell>
-                          <Badge className={getSuspensionStatusColor(employee.status)}>
-                            {employee.status.replace('_', ' ').toUpperCase()}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => openViewDetailsModal(employee)}
-                            >
-                              View Details
-                            </Button>
-                            {employee.status === 'suspended' && (
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="text-green-600 hover:text-green-700"
-                                onClick={() => handleReinstateEmployee(employee.id)}
-                              >
-                                Reinstate
-                              </Button>
-                            )}
-                            {employee.status === 'pending_review' && (
-                              <Button size="sm" variant="outline" className="text-blue-600 hover:text-blue-700">
-                                Review
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+                <div className="max-h-[70vh] overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-white">
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Position</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Branch</TableHead>
+                        <TableHead>Suspension Date</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead>Duration</TableHead>
+                        <TableHead>Suspended By</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {getFilteredSuspendedEmployees().length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  {suspendedSearchTerm ? 'No suspended employees match your search.' : 'No suspended employees found.'}
+                    </TableHeader>
+                    <TableBody>
+                      {getFilteredSuspendedEmployees().map((employee) => (
+                        <TableRow key={employee.id}>
+                          <TableCell className="font-medium">{employee.name}</TableCell>
+                          <TableCell>{employee.email}</TableCell>
+                          <TableCell>{employee.position}</TableCell>
+                          <TableCell>{employee.department}</TableCell>
+                          <TableCell>{employee.branch}</TableCell>
+                          <TableCell>{new Date(employee.suspensionDate).toLocaleDateString()}</TableCell>
+                          <TableCell className="max-w-xs truncate" title={employee.suspensionReason}>
+                            {employee.suspensionReason}
+                          </TableCell>
+                          <TableCell>{employee.suspensionDuration}</TableCell>
+                          <TableCell>{employee.suspendedBy}</TableCell>
+                          <TableCell>
+                            <Badge className={getSuspensionStatusColor(employee.status)}>
+                              {employee.status.replace('_', ' ').toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openViewDetailsModal(employee)}
+                              >
+                                View Details
+                              </Button>
+                              {employee.status === 'suspended' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-green-600 hover:text-green-700"
+                                  onClick={() => handleReinstateEmployee(employee.id)}
+                                >
+                                  Reinstate
+                                </Button>
+                              )}
+                              {employee.status === 'pending_review' && (
+                                <Button size="sm" variant="outline" className="text-blue-600 hover:text-blue-700">
+                                  Review
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-              )}
-            </div>
+
+                {getFilteredSuspendedEmployees().length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    {suspendedSearchTerm ? 'No suspended employees match your search.' : 'No suspended employees found.'}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Reinstated Records Tab */}
@@ -1472,8 +1465,8 @@ export default function AdminDashboard() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex space-x-4">
-                    <Input 
-                      placeholder="Search reinstated employees..." 
+                    <Input
+                      placeholder="Search reinstated employees..."
                       className="w-64"
                       value={reinstatedSearchTerm}
                       onChange={(e) => setReinstatedSearchTerm(e.target.value)}
@@ -1492,14 +1485,14 @@ export default function AdminDashboard() {
                     </Select>
                   </div>
                   <div className="flex space-x-2">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={refreshUserData}
                       className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
                     >
                       <span>🔄</span>
                       Refresh
-                    </Button>       
+                    </Button>
                   </div>
                 </div>
 
@@ -1541,15 +1534,15 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
-                              <Button 
-                                size="sm" 
+                              <Button
+                                size="sm"
                                 variant="outline"
                                 onClick={() => openViewDetailsModal(employee)}
                               >
                                 View Details
                               </Button>
-                              <Button 
-                                size="sm" 
+                              <Button
+                                size="sm"
                                 variant="outline"
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                 onClick={() => openDeleteReinstatedModal(employee)}
@@ -1607,126 +1600,126 @@ export default function AdminDashboard() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex space-x-4">
-                    <Input 
-                      placeholder="Search users..." 
+                    <Input
+                      placeholder="Search users..."
                       className="w-64"
                       value={userSearchTerm}
                       onChange={(e) => setUserSearchTerm(e.target.value)}
                     />
-                  <Select>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Filter by role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Roles</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="hr">HR</SelectItem>
-                      <SelectItem value="evaluator">Evaluator</SelectItem>
-                      <SelectItem value="employee">Employee</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <Select>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Filter by role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="hr">HR</SelectItem>
+                        <SelectItem value="evaluator">Evaluator</SelectItem>
+                        <SelectItem value="employee">Employee</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={refreshUserData}
+                      disabled={isRefreshing}
+                      className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
+                    >
+                      {isRefreshing ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Refreshing...
+                        </>
+                      ) : (
+                        <>
+                          <span>🔄</span>
+                          Refresh
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={() => setIsAddUserModalOpen(true)}
+                      className="flex items-center bg-blue-500 text-white hover:bg-green-400 hover:text-gray-600 gap-2"
+                    >
+                      <span>➕</span>
+                      Add User
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={refreshUserData}
-                    disabled={isRefreshing}
-                    className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
-                  >
-                    {isRefreshing ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Refreshing...
-                      </>
-                    ) : (
-                      <>
-                        <span>🔄</span>
-                        Refresh
-                      </>
-                    )}
-                  </Button>
-                  <Button 
-                    onClick={() => setIsAddUserModalOpen(true)}
-                    className="flex items-center bg-blue-500 text-white hover:bg-green-400 hover:text-gray-600 gap-2"
-                  >
-                    <span>➕</span>
-                    Add User
-                  </Button>
-                </div>
-              </div>
 
-              <div className="max-h-[70vh] overflow-y-auto">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-white">
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Last Login</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {getFilteredActiveEmployees().slice(0, 10).map((employee) => (
-                      <TableRow key={employee.id}>
-                        <TableCell className="font-medium">{employee.name}</TableCell>
-                        <TableCell>{employee.email}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{employee.role}</Badge>
-                        </TableCell>
-                        <TableCell>{employee.department}</TableCell>
-                        <TableCell>
-                          {wasEmployeeReinstated(employee.id) ? (
-                            <Badge 
-                              className="text-blue-600 bg-blue-100" 
-                              title={`Reinstated on ${getEmployeeReinstatementDate(employee.id) ? new Date(getEmployeeReinstatementDate(employee.id)!).toLocaleDateString() : 'Unknown date'}`}
-                            >
-                              Reinstated
-                            </Badge>
-                          ) : (
-                            <Badge className="text-green-600 bg-green-100">Active</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>{new Date().toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="text-blue-600 hover:text-blue-700"
-                              onClick={() => openEditModal(employee)}
-                            >
-                              Edit
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-orange-600 hover:text-orange-700"
-                              onClick={() => openSuspendModal(employee)}
-                            >
-                              Suspend
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-red-600 hover:text-red-700"
-                              onClick={() => openDeleteModal(employee)}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </TableCell>
+                <div className="max-h-[70vh] overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-white">
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Last Login</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {getFilteredActiveEmployees().slice(0, 10).map((employee) => (
+                        <TableRow key={employee.id}>
+                          <TableCell className="font-medium">{employee.name}</TableCell>
+                          <TableCell>{employee.email}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{employee.role}</Badge>
+                          </TableCell>
+                          <TableCell>{employee.department}</TableCell>
+                          <TableCell>
+                            {wasEmployeeReinstated(employee.id) ? (
+                              <Badge
+                                className="text-blue-600 bg-blue-100"
+                                title={`Reinstated on ${getEmployeeReinstatementDate(employee.id) ? new Date(getEmployeeReinstatementDate(employee.id)!).toLocaleDateString() : 'Unknown date'}`}
+                              >
+                                Reinstated
+                              </Badge>
+                            ) : (
+                              <Badge className="text-green-600 bg-green-100">Active</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>{new Date().toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-600 hover:text-blue-700"
+                                onClick={() => openEditModal(employee)}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-orange-600 hover:text-orange-700"
+                                onClick={() => openSuspendModal(employee)}
+                              >
+                                Suspend
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                                onClick={() => openDeleteModal(employee)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-            </div>
             )}
           </CardContent>
         </Card>
@@ -1743,8 +1736,8 @@ export default function AdminDashboard() {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <div className="flex space-x-4">
-                  <Input 
-                    placeholder="Search new registrations..." 
+                  <Input
+                    placeholder="Search new registrations..."
                     className="w-64"
                     value={userSearchTerm}
                     onChange={(e) => setUserSearchTerm(e.target.value)}
@@ -1762,8 +1755,8 @@ export default function AdminDashboard() {
                   </Select>
                 </div>
                 <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={refreshUserData}
                     disabled={isRefreshing}
                     className="flex items-center gap-2"
@@ -1824,16 +1817,16 @@ export default function AdminDashboard() {
                           <div className="flex space-x-2">
                             {account.status === 'pending_verification' && (
                               <>
-                                <Button 
-                                  variant="ghost" 
+                                <Button
+                                  variant="ghost"
                                   size="sm"
                                   className="text-green-600 hover:text-green-700"
                                   onClick={() => handleApproveRegistration(account.id, account.name)}
                                 >
                                   Approve
                                 </Button>
-                                <Button 
-                                  variant="ghost" 
+                                <Button
+                                  variant="ghost"
                                   size="sm"
                                   className="text-red-600 hover:text-red-700"
                                   onClick={() => handleRejectRegistration(account.id, account.name)}
@@ -1843,8 +1836,8 @@ export default function AdminDashboard() {
                               </>
                             )}
                             {account.status === 'rejected' && (
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="sm"
                                 className="text-green-600 hover:text-green-700"
                                 onClick={() => handleApproveRegistration(account.id, account.name)}
@@ -1881,8 +1874,8 @@ export default function AdminDashboard() {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <div className="flex space-x-4">
-                  <Input 
-                    placeholder="Search evaluations..." 
+                  <Input
+                    placeholder="Search evaluations..."
                     className="w-64"
                     value={userSearchTerm}
                     onChange={(e) => setUserSearchTerm(e.target.value)}
@@ -1913,8 +1906,8 @@ export default function AdminDashboard() {
                   </Select>
                 </div>
                 <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={handleRefreshEvaluatedReviews}
                     disabled={showRefreshModal}
                     className="flex items-center gap-2"
@@ -1934,7 +1927,7 @@ export default function AdminDashboard() {
                       </>
                     )}
                   </Button>
-                  <Button 
+                  <Button
                     variant="outline"
                     className="bg-purple-500 text-white hover:bg-purple-600 hover:text-white"
                   >
@@ -1943,7 +1936,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-                 <div className="max-h-[70vh] overflow-y-auto border border-gray-200 rounded-lg scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              <div className="max-h-[70vh] overflow-y-auto border border-gray-200 rounded-lg scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 <Table>
                   <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                     <TableRow>
@@ -1961,8 +1954,8 @@ export default function AdminDashboard() {
                       .filter(review => {
                         if (!userSearchTerm) return true;
                         return review.employeeName.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                               review.evaluatorName.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-                               review.employeeEmail.toLowerCase().includes(userSearchTerm.toLowerCase());
+                          review.evaluatorName.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                          review.employeeEmail.toLowerCase().includes(userSearchTerm.toLowerCase());
                       })
                       .map((review) => (
                         <TableRow key={review.id}>
@@ -1979,21 +1972,21 @@ export default function AdminDashboard() {
                                 {review.overallRating}%
                               </span>
                               <Badge className={
-                                review.overallRating >= 90 
+                                review.overallRating >= 90
                                   ? 'bg-green-100 text-green-800'
                                   : review.overallRating >= 80
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : review.overallRating >= 70
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-red-100 text-red-800'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : review.overallRating >= 70
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-red-100 text-red-800'
                               }>
-                                {review.overallRating >= 90 
+                                {review.overallRating >= 90
                                   ? 'Excellent'
                                   : review.overallRating >= 80
-                                  ? 'Good'
-                                  : review.overallRating >= 70
-                                  ? 'Satisfactory'
-                                  : 'Needs Improvement'
+                                    ? 'Good'
+                                    : review.overallRating >= 70
+                                      ? 'Satisfactory'
+                                      : 'Needs Improvement'
                                 }
                               </Badge>
                             </div>
@@ -2013,8 +2006,8 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => {
                                   toastMessages.generic.info('View Evaluation Details', `View detailed evaluation results for ${review.employeeName}`);
@@ -2022,8 +2015,8 @@ export default function AdminDashboard() {
                               >
                                 View Details
                               </Button>
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="sm"
                                 className="text-blue-600 hover:text-blue-700"
                                 onClick={() => {
@@ -2171,552 +2164,552 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-                 </div>
-       )}
+        </div>
+      )}
 
-       {/* Add User Modal */}
-       <Dialog open={isAddUserModalOpen} onOpenChangeAction={setIsAddUserModalOpen}>
-         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
-           <DialogHeader className="pb-4">
-             <DialogTitle>Add New User</DialogTitle>
-             <DialogDescription>Create a new user account with appropriate permissions</DialogDescription>
-           </DialogHeader>
-           
-           <div className="space-y-6 px-2">
-             {/* Personal Information */}
-             <div className="space-y-4">
-               <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="space-y-2">
-                   <Label htmlFor="name" className="text-sm font-medium">
-                     Full Name <span className="text-red-500">*</span>
-                   </Label>
-                   <Input
-                     id="name"
-                     placeholder="Enter full name"
-                     value={newUser.name}
-                     onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                   />
-                 </div>
-                 <div className="space-y-2">
-                   <Label htmlFor="email" className="text-sm font-medium">
-                     Email Address <span className="text-red-500">*</span>
-                   </Label>
-                   <Input
-                     id="email"
-                     type="email"
-                     placeholder="Enter email address"
-                     value={newUser.email}
-                     onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                   />
-                 </div>
-               </div>
-             </div>
+      {/* Add User Modal */}
+      <Dialog open={isAddUserModalOpen} onOpenChangeAction={setIsAddUserModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+          <DialogHeader className="pb-4">
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>Create a new user account with appropriate permissions</DialogDescription>
+          </DialogHeader>
 
-             {/* Job Information */}
-             <div className="space-y-4">
-               <h3 className="text-lg font-semibold text-gray-900">Job Information</h3>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="space-y-2">
-                   <Label htmlFor="position" className="text-sm font-medium">Position</Label>
-                   <Select value={newUser.position} onValueChange={(value) => setNewUser({ ...newUser, position: value })}>
-                     <SelectTrigger>
-                       <SelectValue placeholder="Select position" />
-                     </SelectTrigger>
-                     <SelectContent>
-                       {positionsData.map((position) => (
-                         <SelectItem key={position} value={position}>
-                           {position}
-                         </SelectItem>
-                       ))}
-                     </SelectContent>
-                   </Select>
-                 </div>
-                 <div className="space-y-2">
-                   <Label htmlFor="role" className="text-sm font-medium">Role</Label>
-                   <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
-                     <SelectTrigger>
-                       <SelectValue placeholder="Select role" />
-                     </SelectTrigger>
-                     <SelectContent>
-                       <SelectItem value="admin">Admin</SelectItem>
-                       <SelectItem value="hr">HR Manager</SelectItem>
-                       <SelectItem value="evaluator">Evaluator</SelectItem>
-                       <SelectItem value="employee">Employee</SelectItem>
-                     </SelectContent>
-                   </Select>
-                 </div>
-               </div>
-             </div>
+          <div className="space-y-6 px-2">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-sm font-medium">
+                    Full Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="name"
+                    placeholder="Enter full name"
+                    value={newUser.name}
+                    onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium">
+                    Email Address <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter email address"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
 
-             {/* Organization Information */}
-             <div className="space-y-4">
-               <h3 className="text-lg font-semibold text-gray-900">Organization</h3>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="space-y-2">
-                   <Label htmlFor="department" className="text-sm font-medium">Department</Label>
-                   <Select value={newUser.department} onValueChange={(value) => setNewUser({ ...newUser, department: value })}>
-                     <SelectTrigger>
-                       <SelectValue placeholder="Select department" />
-                     </SelectTrigger>
-                     <SelectContent>
-                       {departmentsData.map(dept => (
-                         <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
-                       ))}
-                     </SelectContent>
-                   </Select>
-                 </div>
-                 <div className="space-y-2">
-                   <Label htmlFor="branchCode" className="text-sm font-medium">Branch Code</Label>
-                   <Select value={newUser.branchCode} onValueChange={(value) => setNewUser({ ...newUser, branchCode: value })}>
-                     <SelectTrigger>
-                       <SelectValue placeholder="Select branch code" />
-                     </SelectTrigger>
-                     <SelectContent>
-                       {branchCodesData.map((code) => (
-                         <SelectItem key={code} value={code}>
-                           {code}
-                         </SelectItem>
-                       ))}
-                     </SelectContent>
-                   </Select>
-                 </div>
-               </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="space-y-2">
-                   <Label htmlFor="branch" className="text-sm font-medium">Branch</Label>
-                   <Select value={newUser.branch} onValueChange={(value) => setNewUser({ ...newUser, branch: value })}>
-                     <SelectTrigger>
-                       <SelectValue placeholder="Select branch" />
-                     </SelectTrigger>
-                     <SelectContent>
-                       {branchData.map(branch => (
-                         <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
-                       ))}
-                     </SelectContent>
-                   </Select>
-                 </div>
-               </div>
-             </div>
+            {/* Job Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Job Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="position" className="text-sm font-medium">Position</Label>
+                  <Select value={newUser.position} onValueChange={(value) => setNewUser({ ...newUser, position: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select position" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {positionsData.map((position) => (
+                        <SelectItem key={position} value={position}>
+                          {position}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role" className="text-sm font-medium">Role</Label>
+                  <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="hr">HR Manager</SelectItem>
+                      <SelectItem value="evaluator">Evaluator</SelectItem>
+                      <SelectItem value="employee">Employee</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
 
-             {/* Security Information */}
-             <div className="space-y-4">
-               <h3 className="text-lg font-semibold text-gray-900">Security</h3>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="space-y-2">
-                   <Label htmlFor="password" className="text-sm font-medium">
-                     Password <span className="text-red-500">*</span>
-                   </Label>
-                   <Input
-                     id="password"
-                     type="password"
-                     placeholder="Enter password"
-                     value={newUser.password}
-                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                   />
-                 </div>
-                 <div className="space-y-2">
-                   <Label htmlFor="confirmPassword" className="text-sm font-medium">
-                     Confirm Password <span className="text-red-500">*</span>
-                   </Label>
-                   <Input
-                     id="confirmPassword"
-                     type="password"
-                     placeholder="Confirm password"
-                     value={newUser.confirmPassword}
-                     onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
-                   />
-                 </div>
-               </div>
-               {newUser.password && newUser.confirmPassword && newUser.password !== newUser.confirmPassword && (
-                 <p className="text-sm text-red-600">Passwords do not match</p>
-               )}
-             </div>
+            {/* Organization Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Organization</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="department" className="text-sm font-medium">Department</Label>
+                  <Select value={newUser.department} onValueChange={(value) => setNewUser({ ...newUser, department: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departmentsData.map(dept => (
+                        <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="branchCode" className="text-sm font-medium">Branch Code</Label>
+                  <Select value={newUser.branchCode} onValueChange={(value) => setNewUser({ ...newUser, branchCode: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select branch code" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branchCodesData.map((code) => (
+                        <SelectItem key={code} value={code}>
+                          {code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="branch" className="text-sm font-medium">Branch</Label>
+                  <Select value={newUser.branch} onValueChange={(value) => setNewUser({ ...newUser, branch: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branchData.map(branch => (
+                        <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
 
-             {/* Permissions */}
-             <div className="space-y-4">
-               <h3 className="text-lg font-semibold text-gray-900">Permissions</h3>
-               <div className="space-y-3">
-                 <div className="flex items-center space-x-2">
-                   <input 
-                     type="checkbox" 
-                     id="dashboard-access" 
-                     defaultChecked 
-                     className="rounded border-gray-300"
-                   />
-                   <Label htmlFor="dashboard-access" className="text-sm">Dashboard Access</Label>
-                 </div>
-                 <div className="flex items-center space-x-2">
-                   <input 
-                     type="checkbox" 
-                     id="user-management" 
-                     className="rounded border-gray-300"
-                   />
-                   <Label htmlFor="user-management" className="text-sm">User Management</Label>
-                 </div>
-                 <div className="flex items-center space-x-2">
-                   <input 
-                     type="checkbox" 
-                     id="evaluation-access" 
-                     defaultChecked 
-                     className="rounded border-gray-300"
-                   />
-                   <Label htmlFor="evaluation-access" className="text-sm">Evaluation Access</Label>
-                 </div>
-                 <div className="flex items-center space-x-2">
-                   <input 
-                     type="checkbox" 
-                     id="reports-access" 
-                     className="rounded border-gray-300"
-                   />
-                   <Label htmlFor="reports-access" className="text-sm">Reports Access</Label>
-                 </div>
-               </div>
-             </div>
-           </div>
+            {/* Security Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Security</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-sm font-medium">
+                    Password <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-sm font-medium">
+                    Confirm Password <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Confirm password"
+                    value={newUser.confirmPassword}
+                    onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
+                  />
+                </div>
+              </div>
+              {newUser.password && newUser.confirmPassword && newUser.password !== newUser.confirmPassword && (
+                <p className="text-sm text-red-600">Passwords do not match</p>
+              )}
+            </div>
 
-           <DialogFooter className="pt-6 px-2">
-             <div className="flex justify-end space-x-4 w-full">
-               <Button 
-                 variant="outline" 
-                 onClick={() => {
-                   resetUserForm();
-                   setIsAddUserModalOpen(false);
-                 }}
-               >
-                 Cancel
-               </Button>
-               <Button 
-                 onClick={handleAddUser}
-                 className="bg-green-500 text-white hover:bg-green-600 hover:text-white"
-               >
-                 Add User
-               </Button>
-             </div>
-           </DialogFooter>
-         </DialogContent>
-       </Dialog>
+            {/* Permissions */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Permissions</h3>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="dashboard-access"
+                    defaultChecked
+                    className="rounded border-gray-300"
+                  />
+                  <Label htmlFor="dashboard-access" className="text-sm">Dashboard Access</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="user-management"
+                    className="rounded border-gray-300"
+                  />
+                  <Label htmlFor="user-management" className="text-sm">User Management</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="evaluation-access"
+                    defaultChecked
+                    className="rounded border-gray-300"
+                  />
+                  <Label htmlFor="evaluation-access" className="text-sm">Evaluation Access</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="reports-access"
+                    className="rounded border-gray-300"
+                  />
+                  <Label htmlFor="reports-access" className="text-sm">Reports Access</Label>
+                </div>
+              </div>
+            </div>
+          </div>
 
-       {/* Suspend Employee Modal */}
-       <Dialog open={isSuspendModalOpen} onOpenChangeAction={setIsSuspendModalOpen}>
-         <DialogContent className="max-w-md p-6">
-           <DialogHeader className="pb-4 bg-yellow-200/70 rounded-lg">
-             <DialogTitle className='text-black'>Suspend Employee</DialogTitle>
-             <DialogDescription className='text-black'>
-               Suspend {selectedEmployee?.name} from the system
-             </DialogDescription>
-           </DialogHeader>
-           
-           <div className="space-y-4 px-2">
-             <div className="space-y-2">
-               <Label htmlFor="reason" className="text-sm font-medium mt-5">
-                 Suspension Reason <span className="text-red-500">*</span>
-               </Label>
-               <DropdownMenu>
-                 <DropdownMenuTrigger asChild>
-                   <Button variant="outline" className="w-full justify-between">
-                     {suspendForm.reason || "Select suspension reason"}
-                     <ChevronDown className="h-4 w-4 opacity-50" />
-                   </Button>
-                 </DropdownMenuTrigger>
-                 <DropdownMenuContent className="w-full">
-                   <DropdownMenuItem 
-                     onClick={() => setSuspendForm({ ...suspendForm, reason: "Policy violation - unauthorized access" })}
-                     className={suspendForm.reason === "Policy violation - unauthorized access" ? "bg-accent" : ""}
-                   >
-                     Policy violation - unauthorized access
-                   </DropdownMenuItem>
-                   <DropdownMenuItem 
-                     onClick={() => setSuspendForm({ ...suspendForm, reason: "Performance issues - missed deadlines" })}
-                     className={suspendForm.reason === "Performance issues - missed deadlines" ? "bg-accent" : ""}
-                   >
-                     Performance issues - missed deadlines
-                   </DropdownMenuItem>
-                   <DropdownMenuItem 
-                     onClick={() => setSuspendForm({ ...suspendForm, reason: "Security breach - shared credentials" })}
-                     className={suspendForm.reason === "Security breach - shared credentials" ? "bg-accent" : ""}
-                   >
-                     Security breach - shared credentials
-                   </DropdownMenuItem>
-                   <DropdownMenuItem 
-                     onClick={() => setSuspendForm({ ...suspendForm, reason: "Inappropriate behavior" })}
-                     className={suspendForm.reason === "Inappropriate behavior" ? "bg-accent" : ""}
-                   >
-                     Inappropriate behavior
-                   </DropdownMenuItem>
-                   <DropdownMenuItem 
-                     onClick={() => setSuspendForm({ ...suspendForm, reason: "Attendance violations" })}
-                     className={suspendForm.reason === "Attendance violations" ? "bg-accent" : ""}
-                   >
-                     Attendance violations
-                   </DropdownMenuItem>
-                   <DropdownMenuItem 
-                     onClick={() => setSuspendForm({ ...suspendForm, reason: "Data misuse" })}
-                     className={suspendForm.reason === "Data misuse" ? "bg-accent" : ""}
-                   >
-                     Data misuse
-                   </DropdownMenuItem>
-                   <DropdownMenuItem 
-                     onClick={() => setSuspendForm({ ...suspendForm, reason: "Confidentiality breach" })}
-                     className={suspendForm.reason === "Confidentiality breach" ? "bg-accent" : ""}
-                   >
-                     Confidentiality breach
-                   </DropdownMenuItem>
-                   <DropdownMenuItem 
-                     onClick={() => setSuspendForm({ ...suspendForm, reason: "Workplace harassment" })}
-                     className={suspendForm.reason === "Workplace harassment" ? "bg-accent" : ""}
-                   >
-                     Workplace harassment
-                   </DropdownMenuItem>
-                   <DropdownMenuItem 
-                     onClick={() => setSuspendForm({ ...suspendForm, reason: "Substance abuse" })}
-                     className={suspendForm.reason === "Substance abuse" ? "bg-accent" : ""}
-                   >
-                     Substance abuse
-                   </DropdownMenuItem>
-                   <DropdownMenuItem 
-                     onClick={() => setSuspendForm({ ...suspendForm, reason: "Other - please specify" })}
-                     className={suspendForm.reason === "Other - please specify" ? "bg-accent" : ""}
-                   >
-                     Other - please specify
-                   </DropdownMenuItem>
-                 </DropdownMenuContent>
-               </DropdownMenu>
-             </div>
-             
-             <div className="space-y-2">
-               <Label htmlFor="duration" className="text-sm font-medium">
-                 Suspension Duration <span className="text-red-500">*</span>
-               </Label>
-               <Select 
-                 value={suspendForm.duration} 
-                 onValueChange={(value) => setSuspendForm({ ...suspendForm, duration: value })}
-               >
-                 <SelectTrigger>
-                   <SelectValue placeholder="Select duration" />
-                 </SelectTrigger>
-                 <SelectContent>
-                   <SelectItem value="1 day">1 Day</SelectItem>
-                   <SelectItem value="3 days">3 Days</SelectItem>
-                   <SelectItem value="7 days">7 Days</SelectItem>
-                   <SelectItem value="14 days">14 Days</SelectItem>
-                   <SelectItem value="30 days">30 Days</SelectItem>
-                   <SelectItem value="60 days">60 Days</SelectItem>
-                   <SelectItem value="90 days">90 Days</SelectItem>
-                   <SelectItem value="Indefinite">Indefinite</SelectItem>
-                 </SelectContent>
-               </Select>
-             </div>
-             
-             <div className="space-y-2">
-               <Label htmlFor="suspendedBy" className="text-sm font-medium">
-                 Suspended By
-               </Label>
-               <Select 
-                 value={suspendForm.suspendedBy} 
-                 onValueChange={(value) => setSuspendForm({ ...suspendForm, suspendedBy: value })}
-               >
-                 <SelectTrigger>
-                   <SelectValue placeholder="Select who suspended" />
-                 </SelectTrigger>
-                 <SelectContent>
-                   <SelectItem value="Admin">Admin</SelectItem>
-                   <SelectItem value="HR Manager">HR Manager</SelectItem>
-                   <SelectItem value="Department Manager">Department Manager</SelectItem>
-                   <SelectItem value="IT Manager">IT Manager</SelectItem>
-                   <SelectItem value="Supervisor">Supervisor</SelectItem>
-                   <SelectItem value="System">System</SelectItem>
-                 </SelectContent>
-               </Select>
-             </div>
-           </div>
-           
-           <DialogFooter className="pt-6 px-2">
-             <div className="flex justify-end space-x-4 w-full">
-               <Button className='bg-blue-400/90 text-white'
-                 variant="outline" 
-                 onClick={() => {
-                   resetSuspendForm();
-                   setIsSuspendModalOpen(false);
-                 }}
-               >
-                 Cancel
-               </Button>
-               <Button 
-                 className='bg-red-400/100 text-white'
-                 onClick={handleSuspendEmployee}
-               >
-                  ❌ Suspend Employee
-               </Button>
-             </div>
-           </DialogFooter>
-         </DialogContent>
-       </Dialog>
+          <DialogFooter className="pt-6 px-2">
+            <div className="flex justify-end space-x-4 w-full">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  resetUserForm();
+                  setIsAddUserModalOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAddUser}
+                className="bg-green-500 text-white hover:bg-green-600 hover:text-white"
+              >
+                Add User
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-       {/* View Details Modal */}
-       <Dialog open={isViewDetailsModalOpen} onOpenChangeAction={setIsViewDetailsModalOpen}>
-         <DialogContent className="max-w-lg p-4">
-           <DialogHeader className="pb-3">
-             <DialogTitle className="flex items-center gap-2">
-               <span className="text-xl">📋</span>
-               Suspension Details
-             </DialogTitle>
-             <DialogDescription>
-               {selectedSuspendedEmployee?.name}
-             </DialogDescription>
-           </DialogHeader>
-           
-           <div className="space-y-4 px-2">
-             {/* Key Information */}
-             <div className="grid grid-cols-2 gap-3 text-sm">
-               <div>
-                 <span className="font-medium text-gray-600">Date:</span>
-                 <div>{selectedSuspendedEmployee?.suspensionDate ? new Date(selectedSuspendedEmployee.suspensionDate).toLocaleDateString() : 'N/A'}</div>
-               </div>
-               <div>
-                 <span className="font-medium text-gray-600">Duration:</span>
-                 <div>{selectedSuspendedEmployee?.suspensionDuration}</div>
-               </div>
-               <div>
-                 <span className="font-medium text-gray-600">Suspended By:</span>
-                 <div>{selectedSuspendedEmployee?.suspendedBy}</div>
-               </div>
-               {selectedSuspendedEmployee?.status === 'reinstated' && (
-                 <>
-                   <div>
-                     <span className="font-medium text-gray-600">Reinstated Date:</span>
-                     <div>{selectedSuspendedEmployee?.reinstatedDate ? new Date(selectedSuspendedEmployee.reinstatedDate).toLocaleDateString() : 'N/A'}</div>
-                   </div>
-                   <div>
-                     <span className="font-medium text-gray-600">Reinstated By:</span>
-                     <div>{selectedSuspendedEmployee?.reinstatedBy || 'N/A'}</div>
-                   </div>
-                 </>
-               )}
-               <div>
-                 <span className="font-medium text-gray-600">Status:</span>
-                 <Badge className={getSuspensionStatusColor(selectedSuspendedEmployee?.status || '')}>
-                   {selectedSuspendedEmployee?.status?.replace('_', ' ').toUpperCase()}
-                 </Badge>
-               </div>
-             </div>
+      {/* Suspend Employee Modal */}
+      <Dialog open={isSuspendModalOpen} onOpenChangeAction={setIsSuspendModalOpen}>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader className="pb-4 bg-yellow-200/70 rounded-lg">
+            <DialogTitle className='text-black'>Suspend Employee</DialogTitle>
+            <DialogDescription className='text-black'>
+              Suspend {selectedEmployee?.name} from the system
+            </DialogDescription>
+          </DialogHeader>
 
-             {/* Violation Reason */}
-             <div className="space-y-2">
-               <Label className="text-sm font-medium text-gray-600">Reason for Suspension</Label>
-               <div className="p-3 bg-gray-50 rounded-lg border text-sm">
-                 {selectedSuspendedEmployee?.suspensionReason}
-               </div>
-             </div>
-           </div>
-           
-           <DialogFooter className="pt-4 px-2">
-             <div className="flex justify-end space-x-3 w-full">
-               <Button 
-                 variant="outline" 
-                 size="sm"
-                 onClick={() => setIsViewDetailsModalOpen(false)}
-               >
-                 Close
-               </Button>
-               {selectedSuspendedEmployee?.status === 'suspended' && (
-                 <Button 
-                   size="sm"
-                   className="bg-green-600 hover:bg-green-700 text-white"
-                   onClick={() => {
-                     handleReinstateEmployee(selectedSuspendedEmployee.id);
-                     setIsViewDetailsModalOpen(false);
-                   }}
-                 >
-                   Reinstate
-                 </Button>
-               )}
-             </div>
-           </DialogFooter>
-         </DialogContent>
-       </Dialog>
+          <div className="space-y-4 px-2">
+            <div className="space-y-2">
+              <Label htmlFor="reason" className="text-sm font-medium mt-5">
+                Suspension Reason <span className="text-red-500">*</span>
+              </Label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    {suspendForm.reason || "Select suspension reason"}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-full">
+                  <DropdownMenuItem
+                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Policy violation - unauthorized access" })}
+                    className={suspendForm.reason === "Policy violation - unauthorized access" ? "bg-accent" : ""}
+                  >
+                    Policy violation - unauthorized access
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Performance issues - missed deadlines" })}
+                    className={suspendForm.reason === "Performance issues - missed deadlines" ? "bg-accent" : ""}
+                  >
+                    Performance issues - missed deadlines
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Security breach - shared credentials" })}
+                    className={suspendForm.reason === "Security breach - shared credentials" ? "bg-accent" : ""}
+                  >
+                    Security breach - shared credentials
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Inappropriate behavior" })}
+                    className={suspendForm.reason === "Inappropriate behavior" ? "bg-accent" : ""}
+                  >
+                    Inappropriate behavior
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Attendance violations" })}
+                    className={suspendForm.reason === "Attendance violations" ? "bg-accent" : ""}
+                  >
+                    Attendance violations
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Data misuse" })}
+                    className={suspendForm.reason === "Data misuse" ? "bg-accent" : ""}
+                  >
+                    Data misuse
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Confidentiality breach" })}
+                    className={suspendForm.reason === "Confidentiality breach" ? "bg-accent" : ""}
+                  >
+                    Confidentiality breach
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Workplace harassment" })}
+                    className={suspendForm.reason === "Workplace harassment" ? "bg-accent" : ""}
+                  >
+                    Workplace harassment
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Substance abuse" })}
+                    className={suspendForm.reason === "Substance abuse" ? "bg-accent" : ""}
+                  >
+                    Substance abuse
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Other - please specify" })}
+                    className={suspendForm.reason === "Other - please specify" ? "bg-accent" : ""}
+                  >
+                    Other - please specify
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
-       {/* Delete Confirmation Modal */}
-       <Dialog open={isDeleteModalOpen} onOpenChangeAction={(open) => {
-         setIsDeleteModalOpen(open);
-         if (!open) {
-           setEmployeeToDelete(null);
-           setReinstatedEmployeeToDelete(null);
-         }
-       }}>
-         <DialogContent className="max-w-md p-6">
-           <DialogHeader className="pb-4 bg-red-50 rounded-lg">
-             <DialogTitle className='text-red-800 flex items-center gap-2'>
-               <span className="text-xl">⚠️</span>
-               Delete Employee
-             </DialogTitle>
-             <DialogDescription className='text-red-700'>
-               This action cannot be undone. Are you sure you want to permanently delete {employeeToDelete?.name || reinstatedEmployeeToDelete?.name}?
-             </DialogDescription>
-           </DialogHeader>
-           
-           <div className="space-y-4 px-2 mt-8">
-             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-               <div className="flex items-start space-x-3">
-                 <div className="flex-shrink-0">
-                   <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                   </svg>
-                 </div>
-                 <div className="text-sm text-red-700">
-                   <p className="font-medium">Warning: This will permanently delete:</p>
-                   <ul className="mt-2 list-disc list-inside space-y-1">
-                     <li>Employee profile and data</li>
-                     <li>All evaluation records</li>
-                     <li>Access permissions</li>
-                     <li>Associated files and documents</li>
-                   </ul>
-                 </div>
-               </div>
-             </div>
+            <div className="space-y-2">
+              <Label htmlFor="duration" className="text-sm font-medium">
+                Suspension Duration <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={suspendForm.duration}
+                onValueChange={(value) => setSuspendForm({ ...suspendForm, duration: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select duration" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1 day">1 Day</SelectItem>
+                  <SelectItem value="3 days">3 Days</SelectItem>
+                  <SelectItem value="7 days">7 Days</SelectItem>
+                  <SelectItem value="14 days">14 Days</SelectItem>
+                  <SelectItem value="30 days">30 Days</SelectItem>
+                  <SelectItem value="60 days">60 Days</SelectItem>
+                  <SelectItem value="90 days">90 Days</SelectItem>
+                  <SelectItem value="Indefinite">Indefinite</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-               <div className="text-sm text-gray-700">
-                 <p className="font-medium">Employee Details:</p>
-                 <div className="mt-2 space-y-1">
-                   <p><span className="font-medium">Name:</span> {employeeToDelete?.name}</p>
-                   <p><span className="font-medium">Email:</span> {employeeToDelete?.email}</p>
-                   <p><span className="font-medium">Position:</span> {employeeToDelete?.position}</p>
-                   <p><span className="font-medium">Department:</span> {employeeToDelete?.department}</p>
-                 </div>
-               </div>
-             </div>
-           </div>
-           
-           <DialogFooter className="pt-6 px-2">
-             <div className="flex justify-end space-x-4 w-full">
-               <Button 
-                 variant="outline" 
-                 onClick={() => {
-                   setIsDeleteModalOpen(false);
-                   setEmployeeToDelete(null);
-                   setReinstatedEmployeeToDelete(null);
-                 }}
-                 className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
-               >
-                 Cancel
-               </Button>
-               <Button 
-                 className='bg-red-600 hover:bg-red-700 text-white'
-                 onClick={() => {
-                   if (reinstatedEmployeeToDelete) {
-                     handleDeleteReinstatedEmployee();
-                   } else {
-                     handleDeleteEmployee();
-                   }
-                 }}
-               >
-                 🗑️ Delete Permanently
-               </Button>
-             </div>
-           </DialogFooter>
-         </DialogContent>
-       </Dialog>
+            <div className="space-y-2">
+              <Label htmlFor="suspendedBy" className="text-sm font-medium">
+                Suspended By
+              </Label>
+              <Select
+                value={suspendForm.suspendedBy}
+                onValueChange={(value) => setSuspendForm({ ...suspendForm, suspendedBy: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select who suspended" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                  <SelectItem value="HR Manager">HR Manager</SelectItem>
+                  <SelectItem value="Department Manager">Department Manager</SelectItem>
+                  <SelectItem value="IT Manager">IT Manager</SelectItem>
+                  <SelectItem value="Supervisor">Supervisor</SelectItem>
+                  <SelectItem value="System">System</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="pt-6 px-2">
+            <div className="flex justify-end space-x-4 w-full">
+              <Button className='bg-blue-400/90 text-white'
+                variant="outline"
+                onClick={() => {
+                  resetSuspendForm();
+                  setIsSuspendModalOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className='bg-red-400/100 text-white'
+                onClick={handleSuspendEmployee}
+              >
+                ❌ Suspend Employee
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Details Modal */}
+      <Dialog open={isViewDetailsModalOpen} onOpenChangeAction={setIsViewDetailsModalOpen}>
+        <DialogContent className="max-w-lg p-4">
+          <DialogHeader className="pb-3">
+            <DialogTitle className="flex items-center gap-2">
+              <span className="text-xl">📋</span>
+              Suspension Details
+            </DialogTitle>
+            <DialogDescription>
+              {selectedSuspendedEmployee?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 px-2">
+            {/* Key Information */}
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="font-medium text-gray-600">Date:</span>
+                <div>{selectedSuspendedEmployee?.suspensionDate ? new Date(selectedSuspendedEmployee.suspensionDate).toLocaleDateString() : 'N/A'}</div>
+              </div>
+              <div>
+                <span className="font-medium text-gray-600">Duration:</span>
+                <div>{selectedSuspendedEmployee?.suspensionDuration}</div>
+              </div>
+              <div>
+                <span className="font-medium text-gray-600">Suspended By:</span>
+                <div>{selectedSuspendedEmployee?.suspendedBy}</div>
+              </div>
+              {selectedSuspendedEmployee?.status === 'reinstated' && (
+                <>
+                  <div>
+                    <span className="font-medium text-gray-600">Reinstated Date:</span>
+                    <div>{selectedSuspendedEmployee?.reinstatedDate ? new Date(selectedSuspendedEmployee.reinstatedDate).toLocaleDateString() : 'N/A'}</div>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Reinstated By:</span>
+                    <div>{selectedSuspendedEmployee?.reinstatedBy || 'N/A'}</div>
+                  </div>
+                </>
+              )}
+              <div>
+                <span className="font-medium text-gray-600">Status:</span>
+                <Badge className={getSuspensionStatusColor(selectedSuspendedEmployee?.status || '')}>
+                  {selectedSuspendedEmployee?.status?.replace('_', ' ').toUpperCase()}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Violation Reason */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-600">Reason for Suspension</Label>
+              <div className="p-3 bg-gray-50 rounded-lg border text-sm">
+                {selectedSuspendedEmployee?.suspensionReason}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="pt-4 px-2">
+            <div className="flex justify-end space-x-3 w-full">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsViewDetailsModalOpen(false)}
+              >
+                Close
+              </Button>
+              {selectedSuspendedEmployee?.status === 'suspended' && (
+                <Button
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => {
+                    handleReinstateEmployee(selectedSuspendedEmployee.id);
+                    setIsViewDetailsModalOpen(false);
+                  }}
+                >
+                  Reinstate
+                </Button>
+              )}
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={isDeleteModalOpen} onOpenChangeAction={(open) => {
+        setIsDeleteModalOpen(open);
+        if (!open) {
+          setEmployeeToDelete(null);
+          setReinstatedEmployeeToDelete(null);
+        }
+      }}>
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader className="pb-4 bg-red-50 rounded-lg">
+            <DialogTitle className='text-red-800 flex items-center gap-2'>
+              <span className="text-xl">⚠️</span>
+              Delete Employee
+            </DialogTitle>
+            <DialogDescription className='text-red-700'>
+              This action cannot be undone. Are you sure you want to permanently delete {employeeToDelete?.name || reinstatedEmployeeToDelete?.name}?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 px-2 mt-8">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="text-sm text-red-700">
+                  <p className="font-medium">Warning: This will permanently delete:</p>
+                  <ul className="mt-2 list-disc list-inside space-y-1">
+                    <li>Employee profile and data</li>
+                    <li>All evaluation records</li>
+                    <li>Access permissions</li>
+                    <li>Associated files and documents</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <div className="text-sm text-gray-700">
+                <p className="font-medium">Employee Details:</p>
+                <div className="mt-2 space-y-1">
+                  <p><span className="font-medium">Name:</span> {employeeToDelete?.name}</p>
+                  <p><span className="font-medium">Email:</span> {employeeToDelete?.email}</p>
+                  <p><span className="font-medium">Position:</span> {employeeToDelete?.position}</p>
+                  <p><span className="font-medium">Department:</span> {employeeToDelete?.department}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="pt-6 px-2">
+            <div className="flex justify-end space-x-4 w-full">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setEmployeeToDelete(null);
+                  setReinstatedEmployeeToDelete(null);
+                }}
+                className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
+              >
+                Cancel
+              </Button>
+              <Button
+                className='bg-red-600 hover:bg-red-700 text-white'
+                onClick={() => {
+                  if (reinstatedEmployeeToDelete) {
+                    handleDeleteReinstatedEmployee();
+                  } else {
+                    handleDeleteEmployee();
+                  }
+                }}
+              >
+                🗑️ Delete Permanently
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
 
       {/* Edit User Modal */}
@@ -2739,5 +2732,5 @@ export default function AdminDashboard() {
         duration={2000}
       />
     </DashboardShell>
-   );
- }
+  );
+}
