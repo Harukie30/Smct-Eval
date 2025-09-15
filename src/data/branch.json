@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1,
+    "name": "Head Office",
+    "location": "Manila, Philippines",
+    "manager": "Maria Santos",
+    "employeeCount": 15,
+    "performance": 95
+  },
+  {
+    "id": 2,
+    "name": "Cebu Branch",
+    "location": "Cebu City, Philippines",
+    "manager": "Carlos Reyes",
+    "employeeCount": 8,
+    "performance": 88
+  },
+  {
+    "id": 3,
+    "name": "Davao Branch",
+    "location": "Davao City, Philippines",
+    "manager": "Ana Cruz",
+    "employeeCount": 6,
+    "performance": 85
+  },
+  {
+    "id": 4,
+    "name": "Bacolod Branch",
+    "location": "Bacolod City, Philippines",
+    "manager": "Jose Mendoza",
+    "employeeCount": 5,
+    "performance": 82
+  },
+  {
+    "id": 5,
+    "name": "Iloilo Branch",
+    "location": "Iloilo City, Philippines",
+    "manager": "Carmen Lopez",
+    "employeeCount": 4,
+    "performance": 80
+  },
+  {
+    "id": 6,
+    "name": "Cagayan de Oro Branch",
+    "location": "Cagayan de Oro, Philippines",
+    "manager": "Ramon Torres",
+    "employeeCount": 5,
+    "performance": 83
+  },
+  {
+    "id": 7,
+    "name": "Baguio Branch",
+    "location": "Baguio City, Philippines",
+    "manager": "Luzviminda Santos",
+    "employeeCount": 3,
+    "performance": 78
+  },
+  {
+    "id": 8,
+    "name": "Zamboanga Branch",
+    "location": "Zamboanga City, Philippines",
+    "manager": "Antonio Rivera",
+    "employeeCount": 4,
+    "performance": 81
+  },
+  {
+    "id": 9,
+    "name": "General Santos Branch",
+    "location": "General Santos City, Philippines",
+    "manager": "Elena Morales",
+    "employeeCount": 3,
+    "performance": 79
+  }
+]
