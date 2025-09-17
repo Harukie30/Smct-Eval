@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import SignaturePad from '@/components/SignaturePad';
 
 interface User {
   id: number;
@@ -18,6 +19,7 @@ interface User {
   contact?: string;
   hireDate?: string;
   isActive?: boolean;
+  signature?: string;
 }
 
 interface EditUserModalProps {
@@ -51,7 +53,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     password: '',
     contact: '',
     hireDate: '',
-    isActive: true
+    isActive: true,
+    signature: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -72,7 +75,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         password: user.password || '',
         contact: user.contact || '',
         hireDate: user.hireDate || '',
-        isActive: user.isActive !== undefined ? user.isActive : true
+        isActive: user.isActive !== undefined ? user.isActive : true,
+        signature: user.signature || ''
       });
       setErrors({});
     }
@@ -153,7 +157,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   if (!user) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChangeAction={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChangeAction={(open: boolean) => !open && onClose()}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-6 bg-blue-100">
         <DialogHeader className="pb-6">
           <DialogTitle className="text-xl font-semibold">Edit User Information</DialogTitle>
@@ -362,6 +366,23 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* Digital Signature - Full Width */}
+        <div className="w-full space-y-2 pt-4 mt-4 border-t border-gray-200">
+          <Label htmlFor="signature" className="text-base font-medium">Digital Signature</Label>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <SignaturePad
+              value={formData.signature || ''}
+              onChangeAction={(signature) => handleInputChange('signature', signature)}
+              className="w-full"
+              required={false}
+              hasError={false}
+            />
+          </div>
+          <p className="text-sm text-gray-500">
+            Update the user's digital signature if needed. This signature will be used for official documents.
+          </p>
         </div>
 
         <DialogFooter className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">

@@ -15,6 +15,13 @@ interface UseAutoRefreshReturn {
   refreshModalMessage: string;
   handleRefreshModalComplete: () => void;
   refreshDashboardData: (showModal?: boolean, isAutoRefresh?: boolean) => Promise<void>;
+  refreshModalProps: {
+    isOpen: boolean;
+    message: string;
+    gifPath: string;
+    duration: number;
+    onComplete: () => void;
+  };
 }
 
 export const useAutoRefresh = ({
@@ -99,10 +106,20 @@ export const useAutoRefresh = ({
     hasAutoRefreshed.current = false;
   }, []);
 
+  // Refresh Modal Props
+  const refreshModalProps = {
+    isOpen: showRefreshModal,
+    message: refreshModalMessage,
+    gifPath: gifPath,
+    duration: duration,
+    onComplete: handleRefreshModalComplete
+  };
+
   return {
     showRefreshModal,
     refreshModalMessage,
     handleRefreshModalComplete,
-    refreshDashboardData
+    refreshDashboardData,
+    refreshModalProps
   };
 };

@@ -24,10 +24,22 @@ type Submission = {
   overallRating?: number;
 };
 
+interface ApprovalData {
+  id: string;
+  approvedAt: string;
+  employeeSignature: string;
+  employeeName: string;
+  employeeEmail: string;
+}
+
 interface ViewResultsModalProps {
   isOpen: boolean;
   onCloseAction: () => void;
   submission: Submission | null;
+  onApprove?: (submissionId: string) => void;
+  isApproved?: boolean;
+  showApproval?: boolean;
+  approvalData?: ApprovalData | null;
 }
 
 // Helper functions for rating calculations
@@ -88,8 +100,9 @@ const getQuarterColor = (quarter: string) => {
   return 'bg-gray-100 text-gray-800';
 };
 
-export default function ViewResultsModal({ isOpen, onCloseAction, submission }: ViewResultsModalProps) {
+export default function ViewResultsModal({ isOpen, onCloseAction, submission, onApprove, isApproved = false, showApproval = false, approvalData = null }: ViewResultsModalProps) {
   if (!submission) return null;
+
 
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
@@ -1426,6 +1439,104 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission }: 
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Approval Section - Only show when opened from Evaluation History tab */}
+                  {showApproval && (
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <div className="space-y-4">
+                        <div className="space-y-4">
+                          {/* Signature Display - At the Very Top */}
+                          {isApproved && approvalData && (
+                            <div className="flex flex-col items-center space-y-3 py-4 border-b border-gray-200">
+                              <span className="text-sm font-medium text-gray-700">Employee Signature:</span>
+                              <div className="border-2 border-gray-400 rounded-lg p-4 bg-white min-w-[250px] min-h-[80px] flex items-center justify-center shadow-sm">
+                                {approvalData.employeeSignature ? (
+                                  <img 
+                                    src={approvalData.employeeSignature} 
+                                    alt="Employee Signature" 
+                                    className="max-h-16 max-w-full object-contain"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                      const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                                      if (nextElement) {
+                                        nextElement.style.display = 'block';
+                                      }
+                                    }}
+                                  />
+                                ) : null}
+                                {!approvalData.employeeSignature && (
+                                  <span className="text-sm text-gray-500 font-medium">No signature</span>
+                                )}
+                              </div>
+                              <div className="text-center">
+                                <span className="text-sm text-gray-600">Signed by: </span>
+                                <span className="text-sm font-medium text-gray-900">{approvalData.employeeName}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="text-lg font-semibold text-gray-900 mb-2">Employee Acknowledgement</h4>
+                              <p className="text-sm text-gray-600">
+                                By approving this evaluation, you acknowledge that you have reviewed and understood your performance assessment.
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-4">
+                              {isApproved ? (
+                                <div className="flex items-center space-x-2">
+                                  <Badge className="bg-green-100 text-green-800">
+                                    ✓ Approved
+                                  </Badge>
+                                  <span className="text-sm text-gray-600">Acknowledged</span>
+                                </div>
+                              ) : (
+                                <Button
+                                  onClick={() => onApprove?.(submission.id.toString())}
+                                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2"
+                                >
+                                  Approve Evaluation
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Approval Details - Only show when approved */}
+                        {isApproved && approvalData && (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+
+                            {/* Approval Details */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="p-3 bg-white border border-gray-200 rounded-lg">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                  <span className="text-sm font-medium text-gray-700">Status</span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-lg">✓</span>
+                                  <span className="text-sm font-medium text-green-600">Approved</span>
+                                </div>
+                              </div>
+                              
+                              <div className="p-3 bg-white border border-gray-200 rounded-lg">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                  <span className="text-sm font-medium text-gray-700">Approved On</span>
+                                </div>
+                                <div className="text-sm text-gray-700">
+                                  <div>{new Date(approvalData.approvedAt).toLocaleDateString()}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {new Date(approvalData.approvedAt).toLocaleTimeString()}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}

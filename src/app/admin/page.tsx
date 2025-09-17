@@ -48,6 +48,7 @@ interface Employee {
   bio?: string | null;
   contact?: string;
   updatedAt?: string;
+  approvedDate?: string; // Date when the user was approved
 }
 
 interface SystemMetrics {
@@ -383,7 +384,8 @@ export default function AdminDashboard() {
           avatar: account.avatar,
           bio: account.bio,
           contact: account.contact,
-          updatedAt: account.updatedAt
+          updatedAt: account.updatedAt,
+          approvedDate: account.approvedDate
         }));
 
       return employees;
@@ -658,7 +660,10 @@ export default function AdminDashboard() {
       .filter(emp => emp.status === 'suspended') // Only currently suspended
       .map(emp => emp.id);
 
-    return employees.filter(emp => !currentlySuspendedIds.includes(emp.id));
+    return employees.filter(emp => 
+      !currentlySuspendedIds.includes(emp.id) && 
+      (emp.isActive !== false) // Include employees where isActive is true or undefined
+    );
   };
 
   // Function to check if an employee was previously suspended and reinstated
@@ -1655,9 +1660,11 @@ export default function AdminDashboard() {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
+                        <TableHead>Position</TableHead>
                         <TableHead>Department</TableHead>
+                        <TableHead>Role</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Approved Date</TableHead>
                         <TableHead>Last Login</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -1667,10 +1674,11 @@ export default function AdminDashboard() {
                         <TableRow key={employee.id}>
                           <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{employee.email}</TableCell>
+                          <TableCell>{employee.position}</TableCell>
+                          <TableCell>{employee.department}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{employee.role}</Badge>
                           </TableCell>
-                          <TableCell>{employee.department}</TableCell>
                           <TableCell>
                             {wasEmployeeReinstated(employee.id) ? (
                               <Badge
@@ -1683,7 +1691,18 @@ export default function AdminDashboard() {
                               <Badge className="text-green-600 bg-green-100">Active</Badge>
                             )}
                           </TableCell>
-                          <TableCell>{new Date().toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            {employee.approvedDate ? 
+                              new Date(employee.approvedDate).toLocaleDateString() : 
+                              'N/A'
+                            }
+                          </TableCell>
+                          <TableCell>
+                            {employee.lastLogin ? 
+                              new Date(employee.lastLogin).toLocaleDateString() : 
+                              'Never'
+                            }
+                          </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
                               <Button
@@ -1818,7 +1837,7 @@ export default function AdminDashboard() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-green-600 hover:text-green-700"
+                                  className="text-white bg-green-500 hover:text-white hover:bg-green-600"
                                   onClick={() => handleApproveRegistration(account.id, account.name)}
                                 >
                                   Approve
@@ -1826,7 +1845,7 @@ export default function AdminDashboard() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-red-600 hover:text-red-700"
+                                  className="text-white bg-red-500 hover:bg-red-600 hover:text-white"
                                   onClick={() => handleRejectRegistration(account.id, account.name)}
                                 >
                                   Reject

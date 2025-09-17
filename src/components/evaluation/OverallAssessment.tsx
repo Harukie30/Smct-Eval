@@ -21,6 +21,16 @@ interface OverallAssessmentProps {
         department: string;
         role: string;
         hireDate: string;
+        signature?: string;
+    };
+    currentUser?: {
+        id: number;
+        name: string;
+        email: string;
+        position: string;
+        department: string;
+        role: string;
+        signature?: string;
     };
     onSubmitAction?: () => void;
     onPreviousAction?: () => void;
@@ -56,8 +66,31 @@ const getRatingColor = (rating: string) => {
     }
 };
 
-export default function OverallAssessment({ data, updateDataAction, employee, onSubmitAction, onPreviousAction }: OverallAssessmentProps) {
+export default function OverallAssessment({ data, updateDataAction, employee, currentUser, onSubmitAction, onPreviousAction }: OverallAssessmentProps) {
+    // Auto-populate evaluator name when currentUser is available
+    useEffect(() => {
+        if (currentUser && !data.evaluatorSignature) {
+            updateDataAction({ evaluatorSignature: currentUser.name });
+        }
+    }, [currentUser, data.evaluatorSignature, updateDataAction]);
+
+    // Auto-populate employee name when employee data is available
+    useEffect(() => {
+        if (employee && !data.employeeSignature) {
+            updateDataAction({ employeeSignature: employee.name });
+        }
+    }, [employee, data.employeeSignature, updateDataAction]);
+
     const handleSubmit = () => {
+        // Save the evaluator's signature from their profile before submitting
+        if (currentUser?.signature) {
+            updateDataAction({ 
+                evaluatorSignatureImage: currentUser.signature,
+                evaluatorSignature: currentUser.name || data.evaluatorSignature,
+                evaluatorSignatureDate: data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
+            });
+        }
+        
         if (onSubmitAction) {
             onSubmitAction();
         }
@@ -232,6 +265,8 @@ export default function OverallAssessment({ data, updateDataAction, employee, on
             <Card>
                 <CardContent className="pt-6">
                     <h4 className="font-bold text-lg text-gray-900 mb-4">Review Type</h4>
+                    
+                    
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* For Probationary */}
                         <div className="space-y-3">
@@ -266,41 +301,77 @@ export default function OverallAssessment({ data, updateDataAction, employee, on
                             <div className="space-y-2">
                                 <div className="flex items-center gap-2">
                                     <input 
-                                        type="checkbox" 
+                                        type="radio" 
                                         id="q1" 
+                                        name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ1}
-                                        onChange={(e) => updateDataAction({ reviewTypeRegularQ1: e.target.checked })}
+                                        onChange={(e) => {
+                                            // Clear all other regular review types first
+                                            updateDataAction({
+                                                reviewTypeRegularQ1: e.target.checked,
+                                                reviewTypeRegularQ2: false,
+                                                reviewTypeRegularQ3: false,
+                                                reviewTypeRegularQ4: false
+                                            });
+                                        }}
                                     />
                                     <label htmlFor="q1" className="text-sm text-gray-700">Q1 review</label>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <input 
-                                        type="checkbox" 
+                                        type="radio" 
                                         id="q2" 
+                                        name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ2}
-                                        onChange={(e) => updateDataAction({ reviewTypeRegularQ2: e.target.checked })}
+                                        onChange={(e) => {
+                                            // Clear all other regular review types first
+                                            updateDataAction({
+                                                reviewTypeRegularQ1: false,
+                                                reviewTypeRegularQ2: e.target.checked,
+                                                reviewTypeRegularQ3: false,
+                                                reviewTypeRegularQ4: false
+                                            });
+                                        }}
                                     />
                                     <label htmlFor="q2" className="text-sm text-gray-700">Q2 review</label>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <input 
-                                        type="checkbox" 
+                                        type="radio" 
                                         id="q3" 
+                                        name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ3}
-                                        onChange={(e) => updateDataAction({ reviewTypeRegularQ3: e.target.checked })}
+                                        onChange={(e) => {
+                                            // Clear all other regular review types first
+                                            updateDataAction({
+                                                reviewTypeRegularQ1: false,
+                                                reviewTypeRegularQ2: false,
+                                                reviewTypeRegularQ3: e.target.checked,
+                                                reviewTypeRegularQ4: false
+                                            });
+                                        }}
                                     />
                                     <label htmlFor="q3" className="text-sm text-gray-700">Q3 review</label>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <input 
-                                        type="checkbox" 
+                                        type="radio" 
                                         id="q4" 
+                                        name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ4}
-                                        onChange={(e) => updateDataAction({ reviewTypeRegularQ4: e.target.checked })}
+                                        onChange={(e) => {
+                                            // Clear all other regular review types first
+                                            updateDataAction({
+                                                reviewTypeRegularQ1: false,
+                                                reviewTypeRegularQ2: false,
+                                                reviewTypeRegularQ3: false,
+                                                reviewTypeRegularQ4: e.target.checked
+                                            });
+                                        }}
                                     />
                                     <label htmlFor="q4" className="text-sm text-gray-700">Q4 review</label>
                                 </div>
@@ -1468,12 +1539,31 @@ export default function OverallAssessment({ data, updateDataAction, employee, on
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Employee Section */}
                         <div className="space-y-3">
-                            <Input
-                                value={data.employeeSignature || ''}
-                                onChange={(e) => updateDataAction({ employeeSignature: e.target.value })}
-                                className="bg-yellow-50 border-gray-300"
-                                placeholder="Employee's signature"
-                            />
+                            <div>
+                                <Label className="text-sm font-medium text-gray-700">Employee Name:</Label>
+                                <Input
+                                    value={data.employeeSignature || employee?.name || ''}
+                                    onChange={(e) => updateDataAction({ employeeSignature: e.target.value })}
+                                    className="bg-gray-100 border-gray-300 mt-1"
+                                    placeholder="Employee's name"
+                                    disabled
+                                    readOnly
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-sm font-medium text-gray-700">Signature:</Label>
+                                <div className="mt-1 border-2 border-gray-300 rounded-lg p-4 bg-white min-h-[80px] flex items-center justify-center">
+                                    {employee?.signature ? (
+                                        <img 
+                                            src={employee.signature} 
+                                            alt="Employee Signature" 
+                                            className="max-h-16 max-w-full object-contain"
+                                        />
+                                    ) : (
+                                        <span className="text-sm text-gray-500">No signature available</span>
+                                    )}
+                                </div>
+                            </div>
                             <p className="text-center text-sm text-gray-600">Employee's Name & Signature</p>
                             <div className="flex items-center space-x-2">
                                 <Label className="text-sm font-medium">Date:</Label>
@@ -1481,25 +1571,49 @@ export default function OverallAssessment({ data, updateDataAction, employee, on
                                     type="date"
                                     value={data.employeeSignatureDate || ''}
                                     onChange={(e) => updateDataAction({ employeeSignatureDate: e.target.value })}
-                                    className="w-40"
+                                    className="w-40 bg-gray-100"
+                                    disabled
+                                    readOnly
                                 />
+                            </div>
+                            <div className="text-center">
+                                <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded">
+                                    ⏳ Waiting for employee approval
+                                </span>
                             </div>
                         </div>
 
                         {/* Evaluator Section */}
                         <div className="space-y-3">
-                            <Input
-                                value={data.evaluatorSignature || ''}
-                                onChange={(e) => updateDataAction({ evaluatorSignature: e.target.value })}
-                                className="bg-yellow-50 border-gray-300"
-                                placeholder="Evaluator's signature"
-                            />
+                            <div>
+                                <Label className="text-sm font-medium text-gray-700">Evaluator Name:</Label>
+                                <Input
+                                    value={data.evaluatorSignature || currentUser?.name || ''}
+                                    onChange={(e) => updateDataAction({ evaluatorSignature: e.target.value })}
+                                    className="bg-blue-50 border-gray-300 mt-1"
+                                    placeholder="Enter evaluator name"
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-sm font-medium text-gray-700">Signature:</Label>
+                                <div className="mt-1 border-2 border-gray-300 rounded-lg p-4 bg-white min-h-[80px] flex items-center justify-center">
+                                    {currentUser?.signature ? (
+                                        <img 
+                                            src={currentUser.signature} 
+                                            alt="Evaluator Signature" 
+                                            className="max-h-16 max-w-full object-contain"
+                                        />
+                                    ) : (
+                                        <span className="text-sm text-gray-500">No signature available</span>
+                                    )}
+                                </div>
+                            </div>
                             <p className="text-center text-sm text-gray-600">Evaluator's Name & Signature</p>
                             <div className="flex items-center space-x-2">
                                 <Label className="text-sm font-medium">Date:</Label>
                                 <Input
                                     type="date"
-                                    value={data.evaluatorSignatureDate || ''}
+                                    value={data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]}
                                     onChange={(e) => updateDataAction({ evaluatorSignatureDate: e.target.value })}
                                     className="w-40"
                                 />

@@ -10,6 +10,7 @@ export type UserProfile = {
   avatar?: string;
   department?: string;
   bio?: string;
+  signature?: string;
 };
 
 interface ProfileCardProps {

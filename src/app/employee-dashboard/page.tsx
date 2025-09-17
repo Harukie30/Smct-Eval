@@ -27,7 +27,7 @@ import RefreshAnimationModal from '@/components/RefreshAnimationModal';
 
 export default function EmployeeDashboard() {
   const router = useRouter();
-  const { profile, isAuthenticated, isLoading: authLoading, logout } = useUser();
+  const { profile, user, isAuthenticated, isLoading: authLoading, logout } = useUser();
   const { success } = useToast();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -35,6 +35,7 @@ export default function EmployeeDashboard() {
   const [evaluationResults, setEvaluationResults] = useState<any[]>([]);
   const [selectedEvaluation, setSelectedEvaluation] = useState<any>(null);
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
+  const [modalOpenedFromTab, setModalOpenedFromTab] = useState<string>('');
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [quarterlySearchTerm, setQuarterlySearchTerm] = useState('');
   const [selectedQuarter, setSelectedQuarter] = useState<string>('');
@@ -75,6 +76,13 @@ export default function EmployeeDashboard() {
   const [evaluationToDelete, setEvaluationToDelete] = useState<any>(null);
   const [isDeletingEvaluation, setIsDeletingEvaluation] = useState(false);
   const [showDeleteEvaluationSuccess, setShowDeleteEvaluationSuccess] = useState(false);
+
+  // Approval states
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [evaluationToApprove, setEvaluationToApprove] = useState<any>(null);
+  const [isApproving, setIsApproving] = useState(false);
+  const [showApprovalSuccess, setShowApprovalSuccess] = useState(false);
+  const [approvedEvaluations, setApprovedEvaluations] = useState<Set<string>>(new Set());
 
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: '📊' },
@@ -307,6 +315,14 @@ export default function EmployeeDashboard() {
         // Use the comprehensive refresh function to load all data with modal
         await refreshDashboardData(false, true, true);
 
+        // Load approved evaluations
+        if (profile?.email) {
+          const approvedData = localStorage.getItem(`approvedEvaluations_${profile.email}`);
+          if (approvedData) {
+            setApprovedEvaluations(new Set(JSON.parse(approvedData)));
+          }
+        }
+
         setLoading(false);
       } catch (error) {
         console.error('Error loading employee data:', error);
@@ -383,8 +399,8 @@ export default function EmployeeDashboard() {
     } finally {
       // Show appropriate success message
       if (showToast) {
-        const message = isInitialLoad 
-          ? 'Dashboard loaded successfully!' 
+        const message = isInitialLoad
+          ? 'Dashboard loaded successfully!'
           : 'Dashboard refreshed successfully!';
         success(message, 'All your data has been updated');
       }
@@ -405,6 +421,9 @@ export default function EmployeeDashboard() {
 
   // Refresh function for Account History table only
   const handleRefreshAccountHistory = async () => {
+    // Show refresh modal
+    setRefreshMessage('Refreshing account history...');
+    setShowRefreshSuccess(true);
 
     try {
       if (profile?.email) {
@@ -412,17 +431,25 @@ export default function EmployeeDashboard() {
         const history = loadAccountHistory(profile.email);
         setAccountHistory(history);
         console.log('Account history refreshed:', history.length, 'items');
-        
+
         // Show success toast
         success('Account history refreshed successfully', 'All account records have been updated');
       }
     } catch (error) {
       console.error('Error refreshing account history:', error);
+    } finally {
+      // Hide refresh modal after a delay
+      setTimeout(() => {
+        setShowRefreshSuccess(false);
+      }, 2000);
     }
   };
 
   // Refresh function for Comments table only
   const handleRefreshComments = async () => {
+    // Show refresh modal
+    setRefreshMessage('Refreshing comments and feedback...');
+    setShowRefreshSuccess(true);
 
     try {
       if (profile?.email) {
@@ -430,17 +457,25 @@ export default function EmployeeDashboard() {
         const commentsData = loadComments(profile.email);
         setComments(commentsData);
         console.log('Comments refreshed:', commentsData.length, 'items');
-        
+
         // Show success toast
         success('Comments refreshed successfully', 'All comments and feedback have been updated');
       }
     } catch (error) {
       console.error('Error refreshing comments:', error);
+    } finally {
+      // Hide refresh modal after a delay
+      setTimeout(() => {
+        setShowRefreshSuccess(false);
+      }, 2000);
     }
   };
 
   // Refresh function for Performance Reviews (submissions) only
   const handleRefreshSubmissions = async () => {
+    // Show refresh modal
+    setRefreshMessage('Refreshing performance reviews...');
+    setShowRefreshSuccess(true);
 
     try {
       // Fetch submissions data using client data service
@@ -458,16 +493,27 @@ export default function EmployeeDashboard() {
         const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
         setSubmissions(finalSubmissions);
         console.log('Submissions refreshed:', userSubmissions.length, 'items');
+
+        // Show success toast
+        success('Performance reviews refreshed successfully', 'All performance data has been updated');
       } catch (error) {
         console.log('Submissions not available');
       }
     } catch (error) {
       console.error('Error refreshing submissions:', error);
+    } finally {
+      // Hide refresh modal after a delay
+      setTimeout(() => {
+        setShowRefreshSuccess(false);
+      }, 2000);
     }
   };
 
   // Refresh function for Quarterly Performance table
   const handleRefreshQuarterly = async () => {
+    // Show refresh modal
+    setRefreshMessage('Refreshing quarterly performance...');
+    setShowRefreshSuccess(true);
 
     try {
       if (profile?.email) {
@@ -475,17 +521,25 @@ export default function EmployeeDashboard() {
         const results = getEmployeeResults(profile.email);
         setEvaluationResults(results);
         console.log('Quarterly performance refreshed:', results.length, 'items');
-        
+
         // Show success toast
         success('Quarterly performance refreshed successfully', 'All quarterly data has been updated');
       }
     } catch (error) {
       console.error('Error refreshing quarterly performance:', error);
+    } finally {
+      // Hide refresh modal after a delay
+      setTimeout(() => {
+        setShowRefreshSuccess(false);
+      }, 2000);
     }
   };
 
   // Refresh function for Evaluation History table
   const handleRefreshHistory = async () => {
+    // Show refresh modal
+    setRefreshMessage('Refreshing evaluation history...');
+    setShowRefreshSuccess(true);
 
     try {
       if (profile?.email) {
@@ -493,12 +547,17 @@ export default function EmployeeDashboard() {
         const results = getEmployeeResults(profile.email);
         setEvaluationResults(results);
         console.log('Evaluation history refreshed:', results.length, 'items');
-        
+
         // Show success toast
         success('Evaluation history refreshed successfully', 'All evaluation records have been updated');
       }
     } catch (error) {
       console.error('Error refreshing evaluation history:', error);
+    } finally {
+      // Hide refresh modal after a delay
+      setTimeout(() => {
+        setShowRefreshSuccess(false);
+      }, 2000);
     }
   };
 
@@ -519,6 +578,77 @@ export default function EmployeeDashboard() {
       setSelectedEvaluation(submission);
       setIsViewResultsModalOpen(true);
     }
+  };
+
+  // Approval functions
+  const handleApproveEvaluation = (submission: any) => {
+    setEvaluationToApprove(submission);
+    setIsApprovalDialogOpen(true);
+  };
+
+  const confirmApproval = async () => {
+    if (!evaluationToApprove || !profile?.email) return;
+
+    setIsApproving(true);
+
+    try {
+      // Create approval data with signature and timestamp
+      const employeeSignature = profile.signature || user?.signature || '';
+      
+      // If no signature exists, create a test signature for demo purposes
+      const finalSignature = employeeSignature || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjQwIiB2aWV3Qm94PSIwIDAgMTAwIDQwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8dGV4dCB4PSI1MCIgeT0iMjUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzMzMzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+U2lnbmVkPC90ZXh0Pgo8L3N2Zz4K';
+      
+      const approvalData = {
+        id: evaluationToApprove.id,
+        approvedAt: new Date().toISOString(),
+        employeeSignature: finalSignature,
+        employeeName: profile.name || user?.name || '',
+        employeeEmail: profile.email || user?.email || ''
+      };
+      
+
+      // Add to approved evaluations with full approval data
+      const newApproved = new Set(approvedEvaluations);
+      newApproved.add(evaluationToApprove.id);
+      setApprovedEvaluations(newApproved);
+
+      // Save approval data to localStorage
+      const existingApprovals = JSON.parse(localStorage.getItem(`approvalData_${profile.email}`) || '{}');
+      existingApprovals[evaluationToApprove.id] = approvalData;
+      localStorage.setItem(`approvalData_${profile.email}`, JSON.stringify(existingApprovals));
+
+      // Also save the approved IDs list
+      localStorage.setItem(`approvedEvaluations_${profile.email}`, JSON.stringify([...newApproved]));
+
+      // Show success animation
+      setIsApproving(false);
+      setShowApprovalSuccess(true);
+
+      // Close dialog after success animation
+      setTimeout(() => {
+        setIsApprovalDialogOpen(false);
+        setShowApprovalSuccess(false);
+        setEvaluationToApprove(null);
+        success('Evaluation Approved!', 'You have successfully acknowledged this evaluation with your signature.');
+        
+        // Refresh the evaluation history to show the signature
+        handleRefreshHistory();
+      }, 1500);
+
+    } catch (error) {
+      console.error('Error approving evaluation:', error);
+      setIsApproving(false);
+    }
+  };
+
+  const isEvaluationApproved = (submissionId: string) => {
+    return approvedEvaluations.has(submissionId);
+  };
+
+  const getApprovalData = (submissionId: string) => {
+    if (!profile?.email) return null;
+    const approvalData = JSON.parse(localStorage.getItem(`approvalData_${profile.email}`) || '{}');
+    return approvalData[submissionId] || null;
   };
 
   const handleLogout = () => {
@@ -636,31 +766,30 @@ export default function EmployeeDashboard() {
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold text-blue-600">
-            {submissions.length > 0 ? 
-              (submissions[0].evaluationData ? 
-                calculateOverallRating(submissions[0].evaluationData).toFixed(1) : 
+            {submissions.length > 0 ?
+              (submissions[0].evaluationData ?
+                calculateOverallRating(submissions[0].evaluationData).toFixed(1) :
                 submissions[0].rating?.toFixed(1) || '0.0'
               ) : '0.0'
             }/5.0
           </div>
           <p className="text-sm text-gray-500 mt-1">Latest evaluation</p>
           <div className="mt-2">
-            <Badge className={`text-xs ${
-              submissions.length > 0 ? 
+            <Badge className={`text-xs ${submissions.length > 0 ?
                 (() => {
-                  const score = submissions[0].evaluationData ? 
-                    calculateOverallRating(submissions[0].evaluationData) : 
+                  const score = submissions[0].evaluationData ?
+                    calculateOverallRating(submissions[0].evaluationData) :
                     submissions[0].rating || 0;
                   if (score >= 4.5) return 'bg-green-100 text-green-800';
                   if (score >= 4.0) return 'bg-blue-100 text-blue-800';
                   if (score >= 3.5) return 'bg-yellow-100 text-yellow-800';
                   return 'bg-red-100 text-red-800';
                 })() : 'bg-gray-100 text-gray-800'
-            }`}>
-              {submissions.length > 0 ? 
+              }`}>
+              {submissions.length > 0 ?
                 (() => {
-                  const score = submissions[0].evaluationData ? 
-                    calculateOverallRating(submissions[0].evaluationData) : 
+                  const score = submissions[0].evaluationData ?
+                    calculateOverallRating(submissions[0].evaluationData) :
                     submissions[0].rating || 0;
                   if (score >= 4.5) return 'Outstanding';
                   if (score >= 4.0) return 'Exceeds Expectations';
@@ -681,14 +810,14 @@ export default function EmployeeDashboard() {
           <div className="text-3xl font-bold text-orange-600">
             {(() => {
               if (submissions.length === 0) return '0.0';
-              
+
               const totalScore = submissions.reduce((sum, submission) => {
-                const score = submission.evaluationData ? 
-                  calculateOverallRating(submission.evaluationData) : 
+                const score = submission.evaluationData ?
+                  calculateOverallRating(submission.evaluationData) :
                   submission.rating || 0;
                 return sum + score;
               }, 0);
-              
+
               return (totalScore / submissions.length).toFixed(1);
             })()}/5.0
           </div>
@@ -698,18 +827,17 @@ export default function EmployeeDashboard() {
               {[1, 2, 3, 4, 5].map((star) => (
                 <svg
                   key={star}
-                  className={`w-4 h-4 ${
-                    (() => {
-                      const avgRating = submissions.length > 0 ? 
+                  className={`w-4 h-4 ${(() => {
+                      const avgRating = submissions.length > 0 ?
                         submissions.reduce((sum, submission) => {
-                          const score = submission.evaluationData ? 
-                            calculateOverallRating(submission.evaluationData) : 
+                          const score = submission.evaluationData ?
+                            calculateOverallRating(submission.evaluationData) :
                             submission.rating || 0;
                           return sum + score;
                         }, 0) / submissions.length : 0;
                       return star <= avgRating ? 'text-yellow-400' : 'text-gray-300';
                     })()
-                  }`}
+                    }`}
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -795,6 +923,7 @@ export default function EmployeeDashboard() {
                               size="sm"
                               onClick={() => {
                                 setSelectedEvaluation(submission);
+                                setModalOpenedFromTab('overview');
                                 setIsViewResultsModalOpen(true);
                                 // Show success animation
                                 setShowViewSuccess(true);
@@ -1186,6 +1315,7 @@ export default function EmployeeDashboard() {
                                   size="sm"
                                   onClick={() => {
                                     setSelectedEvaluation(submission);
+                                    setModalOpenedFromTab('reviews');
                                     setIsViewResultsModalOpen(true);
                                     // Show success animation
                                     setShowViewSuccess(true);
@@ -1314,8 +1444,8 @@ export default function EmployeeDashboard() {
                             size="sm"
                             onClick={() => setSelectedQuarter('')}
                             className={`text-xs ${selectedQuarter === ''
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                               }`}
                           >
                             All Quarters
@@ -1327,8 +1457,8 @@ export default function EmployeeDashboard() {
                               size="sm"
                               onClick={() => setSelectedQuarter(quarter)}
                               className={`text-xs font-medium transition-all duration-200 ${selectedQuarter === quarter
-                                  ? `${getQuarterColor(quarter)} border-2 shadow-md transform scale-105`
-                                  : `${getQuarterColor(quarter)} border border-gray-300 hover:shadow-sm hover:scale-102`
+                                ? `${getQuarterColor(quarter)} border-2 shadow-md transform scale-105`
+                                : `${getQuarterColor(quarter)} border border-gray-300 hover:shadow-sm hover:scale-102`
                                 }`}
                             >
                               {quarter}
@@ -1469,6 +1599,7 @@ export default function EmployeeDashboard() {
                                         );
                                         if (quarterSubmissions.length > 0) {
                                           setSelectedEvaluation(quarterSubmissions[0]);
+                                          setModalOpenedFromTab('quarterly');
                                           setIsViewResultsModalOpen(true);
                                           // Show success animation
                                           setShowViewSuccess(true);
@@ -1567,6 +1698,7 @@ export default function EmployeeDashboard() {
                               <TableHead className="text-right">Rating</TableHead>
                               <TableHead>Quarter</TableHead>
                               <TableHead>Immediate Supervisor</TableHead>
+                              <TableHead>Acknowledgement</TableHead>
                               <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -1603,6 +1735,38 @@ export default function EmployeeDashboard() {
                                 <TableCell className="text-sm text-gray-600">
                                   {submission.evaluationData?.supervisor || 'Not specified'}
                                 </TableCell>
+                                <TableCell>
+                                  {isEvaluationApproved(submission.id) ? (
+                                    <div className="flex items-center space-x-3">
+                                      <Badge className="bg-green-100 text-green-800">
+                                        ✓ Approved
+                                      </Badge>
+                  {(() => {
+                    const approvalData = getApprovalData(submission.id);
+                    return approvalData?.employeeSignature ? (
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-gray-500">Signature:</span>
+                        <div className="border border-gray-300 rounded p-1 bg-white">
+                          <img 
+                            src={approvalData.employeeSignature} 
+                            alt="Employee Signature" 
+                            className="h-6 w-auto object-contain"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-400">
+                        {approvalData ? 'No signature' : 'No approval data'}
+                      </div>
+                    );
+                  })()}
+                                    </div>
+                                  ) : (
+                                    <Badge variant="outline" className="text-orange-600 border-orange-300">
+                                      Pending
+                                    </Badge>
+                                  )}
+                                </TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex items-center justify-end space-x-2">
                                     <Button
@@ -1610,6 +1774,7 @@ export default function EmployeeDashboard() {
                                       size="sm"
                                       onClick={() => {
                                         setSelectedEvaluation(submission);
+                                        setModalOpenedFromTab('history');
                                         setIsViewResultsModalOpen(true);
                                         // Show success animation
                                         setShowViewSuccess(true);
@@ -1619,6 +1784,16 @@ export default function EmployeeDashboard() {
                                     >
                                       View Details
                                     </Button>
+                                    {!isEvaluationApproved(submission.id) && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleApproveEvaluation(submission)}
+                                        className="text-green-600 hover:text-green-800 border-green-200 hover:border-green-300"
+                                      >
+                                        Approve
+                                      </Button>
+                                    )}
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -1635,7 +1810,7 @@ export default function EmployeeDashboard() {
                               </TableRow>
                             )) : (
                               <TableRow>
-                                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                                   {historySearchTerm ? (
                                     <>
                                       <p>No evaluations found matching "{historySearchTerm}"</p>
@@ -2081,9 +2256,9 @@ export default function EmployeeDashboard() {
         <RefreshAnimationModal
           isOpen={true}
           message={
-            authLoading ? "Authenticating..." : 
-            !profile ? "Loading user profile..." : 
-            "Loading Employee Dashboard..."
+            authLoading ? "Authenticating..." :
+              !profile ? "Loading user profile..." :
+                "Loading Employee Dashboard..."
           }
           gifPath="/search-file.gif"
           duration={authLoading ? 800 : 1200}
@@ -2119,6 +2294,10 @@ export default function EmployeeDashboard() {
         isOpen={isViewResultsModalOpen}
         onCloseAction={() => setIsViewResultsModalOpen(false)}
         submission={selectedEvaluation}
+        onApprove={handleApproveEvaluation}
+        isApproved={selectedEvaluation ? isEvaluationApproved(selectedEvaluation.id) : false}
+        showApproval={modalOpenedFromTab === 'history'}
+        approvalData={selectedEvaluation ? getApprovalData(selectedEvaluation.id) : null}
       />
 
       {/* Comment Detail Modal */}
@@ -2245,6 +2424,40 @@ export default function EmployeeDashboard() {
           setIsDeleteEvaluationDialogOpen(false);
           setEvaluationToDelete(null);
         }}
+      />
+
+      {/* Approval Confirmation Dialog */}
+      <AlertDialog
+        open={isApprovalDialogOpen}
+        onOpenChangeAction={setIsApprovalDialogOpen}
+        title={showApprovalSuccess ? "Evaluation Approved!" : "Approve Evaluation"}
+        description={showApprovalSuccess
+          ? "You have successfully acknowledged this evaluation. Your approval has been recorded."
+          : `Are you sure you want to approve this evaluation? By approving, you acknowledge that you have reviewed and understood your performance assessment.`
+        }
+        confirmText={isApproving ? "Approving..." : "Approve"}
+        cancelText="Cancel"
+        showCancel={!showApprovalSuccess}
+        isLoading={isApproving}
+        showSuccessAnimation={showApprovalSuccess}
+        successAnimation={{
+          variant: 'checkmark',
+          color: 'green',
+          size: 'lg'
+        }}
+        onConfirm={confirmApproval}
+        onCancel={() => {
+          setIsApprovalDialogOpen(false);
+          setEvaluationToApprove(null);
+        }}
+      />
+
+      {/* Refresh Animation Modal for Submissions */}
+      <RefreshAnimationModal
+        isOpen={showRefreshSuccess}
+        message={refreshMessage}
+        gifPath="/search-file.gif"
+        duration={2000}
       />
 
       {/* Refresh Animation Modal */}

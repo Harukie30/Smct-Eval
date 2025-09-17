@@ -10,6 +10,7 @@ import Link from 'next/link';
 import PageTransition from '@/components/PageTransition';
 import FakeLoadingScreen from '@/components/FakeLoadingScreen';
 import SuspensionModal from '@/components/SuspensionModal';
+import GoogleLoginModal from '@/components/GoogleLoginModal';
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -25,6 +26,7 @@ export default function LandingLoginPage() {
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
   const [suspensionData, setSuspensionData] = useState<any>(null);
+  const [showGoogleLoginModal, setShowGoogleLoginModal] = useState(false);
 
   const { login, isAuthenticated, isLoading } = useUser();
   const router = useRouter();
@@ -272,7 +274,7 @@ export default function LandingLoginPage() {
           {/* Right Column - Login Card */}
           <div className="flex items-center justify-center">
             <PageTransition>
-              <Card className="w-full max-w-md shadow-lg hover:shadow-xl transition-shadow duration-300 backdrop-blur-sm bg-white-200/95 border-gray-500/20">
+              <Card className="w-full max-w-md shadow-lg hover:shadow-xl transition-shadow duration-300 backdrop-blur-sm bg-white border-gray-500/20">
                 <CardHeader className="space-y-1">
                   <CardTitle className="text-2xl text-center text-gray-900">
                     Sign in to your account
@@ -365,32 +367,16 @@ export default function LandingLoginPage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-4">
-                    <Button variant="outline">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowGoogleLoginModal(true)}
+                      className="w-full"
+                    >
                       <svg className="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
                         <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z" />
                       </svg>
-                      Google
+                      Continue with Google
                     </Button>
-                  </div>
-
-
-
-                  {/* Test Credentials */}
-                  <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Test Credentials:</h4>
-                    <div className="space-y-1 text-xs text-gray-600">
-                      <div><strong>Admin:</strong> admin / admin123</div>
-                      <div><strong>HR:</strong> hr / hr123</div>
-                      <div><strong>Evaluator:</strong> evaluator / eval123</div>
-                      <div className="border-t pt-2 mt-2">
-                        <div className="font-semibold text-gray-700 mb-1">Employee Logins:</div>
-                        <div><strong>John Smith:</strong> john.smith / john123</div>
-                        <div><strong>Emily Davis:</strong> emily.davis / emily123</div>
-                        <div><strong>Alex Rodriguez:</strong> alex.rodriguez / alex123</div>
-                        <div><strong>Maria Santos:</strong> maria.santos / maria123</div>
-                        <div><strong>Sofia Hernandez:</strong> sofia.hernandez / sofia123</div>
-                      </div>
-                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -665,6 +651,16 @@ export default function LandingLoginPage() {
           suspensionData={suspensionData}
         />
       )}
+
+      {/* Google Login Modal */}
+      <GoogleLoginModal
+        isOpen={showGoogleLoginModal}
+        onCloseAction={() => setShowGoogleLoginModal(false)}
+        onSuccess={(user) => {
+          console.log('Google login successful:', user);
+          // The modal will handle the login and redirect
+        }}
+      />
     </div>
   );
 }

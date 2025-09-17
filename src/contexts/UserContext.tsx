@@ -17,6 +17,7 @@ export interface AuthenticatedUser {
   hireDate: string;
   avatar?: string;
   bio?: string;
+  signature?: string;
   isActive: boolean;
   lastLogin?: string;
 }
@@ -84,6 +85,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
               department: parsedUser.department,
               avatar: parsedUser.avatar,
               bio: parsedUser.bio,
+              signature: parsedUser.signature,
             };
             setProfile(userProfile);
             
@@ -144,6 +146,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           department: userWithNumberId.department,
           avatar: userWithNumberId.avatar,
           bio: userWithNumberId.bio,
+          signature: userWithNumberId.signature,
         };
         setProfile(userProfile);
 
@@ -210,6 +213,14 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         setUser(updatedUser);
         if (typeof window !== 'undefined') {
           localStorage.setItem('authenticatedUser', JSON.stringify(updatedUser));
+          
+          // Also update the accounts data in localStorage
+          const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+          const accountIndex = accounts.findIndex((acc: any) => acc.id === user.id || acc.employeeId === user.id);
+          if (accountIndex !== -1) {
+            accounts[accountIndex] = { ...accounts[accountIndex], ...updates };
+            localStorage.setItem('accounts', JSON.stringify(accounts));
+          }
         }
       }
     }
@@ -241,6 +252,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
             department: updatedUser.department,
             avatar: updatedUser.avatar,
             bio: updatedUser.bio,
+            signature: updatedUser.signature,
           };
           setProfile(updatedProfile);
           

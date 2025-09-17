@@ -38,12 +38,21 @@ interface EvaluationFormProps {
     branch?: string;
     role: string;
     hireDate: string;
+    signature?: string;
+  };
+  currentUser?: {
+    id: number;
+    name: string;
+    email: string;
+    position: string;
+    department: string;
+    role: string;
   };
   onCloseAction?: () => void;
   onCancelAction?: () => void;
 }
 
-export default function EvaluationForm({ employee, onCloseAction, onCancelAction }: EvaluationFormProps) {
+export default function EvaluationForm({ employee, currentUser, onCloseAction, onCancelAction }: EvaluationFormProps) {
   console.log('EvaluationForm received employee:', employee); // Debug log
   
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-8 = actual steps
@@ -146,6 +155,7 @@ export default function EvaluationForm({ employee, onCloseAction, onCancelAction
     employeeSignatureDate: '',
     evaluatorSignature: '',
     evaluatorSignatureDate: '',
+    evaluatorSignatureImage: '',
   });
   
   console.log('Initial evaluation data:', {
@@ -345,6 +355,7 @@ export default function EvaluationForm({ employee, onCloseAction, onCancelAction
                 data={evaluationData}
                 updateDataAction={updateEvaluationData}
                 employee={employee}
+                currentUser={currentUser}
                 onStartAction={startEvaluation}
               />
             </CardContent>
@@ -364,6 +375,7 @@ export default function EvaluationForm({ employee, onCloseAction, onCancelAction
                 data={evaluationData}
                 updateDataAction={updateEvaluationData}
                 employee={employee}
+                currentUser={currentUser}
                 onStartAction={startEvaluation}
                 onNextAction={nextStep}
                 onSubmitAction={handleSubmit}

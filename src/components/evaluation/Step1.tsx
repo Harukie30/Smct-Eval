@@ -33,6 +33,14 @@ interface Step1Props {
     role: string;
     hireDate: string;
   };
+  currentUser?: {
+    id: number;
+    name: string;
+    email: string;
+    position: string;
+    department: string;
+    role: string;
+  };
 }
 
 // Score Dropdown Component
@@ -103,7 +111,7 @@ function ScoreDropdown({
   );
 }
 
-export default function Step1({ data, updateDataAction, employee }: Step1Props) {
+export default function Step1({ data, updateDataAction, employee, currentUser }: Step1Props) {
   // Auto-populate employee information when employee is selected
   useEffect(() => {
     if (employee) {
@@ -120,6 +128,14 @@ export default function Step1({ data, updateDataAction, employee }: Step1Props) 
       updateDataAction(employeeData);
     }
   }, [employee, updateDataAction]);
+
+  // Auto-populate supervisor information with current user
+  useEffect(() => {
+    if (currentUser && !data.supervisor) {
+      console.log('Auto-populating supervisor with current user:', currentUser); // Debug log
+      updateDataAction({ supervisor: currentUser.name });
+    }
+  }, [currentUser, data.supervisor, updateDataAction]);
 
   // Debug log to see current data state
   useEffect(() => {

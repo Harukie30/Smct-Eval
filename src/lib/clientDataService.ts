@@ -20,6 +20,12 @@ export interface Employee {
   bio?: string | null;
   contact?: string;
   updatedAt?: string;
+  username?: string;
+  password?: string;
+  isActive?: boolean;
+  lastLogin?: string;
+  signature?: string;
+  approvedDate?: string; // Date when the user was approved
 }
 
 export interface Submission {
@@ -49,6 +55,10 @@ export interface PendingRegistration {
   role: string;
   status: 'pending' | 'approved' | 'rejected';
   submittedAt: string;
+  signature?: string; // Digital signature as base64 image
+  username?: string;
+  contact?: string;
+  password?: string; // Note: In production, this should be hashed
 }
 
 export interface Profile {
@@ -62,6 +72,7 @@ export interface Profile {
   bio?: string;
   contact?: string;
   updatedAt?: string;
+  signature?: string;
 }
 
 export interface Account {
@@ -263,17 +274,30 @@ export const clientDataService = {
   },
 
   approveRegistration: async (id: number): Promise<{ success: boolean; message: string }> => {
+    console.log('🔄 Approving registration with ID:', id);
     const pending = await clientDataService.getPendingRegistrations();
+    console.log('📋 Found pending registrations:', pending.length);
     const registration = pending.find(reg => reg.id === id);
     
     if (!registration) {
+      console.log('❌ Registration not found with ID:', id);
       return { success: false, message: 'Registration not found' };
     }
 
-    // Move to employees
-    const employees = await clientDataService.getEmployees();
-    const newEmployee: Employee = {
-      id: Date.now(),
+    console.log('✅ Found registration to approve:', registration.name);
+    // Move to accounts (which is what the admin page uses)
+    const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as any[];
+    console.log('📊 Current accounts count:', accounts.length);
+    // Generate unique IDs that don't conflict with existing accounts
+    const existingIds = accounts.map(acc => acc.id);
+    const existingEmployeeIds = accounts.map(acc => acc.employeeId).filter(id => id !== undefined);
+    const maxId = Math.max(...existingIds, 0);
+    const maxEmployeeId = Math.max(...existingEmployeeIds, 1000);
+    console.log('🆔 Generated IDs - ID:', maxId + 1, 'EmployeeID:', maxEmployeeId + 1);
+    
+    const newAccount = {
+      id: maxId + 1,
+      employeeId: maxEmployeeId + 1,
       name: registration.name,
       email: registration.email,
       position: registration.position,
@@ -283,16 +307,26 @@ export const clientDataService = {
       hireDate: registration.hireDate,
       avatar: null,
       bio: null,
+      contact: registration.contact || '',
       updatedAt: new Date().toISOString(),
+      // Include additional fields from registration
+      username: registration.username,
+      password: registration.password,
+      signature: registration.signature,
+      isActive: true, // New employees are active by default
+      approvedDate: new Date().toISOString(), // Record when the user was approved
     };
 
-    employees.push(newEmployee);
-    saveToStorage(STORAGE_KEYS.EMPLOYEES, employees);
+    accounts.push(newAccount);
+    saveToStorage(STORAGE_KEYS.ACCOUNTS, accounts);
+    console.log('💾 Saved new account to storage. New accounts count:', accounts.length);
 
     // Remove from pending
     const updatedPending = pending.filter(reg => reg.id !== id);
     saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
+    console.log('🗑️ Removed from pending. Remaining pending:', updatedPending.length);
 
+    console.log('✅ Registration approval completed successfully');
     return { success: true, message: 'Registration approved successfully' };
   },
 

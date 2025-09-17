@@ -24,6 +24,7 @@ import PageTransition from '@/components/PageTransition';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import RefreshAnimationModal from '@/components/RefreshAnimationModal';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
+import { useUser } from '@/contexts/UserContext';
 
 type Feedback = {
   id: number;
@@ -138,6 +139,34 @@ const getQuarterColor = (quarter: string) => {
 };
 
 export default function EvaluatorDashboard() {
+  const { profile, user } = useUser();
+
+  // Helper function to map user data to currentUser format
+  const getCurrentUserData = () => {
+    if (user) {
+      // AuthenticatedUser type
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        position: user.position,
+        department: user.department,
+        role: user.role
+      };
+    } else if (profile) {
+      // UserProfile type
+      return {
+        id: typeof profile.id === 'string' ? parseInt(profile.id) || 0 : profile.id || 0,
+        name: profile.name,
+        email: profile.email || '',
+        position: profile.roleOrPosition || '',
+        department: profile.department || '',
+        role: profile.roleOrPosition || ''
+      };
+    }
+    return undefined;
+  };
+  
   // Add custom styles for better table scrolling
   useEffect(() => {
     const style = document.createElement('style');
@@ -1787,6 +1816,7 @@ export default function EvaluatorDashboard() {
             {selectedEmployee && (
               <EvaluationForm 
                 employee={selectedEmployee}
+                currentUser={getCurrentUserData()}
                 onCloseAction={() => {
                   setIsEvaluationModalOpen(false);
                   setSelectedEmployee(null);

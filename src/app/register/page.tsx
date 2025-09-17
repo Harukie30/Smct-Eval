@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import SignaturePad from '@/components/SignaturePad';
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import Link from 'next/link';
 import PageTransition from '@/components/PageTransition';
@@ -34,8 +36,10 @@ export default function RegisterPage() {
     branchCode: '',
     branch: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    signature: ''
   });
+  const [signatureError, setSignatureError] = useState(false);
 
   // Load positions and departments from client data service
   useEffect(() => {
@@ -82,6 +86,16 @@ export default function RegisterPage() {
       return;
     }
     
+    // Validate signature
+    if (!formData.signature || formData.signature.trim() === '') {
+      setSignatureError(true);
+      showAlert('Signature Required', 'Please draw your digital signature to complete the registration!', 'warning');
+      return;
+    }
+    
+    // Clear signature error if signature is valid
+    setSignatureError(false);
+    
     setIsRegisterButtonClicked(true);
     
     try {
@@ -94,6 +108,10 @@ export default function RegisterPage() {
         branch: formData.branch,
         hireDate: new Date().toISOString().split('T')[0], // Today's date
         role: formData.position,
+        signature: formData.signature, // Include the digital signature
+        username: formData.username,
+        contact: formData.contact,
+        password: formData.password, // Note: In production, this should be hashed
       };
 
       const result = await clientDataService.createPendingRegistration(registrationData);
@@ -116,8 +134,10 @@ export default function RegisterPage() {
               branchCode: '',
               branch: '',
               password: '',
-              confirmPassword: ''
+              confirmPassword: '',
+              signature: ''
             });
+            setSignatureError(false);
             // Redirect to login page
             window.location.href = '/';
           }
@@ -369,6 +389,26 @@ export default function RegisterPage() {
                         required
                       />
                     </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="signature">Digital Signature *</Label>
+                      <SignaturePad
+                        value={formData.signature}
+                        onChangeAction={(signature) => {
+                          setFormData({...formData, signature});
+                          if (signature && signatureError) {
+                            setSignatureError(false);
+                          }
+                        }}
+                        className="w-full"
+                        required={true}
+                        hasError={signatureError}
+                      />
+                      <p className="text-sm text-gray-500">
+                        By drawing your signature above, you agree to the terms and conditions of this registration.
+                      </p>
+                    </div>
+                    
                     <Button 
                       type="submit" 
                       className={`w-full bg-blue-600 text-white hover:bg-green-700 transition-all duration-300 ${

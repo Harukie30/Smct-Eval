@@ -130,4 +130,5 @@ export type EvaluationData = {
   employeeSignatureDate: string;
   evaluatorSignature: string;
   evaluatorSignatureDate: string;
+  evaluatorSignatureImage: string;
 };

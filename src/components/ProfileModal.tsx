@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { UserProfile } from './ProfileCard';
 import { User, Camera, Save, X } from 'lucide-react';
 import { uploadProfileImage, deleteProfileImage } from '@/lib/imageUpload';
-import { updateProfile } from '@/lib/profileService';
+// Removed profileService import - we'll use UserContext directly
+import SignaturePad from '@/components/SignaturePad';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -100,14 +101,8 @@ export default function ProfileModal({
         }
       }
 
-      // Update profile in the database/API
-      if (profile.id) {
-        const updatedProfile = await updateProfile(profile.id.toString(), formData);
-        await onSave(updatedProfile);
-      } else {
-        // Fallback to original onSave if no ID
-        await onSave(formData);
-      }
+      // Call onSave directly - this will update the UserContext and localStorage
+      await onSave(formData);
       
       onClose();
     } catch (error) {
@@ -243,6 +238,23 @@ export default function ProfileModal({
               placeholder="Tell us a bit about yourself..."
               rows={3}
             />
+          </div>
+
+          {/* Digital Signature */}
+          <div className="space-y-2">
+            <Label htmlFor="signature" className="text-sm font-medium">
+              Digital Signature
+            </Label>
+            <SignaturePad
+              value={formData.signature || ''}
+              onChangeAction={(signature) => handleInputChange('signature', signature)}
+              className="w-full"
+              required={false}
+              hasError={false}
+            />
+            <p className="text-sm text-gray-500">
+              Update your digital signature for official documents and approvals.
+            </p>
           </div>
 
           {/* General Error */}
