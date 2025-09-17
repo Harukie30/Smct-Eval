@@ -23,6 +23,13 @@ class CommentsService {
   // Load comments from localStorage or use mock data
   private loadComments(): void {
     try {
+      // Check if we're in the browser environment
+      if (typeof window === 'undefined') {
+        // Server-side: just use mock data
+        this.comments = [...commentsData];
+        return;
+      }
+
       const storedComments = localStorage.getItem('employeeComments');
       if (storedComments) {
         this.comments = JSON.parse(storedComments);
@@ -40,6 +47,11 @@ class CommentsService {
   // Save comments to localStorage
   private saveComments(): void {
     try {
+      // Check if we're in the browser environment
+      if (typeof window === 'undefined') {
+        return; // Skip saving on server-side
+      }
+      
       localStorage.setItem('employeeComments', JSON.stringify(this.comments));
     } catch (error) {
       console.error('Error saving comments:', error);

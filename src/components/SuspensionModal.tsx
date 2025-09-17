@@ -54,13 +54,13 @@ const SuspensionModal: React.FC<SuspensionModalProps> = ({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1, duration: 0.3 }}
                 >
-                  <DialogTitle className="flex items-center gap-2 text-red-600">
+                  <DialogTitle className="flex items-center gap-2 text-2xl font-bold bg-red-300 rounded-lg px-3 py-2 text-red-600">
                     <motion.div
                       initial={{ scale: 0, rotate: -180 }}
                       animate={{ scale: 1, rotate: 0 }}
                       transition={{ delay: 0.2, type: "spring", stiffness: 400 }}
                     >
-                      <AlertTriangle className="h-13 w-13" />
+                      <AlertTriangle className="h-17 w-17 " />
                     </motion.div>
                     Account Suspended
                   </DialogTitle>
@@ -68,7 +68,7 @@ const SuspensionModal: React.FC<SuspensionModalProps> = ({
               </DialogHeader>
 
               <motion.div 
-                className="space-y-8"
+                className="space-y-8 "
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3, duration: 0.3 }}
@@ -80,7 +80,7 @@ const SuspensionModal: React.FC<SuspensionModalProps> = ({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4, duration: 0.3 }}
                 >
-                  <div className="flex items-center gap-2 text-red-800 font-medium mb-3">
+                  <div className="flex items-center gap-2 text-red-800 font-bold mb-3">
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
@@ -95,65 +95,12 @@ const SuspensionModal: React.FC<SuspensionModalProps> = ({
                   </p>
                 </motion.div>
 
-                {/* Suspension Details */}
-                <motion.div 
-                  className="space-y-6"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6, duration: 0.3 }}
-                >
-                  <motion.div 
-                    className="flex items-start gap-4"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.7, duration: 0.3 }}
-                  >
-                    <FileText className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-700 mb-2">Reason for Suspension:</p>
-                      <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded border leading-relaxed">
-                        {suspensionData.reason}
-                      </p>
-                    </div>
-                  </motion.div>
-
-                  <motion.div 
-                    className="flex items-center gap-4"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.8, duration: 0.3 }}
-                  >
-                    <Clock className="h-5 w-5 text-gray-500 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-700 mb-1">Suspended On:</p>
-                      <p className="text-sm text-gray-600">
-                        {formatDate(suspensionData.suspendedAt)}
-                      </p>
-                    </div>
-                  </motion.div>
-
-                  <motion.div 
-                    className="flex items-center gap-4"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.9, duration: 0.3 }}
-                  >
-                    <User className="h-5 w-5 text-gray-500 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-700 mb-1">Suspended By:</p>
-                      <p className="text-sm text-gray-600">
-                        {suspensionData.suspendedBy}
-                      </p>
-                    </div>
-                  </motion.div>
-                </motion.div>
-
                 {/* Contact Information */}
                 <motion.div 
                   className="bg-blue-50 border border-blue-200 rounded-lg p-6"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.0, duration: 0.3 }}
+                  transition={{ delay: 1.0, duration: 0.1 }}
                 >
                   <h4 className="text-sm font-medium text-blue-800 mb-3">
                     Need Help?

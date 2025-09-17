@@ -55,12 +55,23 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
+        // Check if we're in the browser environment
+        if (typeof window === 'undefined') {
+          // Server-side: just set loading to false
+          setIsLoading(false);
+          return;
+        }
+
         // Check if user explicitly wants to stay logged in
-        const shouldRestoreSession = localStorage.getItem('keepLoggedIn') === 'true';
+        const keepLoggedInValue = localStorage.getItem('keepLoggedIn');
+        const shouldRestoreSession = keepLoggedInValue === 'true';
+        const storedUser = localStorage.getItem('authenticatedUser');
         
-        if (shouldRestoreSession) {
-          const storedUser = localStorage.getItem('authenticatedUser');
-          if (storedUser) {
+        
+        // If we have a stored user, restore the session (regardless of keepLoggedIn flag)
+        // This handles cases where keepLoggedIn might be corrupted or missing
+        if (storedUser) {
+          try {
             const parsedUser = JSON.parse(storedUser);
             setUser(parsedUser);
             
@@ -75,15 +86,26 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
               bio: parsedUser.bio,
             };
             setProfile(userProfile);
+            
+            // Ensure keepLoggedIn is set to true for future sessions
+            localStorage.setItem('keepLoggedIn', 'true');
+          } catch (error) {
+            console.error('Error parsing stored user:', error);
+            // Clear corrupted data
+            localStorage.removeItem('authenticatedUser');
+            localStorage.removeItem('keepLoggedIn');
           }
         } else {
-          // Clear any stored session if user doesn't want to stay logged in
+          // No stored user, clear any remaining data
           localStorage.removeItem('authenticatedUser');
+          localStorage.removeItem('keepLoggedIn');
         }
       } catch (error) {
         console.error('Error checking auth status:', error);
-        localStorage.removeItem('authenticatedUser');
-        localStorage.removeItem('keepLoggedIn');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('authenticatedUser');
+          localStorage.removeItem('keepLoggedIn');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -126,8 +148,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         setProfile(userProfile);
 
         // Store in localStorage
-        localStorage.setItem('authenticatedUser', JSON.stringify(userWithNumberId));
-        localStorage.setItem('keepLoggedIn', 'true');
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('authenticatedUser', JSON.stringify(userWithNumberId));
+          localStorage.setItem('keepLoggedIn', 'true');
+        }
         
         return true;
       } else if (loginResult.message === 'Account suspended' && loginResult.suspensionData) {
@@ -155,13 +179,19 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     // Clear user data
     setUser(null);
     setProfile(null);
-    localStorage.removeItem('authenticatedUser');
-    localStorage.removeItem('keepLoggedIn');
-    sessionStorage.clear();
+    
+    // Clear storage only if in browser
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('authenticatedUser');
+      localStorage.removeItem('keepLoggedIn');
+      sessionStorage.clear();
+    }
     
     // Add a small delay to show loading screen, then redirect
     setTimeout(() => {
-      window.location.href = '/';
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
     }, 1500);
   };
 
@@ -178,7 +208,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           id: user.id // Ensure ID remains a number
         };
         setUser(updatedUser);
-        localStorage.setItem('authenticatedUser', JSON.stringify(updatedUser));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('authenticatedUser', JSON.stringify(updatedUser));
+        }
       }
     }
   };
@@ -212,7 +244,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           };
           setProfile(updatedProfile);
           
-          localStorage.setItem('authenticatedUser', JSON.stringify(updatedUser));
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('authenticatedUser', JSON.stringify(updatedUser));
+          }
         }
       } catch (error) {
         console.error('Error refreshing user data:', error);

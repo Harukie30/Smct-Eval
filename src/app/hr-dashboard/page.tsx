@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,9 @@ import { AlertDialog } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
-import FakeLoadingScreen from '@/components/FakeLoadingScreen';
+import RefreshAnimationModal from '@/components/RefreshAnimationModal';
 import clientDataService from '@/lib/clientDataService';
+import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 
 // Import data
 import accountsData from '@/data/accounts.json';
@@ -130,6 +131,83 @@ export default function HRDashboard() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
+  // Function to refresh HR dashboard data (used by shared hook)
+  const refreshHRData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load data
+      // Convert accounts data to employees format (filter out admin accounts)
+      const employeeAccounts = (accountsData.accounts || []).filter((account: any) => account.role !== 'admin');
+      const employeesList = employeeAccounts.map((account: any) => ({
+        id: account.employeeId || account.id,
+        name: account.name,
+        email: account.email,
+        position: account.position,
+        department: account.department,
+        branch: account.branch,
+        hireDate: account.hireDate,
+        role: account.role
+      }));
+      setEmployees(employeesList);
+      setDepartments(departmentsData);
+      setBranches(branchData);
+
+      // Calculate HR metrics
+      const employees = employeeAccounts;
+      const metrics: HRMetrics = {
+        totalEmployees: employees.length,
+        activeEmployees: employees.length,
+        newHires: employees.filter((emp: any) => {
+          const hireDate = new Date(emp.hireDate);
+          const sixMonthsAgo = new Date();
+          sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+          return hireDate > sixMonthsAgo;
+        }).length,
+        turnoverRate: 5.2, // Mock data
+        averageTenure: 2.8, // Mock data
+        departmentsCount: departmentsData.length,
+        branchesCount: branchData.length,
+        genderDistribution: {
+          male: Math.floor(employees.length * 0.55),
+          female: Math.floor(employees.length * 0.45)
+        },
+        ageDistribution: {
+          '18-25': Math.floor(employees.length * 0.15),
+          '26-35': Math.floor(employees.length * 0.45),
+          '36-45': Math.floor(employees.length * 0.30),
+          '46+': Math.floor(employees.length * 0.10)
+        },
+        performanceDistribution: {
+          excellent: Math.floor(employees.length * 0.25),
+          good: Math.floor(employees.length * 0.40),
+          average: Math.floor(employees.length * 0.25),
+          needsImprovement: Math.floor(employees.length * 0.10)
+        }
+      };
+      setHrMetrics(metrics);
+      
+      // Refresh recent submissions
+      await fetchRecentSubmissions();
+    } catch (error) {
+      console.error('Error refreshing HR data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Auto-refresh functionality using shared hook
+  const {
+    showRefreshModal,
+    refreshModalMessage,
+    handleRefreshModalComplete,
+    refreshDashboardData
+  } = useAutoRefresh({
+    refreshFunction: refreshHRData,
+    dashboardName: 'HR Dashboard',
+    customMessage: 'Welcome back! Refreshing your HR dashboard data...'
+  });
+
   // Fetch recent submissions from client data service
   const fetchRecentSubmissions = async () => {
     try {
@@ -141,6 +219,7 @@ export default function HRDashboard() {
       setSubmissionsLoading(false);
     }
   };
+
 
   useEffect(() => {
     const loadHRData = async () => {
@@ -206,6 +285,7 @@ export default function HRDashboard() {
     loadHRData();
     fetchRecentSubmissions();
   }, []);
+
 
   const filteredEmployees = employees.filter(employee => {
     const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -354,6 +434,7 @@ export default function HRDashboard() {
     }
   };
 
+
   const getPerformanceEmployees = (level: string) => {
     // In a real app, you would filter employees by actual performance data
     // For now, we'll simulate by taking a subset of employees
@@ -369,15 +450,7 @@ export default function HRDashboard() {
     { id: 'analytics', label: 'Analytics', icon: '📈' },
   ];
 
-  if (loading || !hrMetrics) {
-    return (
-      <FakeLoadingScreen 
-        message="Loading HR Dashboard..." 
-        duration={1200}
-        onComplete={() => setLoading(false)}
-      />
-    );
-  }
+  // Loading state is now handled in the main return statement
 
   const topSummary = (
     <>
@@ -386,7 +459,7 @@ export default function HRDashboard() {
           <CardTitle className="text-sm font-medium text-gray-600">Total Employees</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-3xl font-bold text-gray-900">{hrMetrics.totalEmployees}</div>
+          <div className="text-3xl font-bold text-gray-900">{hrMetrics?.totalEmployees || 0}</div>
           <p className="text-sm text-gray-500 mt-1">Active workforce</p>
         </CardContent>
       </Card>
@@ -396,7 +469,7 @@ export default function HRDashboard() {
           <CardTitle className="text-sm font-medium text-gray-600">New Hires</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-3xl font-bold text-green-600">{hrMetrics.newHires}</div>
+          <div className="text-3xl font-bold text-green-600">{hrMetrics?.newHires || 0}</div>
           <p className="text-sm text-gray-500 mt-1">Last 6 months</p>
         </CardContent>
       </Card>
@@ -414,15 +487,37 @@ export default function HRDashboard() {
   );
 
   return (
-    <DashboardShell
-      title="HR Dashboard"
-      currentPeriod={new Date().toLocaleDateString()}
-      sidebarItems={sidebarItems}
-      activeItemId={active}
-      onChangeActive={setActive}
-      topSummary={topSummary}
-      profile={{ name: 'HR Manager', roleOrPosition: 'Human Resources' }}
-    >
+    <>
+      {/* Refresh Animation Modal - Show when loading */}
+      {(loading || !hrMetrics) && (
+        <RefreshAnimationModal
+          isOpen={true}
+          message="Loading HR Dashboard..."
+          gifPath="/search-file.gif"
+          duration={1200}
+        />
+      )}
+
+      {/* Auto-refresh Animation Modal */}
+      {showRefreshModal && (
+        <RefreshAnimationModal
+          isOpen={true}
+          message={refreshModalMessage}
+          gifPath="/search-file.gif"
+          duration={2000}
+          onComplete={handleRefreshModalComplete}
+        />
+      )}
+      
+      <DashboardShell
+        title="HR Dashboard"
+        currentPeriod={new Date().toLocaleDateString()}
+        sidebarItems={sidebarItems}
+        activeItemId={active}
+        onChangeActive={setActive}
+        topSummary={topSummary}
+        profile={{ name: 'HR Manager', roleOrPosition: 'Human Resources' }}
+      >
              {active === 'overview' && (
          <div className="space-y-6 h-[calc(100vh-300px)] overflow-y-auto pr-2">
            {/* Recent Activity Table */}
@@ -530,11 +625,11 @@ export default function HRDashboard() {
                <CardContent className="space-y-4">
                  <div className="grid grid-cols-2 gap-4">
                    <div className="text-center p-4 bg-blue-50 rounded-lg">
-                     <div className="text-2xl font-bold text-blue-600">{hrMetrics.departmentsCount}</div>
+                     <div className="text-2xl font-bold text-blue-600">{hrMetrics?.departmentsCount || 0}</div>
                      <div className="text-sm text-gray-600">Departments</div>
                    </div>
                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                     <div className="text-2xl font-bold text-green-600">{hrMetrics.branchesCount}</div>
+                     <div className="text-2xl font-bold text-green-600">{hrMetrics?.branchesCount || 0}</div>
                      <div className="text-sm text-gray-600">Branches</div>
                    </div>
                  </div>
@@ -542,16 +637,16 @@ export default function HRDashboard() {
                    <div className="flex justify-between items-center">
                      <span className="text-sm text-gray-600">Gender Distribution</span>
                      <div className="flex space-x-2">
-                       <Badge variant="outline">Male: {hrMetrics.genderDistribution.male}</Badge>
-                       <Badge variant="outline">Female: {hrMetrics.genderDistribution.female}</Badge>
+                       <Badge variant="outline">Male: {hrMetrics?.genderDistribution.male || 0}</Badge>
+                       <Badge variant="outline">Female: {hrMetrics?.genderDistribution.female || 0}</Badge>
                      </div>
                    </div>
                    <div className="space-y-2">
                      <div className="flex justify-between text-sm">
                        <span>Male</span>
-                       <span>{Math.round((hrMetrics.genderDistribution.male / hrMetrics.totalEmployees) * 100)}%</span>
+                       <span>{Math.round(((hrMetrics?.genderDistribution.male || 0) / (hrMetrics?.totalEmployees || 1)) * 100)}%</span>
                      </div>
-                     <Progress value={(hrMetrics.genderDistribution.male / hrMetrics.totalEmployees) * 100} className="h-2" />
+                     <Progress value={((hrMetrics?.genderDistribution.male || 0) / (hrMetrics?.totalEmployees || 1)) * 100} className="h-2" />
                    </div>
                  </div>
                </CardContent>
@@ -565,7 +660,7 @@ export default function HRDashboard() {
                  </CardHeader>
                  <CardContent>
                    <div className="max-h-[400px] overflow-y-auto space-y-4 pr-2">
-                     {Object.entries(hrMetrics.performanceDistribution).map(([level, count]) => {
+                     {Object.entries(hrMetrics?.performanceDistribution || {}).map(([level, count]) => {
                        // Get employees for this performance level (mock data for now)
                        const performanceEmployees = employees.slice(0, Math.min(count, 3)); // Show first 3 employees as example
                        
@@ -588,7 +683,7 @@ export default function HRDashboard() {
                              </Button>
                            </div>
                            <Progress 
-                             value={(count / hrMetrics.totalEmployees) * 100} 
+                             value={(count / (hrMetrics?.totalEmployees || 1)) * 100} 
                              className="h-2"
                            />
                            {performanceEmployees.length > 0 && (
@@ -683,10 +778,10 @@ export default function HRDashboard() {
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button
-                onClick={refreshEmployeeData}
+                onClick={() => refreshDashboardData(true, false)}
                 disabled={loading}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
-                title="Refresh employee data"
+                title="Refresh HR dashboard data"
               >
                 {loading ? (
                   <div className="flex items-center space-x-2">
@@ -844,14 +939,14 @@ export default function HRDashboard() {
               <CardDescription>Employee age demographics</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {Object.entries(hrMetrics.ageDistribution).map(([range, count]) => (
+              {Object.entries(hrMetrics?.ageDistribution || {}).map(([range, count]) => (
                 <div key={range} className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>{range} years</span>
                     <span>{count} employees</span>
                   </div>
                   <Progress 
-                    value={(count / hrMetrics.totalEmployees) * 100} 
+                    value={(count / (hrMetrics?.totalEmployees || 1)) * 100} 
                     className="h-2"
                   />
                 </div>
@@ -867,15 +962,15 @@ export default function HRDashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-center p-6 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg">
-                <div className="text-3xl font-bold text-blue-600">{hrMetrics.newHires}</div>
+                <div className="text-3xl font-bold text-blue-600">{hrMetrics?.newHires || 0}</div>
                 <div className="text-sm text-gray-600">New hires in last 6 months</div>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Turnover Rate</span>
-                  <span>{hrMetrics.turnoverRate}%</span>
+                  <span>{hrMetrics?.turnoverRate || 0}%</span>
                 </div>
-                <Progress value={hrMetrics.turnoverRate} className="h-2" />
+                <Progress value={hrMetrics?.turnoverRate || 0} className="h-2" />
                 <p className="text-xs text-gray-500">Industry average: 15%</p>
               </div>
             </CardContent>
@@ -1290,5 +1385,6 @@ export default function HRDashboard() {
           }}
         />
       </DashboardShell>
-    );
-  }
+    </>
+  );
+}

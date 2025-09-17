@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +22,8 @@ import clientDataService from '@/lib/clientDataService';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import PageTransition from '@/components/PageTransition';
 import { AlertDialog } from '@/components/ui/alert-dialog';
-import FakeLoadingScreen from '@/components/FakeLoadingScreen';
+import RefreshAnimationModal from '@/components/RefreshAnimationModal';
+import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 
 type Feedback = {
   id: number;
@@ -192,7 +193,55 @@ export default function EvaluatorDashboard() {
 
   // Profile is now managed by UserContext
 
+  // Function to refresh dashboard data (used by shared hook)
+  const refreshEvaluatorData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load dashboard data
+      setCurrentPeriod(mockData.dashboard.currentPeriod);
+      setData(mockData.dashboard.performanceData as unknown as PerformanceData);
 
+      // Fetch recent submissions from client data service
+      const submissions = await clientDataService.getSubmissions();
+
+      if (Array.isArray(submissions)) {
+        // Ensure data is valid and has unique IDs
+        const validData = submissions.filter((item: any) => 
+          item && 
+          typeof item === 'object' && 
+          item.id !== undefined && 
+          item.employeeName
+        );
+        
+        // Remove duplicates based on ID
+        const uniqueData = validData.filter((item: any, index: number, self: any[]) => 
+          index === self.findIndex(t => t.id === item.id)
+        );
+        
+        setRecentSubmissions(uniqueData);
+      } else {
+        console.warn('Invalid data structure received from API');
+        setRecentSubmissions([]);
+      }
+    } catch (error) {
+      console.error('Error refreshing evaluator data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Auto-refresh functionality using shared hook
+  const {
+    showRefreshModal,
+    refreshModalMessage,
+    handleRefreshModalComplete,
+    refreshDashboardData
+  } = useAutoRefresh({
+    refreshFunction: refreshEvaluatorData,
+    dashboardName: 'Evaluator Dashboard',
+    customMessage: 'Welcome back! Refreshing your evaluator dashboard data...'
+  });
 
   // Overview table state
   const [overviewSearch, setOverviewSearch] = useState('');
@@ -239,6 +288,7 @@ export default function EvaluatorDashboard() {
     // Optionally refresh data or show success message
     console.log('Profile updated:', updatedProfile);
   };
+
 
   // Feedback table functions
   const sortFeedback = (key: string) => {
@@ -1041,21 +1091,14 @@ export default function EvaluatorDashboard() {
     fetchData();
   }, []);
 
+
   const sidebarItems: SidebarItem[] = [
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'employees', label: 'Employees', icon: '👥' },
     { id: 'feedback', label: 'Evaluation Records', icon: '🗂️' },
   ];
 
-  if (loading || !data) {
-    return (
-      <FakeLoadingScreen 
-        message="Loading Dashboard..." 
-        duration={1200}
-        onComplete={() => setLoading(false)}
-      />
-    );
-  }
+  // Loading state is now handled in the main return statement
 
   const topSummary = (
     <>
@@ -1065,11 +1108,11 @@ export default function EvaluatorDashboard() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-2">
-            <span className="text-3xl font-bold text-gray-900">{data.overallRating}</span>
+            <span className="text-3xl font-bold text-gray-900">{data?.overallRating || 0}</span>
             <span className="text-sm text-gray-500">/ 5.0</span>
           </div>
-          <Badge className={`mt-2 ${getRatingColor(data.overallRating)}`}>
-            {data.overallRating >= 4.5 ? 'Excellent' : data.overallRating >= 4.0 ? 'Good' : data.overallRating >= 3.5 ? 'Average' : 'Needs Improvement'}
+          <Badge className={`mt-2 ${getRatingColor(data?.overallRating || 0)}`}>
+            {(data?.overallRating || 0) >= 4.5 ? 'Excellent' : (data?.overallRating || 0) >= 4.0 ? 'Good' : (data?.overallRating || 0) >= 3.5 ? 'Average' : 'Needs Improvement'}
           </Badge>
         </CardContent>
       </Card>
@@ -1079,7 +1122,7 @@ export default function EvaluatorDashboard() {
           <CardTitle className="text-sm font-medium text-gray-600">Reviews to Verify</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-3xl font-bold text-gray-900">{Math.max(0, 10 - data.totalReviews)}</div>
+          <div className="text-3xl font-bold text-gray-900">{Math.max(0, 10 - (data?.totalReviews || 0))}</div>
           <p className="text-sm text-gray-500 mt-1">Pending this quarter</p>
         </CardContent>
       </Card>
@@ -1089,9 +1132,9 @@ export default function EvaluatorDashboard() {
           <CardTitle className="text-sm font-medium text-gray-600">Goals Reviewed</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-3xl font-bold text-gray-900">{data.goalsCompleted}/{data.totalGoals}</div>
+          <div className="text-3xl font-bold text-gray-900">{data?.goalsCompleted || 0}/{data?.totalGoals || 0}</div>
           <p className="text-sm text-gray-500 mt-1">Completed</p>
-          <Progress value={(data.goalsCompleted / data.totalGoals) * 100} className="mt-2" />
+          <Progress value={((data?.goalsCompleted || 0) / (data?.totalGoals || 1)) * 100} className="mt-2" />
         </CardContent>
       </Card>
 
@@ -1100,7 +1143,7 @@ export default function EvaluatorDashboard() {
           <CardTitle className="text-sm font-medium text-gray-600">Performance Trend</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-3xl font-bold text-green-600">{data.performanceTrend}</div>
+          <div className="text-3xl font-bold text-green-600">{data?.performanceTrend || 'N/A'}</div>
           <p className="text-sm text-gray-500 mt-1">vs last quarter</p>
         </CardContent>
       </Card>
@@ -1704,6 +1747,27 @@ export default function EvaluatorDashboard() {
 
   return (
     <ProtectedRoute requiredRole={["evaluator", "manager"]}>
+      {/* Refresh Animation Modal - Outside PageTransition to avoid opacity conflicts */}
+      {(loading || !data) && (
+        <RefreshAnimationModal
+          isOpen={true}
+          message="Loading Dashboard..."
+          gifPath="/search-file.gif"
+          duration={1200}
+        />
+      )}
+
+      {/* Auto-refresh Modal */}
+      {showRefreshModal && (
+        <RefreshAnimationModal
+          isOpen={true}
+          message={refreshModalMessage}
+          gifPath="/search-file.gif"
+          duration={2000}
+          onComplete={handleRefreshModalComplete}
+        />
+      )}
+      
       <PageTransition>
         <DashboardShell
           title="Evaluator Dashboard"

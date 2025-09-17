@@ -237,6 +237,7 @@ class CommentsApi {
   // Helper method to get auth token
   private getAuthToken(): string {
     // This would typically come from your auth context or localStorage
+    if (typeof window === 'undefined') return '';
     return localStorage.getItem('authToken') || '';
   }
 }

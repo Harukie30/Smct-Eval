@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ChevronDown } from "lucide-react";
 
 import EditUserModal from '@/components/EditUserModal';
-import FakeLoadingScreen from '@/components/FakeLoadingScreen';
 import RefreshAnimationModal from '@/components/RefreshAnimationModal';
 import { toastMessages } from '@/lib/toastMessages';
 import clientDataService from '@/lib/clientDataService';
+import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 
 // Import data
 import accountsDataRaw from '@/data/accounts.json';
@@ -149,22 +149,112 @@ export default function AdminDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [active, setActive] = useState('overview');
 
-  // Refresh modal states
-  const [showRefreshModal, setShowRefreshModal] = useState(false);
-  const [refreshModalMessage, setRefreshModalMessage] = useState('');
+  // Function to refresh user data (used by shared hook)
+  const refreshUserData = async () => {
+    console.log('🔄 Starting user data refresh...');
+    setIsRefreshing(true);
 
-  // Handle refresh modal completion
-  const handleRefreshModalComplete = () => {
-    setShowRefreshModal(false);
-    // Show success toast
-    toastMessages.generic.success('Refresh Complete', 'User data has been refreshed successfully');
+    try {
+      // Load accounts data directly (no merging needed)
+      const employees = await loadAccountsData();
+      console.log('📊 Loaded employees:', employees.length);
+
+      const filteredEmployees = filterDeletedEmployees(employees);
+      console.log('✅ Filtered employees:', filteredEmployees.length);
+
+      setEmployees(filteredEmployees);
+
+      // Update system metrics with actual data (will be updated by updateSystemMetrics)
+      setSystemMetrics(prev => prev ? {
+        ...prev,
+        totalUsers: filteredEmployees.length,
+        activeUsers: filteredEmployees.length
+      } : null);
+
+      // Update dashboard stats with actual data
+      setDashboardStats(prev => prev ? {
+        ...prev,
+        employeeDashboard: {
+          ...prev.employeeDashboard,
+          activeUsers: filteredEmployees.filter((emp: any) => {
+            const role = emp.role?.toLowerCase() || '';
+            return role === 'employee' ||
+              role.includes('representative') ||
+              role.includes('designer') ||
+              role.includes('developer') ||
+              role.includes('specialist') ||
+              role.includes('analyst') ||
+              role.includes('coordinator') ||
+              role.includes('assistant');
+          }).length
+        },
+        hrDashboard: {
+          ...prev.hrDashboard,
+          activeUsers: filteredEmployees.filter((emp: any) => {
+            const role = emp.role?.toLowerCase() || '';
+            return role === 'hr' ||
+              role === 'hr-manager' ||
+              role.includes('hr') ||
+              role.includes('human resources');
+          }).length
+        },
+        evaluatorDashboard: {
+          ...prev.evaluatorDashboard,
+          activeUsers: filteredEmployees.filter((emp: any) => {
+            const role = emp.role?.toLowerCase() || '';
+            return role === 'evaluator' ||
+              role.includes('manager') ||
+              role.includes('supervisor') ||
+              role.includes('director') ||
+              role.includes('lead');
+          }).length
+        }
+      } : null);
+
+      // Also refresh pending registrations and evaluated reviews
+      await loadPendingRegistrations();
+      await loadEvaluatedReviews();
+
+      // Update system metrics to reflect current state
+      updateSystemMetrics();
+
+      console.log('✅ User data refresh completed successfully');
+
+    } catch (error) {
+      console.error('❌ Error refreshing user data:', error);
+
+      // Show error message to user
+      toastMessages.generic.error('Refresh Failed', 'Failed to refresh user data. Please try again.');
+
+      // Fallback: load accounts data directly
+      try {
+        const employees = await loadAccountsData();
+        const filteredEmployees = filterDeletedEmployees(employees);
+        setEmployees(filteredEmployees);
+        console.log('🔄 Fallback refresh completed');
+      } catch (fallbackError) {
+        console.error('❌ Fallback refresh also failed:', fallbackError);
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
   };
+
+  // Auto-refresh functionality using shared hook
+  const {
+    showRefreshModal,
+    refreshModalMessage,
+    handleRefreshModalComplete,
+    refreshDashboardData
+  } = useAutoRefresh({
+    refreshFunction: refreshUserData,
+    dashboardName: 'Admin Dashboard',
+    customMessage: 'Welcome back! Refreshing your admin dashboard data...'
+  });
 
   // Function to refresh evaluated reviews only
   const handleRefreshEvaluatedReviews = async () => {
     console.log('🔄 Starting evaluated reviews refresh...');
-    setRefreshModalMessage('Refreshing evaluated reviews...');
-    setShowRefreshModal(true);
 
     try {
       await loadEvaluatedReviews();
@@ -303,100 +393,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Function to refresh user data
-  const refreshUserData = async () => {
-    console.log('🔄 Starting user data refresh...');
-    setRefreshModalMessage('Refreshing user data...');
-    setShowRefreshModal(true);
-    setIsRefreshing(true);
-
-    try {
-      // Load accounts data directly (no merging needed)
-      const employees = await loadAccountsData();
-      console.log('📊 Loaded employees:', employees.length);
-
-      const filteredEmployees = filterDeletedEmployees(employees);
-      console.log('✅ Filtered employees:', filteredEmployees.length);
-
-      setEmployees(filteredEmployees);
-
-      // Update system metrics with actual data (will be updated by updateSystemMetrics)
-      setSystemMetrics(prev => prev ? {
-        ...prev,
-        totalUsers: filteredEmployees.length,
-        activeUsers: filteredEmployees.length
-      } : null);
-
-      // Update dashboard stats with actual data
-      setDashboardStats(prev => prev ? {
-        ...prev,
-        employeeDashboard: {
-          ...prev.employeeDashboard,
-          activeUsers: filteredEmployees.filter((emp: any) => {
-            const role = emp.role?.toLowerCase() || '';
-            return role === 'employee' ||
-              role.includes('representative') ||
-              role.includes('designer') ||
-              role.includes('developer') ||
-              role.includes('specialist') ||
-              role.includes('analyst') ||
-              role.includes('coordinator') ||
-              role.includes('assistant');
-          }).length
-        },
-        hrDashboard: {
-          ...prev.hrDashboard,
-          activeUsers: filteredEmployees.filter((emp: any) => {
-            const role = emp.role?.toLowerCase() || '';
-            return role === 'hr' ||
-              role === 'hr-manager' ||
-              role.includes('hr') ||
-              role.includes('human resources');
-          }).length
-        },
-        evaluatorDashboard: {
-          ...prev.evaluatorDashboard,
-          activeUsers: filteredEmployees.filter((emp: any) => {
-            const role = emp.role?.toLowerCase() || '';
-            return role === 'evaluator' ||
-              role.includes('manager') ||
-              role.includes('supervisor') ||
-              role.includes('director') ||
-              role.includes('lead');
-          }).length
-        }
-      } : null);
-
-      // Also refresh pending registrations and evaluated reviews
-      await loadPendingRegistrations();
-      await loadEvaluatedReviews();
-
-      // Update system metrics to reflect current state
-      updateSystemMetrics();
-
-      console.log('✅ User data refresh completed successfully');
-
-    } catch (error) {
-      console.error('❌ Error refreshing user data:', error);
-
-      // Show error message to user
-      toastMessages.generic.error('Refresh Failed', 'Failed to refresh user data. Please try again.');
-
-      // Fallback: load accounts data directly
-      try {
-        const employees = await loadAccountsData();
-        const filteredEmployees = filterDeletedEmployees(employees);
-        setEmployees(filteredEmployees);
-        console.log('🔄 Fallback refresh completed');
-      } catch (fallbackError) {
-        console.error('❌ Fallback refresh also failed:', fallbackError);
-      }
-    } finally {
-      setIsRefreshing(false);
-      // Modal will close automatically after duration via onComplete callback
-    }
-  };
-
   // Function to open suspend modal
   const openSuspendModal = (employee: Employee) => {
     setSelectedEmployee(employee);
@@ -426,7 +422,7 @@ export default function AdminDashboard() {
       await clientDataService.updateEmployee(updatedUser.id, updatedUser);
 
       // Refresh user data to get updated information
-      await refreshUserData();
+      await refreshDashboardData(false, false);
 
       // Show success toast
       toastMessages.user.updated(updatedUser.name);
@@ -478,7 +474,7 @@ export default function AdminDashboard() {
         await loadPendingRegistrations();
 
         // Refresh active users data to show the newly approved user
-        await refreshUserData();
+        await refreshDashboardData(false, false);
 
         // Show success toast
         toastMessages.user.approved(registrationName);
@@ -864,7 +860,7 @@ export default function AdminDashboard() {
         setRejectedRegistrations(savedRejected);
 
         // Load fresh data from accounts.json
-        await refreshUserData();
+        await refreshDashboardData(false, false);
 
         // Real system metrics based on actual data (will be updated after refreshUserData)
         const metrics: SystemMetrics = {
@@ -928,6 +924,7 @@ export default function AdminDashboard() {
 
     loadAdminData();
   }, []);
+
 
   const getSystemHealthColor = (health: string) => {
     switch (health) {
@@ -1022,10 +1019,11 @@ export default function AdminDashboard() {
 
   if (loading || !systemMetrics || !dashboardStats) {
     return (
-      <FakeLoadingScreen
+      <RefreshAnimationModal
+        isOpen={true}
         message="Loading Dashboard..."
+        gifPath="/search-file.gif"
         duration={1200}
-        onComplete={() => setLoading(false)}
       />
     );
   }
@@ -1354,7 +1352,7 @@ export default function AdminDashboard() {
                   <div className="flex space-x-2">
                     <Button
                       variant="outline"
-                      onClick={refreshUserData}
+                      onClick={() => refreshDashboardData(true, false)}
                       disabled={isRefreshing}
                       className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
                     >
@@ -1487,7 +1485,7 @@ export default function AdminDashboard() {
                   <div className="flex space-x-2">
                     <Button
                       variant="outline"
-                      onClick={refreshUserData}
+                      onClick={() => refreshDashboardData(true, false)}
                       className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
                     >
                       <span>🔄</span>
@@ -1622,7 +1620,7 @@ export default function AdminDashboard() {
                   <div className="flex space-x-2">
                     <Button
                       variant="outline"
-                      onClick={refreshUserData}
+                      onClick={() => refreshDashboardData(true, false)}
                       disabled={isRefreshing}
                       className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
                     >
@@ -1757,7 +1755,7 @@ export default function AdminDashboard() {
                 <div className="flex space-x-2">
                   <Button
                     variant="outline"
-                    onClick={refreshUserData}
+                    onClick={() => refreshDashboardData(true, false)}
                     disabled={isRefreshing}
                     className="flex items-center gap-2"
                   >

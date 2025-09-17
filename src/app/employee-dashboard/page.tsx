@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardShell from '@/components/DashboardShell';
@@ -16,18 +15,20 @@ import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 import CommentDetailModal from '@/components/CommentDetailModal';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import clientDataService from '@/lib/clientDataService';
-import FakeLoadingScreen from '@/components/FakeLoadingScreen';
 import { getEmployeeResults, initializeMockData } from '@/lib/evaluationStorage';
 import commentsService from '@/lib/commentsService';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Line, LineChart,  XAxis, YAxis, CartesianGrid } from 'recharts';
+import { Line, LineChart, XAxis, YAxis, CartesianGrid } from 'recharts';
 import SuccessAnimation from '@/components/SuccessAnimation';
+import { useToast } from '@/hooks/useToast';
+import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 
 import RefreshAnimationModal from '@/components/RefreshAnimationModal';
 
 export default function EmployeeDashboard() {
   const router = useRouter();
   const { profile, isAuthenticated, isLoading: authLoading, logout } = useUser();
+  const { success } = useToast();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [submissions, setSubmissions] = useState<any[]>([]);
@@ -46,35 +47,29 @@ export default function EmployeeDashboard() {
   const [isClearAllDialogOpen, setIsClearAllDialogOpen] = useState(false);
   const [isDeletingComments, setIsDeletingComments] = useState(false);
   const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
-  
   // Separate loading states for different refresh operations
   const [isRefreshingSubmissions, setIsRefreshingSubmissions] = useState(false);
   const [isRefreshingAccountHistory, setIsRefreshingAccountHistory] = useState(false);
   const [isRefreshingComments, setIsRefreshingComments] = useState(false);
   const [isRefreshingQuarterly, setIsRefreshingQuarterly] = useState(false);
   const [isRefreshingHistory, setIsRefreshingHistory] = useState(false);
-  
+
   // Individual comment deletion states
   const [isDeleteCommentDialogOpen, setIsDeleteCommentDialogOpen] = useState(false);
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
   const [isDeletingSingleComment, setIsDeletingSingleComment] = useState(false);
   const [showSingleDeleteSuccess, setShowSingleDeleteSuccess] = useState(false);
-  
+
   // Logout confirmation states
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
-  
+
   // Success animation states for various actions
   const [showViewSuccess, setShowViewSuccess] = useState(false);
-  const [showCommentViewSuccess, setShowCommentViewSuccess] = useState(false);
   const [showRefreshSuccess, setShowRefreshSuccess] = useState(false);
   const [refreshMessage, setRefreshMessage] = useState('');
-  
-  // Refresh animation modal states
-  const [showRefreshModal, setShowRefreshModal] = useState(false);
-  const [refreshModalMessage, setRefreshModalMessage] = useState('');
-  
+
   // Delete evaluation states
   const [isDeleteEvaluationDialogOpen, setIsDeleteEvaluationDialogOpen] = useState(false);
   const [evaluationToDelete, setEvaluationToDelete] = useState<any>(null);
@@ -94,7 +89,7 @@ export default function EmployeeDashboard() {
       // Load only suspended employees data (violations/suspensions)
       const suspendedEmployees = JSON.parse(localStorage.getItem('suspendedEmployees') || '[]');
       const employeeViolations = suspendedEmployees.filter((emp: any) => emp.email === email);
-      
+
       // Format only suspension/violation records
       const history = employeeViolations.map((violation: any) => ({
         id: `violation-${violation.id}`,
@@ -111,7 +106,7 @@ export default function EmployeeDashboard() {
           reinstatedBy: violation.reinstatedBy
         }
       }));
-      
+
       // Sort by date (newest first)
       return history.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
     } catch (error) {
@@ -164,9 +159,8 @@ export default function EmployeeDashboard() {
   const handleViewComment = (comment: any) => {
     setSelectedComment(comment);
     setIsCommentModalOpen(true);
-    // Show success animation
-    setShowCommentViewSuccess(true);
-    setTimeout(() => setShowCommentViewSuccess(false), 2000);
+    // Show Sonner toast
+    success('Comment details opened', 'Comment information has been loaded successfully');
   };
 
   const handleClearComment = (commentId: string) => {
@@ -176,22 +170,22 @@ export default function EmployeeDashboard() {
 
   const confirmDeleteComment = async () => {
     if (!commentToDelete) return;
-    
+
     setIsDeletingSingleComment(true);
-    
+
     // Simulate a small delay for the loading animation
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     const success = commentsService.deleteComment(commentToDelete);
     if (success && profile?.email) {
       const updatedComments = commentsService.getCommentsByEmployee(profile.email);
       setComments(updatedComments);
     }
-    
+
     // Show success animation
     setIsDeletingSingleComment(false);
     setShowSingleDeleteSuccess(true);
-    
+
     // Close dialog after success animation
     setTimeout(() => {
       setIsDeleteCommentDialogOpen(false);
@@ -206,21 +200,21 @@ export default function EmployeeDashboard() {
 
   const confirmClearAllComments = async () => {
     setIsDeletingComments(true);
-    
+
     // Simulate a small delay for the loading animation
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
+
     if (profile?.email) {
       const deletedCount = commentsService.deleteAllCommentsForEmployee(profile.email);
       if (deletedCount > 0) {
         setComments([]);
       }
     }
-    
+
     // Show success animation
     setIsDeletingComments(false);
     setShowDeleteSuccess(true);
-    
+
     // Close dialog after success animation (increased time to see checkmark better)
     setTimeout(() => {
       setIsClearAllDialogOpen(false);
@@ -231,34 +225,34 @@ export default function EmployeeDashboard() {
   // Delete evaluation function
   const handleDeleteEvaluation = async () => {
     if (!evaluationToDelete) return;
-    
+
     setIsDeletingEvaluation(true);
-    
+
     // Simulate a small delay for the loading animation
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
+
     try {
       // Remove the evaluation from submissions
       const updatedSubmissions = submissions.filter(submission => submission.id !== evaluationToDelete.id);
       setSubmissions(updatedSubmissions);
-      
+
       // Also remove from evaluation results if it exists there
       const updatedResults = evaluationResults.filter(result => result.id !== evaluationToDelete.id);
       setEvaluationResults(updatedResults);
-      
+
       console.log('Evaluation deleted:', evaluationToDelete.id);
-      
+
       // Show success animation
       setIsDeletingEvaluation(false);
       setShowDeleteEvaluationSuccess(true);
-      
+
       // Close dialog after success animation
       setTimeout(() => {
         setIsDeleteEvaluationDialogOpen(false);
         setEvaluationToDelete(null);
         setShowDeleteEvaluationSuccess(false);
       }, 3000);
-      
+
     } catch (error) {
       console.error('Error deleting evaluation:', error);
       setIsDeletingEvaluation(false);
@@ -268,7 +262,7 @@ export default function EmployeeDashboard() {
   // Helper functions for account history
   const getFilteredAccountHistory = () => {
     if (!accountHistorySearchTerm) return accountHistory;
-    
+
     return accountHistory.filter(item =>
       item.title.toLowerCase().includes(accountHistorySearchTerm.toLowerCase()) ||
       item.description.toLowerCase().includes(accountHistorySearchTerm.toLowerCase()) ||
@@ -305,81 +299,122 @@ export default function EmployeeDashboard() {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
+    const loadEmployeeData = async () => {
       try {
         // Initialize mock data on first load (now empty)
         initializeMockData();
 
-        // Fetch submissions data using client data service
-        try {
-          const allSubmissions = await clientDataService.getSubmissions();
-          // Filter submissions to only show current user's data
-          const userSubmissions = profile?.email 
-            ? allSubmissions.filter((submission: any) => 
-                submission.employeeName === profile.name || 
-                submission.evaluationData?.employeeEmail === profile.email
-              )
-            : [];
-          
-          // If no user-specific submissions found, show all submissions for testing
-          const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
-          setSubmissions(finalSubmissions);
-        } catch (error) {
-          console.log('Submissions not available');
-        }
+        // Use the comprehensive refresh function to load all data with modal
+        await refreshDashboardData(false, true, true);
 
-        // Get employee evaluation results from localStorage
-        if (profile?.email) {
-          const results = getEmployeeResults(profile.email);
-          setEvaluationResults(results);
-          
-          // Load account history (violations and feedback)
-          const history = loadAccountHistory(profile.email);
-          setAccountHistory(history);
-          
-          // Load comments
-          const commentsData = loadComments(profile.email);
-          setComments(commentsData);
-        }
+        setLoading(false);
       } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
+        console.error('Error loading employee data:', error);
         setLoading(false);
       }
     };
 
-    if (isAuthenticated && profile) {
-      fetchData();
+    // Always try to load data, let ProtectedRoute handle authentication
+    if (profile) {
+      loadEmployeeData();
+    } else {
+      // If no profile, still stop loading to prevent infinite loading
+      setLoading(false);
     }
-  }, [isAuthenticated, profile]);
+  }, [profile]);
+
+
+
+  // Fallback timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('Loading timeout reached, forcing loading to false');
+        setLoading(false);
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [loading]);
+
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
   };
 
   // Handle refresh modal completion
-  const handleRefreshModalComplete = () => {
-    setShowRefreshModal(false);
-    // Show success animation
-    setRefreshMessage('Data refreshed successfully');
-    setShowRefreshSuccess(true);
-    setTimeout(() => {
-      setShowRefreshSuccess(false);
-      setRefreshMessage('');
-    }, 2000);
+
+  // Comprehensive refresh function for all dashboard data
+  const refreshDashboardData = async (showToast = true, showModal = false, isInitialLoad = false) => {
+
+    try {
+      if (profile?.email) {
+        // Fetch fresh submissions data
+        const allSubmissions = await clientDataService.getSubmissions();
+        const userSubmissions = allSubmissions.filter((submission: any) =>
+          submission.employeeName === profile.name ||
+          submission.evaluationData?.employeeEmail === profile.email
+        );
+        const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
+        setSubmissions(finalSubmissions);
+
+        // Refresh evaluation results
+        const results = getEmployeeResults(profile.email);
+        setEvaluationResults(results);
+
+        // Refresh account history
+        const history = loadAccountHistory(profile.email);
+        setAccountHistory(history);
+
+        // Refresh comments
+        const commentsData = loadComments(profile.email);
+        setComments(commentsData);
+
+
+        console.log('Dashboard refreshed:', {
+          submissions: finalSubmissions.length,
+          evaluations: results.length,
+          history: history.length,
+          comments: commentsData.length
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing dashboard data:', error);
+    } finally {
+      // Show appropriate success message
+      if (showToast) {
+        const message = isInitialLoad 
+          ? 'Dashboard loaded successfully!' 
+          : 'Dashboard refreshed successfully!';
+        success(message, 'All your data has been updated');
+      }
+    }
   };
+
+  // Auto-refresh functionality using shared hook
+  const {
+    showRefreshModal,
+    refreshModalMessage,
+    handleRefreshModalComplete,
+    refreshDashboardData: autoRefreshDashboardData
+  } = useAutoRefresh({
+    refreshFunction: refreshDashboardData,
+    dashboardName: 'Employee Dashboard',
+    customMessage: 'Welcome back! Refreshing your employee dashboard data...'
+  });
 
   // Refresh function for Account History table only
   const handleRefreshAccountHistory = async () => {
-    setRefreshModalMessage('Refreshing account history...');
-    setShowRefreshModal(true);
-    
+
     try {
       if (profile?.email) {
         // Load only account history data
         const history = loadAccountHistory(profile.email);
         setAccountHistory(history);
         console.log('Account history refreshed:', history.length, 'items');
+        
+        // Show success toast
+        success('Account history refreshed successfully', 'All account records have been updated');
       }
     } catch (error) {
       console.error('Error refreshing account history:', error);
@@ -388,15 +423,16 @@ export default function EmployeeDashboard() {
 
   // Refresh function for Comments table only
   const handleRefreshComments = async () => {
-    setRefreshModalMessage('Refreshing comments...');
-    setShowRefreshModal(true);
-    
+
     try {
       if (profile?.email) {
         // Load only comments data
         const commentsData = loadComments(profile.email);
         setComments(commentsData);
         console.log('Comments refreshed:', commentsData.length, 'items');
+        
+        // Show success toast
+        success('Comments refreshed successfully', 'All comments and feedback have been updated');
       }
     } catch (error) {
       console.error('Error refreshing comments:', error);
@@ -405,21 +441,19 @@ export default function EmployeeDashboard() {
 
   // Refresh function for Performance Reviews (submissions) only
   const handleRefreshSubmissions = async () => {
-    setRefreshModalMessage('Refreshing performance reviews...');
-    setShowRefreshModal(true);
-    
+
     try {
       // Fetch submissions data using client data service
       try {
         const allSubmissions = await clientDataService.getSubmissions();
         // Filter submissions to only show current user's data
-        const userSubmissions = profile?.email 
-          ? allSubmissions.filter((submission: any) => 
-              submission.employeeName === profile.name || 
-              submission.evaluationData?.employeeEmail === profile.email
-            )
+        const userSubmissions = profile?.email
+          ? allSubmissions.filter((submission: any) =>
+            submission.employeeName === profile.name ||
+            submission.evaluationData?.employeeEmail === profile.email
+          )
           : [];
-        
+
         // If no user-specific submissions found, show all submissions for testing
         const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
         setSubmissions(finalSubmissions);
@@ -434,15 +468,16 @@ export default function EmployeeDashboard() {
 
   // Refresh function for Quarterly Performance table
   const handleRefreshQuarterly = async () => {
-    setRefreshModalMessage('Refreshing quarterly performance data...');
-    setShowRefreshModal(true);
-    
+
     try {
       if (profile?.email) {
         // Reload evaluation results which are used for quarterly performance
         const results = getEmployeeResults(profile.email);
         setEvaluationResults(results);
         console.log('Quarterly performance refreshed:', results.length, 'items');
+        
+        // Show success toast
+        success('Quarterly performance refreshed successfully', 'All quarterly data has been updated');
       }
     } catch (error) {
       console.error('Error refreshing quarterly performance:', error);
@@ -451,15 +486,16 @@ export default function EmployeeDashboard() {
 
   // Refresh function for Evaluation History table
   const handleRefreshHistory = async () => {
-    setRefreshModalMessage('Refreshing evaluation history...');
-    setShowRefreshModal(true);
-    
+
     try {
       if (profile?.email) {
         // Reload evaluation results which are used for evaluation history
         const results = getEmployeeResults(profile.email);
         setEvaluationResults(results);
         console.log('Evaluation history refreshed:', results.length, 'items');
+        
+        // Show success toast
+        success('Evaluation history refreshed successfully', 'All evaluation records have been updated');
       }
     } catch (error) {
       console.error('Error refreshing evaluation history:', error);
@@ -491,14 +527,14 @@ export default function EmployeeDashboard() {
 
   const confirmLogout = async () => {
     setIsLoggingOut(true);
-    
+
     // Simulate a small delay for the loading animation
     await new Promise(resolve => setTimeout(resolve, 1200));
-    
+
     // Show success animation
     setIsLoggingOut(false);
     setShowLogoutSuccess(true);
-    
+
     // Close dialog and logout after success animation
     setTimeout(() => {
       setIsLogoutDialogOpen(false);
@@ -567,21 +603,7 @@ export default function EmployeeDashboard() {
     return Math.round(overallWeightedScore * 10) / 10;
   };
 
-  // Show fake loading screen
-  if (loading) {
-    return (
-      <FakeLoadingScreen 
-        message="Loading dashboard..." 
-        duration={1200}
-        onComplete={() => setLoading(false)}
-      />
-    );
-  }
-
-  // Don't render if not authenticated
-  if (!isAuthenticated || !profile) {
-    return null;
-  }
+  // Loading state is now handled in the main return statement
 
   const topSummary = (
     <>
@@ -610,24 +632,99 @@ export default function EmployeeDashboard() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Goals Progress</CardTitle>
+          <CardTitle className="text-sm font-medium text-gray-600">Evaluation Score</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-3xl font-bold text-gray-900">7/10</div>
-          <p className="text-sm text-gray-500 mt-1">Completed</p>
-          <Progress value={70} className="mt-2" />
+          <div className="text-3xl font-bold text-blue-600">
+            {submissions.length > 0 ? 
+              (submissions[0].evaluationData ? 
+                calculateOverallRating(submissions[0].evaluationData).toFixed(1) : 
+                submissions[0].rating?.toFixed(1) || '0.0'
+              ) : '0.0'
+            }/5.0
+          </div>
+          <p className="text-sm text-gray-500 mt-1">Latest evaluation</p>
+          <div className="mt-2">
+            <Badge className={`text-xs ${
+              submissions.length > 0 ? 
+                (() => {
+                  const score = submissions[0].evaluationData ? 
+                    calculateOverallRating(submissions[0].evaluationData) : 
+                    submissions[0].rating || 0;
+                  if (score >= 4.5) return 'bg-green-100 text-green-800';
+                  if (score >= 4.0) return 'bg-blue-100 text-blue-800';
+                  if (score >= 3.5) return 'bg-yellow-100 text-yellow-800';
+                  return 'bg-red-100 text-red-800';
+                })() : 'bg-gray-100 text-gray-800'
+            }`}>
+              {submissions.length > 0 ? 
+                (() => {
+                  const score = submissions[0].evaluationData ? 
+                    calculateOverallRating(submissions[0].evaluationData) : 
+                    submissions[0].rating || 0;
+                  if (score >= 4.5) return 'Outstanding';
+                  if (score >= 4.0) return 'Exceeds Expectations';
+                  if (score >= 3.5) return 'Meets Expectations';
+                  return 'Needs Improvement';
+                })() : 'No Data'
+              }
+            </Badge>
+          </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Performance Trend</CardTitle>
+          <CardTitle className="text-sm font-medium text-gray-600">Performance Rating</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-3xl font-bold text-green-600">+12%</div>
-          <p className="text-sm text-gray-500 mt-1">vs last quarter</p>
+          <div className="text-3xl font-bold text-orange-600">
+            {(() => {
+              if (submissions.length === 0) return '0.0';
+              
+              const totalScore = submissions.reduce((sum, submission) => {
+                const score = submission.evaluationData ? 
+                  calculateOverallRating(submission.evaluationData) : 
+                  submission.rating || 0;
+                return sum + score;
+              }, 0);
+              
+              return (totalScore / submissions.length).toFixed(1);
+            })()}/5.0
+          </div>
+          <p className="text-sm text-gray-500 mt-1">Average across all evaluations</p>
+          <div className="mt-2 flex items-center space-x-1">
+            <div className="flex space-x-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <svg
+                  key={star}
+                  className={`w-4 h-4 ${
+                    (() => {
+                      const avgRating = submissions.length > 0 ? 
+                        submissions.reduce((sum, submission) => {
+                          const score = submission.evaluationData ? 
+                            calculateOverallRating(submission.evaluationData) : 
+                            submission.rating || 0;
+                          return sum + score;
+                        }, 0) / submissions.length : 0;
+                      return star <= avgRating ? 'text-yellow-400' : 'text-gray-300';
+                    })()
+                  }`}
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+              ))}
+            </div>
+            <span className="text-xs text-gray-600 ml-1">
+              {submissions.length > 0 ? `${submissions.length} review${submissions.length !== 1 ? 's' : ''}` : 'No reviews'}
+            </span>
+          </div>
         </CardContent>
       </Card>
+
+
     </>
   );
 
@@ -651,10 +748,10 @@ export default function EmployeeDashboard() {
                     disabled={showRefreshModal}
                     className="flex items-center space-x-2"
                   >
-                    <svg 
-                      className="h-4 w-4" 
-                      fill="none" 
-                      stroke="currentColor" 
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
                       viewBox="0 0 24 24"
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -888,7 +985,7 @@ export default function EmployeeDashboard() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {(() => {
-                        const ratings = submissions.map(s => 
+                        const ratings = submissions.map(s =>
                           s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating
                         ).filter(r => r > 0);
                         const averageRating = ratings.length > 0 ? (ratings.reduce((sum, r) => sum + r, 0) / ratings.length).toFixed(1) : '0.0';
@@ -957,7 +1054,7 @@ export default function EmployeeDashboard() {
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {(() => {
-                        const ratings = submissions.map(s => 
+                        const ratings = submissions.map(s =>
                           s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating
                         ).filter(r => r > 0);
                         const averageRating = ratings.length > 0 ? (ratings.reduce((sum, r) => sum + r, 0) / ratings.length) : 0;
@@ -1120,7 +1217,7 @@ export default function EmployeeDashboard() {
         // Filter submissions based on search term only
         const filteredHistorySubmissions = submissions.filter(submission => {
           if (!historySearchTerm) return true;
-          
+
           const searchLower = historySearchTerm.toLowerCase();
           return (
             submission.employeeName?.toLowerCase().includes(searchLower) ||
@@ -1146,7 +1243,7 @@ export default function EmployeeDashboard() {
                   <TabsTrigger value="quarterly">📊 Quarterly Performance</TabsTrigger>
                   <TabsTrigger value="history">📈 Evaluation History</TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="quarterly" className="mt-6">
                   <Card>
                     <CardHeader>
@@ -1160,15 +1257,15 @@ export default function EmployeeDashboard() {
                           size="sm"
                           onClick={handleRefreshQuarterly}
                           disabled={showRefreshModal}
-                          className="flex items-center space-x-2"
+                          className="flex items-center bg-blue-500 text-white hover:bg-green-700 hover:text-white space-x-2"
                         >
-                          <svg 
-                            className="h-4 w-4" 
-                            fill="none" 
-                            stroke="currentColor" 
+                          <svg
+                            className="h-4 w-4 "
+                            fill="none"
+                            stroke="currentColor"
                             viewBox="0 0 24 24"
                           >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                           </svg>
                           <span>Refresh</span>
                         </Button>
@@ -1216,11 +1313,10 @@ export default function EmployeeDashboard() {
                             variant={selectedQuarter === '' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => setSelectedQuarter('')}
-                            className={`text-xs ${
-                              selectedQuarter === '' 
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
+                            className={`text-xs ${selectedQuarter === ''
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-md'
                                 : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                            }`}
+                              }`}
                           >
                             All Quarters
                           </Button>
@@ -1230,11 +1326,10 @@ export default function EmployeeDashboard() {
                               variant={selectedQuarter === quarter ? 'default' : 'outline'}
                               size="sm"
                               onClick={() => setSelectedQuarter(quarter)}
-                              className={`text-xs font-medium transition-all duration-200 ${
-                                selectedQuarter === quarter 
-                                  ? `${getQuarterColor(quarter)} border-2 shadow-md transform scale-105` 
+                              className={`text-xs font-medium transition-all duration-200 ${selectedQuarter === quarter
+                                  ? `${getQuarterColor(quarter)} border-2 shadow-md transform scale-105`
                                   : `${getQuarterColor(quarter)} border border-gray-300 hover:shadow-sm hover:scale-102`
-                              }`}
+                                }`}
                             >
                               {quarter}
                             </Button>
@@ -1257,147 +1352,146 @@ export default function EmployeeDashboard() {
                         )}
                       </div>
                       <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Quarter</TableHead>
-                            <TableHead>Total Evaluations</TableHead>
-                            <TableHead>Average Rating</TableHead>
-                            <TableHead>Latest Rating</TableHead>
-                            <TableHead>Performance Trend</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {(() => {
-                            // Group submissions by quarter
-                            const quarterlyData = submissions.reduce((acc, submission) => {
-                              const quarter = getQuarterFromDate(submission.submittedAt);
-                              if (!acc[quarter]) {
-                                acc[quarter] = {
-                                  quarter,
-                                  submissions: [],
-                                  averageRating: 0,
-                                  totalEvaluations: 0,
-                                  latestRating: 0,
-                                  trend: 0
-                                };
-                              }
-                              acc[quarter].submissions.push(submission);
-                              return acc;
-                            }, {} as any);
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Quarter</TableHead>
+                              <TableHead>Total Evaluations</TableHead>
+                              <TableHead>Average Rating</TableHead>
+                              <TableHead>Latest Rating</TableHead>
+                              <TableHead>Performance Trend</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(() => {
+                              // Group submissions by quarter
+                              const quarterlyData = submissions.reduce((acc, submission) => {
+                                const quarter = getQuarterFromDate(submission.submittedAt);
+                                if (!acc[quarter]) {
+                                  acc[quarter] = {
+                                    quarter,
+                                    submissions: [],
+                                    averageRating: 0,
+                                    totalEvaluations: 0,
+                                    latestRating: 0,
+                                    trend: 0
+                                  };
+                                }
+                                acc[quarter].submissions.push(submission);
+                                return acc;
+                              }, {} as any);
 
-                            // Calculate statistics for each quarter
-                            Object.keys(quarterlyData).forEach(quarter => {
-                              const data = quarterlyData[quarter];
-                              const ratings = data.submissions.map((s: any) => 
-                                s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating
-                              ).filter((r: any) => r > 0);
-                              data.totalEvaluations = ratings.length;
-                              data.averageRating = ratings.length > 0 ? (ratings.reduce((a: any, b: any) => a + b, 0) / ratings.length).toFixed(1) : 0;
-                              data.latestRating = ratings.length > 0 ? ratings[ratings.length - 1] : 0;
-                              data.trend = ratings.length > 1 ? (ratings[ratings.length - 1] - ratings[0]) : 0;
-                            });
+                              // Calculate statistics for each quarter
+                              Object.keys(quarterlyData).forEach(quarter => {
+                                const data = quarterlyData[quarter];
+                                const ratings = data.submissions.map((s: any) =>
+                                  s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating
+                                ).filter((r: any) => r > 0);
+                                data.totalEvaluations = ratings.length;
+                                data.averageRating = ratings.length > 0 ? (ratings.reduce((a: any, b: any) => a + b, 0) / ratings.length).toFixed(1) : 0;
+                                data.latestRating = ratings.length > 0 ? ratings[ratings.length - 1] : 0;
+                                data.trend = ratings.length > 1 ? (ratings[ratings.length - 1] - ratings[0]) : 0;
+                              });
 
-                            // Sort quarters chronologically
-                            const sortedQuarters = Object.values(quarterlyData).sort((a: any, b: any) => {
-                              const quarterOrder: { [key: string]: number } = { 'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4 };
-                              const aQuarter = a.quarter.split(' ')[0]; // Extract just Q1, Q2, etc.
-                              const bQuarter = b.quarter.split(' ')[0];
-                              return (quarterOrder[aQuarter] || 0) - (quarterOrder[bQuarter] || 0);
-                            });
+                              // Sort quarters chronologically
+                              const sortedQuarters = Object.values(quarterlyData).sort((a: any, b: any) => {
+                                const quarterOrder: { [key: string]: number } = { 'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4 };
+                                const aQuarter = a.quarter.split(' ')[0]; // Extract just Q1, Q2, etc.
+                                const bQuarter = b.quarter.split(' ')[0];
+                                return (quarterOrder[aQuarter] || 0) - (quarterOrder[bQuarter] || 0);
+                              });
 
-                            // Filter quarters based on selected quarter
-                            const filteredQuarters = selectedQuarter 
-                              ? sortedQuarters.filter((q: any) => q.quarter.startsWith(selectedQuarter))
-                              : sortedQuarters;
+                              // Filter quarters based on selected quarter
+                              const filteredQuarters = selectedQuarter
+                                ? sortedQuarters.filter((q: any) => q.quarter.startsWith(selectedQuarter))
+                                : sortedQuarters;
 
-                            return filteredQuarters.length > 0 ? filteredQuarters.map((quarterData: any) => (
-                              <TableRow key={quarterData.quarter}>
-                                <TableCell>
-                                  <Badge className={getQuarterColor(quarterData.quarter)}>
-                                    {quarterData.quarter}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="font-medium">
-                                  {quarterData.totalEvaluations}
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center space-x-1">
-                                    <span className="font-semibold">{quarterData.averageRating}</span>
-                                    <span className="text-gray-500">/5.0</span>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center space-x-1">
-                                    <span className="font-medium">{quarterData.latestRating}</span>
-                                    <span className="text-gray-500">/5.0</span>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  {quarterData.trend !== 0 ? (
+                              return filteredQuarters.length > 0 ? filteredQuarters.map((quarterData: any) => (
+                                <TableRow key={quarterData.quarter}>
+                                  <TableCell>
+                                    <Badge className={getQuarterColor(quarterData.quarter)}>
+                                      {quarterData.quarter}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="font-medium">
+                                    {quarterData.totalEvaluations}
+                                  </TableCell>
+                                  <TableCell>
                                     <div className="flex items-center space-x-1">
-                                      <span className={`text-sm font-medium ${
-                                        quarterData.trend > 0 ? 'text-green-600' : 'text-red-600'
-                                      }`}>
-                                        {quarterData.trend > 0 ? '↗' : '↘'}
-                                      </span>
-                                      <span className="text-sm">
-                                        {Math.abs(quarterData.trend).toFixed(1)}
-                                      </span>
+                                      <span className="font-semibold">{quarterData.averageRating}</span>
+                                      <span className="text-gray-500">/5.0</span>
                                     </div>
-                                  ) : (
-                                    <span className="text-gray-400 text-sm">No change</span>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge className={
-                                    parseFloat(quarterData.averageRating) >= 4.5 ? 'bg-green-100 text-green-800' :
-                                    parseFloat(quarterData.averageRating) >= 4.0 ? 'bg-blue-100 text-blue-800' :
-                                    parseFloat(quarterData.averageRating) >= 3.5 ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-red-100 text-red-800'
-                                  }>
-                                    {parseFloat(quarterData.averageRating) >= 4.5 ? 'Outstanding' :
-                                     parseFloat(quarterData.averageRating) >= 4.0 ? 'Exceeds Expectations' :
-                                     parseFloat(quarterData.averageRating) >= 3.5 ? 'Meets Expectations' :
-                                     'Needs Improvement'}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      // Filter submissions for this quarter and show the first one
-                                      const quarterSubmissions = submissions.filter(submission => 
-                                        getQuarterFromDate(submission.submittedAt) === quarterData.quarter
-                                      );
-                                      if (quarterSubmissions.length > 0) {
-                                        setSelectedEvaluation(quarterSubmissions[0]);
-                                        setIsViewResultsModalOpen(true);
-                                        // Show success animation
-                                        setShowViewSuccess(true);
-                                        setTimeout(() => setShowViewSuccess(false), 2000);
-                                      }
-                                    }}
-                                    className="text-blue-600 hover:text-blue-800 border-blue-200 hover:border-blue-300"
-                                  >
-                                    View Details
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            )) : (
-                              <TableRow>
-                                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                                  <p>No quarterly data available</p>
-                                  <p className="text-sm">Evaluations will be grouped by quarter once available</p>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })()}
-                        </TableBody>
-                      </Table>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center space-x-1">
+                                      <span className="font-medium">{quarterData.latestRating}</span>
+                                      <span className="text-gray-500">/5.0</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    {quarterData.trend !== 0 ? (
+                                      <div className="flex items-center space-x-1">
+                                        <span className={`text-sm font-medium ${quarterData.trend > 0 ? 'text-green-600' : 'text-red-600'
+                                          }`}>
+                                          {quarterData.trend > 0 ? '↗' : '↘'}
+                                        </span>
+                                        <span className="text-sm">
+                                          {Math.abs(quarterData.trend).toFixed(1)}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-400 text-sm">No change</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge className={
+                                      parseFloat(quarterData.averageRating) >= 4.5 ? 'bg-green-100 text-green-800' :
+                                        parseFloat(quarterData.averageRating) >= 4.0 ? 'bg-blue-100 text-blue-800' :
+                                          parseFloat(quarterData.averageRating) >= 3.5 ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-red-100 text-red-800'
+                                    }>
+                                      {parseFloat(quarterData.averageRating) >= 4.5 ? 'Outstanding' :
+                                        parseFloat(quarterData.averageRating) >= 4.0 ? 'Exceeds Expectations' :
+                                          parseFloat(quarterData.averageRating) >= 3.5 ? 'Meets Expectations' :
+                                            'Needs Improvement'}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        // Filter submissions for this quarter and show the first one
+                                        const quarterSubmissions = submissions.filter(submission =>
+                                          getQuarterFromDate(submission.submittedAt) === quarterData.quarter
+                                        );
+                                        if (quarterSubmissions.length > 0) {
+                                          setSelectedEvaluation(quarterSubmissions[0]);
+                                          setIsViewResultsModalOpen(true);
+                                          // Show success animation
+                                          setShowViewSuccess(true);
+                                          setTimeout(() => setShowViewSuccess(false), 2000);
+                                        }
+                                      }}
+                                      className="text-blue-600 hover:text-blue-800 border-blue-200 hover:border-blue-300"
+                                    >
+                                      View Details
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              )) : (
+                                <TableRow>
+                                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                                    <p>No quarterly data available</p>
+                                    <p className="text-sm">Evaluations will be grouped by quarter once available</p>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })()}
+                          </TableBody>
+                        </Table>
                       </div>
                     </CardContent>
                   </Card>
@@ -1416,15 +1510,15 @@ export default function EmployeeDashboard() {
                           size="sm"
                           onClick={handleRefreshHistory}
                           disabled={showRefreshModal}
-                          className="flex items-center space-x-2"
+                          className="flex items-center bg-blue-500 text-white hover:bg-green-700 hover:text-white space-x-2"
                         >
-                          <svg 
-                            className="h-4 w-4" 
-                            fill="none" 
-                            stroke="currentColor" 
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
                             viewBox="0 0 24 24"
                           >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                           </svg>
                           <span>Refresh</span>
                         </Button>
@@ -1465,98 +1559,98 @@ export default function EmployeeDashboard() {
                       </div>
                       <div className="overflow-x-auto">
                         <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Rating</TableHead>
-                    <TableHead>Quarter</TableHead>
-                    <TableHead>Immediate Supervisor</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredHistorySubmissions.length > 0 ? filteredHistorySubmissions.map((submission) => (
-                    <TableRow key={submission.id}>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {new Date(submission.submittedAt).toLocaleDateString()}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(submission.submittedAt).toLocaleTimeString()}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{submission.employeeName}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{submission.category}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-1">
-                          <span className="font-semibold">
-                            {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating}
-                          </span>
-                          <span className="text-gray-500">/5</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getQuarterColor(getQuarterFromDate(submission.submittedAt))}>
-                          {getQuarterFromDate(submission.submittedAt)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        {submission.evaluationData?.supervisor || 'Not specified'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedEvaluation(submission);
-                              setIsViewResultsModalOpen(true);
-                              // Show success animation
-                              setShowViewSuccess(true);
-                              setTimeout(() => setShowViewSuccess(false), 2000);
-                            }}
-                            className="text-blue-600 hover:text-blue-800 border-blue-200 hover:border-blue-300"
-                          >
-                            View Details
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setEvaluationToDelete(submission);
-                              setIsDeleteEvaluationDialogOpen(true);
-                            }}
-                            className="text-red-600 hover:text-red-800 border-red-200 hover:border-red-300"
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                        {historySearchTerm ? (
-                          <>
-                            <p>No evaluations found matching "{historySearchTerm}"</p>
-                            <p className="text-sm">Try adjusting your search terms</p>
-                          </>
-                        ) : (
-                          <>
-                            <p>No evaluation history found</p>
-                            <p className="text-sm">Completed evaluations will appear here</p>
-                          </>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Employee</TableHead>
+                              <TableHead>Category</TableHead>
+                              <TableHead className="text-right">Rating</TableHead>
+                              <TableHead>Quarter</TableHead>
+                              <TableHead>Immediate Supervisor</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredHistorySubmissions.length > 0 ? filteredHistorySubmissions.map((submission) => (
+                              <TableRow key={submission.id}>
+                                <TableCell>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {new Date(submission.submittedAt).toLocaleDateString()}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      {new Date(submission.submittedAt).toLocaleTimeString()}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-medium">{submission.employeeName}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">{submission.category}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end space-x-1">
+                                    <span className="font-semibold">
+                                      {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating}
+                                    </span>
+                                    <span className="text-gray-500">/5</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={getQuarterColor(getQuarterFromDate(submission.submittedAt))}>
+                                    {getQuarterFromDate(submission.submittedAt)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-sm text-gray-600">
+                                  {submission.evaluationData?.supervisor || 'Not specified'}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end space-x-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedEvaluation(submission);
+                                        setIsViewResultsModalOpen(true);
+                                        // Show success animation
+                                        setShowViewSuccess(true);
+                                        setTimeout(() => setShowViewSuccess(false), 2000);
+                                      }}
+                                      className="text-blue-600 hover:text-blue-800 border-blue-200 hover:border-blue-300"
+                                    >
+                                      View Details
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEvaluationToDelete(submission);
+                                        setIsDeleteEvaluationDialogOpen(true);
+                                      }}
+                                      className="text-red-600 hover:text-red-800 border-red-200 hover:border-red-300"
+                                    >
+                                      Delete
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )) : (
+                              <TableRow>
+                                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                                  {historySearchTerm ? (
+                                    <>
+                                      <p>No evaluations found matching "{historySearchTerm}"</p>
+                                      <p className="text-sm">Try adjusting your search terms</p>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <p>No evaluation history found</p>
+                                      <p className="text-sm">Completed evaluations will appear here</p>
+                                    </>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
                         </Table>
                       </div>
                     </CardContent>
@@ -1580,405 +1674,395 @@ export default function EmployeeDashboard() {
                   <TabsTrigger value="account-history">Account History📋</TabsTrigger>
                   <TabsTrigger value="comments" >Comments & Feedback🗨️</TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="account-history" className="mt-6">
-                {/* Search Bar */}
-                <div className="mb-6 w-1/2">
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Search account history..."
-                      value={accountHistorySearchTerm}
-                      onChange={(e) => setAccountHistorySearchTerm(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                   {accountHistorySearchTerm && (
-                      <button
-                        onClick={() => setAccountHistorySearchTerm('')}
-                        className="absolute inset-y-0 font-medium  px-2 right-0 pr-3 flex items-center"
-                      >
-                        
-                        <svg className="h-5 w-5 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M6 18L18 6M6 6l12 12" />
+                  {/* Search Bar */}
+                  <div className="mb-6 w-1/2">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
-                       
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Account History Actions */}
-                <div className="mb-4 flex justify-between items-center">
-                  <div className="text-sm text-gray-600">
-                    Showing {getFilteredAccountHistory().length} of {accountHistory.length} records
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRefreshAccountHistory}
-                    disabled={showRefreshModal}
-                    className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white"
-                  >
-                    <svg 
-                      className="h-5 w-5" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    <span>Refresh</span>
-                  </Button>
-                </div>
-
-                {/* Account History Table */}
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Severity</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Action By</TableHead>
-                        <TableHead>Details</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {getFilteredAccountHistory().map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-lg">{getTypeIcon(item.type)}</span>
-                              <Badge variant="outline" className="capitalize">
-                                {item.type}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">{item.title}</TableCell>
-                          <TableCell className="max-w-xs truncate" title={item.description}>
-                            {item.description}
-                          </TableCell>
-                          <TableCell>{new Date(item.date).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <Badge className={getSeverityColor(item.severity)}>
-                              {item.severity.toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(item.status)}>
-                              {item.status.toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{item.actionBy}</TableCell>
-                          <TableCell>
-                            <div className="space-y-1 text-sm">
-                              {item.type === 'violation' && (
-                                <>
-                                  {item.details.duration && (
-                                    <div>Duration: {item.details.duration}</div>
-                                  )}
-                                  {item.details.reinstatedDate && (
-                                    <div className="text-green-600">
-                                      Reinstated: {new Date(item.details.reinstatedDate).toLocaleDateString()}
-                                    </div>
-                                  )}
-                                  {item.details.reinstatedBy && (
-                                    <div>By: {item.details.reinstatedBy}</div>
-                                  )}
-                                </>
-                              )}
-                              {item.type === 'feedback' && (
-                                <>
-                                  {item.details.rating && (
-                                    <div>Rating: {item.details.rating}%</div>
-                                  )}
-                                  {item.details.period && (
-                                    <div>Period: {item.details.period}</div>
-                                  )}
-                                  {item.details.category && (
-                                    <div>Category: {item.details.category}</div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Empty State */}
-                {getFilteredAccountHistory().length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <div className="text-4xl mb-4">📋</div>
-                    <p className="text-lg font-medium">
-                      {accountHistorySearchTerm ? 'No matching records found' : 'No account history found'}
-                    </p>
-                    <p className="text-sm">
-                      {accountHistorySearchTerm 
-                        ? 'Try adjusting your search terms' 
-                        : 'Your account history will appear here when violations or feedback are recorded'
-                      }
-                    </p>
-                  </div>
-                )}
-
-                {/* Summary Statistics */}
-                {accountHistory.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-6 border-t mt-6">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-red-600">
-                        {accountHistory.filter(item => item.type === 'violation').length}
                       </div>
-                      <div className="text-sm text-gray-600">Violations</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {accountHistory.filter(item => item.type === 'feedback').length}
-                      </div>
-                      <div className="text-sm text-gray-600">Feedback</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-yellow-600">
-                        {accountHistory.filter(item => item.severity === 'high').length}
-                      </div>
-                      <div className="text-sm text-gray-600">High Severity</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">
-                        {accountHistory.filter(item => item.status === 'completed' || item.status === 'reinstated').length}
-                      </div>
-                      <div className="text-sm text-gray-600">Resolved</div>
-                    </div>
-                  </div>
-                )}
-                </TabsContent>
-                
-                <TabsContent value="comments" className="mt-6">
-                {/* Search Bar */}
-                <div className="mb-6 w-1/2">
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Search comments..."
-                      value={commentsSearchTerm}
-                      onChange={(e) => setCommentsSearchTerm(e.target.value)}
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                    {commentsSearchTerm && (
-                      <button
-                        onClick={() => setCommentsSearchTerm('')}
-                        className="absolute inset-y-0 font-medium text-white  px-2 right-0 pr-3 flex items-center"
-                      >
-                        <svg className="h-5 w-5 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        
-                      </button>
-                    )}
-                  </div>
-                </div>
+                      <input
+                        type="text"
+                        placeholder="Search account history..."
+                        value={accountHistorySearchTerm}
+                        onChange={(e) => setAccountHistorySearchTerm(e.target.value)}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      />
+                      {accountHistorySearchTerm && (
+                        <button
+                          onClick={() => setAccountHistorySearchTerm('')}
+                          className="absolute inset-y-0 font-medium  px-2 right-0 pr-3 flex items-center"
+                        >
 
-                {/* Comments Actions */}
-                <div className="mb-4 flex justify-between items-center">
-                  <div className="text-sm text-gray-600">
-                    {comments.length > 0 
-                      ? `Showing ${getFilteredComments().length} of ${comments.length} comments`
-                      : 'No comments found'
-                    }
+                          <svg className="h-5 w-5 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+
+                  {/* Account History Actions */}
+                  <div className="mb-4 flex justify-between items-center">
+                    <div className="text-sm text-gray-600">
+                      Showing {getFilteredAccountHistory().length} of {accountHistory.length} records
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleRefreshComments}
+                      onClick={handleRefreshAccountHistory}
                       disabled={showRefreshModal}
                       className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white"
                     >
-                      <svg 
-                        className="h-4 w-4" 
-                        fill="none" 
-                        stroke="currentColor" 
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                       </svg>
                       <span>Refresh</span>
                     </Button>
-                    {comments.length > 0 && (
+                  </div>
+
+                  {/* Account History Table */}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Severity</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Action By</TableHead>
+                          <TableHead>Details</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {getFilteredAccountHistory().map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-lg">{getTypeIcon(item.type)}</span>
+                                <Badge variant="outline" className="capitalize">
+                                  {item.type}
+                                </Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">{item.title}</TableCell>
+                            <TableCell className="max-w-xs truncate" title={item.description}>
+                              {item.description}
+                            </TableCell>
+                            <TableCell>{new Date(item.date).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              <Badge className={getSeverityColor(item.severity)}>
+                                {item.severity.toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getStatusColor(item.status)}>
+                                {item.status.toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{item.actionBy}</TableCell>
+                            <TableCell>
+                              <div className="space-y-1 text-sm">
+                                {item.type === 'violation' && (
+                                  <>
+                                    {item.details.duration && (
+                                      <div>Duration: {item.details.duration}</div>
+                                    )}
+                                    {item.details.reinstatedDate && (
+                                      <div className="text-green-600">
+                                        Reinstated: {new Date(item.details.reinstatedDate).toLocaleDateString()}
+                                      </div>
+                                    )}
+                                    {item.details.reinstatedBy && (
+                                      <div>By: {item.details.reinstatedBy}</div>
+                                    )}
+                                  </>
+                                )}
+                                {item.type === 'feedback' && (
+                                  <>
+                                    {item.details.rating && (
+                                      <div>Rating: {item.details.rating}%</div>
+                                    )}
+                                    {item.details.period && (
+                                      <div>Period: {item.details.period}</div>
+                                    )}
+                                    {item.details.category && (
+                                      <div>Category: {item.details.category}</div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Empty State */}
+                  {getFilteredAccountHistory().length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="text-4xl mb-4">📋</div>
+                      <p className="text-lg font-medium">
+                        {accountHistorySearchTerm ? 'No matching records found' : 'No account history found'}
+                      </p>
+                      <p className="text-sm">
+                        {accountHistorySearchTerm
+                          ? 'Try adjusting your search terms'
+                          : 'Your account history will appear here when violations or feedback are recorded'
+                        }
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Summary Statistics */}
+                  {accountHistory.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-6 border-t mt-6">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-red-600">
+                          {accountHistory.filter(item => item.type === 'violation').length}
+                        </div>
+                        <div className="text-sm text-gray-600">Violations</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {accountHistory.filter(item => item.type === 'feedback').length}
+                        </div>
+                        <div className="text-sm text-gray-600">Feedback</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-yellow-600">
+                          {accountHistory.filter(item => item.severity === 'high').length}
+                        </div>
+                        <div className="text-sm text-gray-600">High Severity</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {accountHistory.filter(item => item.status === 'completed' || item.status === 'reinstated').length}
+                        </div>
+                        <div className="text-sm text-gray-600">Resolved</div>
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="comments" className="mt-6">
+                  {/* Search Bar */}
+                  <div className="mb-6 w-1/2">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Search comments..."
+                        value={commentsSearchTerm}
+                        onChange={(e) => setCommentsSearchTerm(e.target.value)}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      />
+                      {commentsSearchTerm && (
+                        <button
+                          onClick={() => setCommentsSearchTerm('')}
+                          className="absolute inset-y-0 font-medium text-white  px-2 right-0 pr-3 flex items-center"
+                        >
+                          <svg className="h-5 w-5 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Comments Actions */}
+                  <div className="mb-4 flex justify-between items-center">
+                    <div className="text-sm text-gray-600">
+                      {comments.length > 0
+                        ? `Showing ${getFilteredComments().length} of ${comments.length} comments`
+                        : 'No comments found'
+                      }
+                    </div>
+                    <div className="flex items-center space-x-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleClearAllComments}
-                        className="text-red-600 hover:text-red-800 border-red-200 hover:border-red-300"
+                        onClick={handleRefreshComments}
+                        disabled={showRefreshModal}
+                        className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white"
                       >
-                        Clear All Comments
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>Refresh</span>
                       </Button>
-                    )}
+                      {comments.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleClearAllComments}
+                          className="text-red-600 hover:text-red-800 border-red-200 hover:border-red-300"
+                        >
+                          Clear All Comments
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Comments Table */}
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Author</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Content</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Priority</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {getFilteredComments().map((comment) => (
-                        <TableRow key={comment.id}>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-lg">{getCommentTypeIcon(comment.type)}</span>
-                              <Badge className={getCommentTypeColor(comment.type)}>
-                                {comment.type}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-medium">{comment.author}</span>
-                              <span className="text-xs text-gray-500">{comment.authorRole}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{comment.category}</Badge>
-                          </TableCell>
-                          <TableCell className="max-w-xs">
-                            <div className="truncate" title={comment.content}>
-                              {comment.content}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="text-sm">
-                                {new Date(comment.date).toLocaleDateString()}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {new Date(comment.date).toLocaleTimeString()}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getPriorityColor(comment.priority)}>
-                              {comment.priority}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end space-x-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewComment(comment)}
-                                className="text-blue-600 hover:text-blue-800 border-blue-200 hover:border-blue-300"
-                              >
-                                View
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleClearComment(comment.id)}
-                                className="text-red-600 hover:text-red-800 border-red-200 hover:border-red-300"
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </TableCell>
+                  {/* Comments Table */}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Author</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Content</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Priority</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Empty State */}
-                {getFilteredComments().length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <div className="text-4xl mb-4">💬</div>
-                    <p className="text-lg font-medium">
-                      {commentsSearchTerm ? 'No matching comments found' : 'No comments found'}
-                    </p>
-                    <p className="text-sm">
-                      {commentsSearchTerm 
-                        ? 'Try adjusting your search terms' 
-                        : 'Comments from supervisors and HR will appear here'
-                      }
-                    </p>
+                      </TableHeader>
+                      <TableBody>
+                        {getFilteredComments().map((comment) => (
+                          <TableRow key={comment.id}>
+                            <TableCell>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-lg">{getCommentTypeIcon(comment.type)}</span>
+                                <Badge className={getCommentTypeColor(comment.type)}>
+                                  {comment.type}
+                                </Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{comment.author}</span>
+                                <span className="text-xs text-gray-500">{comment.authorRole}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{comment.category}</Badge>
+                            </TableCell>
+                            <TableCell className="max-w-xs">
+                              <div className="truncate" title={comment.content}>
+                                {comment.content}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="text-sm">
+                                  {new Date(comment.date).toLocaleDateString()}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(comment.date).toLocaleTimeString()}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getPriorityColor(comment.priority)}>
+                                {comment.priority}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewComment(comment)}
+                                  className="text-blue-600 hover:text-blue-800 border-blue-200 hover:border-blue-300"
+                                >
+                                  View
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleClearComment(comment.id)}
+                                  className="text-red-600 hover:text-red-800 border-red-200 hover:border-red-300"
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
-                )}
 
-                {/* Comments Summary Statistics */}
-                {comments.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-6 border-t mt-6">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">
-                        {comments.filter(comment => comment.type === 'positive').length}
-                      </div>
-                      <div className="text-sm text-gray-600">Positive</div>
+                  {/* Empty State */}
+                  {getFilteredComments().length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="text-4xl mb-4">💬</div>
+                      <p className="text-lg font-medium">
+                        {commentsSearchTerm ? 'No matching comments found' : 'No comments found'}
+                      </p>
+                      <p className="text-sm">
+                        {commentsSearchTerm
+                          ? 'Try adjusting your search terms'
+                          : 'Comments from supervisors and HR will appear here'
+                        }
+                      </p>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {comments.filter(comment => comment.type === 'constructive').length}
-                      </div>
-                      <div className="text-sm text-gray-600">Constructive</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-yellow-600">
-                        {comments.filter(comment => comment.type === 'recognition').length}
-                      </div>
-                      <div className="text-sm text-gray-600">Recognition</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-red-600">
-                        {comments.filter(comment => comment.priority === 'high').length}
-                      </div>
-                      <div className="text-sm text-gray-600">High Priority</div>
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Comment View Success Animation */}
-                {showCommentViewSuccess && (
-                  <div className="fixed top-4 right-4 z-50 bg-white border border-blue-200 rounded-lg shadow-lg p-4 flex items-center space-x-3">
-                    <SuccessAnimation variant="circle" color="blue" size="md" />
-                    <div>
-                      <p className="font-medium text-blue-800">Success!</p>
-                      <p className="text-sm text-blue-600">Comment details opened</p>
+                  {/* Comments Summary Statistics */}
+                  {comments.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-6 border-t mt-6">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {comments.filter(comment => comment.type === 'positive').length}
+                        </div>
+                        <div className="text-sm text-gray-600">Positive</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {comments.filter(comment => comment.type === 'constructive').length}
+                        </div>
+                        <div className="text-sm text-gray-600">Constructive</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-yellow-600">
+                          {comments.filter(comment => comment.type === 'recognition').length}
+                        </div>
+                        <div className="text-sm text-gray-600">Recognition</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-red-600">
+                          {comments.filter(comment => comment.priority === 'high').length}
+                        </div>
+                        <div className="text-sm text-gray-600">High Priority</div>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Refresh Success Animation */}
-                {showRefreshSuccess && (
-                  <div className="fixed top-4 right-4 z-50 bg-white border border-green-200 rounded-lg shadow-lg p-4 flex items-center space-x-3">
-                    <SuccessAnimation variant="checkmark" color="green" size="md" />
-                    <div>
-                      <p className="font-medium text-green-800">Success!</p>
-                      <p className="text-sm text-green-600">{refreshMessage}</p>
+
+                  {/* Refresh Success Animation */}
+                  {showRefreshSuccess && (
+                    <div className="fixed top-4 right-4 z-50 bg-white border border-green-200 rounded-lg shadow-lg p-4 flex items-center space-x-3">
+                      <SuccessAnimation variant="checkmark" color="green" size="md" />
+                      <div>
+                        <p className="font-medium text-green-800">Success!</p>
+                        <p className="text-sm text-green-600">{refreshMessage}</p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
                 </TabsContent>
               </Tabs>
             </CardContent>
@@ -1992,6 +2076,31 @@ export default function EmployeeDashboard() {
 
   return (
     <ProtectedRoute>
+      {/* Loading Screen - Shows during initial load, authentication, and auto-refresh */}
+      {(loading || authLoading || !profile) && (
+        <RefreshAnimationModal
+          isOpen={true}
+          message={
+            authLoading ? "Authenticating..." : 
+            !profile ? "Loading user profile..." : 
+            "Loading Employee Dashboard..."
+          }
+          gifPath="/search-file.gif"
+          duration={authLoading ? 800 : 1200}
+        />
+      )}
+
+      {/* Refresh Modal for manual refresh operations */}
+      {showRefreshModal && (
+        <RefreshAnimationModal
+          isOpen={true}
+          message={refreshModalMessage}
+          gifPath="/search-file.gif"
+          duration={2000}
+          onComplete={handleRefreshModalComplete}
+        />
+      )}
+
       <PageTransition>
         <DashboardShell
           title="Employee Dashboard"
@@ -2024,7 +2133,7 @@ export default function EmployeeDashboard() {
         open={isClearAllDialogOpen}
         onOpenChangeAction={setIsClearAllDialogOpen}
         title={showDeleteSuccess ? "Comments Deleted!" : "Clear All Comments"}
-        description={showDeleteSuccess 
+        description={showDeleteSuccess
           ? `Successfully deleted ${comments.length} comments from your account.`
           : `Are you sure you want to delete ALL ${comments.length} comments? This action cannot be undone and will permanently remove all feedback and comments from your account.`
         }
@@ -2054,7 +2163,7 @@ export default function EmployeeDashboard() {
         open={isDeleteCommentDialogOpen}
         onOpenChangeAction={setIsDeleteCommentDialogOpen}
         title={showSingleDeleteSuccess ? "Comment Deleted!" : "Delete Comment"}
-        description={showSingleDeleteSuccess 
+        description={showSingleDeleteSuccess
           ? "The comment has been successfully removed from your account."
           : "Are you sure you want to delete this comment? This action cannot be undone and will permanently remove the feedback from your account."
         }
@@ -2087,7 +2196,7 @@ export default function EmployeeDashboard() {
         open={isLogoutDialogOpen}
         onOpenChangeAction={setIsLogoutDialogOpen}
         title={showLogoutSuccess ? "Logging Out..." : "Logout"}
-        description={showLogoutSuccess 
+        description={showLogoutSuccess
           ? "You have been successfully logged out. Redirecting to login page..."
           : "Are you sure you want to logout? You will need to sign in again to access your dashboard."
         }
@@ -2117,12 +2226,13 @@ export default function EmployeeDashboard() {
         open={isDeleteEvaluationDialogOpen}
         onOpenChangeAction={setIsDeleteEvaluationDialogOpen}
         title={showDeleteEvaluationSuccess ? "Evaluation Deleted!" : "Delete Evaluation"}
-        description={showDeleteEvaluationSuccess 
+        description={showDeleteEvaluationSuccess
           ? "The evaluation has been successfully removed from your history."
           : `Are you sure you want to delete this evaluation from ${evaluationToDelete?.employeeName}? This action cannot be undone and will permanently remove the evaluation from your history.`
         }
         confirmText={isDeletingEvaluation ? "Deleting..." : "Delete"}
         cancelText="Cancel"
+        showCancel={!showDeleteEvaluationSuccess}
         isLoading={isDeletingEvaluation}
         showSuccessAnimation={showDeleteEvaluationSuccess}
         successAnimation={{
