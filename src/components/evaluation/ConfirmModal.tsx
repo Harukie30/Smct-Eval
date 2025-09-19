@@ -601,14 +601,14 @@ export default function ConfirmModal({ open, onCloseAction, onConfirmAction, dat
             <div class="print-signature">${data.employeeSignature || 'Employee signature not provided'}</div>
             <div class="print-signature-label">Employee's Name & Signature</div>
             <div style="margin-top: 5px; font-size: 8px;">
-              <strong>Date:</strong> ${data.employeeSignatureDate || 'Not specified'}
+              <strong>Date:</strong> ${data.employeeSignatureDate || new Date().toISOString().split('T')[0]}
             </div>
           </div>
           <div>
             <div class="print-signature">${data.evaluatorSignature || 'Evaluator signature not provided'}</div>
             <div class="print-signature-label">Evaluator's Name & Signature</div>
             <div style="margin-top: 5px; font-size: 8px;">
-              <strong>Date:</strong> ${data.evaluatorSignatureDate || 'Not specified'}
+              <strong>Date:</strong> ${data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]}
             </div>
           </div>
         </div>
@@ -981,7 +981,7 @@ export default function ConfirmModal({ open, onCloseAction, onConfirmAction, dat
                 <p className="text-center text-sm text-gray-600">Employee's Name & Signature</p>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm font-medium">Date:</span>
-                  <span className="text-sm text-gray-700">{data.employeeSignatureDate || 'Not specified'}</span>
+                  <span className="text-sm text-gray-700">{data.employeeSignatureDate || new Date().toISOString().split('T')[0]}</span>
                 </div>
               </div>
 
@@ -993,7 +993,7 @@ export default function ConfirmModal({ open, onCloseAction, onConfirmAction, dat
                 <p className="text-center text-sm text-gray-600">Evaluator's Name & Signature</p>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm font-medium">Date:</span>
-                  <span className="text-sm text-gray-700">{data.evaluatorSignatureDate || 'Not specified'}</span>
+                  <span className="text-sm text-gray-700">{data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]}</span>
                 </div>
               </div>
             </div>

@@ -31,29 +31,8 @@ export default function LandingLoginPage() {
   const { login, isAuthenticated, isLoading } = useUser();
   const router = useRouter();
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      // Get the appropriate dashboard based on user role
-      const storedUser = localStorage.getItem('authenticatedUser');
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-        const roleDashboards: Record<string, string> = {
-          'admin': '/admin',
-          'hr': '/hr-dashboard',
-          'hr-manager': '/hr-dashboard',
-          'evaluator': '/evaluator',
-          'employee': '/employee-dashboard',
-          'manager': '/evaluator'
-        };
-
-        const dashboardPath = roleDashboards[user.role || ''] || '/';
-        router.push(dashboardPath);
-      } else {
-        router.push('/');
-      }
-    }
-  }, [isAuthenticated, isLoading, router]);
+  // Remove automatic redirect - let users stay on login page even if authenticated
+  // This allows users to see the login form and choose to log in again or navigate elsewhere
 
   const handleLogin = async (e: any) => {
     e.preventDefault();
@@ -147,16 +126,7 @@ export default function LandingLoginPage() {
     );
   }
 
-  if (isAuthenticated) {
-    return (
-      <PageTransition>
-        <FakeLoadingScreen 
-          message="Redirecting..." 
-          duration={1000}
-        />
-      </PageTransition>
-    );
-  }
+  // Remove automatic redirect screen - show login form even if authenticated
 
   // Show fake loading screen during login process
   if (showLoadingScreen) {
@@ -354,6 +324,34 @@ export default function LandingLoginPage() {
                         Create one here
                       </Link>
                     </p>
+                    {isAuthenticated && (
+                      <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm text-green-800 mb-2">You're already logged in!</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            const storedUser = localStorage.getItem('authenticatedUser');
+                            if (storedUser) {
+                              const user = JSON.parse(storedUser);
+                              const roleDashboards: Record<string, string> = {
+                                'admin': '/admin',
+                                'hr': '/hr-dashboard',
+                                'hr-manager': '/hr-dashboard',
+                                'evaluator': '/evaluator',
+                                'employee': '/employee-dashboard',
+                                'manager': '/evaluator'
+                              };
+                              const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
+                              router.push(dashboardPath);
+                            }
+                          }}
+                          className="text-green-700 border-green-300 hover:bg-green-100"
+                        >
+                          Go to Dashboard
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="relative my-4">

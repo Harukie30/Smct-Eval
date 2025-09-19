@@ -131,4 +131,8 @@ export type EvaluationData = {
   evaluatorSignature: string;
   evaluatorSignatureDate: string;
   evaluatorSignatureImage: string;
+  
+  // Approval Status
+  evaluatorApproved?: boolean;
+  evaluatorApprovedAt?: string;
 };

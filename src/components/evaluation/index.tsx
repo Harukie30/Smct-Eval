@@ -156,6 +156,8 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
     evaluatorSignature: '',
     evaluatorSignatureDate: '',
     evaluatorSignatureImage: '',
+    evaluatorApproved: false,
+    evaluatorApprovedAt: '',
   });
   
   console.log('Initial evaluation data:', {
@@ -167,6 +169,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
     hireDate: evaluationData.hireDate,
   }); // Debug log
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isEvaluatorApproved, setIsEvaluatorApproved] = useState(false);
 
   // Update evaluation data when employee prop changes
   useEffect(() => {
@@ -212,6 +215,20 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
 
   const handleSubmit = () => {
     setShowConfirmModal(true);
+  };
+
+  const handleApprove = () => {
+    // Mark the evaluation as approved by the evaluator
+    setIsEvaluatorApproved(true);
+    
+    // Update the evaluation data to mark it as approved
+    updateEvaluationData({
+      evaluatorApproved: true,
+      evaluatorApprovedAt: new Date().toISOString()
+    });
+    
+    // Show success message
+    alert('Evaluation approved by evaluator! The evaluation is now ready for employee review.');
   };
 
   const confirmSubmit = async () => {
@@ -380,6 +397,8 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
                 onNextAction={nextStep}
                 onSubmitAction={handleSubmit}
                 onPreviousAction={prevStep}
+                onApproveAction={currentStep === 8 ? handleApprove : undefined}
+                isApproved={currentStep === 8 ? isEvaluatorApproved : false}
               />
             </CardContent>
           </Card>

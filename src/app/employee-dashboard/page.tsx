@@ -12,8 +12,12 @@ import PageTransition from '@/components/PageTransition';
 import { useUser } from '@/contexts/UserContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
+import EvaluationDetailsModal from '@/components/EvaluationDetailsModal';
 import CommentDetailModal from '@/components/CommentDetailModal';
 import { AlertDialog } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import clientDataService from '@/lib/clientDataService';
 import { getEmployeeResults, initializeMockData } from '@/lib/evaluationStorage';
 import commentsService from '@/lib/commentsService';
@@ -28,13 +32,14 @@ import RefreshAnimationModal from '@/components/RefreshAnimationModal';
 export default function EmployeeDashboard() {
   const router = useRouter();
   const { profile, user, isAuthenticated, isLoading: authLoading, logout } = useUser();
-  const { success } = useToast();
+  const { success, error } = useToast();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [evaluationResults, setEvaluationResults] = useState<any[]>([]);
   const [selectedEvaluation, setSelectedEvaluation] = useState<any>(null);
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
+  const [isEvaluationDetailsModalOpen, setIsEvaluationDetailsModalOpen] = useState(false);
   const [modalOpenedFromTab, setModalOpenedFromTab] = useState<string>('');
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [quarterlySearchTerm, setQuarterlySearchTerm] = useState('');
@@ -83,6 +88,7 @@ export default function EmployeeDashboard() {
   const [isApproving, setIsApproving] = useState(false);
   const [showApprovalSuccess, setShowApprovalSuccess] = useState(false);
   const [approvedEvaluations, setApprovedEvaluations] = useState<Set<string>>(new Set());
+  const [employeeApprovalName, setEmployeeApprovalName] = useState('');
 
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: '📊' },
@@ -581,30 +587,87 @@ export default function EmployeeDashboard() {
   };
 
   // Approval functions
-  const handleApproveEvaluation = (submission: any) => {
+  const handleApproveEvaluation = (submissionOrId: any) => {
+    let submission;
+    
+    if (typeof submissionOrId === 'string') {
+      // If it's a string ID, find the submission from the submissions array
+      submission = submissions.find(sub => sub.id.toString() === submissionOrId);
+      if (!submission) {
+        // Fallback to selectedEvaluation if not found in submissions
+        submission = selectedEvaluation;
+      }
+    } else {
+      // If it's an object, use it directly
+      submission = submissionOrId;
+    }
+    
+    // Debug logging
+    console.log('🔍 Debug - handleApproveEvaluation:', {
+      submissionOrId,
+      submissionOrIdType: typeof submissionOrId,
+      selectedEvaluation,
+      submission,
+      submissionId: submission?.id,
+      submissionKeys: submission ? Object.keys(submission) : 'no submission',
+      submissionsLength: submissions.length,
+      foundInSubmissions: submissions.find(sub => sub.id.toString() === submissionOrId)
+    });
+    
+    if (!submission) {
+      console.error('❌ Cannot approve: no submission found');
+      return;
+    }
+    
+    if (!submission.id) {
+      console.error('❌ Cannot approve: submission has no id property');
+      return;
+    }
+    
     setEvaluationToApprove(submission);
+    setEmployeeApprovalName(profile?.name || user?.name || '');
     setIsApprovalDialogOpen(true);
   };
 
   const confirmApproval = async () => {
     if (!evaluationToApprove || !profile?.email) return;
 
+    // Debug logging
+    console.log('🔍 Debug - confirmApproval:', {
+      evaluationToApprove,
+      evaluationId: evaluationToApprove.id,
+      evaluationIdType: typeof evaluationToApprove.id,
+      profileEmail: profile.email
+    });
+
+    // Check if user has a signature
+    const employeeSignature = profile.signature || user?.signature || '';
+    
+    if (!employeeSignature) {
+      error('No Signature Found', 'Please add a signature to your profile before approving evaluations. Go to your profile settings to add a signature.');
+      return;
+    }
+
     setIsApproving(true);
 
     try {
-      // Create approval data with signature and timestamp
-      const employeeSignature = profile.signature || user?.signature || '';
-      
-      // If no signature exists, create a test signature for demo purposes
-      const finalSignature = employeeSignature || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjQwIiB2aWV3Qm94PSIwIDAgMTAwIDQwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8dGV4dCB4PSI1MCIgeT0iMjUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzMzMzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+U2lnbmVkPC90ZXh0Pgo8L3N2Zz4K';
-      
       const approvalData = {
         id: evaluationToApprove.id,
         approvedAt: new Date().toISOString(),
-        employeeSignature: finalSignature,
-        employeeName: profile.name || user?.name || '',
+        employeeSignature: employeeSignature,
+        employeeName: employeeApprovalName || profile.name || user?.name || '',
         employeeEmail: profile.email || user?.email || ''
       };
+      
+      // Debug logging
+      console.log('🔍 Debug - Approval Data:', {
+        evaluationId: evaluationToApprove.id,
+        hasSignature: employeeSignature ? 'YES' : 'NO',
+        signatureLength: employeeSignature?.length || 0,
+        signaturePreview: employeeSignature?.substring(0, 50) + '...',
+        employeeName: approvalData.employeeName,
+        employeeEmail: approvalData.employeeEmail
+      });
       
 
       // Add to approved evaluations with full approval data
@@ -614,8 +677,22 @@ export default function EmployeeDashboard() {
 
       // Save approval data to localStorage
       const existingApprovals = JSON.parse(localStorage.getItem(`approvalData_${profile.email}`) || '{}');
-      existingApprovals[evaluationToApprove.id] = approvalData;
+      // Ensure we use the correct submission ID as the key
+      const submissionId = evaluationToApprove.id?.toString() || '';
+      if (!submissionId) {
+        console.error('❌ Cannot save approval: evaluationToApprove.id is undefined');
+        return;
+      }
+      existingApprovals[submissionId] = approvalData;
       localStorage.setItem(`approvalData_${profile.email}`, JSON.stringify(existingApprovals));
+      
+      // Debug logging for localStorage save
+      console.log('🔍 Debug - Saving to localStorage:', {
+        key: `approvalData_${profile.email}`,
+        submissionId: submissionId,
+        approvalData: approvalData,
+        existingApprovals: existingApprovals
+      });
 
       // Also save the approved IDs list
       localStorage.setItem(`approvedEvaluations_${profile.email}`, JSON.stringify([...newApproved]));
@@ -648,7 +725,22 @@ export default function EmployeeDashboard() {
   const getApprovalData = (submissionId: string) => {
     if (!profile?.email) return null;
     const approvalData = JSON.parse(localStorage.getItem(`approvalData_${profile.email}`) || '{}');
-    return approvalData[submissionId] || null;
+    // Ensure we use the correct submission ID format (convert to string)
+    const key = submissionId.toString();
+    const data = approvalData[key] || null;
+    
+    // Debug logging
+    console.log('🔍 Debug - getApprovalData:', {
+      submissionId,
+      key,
+      profileEmail: profile.email,
+      approvalData,
+      foundData: data,
+      hasSignature: data?.employeeSignature ? 'YES' : 'NO',
+      signatureLength: data?.employeeSignature?.length || 0
+    });
+    
+    return data;
   };
 
   const handleLogout = () => {
@@ -931,6 +1023,17 @@ export default function EmployeeDashboard() {
                               }}
                             >
                               View Details
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedEvaluation(submission);
+                                setIsEvaluationDetailsModalOpen(true);
+                              }}
+                              className="text-green-600 hover:text-green-800 border-green-200 hover:border-green-300"
+                            >
+                              Evaluation Details
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -1746,12 +1849,19 @@ export default function EmployeeDashboard() {
                     return approvalData?.employeeSignature ? (
                       <div className="flex items-center space-x-2">
                         <span className="text-xs text-gray-500">Signature:</span>
-                        <div className="border border-gray-300 rounded p-1 bg-white">
-                          <img 
-                            src={approvalData.employeeSignature} 
-                            alt="Employee Signature" 
-                            className="h-6 w-auto object-contain"
-                          />
+                        <div className="text-center">
+                          {/* Signature area */}
+                          <div className="h-6 border-b border-gray-300 flex items-center justify-center">
+                            <img 
+                              src={approvalData.employeeSignature} 
+                              alt="Employee Signature" 
+                              className="h-4 max-w-full object-contain"
+                            />
+                          </div>
+                          {/* Printed Name */}
+                          <p className="text-xs font-medium text-gray-900 mt-1">
+                            {approvalData.employeeName || 'Employee'}
+                          </p>
                         </div>
                       </div>
                     ) : (
@@ -1784,16 +1894,6 @@ export default function EmployeeDashboard() {
                                     >
                                       View Details
                                     </Button>
-                                    {!isEvaluationApproved(submission.id) && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleApproveEvaluation(submission)}
-                                        className="text-green-600 hover:text-green-800 border-green-200 hover:border-green-300"
-                                      >
-                                        Approve
-                                      </Button>
-                                    )}
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -2296,8 +2396,23 @@ export default function EmployeeDashboard() {
         submission={selectedEvaluation}
         onApprove={handleApproveEvaluation}
         isApproved={selectedEvaluation ? isEvaluationApproved(selectedEvaluation.id) : false}
-        showApproval={modalOpenedFromTab === 'history'}
         approvalData={selectedEvaluation ? getApprovalData(selectedEvaluation.id) : null}
+        currentUserName={profile?.name || user?.name}
+      />
+
+      {/* Evaluation Details Modal */}
+      <EvaluationDetailsModal
+        isOpen={isEvaluationDetailsModalOpen}
+        onCloseAction={() => setIsEvaluationDetailsModalOpen(false)}
+        evaluationData={selectedEvaluation ? {
+          evaluationData: selectedEvaluation.evaluationData,
+          evaluatorName: selectedEvaluation.evaluatorName,
+          submittedAt: selectedEvaluation.submittedAt,
+          period: selectedEvaluation.period,
+          overallRating: selectedEvaluation.overallRating
+        } : null}
+        approvalData={selectedEvaluation ? getApprovalData(selectedEvaluation.id) : null}
+        isApproved={selectedEvaluation ? isEvaluationApproved(selectedEvaluation.id) : false}
       />
 
       {/* Comment Detail Modal */}
@@ -2427,30 +2542,121 @@ export default function EmployeeDashboard() {
       />
 
       {/* Approval Confirmation Dialog */}
-      <AlertDialog
-        open={isApprovalDialogOpen}
-        onOpenChangeAction={setIsApprovalDialogOpen}
-        title={showApprovalSuccess ? "Evaluation Approved!" : "Approve Evaluation"}
-        description={showApprovalSuccess
-          ? "You have successfully acknowledged this evaluation. Your approval has been recorded."
-          : `Are you sure you want to approve this evaluation? By approving, you acknowledge that you have reviewed and understood your performance assessment.`
-        }
-        confirmText={isApproving ? "Approving..." : "Approve"}
-        cancelText="Cancel"
-        showCancel={!showApprovalSuccess}
-        isLoading={isApproving}
-        showSuccessAnimation={showApprovalSuccess}
-        successAnimation={{
-          variant: 'checkmark',
-          color: 'green',
-          size: 'lg'
-        }}
-        onConfirm={confirmApproval}
-        onCancel={() => {
-          setIsApprovalDialogOpen(false);
-          setEvaluationToApprove(null);
-        }}
-      />
+      <Dialog open={isApprovalDialogOpen} onOpenChangeAction={setIsApprovalDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              {showApprovalSuccess ? "Evaluation Approved!" : "Approve Evaluation"}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {!showApprovalSuccess ? (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Are you sure you want to approve this evaluation? By approving, you acknowledge that you have reviewed and understood your performance assessment.
+              </p>
+              
+              {/* Signature Status Check */}
+              {(() => {
+                const hasSignature = profile?.signature || user?.signature;
+                return hasSignature ? (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-green-800 font-medium">Signature Available</span>
+                    </div>
+                    <p className="text-xs text-green-700 mt-1">Your signature will be used for approval.</p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      <span className="text-sm text-red-800 font-medium">No Signature Found</span>
+                    </div>
+                    <p className="text-xs text-red-700 mt-1">Please add a signature to your profile before approving evaluations.</p>
+                  </div>
+                );
+              })()}
+              
+              <div className="space-y-2">
+                <Label htmlFor="employeeName" className="text-sm font-medium">
+                  Your Name (as it will appear on the signature):
+                </Label>
+                <Input
+                  id="employeeName"
+                  value={employeeApprovalName}
+                  onChange={(e) => setEmployeeApprovalName(e.target.value)}
+                  placeholder="Enter your full name"
+                  className="w-full"
+                  disabled={isApproving}
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsApprovalDialogOpen(false);
+                    setEvaluationToApprove(null);
+                    setEmployeeApprovalName('');
+                  }}
+                  disabled={isApproving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmApproval}
+                  disabled={isApproving || !employeeApprovalName.trim() || !(profile?.signature || user?.signature)}
+                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {isApproving ? "Approving..." : "Approve"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-lg font-medium text-gray-900 text-center">Evaluation Approved Successfully!</p>
+              <p className="text-sm text-gray-600 text-center">
+                Your signature has been recorded and the evaluation is now complete.
+              </p>
+              
+              {/* Show approved name as read-only */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700">Approved By:</Label>
+                <Input
+                  type="text"
+                  value={employeeApprovalName}
+                  readOnly
+                  className="w-full bg-gray-50 text-gray-900 cursor-not-allowed"
+                />
+              </div>
+              
+              <Button
+                onClick={() => {
+                  setIsApprovalDialogOpen(false);
+                  setShowApprovalSuccess(false);
+                  setEmployeeApprovalName('');
+                  setEvaluationToApprove(null);
+                }}
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                Close
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Refresh Animation Modal for Submissions */}
       <RefreshAnimationModal

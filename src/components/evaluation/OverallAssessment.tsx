@@ -34,6 +34,8 @@ interface OverallAssessmentProps {
     };
     onSubmitAction?: () => void;
     onPreviousAction?: () => void;
+    onApproveAction?: () => void;
+    isApproved?: boolean;
 }
 
 const getRatingIcon = (rating: string) => {
@@ -66,7 +68,7 @@ const getRatingColor = (rating: string) => {
     }
 };
 
-export default function OverallAssessment({ data, updateDataAction, employee, currentUser, onSubmitAction, onPreviousAction }: OverallAssessmentProps) {
+export default function OverallAssessment({ data, updateDataAction, employee, currentUser, onSubmitAction, onPreviousAction, onApproveAction, isApproved = false }: OverallAssessmentProps) {
     // Auto-populate evaluator name when currentUser is available
     useEffect(() => {
         if (currentUser && !data.evaluatorSignature) {
@@ -99,6 +101,12 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
     const handlePrevious = () => {
         if (onPreviousAction) {
             onPreviousAction();
+        }
+    };
+
+    const handleApprove = () => {
+        if (onApproveAction) {
+            onApproveAction();
         }
     };
 
@@ -1540,28 +1548,30 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                         {/* Employee Section */}
                         <div className="space-y-3">
                             <div>
-                                <Label className="text-sm font-medium text-gray-700">Employee Name:</Label>
-                                <Input
-                                    value={data.employeeSignature || employee?.name || ''}
-                                    onChange={(e) => updateDataAction({ employeeSignature: e.target.value })}
-                                    className="bg-gray-100 border-gray-300 mt-1"
-                                    placeholder="Employee's name"
-                                    disabled
-                                    readOnly
-                                />
-                            </div>
-                            <div>
                                 <Label className="text-sm font-medium text-gray-700">Signature:</Label>
-                                <div className="mt-1 border-2 border-gray-300 rounded-lg p-4 bg-white min-h-[80px] flex items-center justify-center">
-                                    {employee?.signature ? (
-                                        <img 
-                                            src={employee.signature} 
-                                            alt="Employee Signature" 
-                                            className="max-h-16 max-w-full object-contain"
-                                        />
-                                    ) : (
-                                        <span className="text-sm text-gray-500">No signature available</span>
-                                    )}
+                                <div className="mt-1 border-2 border-dashed border-white rounded-lg bg-gray-50">
+                                    {/* Signature area */}
+                                    <div className="h-16 border-b border-gray-300 flex items-center justify-center">
+                                        {employee?.signature ? (
+                                            <img 
+                                                src={employee.signature} 
+                                                alt="Employee Signature" 
+                                                className="h-12 max-w-full object-contain"
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = 'none';
+                                                }}
+                                            />
+                                        ) : (
+                                            <span className="text-gray-500 text-sm">No signature available</span>
+                                        )}
+                                    </div>
+                                    
+                                    {/* Name area */}
+                                    <div className="p-2 text-center">
+                                        <p className="text-sm font-medium text-gray-700">
+                                            {data.employeeSignature || employee?.name || 'Employee Name'}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                             <p className="text-center text-sm text-gray-600">Employee's Name & Signature</p>
@@ -1584,69 +1594,100 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                         </div>
 
                         {/* Evaluator Section */}
-                        <div className="space-y-3">
-                            <div>
-                                <Label className="text-sm font-medium text-gray-700">Evaluator Name:</Label>
-                                <Input
-                                    value={data.evaluatorSignature || currentUser?.name || ''}
-                                    onChange={(e) => updateDataAction({ evaluatorSignature: e.target.value })}
-                                    className="bg-blue-50 border-gray-300 mt-1"
-                                    placeholder="Enter evaluator name"
-                                />
-                            </div>
-                            <div>
-                                <Label className="text-sm font-medium text-gray-700">Signature:</Label>
-                                <div className="mt-1 border-2 border-gray-300 rounded-lg p-4 bg-white min-h-[80px] flex items-center justify-center">
-                                    {currentUser?.signature ? (
-                                        <img 
-                                            src={currentUser.signature} 
-                                            alt="Evaluator Signature" 
-                                            className="max-h-16 max-w-full object-contain"
-                                        />
-                                    ) : (
-                                        <span className="text-sm text-gray-500">No signature available</span>
+                        <div className="space-y-4">
+                            <div className="text-center">
+                                <h4 className="text-sm font-semibold text-gray-800 mb-3">Evaluator Signature</h4>
+                                
+                                {/* Signature area */}
+                                <div className="border border-gray-300 rounded-lg bg-white p-4 relative">
+                                    <div className="h-16 flex items-center justify-center relative">
+                                        {/* Name as background text */}
+                                        <span className="text-sm text-gray-400 font-medium">
+                                            {data.evaluatorSignature || currentUser?.name || 'Evaluator Name'}
+                                        </span>
+                                        {/* Signature overlay */}
+                                        {isApproved && currentUser?.signature && (
+                                            <img 
+                                                src={currentUser.signature} 
+                                                alt="Evaluator Signature" 
+                                                className="absolute inset-0 max-h-12 max-w-full object-contain pointer-events-none"
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = 'none';
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                {/* Action Section */}
+                                <div className="mt-4">
+                                    {/* Approve Button - Only show if not approved */}
+                                    {!isApproved && onApproveAction && (
+                                        <Button
+                                            onClick={handleApprove}
+                                            className="bg-green-600 hover:bg-green-700 text-white px-8 py-2 text-sm font-medium"
+                                        >
+                                            Approve Evaluation
+                                        </Button>
+                                    )}
+                                    
+                                    {/* Approved Status - Only show if approved */}
+                                    {isApproved && (
+                                        <div className="space-y-2">
+                                            <div className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium">
+                                                ✓ Approved
+                                            </div>
+                                            <p className="text-xs text-gray-500">
+                                                {data.evaluatorApprovedAt ? new Date(data.evaluatorApprovedAt).toLocaleDateString('en-US', {
+                                                    year: 'numeric',
+                                                    month: 'long',
+                                                    day: 'numeric'
+                                                }) : 'Unknown date'}
+                                            </p>
+                                        </div>
                                     )}
                                 </div>
                             </div>
-                            <p className="text-center text-sm text-gray-600">Evaluator's Name & Signature</p>
-                            <div className="flex items-center space-x-2">
-                                <Label className="text-sm font-medium">Date:</Label>
+                            
+                            <div className="flex items-center justify-center space-x-2">
+                                <Label className="text-sm font-medium text-gray-600">Date:</Label>
                                 <Input
                                     type="date"
                                     value={data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]}
                                     onChange={(e) => updateDataAction({ evaluatorSignatureDate: e.target.value })}
-                                    className="w-40"
+                                    className="w-32 text-sm"
                                 />
                             </div>
                         </div>
                     </div>
                 </CardContent>
             </Card>
-                         {/* Submit Button */}
-             <div className="flex justify-between items-center pt-20">
-                 <Button
-                     onClick={handlePrevious}
-                     variant="outline"
-                     className="px-8 py-3 text-lg"
-                     size="lg"
-                 >
-                     Previous
-                 </Button>
-                 <Button
-                     onClick={handleSubmit}
-                     className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700"
-                     size="lg"
-                 >
-                     Submit Evaluation
-                 </Button>
-             </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-between items-center pt-20">
+                <Button
+                    onClick={handlePrevious}
+                    variant="outline"
+                    className="px-8 py-3 text-lg"
+                    size="lg"
+                >
+                    Previous
+                </Button>
+                <Button
+                    onClick={handleSubmit}
+                    className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700"
+                    size="lg"
+                >
+                    Submit Evaluation
+                </Button>
+            </div>
             
-                         {/* Auto-save indicator */}
-             {showAutoSaveIndicator && (
-                 <div className="auto-save-indicator show">
-                     ✓ Auto-saved
-                 </div>
-             )}
-         </div>
-     );
- }
+            {/* Auto-save indicator */}
+            {showAutoSaveIndicator && (
+                <div className="auto-save-indicator show">
+                    ✓ Auto-saved
+                </div>
+            )}
+        </div>
+    );
+}

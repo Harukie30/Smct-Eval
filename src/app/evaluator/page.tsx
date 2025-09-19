@@ -151,7 +151,8 @@ export default function EvaluatorDashboard() {
         email: user.email,
         position: user.position,
         department: user.department,
-        role: user.role
+        role: user.role,
+        signature: user.signature // Include signature from user
       };
     } else if (profile) {
       // UserProfile type
@@ -161,7 +162,8 @@ export default function EvaluatorDashboard() {
         email: profile.email || '',
         position: profile.roleOrPosition || '',
         department: profile.department || '',
-        role: profile.roleOrPosition || ''
+        role: profile.roleOrPosition || '',
+        signature: profile.signature // Include signature from profile
       };
     }
     return undefined;

@@ -10,12 +10,16 @@ interface EvaluationDetailsModalProps {
   isOpen: boolean;
   onCloseAction: () => void;
   evaluationData: any;
+  approvalData?: any;
+  isApproved?: boolean;
 }
 
 export default function EvaluationDetailsModal({ 
   isOpen, 
   onCloseAction, 
-  evaluationData 
+  evaluationData,
+  approvalData,
+  isApproved = false
 }: EvaluationDetailsModalProps) {
   if (!evaluationData) return null;
 
@@ -190,6 +194,59 @@ export default function EvaluationDetailsModal({
             </div>
           )}
         </div>
+
+        {/* Employee Signature Section - if approved */}
+        {isApproved && approvalData && (
+          <Card className="shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base font-semibold text-gray-900">Employee Signature</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center space-y-4">
+                {/* Signature area */}
+                <div className="h-16 border-b border-gray-300 flex items-center justify-center">
+                  {approvalData.employeeSignature ? (
+                    <img 
+                      src={approvalData.employeeSignature} 
+                      alt="Employee Signature" 
+                      className="h-12 max-w-full object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <span className="text-gray-400 text-sm">No signature</span>
+                  )}
+                </div>
+
+                {/* Printed Name */}
+                <p className="text-sm font-medium text-gray-900">
+                  {approvalData.employeeName || 'Employee Name'}
+                </p>
+
+                {/* Date and Status */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center space-x-2">
+                    <span className="text-sm text-gray-600">Date:</span>
+                    <span className="text-sm text-gray-700">
+                      {new Date(approvalData.approvedAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <Badge className="bg-green-100 text-green-800">
+                      ✓ Approved
+                    </Badge>
+                    <span className="text-sm text-gray-600">Acknowledged</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Close Button */}
         <div className="flex justify-end pt-6 border-t border-gray-200 mt-6">
