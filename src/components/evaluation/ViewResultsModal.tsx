@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { approveEvaluation } from '@/lib/approvalService';
+import { useEmployeeSignatureByEvaluation } from '@/hooks/useEmployeeSignature';
 
 type Submission = {
   id: number;
@@ -24,6 +24,12 @@ type Submission = {
   evaluatorName?: string;
   period?: string;
   overallRating?: number;
+  // Approval-related properties
+  approvalStatus?: string;
+  employeeSignature?: string | null;
+  employeeApprovedAt?: string | null;
+  evaluatorSignature?: string | null;
+  evaluatorApprovedAt?: string | null;
 };
 
 interface ApprovalData {
@@ -43,6 +49,7 @@ interface ViewResultsModalProps {
   approvalData?: ApprovalData | null;
   currentUserName?: string;
   showApprovalButton?: boolean; // New prop to control approval button visibility
+  isEvaluatorView?: boolean; // New prop to indicate if this is being viewed by evaluator
 }
 
 // Helper functions for rating calculations
@@ -103,9 +110,12 @@ const getQuarterColor = (quarter: string) => {
   return 'bg-gray-100 text-gray-800';
 };
 
-export default function ViewResultsModal({ isOpen, onCloseAction, submission, onApprove, isApproved = false, approvalData = null, currentUserName, showApprovalButton = false }: ViewResultsModalProps) {
+export default function ViewResultsModal({ isOpen, onCloseAction, submission, onApprove, isApproved = false, approvalData = null, currentUserName, showApprovalButton = false, isEvaluatorView = false }: ViewResultsModalProps) {
   const [isApproving, setIsApproving] = useState(false);
   const [approvalError, setApprovalError] = useState('');
+
+  // Fetch employee signature for this evaluation
+  const { signature: employeeSignature, loading: signatureLoading, error: signatureError } = useEmployeeSignatureByEvaluation(submission?.id || null);
 
   if (!submission) return null;
 
@@ -116,7 +126,19 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
     submissionIdType: typeof submission.id,
     hasOnApprove: !!onApprove,
     isApproved,
-    approvalData
+    approvalData,
+    isEvaluatorView,
+    approvalStatus: submission.approvalStatus,
+    employeeSignature: submission.employeeSignature,
+    employeeApprovedAt: submission.employeeApprovedAt,
+    employeeSignatureFromAPI: employeeSignature ? {
+      id: employeeSignature.id,
+      employeeName: employeeSignature.employeeName,
+      hasSignature: !!employeeSignature.signature,
+      signatureDate: employeeSignature.signatureDate
+    } : null,
+    signatureLoading,
+    signatureError
   });
 
   // Handle approval API call
@@ -261,7 +283,127 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
               </CardContent>
             </Card>
 
-           
+            {/* Employee Approval Status Section - Only show for evaluator view */}
+            {isEvaluatorView && submission && (
+              <Card className="shadow-md">
+                <CardHeader className={`border-b ${
+                  submission.approvalStatus === 'employee_approved' ? 'bg-green-50 border-green-200' :
+                  submission.approvalStatus === 'fully_approved' ? 'bg-green-50 border-green-200' :
+                  'bg-blue-50 border-blue-200'
+                }`}>
+                  <CardTitle className={`text-xl font-semibold ${
+                    submission.approvalStatus === 'employee_approved' ? 'text-green-900' :
+                    submission.approvalStatus === 'fully_approved' ? 'text-green-900' :
+                    'text-blue-900'
+                  }`}>
+                    {submission.approvalStatus === 'employee_approved' ? '🎉 Employee Has Approved!' :
+                     submission.approvalStatus === 'fully_approved' ? '✅ Fully Approved' :
+                     'Employee Approval Status'}
+                  </CardTitle>
+                  {submission.approvalStatus === 'employee_approved' && (
+                    <p className="text-sm text-green-700 mt-2">
+                      The employee has reviewed and approved this evaluation. You can now provide your final approval.
+                    </p>
+                  )}
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Approval Status</Label>
+                      <div className="mt-2">
+                        <Badge className={
+                          submission.approvalStatus === 'fully_approved' ? 'bg-green-100 text-green-800' :
+                          submission.approvalStatus === 'employee_approved' ? 'bg-blue-100 text-blue-800' :
+                          submission.approvalStatus === 'evaluator_approved' ? 'bg-purple-100 text-purple-800' :
+                          submission.approvalStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }>
+                          {submission.approvalStatus === 'fully_approved' ? '✓ Fully Approved' :
+                           submission.approvalStatus === 'employee_approved' ? '👤 Employee Approved' :
+                           submission.approvalStatus === 'evaluator_approved' ? '👨‍💼 Evaluator Approved' :
+                           submission.approvalStatus === 'rejected' ? '❌ Rejected' :
+                           '⏳ Pending'}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-600">Employee Signature</Label>
+                      <div className="mt-2">
+                        {signatureLoading ? (
+                          <div className="text-sm text-gray-500">Loading signature...</div>
+                        ) : signatureError ? (
+                          <div className="text-sm text-red-500">Error loading signature</div>
+                        ) : (submission.employeeSignature || employeeSignature?.signature) ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-1 text-green-600">
+                              <span className="text-sm">✓</span>
+                              <span className="text-sm font-medium">Signed</span>
+                            </div>
+                            {submission.employeeApprovedAt && (
+                              <div className="text-sm text-gray-500">
+                                on {new Date(submission.employeeApprovedAt).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-1 text-gray-500">
+                            <span className="text-sm">⏳</span>
+                            <span className="text-sm">Pending</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Employee Signature Preview */}
+                  {(submission.employeeSignature || employeeSignature?.signature) && (
+                    <div className="mt-6">
+                      <Label className="text-sm font-medium text-gray-600">Employee Signature Preview</Label>
+                      <div className="mt-2 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                        <div className="flex items-center justify-center h-20 border-2 border-dashed border-gray-300 rounded-lg bg-white relative">
+                          <span className="text-sm text-gray-400 font-medium">
+                            {submission.employeeName || 'Employee Name'}
+                          </span>
+                          <img 
+                            src={submission.employeeSignature || employeeSignature?.signature} 
+                            alt="Employee Signature" 
+                            className="absolute top-2 left-1/2 transform -translate-x-1/2 max-h-16 max-w-full object-contain"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Call to Action for Evaluator */}
+                  {submission.approvalStatus === 'employee_approved' && (
+                    <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-medium text-green-800">Ready for Final Approval</h4>
+                          <p className="text-sm text-green-700 mt-1">
+                            The employee has approved this evaluation. You can now provide your final approval to complete the process.
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            // This would trigger the evaluator approval process
+                            // You can add the evaluator approval logic here
+                            alert('Evaluator approval functionality would be triggered here');
+                          }}
+                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm font-medium"
+                        >
+                          ✅ Final Approval
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Review Type Section */}
             {submission.evaluationData && (
               <Card className="shadow-md">
@@ -1499,9 +1641,17 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             {approvalData?.employeeName || currentUserName || 'Employee Name'}
                           </span>
                           {/* Signature overlay - centered and overlapping */}
-                          {isApproved && approvalData?.employeeSignature && (
+                          {signatureLoading ? (
+                            <div className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-gray-500">
+                              Loading signature...
+                            </div>
+                          ) : signatureError ? (
+                            <div className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-red-500">
+                              Error loading signature
+                            </div>
+                          ) : (isApproved && (employeeSignature?.signature || approvalData?.employeeSignature)) && (
                             <img 
-                              src={approvalData.employeeSignature} 
+                              src={employeeSignature?.signature || approvalData?.employeeSignature} 
                               alt="Employee Signature" 
                               className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-16 max-w-full object-contain"
                               onError={(e) => {

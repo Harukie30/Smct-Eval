@@ -4,7 +4,7 @@
     "name": "Engineering",
     "manager": "Sarah Johnson",
     "employeeCount": 8,
-    "budget": 1200000,
+    
     "performance": 92
   },
   {
@@ -12,7 +12,7 @@
     "name": "Product",
     "manager": "Mike Chen",
     "employeeCount": 5,
-    "budget": 800000,
+   
     "performance": 88
   },
   {
@@ -20,7 +20,7 @@
     "name": "Design",
     "manager": "Lisa Rodriguez",
     "employeeCount": 4,
-    "budget": 600000,
+ 
     "performance": 85
   },
   {
@@ -28,7 +28,7 @@
     "name": "Marketing",
     "manager": "David Kim",
     "employeeCount": 6,
-    "budget": 900000,
+    
     "performance": 90
   },
   {
@@ -36,7 +36,7 @@
     "name": "Human Resources",
     "manager": "Jennifer Wilson",
     "employeeCount": 3,
-    "budget": 400000,
+    
     "performance": 87
   },
   {
@@ -44,7 +44,7 @@
     "name": "Finance",
     "manager": "Robert Martinez",
     "employeeCount": 4,
-    "budget": 500000,
+    
     "performance": 94
   },
   {
@@ -52,7 +52,7 @@
     "name": "Sales",
     "manager": "Amanda Thompson",
     "employeeCount": 7,
-    "budget": 1100000,
+    
     "performance": 89
   },
   {
@@ -60,7 +60,7 @@
     "name": "Customer Support",
     "manager": "Michael Brown",
     "employeeCount": 5,
-    "budget": 700000,
+   
     "performance": 86
   },
   {
@@ -68,7 +68,7 @@
     "name": "Operations",
     "manager": "Patricia Garcia",
     "employeeCount": 12,
-    "budget": 1500000,
+ 
     "performance": 91
   },
   {
@@ -76,7 +76,7 @@
     "name": "Legal",
     "manager": "Christopher Lee",
     "employeeCount": 2,
-    "budget": 300000,
+   
     "performance": 93
   }
 ]

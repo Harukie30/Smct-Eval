@@ -26,6 +26,7 @@ import { AlertDialog } from '@/components/ui/alert-dialog';
 import RefreshAnimationModal from '@/components/RefreshAnimationModal';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { useUser } from '@/contexts/UserContext';
+import { useToast } from '@/hooks/useToast';
 
 type Feedback = {
   id: number;
@@ -148,6 +149,7 @@ const getQuarterColor = (quarter: string) => {
 
 export default function EvaluatorDashboard() {
   const { profile, user } = useUser();
+  const { success, error } = useToast();
 
   // Helper function to map user data to currentUser format
   const getCurrentUserData = () => {
@@ -294,8 +296,11 @@ export default function EvaluatorDashboard() {
   const [feedbackApprovalStatusFilter, setFeedbackApprovalStatusFilter] = useState('');
   const [feedbackSort, setFeedbackSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const refreshSubmissions = async () => {
     try {
+      setIsRefreshing(true);
       const submissions = await clientDataService.getSubmissions();
 
       if (Array.isArray(submissions)) {
@@ -313,13 +318,30 @@ export default function EvaluatorDashboard() {
         );
         
         setRecentSubmissions(uniqueData);
+        
+        // Show success feedback
+        success(
+          'Evaluation Records Refreshed',
+          `Successfully loaded ${uniqueData.length} evaluation records`
+        );
+        console.log(`✅ Successfully refreshed ${uniqueData.length} evaluation records`);
       } else {
         console.warn('Invalid data structure received from API');
         setRecentSubmissions([]);
+        error(
+          'Invalid Data',
+          'Received invalid data structure from the server'
+        );
       }
-    } catch (error) {
-      console.error('Error fetching submissions:', error);
+    } catch (err) {
+      console.error('Error fetching submissions:', err);
       setRecentSubmissions([]);
+      error(
+        'Refresh Failed',
+        'Failed to refresh evaluation records. Please try again.'
+      );
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -1081,12 +1103,12 @@ export default function EvaluatorDashboard() {
         rating: calculatedRating,
         date: submission.submittedAt || new Date().toISOString(),
         comment: submission.evaluationData?.overallComments || 'Performance evaluation completed',
-        // Approval-related properties
-        approvalStatus: submission.approvalStatus || 'pending',
-        employeeSignature: submission.employeeSignature || null,
-        employeeApprovedAt: submission.employeeApprovedAt || null,
-        evaluatorSignature: submission.evaluatorSignature || null,
-        evaluatorApprovedAt: submission.evaluatorApprovedAt || null
+        // Approval-related properties - extract from nested evaluationData or top level
+        approvalStatus: submission.approvalStatus || submission.evaluationData?.approvalStatus || 'pending',
+        employeeSignature: submission.employeeSignature || submission.evaluationData?.employeeSignature || null,
+        employeeApprovedAt: submission.employeeApprovedAt || submission.evaluationData?.employeeApprovedAt || null,
+        evaluatorSignature: submission.evaluatorSignature || submission.evaluationData?.evaluatorSignature || null,
+        evaluatorApprovedAt: submission.evaluatorApprovedAt || submission.evaluationData?.evaluatorApprovedAt || null
       };
     });
 
@@ -1332,10 +1354,18 @@ export default function EvaluatorDashboard() {
                   <Button
                     size="sm"
                     onClick={refreshSubmissions}
-                    className="px-3 py-2 text-white hover:text-white bg-green-500 hover:bg-green-600"
+                    disabled={isRefreshing}
+                    className="px-3 py-2 text-white hover:text-white bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
                     title="Refresh submissions data"
                   >
-                    🔄 Refresh
+                    {isRefreshing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Refreshing...
+                      </>
+                    ) : (
+                      <>🔄 Refresh</>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -1684,10 +1714,18 @@ export default function EvaluatorDashboard() {
                     variant="outline"
                     size="sm"
                     onClick={refreshSubmissions}
-                    className="mt-1 w-full text-xs bg-blue-500 hover:bg-blue-600 text-center text-white border-blue-200"
+                    disabled={isRefreshing}
+                    className="mt-1 w-full text-xs bg-blue-500 hover:bg-blue-600 text-center text-white border-blue-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
                     title="Refresh evaluation records data"
                   >
-                    🔄 Refresh
+                    {isRefreshing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                        Refreshing...
+                      </>
+                    ) : (
+                      <>🔄 Refresh</>
+                    )}
                   </Button>
                 </div>
 
@@ -1939,6 +1977,7 @@ export default function EvaluatorDashboard() {
           isOpen={isViewResultsModalOpen}
           onCloseAction={() => setIsViewResultsModalOpen(false)}
           submission={selectedEvaluationSubmission}
+          isEvaluatorView={true}
         />
 
         {/* Cancel Evaluation Alert Dialog */}

@@ -66,14 +66,11 @@ function ScoreDropdown({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          className={`w-15 px-1 py-2 text-lg font-bold border-2 border-yellow-400 rounded-md bg-yellow-100 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm min-h-[40px] justify-between ${getScoreColor(value)}`}
-        >
-          {value || ''}
-          <ChevronDownIcon className="h-4 w-4" />
-        </Button>
+      <DropdownMenuTrigger 
+        className={`w-15 px-1 py-2 text-lg font-bold border-2 border-yellow-400 rounded-md bg-yellow-100 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm min-h-[40px] justify-between inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground ${getScoreColor(value)}`}
+      >
+        {value || ''}
+        <ChevronDownIcon className="h-4 w-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-32 min-w-[128px] bg-white border-2 border-yellow-400">
         <DropdownMenuItem
@@ -433,20 +430,17 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
               <div className="space-y-1">
                 <Label className="text-sm text-gray-600">From:</Label>
                 <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={`w-full justify-start text-left font-normal bg-yellow-100 border-yellow-300 hover:bg-yellow-200 ${
-                        data.coverageFrom ? 'text-gray-900' : 'text-muted-foreground'
-                      }`}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {data.coverageFrom ? (
-                        format(new Date(data.coverageFrom), 'MMM dd, yyyy')
-                      ) : (
-                        <span>Start date</span>
-                      )}
-                    </Button>
+                  <PopoverTrigger 
+                    className={`w-full justify-start text-left font-normal bg-yellow-100 border-yellow-300 hover:bg-yellow-200 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground ${
+                      data.coverageFrom ? 'text-gray-900' : 'text-muted-foreground'
+                    }`}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {data.coverageFrom ? (
+                      format(new Date(data.coverageFrom), 'MMM dd, yyyy')
+                    ) : (
+                      <span>Start date</span>
+                    )}
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
@@ -468,20 +462,17 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
               <div className="space-y-1">
                 <Label className="text-sm text-gray-600">To:</Label>
                 <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={`w-full justify-start text-left font-normal bg-yellow-100 border-yellow-300 hover:bg-yellow-200 ${
-                        data.coverageTo ? 'text-gray-900' : 'text-muted-foreground'
-                      }`}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {data.coverageTo ? (
-                        format(new Date(data.coverageTo), 'MMM dd, yyyy')
-                      ) : (
-                        <span>End date</span>
-                      )}
-                    </Button>
+                  <PopoverTrigger 
+                    className={`w-full justify-start text-left font-normal bg-yellow-100 border-yellow-300 hover:bg-yellow-200 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground ${
+                      data.coverageTo ? 'text-gray-900' : 'text-muted-foreground'
+                    }`}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {data.coverageTo ? (
+                      format(new Date(data.coverageTo), 'MMM dd, yyyy')
+                    ) : (
+                      <span>End date</span>
+                    )}
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar

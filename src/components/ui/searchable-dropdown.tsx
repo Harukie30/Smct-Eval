@@ -137,14 +137,21 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         </span>
         <div className="flex items-center gap-1 ml-2">
           {value && (
-            <button
-              type="button"
+            <div
               onClick={handleClear}
-              className="p-0.5 hover:bg-gray-200 rounded-full transition-colors"
+              className="p-0.5 hover:bg-gray-200 rounded-full transition-colors cursor-pointer"
               aria-label="Clear selection"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleClear(e as any);
+                }
+              }}
             >
               <X className="h-3 w-3 text-gray-400" />
-            </button>
+            </div>
           )}
           <ChevronDown 
             className={cn(
