@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 interface SearchableDropdownProps {
   options: string[];
   value: string;
-  onValueChange: (value: string) => void;
+  onValueChangeAction: (value: string) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -17,7 +17,7 @@ interface SearchableDropdownProps {
 export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   options,
   value,
-  onValueChange,
+  onValueChangeAction,
   placeholder = "Select an option...",
   className,
   disabled = false,
@@ -94,7 +94,7 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   };
 
   const handleOptionSelect = (option: string) => {
-    onValueChange(option);
+    onValueChangeAction(option);
     setIsOpen(false);
     setSearchTerm('');
     setHighlightedIndex(-1);
@@ -102,7 +102,7 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onValueChange('');
+    onValueChangeAction('');
     setSearchTerm('');
   };
 

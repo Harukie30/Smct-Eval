@@ -1446,7 +1446,7 @@ export default function EvaluatorDashboard() {
                     <SearchableDropdown
                       options={['All Departments', ...departments.map(dept => dept.name)]}
                       value={selectedDepartment || 'All Departments'}
-                      onValueChange={(value) => setSelectedDepartment(value === 'All Departments' ? '' : value)}
+                      onValueChangeAction={(value) => setSelectedDepartment(value === 'All Departments' ? '' : value)}
                       placeholder="All Departments"
                       className="w-[200px]"
                     />
@@ -1571,7 +1571,7 @@ export default function EvaluatorDashboard() {
                   <SearchableDropdown
                     options={['All Departments', ...departments.map(dept => dept.name)]}
                     value={feedbackDepartmentFilter || 'All Departments'}
-                    onValueChange={(value) => setFeedbackDepartmentFilter(value === 'All Departments' ? '' : value)}
+                    onValueChangeAction={(value) => setFeedbackDepartmentFilter(value === 'All Departments' ? '' : value)}
                     placeholder="All Departments"
                     className="mt-1"
                   />
@@ -1597,7 +1597,7 @@ export default function EvaluatorDashboard() {
                       feedbackApprovalStatusFilter === 'rejected' ? '❌ Rejected' :
                       'All Statuses'
                     }
-                    onValueChange={(value) => {
+                    onValueChangeAction={(value) => {
                       const statusMap: Record<string, string> = {
                         '⏳ Pending': 'pending',
                         '👤 Employee Approved': 'employee_approved',
@@ -1628,7 +1628,7 @@ export default function EvaluatorDashboard() {
                       'Q4 2025'
                     ]}
                     value={feedbackQuarterFilter || 'All Quarters'}
-                    onValueChange={(value) => {
+                    onValueChangeAction={(value) => {
                       setFeedbackQuarterFilter(value === 'All Quarters' ? '' : value);
                       // Clear date filters when quarter is selected
                       if (value !== 'All Quarters') {

@@ -275,7 +275,7 @@ export default function RegisterPage() {
                       <SearchableDropdown
                         options={positions}
                         value={formData.position}
-                        onValueChange={(value) => {
+                        onValueChangeAction={(value) => {
                           const newFormData = {...formData, position: value};
                           // Auto-set department for Branch Managers
                           if (value.toLowerCase().includes('branch manager')) {
@@ -290,23 +290,14 @@ export default function RegisterPage() {
                     
                     <div className="space-y-2">
                       <Label htmlFor="department">Department</Label>
-                      <Select 
+                      <SearchableDropdown
+                        options={departments}
                         value={formData.department}
-                        onValueChange={(value) => setFormData({...formData, department: value})}
+                        onValueChangeAction={(value) => setFormData({...formData, department: value})}
+                        placeholder="Select your department"
+                        className="w-full"
                         disabled={formData.position.toLowerCase().includes('branch manager')}
-                        required
-                      >
-                        <SelectTrigger className={formData.position.toLowerCase().includes('branch manager') ? 'bg-gray-100' : ''}>
-                          <SelectValue placeholder="Select your department" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {departments.map((department) => (
-                            <SelectItem key={department} value={department}>
-                              {department}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      />
                       {formData.position.toLowerCase().includes('branch manager') && (
                         <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded-md">
                           ℹ️ "Operations" is automatically set for Branch Managers
@@ -316,46 +307,34 @@ export default function RegisterPage() {
                     
                     <div className="space-y-2">
                       <Label htmlFor="branchCode">Branch Code</Label>
-                      <Select 
+                      <SearchableDropdown
+                        options={branchCodes}
                         value={formData.branchCode}
-                        onValueChange={(value) => setFormData({...formData, branchCode: value})}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select branch code" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {branchCodes.map((code) => (
-                            <SelectItem key={code} value={code}>
-                              {code}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onValueChangeAction={(value) => setFormData({...formData, branchCode: value})}
+                        placeholder="Select branch code"
+                        className="w-full"
+                      />
                     </div>
                     
                     <div className="space-y-2">
                       <Label htmlFor="branch">Branch</Label>
-                      <Select 
+                      <SearchableDropdown
+                        options={[
+                          'Head Office',
+                          'Cebu Branch',
+                          'Davao Branch',
+                          'Bacolod Branch',
+                          'Iloilo Branch',
+                          'Cagayan de Oro Branch',
+                          'Baguio Branch',
+                          'Zamboanga Branch',
+                          'General Santos Branch'
+                        ]}
                         value={formData.branch}
-                        onValueChange={(value) => setFormData({...formData, branch: value})}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your branch" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="head-office">Head Office</SelectItem>
-                          <SelectItem value="cebu-branch">Cebu Branch</SelectItem>
-                          <SelectItem value="davao-branch">Davao Branch</SelectItem>
-                          <SelectItem value="bacolod-branch">Bacolod Branch</SelectItem>
-                          <SelectItem value="iloilo-branch">Iloilo Branch</SelectItem>
-                          <SelectItem value="cagayan-de-oro-branch">Cagayan de Oro Branch</SelectItem>
-                          <SelectItem value="baguio-branch">Baguio Branch</SelectItem>
-                          <SelectItem value="zamboanga-branch">Zamboanga Branch</SelectItem>
-                          <SelectItem value="general-santos-branch">General Santos Branch</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        onValueChangeAction={(value) => setFormData({...formData, branch: value})}
+                        placeholder="Select your branch"
+                        className="w-full"
+                      />
                     </div>
                     
                     <div className="space-y-2">
