@@ -166,9 +166,45 @@ export default function GoogleLoginModal({
           transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
         }
         
+        /* Modal backdrop animation */
+        [data-radix-dialog-overlay] {
+          animation: modalBackdropIn 0.3s ease-out;
+        }
+        
+        @keyframes modalBackdropIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        
+        /* Modal content animation - Zoom In Style */
+        .modal-zoom-in {
+          animation: modalZoomIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        @keyframes modalZoomIn {
+          0% {
+            opacity: 0;
+            transform: scale(0.3);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.05);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        
       `}</style>
         <Dialog open={isOpen} onOpenChangeAction={handleClose}>
-        <DialogContent className="sm:max-w-md mx-auto my-8 px-6 py-4">
+        <DialogContent 
+          className="sm:max-w-md mx-auto my-8 px-6 py-4 modal-zoom-in"
+        >
         <DialogHeader>
           <DialogTitle className="text-center text-xl font-semibold">
             {loginStep === 'select' && 'Continue with Google'}

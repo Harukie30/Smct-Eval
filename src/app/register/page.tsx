@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import SearchableDropdown from "@/components/ui/searchable-dropdown";
 import SignaturePad from '@/components/SignaturePad';
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import Link from 'next/link';
@@ -271,7 +272,8 @@ export default function RegisterPage() {
                     
                     <div className="space-y-2">
                       <Label htmlFor="position">Position</Label>
-                      <Select 
+                      <SearchableDropdown
+                        options={positions}
                         value={formData.position}
                         onValueChange={(value) => {
                           const newFormData = {...formData, position: value};
@@ -281,19 +283,9 @@ export default function RegisterPage() {
                           }
                           setFormData(newFormData);
                         }}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your position" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {positions.map((position) => (
-                            <SelectItem key={position} value={position}>
-                              {position}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Select your position"
+                        className="w-full"
+                      />
                     </div>
                     
                     <div className="space-y-2">

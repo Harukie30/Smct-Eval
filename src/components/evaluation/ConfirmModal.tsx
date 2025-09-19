@@ -4,9 +4,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, AlertTriangle, Printer } from 'lucide-react';
+import { Check, X, AlertTriangle, Printer, Send, CheckCircle, AlertCircle } from 'lucide-react';
 import { EvaluationData } from './types';
 import { format } from 'date-fns';
+import { useState } from 'react';
+import { submitEvaluation } from '@/lib/evaluationSubmissionService';
 
 interface ConfirmModalProps {
   open: boolean;
@@ -60,6 +62,9 @@ const calculateScore = (scores: string[]) => {
 };
 
 export default function ConfirmModal({ open, onCloseAction, onConfirmAction, data }: ConfirmModalProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState('');
+  const [submissionSuccess, setSubmissionSuccess] = useState(false);
   // Calculate scores from individual evaluations
   const jobKnowledgeScore = calculateScore([data.jobKnowledgeScore1, data.jobKnowledgeScore2, data.jobKnowledgeScore3]);
   const qualityOfWorkScore = calculateScore([data.qualityOfWorkScore1, data.qualityOfWorkScore2, data.qualityOfWorkScore3, data.qualityOfWorkScore4, data.qualityOfWorkScore5]);
@@ -100,6 +105,63 @@ export default function ConfirmModal({ open, onCloseAction, onConfirmAction, dat
     reliabilityScore > 0 && 
     ethicalScore > 0 && 
     customerServiceScore > 0;
+
+  const handleSubmitEvaluation = async () => {
+    if (!isComplete) {
+      setSubmissionError('Please complete all required fields before submitting.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmissionError('');
+    setSubmissionSuccess(false);
+
+    try {
+      // Get evaluator name from localStorage or use a default
+      const storedUser = localStorage.getItem('authenticatedUser');
+      const evaluatorName = storedUser ? JSON.parse(storedUser).name : 'Evaluator';
+
+      // Submit evaluation via API
+      const result = await submitEvaluation(data, evaluatorName);
+
+      console.log('✅ Evaluation submitted successfully:', result);
+      
+      // Show success state
+      setSubmissionSuccess(true);
+      
+      // Call the parent's confirm action after successful submission
+      setTimeout(() => {
+        onConfirmAction();
+      }, 2000);
+
+      // TODO: Replace with actual API call when backend is ready:
+      /*
+      const response = await fetch('/api/evaluations/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          evaluationData: data,
+          evaluatorName,
+          submittedAt: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      */
+      
+    } catch (error) {
+      console.error('❌ Error submitting evaluation:', error);
+      setSubmissionError(error instanceof Error ? error.message : 'Failed to submit evaluation. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handlePrint = () => {
     const printContent = document.createElement('div');
@@ -910,11 +972,12 @@ export default function ConfirmModal({ open, onCloseAction, onConfirmAction, dat
                  <div>
                    <h4 className="font-medium text-blue-800 mb-1 text-sm">Submission Notice</h4>
                    <ul className="text-xs text-blue-700 space-y-1">
-                     <li>• This evaluation will be submitted to the HR system</li>
-                     <li>• The employee will receive a copy of this evaluation</li>
-                     <li>• This evaluation will be used for performance management and development planning</li>
+                     <li>• This evaluation will be automatically sent to the employee, HR department, and administrator</li>
+                     <li>• All parties will receive email notifications with the evaluation details</li>
+                     <li>• This evaluation will be stored in the HR system for performance management</li>
                      <li>• You cannot edit this evaluation after submission</li>
                      <li>• The overall performance score will determine pass/fail status</li>
+                     <li>• The employee can view and approve the evaluation in their dashboard</li>
                    </ul>
                  </div>
                </div>
@@ -1000,10 +1063,43 @@ export default function ConfirmModal({ open, onCloseAction, onConfirmAction, dat
           </CardContent>
         </Card>
 
+        {/* Submission Status Messages */}
+        {submissionSuccess && (
+          <Card className="bg-green-50 border-green-200">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <div>
+                  <h4 className="font-medium text-green-800 mb-1">Evaluation Submitted Successfully!</h4>
+                  <p className="text-sm text-green-700">
+                    The evaluation has been sent to the employee, HR department, and administrator. 
+                    All parties will receive notifications.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {submissionError && (
+          <Card className="bg-red-50 border-red-200">
+            <CardContent className="pt-4">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <div>
+                  <h4 className="font-medium text-red-800 mb-1">Submission Failed</h4>
+                  <p className="text-sm text-red-700">{submissionError}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <DialogFooter className="flex space-x-4 mt-6">
           <Button 
             variant="outline" 
             onClick={handlePrint}
+            disabled={isSubmitting}
             className="px-6 py-2 text-base"
           >
             <Printer className="h-4 w-4 mr-2" />
@@ -1012,16 +1108,32 @@ export default function ConfirmModal({ open, onCloseAction, onConfirmAction, dat
           <Button 
             variant="outline" 
             onClick={onCloseAction}
+            disabled={isSubmitting}
             className="px-6 py-2 text-base"
           >
             Review & Edit
           </Button>
           <Button 
-            onClick={onConfirmAction}
-            disabled={!isComplete}
+            onClick={handleSubmitEvaluation}
+            disabled={!isComplete || isSubmitting}
             className="px-6 py-2 text-base bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            {isComplete ? 'Submit Evaluation' : 'Complete Required Fields'}
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Submitting...
+              </>
+            ) : submissionSuccess ? (
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Submitted Successfully
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                {isComplete ? 'Submit to Employee, HR & Admin' : 'Complete Required Fields'}
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

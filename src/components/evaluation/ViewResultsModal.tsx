@@ -1,11 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { approveEvaluation } from '@/lib/approvalService';
 
 type Submission = {
   id: number;
@@ -40,6 +42,7 @@ interface ViewResultsModalProps {
   isApproved?: boolean;
   approvalData?: ApprovalData | null;
   currentUserName?: string;
+  showApprovalButton?: boolean; // New prop to control approval button visibility
 }
 
 // Helper functions for rating calculations
@@ -100,7 +103,10 @@ const getQuarterColor = (quarter: string) => {
   return 'bg-gray-100 text-gray-800';
 };
 
-export default function ViewResultsModal({ isOpen, onCloseAction, submission, onApprove, isApproved = false, approvalData = null, currentUserName }: ViewResultsModalProps) {
+export default function ViewResultsModal({ isOpen, onCloseAction, submission, onApprove, isApproved = false, approvalData = null, currentUserName, showApprovalButton = false }: ViewResultsModalProps) {
+  const [isApproving, setIsApproving] = useState(false);
+  const [approvalError, setApprovalError] = useState('');
+
   if (!submission) return null;
 
   // Debug logging
@@ -112,6 +118,64 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
     isApproved,
     approvalData
   });
+
+  // Handle approval API call
+  const handleApproveEvaluation = async () => {
+    if (!submission.id) {
+      setApprovalError('Invalid submission ID');
+      return;
+    }
+
+    setIsApproving(true);
+    setApprovalError('');
+
+    try {
+      // For development: Use mock service
+      // For production: Replace with actual API call
+      const result = await approveEvaluation({
+        submissionId: submission.id,
+        employeeId: submission.employeeId || 0,
+        approvedAt: new Date().toISOString(),
+        employeeName: currentUserName || submission.employeeName
+      });
+
+      // Call the parent component's onApprove callback if provided
+      if (onApprove) {
+        onApprove(submission.id.toString());
+      }
+
+      // Show success message
+      console.log('✅ Evaluation approved successfully:', result);
+      
+      // TODO: Replace with actual API call when backend is ready:
+      /*
+      const response = await fetch('/api/evaluations/approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          submissionId: submission.id,
+          employeeId: submission.employeeId,
+          approvedAt: new Date().toISOString(),
+          employeeName: currentUserName || submission.employeeName
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      */
+      
+    } catch (error) {
+      console.error('❌ Error approving evaluation:', error);
+      setApprovalError('Failed to approve evaluation. Please try again.');
+    } finally {
+      setIsApproving(false);
+    }
+  };
 
 
   return (
@@ -1429,68 +1493,74 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                     <div className="space-y-4">
                       <div className="text-center">
                         {/* Signature area */}
-                        <div className="h-20 border-2 border-dashed border-white rounded-lg flex items-center justify-center bg-gray-50">
-                          {isApproved && approvalData?.employeeSignature ? (
-                            <div className="flex flex-col items-center space-y-1">
-                              <img 
-                                src={approvalData.employeeSignature} 
-                                alt="Employee Signature" 
-                                className="h-20 max-w-full object-contain mx-auto"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                }}
-                              />
-                              <p className="text-2xl font-medium text-gray-800 -mt-10">
-                                {approvalData.employeeName || currentUserName || 'Employee Name'}
-                              </p>
-                            </div>
-                          ) : (
-                            <span className="text-gray-500 text-sm">Employee signature will appear here after approval</span>
+                        <div className="h-20 border-2 border-dashed border-white rounded-lg flex items-center justify-center bg-gray-50 relative">
+                          {/* Name as background text - always show */}
+                          <span className="text-md text-gray-900 font-bold">
+                            {approvalData?.employeeName || currentUserName || 'Employee Name'}
+                          </span>
+                          {/* Signature overlay - centered and overlapping */}
+                          {isApproved && approvalData?.employeeSignature && (
+                            <img 
+                              src={approvalData.employeeSignature} 
+                              alt="Employee Signature" 
+                              className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-16 max-w-full object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
                           )}
                         </div>
                         
-                        {/* Action Section */}
-                        <div className="mt-4 space-y-3">
-                          {/* Approve Button - Only show if not approved */}
-                          {!isApproved && onApprove && (
-                            <div className="space-y-2">
-                              <Button
-                                onClick={() => {
-                                  if (submission.id) {
-                                    onApprove(submission.id.toString());
-                                  } else {
-                                    console.error('❌ Cannot approve: submission.id is undefined');
-                                  }
-                                }}
-                                disabled={!submission.id}
-                                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed shadow-sm"
-                              >
-                                ✓ Approve Evaluation
-                              </Button>
-                              <p className="text-xs text-gray-500">
-                                Click to acknowledge and approve this evaluation
-                              </p>
-                            </div>
-                          )}
-                          
-                          {/* Approved Status - Only show if approved */}
-                          {isApproved && (
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-center space-x-2">
-                                <Badge className="bg-green-100 text-green-800 px-3 py-1 text-sm font-medium">
-                                  ✓ Evaluation Approved
-                                </Badge>
+                        {/* Action Section - Only show if showApprovalButton is true */}
+                        {showApprovalButton && (
+                          <div className="mt-4 space-y-3">
+                            {/* Approve Button - Only show if not approved */}
+                            {!isApproved && (
+                              <div className="space-y-2">
+                                <Button
+                                  onClick={handleApproveEvaluation}
+                                  disabled={!submission.id || isApproving}
+                                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed shadow-sm"
+                                >
+                                  {isApproving ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                      Approving...
+                                    </>
+                                  ) : (
+                                    '✓ Approve Evaluation'
+                                  )}
+                                </Button>
+                                <p className="text-xs text-gray-500">
+                                  Click to acknowledge and approve this evaluation
+                                </p>
+                                {approvalError && (
+                                  <p className="text-xs text-red-600 bg-red-50 p-2 rounded">
+                                    {approvalError}
+                                  </p>
+                                )}
                               </div>
-                              <p className="text-xs text-gray-500">
-                                Approved on {approvalData?.approvedAt ? new Date(approvalData.approvedAt).toLocaleDateString('en-US', {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
-                                }) : 'Unknown date'}
-                              </p>
-                            </div>
-                          )}
-                        </div>
+                            )}
+                            
+                            {/* Approved Status - Only show if approved */}
+                            {isApproved && (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-center space-x-2">
+                                  <Badge className="bg-green-100 text-green-800 px-3 py-1 text-sm font-medium">
+                                    ✓ Evaluation Approved
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                  Approved on {approvalData?.approvedAt ? new Date(approvalData.approvedAt).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  }) : 'Unknown date'}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                       
                       {/* Section Label */}

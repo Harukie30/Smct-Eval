@@ -2398,6 +2398,7 @@ export default function EmployeeDashboard() {
         isApproved={selectedEvaluation ? isEvaluationApproved(selectedEvaluation.id) : false}
         approvalData={selectedEvaluation ? getApprovalData(selectedEvaluation.id) : null}
         currentUserName={profile?.name || user?.name}
+        showApprovalButton={modalOpenedFromTab === 'history'} // Only show approval button in Evaluation History tab
       />
 
       {/* Evaluation Details Modal */}

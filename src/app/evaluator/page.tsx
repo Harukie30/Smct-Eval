@@ -14,6 +14,7 @@ import { Eye, ChevronDown } from "lucide-react";
 import EvaluationForm from '@/components/evaluation';
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import SearchableDropdown from "@/components/ui/searchable-dropdown";
 import mockData from '@/data/dashboard.json';
 import accountsData from '@/data/accounts.json';
 import departments from '@/data/departments.json';
@@ -44,13 +45,20 @@ type Submission = {
   submittedAt: string;
   status: string;
   evaluator?: string;
-  evaluationData?: any; // Full evaluation data from the form
+  evaluationData?: any;// Full evaluation data from the form
   employeeId?: number;
   employeeEmail?: string;
   evaluatorId?: number;
   evaluatorName?: string;
   period?: string;
   overallRating?: number;
+
+  // Approval-related properties
+  approvalStatus?: string;
+  employeeSignature?: string | null;
+  employeeApprovedAt?: string | null;
+  evaluatorSignature?: string | null;
+  evaluatorApprovedAt?: string | null;
 };
 
 type PerformanceData = {
@@ -283,6 +291,7 @@ export default function EvaluatorDashboard() {
   const [feedbackDateFilter, setFeedbackDateFilter] = useState('');
   const [feedbackDateRange, setFeedbackDateRange] = useState({ from: '', to: '' });
   const [feedbackQuarterFilter, setFeedbackQuarterFilter] = useState('');
+  const [feedbackApprovalStatusFilter, setFeedbackApprovalStatusFilter] = useState('');
   const [feedbackSort, setFeedbackSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
 
   const refreshSubmissions = async () => {
@@ -939,6 +948,83 @@ export default function EvaluatorDashboard() {
 
 
 
+  // Evaluator approval function
+  const handleEvaluatorApproval = async (feedback: any) => {
+    const currentUser = getCurrentUserData();
+    
+    if (!currentUser?.signature) {
+      alert('Please add a signature to your profile before approving evaluations.');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to approve this evaluation for ${feedback.employeeName}?`)) {
+      return;
+    }
+
+    try {
+      // Find the original submission
+      const originalSubmission = recentSubmissions.find(submission => submission.id === feedback.id);
+      
+      if (!originalSubmission) {
+        alert('Evaluation not found');
+        return;
+      }
+
+      // Update the submission with evaluator approval
+      const updatedSubmission = {
+        ...originalSubmission,
+        evaluatorSignature: currentUser.signature,
+        evaluatorApprovedAt: new Date().toISOString(),
+        approvalStatus: 'fully_approved'
+      };
+
+      console.log('🔍 Debug - Updated submission:', {
+        id: updatedSubmission.id,
+        approvalStatus: updatedSubmission.approvalStatus,
+        evaluatorSignature: updatedSubmission.evaluatorSignature ? 'Present' : 'Missing',
+        evaluatorApprovedAt: updatedSubmission.evaluatorApprovedAt
+      });
+
+      // Update the submissions array
+      setRecentSubmissions(prev => {
+        const updated = prev.map(sub => sub.id === feedback.id ? updatedSubmission : sub);
+        console.log('🔍 Debug - Updated recentSubmissions state:', {
+          totalSubmissions: updated.length,
+          updatedSubmission: updated.find(sub => sub.id === feedback.id)
+        });
+        return updated;
+      });
+
+      // Save to localStorage using the proper service method
+      const allSubmissions = await clientDataService.getSubmissions();
+      const updatedSubmissions = allSubmissions.map((sub: any) => 
+        sub.id === feedback.id ? updatedSubmission : sub
+      );
+      
+      // Update localStorage using the same key as the service
+      localStorage.setItem('submissions', JSON.stringify(updatedSubmissions));
+
+      // Refresh the submissions data to ensure UI updates
+      await refreshSubmissions();
+
+      // Debug: Check if the data was properly updated
+      const refreshedSubmissions = await clientDataService.getSubmissions();
+      const refreshedSubmission = refreshedSubmissions.find(sub => sub.id === feedback.id) as any;
+      console.log('🔍 Debug - After refresh:', {
+        id: refreshedSubmission?.id,
+        approvalStatus: refreshedSubmission?.approvalStatus,
+        evaluatorSignature: refreshedSubmission?.evaluatorSignature ? 'Present' : 'Missing',
+        evaluatorApprovedAt: refreshedSubmission?.evaluatorApprovedAt
+      });
+
+      alert(`Evaluation for ${feedback.employeeName} has been approved successfully!`);
+      
+    } catch (error) {
+      console.error('Error approving evaluation:', error);
+      alert('Failed to approve evaluation. Please try again.');
+    }
+  };
+
   // Computed feedback data
   const filteredFeedbackData = useMemo(() => {
     // Filter out any submissions with invalid data
@@ -994,7 +1080,13 @@ export default function EvaluatorDashboard() {
         category: submission.category || 'Performance Review',
         rating: calculatedRating,
         date: submission.submittedAt || new Date().toISOString(),
-        comment: submission.evaluationData?.overallComments || 'Performance evaluation completed'
+        comment: submission.evaluationData?.overallComments || 'Performance evaluation completed',
+        // Approval-related properties
+        approvalStatus: submission.approvalStatus || 'pending',
+        employeeSignature: submission.employeeSignature || null,
+        employeeApprovedAt: submission.employeeApprovedAt || null,
+        evaluatorSignature: submission.evaluatorSignature || null,
+        evaluatorApprovedAt: submission.evaluatorApprovedAt || null
       };
     });
 
@@ -1046,6 +1138,13 @@ export default function EvaluatorDashboard() {
       });
     }
 
+    if (feedbackApprovalStatusFilter) {
+      data = data.filter(item => {
+        const approvalStatus = item.approvalStatus || 'pending';
+        return approvalStatus === feedbackApprovalStatusFilter;
+      });
+    }
+
     // Apply sorting
     data.sort((a, b) => {
       const aValue = a[feedbackSort.key as keyof typeof a];
@@ -1080,8 +1179,13 @@ export default function EvaluatorDashboard() {
       uniqueKey: item.uniqueKey || `fallback-${index}-${Date.now()}`
     }));
 
+    // Debug: Log approval statuses
+    console.log('🔍 Debug - filteredFeedbackData approval statuses:', 
+      finalData.map(item => ({ id: item.id, employeeName: item.employeeName, approvalStatus: item.approvalStatus }))
+    );
+
     return finalData;
-  }, [recentSubmissions, feedbackSearch, feedbackDepartmentFilter, feedbackDateFilter, feedbackDateRange, feedbackQuarterFilter, feedbackSort]);
+  }, [recentSubmissions, feedbackSearch, feedbackDepartmentFilter, feedbackDateFilter, feedbackDateRange, feedbackQuarterFilter, feedbackApprovalStatusFilter, feedbackSort]);
 
 
   useEffect(() => {
@@ -1339,31 +1443,13 @@ export default function EvaluatorDashboard() {
                       onChange={(e) => setEmployeeSearch(e.target.value)}
                       className="flex-1"
                     />
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-[200px] justify-between">
-                          {selectedDepartment || "All Departments"}
-                          <ChevronDown className="h-4 w-4 opacity-50" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="w-[200px]">
-                        <DropdownMenuItem 
-                          onClick={() => setSelectedDepartment('')}
-                          className={!selectedDepartment ? "bg-accent" : ""}
-                        >
-                          All Departments
-                        </DropdownMenuItem>
-                        {departments.map((dept) => (
-                          <DropdownMenuItem 
-                            key={dept.id} 
-                            onClick={() => setSelectedDepartment(dept.name)}
-                            className={selectedDepartment === dept.name ? "bg-accent" : ""}
-                          >
-                            {dept.name}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <SearchableDropdown
+                      options={['All Departments', ...departments.map(dept => dept.name)]}
+                      value={selectedDepartment || 'All Departments'}
+                      onValueChange={(value) => setSelectedDepartment(value === 'All Departments' ? '' : value)}
+                      placeholder="All Departments"
+                      className="w-[200px]"
+                    />
                   </div>
                 </div>
                 <div className="max-h-[70vh] overflow-y-auto">
@@ -1454,11 +1540,11 @@ export default function EvaluatorDashboard() {
                     <Input
                       id="feedback-search"
                       placeholder="Search by employee name, reviewer, or comments..."
-                      className={`${(feedbackSearch || feedbackDepartmentFilter || feedbackDateFilter || feedbackDateRange.from || feedbackDateRange.to || feedbackQuarterFilter) ? 'pr-20' : 'pr-3'}`}
+                      className={`${(feedbackSearch || feedbackDepartmentFilter || feedbackDateFilter || feedbackDateRange.from || feedbackDateRange.to || feedbackQuarterFilter || feedbackApprovalStatusFilter) ? 'pr-20' : 'pr-3'}`}
                       value={feedbackSearch}
                       onChange={(e) => setFeedbackSearch(e.target.value)}
                     />
-                    {(feedbackSearch || feedbackDepartmentFilter || feedbackDateFilter || feedbackDateRange.from || feedbackDateRange.to || feedbackQuarterFilter) && (
+                    {(feedbackSearch || feedbackDepartmentFilter || feedbackDateFilter || feedbackDateRange.from || feedbackDateRange.to || feedbackQuarterFilter || feedbackApprovalStatusFilter) && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -1468,6 +1554,7 @@ export default function EvaluatorDashboard() {
                           setFeedbackDateFilter('');
                           setFeedbackDateRange({ from: '', to: '' });
                           setFeedbackQuarterFilter('');
+                          setFeedbackApprovalStatusFilter('');
                         }}
                         className="absolute right-1 top-1 h-8 px-2 text-xs bg-blue-500 hover:bg-blue-600 text-center text-white border-blue-200"
                         title="Clear all filters"
@@ -1481,132 +1568,77 @@ export default function EvaluatorDashboard() {
                 {/* Department Filter */}
                 <div className="w-full md:w-48">
                   <Label htmlFor="feedback-department" className="text-sm font-medium">Department</Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="w-full justify-between mt-1">
-                        {feedbackDepartmentFilter || "All Departments"}
-                        <ChevronDown className="h-4 w-4 opacity-50" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-full">
-                      <DropdownMenuItem 
-                        onClick={() => setFeedbackDepartmentFilter('')}
-                        className={!feedbackDepartmentFilter ? "bg-accent" : ""}
-                      >
-                        All Departments
-                      </DropdownMenuItem>
-                      {departments.map((dept) => (
-                        <DropdownMenuItem 
-                          key={dept.id} 
-                          onClick={() => setFeedbackDepartmentFilter(dept.name)}
-                          className={feedbackDepartmentFilter === dept.name ? "bg-accent" : ""}
-                        >
-                          {dept.name}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <SearchableDropdown
+                    options={['All Departments', ...departments.map(dept => dept.name)]}
+                    value={feedbackDepartmentFilter || 'All Departments'}
+                    onValueChange={(value) => setFeedbackDepartmentFilter(value === 'All Departments' ? '' : value)}
+                    placeholder="All Departments"
+                    className="mt-1"
+                  />
+                </div>
+
+                {/* Approval Status Filter */}
+                <div className="w-full md:w-48">
+                  <Label htmlFor="feedback-approval-status" className="text-sm font-medium">Approval Status</Label>
+                  <SearchableDropdown
+                    options={[
+                      'All Statuses',
+                      '⏳ Pending',
+                      '👤 Employee Approved', 
+                      '👨‍💼 Evaluator Approved',
+                      '✓ Fully Approved',
+                      '❌ Rejected'
+                    ]}
+                    value={
+                      feedbackApprovalStatusFilter === 'pending' ? '⏳ Pending' :
+                      feedbackApprovalStatusFilter === 'employee_approved' ? '👤 Employee Approved' :
+                      feedbackApprovalStatusFilter === 'evaluator_approved' ? '👨‍💼 Evaluator Approved' :
+                      feedbackApprovalStatusFilter === 'fully_approved' ? '✓ Fully Approved' :
+                      feedbackApprovalStatusFilter === 'rejected' ? '❌ Rejected' :
+                      'All Statuses'
+                    }
+                    onValueChange={(value) => {
+                      const statusMap: Record<string, string> = {
+                        '⏳ Pending': 'pending',
+                        '👤 Employee Approved': 'employee_approved',
+                        '👨‍💼 Evaluator Approved': 'evaluator_approved',
+                        '✓ Fully Approved': 'fully_approved',
+                        '❌ Rejected': 'rejected'
+                      };
+                      setFeedbackApprovalStatusFilter(value === 'All Statuses' ? '' : statusMap[value] || '');
+                    }}
+                    placeholder="All Statuses"
+                    className="mt-1"
+                  />
                 </div>
 
                 {/* Quarter Filter */}
                 <div className="w-full md:w-48">
                   <Label htmlFor="feedback-quarter" className="text-sm font-medium">Quarter</Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="w-full justify-between mt-1">
-                        {feedbackQuarterFilter || "All Quarters"}
-                        <ChevronDown className="h-4 w-4 opacity-50" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-full">
-                      <DropdownMenuItem 
-                        onClick={() => setFeedbackQuarterFilter('')}
-                        className={!feedbackQuarterFilter ? "bg-accent" : ""}
-                      >
-                        All Quarters
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => {
-                          setFeedbackQuarterFilter('Q1 2024');
-                          setFeedbackDateFilter('');
-                          setFeedbackDateRange({ from: '', to: '' });
-                        }}
-                        className={feedbackQuarterFilter === 'Q1 2024' ? "bg-accent" : ""}
-                      >
-                        Q1 2024
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => {
-                          setFeedbackQuarterFilter('Q2 2024');
-                          setFeedbackDateFilter('');
-                          setFeedbackDateRange({ from: '', to: '' });
-                        }}
-                        className={feedbackQuarterFilter === 'Q2 2024' ? "bg-accent" : ""}
-                      >
-                        Q2 2024
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => {
-                          setFeedbackQuarterFilter('Q3 2024');
-                          setFeedbackDateFilter('');
-                          setFeedbackDateRange({ from: '', to: '' });
-                        }}
-                        className={feedbackQuarterFilter === 'Q3 2024' ? "bg-accent" : ""}
-                      >
-                        Q3 2024
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => {
-                          setFeedbackQuarterFilter('Q4 2024');
-                          setFeedbackDateFilter('');
-                          setFeedbackDateRange({ from: '', to: '' });
-                        }}
-                        className={feedbackQuarterFilter === 'Q4 2024' ? "bg-accent" : ""}
-                      >
-                        Q4 2024
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => {
-                          setFeedbackQuarterFilter('Q1 2025');
-                          setFeedbackDateFilter('');
-                          setFeedbackDateRange({ from: '', to: '' });
-                        }}
-                        className={feedbackQuarterFilter === 'Q1 2025' ? "bg-accent" : ""}
-                      >
-                        Q1 2025
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => {
-                          setFeedbackQuarterFilter('Q2 2025');
-                          setFeedbackDateFilter('');
-                          setFeedbackDateRange({ from: '', to: '' });
-                        }}
-                        className={feedbackQuarterFilter === 'Q2 2025' ? "bg-accent" : ""}
-                      >
-                        Q2 2025
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => {
-                          setFeedbackQuarterFilter('Q3 2025');
-                          setFeedbackDateFilter('');
-                          setFeedbackDateRange({ from: '', to: '' });
-                        }}
-                        className={feedbackQuarterFilter === 'Q3 2025' ? "bg-accent" : ""}
-                      >
-                        Q3 2025
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => {
-                          setFeedbackQuarterFilter('Q4 2025');
-                          setFeedbackDateFilter('');
-                          setFeedbackDateRange({ from: '', to: '' });
-                        }}
-                        className={feedbackQuarterFilter === 'Q4 2025' ? "bg-accent" : ""}
-                      >
-                        Q4 2025
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <SearchableDropdown
+                    options={[
+                      'All Quarters',
+                      'Q1 2024',
+                      'Q2 2024', 
+                      'Q3 2024',
+                      'Q4 2024',
+                      'Q1 2025',
+                      'Q2 2025',
+                      'Q3 2025',
+                      'Q4 2025'
+                    ]}
+                    value={feedbackQuarterFilter || 'All Quarters'}
+                    onValueChange={(value) => {
+                      setFeedbackQuarterFilter(value === 'All Quarters' ? '' : value);
+                      // Clear date filters when quarter is selected
+                      if (value !== 'All Quarters') {
+                        setFeedbackDateFilter('');
+                        setFeedbackDateRange({ from: '', to: '' });
+                      }
+                    }}
+                    placeholder="All Quarters"
+                    className="mt-1"
+                  />
                 </div>
 
                 {/* Custom Date Range */}
@@ -1686,6 +1718,9 @@ export default function EvaluatorDashboard() {
                       <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('date')}>
                         Date {getSortIcon('date')}
                       </TableHead>
+                      <TableHead className="px-6 py-3">Approval Status</TableHead>
+                      <TableHead className="px-6 py-3">Employee Signature</TableHead>
+                      <TableHead className="px-6 py-3">Evaluator Signature</TableHead>
                       <TableHead className="px-6 py-3">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1734,6 +1769,64 @@ export default function EvaluatorDashboard() {
                           {new Date(feedback.date).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="px-6 py-3">
+                          {/* Approval Status */}
+                          <Badge className={
+                            feedback.approvalStatus === 'fully_approved' ? 'bg-green-100 text-green-800' :
+                            feedback.approvalStatus === 'employee_approved' ? 'bg-blue-100 text-blue-800' :
+                            feedback.approvalStatus === 'evaluator_approved' ? 'bg-purple-100 text-purple-800' :
+                            feedback.approvalStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }>
+                            {feedback.approvalStatus === 'fully_approved' ? '✓ Fully Approved' :
+                             feedback.approvalStatus === 'employee_approved' ? '👤 Employee Approved' :
+                             feedback.approvalStatus === 'evaluator_approved' ? '👨‍💼 Evaluator Approved' :
+                             feedback.approvalStatus === 'rejected' ? '❌ Rejected' :
+                             '⏳ Pending'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          {/* Employee Signature Status */}
+                          <div className="flex items-center space-x-2">
+                            {feedback.employeeSignature ? (
+                              <div className="flex items-center space-x-1 text-green-600">
+                                <span className="text-xs">✓</span>
+                                <span className="text-xs font-medium">Signed</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-1 text-gray-500">
+                                <span className="text-xs">⏳</span>
+                                <span className="text-xs">Pending</span>
+                              </div>
+                            )}
+                            {feedback.employeeApprovedAt && (
+                              <div className="text-xs text-gray-500">
+                                {new Date(feedback.employeeApprovedAt).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          {/* Evaluator Signature Status */}
+                          <div className="flex items-center space-x-2">
+                            {feedback.evaluatorSignature ? (
+                              <div className="flex items-center space-x-1 text-blue-600">
+                                <span className="text-xs">✓</span>
+                                <span className="text-xs font-medium">Signed</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-1 text-gray-500">
+                                <span className="text-xs">⏳</span>
+                                <span className="text-xs">Pending</span>
+                              </div>
+                            )}
+                            {feedback.evaluatorApprovedAt && (
+                              <div className="text-xs text-gray-500">
+                                {new Date(feedback.evaluatorApprovedAt).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
                           <div className="flex gap-2">
                             <Button
                               variant="outline"
@@ -1752,6 +1845,18 @@ export default function EvaluatorDashboard() {
                             >
                               🖨️ Print
                             </Button>
+
+                            {/* Evaluator Approval Button */}
+                            {feedback.approvalStatus === 'employee_approved' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEvaluatorApproval(feedback)}
+                                className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-300 text-blue-700 border-blue-200"
+                              >
+                                ✅ Approve
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

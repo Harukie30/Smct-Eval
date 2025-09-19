@@ -42,6 +42,12 @@ export interface Submission {
   submittedAt: string;
   category?: string;
   evaluator?: string;
+  // Approval-related properties
+  approvalStatus?: string;
+  employeeSignature?: string | null;
+  employeeApprovedAt?: string | null;
+  evaluatorSignature?: string | null;
+  evaluatorApprovedAt?: string | null;
 }
 
 export interface PendingRegistration {

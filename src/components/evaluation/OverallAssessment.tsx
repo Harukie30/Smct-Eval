@@ -1601,16 +1601,16 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                 {/* Signature area */}
                                 <div className="border border-gray-300 rounded-lg bg-white p-4 relative">
                                     <div className="h-16 flex items-center justify-center relative">
-                                        {/* Name as background text */}
-                                        <span className="text-sm text-gray-400 font-medium">
+                                        {/* Name as background text - always show */}
+                                        <span className="text-md text-gray-900 font-bold">
                                             {data.evaluatorSignature || currentUser?.name || 'Evaluator Name'}
                                         </span>
-                                        {/* Signature overlay */}
+                                        {/* Signature overlay - centered and overlapping */}
                                         {isApproved && currentUser?.signature && (
                                             <img 
                                                 src={currentUser.signature} 
                                                 alt="Evaluator Signature" 
-                                                className="absolute inset-0 max-h-12 max-w-full object-contain pointer-events-none"
+                                                className="absolute top-5 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-14 max-w-full object-contain"
                                                 onError={(e) => {
                                                     e.currentTarget.style.display = 'none';
                                                 }}

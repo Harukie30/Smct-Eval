@@ -325,10 +325,9 @@ export default function LandingLoginPage() {
                       </Link>
                     </p>
                     {isAuthenticated && (
-                      <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-sm text-green-800 mb-2">You're already logged in!</p>
-                        <Button 
-                          variant="outline" 
+                      <div className="mt-4 p-3 bg-green-600 border border-green-200 rounded-lg">
+                        <p className="text-sm text-white mb-2">You're already logged in!</p>
+                        <Button  
                           size="sm"
                           onClick={() => {
                             const storedUser = localStorage.getItem('authenticatedUser');
@@ -346,7 +345,7 @@ export default function LandingLoginPage() {
                               router.push(dashboardPath);
                             }
                           }}
-                          className="text-green-700 border-green-300 hover:bg-green-100"
+                          className="text-white bg-green-400 hover:bg-green-700"
                         >
                           Go to Dashboard
                         </Button>
