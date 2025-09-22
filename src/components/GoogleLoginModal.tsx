@@ -180,30 +180,110 @@ export default function GoogleLoginModal({
           }
         }
         
-        /* Modal content animation - Zoom In Style */
+        /* Modal content animation - Slow Motion Popup */
         .modal-zoom-in {
-          animation: modalZoomIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+          animation: modalSlowMotion 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
         
-        @keyframes modalZoomIn {
+        @keyframes modalSlowMotion {
           0% {
             opacity: 0;
-            transform: scale(0.3);
+            transform: scale(0.05) translateY(-200px) rotate(-10deg);
           }
-          50% {
-            opacity: 0.8;
-            transform: scale(1.05);
+          15% {
+            opacity: 0.3;
+            transform: scale(0.2) translateY(-150px) rotate(-8deg);
+          }
+          30% {
+            opacity: 0.5;
+            transform: scale(0.4) translateY(-100px) rotate(-5deg);
+          }
+          45% {
+            opacity: 0.7;
+            transform: scale(0.6) translateY(-50px) rotate(-2deg);
+          }
+          60% {
+            opacity: 0.85;
+            transform: scale(0.8) translateY(-20px) rotate(1deg);
+          }
+          75% {
+            opacity: 0.95;
+            transform: scale(0.95) translateY(-5px) rotate(-0.5deg);
+          }
+          85% {
+            opacity: 1;
+            transform: scale(1.08) translateY(3px) rotate(0.3deg);
+          }
+          95% {
+            opacity: 1;
+            transform: scale(0.99) translateY(-1px) rotate(-0.1deg);
           }
           100% {
             opacity: 1;
-            transform: scale(1);
+            transform: scale(1) translateY(0) rotate(0deg);
+          }
+        }
+        
+        /* Ultra slow motion bounce effect */
+        .modal-bounce {
+          animation: modalUltraSlowBounce 3.2s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        
+        @keyframes modalUltraSlowBounce {
+          0% {
+            opacity: 0;
+            transform: scale(0.02) translateY(-300px) rotate(-15deg);
+          }
+          10% {
+            opacity: 0.2;
+            transform: scale(0.1) translateY(-250px) rotate(-12deg);
+          }
+          20% {
+            opacity: 0.4;
+            transform: scale(0.25) translateY(-200px) rotate(-8deg);
+          }
+          30% {
+            opacity: 0.6;
+            transform: scale(0.4) translateY(-150px) rotate(-5deg);
+          }
+          40% {
+            opacity: 0.75;
+            transform: scale(0.55) translateY(-100px) rotate(-2deg);
+          }
+          50% {
+            opacity: 0.85;
+            transform: scale(0.7) translateY(-60px) rotate(1deg);
+          }
+          60% {
+            opacity: 0.92;
+            transform: scale(0.85) translateY(-30px) rotate(-0.5deg);
+          }
+          70% {
+            opacity: 0.96;
+            transform: scale(0.95) translateY(-10px) rotate(0.3deg);
+          }
+          80% {
+            opacity: 0.98;
+            transform: scale(1.02) translateY(2px) rotate(-0.1deg);
+          }
+          90% {
+            opacity: 1;
+            transform: scale(1.05) translateY(5px) rotate(0.2deg);
+          }
+          95% {
+            opacity: 1;
+            transform: scale(0.98) translateY(-2px) rotate(-0.1deg);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1) translateY(0) rotate(0deg);
           }
         }
         
       `}</style>
         <Dialog open={isOpen} onOpenChangeAction={handleClose}>
         <DialogContent 
-          className="sm:max-w-md mx-auto my-8 px-6 py-4 modal-zoom-in"
+          className="sm:max-w-md mx-auto my-8 px-6 py-4 modal-bounce"
         >
         <DialogHeader>
           <DialogTitle className="text-center text-xl font-semibold">
@@ -213,7 +293,7 @@ export default function GoogleLoginModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col items-center space-y-6 py-6">
+        <div className="flex flex-col items-center space-y-6 py-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-[2000ms] delay-[1000ms]">
           {loginStep === 'select' && (
             <>
                     <div className="w-full">

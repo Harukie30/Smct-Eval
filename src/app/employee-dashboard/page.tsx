@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { Eye } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -876,7 +877,7 @@ export default function EmployeeDashboard() {
                   if (score >= 4.0) return 'bg-blue-100 text-blue-800';
                   if (score >= 3.5) return 'bg-yellow-100 text-yellow-800';
                   return 'bg-red-100 text-red-800';
-                })() : 'bg-gray-100 text-gray-800'
+                })() : 'bg-gray-100 text-gray-800'  
               }`}>
               {submissions.length > 0 ?
                 (() => {
@@ -966,7 +967,7 @@ export default function EmployeeDashboard() {
                     size="sm"
                     onClick={handleRefreshSubmissions}
                     disabled={showRefreshModal}
-                    className="flex items-center space-x-2"
+                    className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white"
                   >
                     <svg
                       className="h-4 w-4"
@@ -1009,9 +1010,9 @@ export default function EmployeeDashboard() {
                               {getQuarterFromDate(submission.submittedAt)}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right bg-">
                             <Button
-                              variant="ghost"
+                              className='bg-blue-500 text-white hover:bg-green-700 hover:text-white'
                               size="sm"
                               onClick={() => {
                                 setSelectedEvaluation(submission);
@@ -1021,20 +1022,12 @@ export default function EmployeeDashboard() {
                                 setShowViewSuccess(true);
                                 setTimeout(() => setShowViewSuccess(false), 2000);
                               }}
+                              
                             >
-                              View Details
+                              <Eye className="w-4 h-4" />
+                              View 
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedEvaluation(submission);
-                                setIsEvaluationDetailsModalOpen(true);
-                              }}
-                              className="text-green-600 hover:text-green-800 border-green-200 hover:border-green-300"
-                            >
-                              Evaluation Details
-                            </Button>
+                            
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1047,18 +1040,7 @@ export default function EmployeeDashboard() {
                   </div>
                 )}
               </CardContent>
-            </Card>
-
-            {/* Success Animation Indicator */}
-            {showViewSuccess && (
-              <div className="fixed top-4 right-4 z-50 bg-white border border-green-200 rounded-lg shadow-lg p-4 flex items-center space-x-3">
-                <SuccessAnimation variant="checkmark" color="green" size="md" />
-                <div>
-                  <p className="font-medium text-green-800">Success!</p>
-                  <p className="text-sm text-green-600">Evaluation details opened</p>
-                </div>
-              </div>
-            )}
+            </Card>            
           </>
         );
 
@@ -1693,7 +1675,7 @@ export default function EmployeeDashboard() {
                                   </TableCell>
                                   <TableCell>
                                     <Button
-                                      variant="outline"
+                                      
                                       size="sm"
                                       onClick={() => {
                                         // Filter submissions for this quarter and show the first one
@@ -1709,9 +1691,10 @@ export default function EmployeeDashboard() {
                                           setTimeout(() => setShowViewSuccess(false), 2000);
                                         }
                                       }}
-                                      className="text-blue-600 hover:text-blue-800 border-blue-200 hover:border-blue-300"
+                                      className="bg-blue-500 text-white hover:bg-green-700 hover:text-white"
                                     >
-                                      View Details
+                                      <Eye className="w-4 h-4" />
+                                      View 
                                     </Button>
                                   </TableCell>
                                 </TableRow>
