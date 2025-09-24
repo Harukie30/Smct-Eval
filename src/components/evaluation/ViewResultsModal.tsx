@@ -207,11 +207,11 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
           <div className="flex items-center justify-between border-b border-gray-200 pb-4">
             <h2 className="text-3xl font-bold text-gray-900">Evaluation Details</h2>
             <Button
-              variant="outline"
+              
               onClick={onCloseAction}
-              className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 hover:text-white"
+              className="px-4 py-2 bg-blue-500 text-white hover:bg-red-600 hover:text-white"
             >
-              Close
+             🗙 Close
             </Button>
           </div>
 
@@ -333,7 +333,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                           <div className="text-sm text-gray-500">Loading signature...</div>
                         ) : signatureError ? (
                           <div className="text-sm text-red-500">Error loading signature</div>
-                        ) : (submission.employeeSignature || employeeSignature?.signature) ? (
+                        ) : (submission.employeeSignature || employeeSignature?.signature || approvalData?.employeeSignature) ? (
                           <div className="flex items-center space-x-2">
                             <div className="flex items-center space-x-1 text-green-600">
                               <span className="text-sm">✓</span>
@@ -356,7 +356,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   </div>
                   
                   {/* Employee Signature Preview */}
-                  {(submission.employeeSignature || employeeSignature?.signature) && (
+                  {(submission.employeeSignature || employeeSignature?.signature || approvalData?.employeeSignature) && (
                     <div className="mt-6">
                       <Label className="text-sm font-medium text-gray-600">Employee Signature Preview</Label>
                       <div className="mt-2 p-4 border border-gray-200 rounded-lg bg-gray-50">
@@ -365,7 +365,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             {submission.employeeName || 'Employee Name'}
                           </span>
                           <img 
-                            src={submission.employeeSignature || employeeSignature?.signature} 
+                            src={submission.employeeSignature || employeeSignature?.signature || approvalData?.employeeSignature} 
                             alt="Employee Signature" 
                             className="absolute top-2 left-1/2 transform -translate-x-1/2 max-h-16 max-w-full object-contain"
                             onError={(e) => {
@@ -1649,7 +1649,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             <div className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-red-500">
                               Error loading signature
                             </div>
-                          ) : (isApproved && (employeeSignature?.signature || approvalData?.employeeSignature)) && (
+                          ) : ((isApproved || approvalData?.employeeSignature) && (employeeSignature?.signature || approvalData?.employeeSignature)) && (
                             <img 
                               src={employeeSignature?.signature || approvalData?.employeeSignature} 
                               alt="Employee Signature" 

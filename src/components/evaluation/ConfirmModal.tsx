@@ -65,6 +65,7 @@ export default function ConfirmModal({ open, onCloseAction, onConfirmAction, dat
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState('');
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   // Calculate scores from individual evaluations
   const jobKnowledgeScore = calculateScore([data.jobKnowledgeScore1, data.jobKnowledgeScore2, data.jobKnowledgeScore3]);
   const qualityOfWorkScore = calculateScore([data.qualityOfWorkScore1, data.qualityOfWorkScore2, data.qualityOfWorkScore3, data.qualityOfWorkScore4, data.qualityOfWorkScore5]);
@@ -106,7 +107,7 @@ export default function ConfirmModal({ open, onCloseAction, onConfirmAction, dat
     ethicalScore > 0 && 
     customerServiceScore > 0;
 
-  const handleSubmitEvaluation = async () => {
+  const handleSubmitEvaluation = async (isRetry = false) => {
     if (!isComplete) {
       setSubmissionError('Please complete all required fields before submitting.');
       return;
@@ -128,6 +129,7 @@ export default function ConfirmModal({ open, onCloseAction, onConfirmAction, dat
       
       // Show success state
       setSubmissionSuccess(true);
+      setRetryCount(0); // Reset retry count on success
       
       // Call the parent's confirm action after successful submission
       setTimeout(() => {
@@ -157,9 +159,23 @@ export default function ConfirmModal({ open, onCloseAction, onConfirmAction, dat
       
     } catch (error) {
       console.error('❌ Error submitting evaluation:', error);
-      setSubmissionError(error instanceof Error ? error.message : 'Failed to submit evaluation. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to submit evaluation. Please try again.';
+      
+      // Add retry information to error message
+      if (isRetry) {
+        setSubmissionError(`${errorMessage} (Retry ${retryCount + 1}/3)`);
+      } else {
+        setSubmissionError(errorMessage);
+      }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleRetry = () => {
+    if (retryCount < 3) {
+      setRetryCount(prev => prev + 1);
+      handleSubmitEvaluation(true);
     }
   };
 
@@ -1086,10 +1102,21 @@ export default function ConfirmModal({ open, onCloseAction, onConfirmAction, dat
             <CardContent className="pt-4">
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-red-600" />
-                <div>
+                <div className="flex-1">
                   <h4 className="font-medium text-red-800 mb-1">Submission Failed</h4>
                   <p className="text-sm text-red-700">{submissionError}</p>
                 </div>
+                {retryCount < 3 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRetry}
+                    disabled={isSubmitting}
+                    className="ml-2 text-red-600 border-red-300 hover:bg-red-100"
+                  >
+                    Retry
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1114,7 +1141,7 @@ export default function ConfirmModal({ open, onCloseAction, onConfirmAction, dat
             Review & Edit
           </Button>
           <Button 
-            onClick={handleSubmitEvaluation}
+            onClick={() => handleSubmitEvaluation()}
             disabled={!isComplete || isSubmitting}
             className="px-6 py-2 text-base bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >

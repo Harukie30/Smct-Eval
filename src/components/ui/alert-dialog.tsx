@@ -4,7 +4,6 @@ import * as React from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./dialog"
 import { Button } from "./button"
 import { cn } from "@/lib/utils"
-import SuccessAnimation from "@/components/SuccessAnimation"
 import LoadingAnimation from "@/components/LoadingAnimation"
 
 // Add CSS animations
@@ -70,15 +69,8 @@ interface AlertDialogProps {
     size?: 'sm' | 'md' | 'lg' | 'xl'
     customGif?: string
   }
-  successAnimation?: {
-    variant?: 'checkmark' | 'circle' | 'pulse' | 'bounce'
-    color?: 'green' | 'blue' | 'purple' | 'red' | 'yellow'
-    size?: 'sm' | 'md' | 'lg' | 'xl'
-    customGif?: string
-  }
   // Legacy support
   customLoadingGif?: string
-  customSuccessGif?: string
 }
 
 export function AlertDialog({
@@ -95,9 +87,7 @@ export function AlertDialog({
   isLoading = false,
   showSuccessAnimation = false,
   loadingAnimation,
-  successAnimation,
-  customLoadingGif,
-  customSuccessGif
+  customLoadingGif
 }: AlertDialogProps) {
   const handleConfirm = () => {
     onConfirm?.()
@@ -118,13 +108,6 @@ export function AlertDialog({
     color: loadingAnimation?.color || 'blue',
     size: loadingAnimation?.size || 'md',
     customGif: loadingAnimation?.customGif || customLoadingGif
-  });
-
-  const getSuccessProps = () => ({
-    variant: successAnimation?.variant || 'checkmark',
-    color: successAnimation?.color || 'green',
-    size: successAnimation?.size || 'md',
-    customGif: successAnimation?.customGif || customSuccessGif
   });
 
   const getTypeStyles = () => {
@@ -160,7 +143,21 @@ export function AlertDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {showSuccessAnimation ? (
-              <SuccessAnimation {...getSuccessProps()} />
+              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center animate-pulse">
+                <svg 
+                  className="w-4 h-4 text-white animate-checkmark" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                  style={{
+                    strokeDasharray: '20',
+                    strokeDashoffset: '20',
+                    animation: 'drawCheckmark 0.6s ease-in-out forwards'
+                  }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
             ) : (
               <span className="text-2xl">{styles.icon}</span>
             )}
@@ -193,7 +190,16 @@ export function AlertDialog({
               <LoadingAnimation {...getLoadingProps()} />
             ) : showSuccessAnimation ? (
               <div className="flex items-center gap-2">
-                <SuccessAnimation {...getSuccessProps()} />
+                <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                  <svg 
+                    className="w-3 h-3 text-green-600" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
                 <span>Success!</span>
               </div>
             ) : (

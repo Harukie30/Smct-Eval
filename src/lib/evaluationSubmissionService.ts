@@ -68,8 +68,8 @@ export const submitEvaluation = async (
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 2000));
 
-  // Simulate success or failure (95% success rate)
-  const isSuccess = Math.random() > 0.05;
+  // Simulate success or failure (100% success rate for development)
+  const isSuccess = true; // Math.random() > 0.05; // Uncomment for 95% success rate
 
   if (!isSuccess) {
     throw new Error('Mock API Error: Failed to submit evaluation. Please try again.');

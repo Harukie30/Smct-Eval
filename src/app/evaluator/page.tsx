@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState, useMemo, useRef } from 'react';
+import { X } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge';  
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -178,7 +180,7 @@ export default function EvaluatorDashboard() {
     }
     return undefined;
   };
-  
+
   // Add custom styles for better table scrolling
   useEffect(() => {
     const style = document.createElement('style');
@@ -208,6 +210,23 @@ export default function EvaluatorDashboard() {
   }, []);
 
   const [active, setActive] = useState('overview');
+
+  // Custom tab change handler with auto-refresh functionality
+  const handleTabChange = (tabId: string) => {
+    setActive(tabId);
+
+    // Auto-refresh data when switching to specific tabs
+    if (tabId === 'feedback') {
+      // Show refresh modal when switching to feedback tab (Evaluation Records)
+      setShowEvaluationRecordsRefreshModal(true);
+    } else if (tabId === 'employees') {
+      // Refresh employee data when switching to employees tab
+      refreshEmployeeData();
+    } else if (tabId === 'overview') {
+      // Refresh overview data when switching to overview tab
+      refreshEvaluatorData();
+    }
+  };
   const [currentPeriod, setCurrentPeriod] = useState('');
   const [data, setData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -238,7 +257,7 @@ export default function EvaluatorDashboard() {
   const refreshEvaluatorData = async () => {
     try {
       setLoading(true);
-      
+
       // Load dashboard data
       setCurrentPeriod(mockData.dashboard.currentPeriod);
       setData(mockData.dashboard.performanceData as unknown as PerformanceData);
@@ -248,18 +267,18 @@ export default function EvaluatorDashboard() {
 
       if (Array.isArray(submissions)) {
         // Ensure data is valid and has unique IDs
-        const validData = submissions.filter((item: any) => 
-          item && 
-          typeof item === 'object' && 
-          item.id !== undefined && 
+        const validData = submissions.filter((item: any) =>
+          item &&
+          typeof item === 'object' &&
+          item.id !== undefined &&
           item.employeeName
         );
-        
+
         // Remove duplicates based on ID
-        const uniqueData = validData.filter((item: any, index: number, self: any[]) => 
+        const uniqueData = validData.filter((item: any, index: number, self: any[]) =>
           index === self.findIndex(t => t.id === item.id)
         );
-        
+
         setRecentSubmissions(uniqueData);
       } else {
         console.warn('Invalid data structure received from API');
@@ -297,6 +316,28 @@ export default function EvaluatorDashboard() {
   const [feedbackSort, setFeedbackSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [employeeDataRefresh, setEmployeeDataRefresh] = useState(0);
+
+  // RefreshAnimationModal state for Evaluation Records
+  const [showEvaluationRecordsRefreshModal, setShowEvaluationRecordsRefreshModal] = useState(false);
+
+  // Delete confirmation modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState<any>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState('');
+
+
+  // Function to refresh employee data
+  const refreshEmployeeData = async () => {
+    try {
+      // Force re-render by updating the refresh counter
+      setEmployeeDataRefresh(prev => prev + 1);
+      console.log('Employee data refreshed');
+    } catch (error) {
+      console.error('Error refreshing employee data:', error);
+    }
+  };
 
   const refreshSubmissions = async () => {
     try {
@@ -305,20 +346,20 @@ export default function EvaluatorDashboard() {
 
       if (Array.isArray(submissions)) {
         // Ensure data is valid and has unique IDs
-        const validData = submissions.filter((item: any) => 
-          item && 
-          typeof item === 'object' && 
-          item.id !== undefined && 
+        const validData = submissions.filter((item: any) =>
+          item &&
+          typeof item === 'object' &&
+          item.id !== undefined &&
           item.employeeName
         );
-        
+
         // Remove duplicates based on ID
-        const uniqueData = validData.filter((item: any, index: number, self: any[]) => 
+        const uniqueData = validData.filter((item: any, index: number, self: any[]) =>
           index === self.findIndex(t => t.id === item.id)
         );
-        
+
         setRecentSubmissions(uniqueData);
-        
+
         // Show success feedback
         success(
           'Evaluation Records Refreshed',
@@ -343,6 +384,103 @@ export default function EvaluatorDashboard() {
     } finally {
       setIsRefreshing(false);
     }
+  };
+
+  // Function to handle refresh with modal
+  const handleEvaluationRecordsRefresh = async () => {
+    try {
+      await refreshSubmissions();
+    } catch (error) {
+      console.error('Error during evaluation records refresh:', error);
+    }
+  };
+
+  // Function to handle modal completion
+  const handleEvaluationRecordsRefreshComplete = () => {
+    setShowEvaluationRecordsRefreshModal(false);
+    handleEvaluationRecordsRefresh();
+  };
+
+  // Function to handle delete confirmation
+  const handleDeleteClick = (feedback: any) => {
+    setRecordToDelete(feedback);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Function to confirm delete
+  const handleConfirmDelete = async () => {
+    if (!recordToDelete) return;
+
+    // Validate password
+    if (!deletePassword.trim()) {
+      setDeletePasswordError('Password is required to delete records');
+      return;
+    }
+
+    // Get current user data to verify password
+    const currentUser = getCurrentUserData();
+    if (!currentUser) {
+      setDeletePasswordError('User not found. Please refresh and try again.');
+      return;
+    }
+
+    // Password verification using the current user's password from accounts.json
+    // Get the user's password from the accounts data
+    const userAccount = (accountsData as any).accounts.find((account: any) =>
+      account.email === currentUser.email || account.username === currentUser.email
+    );
+
+    if (!userAccount) {
+      setDeletePasswordError('User account not found. Please refresh and try again.');
+      return;
+    }
+
+    // Compare the entered password with the user's actual password
+    if (deletePassword !== userAccount.password) {
+      setDeletePasswordError('Incorrect password. Please try again.');
+      return;
+    }
+
+    try {
+      // Get all submissions from localStorage
+      const allSubmissions = await clientDataService.getSubmissions();
+
+      // Filter out the record to delete
+      const updatedSubmissions = allSubmissions.filter((sub: any) => sub.id !== recordToDelete.id);
+
+      // Update localStorage
+      localStorage.setItem('submissions', JSON.stringify(updatedSubmissions));
+
+      // Update the state to reflect the deletion
+      setRecentSubmissions(prev => prev.filter(sub => sub.id !== recordToDelete.id));
+
+      // Show success message
+      success(
+        'Record Deleted',
+        `Evaluation record for ${recordToDelete.employeeName} has been deleted successfully`
+      );
+
+      // Close modal and reset state
+      setIsDeleteModalOpen(false);
+      setRecordToDelete(null);
+      setDeletePassword('');
+      setDeletePasswordError('');
+
+    } catch (err) {
+      console.error('Error deleting record:', err);
+      error(
+        'Delete Failed',
+        'Failed to delete the evaluation record. Please try again.'
+      );
+    }
+  };
+
+  // Function to cancel delete
+  const handleCancelDelete = () => {
+    setIsDeleteModalOpen(false);
+    setRecordToDelete(null);
+    setDeletePassword('');
+    setDeletePasswordError('');
   };
 
   const handleProfileSave = (updatedProfile: UserProfile) => {
@@ -973,7 +1111,7 @@ export default function EvaluatorDashboard() {
   // Evaluator approval function
   const handleEvaluatorApproval = async (feedback: any) => {
     const currentUser = getCurrentUserData();
-    
+
     if (!currentUser?.signature) {
       alert('Please add a signature to your profile before approving evaluations.');
       return;
@@ -986,7 +1124,7 @@ export default function EvaluatorDashboard() {
     try {
       // Find the original submission
       const originalSubmission = recentSubmissions.find(submission => submission.id === feedback.id);
-      
+
       if (!originalSubmission) {
         alert('Evaluation not found');
         return;
@@ -996,15 +1134,16 @@ export default function EvaluatorDashboard() {
       const updatedSubmission = {
         ...originalSubmission,
         evaluatorSignature: currentUser.signature,
-        evaluatorApprovedAt: new Date().toISOString(),
-        approvalStatus: 'fully_approved'
+        evaluatorApprovedAt: new Date().toISOString()
+        // Don't set approvalStatus here - let getCorrectApprovalStatus determine it
       };
 
       console.log('🔍 Debug - Updated submission:', {
         id: updatedSubmission.id,
-        approvalStatus: updatedSubmission.approvalStatus,
+        calculatedApprovalStatus: getCorrectApprovalStatus(updatedSubmission),
         evaluatorSignature: updatedSubmission.evaluatorSignature ? 'Present' : 'Missing',
-        evaluatorApprovedAt: updatedSubmission.evaluatorApprovedAt
+        evaluatorApprovedAt: updatedSubmission.evaluatorApprovedAt,
+        hasEmployeeSignature: (updatedSubmission.employeeSignature || updatedSubmission.evaluationData?.employeeSignature) ? 'Present' : 'Missing'
       });
 
       // Update the submissions array
@@ -1019,10 +1158,10 @@ export default function EvaluatorDashboard() {
 
       // Save to localStorage using the proper service method
       const allSubmissions = await clientDataService.getSubmissions();
-      const updatedSubmissions = allSubmissions.map((sub: any) => 
+      const updatedSubmissions = allSubmissions.map((sub: any) =>
         sub.id === feedback.id ? updatedSubmission : sub
       );
-      
+
       // Update localStorage using the same key as the service
       localStorage.setItem('submissions', JSON.stringify(updatedSubmissions));
 
@@ -1040,29 +1179,92 @@ export default function EvaluatorDashboard() {
       });
 
       alert(`Evaluation for ${feedback.employeeName} has been approved successfully!`);
-      
+
     } catch (error) {
       console.error('Error approving evaluation:', error);
       alert('Failed to approve evaluation. Please try again.');
     }
   };
 
+  // Function to determine correct approval status based on signatures
+  const getCorrectApprovalStatus = (submission: any) => {
+    const hasEmployeeSignature = submission.employeeSignature || submission.evaluationData?.employeeSignature;
+    const hasEvaluatorSignature = submission.evaluatorSignature || submission.evaluationData?.evaluatorSignature;
+
+    if (hasEmployeeSignature && hasEvaluatorSignature) {
+      return 'fully_approved';
+    } else if (hasEvaluatorSignature) {
+      return 'evaluator_approved';
+    } else if (hasEmployeeSignature) {
+      return 'employee_approved';
+    } else {
+      return 'pending';
+    }
+  };
+
+  // Function to merge employee approval data from localStorage
+  const mergeEmployeeApprovalData = (submissions: any[]) => {
+    return submissions.map(submission => {
+      // Try to get employee approval data from localStorage
+      // We need to check all possible employee emails that might have approved this evaluation
+      let employeeApprovalData = null;
+
+      // Check if submission has employee email
+      if (submission.employeeEmail) {
+        const approvalKey = `approvalData_${submission.employeeEmail}`;
+        const approvalData = JSON.parse(localStorage.getItem(approvalKey) || '{}');
+        employeeApprovalData = approvalData[submission.id?.toString()] || null;
+      }
+
+      // If not found, try to find approval data by checking all localStorage keys
+      if (!employeeApprovalData) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('approvalData_')) {
+            const approvalData = JSON.parse(localStorage.getItem(key) || '{}');
+            const foundApproval = approvalData[submission.id?.toString()];
+            if (foundApproval) {
+              employeeApprovalData = foundApproval;
+              break;
+            }
+          }
+        }
+      }
+
+      // Merge approval data if found
+      if (employeeApprovalData) {
+        return {
+          ...submission,
+          employeeSignature: employeeApprovalData.employeeSignature,
+          employeeApprovedAt: employeeApprovalData.approvedAt,
+          employeeName: employeeApprovalData.employeeName || submission.employeeName,
+          employeeEmail: employeeApprovalData.employeeEmail || submission.employeeEmail
+        };
+      }
+
+      return submission;
+    });
+  };
+
   // Computed feedback data
   const filteredFeedbackData = useMemo(() => {
     // Filter out any submissions with invalid data
-    const validSubmissions = recentSubmissions.filter(submission => 
-      submission && 
-      typeof submission === 'object' && 
-      submission.id !== undefined && 
+    const validSubmissions = recentSubmissions.filter(submission =>
+      submission &&
+      typeof submission === 'object' &&
+      submission.id !== undefined &&
       submission.employeeName
     );
+
+    // Merge employee approval data from localStorage
+    const submissionsWithApprovalData = mergeEmployeeApprovalData(validSubmissions);
 
     // Debug logging to help identify issues
     if (validSubmissions.length !== recentSubmissions.length) {
       console.warn(`Filtered out ${recentSubmissions.length - validSubmissions.length} invalid submissions`);
     }
 
-    let data = validSubmissions.map((submission, index) => {
+    let data = submissionsWithApprovalData.map((submission, index) => {
       // Calculate rating from evaluation data if available
       let calculatedRating = submission.rating || 0;
 
@@ -1103,8 +1305,8 @@ export default function EvaluatorDashboard() {
         rating: calculatedRating,
         date: submission.submittedAt || new Date().toISOString(),
         comment: submission.evaluationData?.overallComments || 'Performance evaluation completed',
-        // Approval-related properties - extract from nested evaluationData or top level
-        approvalStatus: submission.approvalStatus || submission.evaluationData?.approvalStatus || 'pending',
+        // Approval-related properties - use correct status based on signatures
+        approvalStatus: getCorrectApprovalStatus(submission),
         employeeSignature: submission.employeeSignature || submission.evaluationData?.employeeSignature || null,
         employeeApprovedAt: submission.employeeApprovedAt || submission.evaluationData?.employeeApprovedAt || null,
         evaluatorSignature: submission.evaluatorSignature || submission.evaluationData?.evaluatorSignature || null,
@@ -1140,7 +1342,7 @@ export default function EvaluatorDashboard() {
         const itemDate = new Date(item.date);
         const fromDate = feedbackDateRange.from ? new Date(feedbackDateRange.from) : null;
         const toDate = feedbackDateRange.to ? new Date(feedbackDateRange.to) : null;
-        
+
         if (fromDate && toDate) {
           return itemDate >= fromDate && itemDate <= toDate;
         } else if (fromDate) {
@@ -1186,7 +1388,7 @@ export default function EvaluatorDashboard() {
     });
 
     // Ensure unique keys by filtering out duplicates
-    const uniqueData = data.filter((item, index, self) => 
+    const uniqueData = data.filter((item, index, self) =>
       index === self.findIndex(t => t.uniqueKey === item.uniqueKey)
     );
 
@@ -1202,7 +1404,7 @@ export default function EvaluatorDashboard() {
     }));
 
     // Debug: Log approval statuses
-    console.log('🔍 Debug - filteredFeedbackData approval statuses:', 
+    console.log('🔍 Debug - filteredFeedbackData approval statuses:',
       finalData.map(item => ({ id: item.id, employeeName: item.employeeName, approvalStatus: item.approvalStatus }))
     );
 
@@ -1221,18 +1423,18 @@ export default function EvaluatorDashboard() {
 
         if (Array.isArray(submissions)) {
           // Ensure data is valid and has unique IDs
-          const validData = submissions.filter((item: any) => 
-            item && 
-            typeof item === 'object' && 
-            item.id !== undefined && 
+          const validData = submissions.filter((item: any) =>
+            item &&
+            typeof item === 'object' &&
+            item.id !== undefined &&
             item.employeeName
           );
-          
+
           // Remove duplicates based on ID
-          const uniqueData = validData.filter((item: any, index: number, self: any[]) => 
+          const uniqueData = validData.filter((item: any, index: number, self: any[]) =>
             index === self.findIndex(t => t.id === item.id)
           );
-          
+
           setRecentSubmissions(uniqueData);
         } else {
           console.warn('Invalid data structure received from API');
@@ -1313,7 +1515,7 @@ export default function EvaluatorDashboard() {
     if (!submission || !submission.employeeName) {
       return false;
     }
-    
+
     if (!overviewSearch.trim()) return true;
     const searchTerm = overviewSearch.toLowerCase();
     return (
@@ -1326,593 +1528,651 @@ export default function EvaluatorDashboard() {
   const renderContent = () => {
     switch (active) {
       case 'overview':
-  return (
-        <div className="grid grid-cols-1 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Submissions</CardTitle>
-              <CardDescription>Latest items awaiting evaluation</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="px-6 py-4 space-y-4">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Search submissions by employee name, category, or evaluator..."
-                    value={overviewSearch}
-                    onChange={(e) => setOverviewSearch(e.target.value)}
-                    className=" w-1/2 bg-gray-100 "
-                  />
-                  {overviewSearch && (
-                    <Button
-                      size="sm"
-                      onClick={() => setOverviewSearch('')}
-                      className="px-3 py-2 text-white hover:text-white bg-blue-400 hover:bg-blue-500"
-                    >
-                     ⌫ Clear
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    onClick={refreshSubmissions}
-                    disabled={isRefreshing}
-                    className="px-3 py-2 text-white hover:text-white bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    title="Refresh submissions data"
-                  >
-                    {isRefreshing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Refreshing...
-                      </>
-                    ) : (
-                      <>🔄 Refresh</>
-                    )}
-                  </Button>
-                </div>
-              </div>
-              <div className="max-h-[60vh] overflow-y-auto">
-                <Table className="min-w-full">
-                  <TableHeader className="sticky top-0 bg-white">
-                    <TableRow key="overview-header">
-                      <TableHead className="px-6 py-3">Employee</TableHead>
-                      <TableHead className="px-6 py-3">Category</TableHead>
-                      <TableHead className="px-6 py-3">Submitted</TableHead>
-                      <TableHead className="px-6 py-3 text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredSubmissions.length === 0 ? (
-                      <TableRow key="no-submissions">
-                        <TableCell colSpan={4} className="px-6 py-3 text-center text-gray-500">
-                          {overviewSearch.trim() ? 'No submissions found matching your search' : 'No recent submissions'}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredSubmissions.slice(0, 6).map((submission) => (
-                        <TableRow key={submission.id}>
-                          <TableCell className="px-6 py-3 font-medium text-gray-900">{submission.employeeName}</TableCell>
-                          <TableCell className="px-6 py-3">
-                            <Badge className="bg-blue-100 text-blue-800">{submission.category || 'Performance Review'}</Badge>
-                          </TableCell>
-                          <TableCell className="px-6 py-3 text-gray-600">{new Date(submission.submittedAt).toLocaleDateString()}</TableCell>
-                          <TableCell className="px-6 py-3 text-right">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedEvaluationSubmission(submission);
-                                setIsViewResultsModalOpen(true);
-                              }}
-                              className="bg-blue-500 hover:bg-blue-200 text-white border-blue-200"
-                            >
-                              <Eye className="w-4 h-4" />
-                               View
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        );
-      case 'employees':
         return (
-        (() => {
-          const normalizedQuery = employeeSearch.trim().toLowerCase();
-          const filtered: Employee[] = (accountsData as any).accounts.filter((e: any) => {
-            // Only show active employees (not suspended or inactive)
-            if (!e.isActive || e.isSuspended) return false;
-            
-            // Only show employees (not admins, managers, etc.)
-            if (e.role !== 'employee') return false;
-            
-            const matchesSearch = !normalizedQuery ||
-              e.name.toLowerCase().includes(normalizedQuery) ||
-              e.email.toLowerCase().includes(normalizedQuery) ||
-              e.position.toLowerCase().includes(normalizedQuery) ||
-              e.department.toLowerCase().includes(normalizedQuery) ||
-              e.role.toLowerCase().includes(normalizedQuery);
-
-            const matchesDepartment = !selectedDepartment || e.department === selectedDepartment;
-
-            return matchesSearch && matchesDepartment;
-          });
-          const sorted = [...filtered].sort((a, b) => {
-            const { key, direction } = employeeSort;
-            const av = a[key] ?? '';
-            const bv = b[key] ?? '';
-            const res = key === 'hireDate'
-              ? new Date(av as string).getTime() - new Date(bv as string).getTime()
-              : String(av).localeCompare(String(bv));
-            return direction === 'asc' ? res : -res;
-          });
-          const toggleSort = (key: keyof Employee) => {
-            setEmployeeSort((prev) =>
-              prev.key === key ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' }
-            );
-          };
-          const sortIcon = (key: keyof Employee) => {
-            if (employeeSort.key !== key) return '↕';
-            return employeeSort.direction === 'asc' ? '↑' : '↓';
-          };
-          return (
+          <div className="grid grid-cols-1 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Employees</CardTitle>
-                <CardDescription>Directory of employees</CardDescription>
+                <CardTitle>Recent Submissions</CardTitle>
+                <CardDescription>Latest items awaiting evaluation</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="px-6 py-4 space-y-4">
-                  <div className="flex gap-4">
+                  <div className="flex gap-2">
                     <Input
-                      placeholder="Search employees by name, email, position, department, role"
-                      value={employeeSearch}
-                      onChange={(e) => setEmployeeSearch(e.target.value)}
-                      className="flex-1"
+                      placeholder="Search submissions by employee name, category, or evaluator..."
+                      value={overviewSearch}
+                      onChange={(e) => setOverviewSearch(e.target.value)}
+                      className=" w-1/2 bg-gray-100 "
                     />
-                    <SearchableDropdown
-                      options={['All Departments', ...departments.map(dept => dept.name)]}
-                      value={selectedDepartment || 'All Departments'}
-                      onValueChangeAction={(value) => setSelectedDepartment(value === 'All Departments' ? '' : value)}
-                      placeholder="All Departments"
-                      className="w-[200px]"
-                    />
+                    {overviewSearch && (
+                      <Button
+                        size="sm"
+                        onClick={() => setOverviewSearch('')}
+                        className="px-3 py-2 text-white hover:text-white bg-blue-400 hover:bg-blue-500"
+                      >
+                        ⌫ Clear
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      onClick={() => setShowEvaluationRecordsRefreshModal(true)}
+                      disabled={isRefreshing}
+                      className="px-3 py-2 text-white hover:text-white bg-blue-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      title="Refresh submissions data"
+                    >
+                      {isRefreshing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Refreshing...
+                        </>
+                      ) : (
+                        <> Refresh <span><RefreshCw className="h-3 w-3" /></span> </>
+                      )}
+                    </Button>
                   </div>
                 </div>
-                <div className="max-h-[70vh] overflow-y-auto">
+                <div className="max-h-[60vh] overflow-y-auto">
                   <Table className="min-w-full">
                     <TableHeader className="sticky top-0 bg-white">
-                      <TableRow key="employees-header">
-                        <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('name')}>
-                          Name <span className="ml-1 text-xs text-gray-500">{sortIcon('name')}</span>
-                        </TableHead>
-                        <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('email')}>
-                          Email <span className="ml-1 text-xs text-gray-500">{sortIcon('email')}</span>
-                        </TableHead>
-                        <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('position')}>
-                          Position <span className="ml-1 text-xs text-gray-500">{sortIcon('position')}</span>
-                        </TableHead>
-                        <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('department')}>
-                          Department <span className="ml-1 text-xs text-gray-500">{sortIcon('department')}</span>
-                        </TableHead>
-                        <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('role')}>
-                          Role <span className="ml-1 text-xs text-gray-500">{sortIcon('role')}</span>
-                        </TableHead>
-                        <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('hireDate')}>
-                          Hire Date <span className="ml-1 text-xs text-gray-500">{sortIcon('hireDate')}</span>
-                        </TableHead>
+                      <TableRow key="overview-header">
+                        <TableHead className="px-6 py-3">Employee</TableHead>
+                        <TableHead className="px-6 py-3">Category</TableHead>
+                        <TableHead className="px-6 py-3">Submitted</TableHead>
                         <TableHead className="px-6 py-3 text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sorted.map((e) => (
-                        <TableRow key={e.id}>
-                          <TableCell className="px-6 py-3 font-medium text-gray-900">{e.name}</TableCell>
-                          <TableCell className="px-6 py-3 text-gray-600">{e.email}</TableCell>
-                          <TableCell className="px-6 py-3">{e.position}</TableCell>
-                          <TableCell className="px-6 py-3">{e.department}</TableCell>
-                          <TableCell className="px-6 py-3">{e.role}</TableCell>
-                          <TableCell className="px-6 py-3 text-gray-600">{new Date(e.hireDate).toLocaleDateString()}</TableCell>
-                          <TableCell className="px-6 py-3 text-right">
-                            <Button
-                              size="sm"
-                              className='bg-blue-500 hover:bg-yellow-400 hover:text-black'
-                              onClick={() => {
-                                setSelectedEmployee(e);
-                                setIsEvaluationModalOpen(true);
-                              }}
+                      {filteredSubmissions.length === 0 ? (
+                        <TableRow key="no-submissions">
+                          <TableCell colSpan={4} className="px-6 py-3 text-center text-gray-500">
+                            {overviewSearch.trim() ? 'No submissions found matching your search' : 'No recent submissions'}
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredSubmissions.slice(0, 6).map((submission) => (
+                          <TableRow key={submission.id}>
+                            <TableCell className="px-6 py-3 font-medium text-gray-900">{submission.employeeName}</TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Badge className="bg-blue-100 text-blue-800">{submission.category || 'Performance Review'}</Badge>
+                            </TableCell>
+                            <TableCell className="px-6 py-3 text-gray-600">{new Date(submission.submittedAt).toLocaleDateString()}</TableCell>
+                            <TableCell className="px-6 py-4 flex justify-end text-right">
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedEvaluationSubmission(submission);
+                                    setIsViewResultsModalOpen(true);
+                                  }}
+                                  className="bg-blue-500 hover:bg-blue-200 text-white border-blue-200"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                  View
+                                </Button>
+
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      case 'employees':
+        return (
+          (() => {
+            // Use refresh counter as key to force re-render when data is refreshed
+            const refreshKey = `employees-${employeeDataRefresh}`;
+            const normalizedQuery = employeeSearch.trim().toLowerCase();
+            const filtered: Employee[] = (accountsData as any).accounts.filter((e: any) => {
+              // Only show active employees (not suspended or inactive)
+              if (!e.isActive || e.isSuspended) return false;
+
+              // Only show employees (not admins, managers, etc.)
+              if (e.role !== 'employee') return false;
+
+              const matchesSearch = !normalizedQuery ||
+                e.name.toLowerCase().includes(normalizedQuery) ||
+                e.email.toLowerCase().includes(normalizedQuery) ||
+                e.position.toLowerCase().includes(normalizedQuery) ||
+                e.department.toLowerCase().includes(normalizedQuery) ||
+                e.role.toLowerCase().includes(normalizedQuery);
+
+              const matchesDepartment = !selectedDepartment || e.department === selectedDepartment;
+
+              return matchesSearch && matchesDepartment;
+            });
+            const sorted = [...filtered].sort((a, b) => {
+              const { key, direction } = employeeSort;
+              const av = a[key] ?? '';
+              const bv = b[key] ?? '';
+              const res = key === 'hireDate'
+                ? new Date(av as string).getTime() - new Date(bv as string).getTime()
+                : String(av).localeCompare(String(bv));
+              return direction === 'asc' ? res : -res;
+            });
+            const toggleSort = (key: keyof Employee) => {
+              setEmployeeSort((prev) =>
+                prev.key === key ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' }
+              );
+            };
+            const sortIcon = (key: keyof Employee) => {
+              if (employeeSort.key !== key) return '↕';
+              return employeeSort.direction === 'asc' ? '↑' : '↓';
+            };
+            return (
+              <Card key={refreshKey}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Employees</CardTitle>
+                      <CardDescription>Directory of employees</CardDescription>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={refreshEmployeeData}
+                      className="flex items-center bg-blue-500 text-white hover:bg-green-600 hover:text-white"
+                      title="Refresh employee data"
+                    >
+                      <span>Refresh</span>
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="px-6 py-4 space-y-4">
+                    <div className="flex gap-4">
+                      <div className="flex items-center gap-2 w-full">
+                        {/* Search input with clear button inside */}
+                        <div className="relative flex-1">
+                          <Input
+                            placeholder="Search employees by name, email, position, department, role"
+                            value={employeeSearch}
+                            onChange={(e) => setEmployeeSearch(e.target.value)}
+                            className="w-full pr-10"
+                          />
+                          {employeeSearch && (
+                            <button
+                              onClick={() => setEmployeeSearch('')}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 font hover:text-red-700"
+                              title="Clear search"
                             >
-                              <svg
-                                className="w-4 h-4 mr-2"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Department dropdown */}
+                        <SearchableDropdown
+                          options={['All Departments', ...departments.map((dept) => dept.name)]}
+                          value={selectedDepartment || 'All Departments'}
+                          onValueChangeAction={(value) =>
+                            setSelectedDepartment(value === 'All Departments' ? '' : value)
+                          }
+                          placeholder="All Departments"
+                          className="w-[200px]"
+                        />
+
+                      </div>
+
+                    </div>
+                  </div>
+                  <div className="max-h-[70vh] overflow-y-auto">
+                    <Table className="min-w-full">
+                      <TableHeader className="sticky top-0 bg-white">
+                        <TableRow key="employees-header">
+                          <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('name')}>
+                            Name <span className="ml-1 text-xs text-gray-500">{sortIcon('name')}</span>
+                          </TableHead>
+                          <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('email')}>
+                            Email <span className="ml-1 text-xs text-gray-500">{sortIcon('email')}</span>
+                          </TableHead>
+                          <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('position')}>
+                            Position <span className="ml-1 text-xs text-gray-500">{sortIcon('position')}</span>
+                          </TableHead>
+                          <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('department')}>
+                            Department <span className="ml-1 text-xs text-gray-500">{sortIcon('department')}</span>
+                          </TableHead>
+                          <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('role')}>
+                            Role <span className="ml-1 text-xs text-gray-500">{sortIcon('role')}</span>
+                          </TableHead>
+                          <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('hireDate')}>
+                            Hire Date <span className="ml-1 text-xs text-gray-500">{sortIcon('hireDate')}</span>
+                          </TableHead>
+                          <TableHead className="px-6 py-3 text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sorted.map((e) => (
+                          <TableRow key={e.id}>
+                            <TableCell className="px-6 py-3 font-medium text-gray-900">{e.name}</TableCell>
+                            <TableCell className="px-6 py-3 text-gray-600">{e.email}</TableCell>
+                            <TableCell className="px-6 py-3">{e.position}</TableCell>
+                            <TableCell className="px-6 py-3">{e.department}</TableCell>
+                            <TableCell className="px-6 py-3">{e.role}</TableCell>
+                            <TableCell className="px-6 py-3 text-gray-600">{new Date(e.hireDate).toLocaleDateString()}</TableCell>
+                            <TableCell className="px-6 py-3 text-right">
+                              <Button
+                                size="sm"
+                                className='bg-blue-500 hover:bg-yellow-400 hover:text-black'
+                                onClick={() => {
+                                  setSelectedEmployee(e);
+                                  setIsEvaluationModalOpen(true);
+                                }}
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                />
-                              </svg>
-                              Evaluate
-                            </Button>
+                                <svg
+                                  className="w-4 h-4 mr-2"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                  />
+                                </svg>
+                                Evaluate
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()
+        );
+      case 'feedback':
+        return (
+          <div className="space-y-6">
+            {/* Search and Filter Controls */}
+            <Card>
+              <CardHeader>
+                <CardTitle>All Feedback/Evaluation Records</CardTitle>
+                <CardDescription>Complete feedback history and evaluation records</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                  {/* Search */}
+                  <div className="flex-1">
+                    <Label htmlFor="feedback-search" className="text-sm font-medium">Search</Label>
+                    <div className="mt-1 relative">
+                      <div className="relative w-full">
+                        <Input
+                          id="feedback-search"
+                          placeholder="Search by employee name, reviewer, or comments..."
+                          className={`pr-10`} // reserve space for the button
+                          value={feedbackSearch}
+                          onChange={(e) => setFeedbackSearch(e.target.value)}
+                        />
+
+                        {(feedbackSearch || feedbackDepartmentFilter || feedbackDateFilter || feedbackDateRange.from || feedbackDateRange.to || feedbackQuarterFilter || feedbackApprovalStatusFilter) && (
+                          <button
+                            onClick={() => {
+                              setFeedbackSearch('');
+                              setFeedbackDepartmentFilter('');
+                              setFeedbackDateFilter('');
+                              setFeedbackDateRange({ from: '', to: '' });
+                              setFeedbackQuarterFilter('');
+                              setFeedbackApprovalStatusFilter('');
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-red-600  hover:text-red-700"
+                            title="Clear all filters"
+                          >
+                            <X className="h-4 w-4  " />
+                          </button>
+                        )}
+                      </div>
+
+                    </div>
+                  </div>
+
+                  {/* Department Filter */}
+                  <div className="w-full md:w-48">
+                    <Label htmlFor="feedback-department" className="text-sm font-medium">Department</Label>
+                    <SearchableDropdown
+                      options={['All Departments', ...departments.map(dept => dept.name)]}
+                      value={feedbackDepartmentFilter || 'All Departments'}
+                      onValueChangeAction={(value) => setFeedbackDepartmentFilter(value === 'All Departments' ? '' : value)}
+                      placeholder="All Departments"
+                      className="mt-1"
+                    />
+                  </div>
+
+                  {/* Approval Status Filter */}
+                  <div className="w-full md:w-48">
+                    <Label htmlFor="feedback-approval-status" className="text-sm font-medium">Approval Status</Label>
+                    <SearchableDropdown
+                      options={[
+                        'All Statuses',
+                        '⏳ Pending',
+                        '👤 Employee Approved',
+                        '👨‍💼 Evaluator Approved',
+                        '✓ Fully Approved',
+                      ]}
+                      value={
+                        feedbackApprovalStatusFilter === 'pending' ? '⏳ Pending' :
+                          feedbackApprovalStatusFilter === 'employee_approved' ? '👤 Employee Approved' :
+                            feedbackApprovalStatusFilter === 'evaluator_approved' ? '👨‍💼 Evaluator Approved' :
+                              feedbackApprovalStatusFilter === 'fully_approved' ? '✓ Fully Approved' :
+                                'All Statuses'
+                      }
+                      onValueChangeAction={(value) => {
+                        const statusMap: Record<string, string> = {
+                          '⏳ Pending': 'pending',
+                          '👤 Employee Approved': 'employee_approved',
+                          '👨‍💼 Evaluator Approved': 'evaluator_approved',
+                          '✓ Fully Approved': 'fully_approved',
+                        };
+                        setFeedbackApprovalStatusFilter(value === 'All Statuses' ? '' : statusMap[value] || '');
+                      }}
+                      placeholder="All Statuses"
+                      className="mt-1"
+                    />
+                  </div>
+
+                  {/* Quarter Filter */}
+                  <div className="w-full md:w-48">
+                    <Label htmlFor="feedback-quarter" className="text-sm font-medium">Quarter</Label>
+                    <SearchableDropdown
+                      options={[
+                        'All Quarters',
+                        'Q1 2024',
+                        'Q2 2024',
+                        'Q3 2024',
+                        'Q4 2024',
+                        'Q1 2025',
+                        'Q2 2025',
+                        'Q3 2025',
+                        'Q4 2025'
+                      ]}
+                      value={feedbackQuarterFilter || 'All Quarters'}
+                      onValueChangeAction={(value) => {
+                        setFeedbackQuarterFilter(value === 'All Quarters' ? '' : value);
+                        // Clear date filters when quarter is selected
+                        if (value !== 'All Quarters') {
+                          setFeedbackDateFilter('');
+                          setFeedbackDateRange({ from: '', to: '' });
+                        }
+                      }}
+                      placeholder="All Quarters"
+                      className="mt-1"
+                    />
+                  </div>
+
+                  {/* Custom Date Range */}
+                  <div className="w-full md:w-64">
+                    <Label className="text-sm font-medium">Custom Date Range</Label>
+                    <div className="mt-1 flex gap-2">
+                      <Input
+                        type="date"
+                        placeholder="From"
+                        value={feedbackDateRange.from}
+                        onChange={(e) => {
+                          setFeedbackDateRange(prev => ({ ...prev, from: e.target.value }));
+                          // Clear preset filters when using custom range
+                          if (e.target.value) {
+                            setFeedbackDateFilter('');
+                            setFeedbackQuarterFilter('');
+                          }
+                        }}
+                        className="text-sm"
+                      />
+                      <Input
+                        type="date"
+                        placeholder="To"
+                        value={feedbackDateRange.to}
+                        onChange={(e) => {
+                          setFeedbackDateRange(prev => ({ ...prev, to: e.target.value }));
+                          // Clear preset filters when using custom range
+                          if (e.target.value) {
+                            setFeedbackDateFilter('');
+                            setFeedbackQuarterFilter('');
+                          }
+                        }}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+
+
+                  {/* Refresh Button */}
+                  <div className="w-full md:w-32">
+                    <Label className="text-sm font-medium opacity-0">Refresh</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowEvaluationRecordsRefreshModal(true)}
+                      disabled={isRefreshing}
+                      className="mt-1 w-full text-xs bg-blue-500 hover:bg-green-600 text-center text-white  hover:text-white disabled:cursor-not-allowed"
+                      title="Refresh evaluation records data"
+                    >
+                      {isRefreshing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                          Refreshing...
+                        </>
+                      ) : (
+                        <>
+
+                          Refresh <span><RefreshCw className="h-3 w-3" /></span> </>
+                      )}
+                    </Button>
+                  </div>
+
+
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Feedback Table */}
+            <Card>
+              <CardContent className="p-0">
+                <div className="max-h-[60vh] overflow-y-auto overflow-x-auto scrollable-table">
+                  <Table className="min-w-full">
+                    <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                      <TableRow key="feedback-header">
+                        <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('employeeName')}>
+                          Employee Name {getSortIcon('employeeName')}
+                        </TableHead>
+                        <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('department')}>
+                          Department {getSortIcon('department')}
+                        </TableHead>
+                        <TableHead className="px-6 py-3">Position</TableHead>
+                        <TableHead className="px-6 py-3">Reviewer</TableHead>
+                        <TableHead className="px-6 py-3">Category</TableHead>
+                        <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('rating')}>
+                          Rating {getSortIcon('rating')}
+                        </TableHead>
+                        <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('date')}>
+                          Date {getSortIcon('date')}
+                        </TableHead>
+                        <TableHead className="px-6 py-3">Approval Status</TableHead>
+                        <TableHead className="px-6 py-3">Employee Signature</TableHead>
+                        <TableHead className="px-6 py-3">Evaluator Signature</TableHead>
+                        <TableHead className="px-6 py-3">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-gray-200">
+                      {filteredFeedbackData.map((feedback) => (
+                        <TableRow key={feedback.uniqueKey} className="hover:bg-gray-50">
+                          <TableCell className="px-6 py-3">
+                            <div>
+                              <div className="font-medium text-gray-900">{feedback.employeeName}</div>
+                              <div className="text-sm text-gray-500">{feedback.employeeEmail}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            <Badge variant="outline" className="text-xs">
+                              {feedback.department}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                            {feedback.position}
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            <div>
+                              <div className="font-medium text-gray-900">{feedback.reviewer}</div>
+                              <div className="text-sm text-gray-500">{feedback.reviewerRole}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            <Badge className={`text-xs ${feedback.category === 'Performance Review' ? 'bg-blue-100 text-blue-800' :
+                              feedback.category === 'Probationary Review' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                              {feedback.category}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            <div className="flex items-center gap-2">
+                              <Badge className={`text-xs ${getRatingColor(feedback.rating)}`}>
+                                {feedback.rating.toFixed(1)}/5
+                              </Badge>
+                              <span className="text-xs text-gray-500">
+                                {getRatingLabel(feedback.rating)}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                            {new Date(feedback.date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            {/* Approval Status */}
+                            <Badge className={
+                              feedback.approvalStatus === 'fully_approved' ? 'bg-green-100 text-green-800' :
+                                feedback.approvalStatus === 'employee_approved' ? 'bg-blue-100 text-blue-800' :
+                                  feedback.approvalStatus === 'evaluator_approved' ? 'bg-purple-100 text-purple-800' :
+                                    feedback.approvalStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                                      'bg-gray-100 text-gray-800'
+                            }>
+                              {feedback.approvalStatus === 'fully_approved' ? '✓ Fully Approved' :
+                                feedback.approvalStatus === 'employee_approved' ? '👤 Employee Approved' :
+                                  feedback.approvalStatus === 'evaluator_approved' ? '👨‍💼 Evaluator Approved' :
+                                    feedback.approvalStatus === 'rejected' ? '❌ Rejected' :
+                                      '⏳ Pending'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            {/* Employee Signature Status */}
+                            <div className="flex items-center space-x-2">
+                              {feedback.employeeSignature && feedback.employeeApprovedAt ? (
+                                <div className="flex items-center space-x-1 text-green-600">
+                                  <span className="text-xs">✓</span>
+                                  <span className="text-xs font-medium">Signed</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center space-x-1 text-gray-500">
+                                  <span className="text-xs">⏳</span>
+                                  <span className="text-xs">Pending</span>
+                                </div>
+                              )}
+                              {feedback.employeeApprovedAt && (
+                                <div className="text-xs text-gray-500">
+                                  {new Date(feedback.employeeApprovedAt).toLocaleDateString()}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            {/* Evaluator Signature Status */}
+                            <div className="flex items-center space-x-2">
+                              {feedback.evaluatorSignature ? (
+                                <div className="flex items-center space-x-1 text-blue-600">
+                                  <span className="text-xs">✓</span>
+                                  <span className="text-xs font-medium">Signed</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center space-x-1 text-gray-500">
+                                  <span className="text-xs">⏳</span>
+                                  <span className="text-xs">Pending</span>
+                                </div>
+                              )}
+                              {feedback.evaluatorApprovedAt && (
+                                <div className="text-xs text-gray-500">
+                                  {new Date(feedback.evaluatorApprovedAt).toLocaleDateString()}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => viewEvaluationForm(feedback)}
+                                className="text-xs px-2 py-1 bg-green-600 hover:bg-green-300 text-white "
+                              >
+                                ☰ View 
+                              </Button>
+
+                              <Button
+                                
+                                size="sm"
+                                onClick={() => printFeedback(feedback)}
+                                className="text-xs bg-gray-500 text-white px-2 py-1"
+                              >
+                                ⎙ Print
+                              </Button>
+
+                              {/* Evaluator Approval Button */}
+                              {feedback.approvalStatus === 'employee_approved' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEvaluatorApproval(feedback)}
+                                  className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-300 text-blue-700 border-blue-200"
+                                >
+                                  ✅ Approve
+                                </Button>
+                              )}
+
+                              {/* Delete Button */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteClick(feedback)}
+                                className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200"
+                                title="Delete this evaluation record"
+                              >
+                                ❌ Delete
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* No Data Message */}
+                {filteredFeedbackData.length === 0 && (
+                  <div className="text-center py-12">
+                    <div className="text-gray-500 text-lg">No evaluation data found</div>
+                    <div className="text-gray-400 text-sm mt-2">Try adjusting your search or filters</div>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          );
-        })()
-        );
-      case 'feedback':
-        return (
-        <div className="space-y-6">
-          {/* Search and Filter Controls */}
-          <Card>
-            <CardHeader>
-              <CardTitle>All Feedback/Evaluation Records</CardTitle>
-              <CardDescription>Complete feedback history and evaluation records</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col md:flex-row gap-4 mb-6">
-                {/* Search */}
-                <div className="flex-1">
-                  <Label htmlFor="feedback-search" className="text-sm font-medium">Search</Label>
-                  <div className="mt-1 relative">
-                    <Input
-                      id="feedback-search"
-                      placeholder="Search by employee name, reviewer, or comments..."
-                      className={`${(feedbackSearch || feedbackDepartmentFilter || feedbackDateFilter || feedbackDateRange.from || feedbackDateRange.to || feedbackQuarterFilter || feedbackApprovalStatusFilter) ? 'pr-20' : 'pr-3'}`}
-                      value={feedbackSearch}
-                      onChange={(e) => setFeedbackSearch(e.target.value)}
-                    />
-                    {(feedbackSearch || feedbackDepartmentFilter || feedbackDateFilter || feedbackDateRange.from || feedbackDateRange.to || feedbackQuarterFilter || feedbackApprovalStatusFilter) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setFeedbackSearch('');
-                          setFeedbackDepartmentFilter('');
-                          setFeedbackDateFilter('');
-                          setFeedbackDateRange({ from: '', to: '' });
-                          setFeedbackQuarterFilter('');
-                          setFeedbackApprovalStatusFilter('');
-                        }}
-                        className="absolute right-1 top-1 h-8 px-2 text-xs bg-blue-500 hover:bg-blue-600 text-center text-white border-blue-200"
-                        title="Clear all filters"
-                      >
-                        Clear All
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Department Filter */}
-                <div className="w-full md:w-48">
-                  <Label htmlFor="feedback-department" className="text-sm font-medium">Department</Label>
-                  <SearchableDropdown
-                    options={['All Departments', ...departments.map(dept => dept.name)]}
-                    value={feedbackDepartmentFilter || 'All Departments'}
-                    onValueChangeAction={(value) => setFeedbackDepartmentFilter(value === 'All Departments' ? '' : value)}
-                    placeholder="All Departments"
-                    className="mt-1"
-                  />
-                </div>
-
-                {/* Approval Status Filter */}
-                <div className="w-full md:w-48">
-                  <Label htmlFor="feedback-approval-status" className="text-sm font-medium">Approval Status</Label>
-                  <SearchableDropdown
-                    options={[
-                      'All Statuses',
-                      '⏳ Pending',
-                      '👤 Employee Approved', 
-                      '👨‍💼 Evaluator Approved',
-                      '✓ Fully Approved',
-                      '❌ Rejected'
-                    ]}
-                    value={
-                      feedbackApprovalStatusFilter === 'pending' ? '⏳ Pending' :
-                      feedbackApprovalStatusFilter === 'employee_approved' ? '👤 Employee Approved' :
-                      feedbackApprovalStatusFilter === 'evaluator_approved' ? '👨‍💼 Evaluator Approved' :
-                      feedbackApprovalStatusFilter === 'fully_approved' ? '✓ Fully Approved' :
-                      feedbackApprovalStatusFilter === 'rejected' ? '❌ Rejected' :
-                      'All Statuses'
-                    }
-                    onValueChangeAction={(value) => {
-                      const statusMap: Record<string, string> = {
-                        '⏳ Pending': 'pending',
-                        '👤 Employee Approved': 'employee_approved',
-                        '👨‍💼 Evaluator Approved': 'evaluator_approved',
-                        '✓ Fully Approved': 'fully_approved',
-                        '❌ Rejected': 'rejected'
-                      };
-                      setFeedbackApprovalStatusFilter(value === 'All Statuses' ? '' : statusMap[value] || '');
-                    }}
-                    placeholder="All Statuses"
-                    className="mt-1"
-                  />
-                </div>
-
-                {/* Quarter Filter */}
-                <div className="w-full md:w-48">
-                  <Label htmlFor="feedback-quarter" className="text-sm font-medium">Quarter</Label>
-                  <SearchableDropdown
-                    options={[
-                      'All Quarters',
-                      'Q1 2024',
-                      'Q2 2024', 
-                      'Q3 2024',
-                      'Q4 2024',
-                      'Q1 2025',
-                      'Q2 2025',
-                      'Q3 2025',
-                      'Q4 2025'
-                    ]}
-                    value={feedbackQuarterFilter || 'All Quarters'}
-                    onValueChangeAction={(value) => {
-                      setFeedbackQuarterFilter(value === 'All Quarters' ? '' : value);
-                      // Clear date filters when quarter is selected
-                      if (value !== 'All Quarters') {
-                        setFeedbackDateFilter('');
-                        setFeedbackDateRange({ from: '', to: '' });
-                      }
-                    }}
-                    placeholder="All Quarters"
-                    className="mt-1"
-                  />
-                </div>
-
-                {/* Custom Date Range */}
-                <div className="w-full md:w-64">
-                  <Label className="text-sm font-medium">Custom Date Range</Label>
-                  <div className="mt-1 flex gap-2">
-                    <Input
-                      type="date"
-                      placeholder="From"
-                      value={feedbackDateRange.from}
-                      onChange={(e) => {
-                        setFeedbackDateRange(prev => ({ ...prev, from: e.target.value }));
-                        // Clear preset filters when using custom range
-                        if (e.target.value) {
-                          setFeedbackDateFilter('');
-                          setFeedbackQuarterFilter('');
-                        }
-                      }}
-                      className="text-sm"
-                    />
-                    <Input
-                      type="date"
-                      placeholder="To"
-                      value={feedbackDateRange.to}
-                      onChange={(e) => {
-                        setFeedbackDateRange(prev => ({ ...prev, to: e.target.value }));
-                        // Clear preset filters when using custom range
-                        if (e.target.value) {
-                          setFeedbackDateFilter('');
-                          setFeedbackQuarterFilter('');
-                        }
-                      }}
-                      className="text-sm"
-                    />
-                  </div>
-                </div>
-
-
-                {/* Refresh Button */}
-                <div className="w-full md:w-32">
-                  <Label className="text-sm font-medium opacity-0">Refresh</Label>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={refreshSubmissions}
-                    disabled={isRefreshing}
-                    className="mt-1 w-full text-xs bg-blue-500 hover:bg-blue-600 text-center text-white border-blue-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    title="Refresh evaluation records data"
-                  >
-                    {isRefreshing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
-                        Refreshing...
-                      </>
-                    ) : (
-                      <>🔄 Refresh</>
-                    )}
-                  </Button>
-                </div>
-
-
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Feedback Table */}
-          <Card>
-            <CardContent className="p-0">
-              <div className="max-h-[60vh] overflow-y-auto overflow-x-auto scrollable-table">
-                <Table className="min-w-full">
-                  <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
-                    <TableRow key="feedback-header">
-                      <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('employeeName')}>
-                        Employee Name {getSortIcon('employeeName')}
-                      </TableHead>
-                      <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('department')}>
-                        Department {getSortIcon('department')}
-                      </TableHead>
-                      <TableHead className="px-6 py-3">Position</TableHead>
-                      <TableHead className="px-6 py-3">Reviewer</TableHead>
-                      <TableHead className="px-6 py-3">Category</TableHead>
-                      <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('rating')}>
-                        Rating {getSortIcon('rating')}
-                      </TableHead>
-                      <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('date')}>
-                        Date {getSortIcon('date')}
-                      </TableHead>
-                      <TableHead className="px-6 py-3">Approval Status</TableHead>
-                      <TableHead className="px-6 py-3">Employee Signature</TableHead>
-                      <TableHead className="px-6 py-3">Evaluator Signature</TableHead>
-                      <TableHead className="px-6 py-3">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody className="divide-y divide-gray-200">
-                    {filteredFeedbackData.map((feedback) => (
-                        <TableRow key={feedback.uniqueKey} className="hover:bg-gray-50">
-                        <TableCell className="px-6 py-3">
-                          <div>
-                            <div className="font-medium text-gray-900">{feedback.employeeName}</div>
-                            <div className="text-sm text-gray-500">{feedback.employeeEmail}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Badge variant="outline" className="text-xs">
-                            {feedback.department}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="px-6 py-3 text-sm text-gray-600">
-                          {feedback.position}
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <div>
-                            <div className="font-medium text-gray-900">{feedback.reviewer}</div>
-                            <div className="text-sm text-gray-500">{feedback.reviewerRole}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Badge className={`text-xs ${feedback.category === 'Performance Review' ? 'bg-blue-100 text-blue-800' :
-                              feedback.category === 'Probationary Review' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
-                            }`}>
-                            {feedback.category}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <div className="flex items-center gap-2">
-                            <Badge className={`text-xs ${getRatingColor(feedback.rating)}`}>
-                              {feedback.rating.toFixed(1)}/5
-                            </Badge>
-                            <span className="text-xs text-gray-500">
-                              {getRatingLabel(feedback.rating)}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-3 text-sm text-gray-600">
-                          {new Date(feedback.date).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          {/* Approval Status */}
-                          <Badge className={
-                            feedback.approvalStatus === 'fully_approved' ? 'bg-green-100 text-green-800' :
-                            feedback.approvalStatus === 'employee_approved' ? 'bg-blue-100 text-blue-800' :
-                            feedback.approvalStatus === 'evaluator_approved' ? 'bg-purple-100 text-purple-800' :
-                            feedback.approvalStatus === 'rejected' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }>
-                            {feedback.approvalStatus === 'fully_approved' ? '✓ Fully Approved' :
-                             feedback.approvalStatus === 'employee_approved' ? '👤 Employee Approved' :
-                             feedback.approvalStatus === 'evaluator_approved' ? '👨‍💼 Evaluator Approved' :
-                             feedback.approvalStatus === 'rejected' ? '❌ Rejected' :
-                             '⏳ Pending'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          {/* Employee Signature Status */}
-                          <div className="flex items-center space-x-2">
-                            {feedback.employeeSignature ? (
-                              <div className="flex items-center space-x-1 text-green-600">
-                                <span className="text-xs">✓</span>
-                                <span className="text-xs font-medium">Signed</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-1 text-gray-500">
-                                <span className="text-xs">⏳</span>
-                                <span className="text-xs">Pending</span>
-                              </div>
-                            )}
-                            {feedback.employeeApprovedAt && (
-                              <div className="text-xs text-gray-500">
-                                {new Date(feedback.employeeApprovedAt).toLocaleDateString()}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          {/* Evaluator Signature Status */}
-                          <div className="flex items-center space-x-2">
-                            {feedback.evaluatorSignature ? (
-                              <div className="flex items-center space-x-1 text-blue-600">
-                                <span className="text-xs">✓</span>
-                                <span className="text-xs font-medium">Signed</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-1 text-gray-500">
-                                <span className="text-xs">⏳</span>
-                                <span className="text-xs">Pending</span>
-                              </div>
-                            )}
-                            {feedback.evaluatorApprovedAt && (
-                              <div className="text-xs text-gray-500">
-                                {new Date(feedback.evaluatorApprovedAt).toLocaleDateString()}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => viewEvaluationForm(feedback)}
-                              className="text-xs px-2 py-1 bg-green-50 hover:bg-green-300 text-green-700 border-green-200"
-                            >
-                              📋 View Form
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => printFeedback(feedback)}
-                              className="text-xs px-2 py-1"
-                            >
-                              🖨️ Print
-                            </Button>
-
-                            {/* Evaluator Approval Button */}
-                            {feedback.approvalStatus === 'employee_approved' && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEvaluatorApproval(feedback)}
-                                className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-300 text-blue-700 border-blue-200"
-                              >
-                                ✅ Approve
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* No Data Message */}
-              {filteredFeedbackData.length === 0 && (
-                <div className="text-center py-12">
-                  <div className="text-gray-500 text-lg">No evaluation data found</div>
-                  <div className="text-gray-400 text-sm mt-2">Try adjusting your search or filters</div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+          </div>
         );
       default:
         return null;
@@ -1941,25 +2201,36 @@ export default function EvaluatorDashboard() {
           onComplete={handleRefreshModalComplete}
         />
       )}
-      
+
+      {/* Evaluation Records Refresh Modal */}
+      {showEvaluationRecordsRefreshModal && (
+        <RefreshAnimationModal
+          isOpen={true}
+          message="Refreshing Evaluation Records..."
+          gifPath="/search-file.gif"
+          duration={2000}
+          onComplete={handleEvaluationRecordsRefreshComplete}
+        />
+      )}
+
       <PageTransition>
         <DashboardShell
           title="Evaluator Dashboard"
           currentPeriod="Q4 2024"
           sidebarItems={sidebarItems}
           activeItemId={active}
-          onChangeActive={setActive}
+          onChangeActive={handleTabChange}
           topSummary={topSummary}
           onSaveProfile={handleProfileSave}
         >
           {renderContent()}
         </DashboardShell>
-        
+
         {/* Evaluation Modal */}
         <Dialog open={isEvaluationModalOpen} onOpenChangeAction={setIsEvaluationModalOpen}>
           <DialogContent className="max-w-7xl max-h-[101vh] overflow-hidden p-2">
             {selectedEmployee && (
-              <EvaluationForm 
+              <EvaluationForm
                 employee={selectedEmployee}
                 currentUser={getCurrentUserData()}
                 onCloseAction={() => {
@@ -1971,7 +2242,7 @@ export default function EvaluatorDashboard() {
             )}
           </DialogContent>
         </Dialog>
-        
+
         {/* View Results Modal */}
         <ViewResultsModal
           isOpen={isViewResultsModalOpen}
@@ -1997,6 +2268,65 @@ export default function EvaluatorDashboard() {
           }}
           onCancel={() => setIsCancelAlertOpen(false)}
         />
+
+        {/* Delete Confirmation Modal with Password */}
+        <Dialog open={isDeleteModalOpen} onOpenChangeAction={setIsDeleteModalOpen}>
+          <DialogContent className="sm:max-w-md mx-4 my-8 bg-white animate-in fade-in-0 zoom-in-95 duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
+            <div className="space-y-6 p-2 animate-in slide-in-from-bottom-4 duration-500">
+              <div className="text-center">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4 animate-pulse">
+                  <svg className="h-6 w-6 text-red-600 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900">Delete Evaluation Record</h3>
+                <p className="text-sm text-gray-500 mt-2">
+                  Are you sure you want to delete the evaluation record for <strong>{recordToDelete?.employeeName}</strong>?
+                  This action cannot be undone and all data will be permanently removed.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="delete-password" className="text-sm font-medium text-gray-700">
+                    Enter your account password to confirm deletion:
+                  </Label>
+                  <Input
+                    id="delete-password"
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => {
+                      setDeletePassword(e.target.value);
+                      setDeletePasswordError('');
+                    }}
+                    placeholder="Enter your account password"
+                    className={`mt-2 ${deletePasswordError ? 'border-red-500 bg-gray-50 focus:border-red-500 focus:ring-red-500' : 'bg-white'}`}
+                  />
+                  {deletePasswordError && (
+                    <p className="text-sm text-red-600 mt-2">{deletePasswordError}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelDelete}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 hover:text-white text-white"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmDelete}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white"
+                  disabled={!deletePassword.trim()}
+                >
+                  Delete Record
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </PageTransition>
     </ProtectedRoute>
   );

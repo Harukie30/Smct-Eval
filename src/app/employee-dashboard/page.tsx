@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Eye } from 'lucide-react';
+import { Eye, Trash } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ import { getEmployeeResults, initializeMockData } from '@/lib/evaluationStorage'
 import commentsService from '@/lib/commentsService';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from 'recharts';
-import SuccessAnimation from '@/components/SuccessAnimation';
+import ConfirmModal from '@/components/ConfirmModal';
 import { useToast } from '@/hooks/useToast';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 
@@ -363,6 +363,19 @@ export default function EmployeeDashboard() {
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
+    
+    // Auto-refresh data when switching to specific tabs
+    if (tabId === 'history') {
+      handleRefreshHistory();
+    } else if (tabId === 'reviews') {
+      handleRefreshSubmissions();
+    } else if (tabId === 'account-history') {
+      // Refresh account history data
+      if (profile?.email) {
+        const history = loadAccountHistory(profile.email);
+        setAccountHistory(history);
+      }
+    }
   };
 
   // Handle refresh modal completion
@@ -571,6 +584,9 @@ export default function EmployeeDashboard() {
   const handleViewDetails = (id: string | number) => {
     const evaluation = evaluationResults.find(result => result.id === id);
     if (evaluation) {
+      // Get approval data for this evaluation
+      const approvalData = getApprovalData(evaluation.id);
+      
       // Convert evaluation result to submission format for ViewResultsModal
       const submission = {
         id: evaluation.id,
@@ -580,7 +596,10 @@ export default function EmployeeDashboard() {
         submittedAt: evaluation.submittedAt,
         status: evaluation.status,
         evaluator: evaluation.evaluatorName,
-        evaluationData: evaluation.evaluationData
+        evaluationData: evaluation.evaluationData,
+        // Include approval data in the submission object
+        employeeSignature: approvalData?.employeeSignature || null,
+        employeeApprovedAt: approvalData?.approvedAt || null
       };
       setSelectedEvaluation(submission);
       setIsViewResultsModalOpen(true);
@@ -1015,7 +1034,17 @@ export default function EmployeeDashboard() {
                               className='bg-blue-500 text-white hover:bg-green-700 hover:text-white'
                               size="sm"
                               onClick={() => {
-                                setSelectedEvaluation(submission);
+                                // Get approval data for this submission
+                                const approvalData = getApprovalData(submission.id);
+                                
+                                // Include approval data in the submission object
+                                const submissionWithApproval = {
+                                  ...submission,
+                                  employeeSignature: approvalData?.employeeSignature || null,
+                                  employeeApprovedAt: approvalData?.approvedAt || null
+                                };
+                                
+                                setSelectedEvaluation(submissionWithApproval);
                                 setModalOpenedFromTab('overview');
                                 setIsViewResultsModalOpen(true);
                                 // Show success animation
@@ -1399,16 +1428,27 @@ export default function EmployeeDashboard() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
-                                    setSelectedEvaluation(submission);
+                                    // Get approval data for this submission
+                                    const approvalData = getApprovalData(submission.id);
+                                    
+                                    // Include approval data in the submission object
+                                    const submissionWithApproval = {
+                                      ...submission,
+                                      employeeSignature: approvalData?.employeeSignature || null,
+                                      employeeApprovedAt: approvalData?.approvedAt || null
+                                    };
+                                    
+                                    setSelectedEvaluation(submissionWithApproval);
                                     setModalOpenedFromTab('reviews');
                                     setIsViewResultsModalOpen(true);
                                     // Show success animation
                                     setShowViewSuccess(true);
                                     setTimeout(() => setShowViewSuccess(false), 2000);
                                   }}
-                                  className="text-blue-600 hover:text-blue-800"
+                                  className="text-white bg-blue-500 hover:text-white hover:bg-blue-600"
                                 >
-                                  View Details
+                                  <Eye className="w-4 h-4" />
+                                  View 
                                 </Button>
                               </TableCell>
                             </TableRow>
@@ -1683,7 +1723,17 @@ export default function EmployeeDashboard() {
                                           getQuarterFromDate(submission.submittedAt) === quarterData.quarter
                                         );
                                         if (quarterSubmissions.length > 0) {
-                                          setSelectedEvaluation(quarterSubmissions[0]);
+                                          // Get approval data for this submission
+                                          const approvalData = getApprovalData(quarterSubmissions[0].id);
+                                          
+                                          // Include approval data in the submission object
+                                          const submissionWithApproval = {
+                                            ...quarterSubmissions[0],
+                                            employeeSignature: approvalData?.employeeSignature || null,
+                                            employeeApprovedAt: approvalData?.approvedAt || null
+                                          };
+                                          
+                                          setSelectedEvaluation(submissionWithApproval);
                                           setModalOpenedFromTab('quarterly');
                                           setIsViewResultsModalOpen(true);
                                           // Show success animation
@@ -1855,7 +1905,7 @@ export default function EmployeeDashboard() {
                   })()}
                                     </div>
                                   ) : (
-                                    <Badge variant="outline" className="text-orange-600 border-orange-300">
+                                    <Badge  className="text-white bg-orange-500 border-orange-300">
                                       Pending
                                     </Badge>
                                   )}
@@ -1866,26 +1916,38 @@ export default function EmployeeDashboard() {
                                       variant="outline"
                                       size="sm"
                                       onClick={() => {
-                                        setSelectedEvaluation(submission);
+                                        // Get approval data for this submission
+                                        const approvalData = getApprovalData(submission.id);
+                                        
+                                        // Include approval data in the submission object
+                                        const submissionWithApproval = {
+                                          ...submission,
+                                          employeeSignature: approvalData?.employeeSignature || null,
+                                          employeeApprovedAt: approvalData?.approvedAt || null
+                                        };
+                                        
+                                        setSelectedEvaluation(submissionWithApproval);
                                         setModalOpenedFromTab('history');
                                         setIsViewResultsModalOpen(true);
                                         // Show success animation
                                         setShowViewSuccess(true);
                                         setTimeout(() => setShowViewSuccess(false), 2000);
                                       }}
-                                      className="text-blue-600 hover:text-blue-800 border-blue-200 hover:border-blue-300"
+                                      className="text-white bg-blue-500 hover:text-blue-800 border-blue-200 hover:border-blue-300"
                                     >
-                                      View Details
+                                      <Eye className="w-4 h-4" />
+                                      View 
                                     </Button>
                                     <Button
-                                      variant="outline"
+                                     
                                       size="sm"
                                       onClick={() => {
                                         setEvaluationToDelete(submission);
                                         setIsDeleteEvaluationDialogOpen(true);
                                       }}
-                                      className="text-red-600 hover:text-red-800 border-red-200 hover:border-red-300"
+                                      className="text-white bg-red-500 hover:bg-red-600 hover:text-white border-red-200 hover:border-red-300"
                                     >
+                                       <Trash className="w-4 h-4" />
                                       Delete
                                     </Button>
                                   </div>
@@ -2314,7 +2376,21 @@ export default function EmployeeDashboard() {
                   {/* Refresh Success Animation */}
                   {showRefreshSuccess && (
                     <div className="fixed top-4 right-4 z-50 bg-white border border-green-200 rounded-lg shadow-lg p-4 flex items-center space-x-3">
-                      <SuccessAnimation variant="checkmark" color="green" size="md" />
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center animate-pulse">
+                        <svg 
+                          className="w-4 h-4 text-white animate-checkmark" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                          style={{
+                            strokeDasharray: '20',
+                            strokeDashoffset: '20',
+                            animation: 'drawCheckmark 0.6s ease-in-out forwards'
+                          }}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
                       <div>
                         <p className="font-medium text-green-800">Success!</p>
                         <p className="text-sm text-green-600">{refreshMessage}</p>
@@ -2427,11 +2503,6 @@ export default function EmployeeDashboard() {
           color: 'blue',
           size: 'lg'
         }}
-        successAnimation={{
-          variant: 'checkmark',
-          color: 'green',
-          size: 'lg'
-        }}
         onConfirm={confirmClearAllComments}
         onCancel={() => setIsClearAllDialogOpen(false)}
       />
@@ -2455,11 +2526,6 @@ export default function EmployeeDashboard() {
         loadingAnimation={{
           variant: 'dots',
           color: 'red',
-          size: 'lg'
-        }}
-        successAnimation={{
-          variant: 'circle',
-          color: 'blue',
           size: 'lg'
         }}
         onConfirm={confirmDeleteComment}
@@ -2490,11 +2556,6 @@ export default function EmployeeDashboard() {
           color: 'purple',
           size: 'lg'
         }}
-        successAnimation={{
-          variant: 'pulse',
-          color: 'purple',
-          size: 'lg'
-        }}
         onConfirm={confirmLogout}
         onCancel={() => setIsLogoutDialogOpen(false)}
       />
@@ -2513,11 +2574,6 @@ export default function EmployeeDashboard() {
         showCancel={!showDeleteEvaluationSuccess}
         isLoading={isDeletingEvaluation}
         showSuccessAnimation={showDeleteEvaluationSuccess}
-        successAnimation={{
-          variant: 'checkmark',
-          color: 'green',
-          size: 'lg'
-        }}
         onConfirm={handleDeleteEvaluation}
         onCancel={() => {
           setIsDeleteEvaluationDialogOpen(false);
