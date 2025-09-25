@@ -220,8 +220,8 @@ export default function EvaluatorDashboard() {
       // Show refresh modal when switching to feedback tab (Evaluation Records)
       setShowEvaluationRecordsRefreshModal(true);
     } else if (tabId === 'employees') {
-      // Refresh employee data when switching to employees tab
-      refreshEmployeeData();
+      // Show refresh modal when switching to employees tab
+      setShowEmployeesRefreshModal(true);
     } else if (tabId === 'overview') {
       // Refresh overview data when switching to overview tab
       refreshEvaluatorData();
@@ -320,6 +320,9 @@ export default function EvaluatorDashboard() {
 
   // RefreshAnimationModal state for Evaluation Records
   const [showEvaluationRecordsRefreshModal, setShowEvaluationRecordsRefreshModal] = useState(false);
+  
+  // RefreshAnimationModal state for Employees
+  const [showEmployeesRefreshModal, setShowEmployeesRefreshModal] = useState(false);
 
   // Delete confirmation modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -331,11 +334,52 @@ export default function EvaluatorDashboard() {
   // Function to refresh employee data
   const refreshEmployeeData = async () => {
     try {
-      // Force re-render by updating the refresh counter
+      setIsRefreshing(true);
+      
+      // Fetch fresh employee data from clientDataService
+      const employees = await clientDataService.getEmployees();
+      
+      if (Array.isArray(employees)) {
+        // Ensure data is valid and has unique IDs
+        const validData = employees.filter((item: any) =>
+          item &&
+          typeof item === 'object' &&
+          item.id !== undefined &&
+          item.name &&
+          item.email
+        );
+
+        // Remove duplicates based on ID
+        const uniqueData = validData.filter((item: any, index: number, self: any[]) =>
+          index === self.findIndex(t => t.id === item.id)
+        );
+
+        // Force re-render by updating the refresh counter
+        setEmployeeDataRefresh(prev => prev + 1);
+        
+        // Show success feedback
+        success(
+          'Employee Data Refreshed',
+          `Successfully loaded ${uniqueData.length} employee records`
+        );
+        console.log(`✅ Successfully refreshed ${uniqueData.length} employee records`);
+      } else {
+        console.warn('Invalid employee data structure received from API');
+        setEmployeeDataRefresh(prev => prev + 1);
+        error(
+          'Invalid Data',
+          'Received invalid employee data structure from the server'
+        );
+      }
+    } catch (err) {
+      console.error('Error refreshing employee data:', err);
       setEmployeeDataRefresh(prev => prev + 1);
-      console.log('Employee data refreshed');
-    } catch (error) {
-      console.error('Error refreshing employee data:', error);
+      error(
+        'Refresh Failed',
+        'Failed to refresh employee data. Please try again.'
+      );
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -399,6 +443,21 @@ export default function EvaluatorDashboard() {
   const handleEvaluationRecordsRefreshComplete = () => {
     setShowEvaluationRecordsRefreshModal(false);
     handleEvaluationRecordsRefresh();
+  };
+
+  // Function to handle employees refresh with modal
+  const handleEmployeesRefresh = async () => {
+    try {
+      await refreshEmployeeData();
+    } catch (error) {
+      console.error('Error during employees refresh:', error);
+    }
+  };
+
+  // Function to handle employees modal completion
+  const handleEmployeesRefreshComplete = () => {
+    setShowEmployeesRefreshModal(false);
+    handleEmployeesRefresh();
   };
 
   // Function to handle delete confirmation
@@ -1676,7 +1735,7 @@ export default function EvaluatorDashboard() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={refreshEmployeeData}
+                      onClick={() => setShowEmployeesRefreshModal(true)}
                       className="flex items-center bg-blue-500 text-white hover:bg-green-600 hover:text-white"
                       title="Refresh employee data"
                     >
@@ -2210,6 +2269,17 @@ export default function EvaluatorDashboard() {
           gifPath="/search-file.gif"
           duration={2000}
           onComplete={handleEvaluationRecordsRefreshComplete}
+        />
+      )}
+
+      {/* Employees Refresh Modal */}
+      {showEmployeesRefreshModal && (
+        <RefreshAnimationModal
+          isOpen={true}
+          message="Refreshing Employee Data..."
+          gifPath="/search-file.gif"
+          duration={2000}
+          onComplete={handleEmployeesRefreshComplete}
         />
       )}
 

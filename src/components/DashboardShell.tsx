@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, } from "lucide-react";
 import ProfileCard, { UserProfile } from "./ProfileCard";
 import ProfileModal from "./ProfileModal";
 import { useUser } from '@/contexts/UserContext';
@@ -41,7 +41,7 @@ export default function DashboardShell(props: DashboardShellProps) {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  
+
   const { profile: userProfile, updateProfile, logout } = useUser();
 
   const handleEditProfile = () => {
@@ -52,7 +52,7 @@ export default function DashboardShell(props: DashboardShellProps) {
     try {
       // Update in context
       updateProfile(updatedProfile);
-      
+
       // Call parent callback if provided
       if (onSaveProfile) {
         await onSaveProfile(updatedProfile);
@@ -73,7 +73,7 @@ export default function DashboardShell(props: DashboardShellProps) {
       <header className="bg-white shadow-sm border-b">
         <div className="flex justify-between items-center px-6 py-4">
           <div className="flex items-center space-x-3">
-            <img src="/smct.png" alt="SMCT Group of Companies" className="h-8 w-auto" />
+            <img src="/smct.png" alt="SMCT Group of Companies" className="h-12 w-auto" />
             <div className="flex flex-col">
               <h1 className="text-xl font-bold text-gray-900">{title}</h1>
               <p className="text-sm text-gray-600">Performance & Ratings Overview</p>
@@ -85,11 +85,11 @@ export default function DashboardShell(props: DashboardShellProps) {
                 {currentPeriod}
               </Badge>
             ) : null}
-            
+
             {userProfile && (
-              <ProfileCard 
-                profile={userProfile} 
-                variant="header" 
+              <ProfileCard
+                profile={userProfile}
+                variant="header"
                 showLogout={true}
                 showSettings={false}
                 onEditProfile={handleEditProfile}
@@ -108,34 +108,36 @@ export default function DashboardShell(props: DashboardShellProps) {
             <div className={`p-6 transition-opacity duration-400 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
               <Button
                 variant="outline"
-                size="sm"
+                size="lg"
                 onClick={() => setIsSidebarOpen(false)}
-                className="w-full mb-4 bg-white/10 text-white hover:bg-white/20 border-white/30"
+                className="w-1/3 mb-4 bg-white/10 text-white hover:bg-white/20 border-white/30"
               >
-                <ChevronLeft className="w-4 h-4 mr-2" />
-                Hide Menu
+                 <div className="flex items-center">
+                <ChevronLeft className="w-10 h-10 mr-[-6px]" />
+                <ChevronLeft className="w-10 h-10" />
+              </div>
+
               </Button>
 
 
 
-              <h2 className="text-lg font-semibold text-white mb-6">Navigation</h2>
+              <h2 className="text-lg font-bold text-white mb-6">Navigation</h2>
               <nav className="space-y-2">
                 {sidebarItems.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => onChangeActive(item.id)}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
-                      activeItemId === item.id
+                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${activeItemId === item.id
                         ? 'bg-white/20 text-white border border-white/30'
                         : 'text-blue-100 hover:bg-white/10'
-                    }`}
+                      }`}
                   >
                     <span className="text-lg">{item.icon}</span>
                     <span className="font-medium">{item.label}</span>
                   </button>
                 ))}
               </nav>
-              
+
 
             </div>
           </aside>
@@ -144,8 +146,11 @@ export default function DashboardShell(props: DashboardShellProps) {
         {!isSidebarOpen && (
           <div className="p-4">
             <Button variant="outline" size="sm" onClick={() => setIsSidebarOpen(true)}>
-              <ChevronRight className="w-4 h-4 mr-2" />
-              Show Menu
+              <div className="flex items-center">
+                <ChevronRight className="w-10 h-10 mr-[-6px]" />
+                <ChevronRight className="w-10 h-10" />
+              </div>
+
             </Button>
           </div>
         )}
@@ -162,20 +167,20 @@ export default function DashboardShell(props: DashboardShellProps) {
           <div className={`space-y-6 flex-1 overflow-hidden ${activeItemId === 'overview' ? '' : 'pt-0'}`}>
             {children}
           </div>
-                 </main>
-       </div>
+        </main>
+      </div>
 
-       {/* Profile Modal */}
-       {userProfile && (
-         <ProfileModal
-           isOpen={isProfileModalOpen}
-           onClose={() => setIsProfileModalOpen(false)}
-           profile={userProfile}
-           onSave={handleSaveProfile}
-         />
-       )}
-     </div>
-   );
- }
+      {/* Profile Modal */}
+      {userProfile && (
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          profile={userProfile}
+          onSave={handleSaveProfile}
+        />
+      )}
+    </div>
+  );
+}
 
 
