@@ -1633,8 +1633,8 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Employee Section */}
                     <div className="space-y-4">
+                      {/* Signature area */}
                       <div className="text-center">
-                        {/* Signature area */}
                         <div className="h-20 border-2 border-dashed border-white rounded-lg flex items-center justify-center bg-gray-50 relative">
                           {/* Name as background text - always show */}
                           <span className="text-md text-gray-900 font-bold">
@@ -1660,17 +1660,19 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             />
                           )}
                         </div>
-                        
-                        {/* Action Section - Only show if showApprovalButton is true */}
-                        {showApprovalButton && (
-                          <div className="mt-4 space-y-3">
-                            {/* Approve Button - Only show if not approved */}
-                            {!isApproved && (
-                              <div className="space-y-2">
+                      </div>
+                      
+                      {/* Action Section - Only show if showApprovalButton is true */}
+                      {showApprovalButton && (
+                        <div className="mt-6 space-y-4">
+                          {/* Approve Button - Only show if not approved */}
+                          {!isApproved && (
+                            <div className="space-y-3">
+                              <div className="flex justify-center">
                                 <Button
                                   onClick={handleApproveEvaluation}
                                   disabled={!submission.id || isApproving}
-                                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed shadow-sm"
+                                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed shadow-sm"
                                 >
                                   {isApproving ? (
                                     <>
@@ -1681,37 +1683,37 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                                     '✓ Approve Evaluation'
                                   )}
                                 </Button>
-                                <p className="text-xs text-gray-500">
-                                  Click to acknowledge and approve this evaluation
-                                </p>
-                                {approvalError && (
-                                  <p className="text-xs text-red-600 bg-red-50 p-2 rounded">
-                                    {approvalError}
-                                  </p>
-                                )}
                               </div>
-                            )}
-                            
-                            {/* Approved Status - Only show if approved */}
-                            {isApproved && (
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-center space-x-2">
-                                  <Badge className="bg-green-100 text-green-800 px-3 py-1 text-sm font-medium">
-                                    ✓ Evaluation Approved
-                                  </Badge>
-                                </div>
-                                <p className="text-xs text-gray-500">
-                                  Approved on {approvalData?.approvedAt ? new Date(approvalData.approvedAt).toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric'
-                                  }) : 'Unknown date'}
+                              <p className="text-xs text-gray-500 text-center">
+                                Click to acknowledge and approve this evaluation
+                              </p>
+                              {approvalError && (
+                                <p className="text-xs text-red-600 bg-red-50 p-3 rounded">
+                                  {approvalError}
                                 </p>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Approved Status - Only show if approved */}
+                          {isApproved && (
+                            <div className="space-y-3 px-4 md:px-0">
+                              <div className="flex items-center justify-center space-x-2">
+                                <Badge className="bg-green-100 text-green-800 px-4 py-2 text-sm font-medium">
+                                  ✓ Evaluation Approved
+                                </Badge>
                               </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                              <p className="text-xs text-gray-500 text-center">
+                                Approved on {approvalData?.approvedAt ? new Date(approvalData.approvedAt).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                }) : 'Unknown date'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       
                       {/* Section Label */}
                       <div className="text-center">

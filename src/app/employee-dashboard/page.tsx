@@ -81,7 +81,7 @@ export default function EmployeeDashboard() {
   const [isDeleteEvaluationDialogOpen, setIsDeleteEvaluationDialogOpen] = useState(false);
   const [evaluationToDelete, setEvaluationToDelete] = useState<any>(null);
   const [isDeletingEvaluation, setIsDeletingEvaluation] = useState(false);
-  const [showDeleteEvaluationSuccess, setShowDeleteEvaluationSuccess] = useState(false);
+  const [showDeleteEvaluationSuccessDialog, setShowDeleteEvaluationSuccessDialog] = useState(false);
 
   // Approval states
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
@@ -257,16 +257,16 @@ export default function EmployeeDashboard() {
 
       console.log('Evaluation deleted:', evaluationToDelete.id);
 
-      // Show success animation
+      // Finish and close confirm dialog, then show success dialog
       setIsDeletingEvaluation(false);
-      setShowDeleteEvaluationSuccess(true);
+      setIsDeleteEvaluationDialogOpen(false);
+      setEvaluationToDelete(null);
+      setShowDeleteEvaluationSuccessDialog(true);
 
-      // Close dialog after success animation
+      // Auto-close success dialog after a short delay
       setTimeout(() => {
-        setIsDeleteEvaluationDialogOpen(false);
-        setEvaluationToDelete(null);
-        setShowDeleteEvaluationSuccess(false);
-      }, 3000);
+        setShowDeleteEvaluationSuccessDialog(false);
+      }, 1400);
 
     } catch (error) {
       console.error('Error deleting evaluation:', error);
@@ -370,6 +370,7 @@ export default function EmployeeDashboard() {
     } else if (tabId === 'reviews') {
       handleRefreshSubmissions();
     } else if (tabId === 'account-history') {
+      
       // Refresh account history data
       if (profile?.email) {
         const history = loadAccountHistory(profile.email);
@@ -2560,30 +2561,98 @@ export default function EmployeeDashboard() {
         onCancel={() => setIsLogoutDialogOpen(false)}
       />
 
-      {/* Delete Evaluation Alert Dialog */}
-      <AlertDialog
-        open={isDeleteEvaluationDialogOpen}
-        onOpenChangeAction={setIsDeleteEvaluationDialogOpen}
-        title={showDeleteEvaluationSuccess ? "Evaluation Deleted!" : "Delete Evaluation"}
-        description={showDeleteEvaluationSuccess
-          ? "The evaluation has been successfully removed from your history."
-          : `Are you sure you want to delete this evaluation from ${evaluationToDelete?.employeeName}? This action cannot be undone and will permanently remove the evaluation from your history.`
-        }
-        confirmText={isDeletingEvaluation ? "Deleting..." : "Delete"}
-        cancelText="Cancel"
-        showCancel={!showDeleteEvaluationSuccess}
-        isLoading={isDeletingEvaluation}
-        showSuccessAnimation={showDeleteEvaluationSuccess}
-        onConfirm={handleDeleteEvaluation}
-        onCancel={() => {
-          setIsDeleteEvaluationDialogOpen(false);
-          setEvaluationToDelete(null);
-        }}
-      />
+      {/* Delete Evaluation Dialog */}
+      <Dialog open={isDeleteEvaluationDialogOpen} onOpenChangeAction={setIsDeleteEvaluationDialogOpen}>
+        <DialogContent className="max-w-md w-[90vw] sm:w-full px-6 py-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              Delete Evaluation
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 fade-in-scale">
+            <p className="text-sm text-gray-600">
+              Are you sure you want to delete this evaluation from {evaluationToDelete?.employeeName}? This action cannot be undone and will permanently remove the evaluation from your history.
+            </p>
+
+            <div className="flex justify-end space-x-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteEvaluationDialogOpen(false);
+                  setEvaluationToDelete(null);
+                }}
+                disabled={isDeletingEvaluation}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteEvaluation}
+                disabled={isDeletingEvaluation}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {isDeletingEvaluation ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Evaluation Success Dialog */}
+      <Dialog open={showDeleteEvaluationSuccessDialog} onOpenChangeAction={setShowDeleteEvaluationSuccessDialog}>
+        <DialogContent className="max-w-sm w-[90vw] sm:w-full px-6 py-6">
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              <div className="w-16 h-16 ">
+                <svg viewBox="0 0 52 52" className="w-16 h-16">
+                  <circle className="check-circle" cx="26" cy="26" r="25" fill="none" />
+                  <path className="check-path" fill="none" d="M14 27 l8 8 l16 -16" />
+                </svg>
+              </div>
+            </div>
+            <style jsx>{`
+              .check-circle {
+                stroke: #22c55e; /* green-500 */
+                stroke-width: 3;
+                stroke-linecap: round;
+                stroke-dasharray: 160;
+                stroke-dashoffset: 160;
+                animation: draw-circle 0.6s ease-out forwards;
+              }
+              .check-path {
+                stroke: #16a34a; /* green-600 */
+                stroke-width: 4;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+                stroke-dasharray: 50;
+                stroke-dashoffset: 50;
+                animation: draw-check 0.4s ease-out 0.4s forwards;
+              }
+              @keyframes draw-circle { to { stroke-dashoffset: 0; } }
+              @keyframes draw-check { to { stroke-dashoffset: 0; } }
+              .fade-in-scale { animation: fadeInScale 220ms ease-out both; }
+              @keyframes fadeInScale { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+            `}</style>
+            <p className="text-lg font-medium text-gray-900 text-center">Evaluation Deleted</p>
+            <p className="text-sm text-gray-600 text-center">
+              The evaluation has been removed from your history.
+            </p>
+            <Button
+              onClick={() => setShowDeleteEvaluationSuccessDialog(false)}
+              className="w-full bg-green-600 hover:bg-green-700"
+            >
+              Done
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Approval Confirmation Dialog */}
       <Dialog open={isApprovalDialogOpen} onOpenChangeAction={setIsApprovalDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md w-[90vw] bg-blue-50 sm:w-full px-6 py-6">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
               {showApprovalSuccess ? "Evaluation Approved!" : "Approve Evaluation"}
@@ -2622,19 +2691,7 @@ export default function EmployeeDashboard() {
                 );
               })()}
               
-              <div className="space-y-2">
-                <Label htmlFor="employeeName" className="text-sm font-medium">
-                  Your Name (as it will appear on the signature):
-                </Label>
-                <Input
-                  id="employeeName"
-                  value={employeeApprovalName}
-                  onChange={(e) => setEmployeeApprovalName(e.target.value)}
-                  placeholder="Enter your full name"
-                  className="w-full"
-                  disabled={isApproving}
-                />
-              </div>
+              
               
               <div className="flex justify-end space-x-3 pt-4">
                 <Button
@@ -2659,28 +2716,44 @@ export default function EmployeeDashboard() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex justify-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <div className="flex justify-center mt-4">
+                <div className="w-16 h-16 ">
+                  <svg viewBox="0 0 52 52" className="w-16 h-16">
+                    <circle className="check-circle" cx="26" cy="26" r="25" fill="none" />
+                    <path className="check-path" fill="none" d="M14 27 l8 8 l16 -16" />
                   </svg>
                 </div>
               </div>
+              <style jsx>{`
+                .check-circle {
+                  stroke: #22c55e; /* green-500 */
+                  stroke-width: 3;
+                  stroke-linecap: round;
+                  stroke-dasharray: 160;
+                  stroke-dashoffset: 160;
+                  animation: draw-circle 0.6s ease-out forwards;
+                }
+                .check-path {
+                  stroke: #16a34a; /* green-600 */
+                  stroke-width: 4;
+                  stroke-linecap: round;
+                  stroke-linejoin: round;
+                  stroke-dasharray: 50;
+                  stroke-dashoffset: 50;
+                  animation: draw-check 0.4s ease-out 0.4s forwards;
+                }
+                @keyframes draw-circle {
+                  to { stroke-dashoffset: 0; }
+                }
+                @keyframes draw-check {
+                  to { stroke-dashoffset: 0; }
+                }
+              `}</style>
               <p className="text-lg font-medium text-gray-900 text-center">Evaluation Approved Successfully!</p>
               <p className="text-sm text-gray-600 text-center">
                 Your signature has been recorded and the evaluation is now complete.
               </p>
               
-              {/* Show approved name as read-only */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700">Approved By:</Label>
-                <Input
-                  type="text"
-                  value={employeeApprovalName}
-                  readOnly
-                  className="w-full bg-gray-50 text-gray-900 cursor-not-allowed"
-                />
-              </div>
               
               <Button
                 onClick={() => {
