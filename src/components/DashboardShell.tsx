@@ -70,7 +70,7 @@ export default function DashboardShell(props: DashboardShellProps) {
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm border-b rounded-t-lg">
         <div className="flex justify-between items-center px-6 py-4">
           <div className="flex items-center space-x-3">
             <img src="/smct.png" alt="SMCT Group of Companies" className="h-12 w-auto" />
@@ -104,7 +104,7 @@ export default function DashboardShell(props: DashboardShellProps) {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <div className={`relative overflow-hidden transition-all duration-400 ${isSidebarOpen ? 'w-64' : 'w-0'}`}>
-          <aside className="bg-blue-600 text-blue-50 border-r border-blue-800 min-h-screen w-64">
+          <aside className="bg-blue-600 text-blue-50 min-h-screen w-64 rounded-bl-lg">
             <div className={`p-6 transition-opacity duration-400 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
               <Button
                 variant="outline"
@@ -156,7 +156,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-8 flex flex-col overflow-hidden">
+        <main className="flex-1 p-8 flex flex-col overflow-hidden rounded-br-lg">
           {/* Top Summary - Only show on overview tab */}
           {activeItemId === 'overview' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 flex-none">

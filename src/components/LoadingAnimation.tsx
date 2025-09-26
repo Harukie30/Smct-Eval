@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 interface LoadingAnimationProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   variant?: 'spinner' | 'dots' | 'pulse' | 'wave';
-  color?: 'blue' | 'green' | 'purple' | 'red' | 'yellow' | 'gray';
+  color?: 'blue' | 'green' | 'purple' | 'red' | 'yellow' | 'gray' | 'white';
   customGif?: string;
   className?: string;
   showText?: boolean;
@@ -37,7 +37,8 @@ export default function LoadingAnimation({
     purple: 'border-purple-500',
     red: 'border-red-500',
     yellow: 'border-yellow-500',
-    gray: 'border-gray-500'
+    gray: 'border-gray-500',
+    white: 'border-white'
   };
 
   const currentSize = sizeConfig[size];

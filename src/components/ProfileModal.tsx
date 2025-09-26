@@ -9,6 +9,8 @@ import { User, Camera, Save, X } from 'lucide-react';
 import { uploadProfileImage, deleteProfileImage } from '@/lib/imageUpload';
 // Removed profileService import - we'll use UserContext directly
 import SignaturePad from '@/components/SignaturePad';
+import { useToast } from '@/hooks/useToast';
+import LoadingAnimation from '@/components/LoadingAnimation';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -26,6 +28,7 @@ export default function ProfileModal({
   const [formData, setFormData] = useState<UserProfile>(profile);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { success } = useToast();
 
   // Reset form data when profile changes
   useEffect(() => {
@@ -92,6 +95,9 @@ export default function ProfileModal({
 
     setIsLoading(true);
     try {
+      // Add a small delay to show the loading animation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // If avatar changed and old avatar exists, delete the old one
       if (formData.avatar !== profile.avatar && profile.avatar && !profile.avatar.startsWith('data:')) {
         try {
@@ -104,6 +110,8 @@ export default function ProfileModal({
       // Call onSave directly - this will update the UserContext and localStorage
       await onSave(formData);
       
+      // Show success toast
+      success('Profile updated successfully!');
       onClose();
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -281,8 +289,17 @@ export default function ProfileModal({
               disabled={isLoading}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
             >
-              <Save className="w-4 h-4" />
-              {isLoading ? 'Saving...' : 'Save Changes'}
+              {isLoading ? (
+                <>
+                  <LoadingAnimation size="sm" variant="spinner" color="white" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Save Changes</span>
+                </>
+              )}
             </Button>
           </div>
         </form>

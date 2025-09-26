@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SignaturePad from '@/components/SignaturePad';
+import LoadingAnimation from '@/components/LoadingAnimation';
+import { useToast } from '@/hooks/useToast';
 
 interface User {
   id: number;
@@ -59,6 +61,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const { success } = useToast();
 
   // Update form data when user prop changes
   useEffect(() => {
@@ -142,10 +146,25 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (validateForm()) {
-      onSave(formData);
-      onClose();
+      console.log('Starting save process...');
+      setIsSaving(true);
+      try {
+        // Simulate a delay to show the loading animation
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('Calling onSave...');
+        await onSave(formData);
+        console.log('Save completed, closing modal...');
+        success('Success! Your changes have been saved.');
+        onClose();
+      } catch (error) {
+        console.error('Error saving user:', error);
+        // You might want to show an error message here
+      } finally {
+        console.log('Setting isSaving to false...');
+        setIsSaving(false);
+      }
     }
   };
 
@@ -157,8 +176,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   if (!user) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChangeAction={(open: boolean) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-6 bg-blue-100">
+    <>
+      <Dialog open={isOpen} onOpenChangeAction={(open: boolean) => !open && onClose()}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-6 bg-blue-100">
         <DialogHeader className="pb-6">
           <DialogTitle className="text-xl font-semibold">Edit User Information</DialogTitle>
           <DialogDescription className="text-gray-600">
@@ -386,15 +406,43 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         </div>
 
         <DialogFooter className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
-          <Button variant="outline" onClick={handleCancel} className="px-6">
+          <Button variant="outline" onClick={handleCancel} className="px-6" disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 px-6">
-            Save Changes
+          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 px-6" disabled={isSaving}>
+            {isSaving ? (
+              <div className="flex items-center space-x-2">
+                <LoadingAnimation size="sm" variant="spinner" color="blue" />
+                <span>Saving...</span>
+              </div>
+            ) : (
+              'Save Changes'
+            )}
           </Button>
         </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* Loading Modal Overlay */}
+      {isSaving && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 shadow-xl max-w-sm w-full mx-4">
+            <div className="flex flex-col items-center space-y-4">
+              <LoadingAnimation 
+                size="lg" 
+                variant="spinner" 
+                color="blue" 
+                showText={true}
+                text="Saving user information..."
+              />
+              <p className="text-sm text-gray-600 text-center">
+                Please wait while we save your changes. This may take a few moments.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
