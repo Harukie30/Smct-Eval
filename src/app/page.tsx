@@ -27,6 +27,7 @@ export default function LandingLoginPage() {
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
   const [suspensionData, setSuspensionData] = useState<any>(null);
   const [showGoogleLoginModal, setShowGoogleLoginModal] = useState(false);
+  const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] = useState(false);
 
   const { login, isAuthenticated, isLoading } = useUser();
   const router = useRouter();
@@ -45,20 +46,20 @@ export default function LandingLoginPage() {
       if (result === true) {
         // Login successful
         console.log('Login successful');
-        
+
         // Show success toast
         toastMessages.login.success(username);
-        
+
         // Set remember me preference
         if (rememberMe) {
           localStorage.setItem('keepLoggedIn', 'true');
         } else {
           localStorage.setItem('keepLoggedIn', 'false');
         }
-        
+
         // Show fake loading screen before redirecting
         setShowLoadingScreen(true);
-        
+
         // Get user role for personalized loading message
         // Wait a bit for localStorage to be updated, then get user data
         setTimeout(() => {
@@ -66,7 +67,7 @@ export default function LandingLoginPage() {
           if (storedUser) {
             const user = JSON.parse(storedUser);
             console.log('User role for redirect:', user.role);
-            
+
             const roleDashboards: Record<string, string> = {
               'admin': '/admin',
               'hr': '/hr-dashboard',
@@ -78,7 +79,7 @@ export default function LandingLoginPage() {
 
             const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
             console.log('Redirecting to:', dashboardPath);
-            
+
             // Redirect after loading screen completes
             setTimeout(() => {
               router.push(dashboardPath);
@@ -102,6 +103,9 @@ export default function LandingLoginPage() {
         setLoginError(errorMessage);
         toastMessages.login.error();
         setIsLoggingIn(false);
+        // Show incorrect password dialog
+        setShowIncorrectPasswordDialog(true);
+        setTimeout(() => setShowIncorrectPasswordDialog(false), 1400);
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -115,11 +119,11 @@ export default function LandingLoginPage() {
   if (isLoading) {
     // Check if user is logging out (no authenticated user but loading)
     const isLoggingOut = !isAuthenticated && isLoading;
-    
+
     return (
       <PageTransition>
-        <FakeLoadingScreen 
-          message={isLoggingOut ? "Logging out..." : "Initializing System..."} 
+        <FakeLoadingScreen
+          message={isLoggingOut ? "Logging out..." : "Initializing System..."}
           duration={isLoggingOut ? 1500 : 1000}
         />
       </PageTransition>
@@ -132,8 +136,8 @@ export default function LandingLoginPage() {
   if (showLoadingScreen) {
     return (
       <PageTransition>
-        <FakeLoadingScreen 
-          message="Authenticating..." 
+        <FakeLoadingScreen
+          message="Authenticating..."
           duration={1200}
           onComplete={() => setShowLoadingScreen(false)}
         />
@@ -142,107 +146,141 @@ export default function LandingLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 relative overflow-hidden">
-      {/* Abstract Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Floating geometric shapes */}
-        <div className="absolute top-20 left-10 w-32 h-32 bg-blue-200/20 rounded-full blur-xl animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-24 h-24 bg-indigo-300/30 rounded-full blur-lg animate-bounce" style={{animationDelay: '1s'}}></div>
-        <div className="absolute bottom-32 left-1/4 w-40 h-40 bg-purple-200/25 rounded-full blur-2xl animate-pulse" style={{animationDelay: '2s'}}></div>
-        <div className="absolute bottom-20 right-1/3 w-28 h-28 bg-cyan-300/20 rounded-full blur-xl animate-bounce" style={{animationDelay: '0.5s'}}></div>
-        
-        {/* Abstract lines and patterns */}
-        <div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-300/40 to-transparent"></div>
-        <div className="absolute top-3/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-indigo-300/40 to-transparent"></div>
-        
-        {/* Diagonal abstract shapes */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-blue-100/30 to-transparent transform rotate-45 -translate-y-48 translate-x-48"></div>
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-indigo-100/30 to-transparent transform -rotate-45 translate-y-40 -translate-x-40"></div>
-        
-        {/* Grid pattern overlay */}
-        <div className="absolute inset-0 opacity-[0.02]" style={{
-          backgroundImage: `
-            linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)
-          `,
-          backgroundSize: '50px 50px'
-        }}></div>
-        
-        {/* Floating particles */}
-        <div className="absolute top-1/3 left-1/5 w-2 h-2 bg-blue-400/40 rounded-full animate-ping" style={{animationDelay: '0s'}}></div>
-        <div className="absolute top-1/2 right-1/4 w-1.5 h-1.5 bg-indigo-400/50 rounded-full animate-ping" style={{animationDelay: '1.5s'}}></div>
-        <div className="absolute bottom-1/3 left-1/3 w-2.5 h-2.5 bg-purple-400/30 rounded-full animate-ping" style={{animationDelay: '3s'}}></div>
-        <div className="absolute top-2/3 right-1/5 w-1 h-1 bg-cyan-400/60 rounded-full animate-ping" style={{animationDelay: '2.5s'}}></div>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Main Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-r from-white via-blue-50 to-blue-600"></div>
+      
+      {/* Single Geometric Pattern Overlay - Gradient from left to right */}
+      <div className="absolute inset-0">
+        <svg className="w-full h-full" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            {/* Gradient mask for fading effect */}
+            <linearGradient id="fadeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style={{stopColor:'rgba(255,255,255,0)', stopOpacity:0}} />
+              <stop offset="30%" style={{stopColor:'rgba(255,255,255,0)', stopOpacity:0}} />
+              <stop offset="60%" style={{stopColor:'rgba(255,255,255,0.3)', stopOpacity:0.3}} />
+              <stop offset="100%" style={{stopColor:'rgba(255,255,255,1)', stopOpacity:1}} />
+            </linearGradient>
+            
+            {/* Single hexagon pattern */}
+            <pattern id="hexagons" x="0" y="0" width="100" height="87" patternUnits="userSpaceOnUse">
+              <polygon points="50,8 75,25 75,62 50,79 25,62 25,25" fill="rgba(59, 130, 246, 0.12)" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="0.8"/>
+            </pattern>
+          </defs>
+          
+          {/* Apply single pattern with gradient mask */}
+          <rect width="100%" height="100%" fill="url(#hexagons)" mask="url(#patternMask)"/>
+          
+          {/* Create mask for gradient effect */}
+          <mask id="patternMask">
+            <rect width="100%" height="100%" fill="url(#fadeGradient)"/>
+          </mask>
+        </svg>
       </div>
       
+      {/* Single Geometric Elements - Hexagons only */}
+      <div className="absolute top-20 right-20 w-24 h-24 opacity-30">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.2)" stroke="rgba(59, 130, 246, 0.4)" strokeWidth="1"/>
+        </svg>
+      </div>
+      
+      <div className="absolute bottom-32 right-40 w-20 h-20 opacity-35">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon points="50,5 85,25 85,75 50,95 15,75 15,25" fill="rgba(59, 130, 246, 0.15)" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="1"/>
+        </svg>
+      </div>
+      
+      <div className="absolute top-40 left-20 w-16 h-16 opacity-5">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon points="50,15 75,35 75,65 50,85 25,65 25,35" fill="rgba(59, 130, 246, 0.08)" stroke="rgba(59, 130, 246, 0.15)" strokeWidth="0.5"/>
+        </svg>
+      </div>
+      
+      {/* Right side additional hexagons */}
+      <div className="absolute top-1/2 right-10 w-12 h-12 opacity-20">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.1)" stroke="rgba(59, 130, 246, 0.25)" strokeWidth="0.8"/>
+        </svg>
+      </div>
+      
+      <div className="absolute bottom-1/2 right-20 w-10 h-10 opacity-25">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.12)" stroke="rgba(59, 130, 246, 0.2)" strokeWidth="0.6"/>
+        </svg>
+      </div>
+      
+
       {/* Header */}
       <header className="relative z-10 flex justify-between items-center p-6">
-        <div className="flex items-center space-x-3">
-          <img src="/smct.png" alt="SMCT Group of Companies" className="h-30 w-auto" />
-        </div>
-        <nav className="hidden md:flex space-x-6">
+      <div className="flex items-center space-x-3">
+                <img src="/smct.png" alt="SMCT Group of Companies" className="h-30 w-auto" />
+              </div>
+        <nav className="hidden md:flex bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 space-x-6">
           <button
             onClick={() => setIsAboutModalOpen(true)}
-            className="text-gray-600 font-semibold hover:underline-offset-4 hover:underline hover:text-blue-600 transition-colors"
+            className="text-white font-semibold hover:underline-offset-4 hover:underline hover:text-blue-100 transition-colors"
           >
             About
           </button>
-          <a href="#" className="text-gray-600 font-semibold hover:underline-offset-4 hover:underline hover:text-blue-600">Contact</a>
+          <a href="#" className="text-white font-semibold hover:underline-offset-4 hover:underline hover:text-blue-100">Contact</a>
         </nav>
       </header>
+      
 
       {/* Main Content */}
       <main className="relative z-10 container mx-auto px-4 py-8">
+        
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Left Column - Landing Content */}
           <div className="flex flex-col justify-center space-y-8 relative group">
             {/* Subtle backdrop for better text readability */}
-            <div className="absolute inset-0 bg-white/10 backdrop-blur-[1px] rounded-2xl -m-4 transition-all duration-500 group-hover:bg-white/15 group-hover:backdrop-blur-sm"></div>
+            
             <div className="relative z-10 animate-fade-in-up">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-800 animate-fade-in-up" style={{animationDelay: '0.1s'}}>
-              Streamline Your <span className="text-blue-600 transition-colors duration-300 hover:text-blue-700">Performance Reviews</span>
-            </h1>
-            <p className="text-lg text-gray-600 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
-              Our platform helps organizations conduct meaningful performance evaluations,
-              track employee progress, and foster professional growth with intuitive tools and analytics.
-            </p>
+              
+              <h1 className="text-4xl md:text-5xl font-bold text-gray-800 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+                Streamline Your <span className="text-blue-600 transition-colors duration-300 hover:text-blue-700">Performance Reviews</span>
+              </h1>
+              <p className="text-lg text-gray-600 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                Our platform helps organizations conduct meaningful performance evaluations,
+                track employee progress, and foster professional growth with intuitive tools and analytics.
+              </p>
 
-            <div className="space-y-4 animate-fade-in-up" style={{animationDelay: '0.3s'}}>
-              <div className="flex items-center group/item hover:translate-x-2 transition-transform duration-300 cursor-default">
-                <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-3 group-hover/item:bg-indigo-200 group-hover/item:scale-110 transition-all duration-300">
-                  <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
+              <div className="space-y-4 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+                <div className="flex items-center group/item hover:translate-x-2 transition-transform duration-300 cursor-default">
+                  <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-3 group-hover/item:bg-indigo-200 group-hover/item:scale-110 transition-all duration-300">
+                    <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </div>
+                  <span className="text-gray-700 group-hover/item:text-gray-800 transition-colors duration-300">Customizable evaluation templates</span>
                 </div>
-                <span className="text-gray-700 group-hover/item:text-gray-800 transition-colors duration-300">Customizable evaluation templates</span>
-              </div>
-              <div className="flex items-center group/item hover:translate-x-2 transition-transform duration-300 cursor-default">
-                <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-3 group-hover/item:bg-indigo-200 group-hover/item:scale-110 transition-all duration-300">
-                  <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
+                <div className="flex items-center group/item hover:translate-x-2 transition-transform duration-300 cursor-default">
+                  <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-3 group-hover/item:bg-indigo-200 group-hover/item:scale-110 transition-all duration-300">
+                    <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </div>
+                  <span className="text-gray-700 group-hover/item:text-gray-800 transition-colors duration-300">Real-time feedback and analytics</span>
                 </div>
-                <span className="text-gray-700 group-hover/item:text-gray-800 transition-colors duration-300">Real-time feedback and analytics</span>
-              </div>
-              <div className="flex items-center group/item hover:translate-x-2 transition-transform duration-300 cursor-default">
-                <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-3 group-hover/item:bg-indigo-200 group-hover/item:scale-110 transition-all duration-300">
-                  <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
+                <div className="flex items-center group/item hover:translate-x-2 transition-transform duration-300 cursor-default">
+                  <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-3 group-hover/item:bg-indigo-200 group-hover/item:scale-110 transition-all duration-300">
+                    <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </div>
+                  <span className="text-gray-700 group-hover/item:text-gray-800 transition-colors duration-300">Goal tracking and progress monitoring</span>
                 </div>
-                <span className="text-gray-700 group-hover/item:text-gray-800 transition-colors duration-300">Goal tracking and progress monitoring</span>
               </div>
-            </div>
 
-            <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 animate-fade-in-up hover:shadow-lg transition-all duration-300 hover:scale-[1.02]" style={{animationDelay: '0.4s'}}>
-              <p className="text-blue-800 font-medium">"This platform transformed our review process, saving hours of administrative work and providing meaningful insights."</p>
-              <p className="text-blue-600 mt-2">- Sarah Johnson, HR Director</p>
-            </div>
+              <div className="bg-white/90 backdrop-blur-md p-6 rounded-lg border border-white/30 shadow-lg animate-fade-in-up hover:shadow-xl transition-all duration-300 hover:scale-[1.02]" style={{ animationDelay: '0.4s' }}>
+                <p className="text-gray-800 font-medium">"This platform transformed our review process, saving hours of administrative work and providing meaningful insights."</p>
+                <p className="text-blue-600 mt-2 font-medium">- Sarah Johnson, HR Director</p>
+              </div>
             </div>
           </div>
 
-          {/* Right Column - Login Card */}
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-end pr-8">
             <PageTransition>
               <Card className="w-full max-w-md shadow-lg hover:shadow-xl transition-shadow duration-300 backdrop-blur-sm bg-white border-gray-500/20">
                 <CardHeader className="space-y-1">
@@ -327,7 +365,7 @@ export default function LandingLoginPage() {
                     {isAuthenticated && (
                       <div className="mt-4 p-3 bg-green-600 border border-green-200 rounded-lg">
                         <p className="text-sm text-white mb-2">You're already logged in!</p>
-                        <Button  
+                        <Button
                           size="sm"
                           onClick={() => {
                             const storedUser = localStorage.getItem('authenticatedUser');
@@ -364,8 +402,8 @@ export default function LandingLoginPage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-4">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => setShowGoogleLoginModal(true)}
                       className="w-full"
                     >
@@ -383,7 +421,7 @@ export default function LandingLoginPage() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 bg-blue-600 mt-20 py-8 border-t">
+      <footer className="relative z-10 bg-blue-600 mt-20 py-8 ">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
@@ -408,9 +446,9 @@ export default function LandingLoginPage() {
             </div>
           </div>
           <div className="border-t border-blue-500 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-white text-sm">© 2023 SMCT Group of Companies. All rights reserved.</p>
+            <p className="text-white text-sm">© 2026 SMCT Group of Companies. All rights reserved.</p>
 
-            
+
             <div className="flex space-x-4 mt-4 md:mt-0">
               <a href="#" className="text-white hover:text-yellow-300">
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -422,18 +460,18 @@ export default function LandingLoginPage() {
         </div>
         {/* Clear Session Button */}
         <div className="mt-4 flex justify-end px-4">
-              <Button
-                size="lg"
-                onClick={() => {
-                  localStorage.clear();
-                  sessionStorage.clear();
-                  window.location.reload();
-                }}
-                className="text-base text-white bg-blue-600 hover-text-white hover:bg-blue-700"
-              >
-               🔄 Clear Session & Start Fresh
-              </Button>
-            </div>
+          <Button
+            size="lg"
+            onClick={() => {
+              localStorage.clear();
+              sessionStorage.clear();
+              window.location.reload();
+            }}
+            className="text-base text-white bg-blue-600 hover-text-white hover:bg-blue-700"
+          >
+            🔄 Clear Session & Start Fresh
+          </Button>
+        </div>
       </footer>
 
       {/* About Modal */}
@@ -658,6 +696,35 @@ export default function LandingLoginPage() {
           // The modal will handle the login and redirect
         }}
       />
+
+      {/* Incorrect Password Dialog */}
+      <Dialog open={showIncorrectPasswordDialog} onOpenChangeAction={setShowIncorrectPasswordDialog}>
+        <DialogContent className="max-w-sm w-[90vw] sm:w-full px-6 py-6">
+          <div className="space-y-3 fade-in-scale">
+            <div className="flex justify-center mt-1">
+              <div className="w-16 h-16 flex items-center justify-center p-1">
+                <svg viewBox="0 0 52 52" className="w-12 h-12 overflow-visible">
+                  <circle className="error-circle" cx="26" cy="26" r="24" fill="none" />
+                  <path className="error-x-line1" fill="none" d="M16 16 l20 20" />
+                  <path className="error-x-line2" fill="none" d="M36 16 l-20 20" />
+                </svg>
+              </div>
+            </div>
+            <style jsx>{`
+              .fade-in-scale { animation: fadeInScale 200ms ease-out both; }
+              @keyframes fadeInScale { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+              .error-circle { stroke: #dc2626; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 160; stroke-dashoffset: 160; animation: draw-error-circle 0.6s ease-out forwards; }
+              .error-x-line1 { stroke: #dc2626; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw-x-line1 0.4s ease-out 0.3s forwards; }
+              .error-x-line2 { stroke: #dc2626; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw-x-line2 0.4s ease-out 0.5s forwards; }
+              @keyframes draw-error-circle { to { stroke-dashoffset: 0; } }
+              @keyframes draw-x-line1 { to { stroke-dashoffset: 0; } }
+              @keyframes draw-x-line2 { to { stroke-dashoffset: 0; } }
+            `}</style>
+            <p className="text-lg font-medium text-gray-900 text-center">Incorrect Password</p>
+            <p className="text-sm text-gray-600 text-center">Please try again with the correct password.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

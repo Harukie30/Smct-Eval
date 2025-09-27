@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { UserProfile } from '@/components/ProfileCard';
 import { toastMessages } from '@/lib/toastMessages';
 import clientDataService from '@/lib/clientDataService';
+import FakeLoadingScreen from '@/components/FakeLoadingScreen';
 
 export interface AuthenticatedUser {
   id: number;
@@ -51,6 +52,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showLogoutLoading, setShowLogoutLoading] = useState(false);
 
   // Check if user is already logged in on app start
   useEffect(() => {
@@ -176,26 +178,21 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     // Show logout toast
     toastMessages.generic.info('Logging out...', 'See you next time!');
     
-    // Show loading state
-    setIsLoading(true);
+    // Show logout loading screen
+    setShowLogoutLoading(true);
     
-    // Clear user data
-    setUser(null);
-    setProfile(null);
-    
-    // Clear storage only if in browser
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('authenticatedUser');
-      localStorage.removeItem('keepLoggedIn');
-      sessionStorage.clear();
-    }
-    
-    // Add a small delay to show loading screen, then redirect
+    // Clear user data after a short delay
     setTimeout(() => {
+      setUser(null);
+      setProfile(null);
+      
+      // Clear storage only if in browser
       if (typeof window !== 'undefined') {
-        window.location.href = '/';
+        localStorage.removeItem('authenticatedUser');
+        localStorage.removeItem('keepLoggedIn');
+        sessionStorage.clear();
       }
-    }, 1500);
+    }, 200);
   };
 
   const updateProfile = (updates: Partial<UserProfile>) => {
@@ -277,9 +274,27 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     refreshUserData,
   };
 
+  // Handle logout loading screen completion
+  const handleLogoutComplete = () => {
+    setShowLogoutLoading(false);
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
+  };
+
   return (
     <UserContext.Provider value={value}>
       {children}
+      
+      {/* Logout Loading Screen */}
+      {showLogoutLoading && (
+        <FakeLoadingScreen
+          message="Logging out..."
+          duration={1500}
+          onComplete={handleLogoutComplete}
+          showProgress={true}
+        />
+      )}
     </UserContext.Provider>
   );
 };

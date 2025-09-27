@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import ViewEmployeeModal from '@/components/ViewEmployeeModal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, ChevronDown } from "lucide-react";
@@ -153,6 +154,7 @@ export default function EvaluatorDashboard() {
   const { profile, user } = useUser();
   const { success, error } = useToast();
 
+
   // Helper function to map user data to currentUser format
   const getCurrentUserData = () => {
     if (user) {
@@ -238,6 +240,8 @@ export default function EvaluatorDashboard() {
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
   const [isViewSubmissionModalOpen, setIsViewSubmissionModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [selectedEmployeeForView, setSelectedEmployeeForView] = useState<Employee | null>(null);
+  const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
 
   // ViewResultsModal state
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
@@ -329,6 +333,8 @@ export default function EvaluatorDashboard() {
   const [recordToDelete, setRecordToDelete] = useState<any>(null);
   const [deletePassword, setDeletePassword] = useState('');
   const [deletePasswordError, setDeletePasswordError] = useState('');
+  const [showDeleteSuccessDialog, setShowDeleteSuccessDialog] = useState(false);
+  const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] = useState(false);
 
 
   // Function to refresh employee data
@@ -497,6 +503,8 @@ export default function EvaluatorDashboard() {
     // Compare the entered password with the user's actual password
     if (deletePassword !== userAccount.password) {
       setDeletePasswordError('Incorrect password. Please try again.');
+      setShowIncorrectPasswordDialog(true);
+      setTimeout(() => setShowIncorrectPasswordDialog(false), 1400);
       return;
     }
 
@@ -524,6 +532,9 @@ export default function EvaluatorDashboard() {
       setRecordToDelete(null);
       setDeletePassword('');
       setDeletePasswordError('');
+      // Show success dialog with animated check
+      setShowDeleteSuccessDialog(true);
+      setTimeout(() => setShowDeleteSuccessDialog(false), 1400);
 
     } catch (err) {
       console.error('Error deleting record:', err);
@@ -1824,30 +1835,63 @@ export default function EvaluatorDashboard() {
                             <TableCell className="px-6 py-3">{e.role}</TableCell>
                             <TableCell className="px-6 py-3 text-gray-600">{new Date(e.hireDate).toLocaleDateString()}</TableCell>
                             <TableCell className="px-6 py-3 text-right">
-                              <Button
-                                size="sm"
-                                className='bg-blue-500 hover:bg-yellow-400 hover:text-black'
-                                onClick={() => {
-                                  setSelectedEmployee(e);
-                                  setIsEvaluationModalOpen(true);
-                                }}
-                              >
-                                <svg
-                                  className="w-4 h-4 mr-2"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  xmlns="http://www.w3.org/2000/svg"
+                              <div className="flex gap-2 justify-end">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className='bg-green-500 hover:bg-green-600 text-white border-green-500'
+                                  onClick={() => {
+                                    setSelectedEmployeeForView(e);
+                                    setIsViewEmployeeModalOpen(true);
+                                  }}
                                 >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                  />
-                                </svg>
-                                Evaluate
-                              </Button>
+                                  <svg
+                                    className="w-4 h-4 mr-2"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                    />
+                                  </svg>
+                                  View
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className='bg-blue-500 hover:bg-yellow-400 hover:text-black'
+                                  onClick={() => {
+                                    setSelectedEmployee(e);
+                                    setIsEvaluationModalOpen(true);
+                                  }}
+                                >
+                                  <svg
+                                    className="w-4 h-4 mr-2"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                    />
+                                  </svg>
+                                  Evaluate
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -2313,6 +2357,60 @@ export default function EvaluatorDashboard() {
           </DialogContent>
         </Dialog>
 
+    {/* Delete Success Dialog */}
+    <Dialog open={showDeleteSuccessDialog} onOpenChangeAction={setShowDeleteSuccessDialog}>
+      <DialogContent className="max-w-sm w-[90vw] sm:w-full px-6 py-6">
+        <div className="space-y-4 fade-in-scale">
+          <div className="flex justify-center mt-2">
+            <div className="w-16 h-16 flex items-center justify-center p-1">
+              <svg viewBox="0 0 52 52" className="w-12 h-12 overflow-visible">
+                <circle className="check-circle" cx="26" cy="26" r="24" fill="none" />
+                <path className="check-path" fill="none" d="M14 27 l8 8 l16 -16" />
+              </svg>
+            </div>
+          </div>
+          <style jsx>{`
+            .check-circle { stroke: #22c55e; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 160; stroke-dashoffset: 160; animation: draw-circle 0.6s ease-out forwards; }
+            .check-path { stroke: #16a34a; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 50; stroke-dashoffset: 50; animation: draw-check 0.4s ease-out 0.4s forwards; }
+            @keyframes draw-circle { to { stroke-dashoffset: 0; } }
+            @keyframes draw-check { to { stroke-dashoffset: 0; } }
+            .fade-in-scale { animation: fadeInScale 220ms ease-out both; }
+            @keyframes fadeInScale { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+          `}</style>
+          <p className="text-lg font-medium text-gray-900 text-center">Record Deleted</p>
+          <p className="text-sm text-gray-600 text-center">The evaluation record has been removed.</p>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Incorrect Password Dialog */}
+    <Dialog open={showIncorrectPasswordDialog} onOpenChangeAction={setShowIncorrectPasswordDialog}>
+      <DialogContent className="max-w-sm w-[90vw] sm:w-full px-6 py-6">
+        <div className="space-y-3 fade-in-scale">
+          <div className="flex justify-center mt-1">
+            <div className="w-16 h-16 flex items-center justify-center p-1">
+              <svg viewBox="0 0 52 52" className="w-12 h-12 overflow-visible">
+                <circle className="error-circle" cx="26" cy="26" r="24" fill="none" />
+                <path className="error-x-line1" fill="none" d="M16 16 l20 20" />
+                <path className="error-x-line2" fill="none" d="M36 16 l-20 20" />
+              </svg>
+            </div>
+          </div>
+          <style jsx>{`
+            .fade-in-scale { animation: fadeInScale 200ms ease-out both; }
+            @keyframes fadeInScale { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+            .error-circle { stroke: #dc2626; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 160; stroke-dashoffset: 160; animation: draw-error-circle 0.6s ease-out forwards; }
+            .error-x-line1 { stroke: #dc2626; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw-x-line1 0.4s ease-out 0.3s forwards; }
+            .error-x-line2 { stroke: #dc2626; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw-x-line2 0.4s ease-out 0.5s forwards; }
+            @keyframes draw-error-circle { to { stroke-dashoffset: 0; } }
+            @keyframes draw-x-line1 { to { stroke-dashoffset: 0; } }
+            @keyframes draw-x-line2 { to { stroke-dashoffset: 0; } }
+          `}</style>
+          <p className="text-lg font-medium text-gray-900 text-center">Incorrect Password</p>
+          <p className="text-sm text-gray-600 text-center">Please try again with the correct password.</p>
+        </div>
+      </DialogContent>
+    </Dialog>
         {/* View Results Modal */}
         <ViewResultsModal
           isOpen={isViewResultsModalOpen}
@@ -2397,6 +2495,23 @@ export default function EvaluatorDashboard() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* View Employee Modal Component */}
+        <ViewEmployeeModal
+          isOpen={isViewEmployeeModalOpen}
+          onClose={() => setIsViewEmployeeModalOpen(false)}
+          employee={selectedEmployeeForView}
+          onStartEvaluation={(employee) => {
+            setIsViewEmployeeModalOpen(false);
+            setSelectedEmployee(employee);
+            setIsEvaluationModalOpen(true);
+          }}
+          onViewSubmission={(submission) => {
+            setSelectedSubmission(submission);
+            setIsViewSubmissionModalOpen(true);
+          }}
+        />
+
       </PageTransition>
     </ProtectedRoute>
   );

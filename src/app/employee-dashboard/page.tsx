@@ -2374,30 +2374,7 @@ export default function EmployeeDashboard() {
                   )}
 
 
-                  {/* Refresh Success Animation */}
-                  {showRefreshSuccess && (
-                    <div className="fixed top-4 right-4 z-50 bg-white border border-green-200 rounded-lg shadow-lg p-4 flex items-center space-x-3">
-                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center animate-pulse">
-                        <svg 
-                          className="w-4 h-4 text-white animate-checkmark" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                          style={{
-                            strokeDasharray: '20',
-                            strokeDashoffset: '20',
-                            animation: 'drawCheckmark 0.6s ease-in-out forwards'
-                          }}
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="font-medium text-green-800">Success!</p>
-                        <p className="text-sm text-green-600">{refreshMessage}</p>
-                      </div>
-                    </div>
-                  )}
+                 
                 </TabsContent>
               </Tabs>
             </CardContent>
@@ -2606,9 +2583,9 @@ export default function EmployeeDashboard() {
         <DialogContent className="max-w-sm w-[90vw] sm:w-full px-6 py-6">
           <div className="space-y-4">
             <div className="flex justify-center">
-              <div className="w-16 h-16 ">
-                <svg viewBox="0 0 52 52" className="w-16 h-16">
-                  <circle className="check-circle" cx="26" cy="26" r="25" fill="none" />
+              <div className="w-24 h-24 mt-4 font-bold flex items-center justify-center p-1">
+                <svg viewBox="0 0 52 52" className="w-16 h-16 overflow-visible">
+                  <circle className="check-circle" cx="26" cy="26" r="24" fill="none" />
                   <path className="check-path" fill="none" d="M14 27 l8 8 l16 -16" />
                 </svg>
               </div>
@@ -2640,12 +2617,7 @@ export default function EmployeeDashboard() {
             <p className="text-sm text-gray-600 text-center">
               The evaluation has been removed from your history.
             </p>
-            <Button
-              onClick={() => setShowDeleteEvaluationSuccessDialog(false)}
-              className="w-full bg-green-600 hover:bg-green-700"
-            >
-              Done
-            </Button>
+            
           </div>
         </DialogContent>
       </Dialog>
