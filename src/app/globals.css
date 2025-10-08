@@ -184,6 +184,72 @@
   opacity: 0;
 }
 
+/* Fade in/out animation for warning icons */
+@keyframes fadeInOut {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-fadeInOut {
+  animation: fadeInOut 2s ease-in-out infinite;
+}
+
+/* X animation for incorrect password */
+@keyframes xAnimation {
+  0% {
+    transform: scale(0.8) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1) rotate(180deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+    opacity: 1;
+  }
+}
+
+.animate-x {
+  animation: xAnimation 0.6s ease-out;
+}
+
+/* Pop-up animation for dialogs */
+@keyframes popUp {
+  0% {
+    transform: scale(0.8) translateY(-20px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Pop-down animation for dialogs */
+@keyframes popDown {
+  0% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8) translateY(20px);
+    opacity: 0;
+  }
+}
+
+.animate-popup {
+  animation: popUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.animate-popdown {
+  animation: popDown 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
 /* Date input styling for better cross-browser compatibility */
 input[type="date"] {
   position: relative;

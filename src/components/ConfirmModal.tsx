@@ -92,7 +92,7 @@ export default function ConfirmModal({
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
       <DialogContent className={cn(
         currentSize,
-        'animate-in fade-in-0 zoom-in-95 duration-300 ease-out',
+        'animate-popup',
         className
       )}>
         <DialogHeader>

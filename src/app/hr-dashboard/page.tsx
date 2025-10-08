@@ -15,7 +15,8 @@ import { AlertDialog } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
-import RefreshAnimationModal from '@/components/RefreshAnimationModal';
+import TabLoadingIndicator, { TableSkeletonLoader, PerformanceTableSkeleton } from '@/components/TabLoadingIndicator';
+import { useTabLoading } from '@/hooks/useTabLoading';
 import clientDataService from '@/lib/clientDataService';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 
@@ -41,7 +42,6 @@ interface Department {
   name: string;
   manager: string;
   employeeCount: number;
-  budget: number;
   performance: number;
 }
 
@@ -130,6 +130,28 @@ export default function HRDashboard() {
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
+
+  // Tab loading hook
+  const { isTabLoading, handleTabChange: handleTabChangeWithLoading } = useTabLoading();
+
+  // Handle tab changes with loading
+  const handleTabChange = async (tabId: string) => {
+    setActive(tabId);
+    
+    // Use the new tab loading approach
+    await handleTabChangeWithLoading(tabId, async () => {
+      // Auto-refresh data when switching to specific tabs
+      if (tabId === 'overview') {
+        await fetchRecentSubmissions();
+      } else if (tabId === 'employees') {
+        await refreshEmployeeData();
+      }
+    }, {
+      showLoading: true,
+      loadingDuration: 600,
+      skipIfRecentlyLoaded: true
+    });
+  };
 
   // Function to refresh HR dashboard data (used by shared hook)
   const refreshHRData = async () => {
@@ -488,38 +510,33 @@ export default function HRDashboard() {
 
   return (
     <>
-      {/* Refresh Animation Modal - Show when loading */}
+      {/* Loading Screen - Shows during initial load */}
       {(loading || !hrMetrics) && (
-        <RefreshAnimationModal
-          isOpen={true}
-          message="Loading HR Dashboard..."
-          gifPath="/search-file.gif"
-          duration={1200}
-        />
+        <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-lg font-medium text-gray-800">Loading HR Dashboard...</p>
+          </div>
+        </div>
       )}
 
-      {/* Auto-refresh Animation Modal */}
-      {showRefreshModal && (
-        <RefreshAnimationModal
-          isOpen={true}
-          message={refreshModalMessage}
-          gifPath="/search-file.gif"
-          duration={2000}
-          onComplete={handleRefreshModalComplete}
-        />
-      )}
       
       <DashboardShell
         title="HR Dashboard"
         currentPeriod={new Date().toLocaleDateString()}
         sidebarItems={sidebarItems}
         activeItemId={active}
-        onChangeActive={setActive}
+        onChangeActive={handleTabChange}
         topSummary={topSummary}
         profile={{ name: 'HR Manager', roleOrPosition: 'Human Resources' }}
       >
              {active === 'overview' && (
-         <div className="space-y-6 h-[calc(100vh-300px)] overflow-y-auto pr-2">
+         <div className="relative space-y-6 h-[calc(100vh-300px)] overflow-y-auto pr-2">
+           <TabLoadingIndicator 
+             isLoading={isTabLoading('overview')} 
+             message="Loading overview data..." 
+             position="top"
+           />
            {/* Recent Activity Table */}
            <Card>
              <CardHeader>
@@ -713,7 +730,11 @@ export default function HRDashboard() {
        )}
 
       {active === 'employees' && (
-        <Card>
+        <div className="relative">
+          {isTabLoading('employees') ? (
+            <TableSkeletonLoader rows={10} columns={6} />
+          ) : (
+          <Card>
           <CardHeader>
             <CardTitle>Employee Directory</CardTitle>
             <CardDescription>Search and manage employees</CardDescription>
@@ -862,10 +883,15 @@ export default function HRDashboard() {
             </div>
           </CardContent>
         </Card>
+          )}
+        </div>
       )}
 
       {active === 'departments' && (
-        <div className="h-[calc(100vh-200px)] overflow-y-auto pr-2">
+        <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2">
+          {isTabLoading('departments') ? (
+            <TableSkeletonLoader rows={6} columns={4} />
+          ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {departments.map((dept) => {
               const stats = getDepartmentStats(dept.name);
@@ -894,11 +920,15 @@ export default function HRDashboard() {
               );
             })}
           </div>
+          )}
         </div>
       )}
 
       {active === 'branches' && (
-        <div className="h-[calc(100vh-200px)] overflow-y-auto pr-2">
+        <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2">
+          {isTabLoading('branches') ? (
+            <TableSkeletonLoader rows={4} columns={3} />
+          ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {branches.map((branch) => {
             const stats = getBranchStats(branch.name);
@@ -927,11 +957,16 @@ export default function HRDashboard() {
             );
           })}
           </div>
+          )}
         </div>
       )}
 
       {active === 'analytics' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="relative">
+          {isTabLoading('analytics') ? (
+            <TableSkeletonLoader rows={8} columns={2} />
+          ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Age Distribution */}
           <Card>
             <CardHeader>
@@ -975,6 +1010,8 @@ export default function HRDashboard() {
               </div>
             </CardContent>
           </Card>
+          </div>
+          )}
         </div>
       )}
 

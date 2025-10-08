@@ -82,46 +82,21 @@ export interface EvaluationRecordStats {
   byApprovalStatus: Record<string, number>;
 }
 
-const MOCK_EVALUATION_RECORDS_KEY = 'mockEvaluationRecords';
-const MOCK_APPROVAL_HISTORY_KEY = 'mockApprovalHistory';
+// In-memory storage for mock data (no localStorage needed with SWR)
+let mockEvaluationRecords: EvaluationRecord[] | null = null;
+let mockApprovalHistory: ApprovalHistoryEntry[] = [];
 
-// Helper to get current evaluation records from localStorage or fallback to JSON
+// Helper to get current evaluation records (in-memory with fallback to JSON)
 const getEvaluationRecords = (): EvaluationRecord[] => {
-  if (typeof window === 'undefined') {
-    return (submissionsData || []).map(sub => ({
-      ...sub,
-      employeeEmail: '',
-      evaluatorId: '',
-      employeeSignature: '',
-      employeeSignatureDate: '',
-      employeeApprovedAt: '',
-      employeeApprovedBy: '',
-      evaluatorSignature: '',
-      evaluatorSignatureDate: '',
-      evaluatorApprovedAt: '',
-      evaluatorApprovedBy: '',
-      quarter: getQuarterFromDate(sub.submittedAt),
-      year: new Date(sub.submittedAt).getFullYear(),
-      department: sub.evaluationData?.department || '',
-      position: sub.evaluationData?.position || '',
-      branch: sub.evaluationData?.branch || '',
-      approvalStatus: 'pending' as const,
-      approvalHistory: [],
-      approvalComments: '',
-      rejectionReason: '',
-      lastModified: sub.submittedAt,
-      createdBy: sub.evaluator
-    }));
+  // Return cached data if available
+  if (mockEvaluationRecords) {
+    return mockEvaluationRecords;
   }
   
-  const stored = localStorage.getItem(MOCK_EVALUATION_RECORDS_KEY);
-  if (stored) {
-    return JSON.parse(stored);
-  }
-  
-  // Initialize with submissions data if not in localStorage
-  const records = (submissionsData || []).map(sub => ({
+  // Initialize with submissions data
+  const records: EvaluationRecord[] = (submissionsData || []).map(sub => ({
     ...sub,
+    status: (sub.status as 'pending' | 'completed' | 'approved' | 'rejected') || 'pending',
     employeeEmail: '',
     evaluatorId: '',
     employeeSignature: '',
@@ -142,32 +117,28 @@ const getEvaluationRecords = (): EvaluationRecord[] => {
     approvalComments: '',
     rejectionReason: '',
     lastModified: sub.submittedAt,
-    createdBy: sub.evaluator
+    createdBy: sub.evaluator,
+    evaluationData: sub.evaluationData as EvaluationData
   }));
   
-  localStorage.setItem(MOCK_EVALUATION_RECORDS_KEY, JSON.stringify(records));
+  // Cache in memory
+  mockEvaluationRecords = records;
   return records;
 };
 
-// Helper to save evaluation records to localStorage
+// Helper to save evaluation records (in-memory only)
 const saveEvaluationRecords = (records: EvaluationRecord[]) => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(MOCK_EVALUATION_RECORDS_KEY, JSON.stringify(records));
-  }
+  mockEvaluationRecords = records;
 };
 
-// Helper to get approval history
+// Helper to get approval history (in-memory)
 const getApprovalHistory = (): ApprovalHistoryEntry[] => {
-  if (typeof window === 'undefined') return [];
-  const stored = localStorage.getItem(MOCK_APPROVAL_HISTORY_KEY);
-  return stored ? JSON.parse(stored) : [];
+  return mockApprovalHistory;
 };
 
-// Helper to save approval history
+// Helper to save approval history (in-memory)
 const saveApprovalHistory = (history: ApprovalHistoryEntry[]) => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(MOCK_APPROVAL_HISTORY_KEY, JSON.stringify(history));
-  }
+  mockApprovalHistory = history;
 };
 
 // Helper to get quarter from date

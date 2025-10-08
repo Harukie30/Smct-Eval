@@ -41,7 +41,7 @@ export default function EvaluationDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6 animate-popup">
         <DialogHeader className="mb-6">
           <DialogTitle className="text-2xl font-bold">Performance Evaluation Details</DialogTitle>
         </DialogHeader>

@@ -129,7 +129,7 @@ export default function ProfileModal({
 
   return (
     <Dialog open={isOpen} onOpenChangeAction={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto px-6 py-6">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto px-6 py-6 animate-popup">
         <DialogHeader className="px-1 ">
         <DialogTitle className="flex items-center gap-2 text-xl bg-blue-200 px-3 py-2 rounded-lg">
             <User className="w-5 h-5" />

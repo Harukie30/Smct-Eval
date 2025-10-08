@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Eye, Trash } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+// useRouter removed - not used
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,28 +14,42 @@ import { useUser } from '@/contexts/UserContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 import EvaluationDetailsModal from '@/components/EvaluationDetailsModal';
-import CommentDetailModal from '@/components/CommentDetailModal';
+// CommentDetailModal import removed
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import clientDataService from '@/lib/clientDataService';
 import { getEmployeeResults, initializeMockData } from '@/lib/evaluationStorage';
-import commentsService from '@/lib/commentsService';
+// commentsService import removed
+import accountsData from '@/data/accounts.json';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from 'recharts';
 import ConfirmModal from '@/components/ConfirmModal';
 import { useToast } from '@/hooks/useToast';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
-
-import RefreshAnimationModal from '@/components/RefreshAnimationModal';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useTabLoading } from '@/hooks/useTabLoading';
 
 export default function EmployeeDashboard() {
-  const router = useRouter();
-  const { profile, user, isAuthenticated, isLoading: authLoading, logout } = useUser();
+  const { profile, user, isLoading: authLoading, logout } = useUser();
   const { success, error } = useToast();
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // Individual loading states for each tab content
+  const [isRefreshingReviews, setIsRefreshingReviews] = useState(false);
+  const [isRefreshingHistory, setIsRefreshingHistory] = useState(false);
+  const [isRefreshingAccountHistory, setIsRefreshingAccountHistory] = useState(false);
+  const [isRefreshingQuarterly, setIsRefreshingQuarterly] = useState(false);
+  const [isRefreshingOverview, setIsRefreshingOverview] = useState(false);
+  
+  // Refreshing dialog state
+  const [showRefreshingDialog, setShowRefreshingDialog] = useState(false);
+  const [refreshingMessage, setRefreshingMessage] = useState('');
+  
+  
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [evaluationResults, setEvaluationResults] = useState<any[]>([]);
   const [selectedEvaluation, setSelectedEvaluation] = useState<any>(null);
@@ -47,25 +61,7 @@ export default function EmployeeDashboard() {
   const [selectedQuarter, setSelectedQuarter] = useState<string>('');
   const [accountHistory, setAccountHistory] = useState<any[]>([]);
   const [accountHistorySearchTerm, setAccountHistorySearchTerm] = useState('');
-  const [comments, setComments] = useState<any[]>([]);
-  const [commentsSearchTerm, setCommentsSearchTerm] = useState('');
-  const [selectedComment, setSelectedComment] = useState<any>(null);
-  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
-  const [isClearAllDialogOpen, setIsClearAllDialogOpen] = useState(false);
-  const [isDeletingComments, setIsDeletingComments] = useState(false);
-  const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
-  // Separate loading states for different refresh operations
-  const [isRefreshingSubmissions, setIsRefreshingSubmissions] = useState(false);
-  const [isRefreshingAccountHistory, setIsRefreshingAccountHistory] = useState(false);
-  const [isRefreshingComments, setIsRefreshingComments] = useState(false);
-  const [isRefreshingQuarterly, setIsRefreshingQuarterly] = useState(false);
-  const [isRefreshingHistory, setIsRefreshingHistory] = useState(false);
-
-  // Individual comment deletion states
-  const [isDeleteCommentDialogOpen, setIsDeleteCommentDialogOpen] = useState(false);
-  const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
-  const [isDeletingSingleComment, setIsDeletingSingleComment] = useState(false);
-  const [showSingleDeleteSuccess, setShowSingleDeleteSuccess] = useState(false);
+  // Comments & feedback functionality removed
 
   // Logout confirmation states
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
@@ -74,14 +70,19 @@ export default function EmployeeDashboard() {
 
   // Success animation states for various actions
   const [showViewSuccess, setShowViewSuccess] = useState(false);
-  const [showRefreshSuccess, setShowRefreshSuccess] = useState(false);
-  const [refreshMessage, setRefreshMessage] = useState('');
 
   // Delete evaluation states
   const [isDeleteEvaluationDialogOpen, setIsDeleteEvaluationDialogOpen] = useState(false);
   const [evaluationToDelete, setEvaluationToDelete] = useState<any>(null);
   const [isDeletingEvaluation, setIsDeletingEvaluation] = useState(false);
   const [showDeleteEvaluationSuccessDialog, setShowDeleteEvaluationSuccessDialog] = useState(false);
+  
+  // Password validation for deletion
+  const [deletePassword, setDeletePassword] = useState('');
+  const [isPasswordValid, setIsPasswordValid] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] = useState(false);
+  const [isDialogClosing, setIsDialogClosing] = useState(false);
 
   // Approval states
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
@@ -130,116 +131,86 @@ export default function EmployeeDashboard() {
     }
   };
 
-  // Function to load comments data using the service
-  const loadComments = (email: string) => {
-    return commentsService.getCommentsByEmployee(email);
-  };
+  // Comments & feedback functionality removed
 
-  // Helper functions for comments
-  const getFilteredComments = () => {
-    if (!commentsSearchTerm) return comments;
-    return commentsService.searchComments(commentsSearchTerm, profile?.email);
-  };
-
-  const getCommentTypeIcon = (type: string) => {
-    switch (type) {
-      case 'positive': return '✅';
-      case 'constructive': return '💡';
-      case 'negative': return '⚠️';
-      case 'recognition': return '🏆';
-      default: return '💬';
+  // Function to validate password for deletion
+  const validateDeletePassword = (password: string) => {
+    // Validate against the current user's actual password from accounts.json
+    if (!user || !user.email) {
+      setIsPasswordValid(false);
+      setPasswordError('User not found. Please try again.');
+      setShowIncorrectPasswordDialog(true);
+      
+      // Start pop-down animation after 1 second, then close after 1.3 seconds
+      setTimeout(() => {
+        setIsDialogClosing(true);
+      }, 1000);
+      
+      setTimeout(() => {
+        setShowIncorrectPasswordDialog(false);
+        setDeletePassword('');
+        setPasswordError('');
+        setIsDialogClosing(false);
+      }, 1300);
+      
+      return false;
     }
-  };
-
-  const getCommentTypeColor = (type: string) => {
-    switch (type) {
-      case 'positive': return 'bg-green-100 text-green-800';
-      case 'constructive': return 'bg-blue-100 text-blue-800';
-      case 'negative': return 'bg-red-100 text-red-800';
-      case 'recognition': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+    
+    // Find user account in accounts data
+    const userAccount = accountsData.accounts.find((account: any) => account.email === user.email);
+    
+    if (!userAccount) {
+      setIsPasswordValid(false);
+      setPasswordError('User account not found. Please try again.');
+      setShowIncorrectPasswordDialog(true);
+      
+      setTimeout(() => {
+        setIsDialogClosing(true);
+      }, 1000);
+      
+      setTimeout(() => {
+        setShowIncorrectPasswordDialog(false);
+        setDeletePassword('');
+        setPasswordError('');
+        setIsDialogClosing(false);
+      }, 1300);
+      
+      return false;
     }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800';
-      case 'normal': return 'bg-blue-100 text-blue-800';
-      case 'low': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+    
+    if (password === userAccount.password) {
+      setIsPasswordValid(true);
+      setPasswordError('');
+      return true;
+    } else {
+      setIsPasswordValid(false);
+      setPasswordError('Incorrect password. Please try again.');
+      setShowIncorrectPasswordDialog(true);
+      
+      // Start pop-down animation after 1 second, then close after 1.3 seconds
+      setTimeout(() => {
+        setIsDialogClosing(true);
+      }, 1000);
+      
+      setTimeout(() => {
+        setShowIncorrectPasswordDialog(false);
+        setDeletePassword('');
+        setPasswordError('');
+        setIsDialogClosing(false);
+      }, 1300);
+      
+      return false;
     }
-  };
-
-  // Comment action functions
-  const handleViewComment = (comment: any) => {
-    setSelectedComment(comment);
-    setIsCommentModalOpen(true);
-    // Show Sonner toast
-    success('Comment details opened', 'Comment information has been loaded successfully');
-  };
-
-  const handleClearComment = (commentId: string) => {
-    setCommentToDelete(commentId);
-    setIsDeleteCommentDialogOpen(true);
-  };
-
-  const confirmDeleteComment = async () => {
-    if (!commentToDelete) return;
-
-    setIsDeletingSingleComment(true);
-
-    // Simulate a small delay for the loading animation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    const success = commentsService.deleteComment(commentToDelete);
-    if (success && profile?.email) {
-      const updatedComments = commentsService.getCommentsByEmployee(profile.email);
-      setComments(updatedComments);
-    }
-
-    // Show success animation
-    setIsDeletingSingleComment(false);
-    setShowSingleDeleteSuccess(true);
-
-    // Close dialog after success animation
-    setTimeout(() => {
-      setIsDeleteCommentDialogOpen(false);
-      setShowSingleDeleteSuccess(false);
-      setCommentToDelete(null);
-    }, 2000);
-  };
-
-  const handleClearAllComments = () => {
-    setIsClearAllDialogOpen(true);
-  };
-
-  const confirmClearAllComments = async () => {
-    setIsDeletingComments(true);
-
-    // Simulate a small delay for the loading animation
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    if (profile?.email) {
-      const deletedCount = commentsService.deleteAllCommentsForEmployee(profile.email);
-      if (deletedCount > 0) {
-        setComments([]);
-      }
-    }
-
-    // Show success animation
-    setIsDeletingComments(false);
-    setShowDeleteSuccess(true);
-
-    // Close dialog after success animation (increased time to see checkmark better)
-    setTimeout(() => {
-      setIsClearAllDialogOpen(false);
-      setShowDeleteSuccess(false);
-    }, 3000);
   };
 
   // Delete evaluation function
   const handleDeleteEvaluation = async () => {
     if (!evaluationToDelete) return;
+
+    // Validate password before proceeding
+    if (!validateDeletePassword(deletePassword)) {
+      return;
+    }
 
     setIsDeletingEvaluation(true);
 
@@ -256,6 +227,11 @@ export default function EmployeeDashboard() {
       setEvaluationResults(updatedResults);
 
       console.log('Evaluation deleted:', evaluationToDelete.id);
+
+      // Reset password validation states
+      setDeletePassword('');
+      setIsPasswordValid(false);
+      setPasswordError('');
 
       // Finish and close confirm dialog, then show success dialog
       setIsDeletingEvaluation(false);
@@ -361,21 +337,32 @@ export default function EmployeeDashboard() {
   }, [loading]);
 
 
-  const handleTabChange = (tabId: string) => {
+  const handleTabChange = async (tabId: string) => {
     setActiveTab(tabId);
     
-    // Auto-refresh data when switching to specific tabs
+    // Auto-refresh data when switching to specific tabs with targeted loading states
     if (tabId === 'history') {
-      handleRefreshHistory();
+      setIsRefreshingHistory(true);
+      await handleRefreshHistory();
+      // Keep skeleton visible for a bit longer when switching tabs
+      setTimeout(() => {
+        setIsRefreshingHistory(false);
+      }, 1000);
     } else if (tabId === 'reviews') {
-      handleRefreshSubmissions();
+      setIsRefreshingReviews(true);
+      await handleRefreshSubmissions();
+      // Keep skeleton visible for a bit longer when switching tabs
+      setTimeout(() => {
+        setIsRefreshingReviews(false);
+      }, 1000);
     } else if (tabId === 'account-history') {
-      
-      // Refresh account history data
-      if (profile?.email) {
-        const history = loadAccountHistory(profile.email);
-        setAccountHistory(history);
-      }
+      await handleRefreshAccountHistory();
+    } else if (tabId === 'overview') {
+      // For overview tab, show skeleton loading
+      setIsRefreshingOverview(true);
+      setTimeout(() => {
+        setIsRefreshingOverview(false);
+      }, 1000);
     }
   };
 
@@ -403,16 +390,13 @@ export default function EmployeeDashboard() {
         const history = loadAccountHistory(profile.email);
         setAccountHistory(history);
 
-        // Refresh comments
-        const commentsData = loadComments(profile.email);
-        setComments(commentsData);
+        // Comments functionality removed
 
 
         console.log('Dashboard refreshed:', {
           submissions: finalSubmissions.length,
           evaluations: results.length,
-          history: history.length,
-          comments: commentsData.length
+          history: history.length
         });
       }
     } catch (error) {
@@ -442,12 +426,15 @@ export default function EmployeeDashboard() {
 
   // Refresh function for Account History table only
   const handleRefreshAccountHistory = async () => {
-    // Show refresh modal
-    setRefreshMessage('Refreshing account history...');
-    setShowRefreshSuccess(true);
-
+    setIsRefreshing(true);
+    setIsRefreshingAccountHistory(true);
+    setRefreshingMessage('Refreshing account history...');
+    setShowRefreshingDialog(true);
     try {
       if (profile?.email) {
+        // Add a small delay to simulate loading
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
         // Load only account history data
         const history = loadAccountHistory(profile.email);
         setAccountHistory(history);
@@ -459,46 +446,25 @@ export default function EmployeeDashboard() {
     } catch (error) {
       console.error('Error refreshing account history:', error);
     } finally {
-      // Hide refresh modal after a delay
-      setTimeout(() => {
-        setShowRefreshSuccess(false);
-      }, 2000);
+      setIsRefreshing(false);
+      setIsRefreshingAccountHistory(false);
+      setShowRefreshingDialog(false);
     }
   };
 
-  // Refresh function for Comments table only
-  const handleRefreshComments = async () => {
-    // Show refresh modal
-    setRefreshMessage('Refreshing comments and feedback...');
-    setShowRefreshSuccess(true);
-
-    try {
-      if (profile?.email) {
-        // Load only comments data
-        const commentsData = loadComments(profile.email);
-        setComments(commentsData);
-        console.log('Comments refreshed:', commentsData.length, 'items');
-
-        // Show success toast
-        success('Comments refreshed successfully', 'All comments and feedback have been updated');
-      }
-    } catch (error) {
-      console.error('Error refreshing comments:', error);
-    } finally {
-      // Hide refresh modal after a delay
-      setTimeout(() => {
-        setShowRefreshSuccess(false);
-      }, 2000);
-    }
-  };
+  // Comments refresh functionality removed
 
   // Refresh function for Performance Reviews (submissions) only
   const handleRefreshSubmissions = async () => {
-    // Show refresh modal
-    setRefreshMessage('Refreshing performance reviews...');
-    setShowRefreshSuccess(true);
-
+    setIsRefreshing(true);
+    setIsRefreshingReviews(true);
+    setIsRefreshingOverview(true);
+    setRefreshingMessage('Refreshing performance reviews...');
+    setShowRefreshingDialog(true);
     try {
+      // Add a small delay to simulate loading
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       // Fetch submissions data using client data service
       try {
         const allSubmissions = await clientDataService.getSubmissions();
@@ -523,21 +489,24 @@ export default function EmployeeDashboard() {
     } catch (error) {
       console.error('Error refreshing submissions:', error);
     } finally {
-      // Hide refresh modal after a delay
-      setTimeout(() => {
-        setShowRefreshSuccess(false);
-      }, 2000);
+      setIsRefreshing(false);
+      setIsRefreshingReviews(false);
+      setIsRefreshingOverview(false);
+      setShowRefreshingDialog(false);
     }
   };
 
   // Refresh function for Quarterly Performance table
   const handleRefreshQuarterly = async () => {
-    // Show refresh modal
-    setRefreshMessage('Refreshing quarterly performance...');
-    setShowRefreshSuccess(true);
-
+    setIsRefreshing(true);
+    setIsRefreshingQuarterly(true);
+    setRefreshingMessage('Refreshing quarterly performance...');
+    setShowRefreshingDialog(true);
     try {
       if (profile?.email) {
+        // Add a small delay to simulate loading
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
         // Reload evaluation results which are used for quarterly performance
         const results = getEmployeeResults(profile.email);
         setEvaluationResults(results);
@@ -549,21 +518,24 @@ export default function EmployeeDashboard() {
     } catch (error) {
       console.error('Error refreshing quarterly performance:', error);
     } finally {
-      // Hide refresh modal after a delay
-      setTimeout(() => {
-        setShowRefreshSuccess(false);
-      }, 2000);
+      setIsRefreshing(false);
+      setIsRefreshingQuarterly(false);
+      setShowRefreshingDialog(false);
     }
   };
 
   // Refresh function for Evaluation History table
   const handleRefreshHistory = async () => {
-    // Show refresh modal
-    setRefreshMessage('Refreshing evaluation history...');
-    setShowRefreshSuccess(true);
-
+    setIsRefreshing(true);
+    setIsRefreshingHistory(true);
+    setRefreshingMessage('Refreshing evaluation history...');
+    setShowRefreshingDialog(true);
+    
     try {
       if (profile?.email) {
+        // Add a small delay to simulate loading
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
         // Reload evaluation results which are used for evaluation history
         const results = getEmployeeResults(profile.email);
         setEvaluationResults(results);
@@ -575,10 +547,9 @@ export default function EmployeeDashboard() {
     } catch (error) {
       console.error('Error refreshing evaluation history:', error);
     } finally {
-      // Hide refresh modal after a delay
-      setTimeout(() => {
-        setShowRefreshSuccess(false);
-      }, 2000);
+      setIsRefreshing(false);
+      setIsRefreshingHistory(false);
+      setShowRefreshingDialog(false);
     }
   };
 
@@ -986,7 +957,7 @@ export default function EmployeeDashboard() {
                     variant="outline"
                     size="sm"
                     onClick={handleRefreshSubmissions}
-                    disabled={showRefreshModal}
+                    disabled={isRefreshingOverview}
                     className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white"
                   >
                     <svg
@@ -1002,7 +973,44 @@ export default function EmployeeDashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                {submissions.length > 0 ? (
+                {/* Refreshing Dialog for Performance Reviews */}
+                {showRefreshingDialog && (
+                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                      <div>
+                        <h4 className="text-sm font-medium text-blue-900">Refreshing...</h4>
+                        <p className="text-xs text-blue-700">{refreshingMessage}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {isRefreshingOverview || loading ? (
+                  <div className="space-y-2">
+                    {/* Table Header Skeleton */}
+                    <div className="flex space-x-3 py-2 border-b">
+                      <Skeleton className="h-3 w-20 bg-gray-300" />
+                      <Skeleton className="h-3 w-12 bg-gray-300" />
+                      <Skeleton className="h-3 w-8 bg-gray-300" />
+                      <Skeleton className="h-3 w-12 bg-gray-300" />
+                      <Skeleton className="h-3 w-10 bg-gray-300" />
+                      <Skeleton className="h-3 w-12 bg-gray-300" />
+                    </div>
+                    
+                    {/* Table Rows Skeleton */}
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="flex items-center space-x-3 py-2 border-b">
+                        <Skeleton className="h-3 w-16 bg-gray-300" />
+                        <Skeleton className="h-3 w-12 bg-gray-300" />
+                        <Skeleton className="h-3 w-8 bg-gray-300" />
+                        <Skeleton className="h-3 w-12 bg-gray-300" />
+                        <Skeleton className="h-3 w-10 bg-gray-300" />
+                        <Skeleton className="h-6 w-12 bg-gray-300" />
+                      </div>
+                    ))}
+                  </div>
+                ) : submissions.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1076,7 +1084,58 @@ export default function EmployeeDashboard() {
 
       case 'reviews':
         return (
-          <div className="h-[calc(100vh-200px)] overflow-y-auto">
+          <div className="relative h-[calc(100vh-200px)] overflow-y-auto">
+            {isRefreshingReviews || loading ? (
+              <div className="space-y-6">
+                {/* Performance Analytics Skeleton */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+                  <Card className="h-fit">
+                    <CardHeader>
+                      <Skeleton className="h-6 w-48 bg-gray-300" />
+                    </CardHeader>
+                    <CardContent>
+                      <Skeleton className="h-64 w-full bg-gray-300" />
+                    </CardContent>
+                  </Card>
+                  <Card className="h-fit">
+                    <CardHeader>
+                      <Skeleton className="h-6 w-40 bg-gray-300" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <Skeleton className="h-4 w-full bg-gray-300" />
+                        <Skeleton className="h-4 w-3/4 bg-gray-300" />
+                        <Skeleton className="h-4 w-1/2 bg-gray-300" />
+                        <Skeleton className="h-4 w-5/6 bg-gray-300" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                {/* Performance Reviews Table Skeleton */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <Skeleton className="h-6 w-48 bg-gray-300" />
+                      <Skeleton className="h-8 w-24 bg-gray-300" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="flex items-center space-x-4">
+                          <Skeleton className="h-4 w-32 bg-gray-300" />
+                          <Skeleton className="h-4 w-24 bg-gray-300" />
+                          <Skeleton className="h-4 w-20 bg-gray-300" />
+                          <Skeleton className="h-4 w-16 bg-gray-300" />
+                          <Skeleton className="h-4 w-12 bg-gray-300" />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
             <div className="space-y-6">
               {/* Performance Analytics Section */}
               {submissions.length > 0 && (
@@ -1466,6 +1525,7 @@ export default function EmployeeDashboard() {
                 </CardContent>
               </Card>
             </div>
+            )}
           </div>
         );
 
@@ -1486,7 +1546,37 @@ export default function EmployeeDashboard() {
         });
 
         return (
-          <Card>
+          <div className="relative">
+            {isRefreshingHistory || loading ? (
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-64" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Table Header Skeleton */}
+                    <div className="flex space-x-4">
+                      <Skeleton className="h-8 w-24" />
+                      <Skeleton className="h-8 w-32" />
+                      <Skeleton className="h-8 w-28" />
+                    </div>
+                    
+                    {/* Table Rows Skeleton */}
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="flex items-center space-x-4 py-3 border-b">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-4 w-12" />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+            <Card>
             <CardHeader>
               <CardTitle>Evaluation History</CardTitle>
               <CardDescription>Complete timeline of your performance evaluations</CardDescription>
@@ -1512,7 +1602,7 @@ export default function EmployeeDashboard() {
                           variant="outline"
                           size="sm"
                           onClick={handleRefreshQuarterly}
-                          disabled={showRefreshModal}
+                          disabled={isRefreshingQuarterly}
                           className="flex items-center bg-blue-500 text-white hover:bg-green-700 hover:text-white space-x-2"
                         >
                           <svg
@@ -1528,6 +1618,19 @@ export default function EmployeeDashboard() {
                       </div>
                     </CardHeader>
                     <CardContent>
+                      {/* Refreshing Dialog for Quarterly Performance */}
+                      {showRefreshingDialog && (
+                        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                            <div>
+                              <h4 className="text-sm font-medium text-blue-900">Refreshing...</h4>
+                              <p className="text-xs text-blue-700">{refreshingMessage}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* Search Bar */}
                       <div className="mb-6 w-1/2">
                         <div className="relative">
@@ -1608,6 +1711,33 @@ export default function EmployeeDashboard() {
                         )}
                       </div>
                       <div className="overflow-x-auto">
+                        {isRefreshingQuarterly || loading ? (
+                          <div className="space-y-2">
+                            {/* Table Header Skeleton */}
+                            <div className="flex space-x-3 py-2 border-b">
+                              <Skeleton className="h-3 w-12 bg-gray-300" />
+                              <Skeleton className="h-3 w-18 bg-gray-300" />
+                              <Skeleton className="h-3 w-14 bg-gray-300" />
+                              <Skeleton className="h-3 w-12 bg-gray-300" />
+                              <Skeleton className="h-3 w-16 bg-gray-300" />
+                              <Skeleton className="h-3 w-10 bg-gray-300" />
+                              <Skeleton className="h-3 w-12 bg-gray-300" />
+                            </div>
+                            
+                            {/* Table Rows Skeleton */}
+                            {Array.from({ length: 3 }).map((_, i) => (
+                              <div key={i} className="flex items-center space-x-3 py-2 border-b">
+                                <Skeleton className="h-4 w-8 bg-gray-300" />
+                                <Skeleton className="h-3 w-6 bg-gray-300" />
+                                <Skeleton className="h-3 w-12 bg-gray-300" />
+                                <Skeleton className="h-3 w-10 bg-gray-300" />
+                                <Skeleton className="h-3 w-14 bg-gray-300" />
+                                <Skeleton className="h-3 w-12 bg-gray-300" />
+                                <Skeleton className="h-6 w-14 bg-gray-300" />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -1760,6 +1890,7 @@ export default function EmployeeDashboard() {
                             })()}
                           </TableBody>
                         </Table>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1777,7 +1908,7 @@ export default function EmployeeDashboard() {
                           variant="outline"
                           size="sm"
                           onClick={handleRefreshHistory}
-                          disabled={showRefreshModal}
+                          disabled={isRefreshingHistory}
                           className="flex items-center bg-blue-500 text-white hover:bg-green-700 hover:text-white space-x-2"
                         >
                           <svg
@@ -1793,6 +1924,19 @@ export default function EmployeeDashboard() {
                       </div>
                     </CardHeader>
                     <CardContent>
+                      {/* Refreshing Dialog for History Table */}
+                      {showRefreshingDialog && (
+                        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                            <div>
+                              <h4 className="text-sm font-medium text-blue-900">Refreshing table...</h4>
+                              <p className="text-xs text-blue-700">{refreshingMessage}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* Search Bar */}
                       <div className="mb-6 w-1/2">
                         <div className="relative">
@@ -1826,6 +1970,35 @@ export default function EmployeeDashboard() {
                         )}
                       </div>
                       <div className="overflow-x-auto">
+                        {isRefreshingHistory || loading ? (
+                          <div className="space-y-2">
+                            {/* Table Header Skeleton */}
+                            <div className="flex space-x-3 py-2 border-b">
+                              <Skeleton className="h-3 w-12 bg-gray-300" />
+                              <Skeleton className="h-3 w-14 bg-gray-300" />
+                              <Skeleton className="h-3 w-12 bg-gray-300" />
+                              <Skeleton className="h-3 w-12 bg-gray-300" />
+                              <Skeleton className="h-3 w-10 bg-gray-300" />
+                              <Skeleton className="h-3 w-18 bg-gray-300" />
+                              <Skeleton className="h-3 w-14 bg-gray-300" />
+                              <Skeleton className="h-3 w-12 bg-gray-300" />
+                            </div>
+                            
+                            {/* Table Rows Skeleton */}
+                            {Array.from({ length: 4 }).map((_, i) => (
+                              <div key={i} className="flex items-center space-x-3 py-2 border-b">
+                                <Skeleton className="h-3 w-14 bg-gray-300" />
+                                <Skeleton className="h-3 w-16 bg-gray-300" />
+                                <Skeleton className="h-3 w-12 bg-gray-300" />
+                                <Skeleton className="h-3 w-8 bg-gray-300" />
+                                <Skeleton className="h-3 w-10 bg-gray-300" />
+                                <Skeleton className="h-3 w-14 bg-gray-300" />
+                                <Skeleton className="h-3 w-12 bg-gray-300" />
+                                <Skeleton className="h-6 w-12 bg-gray-300" />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -1973,6 +2146,7 @@ export default function EmployeeDashboard() {
                             )}
                           </TableBody>
                         </Table>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1980,23 +2154,63 @@ export default function EmployeeDashboard() {
               </Tabs>
             </CardContent>
           </Card>
+            )}
+          </div>
         );
 
       case 'account-history':
         return (
-          <Card>
+          <div className="relative">
+            {isRefreshingAccountHistory || loading ? (
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-4 w-48 bg-gray-300" />
+                  <Skeleton className="h-3 w-60 bg-gray-300" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {/* Tabs Skeleton */}
+                    <div className="flex space-x-2">
+                      <Skeleton className="h-6 w-24 bg-gray-300" />
+                      <Skeleton className="h-6 w-20 bg-gray-300" />
+                    </div>
+                    
+                    {/* Table Content Skeleton */}
+                    <div className="space-y-2">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="flex items-center space-x-3 py-2 border-b">
+                          <Skeleton className="h-3 w-20 bg-gray-300" />
+                          <Skeleton className="h-3 w-16 bg-gray-300" />
+                          <Skeleton className="h-3 w-14 bg-gray-300" />
+                          <Skeleton className="h-3 w-12 bg-gray-300" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+            <Card>
             <CardHeader>
-              <CardTitle>Account History & Comments</CardTitle>
-              <CardDescription>Track suspension records and comments from supervisors and HR</CardDescription>
+              <CardTitle>Account History</CardTitle>
+              <CardDescription>Track suspension records and account activity</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="account-history" className="w-full">
-                <TabsList className="grid w-1/2 bg-gray-200 grid-cols-2">
-                  <TabsTrigger value="account-history">Account History📋</TabsTrigger>
-                  <TabsTrigger value="comments" >Comments & Feedback🗨️</TabsTrigger>
-                </TabsList>
 
-                <TabsContent value="account-history" className="mt-6">
+                <div className="mt-6">
+                  {/* Refreshing Dialog for Account History Table */}
+                  {showRefreshingDialog && (
+                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        <div>
+                          <h4 className="text-sm font-medium text-blue-900">Refreshing...</h4>
+                          <p className="text-xs text-blue-700">{refreshingMessage}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* Search Bar */}
                   <div className="mb-6 w-1/2">
                     <div className="relative">
@@ -2036,7 +2250,7 @@ export default function EmployeeDashboard() {
                       variant="outline"
                       size="sm"
                       onClick={handleRefreshAccountHistory}
-                      disabled={showRefreshModal}
+                      disabled={isRefreshing}
                       className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white"
                     >
                       <svg
@@ -2176,209 +2390,11 @@ export default function EmployeeDashboard() {
                       </div>
                     </div>
                   )}
-                </TabsContent>
-
-                <TabsContent value="comments" className="mt-6">
-                  {/* Search Bar */}
-                  <div className="mb-6 w-1/2">
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="Search comments..."
-                        value={commentsSearchTerm}
-                        onChange={(e) => setCommentsSearchTerm(e.target.value)}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      />
-                      {commentsSearchTerm && (
-                        <button
-                          onClick={() => setCommentsSearchTerm('')}
-                          className="absolute inset-y-0 font-medium text-white  px-2 right-0 pr-3 flex items-center"
-                        >
-                          <svg className="h-5 w-5 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Comments Actions */}
-                  <div className="mb-4 flex justify-between items-center">
-                    <div className="text-sm text-gray-600">
-                      {comments.length > 0
-                        ? `Showing ${getFilteredComments().length} of ${comments.length} comments`
-                        : 'No comments found'
-                      }
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleRefreshComments}
-                        disabled={showRefreshModal}
-                        className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white"
-                      >
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        <span>Refresh</span>
-                      </Button>
-                      {comments.length > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleClearAllComments}
-                          className="text-red-600 hover:text-red-800 border-red-200 hover:border-red-300"
-                        >
-                          Clear All Comments
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Comments Table */}
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Author</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Content</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Priority</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {getFilteredComments().map((comment) => (
-                          <TableRow key={comment.id}>
-                            <TableCell>
-                              <div className="flex items-center space-x-2">
-                                <span className="text-lg">{getCommentTypeIcon(comment.type)}</span>
-                                <Badge className={getCommentTypeColor(comment.type)}>
-                                  {comment.type}
-                                </Badge>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{comment.author}</span>
-                                <span className="text-xs text-gray-500">{comment.authorRole}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{comment.category}</Badge>
-                            </TableCell>
-                            <TableCell className="max-w-xs">
-                              <div className="truncate" title={comment.content}>
-                                {comment.content}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="text-sm">
-                                  {new Date(comment.date).toLocaleDateString()}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {new Date(comment.date).toLocaleTimeString()}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={getPriorityColor(comment.priority)}>
-                                {comment.priority}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end space-x-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleViewComment(comment)}
-                                  className="text-blue-600 hover:text-blue-800 border-blue-200 hover:border-blue-300"
-                                >
-                                  View
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleClearComment(comment.id)}
-                                  className="text-red-600 hover:text-red-800 border-red-200 hover:border-red-300"
-                                >
-                                  Delete
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* Empty State */}
-                  {getFilteredComments().length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <div className="text-4xl mb-4">💬</div>
-                      <p className="text-lg font-medium">
-                        {commentsSearchTerm ? 'No matching comments found' : 'No comments found'}
-                      </p>
-                      <p className="text-sm">
-                        {commentsSearchTerm
-                          ? 'Try adjusting your search terms'
-                          : 'Comments from supervisors and HR will appear here'
-                        }
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Comments Summary Statistics */}
-                  {comments.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-6 border-t mt-6">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                          {comments.filter(comment => comment.type === 'positive').length}
-                        </div>
-                        <div className="text-sm text-gray-600">Positive</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {comments.filter(comment => comment.type === 'constructive').length}
-                        </div>
-                        <div className="text-sm text-gray-600">Constructive</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-yellow-600">
-                          {comments.filter(comment => comment.type === 'recognition').length}
-                        </div>
-                        <div className="text-sm text-gray-600">Recognition</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-red-600">
-                          {comments.filter(comment => comment.priority === 'high').length}
-                        </div>
-                        <div className="text-sm text-gray-600">High Priority</div>
-                      </div>
-                    </div>
-                  )}
-
-
-                 
-                </TabsContent>
-              </Tabs>
+                </div>
             </CardContent>
           </Card>
+            )}
+          </div>
         );
 
       default:
@@ -2390,28 +2406,18 @@ export default function EmployeeDashboard() {
     <ProtectedRoute>
       {/* Loading Screen - Shows during initial load, authentication, and auto-refresh */}
       {(loading || authLoading || !profile) && (
-        <RefreshAnimationModal
-          isOpen={true}
-          message={
-            authLoading ? "Authenticating..." :
-              !profile ? "Loading user profile..." :
-                "Loading Employee Dashboard..."
-          }
-          gifPath="/search-file.gif"
-          duration={authLoading ? 800 : 1200}
-        />
+        <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-lg font-medium text-gray-800">
+              {authLoading ? "Authenticating..." :
+                !profile ? "Loading user profile..." :
+                  "Loading Employee Dashboard..."}
+            </p>
+          </div>
+        </div>
       )}
 
-      {/* Refresh Modal for manual refresh operations */}
-      {showRefreshModal && (
-        <RefreshAnimationModal
-          isOpen={true}
-          message={refreshModalMessage}
-          gifPath="/search-file.gif"
-          duration={2000}
-          onComplete={handleRefreshModalComplete}
-        />
-      )}
 
       <PageTransition>
         <DashboardShell
@@ -2453,65 +2459,7 @@ export default function EmployeeDashboard() {
         isApproved={selectedEvaluation ? isEvaluationApproved(selectedEvaluation.id) : false}
       />
 
-      {/* Comment Detail Modal */}
-      <CommentDetailModal
-        isOpen={isCommentModalOpen}
-        onCloseAction={() => setIsCommentModalOpen(false)}
-        comment={selectedComment}
-      />
-
-      {/* Clear All Comments Alert Dialog */}
-      <AlertDialog
-        open={isClearAllDialogOpen}
-        onOpenChangeAction={setIsClearAllDialogOpen}
-        title={showDeleteSuccess ? "Comments Deleted!" : "Clear All Comments"}
-        description={showDeleteSuccess
-          ? `Successfully deleted ${comments.length} comments from your account.`
-          : `Are you sure you want to delete ALL ${comments.length} comments? This action cannot be undone and will permanently remove all feedback and comments from your account.`
-        }
-        type={showDeleteSuccess ? "success" : "warning"}
-        confirmText={showDeleteSuccess ? "Done" : "Yes, Delete All"}
-        cancelText="Cancel"
-        showCancel={!showDeleteSuccess}
-        isLoading={isDeletingComments}
-        showSuccessAnimation={showDeleteSuccess}
-        // Success animations from AnimationExamples
-        loadingAnimation={{
-          variant: 'spinner',
-          color: 'blue',
-          size: 'lg'
-        }}
-        onConfirm={confirmClearAllComments}
-        onCancel={() => setIsClearAllDialogOpen(false)}
-      />
-
-      {/* Delete Single Comment Alert Dialog */}
-      <AlertDialog
-        open={isDeleteCommentDialogOpen}
-        onOpenChangeAction={setIsDeleteCommentDialogOpen}
-        title={showSingleDeleteSuccess ? "Comment Deleted!" : "Delete Comment"}
-        description={showSingleDeleteSuccess
-          ? "The comment has been successfully removed from your account."
-          : "Are you sure you want to delete this comment? This action cannot be undone and will permanently remove the feedback from your account."
-        }
-        type={showSingleDeleteSuccess ? "success" : "error"}
-        confirmText={showSingleDeleteSuccess ? "Done" : "Yes, Delete"}
-        cancelText="Cancel"
-        showCancel={!showSingleDeleteSuccess}
-        isLoading={isDeletingSingleComment}
-        showSuccessAnimation={showSingleDeleteSuccess}
-        // Circle animation from AnimationExamples
-        loadingAnimation={{
-          variant: 'dots',
-          color: 'red',
-          size: 'lg'
-        }}
-        onConfirm={confirmDeleteComment}
-        onCancel={() => {
-          setIsDeleteCommentDialogOpen(false);
-          setCommentToDelete(null);
-        }}
-      />
+      {/* Comments & feedback modals removed */}
 
       {/* Logout Confirmation Alert Dialog */}
       <AlertDialog
@@ -2540,10 +2488,10 @@ export default function EmployeeDashboard() {
 
       {/* Delete Evaluation Dialog */}
       <Dialog open={isDeleteEvaluationDialogOpen} onOpenChangeAction={setIsDeleteEvaluationDialogOpen}>
-        <DialogContent className="max-w-md w-[90vw] sm:w-full px-6 py-6">
+        <DialogContent className="max-w-md w-[90vw] sm:w-full px-6 py-6 animate-popup">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-red-600 animate-fadeInOut" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
               Delete Evaluation
@@ -2555,12 +2503,38 @@ export default function EmployeeDashboard() {
               Are you sure you want to delete this evaluation from {evaluationToDelete?.employeeName}? This action cannot be undone and will permanently remove the evaluation from your history.
             </p>
 
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="deletePassword" className="text-sm font-medium text-gray-700">
+                  Enter your password to confirm deletion:
+                </Label>
+                <Input
+                  id="deletePassword"
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => {
+                    setDeletePassword(e.target.value);
+                    setPasswordError('');
+                  }}
+                  placeholder="Enter password"
+                  className={`mt-1 ${passwordError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  disabled={isDeletingEvaluation}
+                />
+                {passwordError && (
+                  <p className="text-sm text-red-600 mt-1">{passwordError}</p>
+                )}
+              </div>
+            </div>
+
             <div className="flex justify-end space-x-3 pt-2">
               <Button
                 variant="outline"
                 onClick={() => {
                   setIsDeleteEvaluationDialogOpen(false);
                   setEvaluationToDelete(null);
+                  setDeletePassword('');
+                  setIsPasswordValid(false);
+                  setPasswordError('');
                 }}
                 disabled={isDeletingEvaluation}
               >
@@ -2568,8 +2542,8 @@ export default function EmployeeDashboard() {
               </Button>
               <Button
                 onClick={handleDeleteEvaluation}
-                disabled={isDeletingEvaluation}
-                className="bg-red-600 hover:bg-red-700"
+                disabled={isDeletingEvaluation || !deletePassword.trim()}
+                className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {isDeletingEvaluation ? "Deleting..." : "Delete"}
               </Button>
@@ -2580,7 +2554,7 @@ export default function EmployeeDashboard() {
 
       {/* Delete Evaluation Success Dialog */}
       <Dialog open={showDeleteEvaluationSuccessDialog} onOpenChangeAction={setShowDeleteEvaluationSuccessDialog}>
-        <DialogContent className="max-w-sm w-[90vw] sm:w-full px-6 py-6">
+        <DialogContent className="max-w-sm w-[90vw] sm:w-full px-6 py-6 animate-popup">
           <div className="space-y-4">
             <div className="flex justify-center">
               <div className="w-24 h-24 mt-4 font-bold flex items-center justify-center p-1">
@@ -2622,6 +2596,49 @@ export default function EmployeeDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Incorrect Password Dialog */}
+      <Dialog open={showIncorrectPasswordDialog} onOpenChangeAction={setShowIncorrectPasswordDialog}>
+        <DialogContent className={`max-w-sm w-[90vw] sm:w-full px-6 py-6 ${isDialogClosing ? 'animate-popdown' : 'animate-popup'}`}>
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              <div className="w-24 h-24 mt-4 font-bold flex items-center justify-center p-1">
+                <svg viewBox="0 0 52 52" className="w-16 h-16 overflow-visible animate-x">
+                  <circle className="error-circle" cx="26" cy="26" r="24" fill="none" stroke="#ef4444" strokeWidth="2" />
+                  <path className="error-path" fill="none" stroke="#ef4444" strokeWidth="3" d="M16 16 l20 20 M36 16 l-20 20" />
+                </svg>
+              </div>
+            </div>
+            <style jsx>{`
+              .error-circle {
+                stroke: #ef4444; /* red-500 */
+                stroke-width: 3;
+                stroke-linecap: round;
+                stroke-dasharray: 160;
+                stroke-dashoffset: 160;
+                animation: draw-circle 0.6s ease-out forwards;
+              }
+              .error-path {
+                stroke: #dc2626; /* red-600 */
+                stroke-width: 4;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+                stroke-dasharray: 50;
+                stroke-dashoffset: 50;
+                animation: draw-x 0.4s ease-out 0.4s forwards;
+              }
+              @keyframes draw-circle { to { stroke-dashoffset: 0; } }
+              @keyframes draw-x { to { stroke-dashoffset: 0; } }
+              .fade-in-scale { animation: fadeInScale 220ms ease-out both; }
+              @keyframes fadeInScale { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+            `}</style>
+            <p className="text-lg font-medium text-red-600 text-center">Incorrect Password</p>
+            <p className="text-sm text-gray-600 text-center">
+              The password you entered is incorrect. Please try again.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Approval Confirmation Dialog */}
       <Dialog open={isApprovalDialogOpen} onOpenChangeAction={setIsApprovalDialogOpen}>
         <DialogContent className="max-w-md w-[90vw] bg-blue-50 sm:w-full px-6 py-6">
@@ -2651,9 +2668,9 @@ export default function EmployeeDashboard() {
                     <p className="text-xs text-green-700 mt-1">Your signature will be used for approval.</p>
                   </div>
                 ) : (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="p-3 bg-red-200 border border-red-200 rounded-lg">
+                    <div className="flex items-center  space-x-2">
+                      <svg className="w-5 h-5 text-red-600 animate-fadeInOut" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                       </svg>
                       <span className="text-sm text-red-800 font-medium">No Signature Found</span>
@@ -2743,22 +2760,7 @@ export default function EmployeeDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Refresh Animation Modal for Submissions */}
-      <RefreshAnimationModal
-        isOpen={showRefreshSuccess}
-        message={refreshMessage}
-        gifPath="/search-file.gif"
-        duration={2000}
-      />
 
-      {/* Refresh Animation Modal */}
-      <RefreshAnimationModal
-        isOpen={showRefreshModal}
-        message={refreshModalMessage}
-        gifPath="/search-file.gif" // You can change this path to your GIF
-        onComplete={handleRefreshModalComplete}
-        duration={2000}
-      />
     </ProtectedRoute>
   );
 }

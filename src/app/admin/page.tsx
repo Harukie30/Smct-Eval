@@ -15,7 +15,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ChevronDown } from "lucide-react";
 
 import EditUserModal from '@/components/EditUserModal';
-import RefreshAnimationModal from '@/components/RefreshAnimationModal';
 import { toastMessages } from '@/lib/toastMessages';
 import clientDataService from '@/lib/clientDataService';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
@@ -256,6 +255,7 @@ export default function AdminDashboard() {
   // Function to refresh evaluated reviews only
   const handleRefreshEvaluatedReviews = async () => {
     console.log('🔄 Starting evaluated reviews refresh...');
+    setIsRefreshing(true);
 
     try {
       await loadEvaluatedReviews();
@@ -263,6 +263,8 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('❌ Error refreshing evaluated reviews:', error);
       toastMessages.generic.error('Refresh Failed', 'Failed to refresh evaluated reviews. Please try again.');
+    } finally {
+      setIsRefreshing(false);
     }
   };
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
@@ -1024,12 +1026,12 @@ export default function AdminDashboard() {
 
   if (loading || !systemMetrics || !dashboardStats) {
     return (
-      <RefreshAnimationModal
-        isOpen={true}
-        message="Loading Dashboard..."
-        gifPath="/search-file.gif"
-        duration={1200}
-      />
+      <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-lg font-medium text-gray-800">Loading Dashboard...</p>
+        </div>
+      </div>
     );
   }
 
@@ -1926,10 +1928,10 @@ export default function AdminDashboard() {
                   <Button
                     variant="outline"
                     onClick={handleRefreshEvaluatedReviews}
-                    disabled={showRefreshModal}
+                    disabled={isRefreshing}
                     className="flex items-center gap-2"
                   >
-                    {showRefreshModal ? (
+                    {isRefreshing ? (
                       <>
                         <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -2740,14 +2742,6 @@ export default function AdminDashboard() {
         positions={positionsData}
       />
 
-      {/* Refresh Animation Modal */}
-      <RefreshAnimationModal
-        isOpen={showRefreshModal}
-        message={refreshModalMessage}
-        gifPath="/search-file.gif"
-        onComplete={handleRefreshModalComplete}
-        duration={2000}
-      />
     </DashboardShell>
   );
 }

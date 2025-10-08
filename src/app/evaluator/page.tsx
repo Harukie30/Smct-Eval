@@ -26,7 +26,6 @@ import clientDataService from '@/lib/clientDataService';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import PageTransition from '@/components/PageTransition';
 import { AlertDialog } from '@/components/ui/alert-dialog';
-import RefreshAnimationModal from '@/components/RefreshAnimationModal';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/useToast';
@@ -217,13 +216,13 @@ export default function EvaluatorDashboard() {
   const handleTabChange = (tabId: string) => {
     setActive(tabId);
 
-    // Auto-refresh data when switching to specific tabs
+    // Auto-refresh data when switching to specific tabs (no modals)
     if (tabId === 'feedback') {
-      // Show refresh modal when switching to feedback tab (Evaluation Records)
-      setShowEvaluationRecordsRefreshModal(true);
+      // Refresh evaluation records data
+      refreshEvaluatorData();
     } else if (tabId === 'employees') {
-      // Show refresh modal when switching to employees tab
-      setShowEmployeesRefreshModal(true);
+      // Refresh employees data
+      refreshEvaluatorData();
     } else if (tabId === 'overview') {
       // Refresh overview data when switching to overview tab
       refreshEvaluatorData();
@@ -322,11 +321,6 @@ export default function EvaluatorDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [employeeDataRefresh, setEmployeeDataRefresh] = useState(0);
 
-  // RefreshAnimationModal state for Evaluation Records
-  const [showEvaluationRecordsRefreshModal, setShowEvaluationRecordsRefreshModal] = useState(false);
-  
-  // RefreshAnimationModal state for Employees
-  const [showEmployeesRefreshModal, setShowEmployeesRefreshModal] = useState(false);
 
   // Delete confirmation modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -335,6 +329,8 @@ export default function EvaluatorDashboard() {
   const [deletePasswordError, setDeletePasswordError] = useState('');
   const [showDeleteSuccessDialog, setShowDeleteSuccessDialog] = useState(false);
   const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] = useState(false);
+  const [isDialogClosing, setIsDialogClosing] = useState(false);
+  const [isSuccessDialogClosing, setIsSuccessDialogClosing] = useState(false);
 
 
   // Function to refresh employee data
@@ -445,9 +441,8 @@ export default function EvaluatorDashboard() {
     }
   };
 
-  // Function to handle modal completion
+  // Function to handle refresh completion (no modal)
   const handleEvaluationRecordsRefreshComplete = () => {
-    setShowEvaluationRecordsRefreshModal(false);
     handleEvaluationRecordsRefresh();
   };
 
@@ -460,9 +455,8 @@ export default function EvaluatorDashboard() {
     }
   };
 
-  // Function to handle employees modal completion
+  // Function to handle employees refresh completion (no modal)
   const handleEmployeesRefreshComplete = () => {
-    setShowEmployeesRefreshModal(false);
     handleEmployeesRefresh();
   };
 
@@ -504,7 +498,19 @@ export default function EvaluatorDashboard() {
     if (deletePassword !== userAccount.password) {
       setDeletePasswordError('Incorrect password. Please try again.');
       setShowIncorrectPasswordDialog(true);
-      setTimeout(() => setShowIncorrectPasswordDialog(false), 1400);
+      
+      // Start pop-down animation after 1 second, then close after 1.3 seconds
+      setTimeout(() => {
+        setIsDialogClosing(true);
+      }, 1000);
+      
+      setTimeout(() => {
+        setShowIncorrectPasswordDialog(false);
+        setDeletePassword('');
+        setDeletePasswordError('');
+        setIsDialogClosing(false);
+      }, 1300);
+      
       return;
     }
 
@@ -534,7 +540,16 @@ export default function EvaluatorDashboard() {
       setDeletePasswordError('');
       // Show success dialog with animated check
       setShowDeleteSuccessDialog(true);
-      setTimeout(() => setShowDeleteSuccessDialog(false), 1400);
+      
+      // Start pop-down animation after 1 second, then close after 1.3 seconds
+      setTimeout(() => {
+        setIsSuccessDialogClosing(true);
+      }, 1000);
+      
+      setTimeout(() => {
+        setShowDeleteSuccessDialog(false);
+        setIsSuccessDialogClosing(false);
+      }, 1300);
 
     } catch (err) {
       console.error('Error deleting record:', err);
@@ -1625,7 +1640,7 @@ export default function EvaluatorDashboard() {
                     )}
                     <Button
                       size="sm"
-                      onClick={() => setShowEvaluationRecordsRefreshModal(true)}
+                      onClick={handleEvaluationRecordsRefresh}
                       disabled={isRefreshing}
                       className="px-3 py-2 text-white hover:text-white bg-blue-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
                       title="Refresh submissions data"
@@ -1746,7 +1761,7 @@ export default function EvaluatorDashboard() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setShowEmployeesRefreshModal(true)}
+                      onClick={handleEmployeesRefresh}
                       className="flex items-center bg-blue-500 text-white hover:bg-green-600 hover:text-white"
                       title="Refresh employee data"
                     >
@@ -2063,7 +2078,7 @@ export default function EvaluatorDashboard() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setShowEvaluationRecordsRefreshModal(true)}
+                      onClick={handleEvaluationRecordsRefresh}
                       disabled={isRefreshing}
                       className="mt-1 w-full text-xs bg-blue-500 hover:bg-green-600 text-center text-white  hover:text-white disabled:cursor-not-allowed"
                       title="Refresh evaluation records data"
@@ -2284,48 +2299,16 @@ export default function EvaluatorDashboard() {
 
   return (
     <ProtectedRoute requiredRole={["evaluator", "manager"]}>
-      {/* Refresh Animation Modal - Outside PageTransition to avoid opacity conflicts */}
+      {/* Loading Screen - Shows during initial load */}
       {(loading || !data) && (
-        <RefreshAnimationModal
-          isOpen={true}
-          message="Loading Dashboard..."
-          gifPath="/search-file.gif"
-          duration={1200}
-        />
+        <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-lg font-medium text-gray-800">Loading Dashboard...</p>
+          </div>
+        </div>
       )}
 
-      {/* Auto-refresh Modal */}
-      {showRefreshModal && (
-        <RefreshAnimationModal
-          isOpen={true}
-          message={refreshModalMessage}
-          gifPath="/search-file.gif"
-          duration={2000}
-          onComplete={handleRefreshModalComplete}
-        />
-      )}
-
-      {/* Evaluation Records Refresh Modal */}
-      {showEvaluationRecordsRefreshModal && (
-        <RefreshAnimationModal
-          isOpen={true}
-          message="Refreshing Evaluation Records..."
-          gifPath="/search-file.gif"
-          duration={2000}
-          onComplete={handleEvaluationRecordsRefreshComplete}
-        />
-      )}
-
-      {/* Employees Refresh Modal */}
-      {showEmployeesRefreshModal && (
-        <RefreshAnimationModal
-          isOpen={true}
-          message="Refreshing Employee Data..."
-          gifPath="/search-file.gif"
-          duration={2000}
-          onComplete={handleEmployeesRefreshComplete}
-        />
-      )}
 
       <PageTransition>
         <DashboardShell
@@ -2359,7 +2342,7 @@ export default function EvaluatorDashboard() {
 
     {/* Delete Success Dialog */}
     <Dialog open={showDeleteSuccessDialog} onOpenChangeAction={setShowDeleteSuccessDialog}>
-      <DialogContent className="max-w-sm w-[90vw] sm:w-full px-6 py-6">
+      <DialogContent className={`max-w-sm w-[90vw] sm:w-full px-6 py-6 ${isSuccessDialogClosing ? 'animate-popdown' : 'animate-popup'}`}>
         <div className="space-y-4 fade-in-scale">
           <div className="flex justify-center mt-2">
             <div className="w-16 h-16 flex items-center justify-center p-1">
@@ -2385,7 +2368,7 @@ export default function EvaluatorDashboard() {
 
     {/* Incorrect Password Dialog */}
     <Dialog open={showIncorrectPasswordDialog} onOpenChangeAction={setShowIncorrectPasswordDialog}>
-      <DialogContent className="max-w-sm w-[90vw] sm:w-full px-6 py-6">
+      <DialogContent className={`max-w-sm w-[90vw] sm:w-full px-6 py-6 ${isDialogClosing ? 'animate-popdown' : 'animate-popup'}`}>
         <div className="space-y-3 fade-in-scale">
           <div className="flex justify-center mt-1">
             <div className="w-16 h-16 flex items-center justify-center p-1">
@@ -2499,14 +2482,14 @@ export default function EvaluatorDashboard() {
         {/* View Employee Modal Component */}
         <ViewEmployeeModal
           isOpen={isViewEmployeeModalOpen}
-          onClose={() => setIsViewEmployeeModalOpen(false)}
+          onCloseAction={() => setIsViewEmployeeModalOpen(false)}
           employee={selectedEmployeeForView}
-          onStartEvaluation={(employee) => {
+          onStartEvaluationAction={(employee: Employee) => {
             setIsViewEmployeeModalOpen(false);
             setSelectedEmployee(employee);
             setIsEvaluationModalOpen(true);
           }}
-          onViewSubmission={(submission) => {
+          onViewSubmissionAction={(submission: any) => {
             setSelectedSubmission(submission);
             setIsViewSubmissionModalOpen(true);
           }}

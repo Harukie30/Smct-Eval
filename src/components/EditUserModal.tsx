@@ -177,8 +177,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChangeAction={(open: boolean) => !open && onClose()}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-6 bg-blue-100">
+      <Dialog open={isOpen} onOpenChangeAction={onClose}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-6 bg-blue-100 animate-popup">
         <DialogHeader className="pb-6">
           <DialogTitle className="text-xl font-semibold">Edit User Information</DialogTitle>
           <DialogDescription className="text-gray-600">

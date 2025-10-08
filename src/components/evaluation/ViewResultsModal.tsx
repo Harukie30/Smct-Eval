@@ -202,7 +202,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-6">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-6 animate-popup">
         <div className="space-y-8">
           <div className="flex items-center justify-between border-b border-gray-200 pb-4">
             <h2 className="text-3xl font-bold text-gray-900">Evaluation Details</h2>

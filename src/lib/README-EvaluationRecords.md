@@ -8,7 +8,7 @@ This document explains how to use the Evaluation Records API system to store, vi
 2. **`src/hooks/useEvaluationRecords.ts`** - React hooks for easy integration
 3. **`src/components/EvaluationRecordsTable.tsx`** - Comprehensive records table component
 4. **`src/components/EmployeeSignatureApproval.tsx`** - Employee signature approval dialog
-5. **`src/components/EvaluationRecordsExample.tsx`** - Complete example implementation
+5. **Example components removed** - Use the main components directly
 
 ## 🚀 Quick Start
 
