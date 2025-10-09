@@ -252,6 +252,20 @@ export default function AdminDashboard() {
     customMessage: 'Welcome back! Refreshing your admin dashboard data...'
   });
 
+  // Real-time data updates via localStorage events
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // Only refresh if the change is from another tab/window
+      if (e.key === 'submissions' && e.newValue !== e.oldValue) {
+        console.log('📊 Submissions data updated, refreshing admin dashboard...');
+        loadEvaluatedReviews();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // Function to refresh evaluated reviews only
   const handleRefreshEvaluatedReviews = async () => {
     console.log('🔄 Starting evaluated reviews refresh...');

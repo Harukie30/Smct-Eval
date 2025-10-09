@@ -134,6 +134,7 @@ export default function ViewEmployeeModal({
     };
   };
 
+
   // Fetch data when modal opens
   useEffect(() => {
     if (isOpen && employee) {
@@ -145,7 +146,7 @@ export default function ViewEmployeeModal({
 
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
-    <DialogContent className="max-w-7xl mx-8 my-8 max-h-[90vh] overflow-hidden p-6">
+    <DialogContent className="max-w-7xl mx-8 my-8 max-h-[90vh] overflow-hidden p-6 animate-popup">
 
 
      <div className="px-6">
@@ -435,7 +436,8 @@ export default function ViewEmployeeModal({
                               // Show all submissions for this quarter
                               const quarterSubmissions = data.submissions;
                               if (quarterSubmissions.length > 0) {
-                                onViewSubmissionAction(quarterSubmissions[0]);
+                                const submission = quarterSubmissions[0];
+                                onViewSubmissionAction(submission);
                               }
                             }}
                             className="bg-blue-500 text-white hover:bg-blue-600"

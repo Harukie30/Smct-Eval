@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Check, X, AlertTriangle } from 'lucide-react';
 import { EvaluationData } from './types';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/useToast';
 
 interface OverallAssessmentProps {
     data: EvaluationData;
@@ -69,6 +70,8 @@ const getRatingColor = (rating: string) => {
 };
 
 export default function OverallAssessment({ data, updateDataAction, employee, currentUser, onSubmitAction, onPreviousAction, onApproveAction, isApproved = false }: OverallAssessmentProps) {
+    const { error } = useToast();
+    
     // Auto-populate evaluator name when currentUser is available
     useEffect(() => {
         if (currentUser && !data.evaluatorSignature) {
@@ -84,14 +87,18 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
     }, [employee, data.employeeSignature, updateDataAction]);
 
     const handleSubmit = () => {
-        // Save the evaluator's signature from their profile before submitting
-        if (currentUser?.signature) {
-            updateDataAction({ 
-                evaluatorSignatureImage: currentUser.signature,
-                evaluatorSignature: currentUser.name || data.evaluatorSignature,
-                evaluatorSignatureDate: data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
-            });
+        // Validation: Check if evaluator has a signature
+        if (!currentUser?.signature) {
+            error('Please add your signature to your profile before submitting the evaluation.');
+            return;
         }
+
+        // Save the evaluator's signature from their profile before submitting
+        updateDataAction({ 
+            evaluatorSignatureImage: currentUser.signature,
+            evaluatorSignature: currentUser.name || data.evaluatorSignature,
+            evaluatorSignatureDate: data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
+        });
         
         if (onSubmitAction) {
             onSubmitAction();
@@ -105,6 +112,12 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
     };
 
     const handleApprove = () => {
+        // Validation: Check if evaluator has a signature
+        if (!currentUser?.signature) {
+            error('Please add your signature to your profile before approving the evaluation.');
+            return;
+        }
+        
         if (onApproveAction) {
             onApproveAction();
         }
@@ -1623,12 +1636,24 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                 <div className="mt-4">
                                     {/* Approve Button - Only show if not approved */}
                                     {!isApproved && onApproveAction && (
-                                        <Button
-                                            onClick={handleApprove}
-                                            className="bg-green-600 hover:bg-green-700 text-white px-8 py-2 text-sm font-medium"
-                                        >
-                                            Approve Evaluation
-                                        </Button>
+                                        <div className="space-y-2">
+                                            <Button
+                                                onClick={handleApprove}
+                                                disabled={!currentUser?.signature}
+                                                className={`px-8 py-2 text-sm font-medium ${
+                                                    currentUser?.signature 
+                                                        ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                                        : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                                }`}
+                                            >
+                                                {currentUser?.signature ? 'Approve Evaluation' : 'Signature Required'}
+                                            </Button>
+                                            {!currentUser?.signature && (
+                                                <p className="text-xs text-red-600 text-center">
+                                                    Please add your signature to your profile first
+                                                </p>
+                                            )}
+                                        </div>
                                     )}
                                     
                                     {/* Approved Status - Only show if approved */}
@@ -1673,13 +1698,25 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                 >
                     Previous
                 </Button>
-                <Button
-                    onClick={handleSubmit}
-                    className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700"
-                    size="lg"
-                >
-                    Submit Evaluation
-                </Button>
+                <div className="text-center">
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={!currentUser?.signature}
+                        className={`px-8 py-3 text-lg ${
+                            currentUser?.signature 
+                                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        }`}
+                        size="lg"
+                    >
+                        {currentUser?.signature ? 'Submit Evaluation' : 'Signature Required'}
+                    </Button>
+                    {!currentUser?.signature && (
+                        <p className="text-xs text-red-600 mt-2">
+                            Please add your signature to your profile first
+                        </p>
+                    )}
+                </div>
             </div>
             
             {/* Auto-save indicator */}

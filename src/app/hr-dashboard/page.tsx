@@ -230,6 +230,20 @@ export default function HRDashboard() {
     customMessage: 'Welcome back! Refreshing your HR dashboard data...'
   });
 
+  // Real-time data updates via localStorage events
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // Only refresh if the change is from another tab/window
+      if (e.key === 'submissions' && e.newValue !== e.oldValue) {
+        console.log('📊 Submissions data updated, refreshing HR dashboard...');
+        fetchRecentSubmissions();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // Fetch recent submissions from client data service
   const fetchRecentSubmissions = async () => {
     try {

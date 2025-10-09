@@ -306,6 +306,20 @@ export default function EvaluatorDashboard() {
     customMessage: 'Welcome back! Refreshing your evaluator dashboard data...'
   });
 
+  // Real-time data updates via localStorage events
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // Only refresh if the change is from another tab/window
+      if (e.key === 'submissions' && e.newValue !== e.oldValue) {
+        console.log('📊 Submissions data updated, refreshing evaluator dashboard...');
+        refreshSubmissions();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // Overview table state
   const [overviewSearch, setOverviewSearch] = useState('');
 
@@ -1273,15 +1287,25 @@ export default function EvaluatorDashboard() {
 
   // Function to determine correct approval status based on signatures
   const getCorrectApprovalStatus = (submission: any) => {
-    const hasEmployeeSignature = submission.employeeSignature || submission.evaluationData?.employeeSignature;
-    const hasEvaluatorSignature = submission.evaluatorSignature || submission.evaluationData?.evaluatorSignature;
+    // Check for employee signature - only count actual image signatures or approval dates
+    const hasEmployeeSignature = !!(
+      submission.employeeSignature || 
+      submission.employeeApprovedAt
+    );
+    
+    // Check for evaluator signature - only count actual image signatures or approval dates
+    const hasEvaluatorSignature = !!(
+      submission.evaluatorSignature || 
+      submission.evaluatorApprovedAt
+    );
+
 
     if (hasEmployeeSignature && hasEvaluatorSignature) {
       return 'fully_approved';
-    } else if (hasEvaluatorSignature) {
-      return 'evaluator_approved';
     } else if (hasEmployeeSignature) {
-      return 'employee_approved';
+      return 'fully_approved';
+    } else if (hasEvaluatorSignature) {
+      return 'pending';
     } else {
       return 'pending';
     }
@@ -1982,22 +2006,16 @@ export default function EvaluatorDashboard() {
                       options={[
                         'All Statuses',
                         '⏳ Pending',
-                        '👤 Employee Approved',
-                        '👨‍💼 Evaluator Approved',
                         '✓ Fully Approved',
                       ]}
                       value={
                         feedbackApprovalStatusFilter === 'pending' ? '⏳ Pending' :
-                          feedbackApprovalStatusFilter === 'employee_approved' ? '👤 Employee Approved' :
-                            feedbackApprovalStatusFilter === 'evaluator_approved' ? '👨‍💼 Evaluator Approved' :
-                              feedbackApprovalStatusFilter === 'fully_approved' ? '✓ Fully Approved' :
-                                'All Statuses'
+                          feedbackApprovalStatusFilter === 'fully_approved' ? '✓ Fully Approved' :
+                            'All Statuses'
                       }
                       onValueChangeAction={(value) => {
                         const statusMap: Record<string, string> = {
                           '⏳ Pending': 'pending',
-                          '👤 Employee Approved': 'employee_approved',
-                          '👨‍💼 Evaluator Approved': 'evaluator_approved',
                           '✓ Fully Approved': 'fully_approved',
                         };
                         setFeedbackApprovalStatusFilter(value === 'All Statuses' ? '' : statusMap[value] || '');
@@ -2177,16 +2195,12 @@ export default function EvaluatorDashboard() {
                             {/* Approval Status */}
                             <Badge className={
                               feedback.approvalStatus === 'fully_approved' ? 'bg-green-100 text-green-800' :
-                                feedback.approvalStatus === 'employee_approved' ? 'bg-blue-100 text-blue-800' :
-                                  feedback.approvalStatus === 'evaluator_approved' ? 'bg-purple-100 text-purple-800' :
-                                    feedback.approvalStatus === 'rejected' ? 'bg-red-100 text-red-800' :
-                                      'bg-gray-100 text-gray-800'
+                                feedback.approvalStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                                  'bg-gray-100 text-gray-800'
                             }>
                               {feedback.approvalStatus === 'fully_approved' ? '✓ Fully Approved' :
-                                feedback.approvalStatus === 'employee_approved' ? '👤 Employee Approved' :
-                                  feedback.approvalStatus === 'evaluator_approved' ? '👨‍💼 Evaluator Approved' :
-                                    feedback.approvalStatus === 'rejected' ? '❌ Rejected' :
-                                      '⏳ Pending'}
+                                feedback.approvalStatus === 'rejected' ? '❌ Rejected' :
+                                  '⏳ Pending'}
                             </Badge>
                           </TableCell>
                           <TableCell className="px-6 py-3">
@@ -2251,17 +2265,6 @@ export default function EvaluatorDashboard() {
                                 ⎙ Print
                               </Button>
 
-                              {/* Evaluator Approval Button */}
-                              {feedback.approvalStatus === 'employee_approved' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEvaluatorApproval(feedback)}
-                                  className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-300 text-blue-700 border-blue-200"
-                                >
-                                  ✅ Approve
-                                </Button>
-                              )}
 
                               {/* Delete Button */}
                               <Button
@@ -2325,7 +2328,7 @@ export default function EvaluatorDashboard() {
 
         {/* Evaluation Modal */}
         <Dialog open={isEvaluationModalOpen} onOpenChangeAction={setIsEvaluationModalOpen}>
-          <DialogContent className="max-w-7xl max-h-[101vh] overflow-hidden p-2">
+          <DialogContent className="max-w-7xl max-h-[101vh] overflow-hidden p-2 animate-in fade-in-0 zoom-in-95 duration-300">
             {selectedEmployee && (
               <EvaluationForm
                 employee={selectedEmployee}

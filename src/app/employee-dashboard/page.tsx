@@ -424,6 +424,20 @@ export default function EmployeeDashboard() {
     customMessage: 'Welcome back! Refreshing your employee dashboard data...'
   });
 
+  // Real-time data updates via localStorage events
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // Only refresh if the change is from another tab/window
+      if (e.key === 'submissions' && e.newValue !== e.oldValue) {
+        console.log('📊 Submissions data updated, refreshing employee dashboard...');
+        handleRefreshSubmissions();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // Refresh function for Account History table only
   const handleRefreshAccountHistory = async () => {
     setIsRefreshing(true);
@@ -621,6 +635,32 @@ export default function EmployeeDashboard() {
     setIsApprovalDialogOpen(true);
   };
 
+  // Function to update the submissions data with employee signature
+  const updateSubmissionWithEmployeeSignature = async (evaluationId: number, employeeSignature: string) => {
+    try {
+      // Get current submissions from localStorage
+      const currentSubmissions = JSON.parse(localStorage.getItem('submissions') || '[]');
+      
+      // Find and update the specific submission
+      const updatedSubmissions = currentSubmissions.map((submission: any) => {
+        if (submission.id === evaluationId) {
+          return {
+            ...submission,
+            employeeSignature: employeeSignature,
+            employeeApprovedAt: new Date().toISOString(),
+            approvalStatus: 'employee_approved'
+          };
+        }
+        return submission;
+      });
+
+      // Save back to localStorage
+      localStorage.setItem('submissions', JSON.stringify(updatedSubmissions));
+    } catch (error) {
+      console.error('Error updating submission with employee signature:', error);
+    }
+  };
+
   const confirmApproval = async () => {
     if (!evaluationToApprove || !profile?.email) return;
 
@@ -688,6 +728,9 @@ export default function EmployeeDashboard() {
 
       // Also save the approved IDs list
       localStorage.setItem(`approvedEvaluations_${profile.email}`, JSON.stringify([...newApproved]));
+
+      // CRITICAL: Update the main submissions data so evaluator can see the signature
+      await updateSubmissionWithEmployeeSignature(evaluationToApprove.id, employeeSignature);
 
       // Show success animation
       setIsApproving(false);
