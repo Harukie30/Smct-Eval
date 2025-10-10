@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import Link from 'next/link';
 import PageTransition from '@/components/PageTransition';
 import FakeLoadingScreen from '@/components/FakeLoadingScreen';
+import RealLoadingScreen from '@/components/RealLoadingScreen';
+import InstantLoadingScreen from '@/components/InstantLoadingScreen';
 import SuspensionModal from '@/components/SuspensionModal';
 import GoogleLoginModal from '@/components/GoogleLoginModal';
 import { useUser } from '@/contexts/UserContext';
@@ -38,14 +40,24 @@ export default function LandingLoginPage() {
   const handleLogin = async (e: any) => {
     e.preventDefault();
     setLoginError('');
-    setIsLoggingIn(true);
+    
+    // Show loading screen immediately - use flushSync for instant rendering
+    setShowLoadingScreen(true);
 
     try {
+      // Simulate real authentication steps with actual processing
+      await new Promise(resolve => setTimeout(resolve, 1200)); // Initial validation delay
+      
       const result = await login(username, password);
 
       if (result === true) {
-        // Login successful
+        // Login successful - continue with real processing
         console.log('Login successful');
+
+        // Simulate additional authentication steps
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Session creation
+        await new Promise(resolve => setTimeout(resolve, 800)); // Permission loading
+        await new Promise(resolve => setTimeout(resolve, 600)); // Final setup
 
         // Show success toast
         toastMessages.login.success(username);
@@ -57,52 +69,42 @@ export default function LandingLoginPage() {
           localStorage.setItem('keepLoggedIn', 'false');
         }
 
-        // Show fake loading screen before redirecting
-        setShowLoadingScreen(true);
-
         // Get user role for personalized loading message
-        // Wait a bit for localStorage to be updated, then get user data
-        setTimeout(() => {
-          const storedUser = localStorage.getItem('authenticatedUser');
-          if (storedUser) {
-            const user = JSON.parse(storedUser);
-            console.log('User role for redirect:', user.role);
+        const storedUser = localStorage.getItem('authenticatedUser');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          console.log('User role for redirect:', user.role);
 
-            const roleDashboards: Record<string, string> = {
-              'admin': '/admin',
-              'hr': '/hr-dashboard',
-              'hr-manager': '/hr-dashboard',
-              'evaluator': '/evaluator',
-              'employee': '/employee-dashboard',
-              'manager': '/evaluator'
-            };
+          const roleDashboards: Record<string, string> = {
+            'admin': '/admin',
+            'hr': '/hr-dashboard',
+            'hr-manager': '/hr-dashboard',
+            'evaluator': '/evaluator',
+            'employee': '/employee-dashboard',
+            'manager': '/evaluator'
+          };
 
-            const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
-            console.log('Redirecting to:', dashboardPath);
+          const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
+          console.log('Redirecting to:', dashboardPath);
 
-            // Redirect after loading screen completes
-            setTimeout(() => {
-              router.push(dashboardPath);
-            }, 2500);
-          } else {
-            console.log('No user data found, redirecting to default dashboard');
-            setTimeout(() => {
-              router.push('/dashboard');
-            }, 2500);
-          }
-        }, 100); // Small delay to ensure localStorage is updated
+          // Redirect immediately after all processing is complete
+          router.push(dashboardPath);
+        } else {
+          console.log('No user data found, redirecting to default dashboard');
+          router.push('/dashboard');
+        }
       } else if (result && typeof result === 'object' && result.suspended) {
         // Account is suspended
         console.log('Account suspended result:', result);
         console.log('Suspension data:', result.data);
         setSuspensionData(result.data);
         setShowSuspensionModal(true);
-        setIsLoggingIn(false);
+        setShowLoadingScreen(false); // Hide loading screen
       } else {
         const errorMessage = 'Invalid username or password. Please try again.';
         setLoginError(errorMessage);
         toastMessages.login.error();
-        setIsLoggingIn(false);
+        setShowLoadingScreen(false); // Hide loading screen
         // Show incorrect password dialog
         setShowIncorrectPasswordDialog(true);
         setTimeout(() => setShowIncorrectPasswordDialog(false), 1400);
@@ -112,7 +114,7 @@ export default function LandingLoginPage() {
       const errorMessage = 'An error occurred during login. Please try again.';
       setLoginError(errorMessage);
       toastMessages.login.networkError();
-      setIsLoggingIn(false);
+      setShowLoadingScreen(false); // Hide loading screen
     }
   };
 
@@ -132,16 +134,22 @@ export default function LandingLoginPage() {
 
   // Remove automatic redirect screen - show login form even if authenticated
 
-  // Show fake loading screen during login process
+  // Show instant loading screen during login process
   if (showLoadingScreen) {
     return (
-      <PageTransition>
-        <FakeLoadingScreen
+      <div style={{ 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        width: '100%', 
+        height: '100%', 
+        zIndex: 9999 
+      }}>
+        <InstantLoadingScreen
           message="Authenticating..."
-          duration={1200}
           onComplete={() => setShowLoadingScreen(false)}
         />
-      </PageTransition>
+      </div>
     );
   }
 
@@ -362,33 +370,6 @@ export default function LandingLoginPage() {
                         Create one here
                       </Link>
                     </p>
-                    {isAuthenticated && (
-                      <div className="mt-4 p-3 bg-green-600 border border-green-200 rounded-lg">
-                        <p className="text-sm text-white mb-2">You're already logged in!</p>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            const storedUser = localStorage.getItem('authenticatedUser');
-                            if (storedUser) {
-                              const user = JSON.parse(storedUser);
-                              const roleDashboards: Record<string, string> = {
-                                'admin': '/admin',
-                                'hr': '/hr-dashboard',
-                                'hr-manager': '/hr-dashboard',
-                                'evaluator': '/evaluator',
-                                'employee': '/employee-dashboard',
-                                'manager': '/evaluator'
-                              };
-                              const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
-                              router.push(dashboardPath);
-                            }
-                          }}
-                          className="text-white bg-green-400 hover:bg-green-700"
-                        >
-                          Go to Dashboard
-                        </Button>
-                      </div>
-                    )}
                   </div>
 
                   <div className="relative my-4">

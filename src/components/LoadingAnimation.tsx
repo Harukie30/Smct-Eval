@@ -2,15 +2,18 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { Skeleton, SkeletonText, SkeletonOverlay } from '@/components/ui/skeleton';
 
 interface LoadingAnimationProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
-  variant?: 'spinner' | 'dots' | 'pulse' | 'wave';
+  variant?: 'spinner' | 'dots' | 'pulse' | 'wave' | 'skeleton' | 'text' | 'overlay';
   color?: 'blue' | 'green' | 'purple' | 'red' | 'yellow' | 'gray' | 'white';
   customGif?: string;
   className?: string;
   showText?: boolean;
   text?: string;
+  lines?: number;
+  message?: string;
 }
 
 export default function LoadingAnimation({
@@ -20,7 +23,9 @@ export default function LoadingAnimation({
   customGif,
   className,
   showText = false,
-  text = 'Loading...'
+  text = 'Loading...',
+  lines = 3,
+  message = 'Loading...'
 }: LoadingAnimationProps) {
   // Size configurations
   const sizeConfig = {
@@ -43,6 +48,43 @@ export default function LoadingAnimation({
 
   const currentSize = sizeConfig[size];
   const currentColor = colorConfig[color];
+
+  // Skeleton variants
+  if (variant === 'skeleton') {
+    return (
+      <div className={cn('flex items-center justify-center', className)}>
+        <Skeleton className={cn('rounded-full', currentSize.container)} />
+        {showText && (
+          <span className={cn('ml-2 font-medium text-gray-600', currentSize.text)}>
+            {text}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  if (variant === 'text') {
+    return (
+      <div className={cn('flex items-center justify-center', className)}>
+        <SkeletonText lines={lines} />
+        {showText && (
+          <span className={cn('ml-2 font-medium text-gray-600', currentSize.text)}>
+            {text}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  if (variant === 'overlay') {
+    return (
+      <SkeletonOverlay 
+        message={message}
+        showSkeleton={true}
+        className={className}
+      />
+    );
+  }
 
   // Custom GIF variant
   if (customGif) {

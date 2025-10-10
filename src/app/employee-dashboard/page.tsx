@@ -61,6 +61,9 @@ export default function EmployeeDashboard() {
   const [selectedQuarter, setSelectedQuarter] = useState<string>('');
   const [accountHistory, setAccountHistory] = useState<any[]>([]);
   const [accountHistorySearchTerm, setAccountHistorySearchTerm] = useState('');
+  const [deletedEvaluations, setDeletedEvaluations] = useState<any[]>([]);
+  const [deletedEvaluationsSearchTerm, setDeletedEvaluationsSearchTerm] = useState('');
+  const [isRefreshingDeletedEvaluations, setIsRefreshingDeletedEvaluations] = useState(false);
   // Comments & feedback functionality removed
 
   // Logout confirmation states
@@ -130,6 +133,94 @@ export default function EmployeeDashboard() {
       return [];
     }
   };
+
+  // Function to load deleted evaluations
+  const loadDeletedEvaluations = () => {
+    try {
+      // Load from localStorage or create sample data
+      const deletedEvals = JSON.parse(localStorage.getItem('deletedEvaluations') || '[]');
+      
+      // Filter out evaluations older than 2 weeks
+      const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+      const recentDeletedEvals = deletedEvals.filter((evaluation: any) => 
+        new Date(evaluation.deletedAt) > twoWeeksAgo
+      );
+
+      // Add some sample deleted evaluations for demonstration
+      const sampleDeletedEvals = [
+        {
+          id: 'deleted-1',
+          evaluationId: 'eval-123',
+          title: 'Q3 2024 Performance Review',
+          category: 'Quarterly Review',
+          rating: 4.2,
+          deletedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          deletedBy: 'John Smith',
+          reason: 'Accidental deletion',
+          originalDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+          supervisor: 'Sarah Johnson',
+          status: 'deleted',
+          canRestore: true
+        },
+        {
+          id: 'deleted-2',
+          evaluationId: 'eval-124',
+          title: 'Mid-Year Assessment',
+          category: 'Mid-Year Review',
+          rating: 3.8,
+          deletedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          deletedBy: 'System',
+          reason: 'Data corruption',
+          originalDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+          supervisor: 'Mike Wilson',
+          status: 'deleted',
+          canRestore: true
+        },
+        {
+          id: 'deleted-3',
+          evaluationId: 'eval-125',
+          title: 'Annual Performance Review',
+          category: 'Annual Review',
+          rating: 4.5,
+          deletedAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
+          deletedBy: 'HR Manager',
+          reason: 'Policy violation',
+          originalDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          supervisor: 'Lisa Brown',
+          status: 'deleted',
+          canRestore: false
+        }
+      ];
+
+      return [...recentDeletedEvals, ...sampleDeletedEvals];
+    } catch (error) {
+      console.error('Error loading deleted evaluations:', error);
+      return [];
+    }
+  };
+
+  // Helper functions for deleted evaluations
+  const getFilteredDeletedEvaluations = () => {
+    if (!deletedEvaluationsSearchTerm) return deletedEvaluations;
+
+    return deletedEvaluations.filter(item =>
+      item.title.toLowerCase().includes(deletedEvaluationsSearchTerm.toLowerCase()) ||
+      item.category.toLowerCase().includes(deletedEvaluationsSearchTerm.toLowerCase()) ||
+      item.supervisor.toLowerCase().includes(deletedEvaluationsSearchTerm.toLowerCase()) ||
+      item.deletedBy.toLowerCase().includes(deletedEvaluationsSearchTerm.toLowerCase()) ||
+      item.reason.toLowerCase().includes(deletedEvaluationsSearchTerm.toLowerCase())
+    );
+  };
+
+  const getDeletedStatusColor = (status: string) => {
+    switch (status) {
+      case 'deleted': return 'bg-red-100 text-red-800';
+      case 'restored': return 'bg-green-100 text-green-800';
+      case 'expired': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
 
   // Comments & feedback functionality removed
 
@@ -452,6 +543,10 @@ export default function EmployeeDashboard() {
         // Load only account history data
         const history = loadAccountHistory(profile.email);
         setAccountHistory(history);
+
+        // Load deleted evaluations data
+        const deletedEvals = loadDeletedEvaluations();
+        setDeletedEvaluations(deletedEvals);
         console.log('Account history refreshed:', history.length, 'items');
 
         // Show success toast
@@ -462,6 +557,31 @@ export default function EmployeeDashboard() {
     } finally {
       setIsRefreshing(false);
       setIsRefreshingAccountHistory(false);
+      setShowRefreshingDialog(false);
+    }
+  };
+
+  const handleRefreshDeletedEvaluations = async () => {
+    setIsRefreshing(true);
+    setIsRefreshingDeletedEvaluations(true);
+    setRefreshingMessage('Refreshing deleted evaluations...');
+    setShowRefreshingDialog(true);
+    try {
+      // Add a small delay to simulate loading
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Load deleted evaluations data
+      const deletedEvals = loadDeletedEvaluations();
+      setDeletedEvaluations(deletedEvals);
+      console.log('Deleted evaluations refreshed:', deletedEvals.length, 'items');
+
+      // Show success toast
+      success('Deleted evaluations refreshed successfully', 'All deleted evaluation records have been updated');
+    } catch (error) {
+      console.error('Error refreshing deleted evaluations:', error);
+    } finally {
+      setIsRefreshing(false);
+      setIsRefreshingDeletedEvaluations(false);
       setShowRefreshingDialog(false);
     }
   };
@@ -1033,23 +1153,23 @@ export default function EmployeeDashboard() {
                   <div className="space-y-2">
                     {/* Table Header Skeleton */}
                     <div className="flex space-x-3 py-2 border-b">
-                      <Skeleton className="h-3 w-20 bg-gray-300" />
-                      <Skeleton className="h-3 w-12 bg-gray-300" />
-                      <Skeleton className="h-3 w-8 bg-gray-300" />
-                      <Skeleton className="h-3 w-12 bg-gray-300" />
-                      <Skeleton className="h-3 w-10 bg-gray-300" />
-                      <Skeleton className="h-3 w-12 bg-gray-300" />
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-12" />
+                      <Skeleton className="h-3 w-8" />
+                      <Skeleton className="h-3 w-12" />
+                      <Skeleton className="h-3 w-10" />
+                      <Skeleton className="h-3 w-12" />
                     </div>
                     
                     {/* Table Rows Skeleton */}
                     {Array.from({ length: 3 }).map((_, i) => (
                       <div key={i} className="flex items-center space-x-3 py-2 border-b">
-                        <Skeleton className="h-3 w-16 bg-gray-300" />
-                        <Skeleton className="h-3 w-12 bg-gray-300" />
-                        <Skeleton className="h-3 w-8 bg-gray-300" />
-                        <Skeleton className="h-3 w-12 bg-gray-300" />
-                        <Skeleton className="h-3 w-10 bg-gray-300" />
-                        <Skeleton className="h-6 w-12 bg-gray-300" />
+                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-3 w-12" />
+                        <Skeleton className="h-3 w-8" />
+                        <Skeleton className="h-3 w-12" />
+                        <Skeleton className="h-3 w-10" />
+                        <Skeleton className="h-6 w-12" />
                       </div>
                     ))}
                   </div>
@@ -1134,22 +1254,22 @@ export default function EmployeeDashboard() {
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
                   <Card className="h-fit">
                     <CardHeader>
-                      <Skeleton className="h-6 w-48 bg-gray-300" />
+                      <Skeleton className="h-6 w-48" />
                     </CardHeader>
                     <CardContent>
-                      <Skeleton className="h-64 w-full bg-gray-300" />
+                      <Skeleton className="h-64 w-full" />
                     </CardContent>
                   </Card>
                   <Card className="h-fit">
                     <CardHeader>
-                      <Skeleton className="h-6 w-40 bg-gray-300" />
+                      <Skeleton className="h-6 w-40" />
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        <Skeleton className="h-4 w-full bg-gray-300" />
-                        <Skeleton className="h-4 w-3/4 bg-gray-300" />
-                        <Skeleton className="h-4 w-1/2 bg-gray-300" />
-                        <Skeleton className="h-4 w-5/6 bg-gray-300" />
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-4 w-5/6" />
                       </div>
                     </CardContent>
                   </Card>
@@ -1159,19 +1279,19 @@ export default function EmployeeDashboard() {
                 <Card>
                   <CardHeader>
                     <div className="flex justify-between items-center">
-                      <Skeleton className="h-6 w-48 bg-gray-300" />
-                      <Skeleton className="h-8 w-24 bg-gray-300" />
+                      <Skeleton className="h-6 w-48" />
+                      <Skeleton className="h-8 w-24" />
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <div key={i} className="flex items-center space-x-4">
-                          <Skeleton className="h-4 w-32 bg-gray-300" />
-                          <Skeleton className="h-4 w-24 bg-gray-300" />
-                          <Skeleton className="h-4 w-20 bg-gray-300" />
-                          <Skeleton className="h-4 w-16 bg-gray-300" />
-                          <Skeleton className="h-4 w-12 bg-gray-300" />
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-4 w-16" />
+                          <Skeleton className="h-4 w-12" />
                         </div>
                       ))}
                     </div>
@@ -1758,25 +1878,25 @@ export default function EmployeeDashboard() {
                           <div className="space-y-2">
                             {/* Table Header Skeleton */}
                             <div className="flex space-x-3 py-2 border-b">
-                              <Skeleton className="h-3 w-12 bg-gray-300" />
-                              <Skeleton className="h-3 w-18 bg-gray-300" />
-                              <Skeleton className="h-3 w-14 bg-gray-300" />
-                              <Skeleton className="h-3 w-12 bg-gray-300" />
-                              <Skeleton className="h-3 w-16 bg-gray-300" />
-                              <Skeleton className="h-3 w-10 bg-gray-300" />
-                              <Skeleton className="h-3 w-12 bg-gray-300" />
+                              <Skeleton className="h-3 w-12" />
+                              <Skeleton className="h-3 w-18" />
+                              <Skeleton className="h-3 w-14" />
+                              <Skeleton className="h-3 w-12" />
+                              <Skeleton className="h-3 w-16" />
+                              <Skeleton className="h-3 w-10" />
+                              <Skeleton className="h-3 w-12" />
                             </div>
                             
                             {/* Table Rows Skeleton */}
                             {Array.from({ length: 3 }).map((_, i) => (
                               <div key={i} className="flex items-center space-x-3 py-2 border-b">
-                                <Skeleton className="h-4 w-8 bg-gray-300" />
-                                <Skeleton className="h-3 w-6 bg-gray-300" />
-                                <Skeleton className="h-3 w-12 bg-gray-300" />
-                                <Skeleton className="h-3 w-10 bg-gray-300" />
-                                <Skeleton className="h-3 w-14 bg-gray-300" />
-                                <Skeleton className="h-3 w-12 bg-gray-300" />
-                                <Skeleton className="h-6 w-14 bg-gray-300" />
+                                <Skeleton className="h-4 w-8" />
+                                <Skeleton className="h-3 w-6" />
+                                <Skeleton className="h-3 w-12" />
+                                <Skeleton className="h-3 w-10" />
+                                <Skeleton className="h-3 w-14" />
+                                <Skeleton className="h-3 w-12" />
+                                <Skeleton className="h-6 w-14" />
                               </div>
                             ))}
                           </div>
@@ -2017,27 +2137,27 @@ export default function EmployeeDashboard() {
                           <div className="space-y-2">
                             {/* Table Header Skeleton */}
                             <div className="flex space-x-3 py-2 border-b">
-                              <Skeleton className="h-3 w-12 bg-gray-300" />
-                              <Skeleton className="h-3 w-14 bg-gray-300" />
-                              <Skeleton className="h-3 w-12 bg-gray-300" />
-                              <Skeleton className="h-3 w-12 bg-gray-300" />
-                              <Skeleton className="h-3 w-10 bg-gray-300" />
-                              <Skeleton className="h-3 w-18 bg-gray-300" />
-                              <Skeleton className="h-3 w-14 bg-gray-300" />
-                              <Skeleton className="h-3 w-12 bg-gray-300" />
+                              <Skeleton className="h-3 w-12" />
+                              <Skeleton className="h-3 w-14" />
+                              <Skeleton className="h-3 w-12" />
+                              <Skeleton className="h-3 w-12" />
+                              <Skeleton className="h-3 w-10" />
+                              <Skeleton className="h-3 w-18" />
+                              <Skeleton className="h-3 w-14" />
+                              <Skeleton className="h-3 w-12" />
                             </div>
                             
                             {/* Table Rows Skeleton */}
                             {Array.from({ length: 4 }).map((_, i) => (
                               <div key={i} className="flex items-center space-x-3 py-2 border-b">
-                                <Skeleton className="h-3 w-14 bg-gray-300" />
-                                <Skeleton className="h-3 w-16 bg-gray-300" />
-                                <Skeleton className="h-3 w-12 bg-gray-300" />
-                                <Skeleton className="h-3 w-8 bg-gray-300" />
-                                <Skeleton className="h-3 w-10 bg-gray-300" />
-                                <Skeleton className="h-3 w-14 bg-gray-300" />
-                                <Skeleton className="h-3 w-12 bg-gray-300" />
-                                <Skeleton className="h-6 w-12 bg-gray-300" />
+                                <Skeleton className="h-3 w-14" />
+                                <Skeleton className="h-3 w-16" />
+                                <Skeleton className="h-3 w-12" />
+                                <Skeleton className="h-3 w-8" />
+                                <Skeleton className="h-3 w-10" />
+                                <Skeleton className="h-3 w-14" />
+                                <Skeleton className="h-3 w-12" />
+                                <Skeleton className="h-6 w-12" />
                               </div>
                             ))}
                           </div>
@@ -2207,25 +2327,25 @@ export default function EmployeeDashboard() {
             {isRefreshingAccountHistory || loading ? (
               <Card>
                 <CardHeader>
-                  <Skeleton className="h-4 w-48 bg-gray-300" />
-                  <Skeleton className="h-3 w-60 bg-gray-300" />
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-3 w-60" />
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     {/* Tabs Skeleton */}
                     <div className="flex space-x-2">
-                      <Skeleton className="h-6 w-24 bg-gray-300" />
-                      <Skeleton className="h-6 w-20 bg-gray-300" />
+                      <Skeleton className="h-6 w-24" />
+                      <Skeleton className="h-6 w-20" />
                     </div>
                     
                     {/* Table Content Skeleton */}
                     <div className="space-y-2">
                       {Array.from({ length: 4 }).map((_, i) => (
                         <div key={i} className="flex items-center space-x-3 py-2 border-b">
-                          <Skeleton className="h-3 w-20 bg-gray-300" />
-                          <Skeleton className="h-3 w-16 bg-gray-300" />
-                          <Skeleton className="h-3 w-14 bg-gray-300" />
-                          <Skeleton className="h-3 w-12 bg-gray-300" />
+                          <Skeleton className="h-3 w-20" />
+                          <Skeleton className="h-3 w-16" />
+                          <Skeleton className="h-3 w-14" />
+                          <Skeleton className="h-3 w-12" />
                         </div>
                       ))}
                     </div>
@@ -2239,6 +2359,14 @@ export default function EmployeeDashboard() {
               <CardDescription>Track suspension records and account activity</CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Tabbed Interface for Account History */}
+              <Tabs defaultValue="account-history" className="w-full">
+                <TabsList className="grid w-1/2 bg-gray-200 grid-cols-2">
+                  <TabsTrigger value="account-history">📋 Account History</TabsTrigger>
+                  <TabsTrigger value="deleted-evaluations">🗑️ Deleted Evaluations</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="account-history" className="mt-6">
 
                 <div className="mt-6">
                   {/* Refreshing Dialog for Account History Table */}
@@ -2434,6 +2562,175 @@ export default function EmployeeDashboard() {
                     </div>
                   )}
                 </div>
+                </TabsContent>
+
+                <TabsContent value="deleted-evaluations" className="mt-6">
+                  <div className="mt-6">
+                    {/* Search Bar */}
+                    <div className="mb-6 w-1/2">
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Search deleted evaluations..."
+                          value={deletedEvaluationsSearchTerm}
+                          onChange={(e) => setDeletedEvaluationsSearchTerm(e.target.value)}
+                          className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        />
+                        {deletedEvaluationsSearchTerm && (
+                          <button
+                            onClick={() => setDeletedEvaluationsSearchTerm('')}
+                            className="absolute inset-y-0 font-medium px-2 right-0 pr-3 flex items-center"
+                          >
+                            <svg className="h-5 w-5 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Deleted Evaluations Actions */}
+                    <div className="mb-4 flex justify-between items-center">
+                      <div className="text-sm text-gray-600">
+                        Showing {getFilteredDeletedEvaluations().length} of {deletedEvaluations.length} deleted evaluations
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRefreshDeletedEvaluations}
+                        disabled={isRefreshingDeletedEvaluations}
+                        className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white"
+                      >
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>Refresh</span>
+                      </Button>
+                    </div>
+
+                    {/* Deleted Evaluations Table */}
+                    {isRefreshingDeletedEvaluations ? (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Evaluation</TableHead>
+                              <TableHead>Category</TableHead>
+                              <TableHead>Rating</TableHead>
+                              <TableHead>Deleted Date</TableHead>
+                              <TableHead>Deleted By</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {Array.from({ length: 5 }).map((_, index) => (
+                              <TableRow key={`skeleton-deleted-${index}`}>
+                                <TableCell>
+                                  <div className="space-y-1">
+                                    <Skeleton className="h-4 w-32" />
+                                    <Skeleton className="h-3 w-24" />
+                                  </div>
+                                </TableCell>
+                                <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                                <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                                <TableCell><Skeleton className="h-8 w-20" /></TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Evaluation</TableHead>
+                              <TableHead>Category</TableHead>
+                              <TableHead>Rating</TableHead>
+                              <TableHead>Deleted Date</TableHead>
+                              <TableHead>Deleted By</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {getFilteredDeletedEvaluations().map((item) => (
+                              <TableRow key={item.id}>
+                                <TableCell>
+                                  <div>
+                                    <div className="font-medium">{item.title}</div>
+                                    <div className="text-sm text-gray-500">Supervisor: {item.supervisor}</div>
+                                  </div>
+                                </TableCell>
+                                <TableCell><Badge variant="outline">{item.category}</Badge></TableCell>
+                                <TableCell className="font-medium">{item.rating}/5</TableCell>
+                                <TableCell className="text-sm">{new Date(item.deletedAt).toLocaleDateString()}</TableCell>
+                                <TableCell className="text-sm">{item.deletedBy}</TableCell>
+                                <TableCell>
+                                  <Badge className={getDeletedStatusColor(item.status)}>{item.status.toUpperCase()}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {item.canRestore ? (
+                                    <Button variant="outline" size="sm" className="bg-green-500 text-white hover:bg-green-700 hover:text-white">
+                                      Restore
+                                    </Button>
+                                  ) : (
+                                    <span className="text-sm text-gray-500">Cannot restore</span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+
+                    {/* Empty State */}
+                    {!isRefreshingDeletedEvaluations && getFilteredDeletedEvaluations().length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <div className="text-4xl mb-4">🗑️</div>
+                        <p className="text-lg font-medium">
+                          {deletedEvaluationsSearchTerm ? 'No matching deleted evaluations found' : 'No deleted evaluations found'}
+                        </p>
+                        <p className="text-sm">
+                          {deletedEvaluationsSearchTerm ? 'Try adjusting your search terms' : 'Deleted evaluations will appear here for 2 weeks after deletion'}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Deleted Evaluations Summary */}
+                    {!isRefreshingDeletedEvaluations && deletedEvaluations.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-6 border-t mt-6">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-red-600">{deletedEvaluations.filter(item => item.status === 'deleted').length}</div>
+                          <div className="text-sm text-gray-600">Currently Deleted</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">{deletedEvaluations.filter(item => item.status === 'restored').length}</div>
+                          <div className="text-sm text-gray-600">Restored</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">{deletedEvaluations.filter(item => item.canRestore).length}</div>
+                          <div className="text-sm text-gray-600">Can Restore</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-gray-600">{deletedEvaluations.length}</div>
+                          <div className="text-sm text-gray-600">Total Records</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
             )}

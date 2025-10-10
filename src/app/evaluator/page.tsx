@@ -29,6 +29,7 @@ import { AlertDialog } from '@/components/ui/alert-dialog';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/useToast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type Feedback = {
   id: number;
@@ -219,13 +220,89 @@ export default function EvaluatorDashboard() {
     // Auto-refresh data when switching to specific tabs (no modals)
     if (tabId === 'feedback') {
       // Refresh evaluation records data
-      refreshEvaluatorData();
+      console.log('🔄 Starting feedback refresh...');
+      setIsFeedbackRefreshing(true);
+      
+      // Add a 1-second delay to make skeleton visible
+      setTimeout(() => {
+        refreshEvaluatorData().then(() => {
+          console.log('✅ Feedback refresh completed');
+          // Show success toast for feedback refresh
+          success(
+            'Evaluation Records Refreshed',
+            'Feedback data has been updated'
+          );
+        }).finally(() => {
+          console.log('🏁 Setting isFeedbackRefreshing to false');
+          setIsFeedbackRefreshing(false);
+        });
+      }, 1000); // 1-second delay to see skeleton properly
     } else if (tabId === 'employees') {
       // Refresh employees data
-      refreshEvaluatorData();
+      console.log('🔄 Starting employees refresh...');
+      setIsEmployeesRefreshing(true);
+      
+      // Add a 1-second delay to make skeleton visible
+      setTimeout(() => {
+        refreshEvaluatorData().then(() => {
+          console.log('✅ Employees refresh completed');
+          // Show success toast for employees refresh
+          success(
+            'Employees Refreshed',
+            'Employee data has been updated'
+          );
+        }).finally(() => {
+          console.log('🏁 Setting isEmployeesRefreshing to false');
+          setIsEmployeesRefreshing(false);
+        });
+      }, 1000); // 1-second delay to see skeleton properly
+    } else if (tabId === 'account-history') {
+      // Refresh account history data
+      console.log('🔄 Starting account history refresh...');
+      setIsAccountHistoryRefreshing(true);
+      setTimeout(() => {
+        const history = loadAccountHistory();
+        setAccountHistory(history);
+        console.log('✅ Account history refresh completed');
+        success(
+          'Account History Refreshed',
+          'Account history data has been updated'
+        );
+        setIsAccountHistoryRefreshing(false);
+      }, 1000); // 1-second delay to see skeleton properly
+    } else if (tabId === 'violations-storage') {
+      // Refresh violations storage data
+      console.log('🔄 Starting violations storage refresh...');
+      setIsViolationsStorageRefreshing(true);
+      setTimeout(() => {
+        const storage = loadViolationsStorage();
+        setViolationsStorage(storage);
+        console.log('✅ Violations storage refresh completed');
+        success(
+          'Violations Storage Refreshed',
+          'Storage information has been updated'
+        );
+        setIsViolationsStorageRefreshing(false);
+      }, 1000); // 1-second delay to see skeleton properly
     } else if (tabId === 'overview') {
       // Refresh overview data when switching to overview tab
-      refreshEvaluatorData();
+      console.log('🔄 Starting overview refresh...');
+      setIsRefreshing(true);
+      
+      // Add a 2-second delay to make skeleton visible
+      setTimeout(() => {
+        refreshEvaluatorData().then(() => {
+          console.log('✅ Overview refresh completed');
+          // Show success toast for overview refresh
+          success(
+            'Overview Refreshed',
+            'Recent submissions data has been updated'
+          );
+        }).finally(() => {
+          console.log('🏁 Setting isRefreshing to false');
+          setIsRefreshing(false);
+        });
+      }, 1000); // 2-second delay to see skeleton properly
     }
   };
   const [currentPeriod, setCurrentPeriod] = useState('');
@@ -333,7 +410,19 @@ export default function EvaluatorDashboard() {
   const [feedbackSort, setFeedbackSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isEmployeesRefreshing, setIsEmployeesRefreshing] = useState(false);
+  const [isFeedbackRefreshing, setIsFeedbackRefreshing] = useState(false);
+  const [isAccountHistoryRefreshing, setIsAccountHistoryRefreshing] = useState(false);
+  const [isViolationsStorageRefreshing, setIsViolationsStorageRefreshing] = useState(false);
   const [employeeDataRefresh, setEmployeeDataRefresh] = useState(0);
+  
+  // Account History state
+  const [accountHistory, setAccountHistory] = useState<any[]>([]);
+  const [accountHistorySearchTerm, setAccountHistorySearchTerm] = useState('');
+  
+  // Violations Storage state
+  const [violationsStorage, setViolationsStorage] = useState<any[]>([]);
+  const [violationsStorageSearchTerm, setViolationsStorageSearchTerm] = useState('');
 
 
   // Delete confirmation modal state
@@ -449,9 +538,22 @@ export default function EvaluatorDashboard() {
   // Function to handle refresh with modal
   const handleEvaluationRecordsRefresh = async () => {
     try {
-      await refreshSubmissions();
+      console.log('🔄 Starting manual refresh...');
+      setIsFeedbackRefreshing(true);
+      
+      // Add a 1-second delay to make skeleton visible
+      setTimeout(async () => {
+        await refreshSubmissions();
+        console.log('✅ Manual refresh completed');
+        success(
+          'Evaluation Records Refreshed',
+          'Feedback data has been updated'
+        );
+        setIsFeedbackRefreshing(false);
+      }, 1000); // 1-second delay to see skeleton properly
     } catch (error) {
       console.error('Error during evaluation records refresh:', error);
+      setIsFeedbackRefreshing(false);
     }
   };
 
@@ -460,12 +562,276 @@ export default function EvaluatorDashboard() {
     handleEvaluationRecordsRefresh();
   };
 
+  // Function to load account history (all employees' violations/suspensions)
+  const loadAccountHistory = () => {
+    try {
+      // Load all suspended employees data (violations/suspensions)
+      const suspendedEmployees = JSON.parse(localStorage.getItem('suspendedEmployees') || '[]');
+      
+      // Format all suspension/violation records
+      const history = suspendedEmployees.map((violation: any) => ({
+        id: `violation-${violation.id}`,
+        type: 'violation',
+        title: 'Policy Violation',
+        description: violation.suspensionReason,
+        date: violation.suspensionDate,
+        status: violation.status,
+        severity: 'high',
+        actionBy: violation.suspendedBy,
+        employeeName: violation.name,
+        employeeEmail: violation.email
+      }));
+
+      // Add some sample feedback records for variety
+      const sampleFeedback = [
+        {
+          id: 'feedback-1',
+          type: 'feedback',
+          title: 'Performance Review',
+          description: 'Quarterly performance evaluation completed',
+          date: new Date().toISOString(),
+          status: 'completed',
+          severity: 'low',
+          actionBy: 'HR Manager',
+          employeeName: 'John Doe',
+          employeeEmail: 'john.doe@company.com'
+        },
+        {
+          id: 'feedback-2',
+          type: 'feedback',
+          title: 'Goal Setting',
+          description: 'Annual goals reviewed and updated',
+          date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'completed',
+          severity: 'low',
+          actionBy: 'Supervisor',
+          employeeName: 'Jane Smith',
+          employeeEmail: 'jane.smith@company.com'
+        }
+      ];
+
+      return [...history, ...sampleFeedback];
+    } catch (error) {
+      console.error('Error loading account history:', error);
+      return [];
+    }
+  };
+
+  // Helper functions for account history
+  const getFilteredAccountHistory = () => {
+    if (!accountHistorySearchTerm) return accountHistory;
+
+    return accountHistory.filter(item =>
+      item.title.toLowerCase().includes(accountHistorySearchTerm.toLowerCase()) ||
+      item.description.toLowerCase().includes(accountHistorySearchTerm.toLowerCase()) ||
+      item.actionBy.toLowerCase().includes(accountHistorySearchTerm.toLowerCase()) ||
+      item.type.toLowerCase().includes(accountHistorySearchTerm.toLowerCase()) ||
+      item.employeeName.toLowerCase().includes(accountHistorySearchTerm.toLowerCase())
+    );
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'high': return 'bg-red-100 text-red-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getAccountStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'suspended': return 'bg-red-100 text-red-800';
+      case 'reinstated': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'violation': return '⚠️';
+      case 'feedback': return '💬';
+      case 'review': return '📝';
+      default: return '📋';
+    }
+  };
+
+  // Function to handle account history refresh
+  const handleAccountHistoryRefresh = async () => {
+    try {
+      console.log('🔄 Starting account history refresh...');
+      setIsAccountHistoryRefreshing(true);
+      
+      // Add a 1-second delay to make skeleton visible
+      setTimeout(async () => {
+        const history = loadAccountHistory();
+        setAccountHistory(history);
+        console.log('✅ Account history refresh completed');
+        success(
+          'Account History Refreshed',
+          'Account history data has been updated'
+        );
+        setIsAccountHistoryRefreshing(false);
+      }, 1000); // 1-second delay to see skeleton properly
+    } catch (error) {
+      console.error('Error during account history refresh:', error);
+      setIsAccountHistoryRefreshing(false);
+    }
+  };
+
+  // Function to load suspended employee records
+  const loadViolationsStorage = () => {
+    try {
+      // Load suspended employees data
+      const suspendedEmployees = JSON.parse(localStorage.getItem('suspendedEmployees') || '[]');
+      
+      // Format suspended employee records
+      const suspendedRecords = suspendedEmployees.map((employee: any) => ({
+        id: `suspended-${employee.id}`,
+        employeeName: employee.name,
+        employeeEmail: employee.email,
+        department: employee.department,
+        position: employee.position,
+        suspensionReason: employee.suspensionReason,
+        suspensionDate: employee.suspensionDate,
+        suspendedBy: employee.suspendedBy,
+        status: employee.status,
+        severity: employee.severity || 'high',
+        lastUpdated: employee.lastUpdated || new Date().toISOString()
+      }));
+
+      // Add some sample violation records for demonstration
+      const sampleViolations = [
+        {
+          id: 'violation-1',
+          employeeName: 'John Smith',
+          employeeEmail: 'john.smith@company.com',
+          department: 'IT',
+          position: 'Software Developer',
+          suspensionReason: 'Unauthorized access to confidential data',
+          suspensionDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          suspendedBy: 'HR Manager',
+          status: 'suspended',
+          severity: 'high',
+          lastUpdated: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: 'violation-2',
+          employeeName: 'Sarah Johnson',
+          employeeEmail: 'sarah.johnson@company.com',
+          department: 'Finance',
+          position: 'Accountant',
+          suspensionReason: 'Policy violation - inappropriate workplace behavior',
+          suspensionDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+          suspendedBy: 'Department Head',
+          status: 'reinstated',
+          severity: 'medium',
+          lastUpdated: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: 'violation-3',
+          employeeName: 'Mike Wilson',
+          employeeEmail: 'mike.wilson@company.com',
+          department: 'Operations',
+          position: 'Operations Manager',
+          suspensionReason: 'Repeated tardiness and unprofessional conduct',
+          suspensionDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+          suspendedBy: 'HR Director',
+          status: 'suspended',
+          severity: 'medium',
+          lastUpdated: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString()
+        }
+      ];
+
+      return [...suspendedRecords, ...sampleViolations];
+    } catch (error) {
+      console.error('Error loading suspended records:', error);
+      return [];
+    }
+  };
+
+  // Helper functions for suspended records
+  const getFilteredViolationsStorage = () => {
+    if (!violationsStorageSearchTerm) return violationsStorage;
+
+    return violationsStorage.filter(item =>
+      item.employeeName.toLowerCase().includes(violationsStorageSearchTerm.toLowerCase()) ||
+      item.employeeEmail.toLowerCase().includes(violationsStorageSearchTerm.toLowerCase()) ||
+      item.department.toLowerCase().includes(violationsStorageSearchTerm.toLowerCase()) ||
+      item.position.toLowerCase().includes(violationsStorageSearchTerm.toLowerCase()) ||
+      item.suspensionReason.toLowerCase().includes(violationsStorageSearchTerm.toLowerCase()) ||
+      item.suspendedBy.toLowerCase().includes(violationsStorageSearchTerm.toLowerCase()) ||
+      item.status.toLowerCase().includes(violationsStorageSearchTerm.toLowerCase())
+    );
+  };
+
+  const getStorageTypeColor = (type: string) => {
+    switch (type) {
+      case 'localStorage': return 'bg-blue-100 text-blue-800';
+      case 'sessionStorage': return 'bg-green-100 text-green-800';
+      case 'database': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'inactive': return 'bg-red-100 text-red-800';
+      case 'maintenance': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStorageIcon = (type: string) => {
+    switch (type) {
+      case 'localStorage': return '💾';
+      case 'sessionStorage': return '🔄';
+      case 'database': return '🗄️';
+      default: return '📦';
+    }
+  };
+
+  // Function to handle violations storage refresh
+  const handleViolationsStorageRefresh = async () => {
+    try {
+      console.log('🔄 Starting violations storage refresh...');
+      setIsViolationsStorageRefreshing(true);
+      
+      // Add a 1-second delay to make skeleton visible
+      setTimeout(async () => {
+        const storage = loadViolationsStorage();
+        setViolationsStorage(storage);
+        console.log('✅ Violations storage refresh completed');
+        success(
+          'Violations Storage Refreshed',
+          'Storage information has been updated'
+        );
+        setIsViolationsStorageRefreshing(false);
+      }, 1000); // 1-second delay to see skeleton properly
+    } catch (error) {
+      console.error('Error during violations storage refresh:', error);
+      setIsViolationsStorageRefreshing(false);
+    }
+  };
+
   // Function to handle employees refresh with modal
   const handleEmployeesRefresh = async () => {
     try {
-      await refreshEmployeeData();
+      console.log('🔄 Starting manual employees refresh...');
+      setIsEmployeesRefreshing(true);
+      
+      // Add a 1-second delay to make skeleton visible
+      setTimeout(async () => {
+        await refreshEmployeeData();
+        console.log('✅ Manual employees refresh completed');
+        setIsEmployeesRefreshing(false);
+      }, 1000); // 1-second delay to see skeleton properly
     } catch (error) {
       console.error('Error during employees refresh:', error);
+      setIsEmployeesRefreshing(false);
     }
   };
 
@@ -1549,6 +1915,14 @@ export default function EvaluatorDashboard() {
           console.warn('Invalid data structure received from API');
           setRecentSubmissions([]);
         }
+
+        // Load account history data
+        const history = loadAccountHistory();
+        setAccountHistory(history);
+
+        // Load violations storage data
+        const storage = loadViolationsStorage();
+        setViolationsStorage(storage);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -1564,57 +1938,111 @@ export default function EvaluatorDashboard() {
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'employees', label: 'Employees', icon: '👥' },
     { id: 'feedback', label: 'Evaluation Records', icon: '🗂️' },
+    { id: 'account-history', label: 'Account History', icon: '📋' },
+    { id: 'violations-storage', label: 'Suspended Records', icon: '⚠️' },
   ];
 
   // Loading state is now handled in the main return statement
 
   const topSummary = (
     <>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Overall Rating</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-2">
-            <span className="text-3xl font-bold text-gray-900">{data?.overallRating || 0}</span>
-            <span className="text-sm text-gray-500">/ 5.0</span>
-          </div>
-          <Badge className={`mt-2 ${getRatingColor(data?.overallRating || 0)}`}>
-            {(data?.overallRating || 0) >= 4.5 ? 'Excellent' : (data?.overallRating || 0) >= 4.0 ? 'Good' : (data?.overallRating || 0) >= 3.5 ? 'Average' : 'Needs Improvement'}
-          </Badge>
-        </CardContent>
-      </Card>
+      {isRefreshing ? (
+        // Skeleton cards for overview
+        <>
+          <Card>
+            <CardHeader className="pb-2">
+              <Skeleton className="h-3 w-20" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <Skeleton className="h-6 w-8" />
+                <Skeleton className="h-3 w-6" />
+              </div>
+              <Skeleton className="h-5 w-16 mt-2 rounded-full" />
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Reviews to Verify</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-gray-900">{Math.max(0, 10 - (data?.totalReviews || 0))}</div>
-          <p className="text-sm text-gray-500 mt-1">Pending this quarter</p>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <Skeleton className="h-3 w-24" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-6 w-6" />
+              <Skeleton className="h-3 w-20 mt-1" />
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Goals Reviewed</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-gray-900">{data?.goalsCompleted || 0}/{data?.totalGoals || 0}</div>
-          <p className="text-sm text-gray-500 mt-1">Completed</p>
-          <Progress value={((data?.goalsCompleted || 0) / (data?.totalGoals || 1)) * 100} className="mt-2" />
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <Skeleton className="h-3 w-22" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-6 w-12" />
+              <Skeleton className="h-3 w-16 mt-1" />
+              <Skeleton className="h-1.5 w-full mt-2" />
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Performance Trend</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-green-600">{data?.performanceTrend || 'N/A'}</div>
-          <p className="text-sm text-gray-500 mt-1">vs last quarter</p>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <Skeleton className="h-3 w-24" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-6 w-8" />
+              <Skeleton className="h-3 w-20 mt-1" />
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        // Actual cards
+        <>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Overall Rating</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <span className="text-3xl font-bold text-gray-900">{data?.overallRating || 0}</span>
+                <span className="text-sm text-gray-500">/ 5.0</span>
+              </div>
+              <Badge className={`mt-2 ${getRatingColor(data?.overallRating || 0)}`}>
+                {(data?.overallRating || 0) >= 4.5 ? 'Excellent' : (data?.overallRating || 0) >= 4.0 ? 'Good' : (data?.overallRating || 0) >= 3.5 ? 'Average' : 'Needs Improvement'}
+              </Badge>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Reviews to Verify</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-gray-900">{Math.max(0, 10 - (data?.totalReviews || 0))}</div>
+              <p className="text-sm text-gray-500 mt-1">Pending this quarter</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Goals Reviewed</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-gray-900">{data?.goalsCompleted || 0}/{data?.totalGoals || 0}</div>
+              <p className="text-sm text-gray-500 mt-1">Completed</p>
+              <Progress value={((data?.goalsCompleted || 0) / (data?.totalGoals || 1)) * 100} className="mt-2" />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Performance Trend</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">{data?.performanceTrend || 'N/A'}</div>
+              <p className="text-sm text-gray-500 mt-1">vs last quarter</p>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </>
   );
 
@@ -1665,11 +2093,11 @@ export default function EvaluatorDashboard() {
                     <Button
                       size="sm"
                       onClick={handleEvaluationRecordsRefresh}
-                      disabled={isRefreshing}
+                      disabled={isFeedbackRefreshing}
                       className="px-3 py-2 text-white hover:text-white bg-blue-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
                       title="Refresh submissions data"
                     >
-                      {isRefreshing ? (
+                      {isFeedbackRefreshing ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                           Refreshing...
@@ -1680,54 +2108,93 @@ export default function EvaluatorDashboard() {
                     </Button>
                   </div>
                 </div>
-                <div className="max-h-[60vh] overflow-y-auto">
-                  <Table className="min-w-full">
-                    <TableHeader className="sticky top-0 bg-white">
-                      <TableRow key="overview-header">
-                        <TableHead className="px-6 py-3">Employee</TableHead>
-                        <TableHead className="px-6 py-3">Category</TableHead>
-                        <TableHead className="px-6 py-3">Submitted</TableHead>
-                        <TableHead className="px-6 py-3 text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredSubmissions.length === 0 ? (
-                        <TableRow key="no-submissions">
-                          <TableCell colSpan={4} className="px-6 py-3 text-center text-gray-500">
-                            {overviewSearch.trim() ? 'No submissions found matching your search' : 'No recent submissions'}
-                          </TableCell>
+                {isRefreshing ? (
+                  <div className="max-h-[60vh] overflow-y-auto">
+                    <Table className="min-w-full">
+                      <TableHeader className="sticky top-0 bg-white">
+                        <TableRow key="overview-header">
+                          <TableHead className="px-6 py-3">Employee</TableHead>
+                          <TableHead className="px-6 py-3">Category</TableHead>
+                          <TableHead className="px-6 py-3">Submitted</TableHead>
+                          <TableHead className="px-6 py-3 text-right">Actions</TableHead>
                         </TableRow>
-                      ) : (
-                        filteredSubmissions.slice(0, 6).map((submission) => (
-                          <TableRow key={submission.id}>
-                            <TableCell className="px-6 py-3 font-medium text-gray-900">{submission.employeeName}</TableCell>
+                      </TableHeader>
+                      <TableBody>
+                        {Array.from({ length: 6 }).map((_, index) => (
+                          <TableRow key={`skeleton-${index}`}>
                             <TableCell className="px-6 py-3">
-                              <Badge className="bg-blue-100 text-blue-800">{submission.category || 'Performance Review'}</Badge>
-                            </TableCell>
-                            <TableCell className="px-6 py-3 text-gray-600">{new Date(submission.submittedAt).toLocaleDateString()}</TableCell>
-                            <TableCell className="px-6 py-4 flex justify-end text-right">
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setSelectedEvaluationSubmission(submission);
-                                    setIsViewResultsModalOpen(true);
-                                  }}
-                                  className="bg-blue-500 hover:bg-blue-200 text-white border-blue-200"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                  View
-                                </Button>
-
+                              <div className="flex items-center space-x-3">
+                                <Skeleton className="h-8 w-8 rounded-full" />
+                                <div className="space-y-2">
+                                  <Skeleton className="h-4 w-24" />
+                                  <Skeleton className="h-3 w-16" />
+                                </div>
                               </div>
                             </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-6 w-20 rounded-full" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-4 w-20" />
+                            </TableCell>
+                            <TableCell className="px-6 py-4 flex justify-end">
+                              <Skeleton className="h-8 w-16" />
+                            </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="max-h-[60vh] overflow-y-auto">
+                    <Table className="min-w-full">
+                      <TableHeader className="sticky top-0 bg-white">
+                        <TableRow key="overview-header">
+                          <TableHead className="px-6 py-3">Employee</TableHead>
+                          <TableHead className="px-6 py-3">Category</TableHead>
+                          <TableHead className="px-6 py-3">Submitted</TableHead>
+                          <TableHead className="px-6 py-3 text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredSubmissions.length === 0 ? (
+                          <TableRow key="no-submissions">
+                            <TableCell colSpan={4} className="px-6 py-3 text-center text-gray-500">
+                              {overviewSearch.trim() ? 'No submissions found matching your search' : 'No recent submissions'}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredSubmissions.slice(0, 6).map((submission) => (
+                            <TableRow key={submission.id}>
+                              <TableCell className="px-6 py-3 font-medium text-gray-900">{submission.employeeName}</TableCell>
+                              <TableCell className="px-6 py-3">
+                                <Badge className="bg-blue-100 text-blue-800">{submission.category || 'Performance Review'}</Badge>
+                              </TableCell>
+                              <TableCell className="px-6 py-3 text-gray-600">{new Date(submission.submittedAt).toLocaleDateString()}</TableCell>
+                              <TableCell className="px-6 py-4 flex justify-end text-right">
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedEvaluationSubmission(submission);
+                                      setIsViewResultsModalOpen(true);
+                                    }}
+                                    className="bg-blue-500 hover:bg-blue-200 text-white border-blue-200"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                    View
+                                  </Button>
+
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -1839,104 +2306,158 @@ export default function EvaluatorDashboard() {
 
                     </div>
                   </div>
-                  <div className="max-h-[70vh] overflow-y-auto">
-                    <Table className="min-w-full">
-                      <TableHeader className="sticky top-0 bg-white">
-                        <TableRow key="employees-header">
-                          <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('name')}>
-                            Name <span className="ml-1 text-xs text-gray-500">{sortIcon('name')}</span>
-                          </TableHead>
-                          <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('email')}>
-                            Email <span className="ml-1 text-xs text-gray-500">{sortIcon('email')}</span>
-                          </TableHead>
-                          <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('position')}>
-                            Position <span className="ml-1 text-xs text-gray-500">{sortIcon('position')}</span>
-                          </TableHead>
-                          <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('department')}>
-                            Department <span className="ml-1 text-xs text-gray-500">{sortIcon('department')}</span>
-                          </TableHead>
-                          <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('role')}>
-                            Role <span className="ml-1 text-xs text-gray-500">{sortIcon('role')}</span>
-                          </TableHead>
-                          <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('hireDate')}>
-                            Hire Date <span className="ml-1 text-xs text-gray-500">{sortIcon('hireDate')}</span>
-                          </TableHead>
-                          <TableHead className="px-6 py-3 text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sorted.map((e) => (
-                          <TableRow key={e.id}>
-                            <TableCell className="px-6 py-3 font-medium text-gray-900">{e.name}</TableCell>
-                            <TableCell className="px-6 py-3 text-gray-600">{e.email}</TableCell>
-                            <TableCell className="px-6 py-3">{e.position}</TableCell>
-                            <TableCell className="px-6 py-3">{e.department}</TableCell>
-                            <TableCell className="px-6 py-3">{e.role}</TableCell>
-                            <TableCell className="px-6 py-3 text-gray-600">{new Date(e.hireDate).toLocaleDateString()}</TableCell>
-                            <TableCell className="px-6 py-3 text-right">
-                              <div className="flex gap-2 justify-end">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className='bg-green-500 hover:bg-green-600 text-white border-green-500'
-                                  onClick={() => {
-                                    setSelectedEmployeeForView(e);
-                                    setIsViewEmployeeModalOpen(true);
-                                  }}
-                                >
-                                  <svg
-                                    className="w-4 h-4 mr-2"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                    />
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                    />
-                                  </svg>
-                                  View
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  className='bg-blue-500 hover:bg-yellow-400 hover:text-black'
-                                  onClick={() => {
-                                    setSelectedEmployee(e);
-                                    setIsEvaluationModalOpen(true);
-                                  }}
-                                >
-                                  <svg
-                                    className="w-4 h-4 mr-2"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                    />
-                                  </svg>
-                                  Evaluate
-                                </Button>
-                              </div>
-                            </TableCell>
+                  {isEmployeesRefreshing ? (
+                    <div className="max-h-[70vh] overflow-y-auto">
+                      <Table className="min-w-full">
+                        <TableHeader className="sticky top-0 bg-white">
+                          <TableRow key="employees-header">
+                            <TableHead className="px-6 py-3">Name</TableHead>
+                            <TableHead className="px-6 py-3">Email</TableHead>
+                            <TableHead className="px-6 py-3">Position</TableHead>
+                            <TableHead className="px-6 py-3">Department</TableHead>
+                            <TableHead className="px-6 py-3">Role</TableHead>
+                            <TableHead className="px-6 py-3">Hire Date</TableHead>
+                            <TableHead className="px-6 py-3 text-right">Actions</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        </TableHeader>
+                        <TableBody>
+                          {Array.from({ length: 8 }).map((_, index) => (
+                            <TableRow key={`skeleton-employee-${index}`}>
+                              <TableCell className="px-6 py-3">
+                                <div className="flex items-center space-x-3">
+                                  <Skeleton className="h-8 w-8 rounded-full" />
+                                  <div className="space-y-2">
+                                    <Skeleton className="h-4 w-24" />
+                                    <Skeleton className="h-3 w-16" />
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-6 py-3">
+                                <Skeleton className="h-4 w-32" />
+                              </TableCell>
+                              <TableCell className="px-6 py-3">
+                                <Skeleton className="h-4 w-20" />
+                              </TableCell>
+                              <TableCell className="px-6 py-3">
+                                <Skeleton className="h-4 w-24" />
+                              </TableCell>
+                              <TableCell className="px-6 py-3">
+                                <Skeleton className="h-4 w-16" />
+                              </TableCell>
+                              <TableCell className="px-6 py-3">
+                                <Skeleton className="h-4 w-20" />
+                              </TableCell>
+                              <TableCell className="px-6 py-3 flex justify-end">
+                                <div className="flex gap-2">
+                                  <Skeleton className="h-8 w-16" />
+                                  <Skeleton className="h-8 w-20" />
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="max-h-[70vh] overflow-y-auto">
+                      <Table className="min-w-full">
+                        <TableHeader className="sticky top-0 bg-white">
+                          <TableRow key="employees-header">
+                            <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('name')}>
+                              Name <span className="ml-1 text-xs text-gray-500">{sortIcon('name')}</span>
+                            </TableHead>
+                            <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('email')}>
+                              Email <span className="ml-1 text-xs text-gray-500">{sortIcon('email')}</span>
+                            </TableHead>
+                            <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('position')}>
+                              Position <span className="ml-1 text-xs text-gray-500">{sortIcon('position')}</span>
+                            </TableHead>
+                            <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('department')}>
+                              Department <span className="ml-1 text-xs text-gray-500">{sortIcon('department')}</span>
+                            </TableHead>
+                            <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('role')}>
+                              Role <span className="ml-1 text-xs text-gray-500">{sortIcon('role')}</span>
+                            </TableHead>
+                            <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('hireDate')}>
+                              Hire Date <span className="ml-1 text-xs text-gray-500">{sortIcon('hireDate')}</span>
+                            </TableHead>
+                            <TableHead className="px-6 py-3 text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sorted.map((e) => (
+                            <TableRow key={e.id}>
+                              <TableCell className="px-6 py-3 font-medium text-gray-900">{e.name}</TableCell>
+                              <TableCell className="px-6 py-3 text-gray-600">{e.email}</TableCell>
+                              <TableCell className="px-6 py-3">{e.position}</TableCell>
+                              <TableCell className="px-6 py-3">{e.department}</TableCell>
+                              <TableCell className="px-6 py-3">{e.role}</TableCell>
+                              <TableCell className="px-6 py-3 text-gray-600">{new Date(e.hireDate).toLocaleDateString()}</TableCell>
+                              <TableCell className="px-6 py-3 text-right">
+                                <div className="flex gap-2 justify-end">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className='bg-green-500 hover:bg-green-600 text-white border-green-500'
+                                    onClick={() => {
+                                      setSelectedEmployeeForView(e);
+                                      setIsViewEmployeeModalOpen(true);
+                                    }}
+                                  >
+                                    <svg
+                                      className="w-4 h-4 mr-2"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                      />
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                      />
+                                    </svg>
+                                    View
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className='bg-blue-500 hover:bg-yellow-400 hover:text-black'
+                                    onClick={() => {
+                                      setSelectedEmployee(e);
+                                      setIsEvaluationModalOpen(true);
+                                    }}
+                                  >
+                                    <svg
+                                      className="w-4 h-4 mr-2"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                      />
+                                    </svg>
+                                    Evaluate
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
@@ -2097,11 +2618,11 @@ export default function EvaluatorDashboard() {
                       variant="outline"
                       size="sm"
                       onClick={handleEvaluationRecordsRefresh}
-                      disabled={isRefreshing}
+                      disabled={isFeedbackRefreshing}
                       className="mt-1 w-full text-xs bg-blue-500 hover:bg-green-600 text-center text-white  hover:text-white disabled:cursor-not-allowed"
                       title="Refresh evaluation records data"
                     >
-                      {isRefreshing ? (
+                      {isFeedbackRefreshing ? (
                         <>
                           <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
                           Refreshing...
@@ -2122,33 +2643,99 @@ export default function EvaluatorDashboard() {
             {/* Feedback Table */}
             <Card>
               <CardContent className="p-0">
-                <div className="max-h-[60vh] overflow-y-auto overflow-x-auto scrollable-table">
-                  <Table className="min-w-full">
-                    <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
-                      <TableRow key="feedback-header">
-                        <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('employeeName')}>
-                          Employee Name {getSortIcon('employeeName')}
-                        </TableHead>
-                        <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('department')}>
-                          Department {getSortIcon('department')}
-                        </TableHead>
-                        <TableHead className="px-6 py-3">Position</TableHead>
-                        <TableHead className="px-6 py-3">Reviewer</TableHead>
-                        <TableHead className="px-6 py-3">Category</TableHead>
-                        <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('rating')}>
-                          Rating {getSortIcon('rating')}
-                        </TableHead>
-                        <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('date')}>
-                          Date {getSortIcon('date')}
-                        </TableHead>
-                        <TableHead className="px-6 py-3">Approval Status</TableHead>
-                        <TableHead className="px-6 py-3">Employee Signature</TableHead>
-                        <TableHead className="px-6 py-3">Evaluator Signature</TableHead>
-                        <TableHead className="px-6 py-3">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody className="divide-y divide-gray-200">
-                      {filteredFeedbackData.map((feedback) => (
+                {isFeedbackRefreshing ? (
+                  <div className="max-h-[60vh] overflow-y-auto overflow-x-auto scrollable-table">
+                    <Table className="min-w-full">
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                        <TableRow key="feedback-header">
+                          <TableHead className="px-6 py-3">Employee Name</TableHead>
+                          <TableHead className="px-6 py-3">Department</TableHead>
+                          <TableHead className="px-6 py-3">Position</TableHead>
+                          <TableHead className="px-6 py-3">Reviewer</TableHead>
+                          <TableHead className="px-6 py-3">Category</TableHead>
+                          <TableHead className="px-6 py-3">Rating</TableHead>
+                          <TableHead className="px-6 py-3">Date</TableHead>
+                          <TableHead className="px-6 py-3">Approval Status</TableHead>
+                          <TableHead className="px-6 py-3">Employee Signature</TableHead>
+                          <TableHead className="px-6 py-3">Evaluator Signature</TableHead>
+                          <TableHead className="px-6 py-3">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody className="divide-y divide-gray-200">
+                        {Array.from({ length: 10 }).map((_, index) => (
+                          <TableRow key={`skeleton-feedback-${index}`}>
+                            <TableCell className="px-6 py-3">
+                              <div className="space-y-1">
+                                <Skeleton className="h-3 w-20" />
+                                <Skeleton className="h-2.5 w-24" />
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-5 w-12 rounded-full" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-3 w-16" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <div className="space-y-1">
+                                <Skeleton className="h-3 w-16" />
+                                <Skeleton className="h-2.5 w-12" />
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-5 w-18 rounded-full" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-3 w-8" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-3 w-16" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-5 w-12 rounded-full" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-3 w-12" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-3 w-12" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-6 w-12" />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="max-h-[60vh] overflow-y-auto overflow-x-auto scrollable-table">
+                    <Table className="min-w-full">
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                        <TableRow key="feedback-header">
+                          <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('employeeName')}>
+                            Employee Name {getSortIcon('employeeName')}
+                          </TableHead>
+                          <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('department')}>
+                            Department {getSortIcon('department')}
+                          </TableHead>
+                          <TableHead className="px-6 py-3">Position</TableHead>
+                          <TableHead className="px-6 py-3">Reviewer</TableHead>
+                          <TableHead className="px-6 py-3">Category</TableHead>
+                          <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('rating')}>
+                            Rating {getSortIcon('rating')}
+                          </TableHead>
+                          <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('date')}>
+                            Date {getSortIcon('date')}
+                          </TableHead>
+                          <TableHead className="px-6 py-3">Approval Status</TableHead>
+                          <TableHead className="px-6 py-3">Employee Signature</TableHead>
+                          <TableHead className="px-6 py-3">Evaluator Signature</TableHead>
+                          <TableHead className="px-6 py-3">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody className="divide-y divide-gray-200">
+                        {filteredFeedbackData.map((feedback) => (
                         <TableRow key={feedback.uniqueKey} className="hover:bg-gray-50">
                           <TableCell className="px-6 py-3">
                             <div>
@@ -2283,14 +2870,436 @@ export default function EvaluatorDashboard() {
                     </TableBody>
                   </Table>
                 </div>
-
-                {/* No Data Message */}
-                {filteredFeedbackData.length === 0 && (
-                  <div className="text-center py-12">
-                    <div className="text-gray-500 text-lg">No evaluation data found</div>
-                    <div className="text-gray-400 text-sm mt-2">Try adjusting your search or filters</div>
+            )}
+              </CardContent>
+            </Card>
+          </div>
+        );
+      case 'account-history':
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Account History</CardTitle>
+                <CardDescription>Track suspension records and account activity across all employees</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mt-6">
+                  {/* Search Controls */}
+                  <div className="mb-6">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Search account history..."
+                        value={accountHistorySearchTerm}
+                        onChange={(e) => setAccountHistorySearchTerm(e.target.value)}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      />
+                      {accountHistorySearchTerm && (
+                        <button
+                          onClick={() => setAccountHistorySearchTerm('')}
+                          className="absolute inset-y-0 font-medium px-2 right-0 pr-3 flex items-center"
+                        >
+                          <svg className="h-5 w-5 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                )}
+
+                  {/* Account History Actions */}
+                  <div className="mb-4 flex justify-between items-center">
+                    <div className="text-sm text-gray-600">
+                      Showing {getFilteredAccountHistory().length} of {accountHistory.length} records
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAccountHistoryRefresh}
+                      disabled={isAccountHistoryRefreshing}
+                      className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white"
+                    >
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>Refresh</span>
+                    </Button>
+                  </div>
+
+                  {/* Account History Table */}
+                  {isAccountHistoryRefreshing ? (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Title</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Employee</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Severity</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Action By</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {Array.from({ length: 8 }).map((_, index) => (
+                            <TableRow key={`skeleton-account-${index}`}>
+                              <TableCell>
+                                <div className="flex items-center space-x-2">
+                                  <Skeleton className="h-4 w-4" />
+                                  <Skeleton className="h-5 w-16 rounded-full" />
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-20" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-32" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-24" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-20" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-5 w-12 rounded-full" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-5 w-16 rounded-full" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-20" />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Title</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Employee</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Severity</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Action By</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {getFilteredAccountHistory().map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-lg">{getTypeIcon(item.type)}</span>
+                                  <Badge variant="outline" className="capitalize">
+                                    {item.type}
+                                  </Badge>
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-medium">{item.title}</TableCell>
+                              <TableCell className="max-w-xs truncate" title={item.description}>
+                                {item.description}
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <div className="font-medium">{item.employeeName}</div>
+                                  <div className="text-sm text-gray-500">{item.employeeEmail}</div>
+                                </div>
+                              </TableCell>
+                              <TableCell>{new Date(item.date).toLocaleDateString()}</TableCell>
+                              <TableCell>
+                                <Badge className={getSeverityColor(item.severity)}>
+                                  {item.severity}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={getAccountStatusColor(item.status)}>
+                                  {item.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{item.actionBy}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+
+                  {/* Empty State */}
+                  {!isAccountHistoryRefreshing && getFilteredAccountHistory().length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="text-4xl mb-4">📋</div>
+                      <p className="text-lg font-medium">
+                        {accountHistorySearchTerm ? 'No matching records found' : 'No account history found'}
+                      </p>
+                      <p className="text-sm">
+                        {accountHistorySearchTerm
+                          ? 'Try adjusting your search terms'
+                          : 'Account history will appear here when violations or feedback are recorded'
+                        }
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Summary Statistics */}
+                  {!isAccountHistoryRefreshing && accountHistory.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-6 border-t mt-6">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-red-600">
+                          {accountHistory.filter(item => item.type === 'violation').length}
+                        </div>
+                        <div className="text-sm text-gray-600">Violations</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {accountHistory.filter(item => item.type === 'feedback').length}
+                        </div>
+                        <div className="text-sm text-gray-600">Feedback</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-yellow-600">
+                          {accountHistory.filter(item => item.severity === 'high').length}
+                        </div>
+                        <div className="text-sm text-gray-600">High Severity</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {accountHistory.filter(item => item.status === 'completed' || item.status === 'reinstated').length}
+                        </div>
+                        <div className="text-sm text-gray-600">Resolved</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      case 'violations-storage':
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Suspended Records</CardTitle>
+                <CardDescription>View and manage employee suspension and violation records</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mt-6">
+                  {/* Search Controls */}
+                  <div className="mb-6">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Search suspended employees..."
+                        value={violationsStorageSearchTerm}
+                        onChange={(e) => setViolationsStorageSearchTerm(e.target.value)}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      />
+                      {violationsStorageSearchTerm && (
+                        <button
+                          onClick={() => setViolationsStorageSearchTerm('')}
+                          className="absolute inset-y-0 font-medium px-2 right-0 pr-3 flex items-center"
+                        >
+                          <svg className="h-5 w-5 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Storage Actions */}
+                  <div className="mb-4 flex justify-between items-center">
+                    <div className="text-sm text-gray-600">
+                      Showing {getFilteredViolationsStorage().length} of {violationsStorage.length} suspended records
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleViolationsStorageRefresh}
+                      disabled={isViolationsStorageRefreshing}
+                      className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white"
+                    >
+                      <svg
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>Refresh</span>
+                    </Button>
+                  </div>
+
+                  {/* Violations Storage Table */}
+                  {isViolationsStorageRefreshing ? (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Storage Type</TableHead>
+                            <TableHead>Key</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Data Type</TableHead>
+                            <TableHead>Records</TableHead>
+                            <TableHead>Size</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Last Updated</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {Array.from({ length: 5 }).map((_, index) => (
+                            <TableRow key={`skeleton-storage-${index}`}>
+                              <TableCell>
+                                <div className="flex items-center space-x-2">
+                                  <Skeleton className="h-4 w-4" />
+                                  <Skeleton className="h-5 w-20 rounded-full" />
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-24" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-32" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-20" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-8" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-16" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-5 w-12 rounded-full" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-20" />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Storage Type</TableHead>
+                            <TableHead>Key</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Data Type</TableHead>
+                            <TableHead>Records</TableHead>
+                            <TableHead>Size</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Last Updated</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {getFilteredViolationsStorage().map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-lg">{getStorageIcon(item.storageType)}</span>
+                                  <Badge className={getStorageTypeColor(item.storageType)}>
+                                    {item.storageType}
+                                  </Badge>
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-medium font-mono text-sm">{item.key}</TableCell>
+                              <TableCell className="max-w-xs truncate" title={item.description}>
+                                {item.description}
+                              </TableCell>
+                              <TableCell className="text-sm text-gray-600">{item.dataType}</TableCell>
+                              <TableCell className="font-medium">{item.recordCount}</TableCell>
+                              <TableCell className="text-sm text-gray-600">{item.size}</TableCell>
+                              <TableCell>
+                                <Badge className={getAccountStatusColor(item.status)}>
+                                  {item.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-sm text-gray-600">
+                                {new Date(item.lastUpdated).toLocaleDateString()}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+
+                  {/* Empty State */}
+                  {!isViolationsStorageRefreshing && getFilteredViolationsStorage().length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="text-4xl mb-4">🗄️</div>
+                      <p className="text-lg font-medium">
+                        {violationsStorageSearchTerm ? 'No matching storage locations found' : 'No storage information found'}
+                      </p>
+                      <p className="text-sm">
+                        {violationsStorageSearchTerm
+                          ? 'Try adjusting your search terms'
+                          : 'Storage information will appear here when data is available'
+                        }
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Storage Summary */}
+                  {!isViolationsStorageRefreshing && violationsStorage.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-6 border-t mt-6">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {violationsStorage.filter(item => item.storageType === 'localStorage').length}
+                        </div>
+                        <div className="text-sm text-gray-600">Local Storage</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {violationsStorage.filter(item => item.storageType === 'sessionStorage').length}
+                        </div>
+                        <div className="text-sm text-gray-600">Session Storage</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {violationsStorage.reduce((total, item) => total + item.recordCount, 0)}
+                        </div>
+                        <div className="text-sm text-gray-600">Total Records</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {violationsStorage.filter(item => item.status === 'active').length}
+                        </div>
+                        <div className="text-sm text-gray-600">Active Storage</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
