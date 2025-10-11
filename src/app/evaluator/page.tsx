@@ -270,20 +270,6 @@ export default function EvaluatorDashboard() {
         );
         setIsAccountHistoryRefreshing(false);
       }, 1000); // 1-second delay to see skeleton properly
-    } else if (tabId === 'violations-storage') {
-      // Refresh violations storage data
-      console.log('🔄 Starting violations storage refresh...');
-      setIsViolationsStorageRefreshing(true);
-      setTimeout(() => {
-        const storage = loadViolationsStorage();
-        setViolationsStorage(storage);
-        console.log('✅ Violations storage refresh completed');
-        success(
-          'Violations Storage Refreshed',
-          'Storage information has been updated'
-        );
-        setIsViolationsStorageRefreshing(false);
-      }, 1000); // 1-second delay to see skeleton properly
     } else if (tabId === 'overview') {
       // Refresh overview data when switching to overview tab
       console.log('🔄 Starting overview refresh...');
@@ -407,13 +393,13 @@ export default function EvaluatorDashboard() {
   const [feedbackDateRange, setFeedbackDateRange] = useState({ from: '', to: '' });
   const [feedbackQuarterFilter, setFeedbackQuarterFilter] = useState('');
   const [feedbackApprovalStatusFilter, setFeedbackApprovalStatusFilter] = useState('');
+  
   const [feedbackSort, setFeedbackSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isEmployeesRefreshing, setIsEmployeesRefreshing] = useState(false);
   const [isFeedbackRefreshing, setIsFeedbackRefreshing] = useState(false);
   const [isAccountHistoryRefreshing, setIsAccountHistoryRefreshing] = useState(false);
-  const [isViolationsStorageRefreshing, setIsViolationsStorageRefreshing] = useState(false);
   const [employeeDataRefresh, setEmployeeDataRefresh] = useState(0);
   
   // Account History state
@@ -421,8 +407,6 @@ export default function EvaluatorDashboard() {
   const [accountHistorySearchTerm, setAccountHistorySearchTerm] = useState('');
   
   // Violations Storage state
-  const [violationsStorage, setViolationsStorage] = useState<any[]>([]);
-  const [violationsStorageSearchTerm, setViolationsStorageSearchTerm] = useState('');
 
 
   // Delete confirmation modal state
@@ -617,6 +601,7 @@ export default function EvaluatorDashboard() {
     }
   };
 
+
   // Helper functions for account history
   const getFilteredAccountHistory = () => {
     if (!accountHistorySearchTerm) return accountHistory;
@@ -629,6 +614,7 @@ export default function EvaluatorDashboard() {
       item.employeeName.toLowerCase().includes(accountHistorySearchTerm.toLowerCase())
     );
   };
+
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -668,6 +654,8 @@ export default function EvaluatorDashboard() {
       setTimeout(async () => {
         const history = loadAccountHistory();
         setAccountHistory(history);
+        
+        
         console.log('✅ Account history refresh completed');
         success(
           'Account History Refreshed',
@@ -681,91 +669,7 @@ export default function EvaluatorDashboard() {
     }
   };
 
-  // Function to load suspended employee records
-  const loadViolationsStorage = () => {
-    try {
-      // Load suspended employees data
-      const suspendedEmployees = JSON.parse(localStorage.getItem('suspendedEmployees') || '[]');
-      
-      // Format suspended employee records
-      const suspendedRecords = suspendedEmployees.map((employee: any) => ({
-        id: `suspended-${employee.id}`,
-        employeeName: employee.name,
-        employeeEmail: employee.email,
-        department: employee.department,
-        position: employee.position,
-        suspensionReason: employee.suspensionReason,
-        suspensionDate: employee.suspensionDate,
-        suspendedBy: employee.suspendedBy,
-        status: employee.status,
-        severity: employee.severity || 'high',
-        lastUpdated: employee.lastUpdated || new Date().toISOString()
-      }));
 
-      // Add some sample violation records for demonstration
-      const sampleViolations = [
-        {
-          id: 'violation-1',
-          employeeName: 'John Smith',
-          employeeEmail: 'john.smith@company.com',
-          department: 'IT',
-          position: 'Software Developer',
-          suspensionReason: 'Unauthorized access to confidential data',
-          suspensionDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          suspendedBy: 'HR Manager',
-          status: 'suspended',
-          severity: 'high',
-          lastUpdated: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: 'violation-2',
-          employeeName: 'Sarah Johnson',
-          employeeEmail: 'sarah.johnson@company.com',
-          department: 'Finance',
-          position: 'Accountant',
-          suspensionReason: 'Policy violation - inappropriate workplace behavior',
-          suspensionDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-          suspendedBy: 'Department Head',
-          status: 'reinstated',
-          severity: 'medium',
-          lastUpdated: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: 'violation-3',
-          employeeName: 'Mike Wilson',
-          employeeEmail: 'mike.wilson@company.com',
-          department: 'Operations',
-          position: 'Operations Manager',
-          suspensionReason: 'Repeated tardiness and unprofessional conduct',
-          suspensionDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-          suspendedBy: 'HR Director',
-          status: 'suspended',
-          severity: 'medium',
-          lastUpdated: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      ];
-
-      return [...suspendedRecords, ...sampleViolations];
-    } catch (error) {
-      console.error('Error loading suspended records:', error);
-      return [];
-    }
-  };
-
-  // Helper functions for suspended records
-  const getFilteredViolationsStorage = () => {
-    if (!violationsStorageSearchTerm) return violationsStorage;
-
-    return violationsStorage.filter(item =>
-      item.employeeName.toLowerCase().includes(violationsStorageSearchTerm.toLowerCase()) ||
-      item.employeeEmail.toLowerCase().includes(violationsStorageSearchTerm.toLowerCase()) ||
-      item.department.toLowerCase().includes(violationsStorageSearchTerm.toLowerCase()) ||
-      item.position.toLowerCase().includes(violationsStorageSearchTerm.toLowerCase()) ||
-      item.suspensionReason.toLowerCase().includes(violationsStorageSearchTerm.toLowerCase()) ||
-      item.suspendedBy.toLowerCase().includes(violationsStorageSearchTerm.toLowerCase()) ||
-      item.status.toLowerCase().includes(violationsStorageSearchTerm.toLowerCase())
-    );
-  };
 
   const getStorageTypeColor = (type: string) => {
     switch (type) {
@@ -795,27 +699,6 @@ export default function EvaluatorDashboard() {
   };
 
   // Function to handle violations storage refresh
-  const handleViolationsStorageRefresh = async () => {
-    try {
-      console.log('🔄 Starting violations storage refresh...');
-      setIsViolationsStorageRefreshing(true);
-      
-      // Add a 1-second delay to make skeleton visible
-      setTimeout(async () => {
-        const storage = loadViolationsStorage();
-        setViolationsStorage(storage);
-        console.log('✅ Violations storage refresh completed');
-        success(
-          'Violations Storage Refreshed',
-          'Storage information has been updated'
-        );
-        setIsViolationsStorageRefreshing(false);
-      }, 1000); // 1-second delay to see skeleton properly
-    } catch (error) {
-      console.error('Error during violations storage refresh:', error);
-      setIsViolationsStorageRefreshing(false);
-    }
-  };
 
   // Function to handle employees refresh with modal
   const handleEmployeesRefresh = async () => {
@@ -1920,9 +1803,7 @@ export default function EvaluatorDashboard() {
         const history = loadAccountHistory();
         setAccountHistory(history);
 
-        // Load violations storage data
-        const storage = loadViolationsStorage();
-        setViolationsStorage(storage);
+
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -1939,7 +1820,6 @@ export default function EvaluatorDashboard() {
     { id: 'employees', label: 'Employees', icon: '👥' },
     { id: 'feedback', label: 'Evaluation Records', icon: '🗂️' },
     { id: 'account-history', label: 'Account History', icon: '📋' },
-    { id: 'violations-storage', label: 'Suspended Records', icon: '⚠️' },
   ];
 
   // Loading state is now handled in the main return statement
@@ -2206,8 +2086,8 @@ export default function EvaluatorDashboard() {
             const refreshKey = `employees-${employeeDataRefresh}`;
             const normalizedQuery = employeeSearch.trim().toLowerCase();
             const filtered: Employee[] = (accountsData as any).accounts.filter((e: any) => {
-              // Only show active employees (not suspended or inactive)
-              if (!e.isActive || e.isSuspended) return false;
+              // Only show active employees
+              if (!e.isActive) return false;
 
               // Only show employees (not admins, managers, etc.)
               if (e.role !== 'employee') return false;
@@ -2881,37 +2761,41 @@ export default function EvaluatorDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Account History</CardTitle>
-                <CardDescription>Track suspension records and account activity across all employees</CardDescription>
+                <CardDescription>Track suspension records and account activity</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="mt-6">
-                  {/* Search Controls */}
-                  <div className="mb-6">
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                  {/* Tab Navigation */}
+
+                  {/* Tab Content */}
+                  <>
+                      {/* Search Controls */}
+                      <div className="mb-6">
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Search account history..."
+                            value={accountHistorySearchTerm}
+                            onChange={(e) => setAccountHistorySearchTerm(e.target.value)}
+                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                          />
+                          {accountHistorySearchTerm && (
+                            <button
+                              onClick={() => setAccountHistorySearchTerm('')}
+                              className="absolute inset-y-0 font-medium px-2 right-0 pr-3 flex items-center"
+                            >
+                              <svg className="h-5 w-5 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <input
-                        type="text"
-                        placeholder="Search account history..."
-                        value={accountHistorySearchTerm}
-                        onChange={(e) => setAccountHistorySearchTerm(e.target.value)}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      />
-                      {accountHistorySearchTerm && (
-                        <button
-                          onClick={() => setAccountHistorySearchTerm('')}
-                          className="absolute inset-y-0 font-medium px-2 right-0 pr-3 flex items-center"
-                        >
-                          <svg className="h-5 w-5 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
 
                   {/* Account History Actions */}
                   <div className="mb-4 flex justify-between items-center">
@@ -3088,217 +2972,8 @@ export default function EvaluatorDashboard() {
                       </div>
                     </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      case 'violations-storage':
-        return (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Suspended Records</CardTitle>
-                <CardDescription>View and manage employee suspension and violation records</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="mt-6">
-                  {/* Search Controls */}
-                  <div className="mb-6">
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="Search suspended employees..."
-                        value={violationsStorageSearchTerm}
-                        onChange={(e) => setViolationsStorageSearchTerm(e.target.value)}
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      />
-                      {violationsStorageSearchTerm && (
-                        <button
-                          onClick={() => setViolationsStorageSearchTerm('')}
-                          className="absolute inset-y-0 font-medium px-2 right-0 pr-3 flex items-center"
-                        >
-                          <svg className="h-5 w-5 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  </>
 
-                  {/* Storage Actions */}
-                  <div className="mb-4 flex justify-between items-center">
-                    <div className="text-sm text-gray-600">
-                      Showing {getFilteredViolationsStorage().length} of {violationsStorage.length} suspended records
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleViolationsStorageRefresh}
-                      disabled={isViolationsStorageRefreshing}
-                      className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white"
-                    >
-                      <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      <span>Refresh</span>
-                    </Button>
-                  </div>
-
-                  {/* Violations Storage Table */}
-                  {isViolationsStorageRefreshing ? (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Storage Type</TableHead>
-                            <TableHead>Key</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Data Type</TableHead>
-                            <TableHead>Records</TableHead>
-                            <TableHead>Size</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Last Updated</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {Array.from({ length: 5 }).map((_, index) => (
-                            <TableRow key={`skeleton-storage-${index}`}>
-                              <TableCell>
-                                <div className="flex items-center space-x-2">
-                                  <Skeleton className="h-4 w-4" />
-                                  <Skeleton className="h-5 w-20 rounded-full" />
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Skeleton className="h-4 w-24" />
-                              </TableCell>
-                              <TableCell>
-                                <Skeleton className="h-4 w-32" />
-                              </TableCell>
-                              <TableCell>
-                                <Skeleton className="h-4 w-20" />
-                              </TableCell>
-                              <TableCell>
-                                <Skeleton className="h-4 w-8" />
-                              </TableCell>
-                              <TableCell>
-                                <Skeleton className="h-4 w-16" />
-                              </TableCell>
-                              <TableCell>
-                                <Skeleton className="h-5 w-12 rounded-full" />
-                              </TableCell>
-                              <TableCell>
-                                <Skeleton className="h-4 w-20" />
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Storage Type</TableHead>
-                            <TableHead>Key</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Data Type</TableHead>
-                            <TableHead>Records</TableHead>
-                            <TableHead>Size</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Last Updated</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {getFilteredViolationsStorage().map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-lg">{getStorageIcon(item.storageType)}</span>
-                                  <Badge className={getStorageTypeColor(item.storageType)}>
-                                    {item.storageType}
-                                  </Badge>
-                                </div>
-                              </TableCell>
-                              <TableCell className="font-medium font-mono text-sm">{item.key}</TableCell>
-                              <TableCell className="max-w-xs truncate" title={item.description}>
-                                {item.description}
-                              </TableCell>
-                              <TableCell className="text-sm text-gray-600">{item.dataType}</TableCell>
-                              <TableCell className="font-medium">{item.recordCount}</TableCell>
-                              <TableCell className="text-sm text-gray-600">{item.size}</TableCell>
-                              <TableCell>
-                                <Badge className={getAccountStatusColor(item.status)}>
-                                  {item.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-sm text-gray-600">
-                                {new Date(item.lastUpdated).toLocaleDateString()}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-
-                  {/* Empty State */}
-                  {!isViolationsStorageRefreshing && getFilteredViolationsStorage().length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <div className="text-4xl mb-4">🗄️</div>
-                      <p className="text-lg font-medium">
-                        {violationsStorageSearchTerm ? 'No matching storage locations found' : 'No storage information found'}
-                      </p>
-                      <p className="text-sm">
-                        {violationsStorageSearchTerm
-                          ? 'Try adjusting your search terms'
-                          : 'Storage information will appear here when data is available'
-                        }
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Storage Summary */}
-                  {!isViolationsStorageRefreshing && violationsStorage.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-6 border-t mt-6">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {violationsStorage.filter(item => item.storageType === 'localStorage').length}
-                        </div>
-                        <div className="text-sm text-gray-600">Local Storage</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                          {violationsStorage.filter(item => item.storageType === 'sessionStorage').length}
-                        </div>
-                        <div className="text-sm text-gray-600">Session Storage</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-purple-600">
-                          {violationsStorage.reduce((total, item) => total + item.recordCount, 0)}
-                        </div>
-                        <div className="text-sm text-gray-600">Total Records</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                          {violationsStorage.filter(item => item.status === 'active').length}
-                        </div>
-                        <div className="text-sm text-gray-600">Active Storage</div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>

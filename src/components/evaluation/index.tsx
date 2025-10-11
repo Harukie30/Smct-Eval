@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Step1 from './Step1';
 import Step2 from './Step2';
 import Step3 from './Step3';
@@ -11,7 +12,6 @@ import Step5 from './Step5';
 import Step6 from './Step6';
 import Step7 from './Step7';
 import OverallAssessment from './OverallAssessment';
-import ConfirmModal from './ConfirmModal';
 import WelcomeStep from './WelcomeStep';
 import { EvaluationData } from './types';
 import { storeEvaluationResult } from '@/lib/evaluationStorage';
@@ -168,7 +168,6 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
     branch: evaluationData.branch,
     hireDate: evaluationData.hireDate,
   }); // Debug log
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isEvaluatorApproved, setIsEvaluatorApproved] = useState(false);
 
   // Update evaluation data when employee prop changes
@@ -201,6 +200,72 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
     setCurrentStep(1);
   };
 
+  // Check if current step scores are complete
+  const isCurrentStepComplete = () => {
+    switch (currentStep) {
+      case 1: // Job Knowledge
+        return (
+          evaluationData.jobKnowledgeScore1 && evaluationData.jobKnowledgeScore1 !== '' &&
+          evaluationData.jobKnowledgeScore2 && evaluationData.jobKnowledgeScore2 !== '' &&
+          evaluationData.jobKnowledgeScore3 && evaluationData.jobKnowledgeScore3 !== ''
+        );
+      case 2: // Quality of Work
+        return (
+          evaluationData.qualityOfWorkScore1 && evaluationData.qualityOfWorkScore1 !== '' &&
+          evaluationData.qualityOfWorkScore2 && evaluationData.qualityOfWorkScore2 !== '' &&
+          evaluationData.qualityOfWorkScore3 && evaluationData.qualityOfWorkScore3 !== '' &&
+          evaluationData.qualityOfWorkScore4 && evaluationData.qualityOfWorkScore4 !== '' &&
+          evaluationData.qualityOfWorkScore5 && evaluationData.qualityOfWorkScore5 !== ''
+        );
+      case 3: // Adaptability
+        return (
+          evaluationData.adaptabilityScore1 && evaluationData.adaptabilityScore1 !== '' &&
+          evaluationData.adaptabilityScore2 && evaluationData.adaptabilityScore2 !== '' &&
+          evaluationData.adaptabilityScore3 && evaluationData.adaptabilityScore3 !== ''
+        );
+      case 4: // Teamwork
+        return (
+          evaluationData.teamworkScore1 && evaluationData.teamworkScore1 !== '' &&
+          evaluationData.teamworkScore2 && evaluationData.teamworkScore2 !== '' &&
+          evaluationData.teamworkScore3 && evaluationData.teamworkScore3 !== ''
+        );
+      case 5: // Reliability
+        return (
+          evaluationData.reliabilityScore1 && evaluationData.reliabilityScore1 !== '' &&
+          evaluationData.reliabilityScore2 && evaluationData.reliabilityScore2 !== '' &&
+          evaluationData.reliabilityScore3 && evaluationData.reliabilityScore3 !== ''
+        );
+      case 6: // Ethical & Professional Behavior
+        return (
+          evaluationData.ethicalScore1 && evaluationData.ethicalScore1 !== '' &&
+          evaluationData.ethicalScore2 && evaluationData.ethicalScore2 !== '' &&
+          evaluationData.ethicalScore3 && evaluationData.ethicalScore3 !== ''
+        );
+      case 7: // Customer Service
+        return (
+          evaluationData.customerServiceScore1 && evaluationData.customerServiceScore1 !== '' &&
+          evaluationData.customerServiceScore2 && evaluationData.customerServiceScore2 !== '' &&
+          evaluationData.customerServiceScore3 && evaluationData.customerServiceScore3 !== ''
+        );
+      default:
+        return true; // For other steps, allow progression
+    }
+  };
+
+  // Get step name for tooltip
+  const getStepName = () => {
+    switch (currentStep) {
+      case 1: return 'Job Knowledge';
+      case 2: return 'Quality of Work';
+      case 3: return 'Adaptability';
+      case 4: return 'Teamwork';
+      case 5: return 'Reliability';
+      case 6: return 'Ethical & Professional Behavior';
+      case 7: return 'Customer Service';
+      default: return 'evaluation';
+    }
+  };
+
   const nextStep = () => {
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
@@ -214,7 +279,8 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
   };
 
   const handleSubmit = () => {
-    setShowConfirmModal(true);
+    // Direct submission - no modal needed
+    confirmSubmit();
   };
 
   const handleApprove = () => {
@@ -315,7 +381,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
 
   return (
     <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 overflow-y-auto">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-5xl mx-auto px-8">
 
         {/* Step Numbers Indicator */}
         {currentStep > 0 && (
@@ -434,22 +500,42 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
               </Button>
             </div>
 
-            <div className="flex gap-3">
-              <Button onClick={nextStep} className="px-6">
-                Next
-              </Button>
+            <div className="flex flex-col gap-2">
+              {currentStep >= 1 && currentStep <= 7 && !isCurrentStepComplete() ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        onClick={nextStep} 
+                        className="px-6"
+                        disabled={true}
+                      >
+                        Next
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Please complete all {getStepName()} scores to continue</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <Button 
+                  onClick={nextStep} 
+                  className="px-6"
+                >
+                  Next
+                </Button>
+              )}
+              {currentStep >= 1 && currentStep <= 7 && !isCurrentStepComplete() && (
+                <p className="text-sm text-gray-500 text-center">
+                  Please complete all {getStepName()} scores to continue
+                </p>
+              )}
             </div>
           </div>
         )}
       </div>
 
-      {/* Confirmation Modal */}
-      <ConfirmModal
-        open={showConfirmModal}
-        onCloseAction={() => setShowConfirmModal(false)}
-        onConfirmAction={confirmSubmit}
-        data={evaluationData}
-      />
     </div>
   );
 }

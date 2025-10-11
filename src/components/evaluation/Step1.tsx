@@ -109,6 +109,15 @@ function ScoreDropdown({
 }
 
 export default function Step1({ data, updateDataAction, employee, currentUser }: Step1Props) {
+  // Check if all Job Knowledge scores are complete
+  const isJobKnowledgeComplete = () => {
+    return (
+      data.jobKnowledgeScore1 && data.jobKnowledgeScore1 !== '' &&
+      data.jobKnowledgeScore2 && data.jobKnowledgeScore2 !== '' &&
+      data.jobKnowledgeScore3 && data.jobKnowledgeScore3 !== ''
+    );
+  };
+
   // Auto-populate employee information when employee is selected
   useEffect(() => {
     if (employee) {
@@ -770,6 +779,7 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
           </div>
         </CardContent>
       </Card>
+
 
       {/* Average Score Section */}
       <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
