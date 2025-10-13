@@ -18,6 +18,7 @@ import WelcomeStep from './WelcomeStep';
 import { EvaluationData } from './types';
 import { storeEvaluationResult } from '@/lib/evaluationStorage';
 import clientDataService from '@/lib/clientDataService';
+import { createEvaluationNotification } from '@/lib/notificationUtils';
 
 const steps = [
   { id: 1, title: 'Employee Information / Job Knowledge', component: Step1 },
@@ -358,6 +359,17 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
         console.log('Also stored in client data service');
       } catch (clientError) {
         console.log('Client data service storage failed, but localStorage storage succeeded:', clientError);
+      }
+      
+      // Create notification for evaluators and HR
+      try {
+        await createEvaluationNotification(
+          evaluationData.employeeName || employee?.name || 'Employee',
+          currentUser?.name || 'Current Evaluator'
+        );
+      } catch (notificationError) {
+        console.warn('Failed to create notification:', notificationError);
+        // Don't fail the submission if notification creation fails
       }
       
       // Show success message

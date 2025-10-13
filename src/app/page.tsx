@@ -453,7 +453,67 @@ export default function LandingLoginPage() {
 
       {/* About Modal */}
       <Dialog open={isAboutModalOpen} onOpenChangeAction={setIsAboutModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto mx-4 my-8 p-6">
+        <DialogContent 
+          className="max-w-4xl max-h-[85vh] overflow-y-auto mx-4 my-8 p-6 animate-in zoom-in-95 duration-300 custom-scrollbar"
+          style={{
+            animation: isAboutModalOpen ? 'modalPopup 0.3s ease-out' : 'modalPopdown 0.3s ease-in'
+          }}
+        >
+          <style jsx>{`
+            @keyframes modalPopup {
+              0% {
+                transform: scale(0.8) translateY(20px);
+                opacity: 0;
+              }
+              50% {
+                transform: scale(1.05) translateY(-5px);
+                opacity: 0.9;
+              }
+              100% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+              }
+            }
+            @keyframes modalPopdown {
+              0% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+              }
+              100% {
+                transform: scale(0.8) translateY(20px);
+                opacity: 0;
+              }
+            }
+            
+            .custom-scrollbar::-webkit-scrollbar {
+              width: 8px;
+            }
+            
+            .custom-scrollbar::-webkit-scrollbar-track {
+              background: #f1f5f9;
+              border-radius: 10px;
+            }
+            
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+              background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+              border-radius: 10px;
+              border: 2px solid #f1f5f9;
+            }
+            
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: linear-gradient(180deg, #2563eb, #1e40af);
+            }
+            
+            .custom-scrollbar::-webkit-scrollbar-thumb:active {
+              background: linear-gradient(180deg, #1d4ed8, #1e3a8a);
+            }
+            
+            /* Firefox scrollbar */
+            .custom-scrollbar {
+              scrollbar-width: thin;
+              scrollbar-color: #3b82f6 #f1f5f9;
+            }
+          `}</style>
           <DialogHeader className="flex justify-between items-start">
             <div>
               <DialogTitle className="text-xl font-bold text-blue-600 mb-1">

@@ -144,7 +144,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           id: userWithNumberId.id,
           name: userWithNumberId.name,
           email: userWithNumberId.email,
-          roleOrPosition: userWithNumberId.position,
+          roleOrPosition: userWithNumberId.role, // Use role instead of position
           department: userWithNumberId.department,
           avatar: userWithNumberId.avatar,
           bio: userWithNumberId.bio,

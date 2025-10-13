@@ -30,6 +30,7 @@ import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/useToast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { createApprovalNotification, createFullyApprovedNotification } from '@/lib/notificationUtils';
 
 type Feedback = {
   id: number;
@@ -64,6 +65,7 @@ type Submission = {
   employeeApprovedAt?: string | null;
   evaluatorSignature?: string | null;
   evaluatorApprovedAt?: string | null;
+  fullyApprovedNotified?: boolean;
 };
 
 type PerformanceData = {
@@ -1560,6 +1562,17 @@ export default function EvaluatorDashboard() {
 
       alert(`Evaluation for ${feedback.employeeName} has been approved successfully!`);
 
+      // Create notification for evaluator approval
+      try {
+        await createApprovalNotification(
+          feedback.employeeName,
+          currentUser?.name || 'Evaluator',
+          'evaluator'
+        );
+      } catch (notificationError) {
+        console.warn('Failed to create approval notification:', notificationError);
+      }
+
     } catch (error) {
       console.error('Error approving evaluation:', error);
       alert('Failed to approve evaluation. Please try again.');
@@ -1591,6 +1604,49 @@ export default function EvaluatorDashboard() {
       return 'pending';
     }
   };
+
+  // Monitor for fully approved evaluations and send notifications
+  // Only check when there's a recent change, not on initial load
+  const [hasCheckedNotifications, setHasCheckedNotifications] = useState(false);
+  
+  useEffect(() => {
+    const checkForFullyApproved = async () => {
+      if (!recentSubmissions || recentSubmissions.length === 0) return;
+      
+      // Only check notifications after initial load
+      if (!hasCheckedNotifications) {
+        setHasCheckedNotifications(true);
+        return;
+      }
+
+      for (const submission of recentSubmissions) {
+        const status = getCorrectApprovalStatus(submission);
+        
+        // Check if this submission is fully approved and we haven't notified yet
+        if (status === 'fully_approved' && !submission.fullyApprovedNotified) {
+          try {
+            await createFullyApprovedNotification(submission.employeeName);
+            
+            // Mark as notified to prevent duplicate notifications
+            const updatedSubmissions = recentSubmissions.map(sub => 
+              sub.id === submission.id 
+                ? { ...sub, fullyApprovedNotified: true }
+                : sub
+            );
+            setRecentSubmissions(updatedSubmissions);
+            
+            // Also update in localStorage
+            await clientDataService.updateSubmission(submission.id, { fullyApprovedNotified: true });
+            
+          } catch (error) {
+            console.warn('Failed to create fully approved notification:', error);
+          }
+        }
+      }
+    };
+
+    checkForFullyApproved();
+  }, [recentSubmissions, hasCheckedNotifications]);
 
   // Function to merge employee approval data from localStorage
   const mergeEmployeeApprovalData = (submissions: any[]) => {

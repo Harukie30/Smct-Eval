@@ -130,6 +130,8 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
 
             console.log('✅ Evaluation submitted successfully:', result);
             
+            // Notification is handled by the main evaluation form
+            
             // Show success state
             setSubmissionSuccess(true);
             setRetryCount(0); // Reset retry count on success
