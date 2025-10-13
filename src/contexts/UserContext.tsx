@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { UserProfile } from '@/components/ProfileCard';
 import { toastMessages } from '@/lib/toastMessages';
 import clientDataService from '@/lib/clientDataService';
-import FakeLoadingScreen from '@/components/FakeLoadingScreen';
+import RealLoadingScreen from '@/components/RealLoadingScreen';
 
 export interface AuthenticatedUser {
   id: number;
@@ -288,11 +288,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       
       {/* Logout Loading Screen */}
       {showLogoutLoading && (
-        <FakeLoadingScreen
+        <RealLoadingScreen
           message="Logging out..."
-          duration={1500}
           onComplete={handleLogoutComplete}
-          showProgress={true}
         />
       )}
     </UserContext.Provider>

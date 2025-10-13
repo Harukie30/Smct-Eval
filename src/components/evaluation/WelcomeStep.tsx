@@ -3,6 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ArrowLeft } from 'lucide-react';
 import { EvaluationData } from './types';
 
 interface WelcomeStepProps {
@@ -18,11 +19,21 @@ interface WelcomeStepProps {
     hireDate: string;
   };
   onStartAction: () => void;
+  onBackAction?: () => void;
+  currentUser?: {
+    id: number;
+    name: string;
+    email: string;
+    signature?: string;
+  };
 }
 
-export default function WelcomeStep({ employee, onStartAction }: WelcomeStepProps) {
+export default function WelcomeStep({ employee, onStartAction, onBackAction, currentUser }: WelcomeStepProps) {
+  const hasSignature = currentUser?.signature && currentUser.signature.trim() !== '';
   return (
     <div className="space-y-6">
+      
+
       {/* Welcome Header */}
       <div className="text-center">
         <h3 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Performance Evaluation</h3>
@@ -124,6 +135,29 @@ export default function WelcomeStep({ employee, onStartAction }: WelcomeStepProp
         </CardContent>
       </Card>
 
+      {/* Signature Validation */}
+      {!hasSignature && (
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <div className="text-red-600 text-lg">⚠️</div>
+              <div>
+                <h4 className="font-medium text-red-800 mb-2">Signature Required</h4>
+                <p className="text-sm text-red-700 mb-3">
+                  You must have a signature saved in your profile to start an evaluation. 
+                  Please add your signature in your profile settings before proceeding.
+                </p>
+                <div className="bg-red-100 p-3 rounded-md">
+                  <p className="text-sm text-red-800 font-medium">
+                    ❌ Cannot start evaluation without signature
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Important Information */}
       <Card className="bg-yellow-50 border-yellow-200">
         <CardContent className="pt-6">
@@ -143,17 +177,42 @@ export default function WelcomeStep({ employee, onStartAction }: WelcomeStepProp
         </CardContent>
       </Card>
 
-      {/* Start Button */}
+      {/* Action Buttons */}
       <div className="text-center">
-        <Button
-          onClick={onStartAction}
-          size="lg"
-          className="px-8 py-3 text-lg bg-blue-600 hover:bg-blue-700"
-        >
-          Start Evaluation
-        </Button>
+        <div className="flex items-center justify-center gap-4">
+          {/* Back Button - Only show when no signature */}
+          {onBackAction && !hasSignature && (
+            <Button
+              variant="outline"
+              onClick={onBackAction}
+              size="lg"
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white hover:text-white text-lg flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+          )}
+          
+          {/* Start Button */}
+          <Button
+            onClick={hasSignature ? onStartAction : undefined}
+            size="lg"
+            disabled={!hasSignature}
+            className={`px-8 py-3 text-lg ${
+              hasSignature 
+                ? 'bg-blue-600 hover:bg-blue-700' 
+                : 'bg-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {hasSignature ? 'Start Evaluation' : 'Signature Required'}
+          </Button>
+        </div>
+        
         <p className="text-sm text-gray-500 mt-2">
-          Click to begin the performance evaluation process
+          {hasSignature 
+            ? 'Click to begin the performance evaluation process'
+            : 'Add your signature in profile settings to start evaluation'
+          }
         </p>
       </div>
     </div>

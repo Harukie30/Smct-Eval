@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertTriangle } from 'lucide-react';
 import Step1 from './Step1';
 import Step2 from './Step2';
 import Step3 from './Step3';
@@ -47,6 +49,7 @@ interface EvaluationFormProps {
     position: string;
     department: string;
     role: string;
+    signature?: string;
   };
   onCloseAction?: () => void;
   onCancelAction?: () => void;
@@ -169,6 +172,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
     hireDate: evaluationData.hireDate,
   }); // Debug log
   const [isEvaluatorApproved, setIsEvaluatorApproved] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   // Update evaluation data when employee prop changes
   useEffect(() => {
@@ -233,19 +237,23 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
         return (
           evaluationData.reliabilityScore1 && evaluationData.reliabilityScore1 !== '' &&
           evaluationData.reliabilityScore2 && evaluationData.reliabilityScore2 !== '' &&
-          evaluationData.reliabilityScore3 && evaluationData.reliabilityScore3 !== ''
+          evaluationData.reliabilityScore3 && evaluationData.reliabilityScore3 !== '' &&
+          evaluationData.reliabilityScore4 && evaluationData.reliabilityScore4 !== '' 
         );
       case 6: // Ethical & Professional Behavior
         return (
           evaluationData.ethicalScore1 && evaluationData.ethicalScore1 !== '' &&
           evaluationData.ethicalScore2 && evaluationData.ethicalScore2 !== '' &&
-          evaluationData.ethicalScore3 && evaluationData.ethicalScore3 !== ''
+          evaluationData.ethicalScore3 && evaluationData.ethicalScore3 !== '' &&
+          evaluationData.ethicalScore4 && evaluationData.ethicalScore4 !== ''
         );
       case 7: // Customer Service
         return (
           evaluationData.customerServiceScore1 && evaluationData.customerServiceScore1 !== '' &&
           evaluationData.customerServiceScore2 && evaluationData.customerServiceScore2 !== '' &&
-          evaluationData.customerServiceScore3 && evaluationData.customerServiceScore3 !== ''
+          evaluationData.customerServiceScore3 && evaluationData.customerServiceScore3 !== '' &&
+          evaluationData.customerServiceScore4 && evaluationData.customerServiceScore4 !== '' &&
+          evaluationData.customerServiceScore5 && evaluationData.customerServiceScore5 !== ''
         );
       default:
         return true; // For other steps, allow progression
@@ -311,7 +319,11 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
         evaluatorName: 'Current Evaluator', // You can make this dynamic
         evaluationData: {
           ...evaluationData,
-          overallRating
+          overallRating,
+          // Ensure evaluator signature is included
+          evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',
+          evaluatorSignature: evaluationData.evaluatorSignature || currentUser?.name || 'Evaluator',
+          evaluatorSignatureDate: evaluationData.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
         },
         status: 'completed',
         period: new Date().toISOString().slice(0, 7), // YYYY-MM format
@@ -330,7 +342,11 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
           evaluatorName: 'Current Evaluator', // You can make this dynamic
           evaluationData: {
             ...evaluationData,
-            overallRating
+            overallRating,
+            // Ensure evaluator signature is included
+            evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',
+            evaluatorSignature: evaluationData.evaluatorSignature || currentUser?.name || 'Evaluator',
+            evaluatorSignatureDate: evaluationData.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
           },
           status: 'completed',
           period: new Date().toISOString().slice(0, 7), // YYYY-MM format
@@ -380,8 +396,22 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
   const CurrentStepComponent = currentStep === 0 ? WelcomeStep : steps[currentStep - 1].component;
 
   return (
-    <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 overflow-y-auto">
-      <div className="max-w-5xl mx-auto px-8">
+    <>
+      <style jsx>{`
+        @keyframes dialogPopup {
+          from {
+            transform: scale(0.9);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+      `}</style>
+      <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 overflow-y-auto">
+      <div className="w-full mx-auto px-4">
+        <div className="max-w-5xl mx-auto">
 
         {/* Step Numbers Indicator */}
         {currentStep > 0 && (
@@ -440,6 +470,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
                 employee={employee}
                 currentUser={currentUser}
                 onStartAction={startEvaluation}
+                onBackAction={onCloseAction}
               />
             </CardContent>
           </Card>
@@ -485,14 +516,10 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
               
               <Button
                 variant="outline"
-                onClick={() => {
-                  if (onCancelAction) {
-                    onCancelAction();
-                  } else if (confirm('Are you sure you want to cancel this evaluation? All progress will be lost.')) {
-                    if (onCloseAction) {
-                      onCloseAction();
-                    }
-                  }
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowCancelDialog(true);
                 }}
                 className="px-6 text-red-600 border-red-300 hover:bg-red-50"
               >
@@ -501,14 +528,16 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
             </div>
 
             <div className="flex flex-col gap-2">
-              {currentStep >= 1 && currentStep <= 7 && !isCurrentStepComplete() ? (
-                <TooltipProvider>
+              <TooltipProvider>
+                {currentStep >= 1 && currentStep <= 7 && !isCurrentStepComplete() ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button 
-                        onClick={nextStep} 
-                        className="px-6"
-                        disabled={true}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          // Button is disabled, do nothing
+                        }}
+                        className="px-6 opacity-50 cursor-not-allowed"
                       >
                         Next
                       </Button>
@@ -517,25 +546,78 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
                       <p>Please complete all {getStepName()} scores to continue</p>
                     </TooltipContent>
                   </Tooltip>
-                </TooltipProvider>
-              ) : (
-                <Button 
-                  onClick={nextStep} 
-                  className="px-6"
-                >
-                  Next
-                </Button>
-              )}
-              {currentStep >= 1 && currentStep <= 7 && !isCurrentStepComplete() && (
-                <p className="text-sm text-gray-500 text-center">
-                  Please complete all {getStepName()} scores to continue
-                </p>
-              )}
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        onClick={nextStep} 
+                        className="px-6"
+                      >
+                        Next
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Proceed to the next step</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </TooltipProvider>
+              
             </div>
           </div>
         )}
+        </div>
       </div>
 
     </div>
+
+    {/* Cancel Evaluation Dialog */}
+    <Dialog open={showCancelDialog} onOpenChangeAction={setShowCancelDialog}>
+      <DialogContent className="max-w-md m-8" style={{
+        animation: 'dialogPopup 0.3s ease-out'
+      }}>
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-red-500" />
+            Cancel Evaluation
+          </DialogTitle>
+        </DialogHeader>
+        <div className="py-3 bg-red-50 p-4 mx-2 my-2">
+          <p className="text-gray-600">
+            Are you sure you want to cancel this evaluation? All progress will be lost and cannot be recovered.
+          </p>
+        </div>
+        <DialogFooter className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowCancelDialog(false);
+            }}
+            className="px-4 bg-blue-500 text-white hover:bg-blue-600 hover:text-white"
+          >
+            Keep Editing
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowCancelDialog(false);
+              if (onCancelAction) {
+                onCancelAction();
+              } else if (onCloseAction) {
+                onCloseAction();
+              }
+            }}
+            className="px-4"
+          >
+            Cancel Evaluation
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

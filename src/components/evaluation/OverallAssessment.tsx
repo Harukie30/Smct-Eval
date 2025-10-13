@@ -116,14 +116,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
             const evaluatorName = storedUser ? JSON.parse(storedUser).name : 'Evaluator';
 
             // Save the evaluator's signature from their profile before submitting
-            updateDataAction({ 
+            const updatedData = {
+                ...data,
                 evaluatorSignatureImage: currentUser.signature,
                 evaluatorSignature: currentUser.name || data.evaluatorSignature,
                 evaluatorSignatureDate: data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
-            });
+            };
+            
+            updateDataAction(updatedData);
 
-            // Submit evaluation via API
-            const result = await submitEvaluation(data, evaluatorName);
+            // Submit evaluation via API with updated data
+            const result = await submitEvaluation(updatedData, evaluatorName);
 
             console.log('✅ Evaluation submitted successfully:', result);
             

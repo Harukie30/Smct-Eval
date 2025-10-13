@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Link from 'next/link';
 import PageTransition from '@/components/PageTransition';
-import FakeLoadingScreen from '@/components/FakeLoadingScreen';
 import RealLoadingScreen from '@/components/RealLoadingScreen';
 import InstantLoadingScreen from '@/components/InstantLoadingScreen';
 import SuspensionModal from '@/components/SuspensionModal';
@@ -119,14 +118,11 @@ export default function LandingLoginPage() {
   };
 
   if (isLoading) {
-    // Check if user is logging out (no authenticated user but loading)
-    const isLoggingOut = !isAuthenticated && isLoading;
-
     return (
       <PageTransition>
-        <FakeLoadingScreen
-          message={isLoggingOut ? "Logging out..." : "Initializing System..."}
-          duration={isLoggingOut ? 1500 : 1000}
+        <RealLoadingScreen
+          message="Initializing System..."
+          onComplete={() => setShowLoadingScreen(false)}
         />
       </PageTransition>
     );

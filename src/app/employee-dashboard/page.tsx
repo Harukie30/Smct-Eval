@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Eye, Trash } from 'lucide-react';
+import { Eye, Trash, Calendar, X } from 'lucide-react';
 // useRouter removed - not used
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,9 @@ import { AlertDialog } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import clientDataService from '@/lib/clientDataService';
 import { getEmployeeResults, initializeMockData } from '@/lib/evaluationStorage';
 // commentsService import removed
@@ -62,6 +65,10 @@ export default function EmployeeDashboard() {
   const [accountHistory, setAccountHistory] = useState<any[]>([]);
   const [accountHistorySearchTerm, setAccountHistorySearchTerm] = useState('');
   // Comments & feedback functionality removed
+  
+  // Date filtering states for quarterly performance
+  const [dateFilter, setDateFilter] = useState<{from?: Date, to?: Date}>({});
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   // Logout confirmation states
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
@@ -231,7 +238,6 @@ export default function EmployeeDashboard() {
       const updatedResults = evaluationResults.filter(result => result.id !== evaluationToDelete.id);
       setEvaluationResults(updatedResults);
 
-      console.log('Evaluation deleted and moved to deleted evaluations:', evaluationToDelete.id);
 
       // Reset password validation states
       setDeletePassword('');
@@ -398,11 +404,6 @@ export default function EmployeeDashboard() {
         // Comments functionality removed
 
 
-        console.log('Dashboard refreshed:', {
-          submissions: finalSubmissions.length,
-          evaluations: results.length,
-          history: history.length
-        });
       }
     } catch (error) {
       console.error('Error refreshing dashboard data:', error);
@@ -434,7 +435,6 @@ export default function EmployeeDashboard() {
     const handleStorageChange = (e: StorageEvent) => {
       // Only refresh if the change is from another tab/window
       if (e.key === 'submissions' && e.newValue !== e.oldValue) {
-        console.log('📊 Submissions data updated, refreshing employee dashboard...');
         handleRefreshSubmissions();
       }
     };
@@ -458,7 +458,6 @@ export default function EmployeeDashboard() {
         const history = loadAccountHistory(profile.email);
         setAccountHistory(history);
 
-        console.log('Account history refreshed:', history.length, 'items');
 
         // Show success toast
         success('Account history refreshed successfully', 'All account records have been updated');
@@ -500,12 +499,10 @@ export default function EmployeeDashboard() {
         // If no user-specific submissions found, show all submissions for testing
         const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
         setSubmissions(finalSubmissions);
-        console.log('Submissions refreshed:', userSubmissions.length, 'items');
 
         // Show success toast
         success('Performance reviews refreshed successfully', 'All performance data has been updated');
       } catch (error) {
-        console.log('Submissions not available');
       }
     } catch (error) {
       console.error('Error refreshing submissions:', error);
@@ -515,6 +512,11 @@ export default function EmployeeDashboard() {
       setIsRefreshingOverview(false);
       setShowRefreshingDialog(false);
     }
+  };
+
+  // Clear date filter function
+  const clearDateFilter = () => {
+    setDateFilter({});
   };
 
   // Refresh function for Quarterly Performance table
@@ -531,7 +533,6 @@ export default function EmployeeDashboard() {
         // Reload evaluation results which are used for quarterly performance
         const results = getEmployeeResults(profile.email);
         setEvaluationResults(results);
-        console.log('Quarterly performance refreshed:', results.length, 'items');
 
         // Show success toast
         success('Quarterly performance refreshed successfully', 'All quarterly data has been updated');
@@ -560,7 +561,6 @@ export default function EmployeeDashboard() {
         // Reload evaluation results which are used for evaluation history
         const results = getEmployeeResults(profile.email);
         setEvaluationResults(results);
-        console.log('Evaluation history refreshed:', results.length, 'items');
 
         // Show success toast
         success('Evaluation history refreshed successfully', 'All evaluation records have been updated');
@@ -615,17 +615,6 @@ export default function EmployeeDashboard() {
       submission = submissionOrId;
     }
 
-    // Debug logging
-    console.log('🔍 Debug - handleApproveEvaluation:', {
-      submissionOrId,
-      submissionOrIdType: typeof submissionOrId,
-      selectedEvaluation,
-      submission,
-      submissionId: submission?.id,
-      submissionKeys: submission ? Object.keys(submission) : 'no submission',
-      submissionsLength: submissions.length,
-      foundInSubmissions: submissions.find(sub => sub.id.toString() === submissionOrId)
-    });
 
     if (!submission) {
       console.error('❌ Cannot approve: no submission found');
@@ -671,13 +660,6 @@ export default function EmployeeDashboard() {
   const confirmApproval = async () => {
     if (!evaluationToApprove || !profile?.email) return;
 
-    // Debug logging
-    console.log('🔍 Debug - confirmApproval:', {
-      evaluationToApprove,
-      evaluationId: evaluationToApprove.id,
-      evaluationIdType: typeof evaluationToApprove.id,
-      profileEmail: profile.email
-    });
 
     // Check if user has a signature
     const employeeSignature = profile.signature || user?.signature || '';
@@ -698,15 +680,6 @@ export default function EmployeeDashboard() {
         employeeEmail: profile.email || user?.email || ''
       };
 
-      // Debug logging
-      console.log('🔍 Debug - Approval Data:', {
-        evaluationId: evaluationToApprove.id,
-        hasSignature: employeeSignature ? 'YES' : 'NO',
-        signatureLength: employeeSignature?.length || 0,
-        signaturePreview: employeeSignature?.substring(0, 50) + '...',
-        employeeName: approvalData.employeeName,
-        employeeEmail: approvalData.employeeEmail
-      });
 
 
       // Add to approved evaluations with full approval data
@@ -725,13 +698,6 @@ export default function EmployeeDashboard() {
       existingApprovals[submissionId] = approvalData;
       localStorage.setItem(`approvalData_${profile.email}`, JSON.stringify(existingApprovals));
 
-      // Debug logging for localStorage save
-      console.log('🔍 Debug - Saving to localStorage:', {
-        key: `approvalData_${profile.email}`,
-        submissionId: submissionId,
-        approvalData: approvalData,
-        existingApprovals: existingApprovals
-      });
 
       // Also save the approved IDs list
       localStorage.setItem(`approvedEvaluations_${profile.email}`, JSON.stringify([...newApproved]));
@@ -771,16 +737,6 @@ export default function EmployeeDashboard() {
     const key = submissionId.toString();
     const data = approvalData[key] || null;
 
-    // Debug logging
-    console.log('🔍 Debug - getApprovalData:', {
-      submissionId,
-      key,
-      profileEmail: profile.email,
-      approvalData,
-      foundData: data,
-      hasSignature: data?.employeeSignature ? 'YES' : 'NO',
-      signatureLength: data?.employeeSignature?.length || 0
-    });
 
     return data;
   };
@@ -1760,6 +1716,63 @@ export default function EmployeeDashboard() {
                             )}
                           </div>
 
+                          {/* Date Range Filter */}
+                          <div className="mb-6">
+                            <div className="flex items-center gap-4">
+                              <span className="text-sm font-medium text-gray-700">Filter by Date Range:</span>
+                              <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-[280px] justify-start text-left font-normal",
+                                      !dateFilter.from && "text-muted-foreground"
+                                    )}
+                                  >
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    {dateFilter.from ? (
+                                      dateFilter.to ? (
+                                        <>
+                                          {dateFilter.from.toLocaleDateString()} - {dateFilter.to.toLocaleDateString()}
+                                        </>
+                                      ) : (
+                                        dateFilter.from.toLocaleDateString()
+                                      )
+                                    ) : (
+                                      "Pick a date range"
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <CalendarComponent
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={dateFilter.from}
+                                    selected={dateFilter.from ? { from: dateFilter.from, to: dateFilter.to } : undefined}
+                                    onSelect={(range) => setDateFilter(range || {})}
+                                    numberOfMonths={1}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              {(dateFilter.from || dateFilter.to) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={clearDateFilter}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                            {(dateFilter.from || dateFilter.to) && (
+                              <div className="mt-2 text-sm text-gray-600">
+                                Filtering by date range: {dateFilter.from?.toLocaleDateString()} - {dateFilter.to?.toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+
                           {/* Quarter Filter Buttons */}
                           <div className="mb-6">
                             <div className="flex flex-wrap gap-2 items-center">
@@ -1838,10 +1851,10 @@ export default function EmployeeDashboard() {
                                 <TableHeader>
                                   <TableRow>
                                     <TableHead>Quarter</TableHead>
+                                    <TableHead>Dates</TableHead>
                                     <TableHead>Total Evaluations</TableHead>
                                     <TableHead>Average Rating</TableHead>
                                     <TableHead>Latest Rating</TableHead>
-                                    <TableHead>Performance Trend</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Actions</TableHead>
                                   </TableRow>
@@ -1858,7 +1871,7 @@ export default function EmployeeDashboard() {
                                           averageRating: 0,
                                           totalEvaluations: 0,
                                           latestRating: 0,
-                                          trend: 0
+                                          dateRange: ''
                                         };
                                       }
                                       acc[quarter].submissions.push(submission);
@@ -1874,7 +1887,21 @@ export default function EmployeeDashboard() {
                                       data.totalEvaluations = ratings.length;
                                       data.averageRating = ratings.length > 0 ? (ratings.reduce((a: any, b: any) => a + b, 0) / ratings.length).toFixed(1) : 0;
                                       data.latestRating = ratings.length > 0 ? ratings[ratings.length - 1] : 0;
-                                      data.trend = ratings.length > 1 ? (ratings[ratings.length - 1] - ratings[0]) : 0;
+                                      
+                                      // Calculate date range for this quarter
+                                      if (data.submissions.length > 0) {
+                                        const dates = data.submissions.map((s: any) => new Date(s.submittedAt)).sort((a: any, b: any) => a - b);
+                                        const startDate = dates[0];
+                                        const endDate = dates[dates.length - 1];
+                                        
+                                        if (startDate.getTime() === endDate.getTime()) {
+                                          // Same date
+                                          data.dateRange = startDate.toLocaleDateString();
+                                        } else {
+                                          // Date range
+                                          data.dateRange = `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
+                                        }
+                                      }
                                     });
 
                                     // Sort quarters chronologically
@@ -1885,10 +1912,31 @@ export default function EmployeeDashboard() {
                                       return (quarterOrder[aQuarter] || 0) - (quarterOrder[bQuarter] || 0);
                                     });
 
-                                    // Filter quarters based on selected quarter
-                                    const filteredQuarters = selectedQuarter
+                                    // Filter quarters based on selected quarter and date range
+                                    let filteredQuarters = selectedQuarter
                                       ? sortedQuarters.filter((q: any) => q.quarter.startsWith(selectedQuarter))
                                       : sortedQuarters;
+
+                                    // Apply date range filter
+                                    if (dateFilter.from || dateFilter.to) {
+                                      filteredQuarters = filteredQuarters.filter((quarterData: any) => {
+                                        // Check if any submission in this quarter falls within the date range
+                                        return quarterData.submissions.some((submission: any) => {
+                                          const submissionDate = new Date(submission.submittedAt);
+                                          
+                                          // Normalize dates to compare only the date part (remove time)
+                                          const submissionDateOnly = new Date(submissionDate.getFullYear(), submissionDate.getMonth(), submissionDate.getDate());
+                                          const fromDateOnly = dateFilter.from ? new Date(dateFilter.from.getFullYear(), dateFilter.from.getMonth(), dateFilter.from.getDate()) : null;
+                                          const toDateOnly = dateFilter.to ? new Date(dateFilter.to.getFullYear(), dateFilter.to.getMonth(), dateFilter.to.getDate()) : null;
+                                          
+                                          const isAfterFrom = !fromDateOnly || submissionDateOnly >= fromDateOnly;
+                                          const isBeforeTo = !toDateOnly || submissionDateOnly <= toDateOnly;
+                                          
+                                          
+                                          return isAfterFrom && isBeforeTo;
+                                        });
+                                      });
+                                    }
 
                                     return filteredQuarters.length > 0 ? filteredQuarters.map((quarterData: any) => (
                                       <TableRow key={quarterData.quarter}>
@@ -1896,6 +1944,11 @@ export default function EmployeeDashboard() {
                                           <Badge className={getQuarterColor(quarterData.quarter)}>
                                             {quarterData.quarter}
                                           </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                          <div className="text-sm text-gray-600">
+                                            {quarterData.dateRange || 'No dates available'}
+                                          </div>
                                         </TableCell>
                                         <TableCell className="font-medium">
                                           {quarterData.totalEvaluations}
@@ -1911,21 +1964,6 @@ export default function EmployeeDashboard() {
                                             <span className="font-medium">{quarterData.latestRating}</span>
                                             <span className="text-gray-500">/5.0</span>
                                           </div>
-                                        </TableCell>
-                                        <TableCell>
-                                          {quarterData.trend !== 0 ? (
-                                            <div className="flex items-center space-x-1">
-                                              <span className={`text-sm font-medium ${quarterData.trend > 0 ? 'text-green-600' : 'text-red-600'
-                                                }`}>
-                                                {quarterData.trend > 0 ? '↗' : '↘'}
-                                              </span>
-                                              <span className="text-sm">
-                                                {Math.abs(quarterData.trend).toFixed(1)}
-                                              </span>
-                                            </div>
-                                          ) : (
-                                            <span className="text-gray-400 text-sm">No change</span>
-                                          )}
                                         </TableCell>
                                         <TableCell>
                                           <Badge className={
@@ -2533,6 +2571,10 @@ export default function EmployeeDashboard() {
         isApproved={selectedEvaluation ? isEvaluationApproved(selectedEvaluation.id) : false}
         approvalData={selectedEvaluation ? getApprovalData(selectedEvaluation.id) : null}
         currentUserName={profile?.name || user?.name}
+        currentUserSignature={(() => {
+          const signature = selectedEvaluation?.evaluationData?.evaluatorSignatureImage || selectedEvaluation?.evaluationData?.evaluatorSignature || null;
+          return signature;
+        })()}
         showApprovalButton={modalOpenedFromTab === 'history'} // Only show approval button in Evaluation History tab
       />
 

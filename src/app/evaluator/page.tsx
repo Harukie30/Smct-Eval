@@ -39,6 +39,7 @@ type Feedback = {
   date: string;
   comment: string;
   category: string;
+  supervisor?: string;
 };
 
 type Submission = {
@@ -153,6 +154,37 @@ const getQuarterColor = (quarter: string) => {
 export default function EvaluatorDashboard() {
   const { profile, user } = useUser();
   const { success, error } = useToast();
+
+  // Add custom CSS for container popup animation
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes containerPopup {
+        0% {
+          transform: scale(0.8) translateY(20px);
+          opacity: 0;
+        }
+        50% {
+          transform: scale(1.05) translateY(-5px);
+          opacity: 0.8;
+        }
+        100% {
+          transform: scale(1) translateY(0);
+          opacity: 1;
+        }
+      }
+      .evaluation-container {
+        animation: containerPopup 0.4s ease-out !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
+
 
 
   // Helper function to map user data to currentUser format
@@ -1659,6 +1691,7 @@ export default function EvaluatorDashboard() {
         position: submission.evaluationData?.position || '',
         reviewer: submission.evaluator || 'Unknown',
         reviewerRole: 'Evaluator',
+        supervisor: submission.evaluationData?.supervisor || 'Not specified',
         category: submission.category || 'Performance Review',
         rating: calculatedRating,
         date: submission.submittedAt || new Date().toISOString(),
@@ -2633,8 +2666,11 @@ export default function EvaluatorDashboard() {
                           </TableCell>
                           <TableCell className="px-6 py-3">
                             <div>
-                              <div className="font-medium text-gray-900">{feedback.reviewer}</div>
-                              <div className="text-sm text-gray-500">{feedback.reviewerRole}</div>
+                              <div className="font-medium text-gray-900">
+                                {feedback.supervisor && feedback.supervisor !== 'Not specified' 
+                                  ? feedback.supervisor 
+                                  : feedback.reviewer}
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell className="px-6 py-3">
@@ -2986,6 +3022,7 @@ export default function EvaluatorDashboard() {
 
   return (
     <ProtectedRoute requiredRole={["evaluator", "manager"]}>
+      
       {/* Loading Screen - Shows during initial load */}
       {(loading || !data) && (
         <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -3012,7 +3049,9 @@ export default function EvaluatorDashboard() {
 
         {/* Evaluation Modal */}
         <Dialog open={isEvaluationModalOpen} onOpenChangeAction={setIsEvaluationModalOpen}>
-          <DialogContent className="max-w-7xl max-h-[101vh] overflow-hidden p-2 animate-in fade-in-0 zoom-in-95 duration-300">
+          <DialogContent 
+            className="max-w-7xl max-h-[101vh] overflow-hidden p-2 evaluation-container"
+          >
             {selectedEmployee && (
               <EvaluationForm
                 employee={selectedEmployee}
@@ -3021,7 +3060,6 @@ export default function EvaluatorDashboard() {
                   setIsEvaluationModalOpen(false);
                   setSelectedEmployee(null);
                 }}
-                onCancelAction={() => setIsCancelAlertOpen(true)}
               />
             )}
           </DialogContent>
@@ -3086,6 +3124,8 @@ export default function EvaluatorDashboard() {
           isOpen={isViewResultsModalOpen}
           onCloseAction={() => setIsViewResultsModalOpen(false)}
           submission={selectedEvaluationSubmission}
+          currentUserName={getCurrentUserData()?.name}
+          currentUserSignature={getCurrentUserData()?.signature}
           isEvaluatorView={true}
         />
 
