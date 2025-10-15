@@ -125,33 +125,7 @@ const getRatingColorForLabel = (rating: string) => {
   }
 };
 
-// Function to get quarter from date
-const getQuarterFromDate = (dateString: string): string => {
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Unknown';
-
-    const month = date.getMonth() + 1; // getMonth() returns 0-11
-    const year = date.getFullYear();
-
-    if (month >= 1 && month <= 3) return `Q1 ${year}`;
-    if (month >= 4 && month <= 6) return `Q2 ${year}`;
-    if (month >= 7 && month <= 9) return `Q3 ${year}`;
-    if (month >= 10 && month <= 12) return `Q4 ${year}`;
-
-    return 'Unknown';
-  } catch (error) {
-    return 'Unknown';
-  }
-};
-
-const getQuarterColor = (quarter: string) => {
-  if (quarter.includes('Q1')) return 'bg-blue-100 text-blue-800';
-  if (quarter.includes('Q2')) return 'bg-green-100 text-green-800';
-  if (quarter.includes('Q3')) return 'bg-yellow-100 text-yellow-800';
-  if (quarter.includes('Q4')) return 'bg-purple-100 text-purple-800';
-  return 'bg-gray-100 text-gray-800';
-};
+import { getQuarterFromEvaluationData, getQuarterFromDate, getQuarterColor } from '@/lib/quarterUtils';
 
 export default function EvaluatorDashboard() {
   const { profile, user } = useUser();
@@ -1804,7 +1778,7 @@ export default function EvaluatorDashboard() {
     // Apply quarter filter
     if (feedbackQuarterFilter) {
       data = data.filter(item => {
-        const itemQuarter = getQuarterFromDate(item.date);
+        const itemQuarter = getQuarterFromEvaluationData(item);
         return itemQuarter === feedbackQuarterFilter;
       });
     }
@@ -2191,7 +2165,16 @@ export default function EvaluatorDashboard() {
               const matchesDepartment = !selectedDepartment || e.department === selectedDepartment;
 
               return matchesSearch && matchesDepartment;
-            });
+            }).map((e: any) => ({
+              // Use employeeId instead of id to match submissions data
+              id: e.employeeId || e.id,
+              name: e.name,
+              email: e.email,
+              position: e.position,
+              department: e.department,
+              role: e.role,
+              hireDate: e.hireDate
+            }));
             const sorted = [...filtered].sort((a, b) => {
               const { key, direction } = employeeSort;
               const av = a[key] ?? '';

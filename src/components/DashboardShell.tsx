@@ -9,6 +9,7 @@ import ProfileModal from "./ProfileModal";
 import { useUser } from '@/contexts/UserContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Notification } from '@/lib/clientDataService';
+import clientDataService from '@/lib/clientDataService';
 
 export type SidebarItem = {
   id: string;
@@ -111,17 +112,8 @@ export default function DashboardShell(props: DashboardShellProps) {
   const handleDeleteNotification = async (notificationId: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering the notification click
     try {
-      // Delete notification from localStorage
-      const allNotifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-      const updatedNotifications = allNotifications.filter((n: Notification) => n.id !== notificationId);
-      localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
-      
-      // Trigger storage event for real-time updates
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: 'notifications',
-        newValue: JSON.stringify(updatedNotifications),
-        oldValue: localStorage.getItem('notifications')
-      }));
+      // Use clientDataService to delete notification properly
+      await clientDataService.deleteNotification(notificationId);
     } catch (error) {
       console.error('Failed to delete notification:', error);
     }
@@ -212,7 +204,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                     </div>
                   </div>
                   
-                  <div className="max-h-96 overflow-y-auto">
+                  <div className="h-[270px] overflow-y-auto">
                     {notifications.length === 0 ? (
                       <div className="p-4 text-center text-gray-500">
                         No notifications

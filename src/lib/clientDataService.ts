@@ -649,6 +649,20 @@ export const clientDataService = {
     const notifications = await clientDataService.getNotifications(userRole);
     return notifications.filter(notification => !notification.isRead).length;
   },
+
+  deleteNotification: async (notificationId: number): Promise<void> => {
+    const notifications = getFromStorage(STORAGE_KEYS.NOTIFICATIONS, [] as Notification[]);
+    const updatedNotifications = notifications.filter(n => n.id !== notificationId);
+    saveToStorage(STORAGE_KEYS.NOTIFICATIONS, updatedNotifications);
+    
+    // Trigger storage event for real-time updates
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: STORAGE_KEYS.NOTIFICATIONS,
+        newValue: JSON.stringify(updatedNotifications)
+      }));
+    }
+  },
 };
 
 export default clientDataService;

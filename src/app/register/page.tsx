@@ -155,40 +155,81 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 relative overflow-hidden">
-      {/* Abstract Background */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Animated geometric shapes */}
-        <div className="absolute top-0 left-0 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute top-0 right-0 w-72 h-72 bg-blue-600 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
-        
-        {/* Floating geometric elements */}
-        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg transform rotate-12 opacity-10 animate-float"></div>
-        <div className="absolute top-1/3 right-1/4 w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full opacity-10 animate-float animation-delay-1000"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-20 h-20 bg-gradient-to-br from-indigo-400 to-indigo-600 transform rotate-45 opacity-10 animate-float animation-delay-2000"></div>
-        
-        {/* Grid pattern overlay */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%239C92AC%22%20fill-opacity%3D%220.05%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%221%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
-        
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/10 to-transparent"></div>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Main Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-r from-white via-blue-50 to-blue-600"></div>
+      
+      {/* Single Geometric Pattern Overlay - Gradient from left to right */}
+      <div className="absolute inset-0">
+        <svg className="w-full h-full" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
+          <defs>
+            {/* Gradient mask for fading effect */}
+            <linearGradient id="fadeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style={{stopColor:'rgba(255,255,255,0)', stopOpacity:0}} />
+              <stop offset="30%" style={{stopColor:'rgba(255,255,255,0)', stopOpacity:0}} />
+              <stop offset="60%" style={{stopColor:'rgba(255,255,255,0.3)', stopOpacity:0.3}} />
+              <stop offset="100%" style={{stopColor:'rgba(255,255,255,1)', stopOpacity:1}} />
+            </linearGradient>
+            
+            {/* Single hexagon pattern */}
+            <pattern id="hexagons" x="0" y="0" width="100" height="87" patternUnits="userSpaceOnUse">
+              <polygon points="50,8 75,25 75,62 50,79 25,62 25,25" fill="rgba(59, 130, 246, 0.12)" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="0.8"/>
+            </pattern>
+          </defs>
+          
+          {/* Apply single pattern with gradient mask */}
+          <rect width="100%" height="100%" fill="url(#hexagons)" mask="url(#patternMask)"/>
+          
+          {/* Create mask for gradient effect */}
+          <mask id="patternMask">
+            <rect width="100%" height="100%" fill="url(#fadeGradient)"/>
+          </mask>
+        </svg>
       </div>
-      {/* Header */}
-      <header className="flex justify-between items-center p-6">
-        <Link href="/" className="flex items-center space-x-2">
-          <img src="/smct.png" alt="SMCT Group of Companies" className="h-30 w-auto" />
-        </Link>
-       
-       
-      </header>
-
+      
+      {/* Single Geometric Elements - Hexagons only */}
+      <div className="absolute top-20 right-20 w-24 h-24 opacity-30">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.2)" stroke="rgba(59, 130, 246, 0.4)" strokeWidth="1"/>
+        </svg>
+      </div>
+      
+      <div className="absolute bottom-32 right-40 w-20 h-20 opacity-35">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon points="50,5 85,25 85,75 50,95 15,75 15,25" fill="rgba(59, 130, 246, 0.15)" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="1"/>
+        </svg>
+      </div>
+      
+      <div className="absolute top-40 left-20 w-16 h-16 opacity-5">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon points="50,15 75,35 75,65 50,85 25,65 25,35" fill="rgba(59, 130, 246, 0.08)" stroke="rgba(59, 130, 246, 0.15)" strokeWidth="0.5"/>
+        </svg>
+      </div>
+      
+      {/* Right side additional hexagons */}
+      <div className="absolute top-1/2 right-10 w-12 h-12 opacity-20">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.1)" stroke="rgba(59, 130, 246, 0.25)" strokeWidth="0.8"/>
+        </svg>
+      </div>
+      
+      <div className="absolute bottom-1/2 right-20 w-10 h-10 opacity-25">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.12)" stroke="rgba(59, 130, 246, 0.2)" strokeWidth="0.6"/>
+        </svg>
+      </div>
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
+      <main className="relative z-10 container mx-auto px-4 py-12">
         <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
           <PageTransition>
             <Card className="w-full max-w-lg shadow-2xl transform scale-105 bg-white/95 backdrop-blur-sm border-0 relative z-10">
-              <CardHeader className="space-y-1">
+              <CardHeader className="space-y-4">
+                {/* Logo at the top of the card */}
+                <div className="flex justify-center mb-4">
+                  <Link href="/" className="flex items-center space-x-2">
+                    <img src="/smct.png" alt="SMCT Group of Companies" className="h-16 w-auto" />
+                  </Link>
+                </div>
                 <CardTitle className="text-2xl text-center text-blue-700">
                   Create your account
                 </CardTitle>

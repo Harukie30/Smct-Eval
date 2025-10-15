@@ -12,6 +12,7 @@ import DashboardShell from '@/components/DashboardShell';
 import PageTransition from '@/components/PageTransition';
 import { useUser } from '@/contexts/UserContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { getQuarterFromEvaluationData, getQuarterFromDate, getQuarterColor } from '@/lib/quarterUtils';
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 import EvaluationDetailsModal from '@/components/EvaluationDetailsModal';
 // CommentDetailModal import removed
@@ -105,6 +106,14 @@ export default function EmployeeDashboard() {
     { id: 'history', label: 'Evaluation History', icon: '📈' },
     { id: 'account-history', label: 'Account History', icon: '📋' },
   ];
+
+  // Function to determine if a submission is "new" (within last 7 days)
+  const isNewSubmission = (submittedAt: string) => {
+    const submissionDate = new Date(submittedAt);
+    const now = new Date();
+    const daysDifference = (now.getTime() - submissionDate.getTime()) / (1000 * 60 * 60 * 24);
+    return daysDifference <= 7; // Consider submissions within 7 days as "new"
+  };
 
   // Function to load account history (suspension records only)
   const loadAccountHistory = (email: string) => {
@@ -764,33 +773,6 @@ export default function EmployeeDashboard() {
     }, 1500);
   };
 
-  // Function to get quarter from date
-  const getQuarterFromDate = (dateString: string): string => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'Unknown';
-
-      const month = date.getMonth() + 1; // getMonth() returns 0-11
-      const year = date.getFullYear();
-
-      if (month >= 1 && month <= 3) return `Q1 ${year}`;
-      if (month >= 4 && month <= 6) return `Q2 ${year}`;
-      if (month >= 7 && month <= 9) return `Q3 ${year}`;
-      if (month >= 10 && month <= 12) return `Q4 ${year}`;
-
-      return 'Unknown';
-    } catch (error) {
-      return 'Unknown';
-    }
-  };
-
-  const getQuarterColor = (quarter: string) => {
-    if (quarter.includes('Q1')) return 'bg-blue-100 text-blue-800';
-    if (quarter.includes('Q2')) return 'bg-green-100 text-green-800';
-    if (quarter.includes('Q3')) return 'bg-yellow-100 text-yellow-800';
-    if (quarter.includes('Q4')) return 'bg-purple-100 text-purple-800';
-    return 'bg-gray-100 text-gray-800';
-  };
 
   // Calculate overall rating using the same formula as ViewResultsModal
   const calculateOverallRating = (evaluationData: any) => {
@@ -1076,8 +1058,20 @@ export default function EmployeeDashboard() {
                     </TableHeader>
                     <TableBody>
                       {submissions.slice(0, 5).map((submission) => (
-                        <TableRow key={submission.id}>
-                          <TableCell className="font-medium">{submission.evaluationData?.supervisor || 'Not specified'}</TableCell>
+                        <TableRow 
+                          key={submission.id}
+                          className={isNewSubmission(submission.submittedAt) ? 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100' : ''}
+                        >
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {submission.evaluationData?.supervisor || 'Not specified'}
+                              {isNewSubmission(submission.submittedAt) && (
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                                  NEW
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge variant="outline">{submission.category}</Badge>
                           </TableCell>
@@ -1086,8 +1080,8 @@ export default function EmployeeDashboard() {
                           </TableCell>
                           <TableCell>{new Date(submission.submittedAt).toLocaleDateString()}</TableCell>
                           <TableCell>
-                            <Badge className={getQuarterColor(getQuarterFromDate(submission.submittedAt))}>
-                              {getQuarterFromDate(submission.submittedAt)}
+                            <Badge className={getQuarterColor(getQuarterFromEvaluationData(submission.evaluationData || submission))}>
+                              {getQuarterFromEvaluationData(submission.evaluationData || submission)}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right bg-">
@@ -1517,9 +1511,19 @@ export default function EmployeeDashboard() {
                           </TableHeader>
                           <TableBody>
                             {submissions.map((submission) => (
-                              <TableRow key={submission.id} className="hover:bg-gray-50">
+                              <TableRow 
+                                key={submission.id} 
+                                className={`hover:bg-gray-50 ${isNewSubmission(submission.submittedAt) ? 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100' : ''}`}
+                              >
                                 <TableCell className="px-6 py-4">
-                                  {new Date(submission.submittedAt).toLocaleDateString()}
+                                  <div className="flex items-center gap-2">
+                                    {new Date(submission.submittedAt).toLocaleDateString()}
+                                    {isNewSubmission(submission.submittedAt) && (
+                                      <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                                        NEW
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </TableCell>
                                 <TableCell className="px-6 py-4 font-medium">
                                   {submission.evaluationData?.supervisor || 'Not specified'}
@@ -1531,8 +1535,8 @@ export default function EmployeeDashboard() {
                                   {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating}/5
                                 </TableCell>
                                 <TableCell className="px-6 py-4">
-                                  <Badge className={getQuarterColor(getQuarterFromDate(submission.submittedAt))}>
-                                    {getQuarterFromDate(submission.submittedAt)}
+                                  <Badge className={getQuarterColor(getQuarterFromEvaluationData(submission.evaluationData || submission))}>
+                                    {getQuarterFromEvaluationData(submission.evaluationData || submission)}
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="px-6 py-4 text-right">
@@ -1593,7 +1597,7 @@ export default function EmployeeDashboard() {
             submission.evaluationData?.supervisor?.toLowerCase().includes(searchLower) ||
             submission.category?.toLowerCase().includes(searchLower) ||
             submission.rating?.toString().includes(searchLower) ||
-            getQuarterFromDate(submission.submittedAt)?.toLowerCase().includes(searchLower)
+            getQuarterFromEvaluationData(submission.evaluationData || submission)?.toLowerCase().includes(searchLower)
           );
         });
 
@@ -1863,7 +1867,7 @@ export default function EmployeeDashboard() {
                                   {(() => {
                                     // Group submissions by quarter
                                     const quarterlyData = submissions.reduce((acc, submission) => {
-                                      const quarter = getQuarterFromDate(submission.submittedAt);
+                                      const quarter = getQuarterFromEvaluationData(submission.evaluationData || submission);
                                       if (!acc[quarter]) {
                                         acc[quarter] = {
                                           quarter,
@@ -1938,13 +1942,29 @@ export default function EmployeeDashboard() {
                                       });
                                     }
 
-                                    return filteredQuarters.length > 0 ? filteredQuarters.map((quarterData: any) => (
-                                      <TableRow key={quarterData.quarter}>
-                                        <TableCell>
-                                          <Badge className={getQuarterColor(quarterData.quarter)}>
-                                            {quarterData.quarter}
-                                          </Badge>
-                                        </TableCell>
+                                    return filteredQuarters.length > 0 ? filteredQuarters.map((quarterData: any) => {
+                                      // Check if any submission in this quarter is new
+                                      const hasNewSubmission = quarterData.submissions.some((submission: any) => 
+                                        isNewSubmission(submission.submittedAt)
+                                      );
+                                      
+                                      return (
+                                        <TableRow 
+                                          key={quarterData.quarter}
+                                          className={hasNewSubmission ? 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100' : ''}
+                                        >
+                                          <TableCell>
+                                            <div className="flex items-center gap-2">
+                                              <Badge className={getQuarterColor(quarterData.quarter)}>
+                                                {quarterData.quarter}
+                                              </Badge>
+                                              {hasNewSubmission && (
+                                                <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                                                  NEW
+                                                </Badge>
+                                              )}
+                                            </div>
+                                          </TableCell>
                                         <TableCell>
                                           <div className="text-sm text-gray-600">
                                             {quarterData.dateRange || 'No dates available'}
@@ -1985,7 +2005,7 @@ export default function EmployeeDashboard() {
                                             onClick={() => {
                                               // Filter submissions for this quarter and show the first one
                                               const quarterSubmissions = submissions.filter(submission =>
-                                                getQuarterFromDate(submission.submittedAt) === quarterData.quarter
+                                                getQuarterFromEvaluationData(submission.evaluationData || submission) === quarterData.quarter
                                               );
                                               if (quarterSubmissions.length > 0) {
                                                 // Get approval data for this submission
@@ -2013,7 +2033,8 @@ export default function EmployeeDashboard() {
                                           </Button>
                                         </TableCell>
                                       </TableRow>
-                                    )) : (
+                                      );
+                                    }) : (
                                       <TableRow>
                                         <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                                           <p>No quarterly data available</p>
@@ -2148,12 +2169,22 @@ export default function EmployeeDashboard() {
                                 </TableHeader>
                                 <TableBody>
                                   {filteredHistorySubmissions.length > 0 ? filteredHistorySubmissions.map((submission) => (
-                                    <TableRow key={submission.id}>
+                                    <TableRow 
+                                      key={submission.id}
+                                      className={isNewSubmission(submission.submittedAt) ? 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100' : ''}
+                                    >
                                       <TableCell>
                                         <div className="flex flex-col">
-                                          <span className="font-medium">
-                                            {new Date(submission.submittedAt).toLocaleDateString()}
-                                          </span>
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-medium">
+                                              {new Date(submission.submittedAt).toLocaleDateString()}
+                                            </span>
+                                            {isNewSubmission(submission.submittedAt) && (
+                                              <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                                                NEW
+                                              </Badge>
+                                            )}
+                                          </div>
                                           <span className="text-xs text-gray-500">
                                             {new Date(submission.submittedAt).toLocaleTimeString()}
                                           </span>
@@ -2172,8 +2203,8 @@ export default function EmployeeDashboard() {
                                         </div>
                                       </TableCell>
                                       <TableCell>
-                                        <Badge className={getQuarterColor(getQuarterFromDate(submission.submittedAt))}>
-                                          {getQuarterFromDate(submission.submittedAt)}
+                                        <Badge className={getQuarterColor(getQuarterFromEvaluationData(submission.evaluationData || submission))}>
+                                          {getQuarterFromEvaluationData(submission.evaluationData || submission)}
                                         </Badge>
                                       </TableCell>
                                       <TableCell className="text-sm text-gray-600">

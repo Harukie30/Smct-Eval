@@ -11,6 +11,7 @@ import { EvaluationData } from './types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/useToast';
 import { submitEvaluation } from '@/lib/evaluationSubmissionService';
+import { getQuarterlyReviewStatus, getCurrentYear } from '@/lib/quarterlyReviewUtils';
 
 interface OverallAssessmentProps {
     data: EvaluationData;
@@ -79,12 +80,41 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
     const [submissionSuccess, setSubmissionSuccess] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
     
+    // Quarterly review status
+    const [quarterlyStatus, setQuarterlyStatus] = useState({
+        q1: false,
+        q2: false,
+        q3: false,
+        q4: false
+    });
+    const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
+    
     // Auto-populate evaluator name when currentUser is available
     useEffect(() => {
         if (currentUser && !data.evaluatorSignature) {
             updateDataAction({ evaluatorSignature: currentUser.name });
         }
     }, [currentUser, data.evaluatorSignature, updateDataAction]);
+
+    // Check for existing quarterly reviews when employee changes
+    useEffect(() => {
+        const checkQuarterlyReviews = async () => {
+            if (employee?.id) {
+                setIsLoadingQuarters(true);
+                try {
+                    const status = await getQuarterlyReviewStatus(employee.id, getCurrentYear());
+                    setQuarterlyStatus(status);
+                    console.log('Quarterly review status for employee', employee.id, ':', status);
+                } catch (error) {
+                    console.error('Error checking quarterly reviews:', error);
+                } finally {
+                    setIsLoadingQuarters(false);
+                }
+            }
+        };
+
+        checkQuarterlyReviews();
+    }, [employee?.id]);
 
     // Auto-populate employee name when employee data is available
     useEffect(() => {
@@ -562,6 +592,9 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                         {/* For Regular */}
                         <div className="space-y-3">
                             <h5 className="font-medium text-gray-800">For Regular</h5>
+                            {isLoadingQuarters && (
+                                <div className="text-sm text-gray-500 italic">Checking existing reviews...</div>
+                            )}
                             <div className="space-y-2">
                                 <div className="flex items-center gap-2">
                                     <input 
@@ -570,6 +603,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ1}
+                                        disabled={quarterlyStatus.q1}
                                         onChange={(e) => {
                                             // Clear all other regular review types first
                                             updateDataAction({
@@ -580,7 +614,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                             });
                                         }}
                                     />
-                                    <label htmlFor="q1" className="text-sm text-gray-700">Q1 review</label>
+                                    <label 
+                                        htmlFor="q1" 
+                                        className={`text-sm ${quarterlyStatus.q1 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+                                    >
+                                        Q1 review
+                                        {quarterlyStatus.q1 && (
+                                            <span className="ml-2 text-xs text-red-500 font-medium">
+                                                (Already exists for {getCurrentYear()})
+                                            </span>
+                                        )}
+                                    </label>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <input 
@@ -589,6 +633,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ2}
+                                        disabled={quarterlyStatus.q2}
                                         onChange={(e) => {
                                             // Clear all other regular review types first
                                             updateDataAction({
@@ -599,7 +644,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                             });
                                         }}
                                     />
-                                    <label htmlFor="q2" className="text-sm text-gray-700">Q2 review</label>
+                                    <label 
+                                        htmlFor="q2" 
+                                        className={`text-sm ${quarterlyStatus.q2 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+                                    >
+                                        Q2 review
+                                        {quarterlyStatus.q2 && (
+                                            <span className="ml-2 text-xs text-red-500 font-medium">
+                                                (Already exists for {getCurrentYear()})
+                                            </span>
+                                        )}
+                                    </label>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <input 
@@ -608,6 +663,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ3}
+                                        disabled={quarterlyStatus.q3}
                                         onChange={(e) => {
                                             // Clear all other regular review types first
                                             updateDataAction({
@@ -618,7 +674,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                             });
                                         }}
                                     />
-                                    <label htmlFor="q3" className="text-sm text-gray-700">Q3 review</label>
+                                    <label 
+                                        htmlFor="q3" 
+                                        className={`text-sm ${quarterlyStatus.q3 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+                                    >
+                                        Q3 review
+                                        {quarterlyStatus.q3 && (
+                                            <span className="ml-2 text-xs text-red-500 font-medium">
+                                                (Already exists for {getCurrentYear()})
+                                            </span>
+                                        )}
+                                    </label>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <input 
@@ -627,6 +693,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ4}
+                                        disabled={quarterlyStatus.q4}
                                         onChange={(e) => {
                                             // Clear all other regular review types first
                                             updateDataAction({
@@ -637,7 +704,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                             });
                                         }}
                                     />
-                                    <label htmlFor="q4" className="text-sm text-gray-700">Q4 review</label>
+                                    <label 
+                                        htmlFor="q4" 
+                                        className={`text-sm ${quarterlyStatus.q4 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+                                    >
+                                        Q4 review
+                                        {quarterlyStatus.q4 && (
+                                            <span className="ml-2 text-xs text-red-500 font-medium">
+                                                (Already exists for {getCurrentYear()})
+                                            </span>
+                                        )}
+                                    </label>
                                 </div>
                             </div>
                         </div>
