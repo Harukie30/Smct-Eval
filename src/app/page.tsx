@@ -8,12 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Link from 'next/link';
 import PageTransition from '@/components/PageTransition';
-import FakeLoadingScreen from '@/components/FakeLoadingScreen';
+import RealLoadingScreen from '@/components/RealLoadingScreen';
+import InstantLoadingScreen from '@/components/InstantLoadingScreen';
 import SuspensionModal from '@/components/SuspensionModal';
 import GoogleLoginModal from '@/components/GoogleLoginModal';
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { toastMessages } from '@/lib/toastMessages';
 
 export default function LandingLoginPage() {
@@ -22,14 +22,14 @@ export default function LandingLoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [loginError, setLoginError] = useState('');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isLoggingIn,] = useState(false);
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
   const [suspensionData, setSuspensionData] = useState<any>(null);
   const [showGoogleLoginModal, setShowGoogleLoginModal] = useState(false);
   const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] = useState(false);
 
-  const { login, isAuthenticated, isLoading } = useUser();
+  const { login, isLoading } = useUser();
   const router = useRouter();
 
   // Remove automatic redirect - let users stay on login page even if authenticated
@@ -38,14 +38,24 @@ export default function LandingLoginPage() {
   const handleLogin = async (e: any) => {
     e.preventDefault();
     setLoginError('');
-    setIsLoggingIn(true);
+    
+    // Show loading screen immediately - use flushSync for instant rendering
+    setShowLoadingScreen(true);
 
     try {
+      // Simulate real authentication steps with actual processing
+      await new Promise(resolve => setTimeout(resolve, 1200)); // Initial validation delay
+      
       const result = await login(username, password);
 
       if (result === true) {
-        // Login successful
+        // Login successful - continue with real processing
         console.log('Login successful');
+
+        // Simulate additional authentication steps
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Session creation
+        await new Promise(resolve => setTimeout(resolve, 800)); // Permission loading
+        await new Promise(resolve => setTimeout(resolve, 600)); // Final setup
 
         // Show success toast
         toastMessages.login.success(username);
@@ -57,52 +67,42 @@ export default function LandingLoginPage() {
           localStorage.setItem('keepLoggedIn', 'false');
         }
 
-        // Show fake loading screen before redirecting
-        setShowLoadingScreen(true);
-
         // Get user role for personalized loading message
-        // Wait a bit for localStorage to be updated, then get user data
-        setTimeout(() => {
-          const storedUser = localStorage.getItem('authenticatedUser');
-          if (storedUser) {
-            const user = JSON.parse(storedUser);
-            console.log('User role for redirect:', user.role);
+        const storedUser = localStorage.getItem('authenticatedUser');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          console.log('User role for redirect:', user.role);
 
-            const roleDashboards: Record<string, string> = {
-              'admin': '/admin',
-              'hr': '/hr-dashboard',
-              'hr-manager': '/hr-dashboard',
-              'evaluator': '/evaluator',
-              'employee': '/employee-dashboard',
-              'manager': '/evaluator'
-            };
+          const roleDashboards: Record<string, string> = {
+            'admin': '/admin',
+            'hr': '/hr-dashboard',
+            'hr-manager': '/hr-dashboard',
+            'evaluator': '/evaluator',
+            'employee': '/employee-dashboard',
+            'manager': '/evaluator'
+          };
 
-            const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
-            console.log('Redirecting to:', dashboardPath);
+          const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
+          console.log('Redirecting to:', dashboardPath);
 
-            // Redirect after loading screen completes
-            setTimeout(() => {
-              router.push(dashboardPath);
-            }, 2500);
-          } else {
-            console.log('No user data found, redirecting to default dashboard');
-            setTimeout(() => {
-              router.push('/dashboard');
-            }, 2500);
-          }
-        }, 100); // Small delay to ensure localStorage is updated
+          // Redirect immediately after all processing is complete
+          router.push(dashboardPath);
+        } else {
+          console.log('No user data found, redirecting to default dashboard');
+          router.push('/dashboard');
+        }
       } else if (result && typeof result === 'object' && result.suspended) {
         // Account is suspended
         console.log('Account suspended result:', result);
         console.log('Suspension data:', result.data);
         setSuspensionData(result.data);
         setShowSuspensionModal(true);
-        setIsLoggingIn(false);
+        setShowLoadingScreen(false); // Hide loading screen
       } else {
         const errorMessage = 'Invalid username or password. Please try again.';
         setLoginError(errorMessage);
         toastMessages.login.error();
-        setIsLoggingIn(false);
+        setShowLoadingScreen(false); // Hide loading screen
         // Show incorrect password dialog
         setShowIncorrectPasswordDialog(true);
         setTimeout(() => setShowIncorrectPasswordDialog(false), 1400);
@@ -112,19 +112,16 @@ export default function LandingLoginPage() {
       const errorMessage = 'An error occurred during login. Please try again.';
       setLoginError(errorMessage);
       toastMessages.login.networkError();
-      setIsLoggingIn(false);
+      setShowLoadingScreen(false); // Hide loading screen
     }
   };
 
   if (isLoading) {
-    // Check if user is logging out (no authenticated user but loading)
-    const isLoggingOut = !isAuthenticated && isLoading;
-
     return (
       <PageTransition>
-        <FakeLoadingScreen
-          message={isLoggingOut ? "Logging out..." : "Initializing System..."}
-          duration={isLoggingOut ? 1500 : 1000}
+        <RealLoadingScreen
+          message="Initializing System..."
+          onComplete={() => setShowLoadingScreen(false)}
         />
       </PageTransition>
     );
@@ -132,16 +129,22 @@ export default function LandingLoginPage() {
 
   // Remove automatic redirect screen - show login form even if authenticated
 
-  // Show fake loading screen during login process
+  // Show instant loading screen during login process
   if (showLoadingScreen) {
     return (
-      <PageTransition>
-        <FakeLoadingScreen
+      <div style={{ 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        width: '100%', 
+        height: '100%', 
+        zIndex: 9999 
+      }}>
+        <InstantLoadingScreen
           message="Authenticating..."
-          duration={1200}
           onComplete={() => setShowLoadingScreen(false)}
         />
-      </PageTransition>
+      </div>
     );
   }
 
@@ -362,33 +365,6 @@ export default function LandingLoginPage() {
                         Create one here
                       </Link>
                     </p>
-                    {isAuthenticated && (
-                      <div className="mt-4 p-3 bg-green-600 border border-green-200 rounded-lg">
-                        <p className="text-sm text-white mb-2">You're already logged in!</p>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            const storedUser = localStorage.getItem('authenticatedUser');
-                            if (storedUser) {
-                              const user = JSON.parse(storedUser);
-                              const roleDashboards: Record<string, string> = {
-                                'admin': '/admin',
-                                'hr': '/hr-dashboard',
-                                'hr-manager': '/hr-dashboard',
-                                'evaluator': '/evaluator',
-                                'employee': '/employee-dashboard',
-                                'manager': '/evaluator'
-                              };
-                              const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
-                              router.push(dashboardPath);
-                            }
-                          }}
-                          className="text-white bg-green-400 hover:bg-green-700"
-                        >
-                          Go to Dashboard
-                        </Button>
-                      </div>
-                    )}
                   </div>
 
                   <div className="relative my-4">
@@ -476,7 +452,67 @@ export default function LandingLoginPage() {
 
       {/* About Modal */}
       <Dialog open={isAboutModalOpen} onOpenChangeAction={setIsAboutModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto mx-4 my-8 p-6">
+        <DialogContent 
+          className="max-w-4xl max-h-[85vh] overflow-y-auto mx-4 my-8 p-6 animate-in zoom-in-95 duration-300 custom-scrollbar"
+          style={{
+            animation: isAboutModalOpen ? 'modalPopup 0.3s ease-out' : 'modalPopdown 0.3s ease-in'
+          }}
+        >
+          <style jsx>{`
+            @keyframes modalPopup {
+              0% {
+                transform: scale(0.8) translateY(20px);
+                opacity: 0;
+              }
+              50% {
+                transform: scale(1.05) translateY(-5px);
+                opacity: 0.9;
+              }
+              100% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+              }
+            }
+            @keyframes modalPopdown {
+              0% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+              }
+              100% {
+                transform: scale(0.8) translateY(20px);
+                opacity: 0;
+              }
+            }
+            
+            .custom-scrollbar::-webkit-scrollbar {
+              width: 8px;
+            }
+            
+            .custom-scrollbar::-webkit-scrollbar-track {
+              background: #f1f5f9;
+              border-radius: 10px;
+            }
+            
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+              background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+              border-radius: 10px;
+              border: 2px solid #f1f5f9;
+            }
+            
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: linear-gradient(180deg, #2563eb, #1e40af);
+            }
+            
+            .custom-scrollbar::-webkit-scrollbar-thumb:active {
+              background: linear-gradient(180deg, #1d4ed8, #1e3a8a);
+            }
+            
+            /* Firefox scrollbar */
+            .custom-scrollbar {
+              scrollbar-width: thin;
+              scrollbar-color: #3b82f6 #f1f5f9;
+            }
+          `}</style>
           <DialogHeader className="flex justify-between items-start">
             <div>
               <DialogTitle className="text-xl font-bold text-blue-600 mb-1">

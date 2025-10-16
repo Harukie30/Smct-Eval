@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { SkeletonOverlay, SkeletonText, Skeleton } from '@/components/ui/skeleton';
 
 interface UnifiedLoaderProps {
   type?: 'fullscreen' | 'inline' | 'page';
@@ -94,68 +95,25 @@ const UnifiedLoader: React.FC<UnifiedLoaderProps> = ({
 
   if (type === 'fullscreen') {
     return (
-      <div className={`fixed inset-0 bg-gradient-to-br from-blue-50 to-indigo-100 z-50 flex items-center justify-center ${className}`}>
-        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4 border border-gray-100">
-          {/* Logo/Brand Section */}
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 mx-auto mb-3 flex items-center justify-center">
-              <img
-                src="/smct.png"
-                alt="SMCT Group of Companies"
-                className="w-full h-full object-contain animate-pulse"
-              />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">Pro-Eval</h2>
-            <p className="text-sm text-gray-600">Employee Performance Evaluation</p>
-          </div>
-
-          {/* Loading Spinner */}
-          <div className="flex justify-center mb-4">
-            {spinner}
-          </div>
-
-          {/* Loading Message */}
-          <div className="text-center mb-4">
-            <p className={`font-medium text-gray-700 ${textSizeClasses[size]}`}>{message}</p>
-          </div>
-
-          {/* Progress Bar */}
-          {showProgress && (
-            <div className="mb-4">
-              <div className="flex justify-between text-xs text-gray-600 mb-1">
-                <span>Loading</span>
-                <span>{Math.round(progress)}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-1.5">
-                <div
-                  className="bg-blue-600 h-1.5 rounded-full transition-all duration-300 ease-out"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Loading Dots Animation */}
-          <div className="flex justify-center space-x-1">
-            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-          </div>
-        </div>
-      </div>
+      <SkeletonOverlay 
+        message={message}
+        showSkeleton={true}
+        className={className}
+      />
     );
   }
 
   if (type === 'page') {
     return (
       <div className={`flex items-center justify-center min-h-[400px] ${className}`}>
-        <div className="text-center">
-          {spinner}
+        <div className="text-center space-y-4">
+          <Skeleton className="w-12 h-12 rounded-full mx-auto" />
           {message && (
-            <p className={`text-gray-600 font-medium mt-3 ${textSizeClasses[size]}`}>
+            <p className={`text-gray-600 font-medium ${textSizeClasses[size]}`}>
               {message}
             </p>
           )}
+          <SkeletonText lines={3} />
         </div>
       </div>
     );
@@ -164,7 +122,7 @@ const UnifiedLoader: React.FC<UnifiedLoaderProps> = ({
   // Inline type
   return (
     <div className={`flex items-center justify-center space-x-2 ${className}`}>
-      {spinner}
+      <Skeleton className="w-6 h-6 rounded-full" />
       {message && (
         <p className={`text-gray-600 ${textSizeClasses[size]}`}>
           {message}

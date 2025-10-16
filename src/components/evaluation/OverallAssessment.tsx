@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Check, X, AlertTriangle } from 'lucide-react';
+import { Check, X, AlertTriangle, Printer, Edit, CheckCircle, AlertCircle, Send } from 'lucide-react';
 import { EvaluationData } from './types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/useToast';
+import { submitEvaluation } from '@/lib/evaluationSubmissionService';
+import { getQuarterlyReviewStatus, getCurrentYear } from '@/lib/quarterlyReviewUtils';
 
 interface OverallAssessmentProps {
     data: EvaluationData;
@@ -72,12 +74,47 @@ const getRatingColor = (rating: string) => {
 export default function OverallAssessment({ data, updateDataAction, employee, currentUser, onSubmitAction, onPreviousAction, onApproveAction, isApproved = false }: OverallAssessmentProps) {
     const { error } = useToast();
     
+    // Submission state management
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submissionError, setSubmissionError] = useState('');
+    const [submissionSuccess, setSubmissionSuccess] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
+    
+    // Quarterly review status
+    const [quarterlyStatus, setQuarterlyStatus] = useState({
+        q1: false,
+        q2: false,
+        q3: false,
+        q4: false
+    });
+    const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
+    
     // Auto-populate evaluator name when currentUser is available
     useEffect(() => {
         if (currentUser && !data.evaluatorSignature) {
             updateDataAction({ evaluatorSignature: currentUser.name });
         }
     }, [currentUser, data.evaluatorSignature, updateDataAction]);
+
+    // Check for existing quarterly reviews when employee changes
+    useEffect(() => {
+        const checkQuarterlyReviews = async () => {
+            if (employee?.id) {
+                setIsLoadingQuarters(true);
+                try {
+                    const status = await getQuarterlyReviewStatus(employee.id, getCurrentYear());
+                    setQuarterlyStatus(status);
+                    console.log('Quarterly review status for employee', employee.id, ':', status);
+                } catch (error) {
+                    console.error('Error checking quarterly reviews:', error);
+                } finally {
+                    setIsLoadingQuarters(false);
+                }
+            }
+        };
+
+        checkQuarterlyReviews();
+    }, [employee?.id]);
 
     // Auto-populate employee name when employee data is available
     useEffect(() => {
@@ -86,22 +123,248 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
         }
     }, [employee, data.employeeSignature, updateDataAction]);
 
-    const handleSubmit = () => {
+
+    const handleSubmitEvaluation = async (isRetry = false) => {
+        if (!isComplete) {
+            setSubmissionError('Please complete all required fields before submitting.');
+            return;
+        }
+
         // Validation: Check if evaluator has a signature
         if (!currentUser?.signature) {
             error('Please add your signature to your profile before submitting the evaluation.');
             return;
         }
 
-        // Save the evaluator's signature from their profile before submitting
-        updateDataAction({ 
-            evaluatorSignatureImage: currentUser.signature,
-            evaluatorSignature: currentUser.name || data.evaluatorSignature,
-            evaluatorSignatureDate: data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
-        });
-        
-        if (onSubmitAction) {
-            onSubmitAction();
+        setIsSubmitting(true);
+        setSubmissionError('');
+        setSubmissionSuccess(false);
+
+        try {
+            // Get evaluator name from localStorage or use a default
+            const storedUser = localStorage.getItem('authenticatedUser');
+            const evaluatorName = storedUser ? JSON.parse(storedUser).name : 'Evaluator';
+
+            // Save the evaluator's signature from their profile before submitting
+            const updatedData = {
+                ...data,
+                evaluatorSignatureImage: currentUser.signature,
+                evaluatorSignature: currentUser.name || data.evaluatorSignature,
+                evaluatorSignatureDate: data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
+            };
+            
+            updateDataAction(updatedData);
+
+            // Submit evaluation via API with updated data
+            const result = await submitEvaluation(updatedData, evaluatorName);
+
+            console.log('✅ Evaluation submitted successfully:', result);
+            
+            // Notification is handled by the main evaluation form
+            
+            // Show success state
+            setSubmissionSuccess(true);
+            setRetryCount(0); // Reset retry count on success
+            
+            // Call the parent's submit action after successful submission
+            setTimeout(() => {
+                if (onSubmitAction) {
+                    onSubmitAction();
+                }
+            }, 2000);
+            
+        } catch (error) {
+            console.error('❌ Error submitting evaluation:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Failed to submit evaluation. Please try again.';
+            
+            // Add retry information to error message
+            if (isRetry) {
+                setSubmissionError(`${errorMessage} (Retry ${retryCount + 1}/3)`);
+            } else {
+                setSubmissionError(errorMessage);
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleRetry = () => {
+        if (retryCount < 3) {
+            setRetryCount(prev => prev + 1);
+            handleSubmitEvaluation(true);
+        }
+    };
+
+    const handlePrint = () => {
+        const printContent = document.createElement('div');
+        printContent.innerHTML = `
+            <style>
+                @media print {
+                    body { margin: 0; padding: 10px; font-family: Arial, sans-serif; font-size: 10px; }
+                    .print-header { text-align: center; margin-bottom: 15px; border-bottom: 1px solid #000; padding-bottom: 10px; }
+                    .print-title { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+                    .print-subtitle { font-size: 12px; color: #666; }
+                    .print-section { margin-bottom: 12px; page-break-inside: avoid; }
+                    .print-section-title { font-size: 14px; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+                    .print-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 8px; }
+                    .print-field { margin-bottom: 5px; }
+                    .print-label { font-weight: bold; color: #666; font-size: 9px; }
+                    .print-value { font-size: 10px; margin-top: 1px; }
+                    .print-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; page-break-inside: avoid; }
+                    .print-table th, .print-table td { border: 1px solid #000; padding: 4px 6px; text-align: left; font-size: 9px; }
+                    .print-table th { background-color: #f0f0f0; font-weight: bold; }
+                    .print-results { text-align: center; margin: 8px 0; }
+                    .print-percentage { font-size: 20px; font-weight: bold; }
+                    .print-status { display: inline-block; padding: 5px 10px; border-radius: 3px; color: white; font-weight: bold; font-size: 12px; }
+                    .print-status.pass { background-color: #16a34a; }
+                    .print-status.fail { background-color: #dc2626; }
+                    .print-priority { background-color: #fefce8; border: 1px solid #e5e7eb; padding: 5px; margin-bottom: 5px; border-radius: 3px; font-size: 9px; }
+                    .print-remarks { background-color: #fefce8; border: 1px solid #e5e7eb; padding: 8px; border-radius: 3px; font-size: 9px; }
+                    .print-signature { background-color: #fefce8; border: 1px solid #e5e7eb; padding: 5px; margin-bottom: 5px; border-radius: 3px; min-height: 25px; font-size: 9px; }
+                    .print-signature-label { text-align: center; font-size: 8px; color: #666; margin-top: 2px; }
+                    .print-signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+                    .print-checkbox { margin-right: 4px; }
+                    .print-step { page-break-before: auto; margin-bottom: 8px; }
+                    .print-step:first-child { page-break-before: auto; }
+                    .print-description { font-size: 9px; margin-bottom: 8px; color: #666; }
+                    .print-compact-table { font-size: 8px; }
+                    .print-compact-table th, .print-compact-table td { padding: 2px 4px; }
+                    .print-summary { margin-top: 10px; }
+                    .no-print { display: none !important; }
+                }
+            </style>
+            
+            <div class="print-header">
+                <div class="print-title">COMPLETE PERFORMANCE EVALUATION REPORT</div>
+                <div class="print-subtitle">Employee Performance Evaluation - All Steps (1-7)</div>
+            </div>
+
+            <!-- STEP 1 & 2: Review Type & Employee Information -->
+            <div class="print-section">
+                <div class="print-section-title">STEP 1: REVIEW TYPE & STEP 2: EMPLOYEE INFORMATION</div>
+                <div class="print-grid">
+                    <div class="print-field">
+                        <div class="print-label">Review Type:</div>
+                        <div class="print-value">
+                            ${data.reviewTypeProbationary3 ? '✓ 3m' : '☐ 3m'} | ${data.reviewTypeProbationary5 ? '✓ 5m' : '☐ 5m'} | 
+                            ${data.reviewTypeRegularQ1 ? '✓ Q1' : '☐ Q1'} | ${data.reviewTypeRegularQ2 ? '✓ Q2' : '☐ Q2'} | 
+                            ${data.reviewTypeRegularQ3 ? '✓ Q3' : '☐ Q3'} | ${data.reviewTypeRegularQ4 ? '✓ Q4' : '☐ Q4'}
+                            ${data.reviewTypeOthersImprovement ? ' | ✓ PI' : ''}
+                            ${data.reviewTypeOthersCustom ? ` | ${data.reviewTypeOthersCustom}` : ''}
+                        </div>
+                    </div>
+                    <div class="print-field">
+                        <div class="print-label">Employee:</div>
+                        <div class="print-value">${data.employeeName || 'Not specified'} (${data.employeeId || 'ID: N/A'})</div>
+                    </div>
+                    <div class="print-field">
+                        <div class="print-label">Position:</div>
+                        <div class="print-value">${data.position || 'Not specified'} - ${data.department || 'Dept: N/A'}</div>
+                    </div>
+                    <div class="print-field">
+                        <div class="print-label">Branch & Supervisor:</div>
+                        <div class="print-value">${data.branch || 'Branch: N/A'} | ${data.supervisor || 'Sup: N/A'}</div>
+                    </div>
+                    <div class="print-field">
+                        <div class="print-label">Hire Date & Coverage:</div>
+                        <div class="print-value">${data.hireDate || 'Hire: N/A'} | ${data.coverageFrom && data.coverageTo ? `${format(new Date(data.coverageFrom), 'MMM dd, yyyy')} - ${format(new Date(data.coverageTo), 'MMM dd, yyyy')}` : 'Coverage: N/A'}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COMPACT EVALUATION SUMMARY -->
+            <div class="print-section print-summary">
+                <div class="print-section-title">EVALUATION SUMMARY</div>
+                <div class="print-grid">
+                    <div class="print-field">
+                        <div class="print-label">Job Knowledge:</div>
+                        <div class="print-value">${jobKnowledgeScore.toFixed(2)} (${getRatingLabel(jobKnowledgeScore)}) - 20%</div>
+                    </div>
+                    <div class="print-field">
+                        <div class="print-label">Quality of Work:</div>
+                        <div class="print-value">${qualityOfWorkScore.toFixed(2)} (${getRatingLabel(qualityOfWorkScore)}) - 20%</div>
+                    </div>
+                    <div class="print-field">
+                        <div class="print-label">Adaptability:</div>
+                        <div class="print-value">${adaptabilityScore.toFixed(2)} (${getRatingLabel(adaptabilityScore)}) - 10%</div>
+                    </div>
+                    <div class="print-field">
+                        <div class="print-label">Teamwork:</div>
+                        <div class="print-value">${teamworkScore.toFixed(2)} (${getRatingLabel(teamworkScore)}) - 10%</div>
+                    </div>
+                    <div class="print-field">
+                        <div class="print-label">Reliability:</div>
+                        <div class="print-value">${reliabilityScore.toFixed(2)} (${getRatingLabel(reliabilityScore)}) - 5%</div>
+                    </div>
+                    <div class="print-field">
+                        <div class="print-label">Ethical Behavior:</div>
+                        <div class="print-value">${ethicalScore.toFixed(2)} (${getRatingLabel(ethicalScore)}) - 5%</div>
+                    </div>
+                    <div class="print-field">
+                        <div class="print-label">Customer Service:</div>
+                        <div class="print-value">${customerServiceScore.toFixed(2)} (${getRatingLabel(customerServiceScore)}) - 30%</div>
+                    </div>
+                </div>
+                
+                <div class="print-results">
+                    <div class="print-percentage">${overallPercentage}%</div>
+                    <div style="margin-bottom: 8px;">Performance Score</div>
+                    <div class="print-status ${isPass ? 'pass' : 'fail'}">${isPass ? 'PASS' : 'FAIL'}</div>
+                </div>
+            </div>
+
+            <!-- FINAL SECTIONS -->
+            <div class="print-section">
+                <div class="print-section-title">PRIORITY AREAS, REMARKS & ACKNOWLEDGEMENT</div>
+                
+                ${data.priorityArea1 || data.priorityArea2 || data.priorityArea3 ? `
+                <div style="margin-bottom: 8px;">
+                    <strong>Priority Areas:</strong><br>
+                    ${data.priorityArea1 ? `1. ${data.priorityArea1}<br>` : ''}
+                    ${data.priorityArea2 ? `2. ${data.priorityArea2}<br>` : ''}
+                    ${data.priorityArea3 ? `3. ${data.priorityArea3}` : ''}
+                </div>
+                ` : ''}
+                
+                ${data.remarks ? `
+                <div style="margin-bottom: 8px;">
+                    <strong>Remarks:</strong> ${data.remarks}
+                </div>
+                ` : ''}
+                
+                <div style="margin-bottom: 8px;">
+                    <strong>Acknowledgement:</strong> I hereby acknowledge that the Evaluator has explained to me, to the best of their ability, 
+                    and in a manner I fully understand, my performance and respective rating on this performance evaluation.
+                </div>
+                
+                <div class="print-signature-grid">
+                    <div>
+                        <div class="print-signature">${data.employeeSignature || 'Employee signature not provided'}</div>
+                        <div class="print-signature-label">Employee's Name & Signature</div>
+                        <div style="margin-top: 5px; font-size: 8px;">
+                            <strong>Date:</strong> ${data.employeeSignatureDate || new Date().toISOString().split('T')[0]}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="print-signature">${data.evaluatorSignature || 'Evaluator signature not provided'}</div>
+                        <div class="print-signature-label">Evaluator's Name & Signature</div>
+                        <div style="margin-top: 5px; font-size: 8px;">
+                            <strong>Date:</strong> ${data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(printContent.innerHTML);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+            printWindow.close();
+        } else {
+            alert('Please allow popups to print the evaluation.');
         }
     };
 
@@ -246,6 +509,16 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
     const overallPercentage = (parseFloat(overallWeightedScore) / 5 * 100).toFixed(2);
     const isPass = parseFloat(overallWeightedScore) >= 3.0;
 
+    // Calculate completion status
+    const isComplete = 
+        jobKnowledgeScore > 0 && 
+        qualityOfWorkScore > 0 && 
+        adaptabilityScore > 0 && 
+        teamworkScore > 0 && 
+        reliabilityScore > 0 && 
+        ethicalScore > 0 && 
+        customerServiceScore > 0;
+
 
 
     // Auto-save function with indicator
@@ -319,6 +592,9 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                         {/* For Regular */}
                         <div className="space-y-3">
                             <h5 className="font-medium text-gray-800">For Regular</h5>
+                            {isLoadingQuarters && (
+                                <div className="text-sm text-gray-500 italic">Checking existing reviews...</div>
+                            )}
                             <div className="space-y-2">
                                 <div className="flex items-center gap-2">
                                     <input 
@@ -327,6 +603,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ1}
+                                        disabled={quarterlyStatus.q1}
                                         onChange={(e) => {
                                             // Clear all other regular review types first
                                             updateDataAction({
@@ -337,7 +614,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                             });
                                         }}
                                     />
-                                    <label htmlFor="q1" className="text-sm text-gray-700">Q1 review</label>
+                                    <label 
+                                        htmlFor="q1" 
+                                        className={`text-sm ${quarterlyStatus.q1 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+                                    >
+                                        Q1 review
+                                        {quarterlyStatus.q1 && (
+                                            <span className="ml-2 text-xs text-red-500 font-medium">
+                                                (Already exists for {getCurrentYear()})
+                                            </span>
+                                        )}
+                                    </label>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <input 
@@ -346,6 +633,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ2}
+                                        disabled={quarterlyStatus.q2}
                                         onChange={(e) => {
                                             // Clear all other regular review types first
                                             updateDataAction({
@@ -356,7 +644,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                             });
                                         }}
                                     />
-                                    <label htmlFor="q2" className="text-sm text-gray-700">Q2 review</label>
+                                    <label 
+                                        htmlFor="q2" 
+                                        className={`text-sm ${quarterlyStatus.q2 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+                                    >
+                                        Q2 review
+                                        {quarterlyStatus.q2 && (
+                                            <span className="ml-2 text-xs text-red-500 font-medium">
+                                                (Already exists for {getCurrentYear()})
+                                            </span>
+                                        )}
+                                    </label>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <input 
@@ -365,6 +663,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ3}
+                                        disabled={quarterlyStatus.q3}
                                         onChange={(e) => {
                                             // Clear all other regular review types first
                                             updateDataAction({
@@ -375,7 +674,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                             });
                                         }}
                                     />
-                                    <label htmlFor="q3" className="text-sm text-gray-700">Q3 review</label>
+                                    <label 
+                                        htmlFor="q3" 
+                                        className={`text-sm ${quarterlyStatus.q3 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+                                    >
+                                        Q3 review
+                                        {quarterlyStatus.q3 && (
+                                            <span className="ml-2 text-xs text-red-500 font-medium">
+                                                (Already exists for {getCurrentYear()})
+                                            </span>
+                                        )}
+                                    </label>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <input 
@@ -384,6 +693,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ4}
+                                        disabled={quarterlyStatus.q4}
                                         onChange={(e) => {
                                             // Clear all other regular review types first
                                             updateDataAction({
@@ -394,7 +704,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                             });
                                         }}
                                     />
-                                    <label htmlFor="q4" className="text-sm text-gray-700">Q4 review</label>
+                                    <label 
+                                        htmlFor="q4" 
+                                        className={`text-sm ${quarterlyStatus.q4 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+                                    >
+                                        Q4 review
+                                        {quarterlyStatus.q4 && (
+                                            <span className="ml-2 text-xs text-red-500 font-medium">
+                                                (Already exists for {getCurrentYear()})
+                                            </span>
+                                        )}
+                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -1688,8 +2008,9 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                 </CardContent>
             </Card>
 
-            {/* Submit Button */}
+            {/* Action Buttons */}
             <div className="flex justify-between items-center pt-20">
+                {/* Previous Button */}
                 <Button
                     onClick={handlePrevious}
                     variant="outline"
@@ -1698,27 +2019,112 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                 >
                     Previous
                 </Button>
-                <div className="text-center">
+                
+                {/* Center Action Buttons */}
+                <div className="flex items-center space-x-4">
+                    {/* Print Button */}
                     <Button
-                        onClick={handleSubmit}
-                        disabled={!currentUser?.signature}
+                        onClick={handlePrint}
+                        variant="outline"
+                        className="px-6 py-3 text-base flex items-center space-x-2"
+                    >
+                        <Printer className="h-4 w-4" />
+                        <span>Print Evaluation</span>
+                    </Button>
+                    
+                    {/* Submit Button */}
+                    <Button
+                        onClick={() => handleSubmitEvaluation()}
+                        disabled={!isComplete || isSubmitting || !currentUser?.signature}
                         className={`px-8 py-3 text-lg ${
-                            currentUser?.signature 
+                            isComplete && currentUser?.signature && !isSubmitting
                                 ? 'bg-green-600 hover:bg-green-700 text-white' 
                                 : 'bg-gray-400 text-gray-200 cursor-not-allowed'
                         }`}
                         size="lg"
                     >
-                        {currentUser?.signature ? 'Submit Evaluation' : 'Signature Required'}
+                        {isSubmitting ? (
+                            <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Submitting...
+                            </>
+                        ) : submissionSuccess ? (
+                            <>
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Submitted Successfully
+                            </>
+                        ) : (
+                            <>
+                                <Send className="h-4 w-4 mr-2" />
+                                {isComplete ? 'Submit to Employee' : 'Complete Required Fields'}
+                            </>
+                        )}
                     </Button>
-                    {!currentUser?.signature && (
-                        <p className="text-xs text-red-600 mt-2">
-                            Please add your signature to your profile first
-                        </p>
-                    )}
                 </div>
+                
+                {/* Empty div for balance */}
+                <div></div>
             </div>
             
+            {/* Validation Messages */}
+            <div className="text-center mt-4">
+                {!currentUser?.signature && (
+                    <p className="text-xs text-red-600">
+                        Please add your signature to your profile first
+                    </p>
+                )}
+                {!isComplete && currentUser?.signature && (
+                    <p className="text-xs text-red-600">
+                        Please complete all required performance criteria
+                    </p>
+                )}
+            </div>
+            
+            {/* Submission Status Messages */}
+            <div className="mt-8 space-y-4">
+                {submissionSuccess && (
+                    <Card className="bg-green-50 border-green-200">
+                        <CardContent className="pt-4">
+                            <div className="flex items-center gap-2">
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                                <div>
+                                    <h4 className="font-medium text-green-800 mb-1">Evaluation Submitted Successfully!</h4>
+                                    <p className="text-sm text-green-700">
+                                        The evaluation has been sent to the employee, HR department, and administrator. 
+                                        All parties will receive notifications.
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {submissionError && (
+                    <Card className="bg-red-50 border-red-200">
+                        <CardContent className="pt-4">
+                            <div className="flex items-center gap-2">
+                                <AlertCircle className="h-5 w-5 text-red-600" />
+                                <div className="flex-1">
+                                    <h4 className="font-medium text-red-800 mb-1">Submission Failed</h4>
+                                    <p className="text-sm text-red-700">{submissionError}</p>
+                                </div>
+                                {retryCount < 3 && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleRetry}
+                                        disabled={isSubmitting}
+                                        className="ml-2 text-red-600 border-red-300 hover:bg-red-100"
+                                    >
+                                        Retry
+                                    </Button>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+
             {/* Auto-save indicator */}
             {showAutoSaveIndicator && (
                 <div className="auto-save-indicator show">

@@ -48,6 +48,7 @@ interface ViewResultsModalProps {
   isApproved?: boolean;
   approvalData?: ApprovalData | null;
   currentUserName?: string;
+  currentUserSignature?: string; // New prop for current user's signature
   showApprovalButton?: boolean; // New prop to control approval button visibility
   isEvaluatorView?: boolean; // New prop to indicate if this is being viewed by evaluator
 }
@@ -110,7 +111,7 @@ const getQuarterColor = (quarter: string) => {
   return 'bg-gray-100 text-gray-800';
 };
 
-export default function ViewResultsModal({ isOpen, onCloseAction, submission, onApprove, isApproved = false, approvalData = null, currentUserName, showApprovalButton = false, isEvaluatorView = false }: ViewResultsModalProps) {
+export default function ViewResultsModal({ isOpen, onCloseAction, submission, onApprove, isApproved = false, approvalData = null, currentUserName, currentUserSignature, showApprovalButton = false, isEvaluatorView = false }: ViewResultsModalProps) {
   const [isApproving, setIsApproving] = useState(false);
   const [approvalError, setApprovalError] = useState('');
 
@@ -119,27 +120,6 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
   if (!submission) return null;
 
-  // Debug logging
-  console.log('🔍 Debug - ViewResultsModal submission:', {
-    submission,
-    submissionId: submission.id,
-    submissionIdType: typeof submission.id,
-    hasOnApprove: !!onApprove,
-    isApproved,
-    approvalData,
-    isEvaluatorView,
-    approvalStatus: submission.approvalStatus,
-    employeeSignature: submission.employeeSignature,
-    employeeApprovedAt: submission.employeeApprovedAt,
-    employeeSignatureFromAPI: employeeSignature ? {
-      id: employeeSignature.id,
-      employeeName: employeeSignature.employeeName,
-      hasSignature: !!employeeSignature.signature,
-      signatureDate: employeeSignature.signatureDate
-    } : null,
-    signatureLoading,
-    signatureError
-  });
 
   // Handle approval API call
   const handleApproveEvaluation = async () => {
@@ -240,10 +220,6 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                     <Badge className={getQuarterColor(getQuarterFromDate(submission.submittedAt))}>
                       {getQuarterFromDate(submission.submittedAt)}
                     </Badge>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Evaluator</Label>
-                    <p className="text-lg">{submission.evaluator || 'Unknown Evaluator'}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-600">Immediate Supervisor</Label>
@@ -1618,12 +1594,12 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                         <div className="h-20 border-2 border-dashed border-white rounded-lg flex items-center justify-center bg-gray-50 relative">
                           {/* Name as background text - always show */}
                           <span className="text-md text-gray-900 font-bold">
-                            {submission.evaluationData.evaluatorSignature || 'Evaluator Name'}
+                            {submission.evaluationData.evaluatorSignature || currentUserName || 'Evaluator Name'}
                           </span>
                           {/* Signature overlay - centered and overlapping */}
-                          {submission.evaluationData.evaluatorSignatureImage ? (
+                          {currentUserSignature ? (
                             <img 
-                              src={submission.evaluationData.evaluatorSignatureImage} 
+                              src={currentUserSignature} 
                               alt="Evaluator Signature" 
                               className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-16 max-w-full object-contain"
                               onError={(e) => {
@@ -1639,7 +1615,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                       {/* Evaluator Name and Date */}
                       <div className="text-center">
                         <p className="text-sm font-medium text-gray-900">
-                          {submission.evaluationData.evaluatorSignature || 'Evaluator Name'}
+                          {submission.evaluationData.evaluatorSignature || currentUserName || 'Evaluator Name'}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
                           {submission.evaluationData.evaluatorSignatureDate || 'Not specified'}

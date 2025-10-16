@@ -3,6 +3,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertTriangle } from 'lucide-react';
 import Step1 from './Step1';
 import Step2 from './Step2';
 import Step3 from './Step3';
@@ -11,11 +14,11 @@ import Step5 from './Step5';
 import Step6 from './Step6';
 import Step7 from './Step7';
 import OverallAssessment from './OverallAssessment';
-import ConfirmModal from './ConfirmModal';
 import WelcomeStep from './WelcomeStep';
 import { EvaluationData } from './types';
 import { storeEvaluationResult } from '@/lib/evaluationStorage';
 import clientDataService from '@/lib/clientDataService';
+import { createEvaluationNotification } from '@/lib/notificationUtils';
 
 const steps = [
   { id: 1, title: 'Employee Information / Job Knowledge', component: Step1 },
@@ -47,6 +50,7 @@ interface EvaluationFormProps {
     position: string;
     department: string;
     role: string;
+    signature?: string;
   };
   onCloseAction?: () => void;
   onCancelAction?: () => void;
@@ -168,8 +172,8 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
     branch: evaluationData.branch,
     hireDate: evaluationData.hireDate,
   }); // Debug log
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isEvaluatorApproved, setIsEvaluatorApproved] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   // Update evaluation data when employee prop changes
   useEffect(() => {
@@ -201,6 +205,76 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
     setCurrentStep(1);
   };
 
+  // Check if current step scores are complete
+  const isCurrentStepComplete = () => {
+    switch (currentStep) {
+      case 1: // Job Knowledge
+        return (
+          evaluationData.jobKnowledgeScore1 && evaluationData.jobKnowledgeScore1 !== '' &&
+          evaluationData.jobKnowledgeScore2 && evaluationData.jobKnowledgeScore2 !== '' &&
+          evaluationData.jobKnowledgeScore3 && evaluationData.jobKnowledgeScore3 !== ''
+        );
+      case 2: // Quality of Work
+        return (
+          evaluationData.qualityOfWorkScore1 && evaluationData.qualityOfWorkScore1 !== '' &&
+          evaluationData.qualityOfWorkScore2 && evaluationData.qualityOfWorkScore2 !== '' &&
+          evaluationData.qualityOfWorkScore3 && evaluationData.qualityOfWorkScore3 !== '' &&
+          evaluationData.qualityOfWorkScore4 && evaluationData.qualityOfWorkScore4 !== '' &&
+          evaluationData.qualityOfWorkScore5 && evaluationData.qualityOfWorkScore5 !== ''
+        );
+      case 3: // Adaptability
+        return (
+          evaluationData.adaptabilityScore1 && evaluationData.adaptabilityScore1 !== '' &&
+          evaluationData.adaptabilityScore2 && evaluationData.adaptabilityScore2 !== '' &&
+          evaluationData.adaptabilityScore3 && evaluationData.adaptabilityScore3 !== ''
+        );
+      case 4: // Teamwork
+        return (
+          evaluationData.teamworkScore1 && evaluationData.teamworkScore1 !== '' &&
+          evaluationData.teamworkScore2 && evaluationData.teamworkScore2 !== '' &&
+          evaluationData.teamworkScore3 && evaluationData.teamworkScore3 !== ''
+        );
+      case 5: // Reliability
+        return (
+          evaluationData.reliabilityScore1 && evaluationData.reliabilityScore1 !== '' &&
+          evaluationData.reliabilityScore2 && evaluationData.reliabilityScore2 !== '' &&
+          evaluationData.reliabilityScore3 && evaluationData.reliabilityScore3 !== '' &&
+          evaluationData.reliabilityScore4 && evaluationData.reliabilityScore4 !== '' 
+        );
+      case 6: // Ethical & Professional Behavior
+        return (
+          evaluationData.ethicalScore1 && evaluationData.ethicalScore1 !== '' &&
+          evaluationData.ethicalScore2 && evaluationData.ethicalScore2 !== '' &&
+          evaluationData.ethicalScore3 && evaluationData.ethicalScore3 !== '' &&
+          evaluationData.ethicalScore4 && evaluationData.ethicalScore4 !== ''
+        );
+      case 7: // Customer Service
+        return (
+          evaluationData.customerServiceScore1 && evaluationData.customerServiceScore1 !== '' &&
+          evaluationData.customerServiceScore2 && evaluationData.customerServiceScore2 !== '' &&
+          evaluationData.customerServiceScore3 && evaluationData.customerServiceScore3 !== '' &&
+          evaluationData.customerServiceScore4 && evaluationData.customerServiceScore4 !== '' &&
+          evaluationData.customerServiceScore5 && evaluationData.customerServiceScore5 !== ''
+        );
+      default:
+        return true; // For other steps, allow progression
+    }
+  };
+
+  // Get step name for tooltip
+  const getStepName = () => {
+    switch (currentStep) {
+      case 1: return 'Job Knowledge';
+      case 2: return 'Quality of Work';
+      case 3: return 'Adaptability';
+      case 4: return 'Teamwork';
+      case 5: return 'Reliability';
+      case 6: return 'Ethical & Professional Behavior';
+      case 7: return 'Customer Service';
+      default: return 'evaluation';
+    }
+  };
+
   const nextStep = () => {
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
@@ -214,7 +288,8 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
   };
 
   const handleSubmit = () => {
-    setShowConfirmModal(true);
+    // Direct submission - no modal needed
+    confirmSubmit();
   };
 
   const handleApprove = () => {
@@ -245,7 +320,11 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
         evaluatorName: 'Current Evaluator', // You can make this dynamic
         evaluationData: {
           ...evaluationData,
-          overallRating
+          overallRating,
+          // Ensure evaluator signature is included
+          evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',
+          evaluatorSignature: evaluationData.evaluatorSignature || currentUser?.name || 'Evaluator',
+          evaluatorSignatureDate: evaluationData.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
         },
         status: 'completed',
         period: new Date().toISOString().slice(0, 7), // YYYY-MM format
@@ -264,7 +343,11 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
           evaluatorName: 'Current Evaluator', // You can make this dynamic
           evaluationData: {
             ...evaluationData,
-            overallRating
+            overallRating,
+            // Ensure evaluator signature is included
+            evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',
+            evaluatorSignature: evaluationData.evaluatorSignature || currentUser?.name || 'Evaluator',
+            evaluatorSignatureDate: evaluationData.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
           },
           status: 'completed',
           period: new Date().toISOString().slice(0, 7), // YYYY-MM format
@@ -276,6 +359,17 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
         console.log('Also stored in client data service');
       } catch (clientError) {
         console.log('Client data service storage failed, but localStorage storage succeeded:', clientError);
+      }
+      
+      // Create notification for evaluators and HR
+      try {
+        await createEvaluationNotification(
+          evaluationData.employeeName || employee?.name || 'Employee',
+          currentUser?.name || 'Current Evaluator'
+        );
+      } catch (notificationError) {
+        console.warn('Failed to create notification:', notificationError);
+        // Don't fail the submission if notification creation fails
       }
       
       // Show success message
@@ -314,8 +408,22 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
   const CurrentStepComponent = currentStep === 0 ? WelcomeStep : steps[currentStep - 1].component;
 
   return (
-    <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 overflow-y-auto">
-      <div className="max-w-5xl mx-auto">
+    <>
+      <style jsx>{`
+        @keyframes dialogPopup {
+          from {
+            transform: scale(0.9);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+      `}</style>
+      <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 overflow-y-auto">
+      <div className="w-full mx-auto px-4">
+        <div className="max-w-5xl mx-auto">
 
         {/* Step Numbers Indicator */}
         {currentStep > 0 && (
@@ -374,6 +482,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
                 employee={employee}
                 currentUser={currentUser}
                 onStartAction={startEvaluation}
+                onBackAction={onCloseAction}
               />
             </CardContent>
           </Card>
@@ -419,14 +528,10 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
               
               <Button
                 variant="outline"
-                onClick={() => {
-                  if (onCancelAction) {
-                    onCancelAction();
-                  } else if (confirm('Are you sure you want to cancel this evaluation? All progress will be lost.')) {
-                    if (onCloseAction) {
-                      onCloseAction();
-                    }
-                  }
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowCancelDialog(true);
                 }}
                 className="px-6 text-red-600 border-red-300 hover:bg-red-50"
               >
@@ -434,22 +539,97 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
               </Button>
             </div>
 
-            <div className="flex gap-3">
-              <Button onClick={nextStep} className="px-6">
-                Next
-              </Button>
+            <div className="flex flex-col gap-2">
+              <TooltipProvider>
+                {currentStep >= 1 && currentStep <= 7 && !isCurrentStepComplete() ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          // Button is disabled, do nothing
+                        }}
+                        className="px-6 opacity-50 cursor-not-allowed"
+                      >
+                        Next
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Please complete all {getStepName()} scores to continue</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        onClick={nextStep} 
+                        className="px-6"
+                      >
+                        Next
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Proceed to the next step</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </TooltipProvider>
+              
             </div>
           </div>
         )}
+        </div>
       </div>
 
-      {/* Confirmation Modal */}
-      <ConfirmModal
-        open={showConfirmModal}
-        onCloseAction={() => setShowConfirmModal(false)}
-        onConfirmAction={confirmSubmit}
-        data={evaluationData}
-      />
     </div>
+
+    {/* Cancel Evaluation Dialog */}
+    <Dialog open={showCancelDialog} onOpenChangeAction={setShowCancelDialog}>
+      <DialogContent className="max-w-md m-8" style={{
+        animation: 'dialogPopup 0.3s ease-out'
+      }}>
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-red-500" />
+            Cancel Evaluation
+          </DialogTitle>
+        </DialogHeader>
+        <div className="py-3 bg-red-50 p-4 mx-2 my-2">
+          <p className="text-gray-600">
+            Are you sure you want to cancel this evaluation? All progress will be lost and cannot be recovered.
+          </p>
+        </div>
+        <DialogFooter className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowCancelDialog(false);
+            }}
+            className="px-4 bg-blue-500 text-white hover:bg-blue-600 hover:text-white"
+          >
+            Keep Editing
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowCancelDialog(false);
+              if (onCancelAction) {
+                onCancelAction();
+              } else if (onCloseAction) {
+                onCloseAction();
+              }
+            }}
+            className="px-4"
+          >
+            Cancel Evaluation
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

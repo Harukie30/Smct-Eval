@@ -26,13 +26,13 @@ interface Step5Props {
 }
 
 // Score Dropdown Component
-function ScoreDropdown({ 
-  value, 
-  onValueChange, 
-  placeholder = "Select Score" 
-}: { 
-  value: string; 
-  onValueChange: (value: string) => void; 
+function ScoreDropdown({
+  value,
+  onValueChange,
+  placeholder = "Select Score"
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
   placeholder?: string;
 }) {
   const getScoreColor = (score: string) => {

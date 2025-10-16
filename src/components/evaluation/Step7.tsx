@@ -120,9 +120,10 @@ const getAverageScoreLabel = (average: number) => {
 };
 
 const calculateAverageScore = (scores: string[]) => {
-  const validScores = scores.filter(score => score !== '').map(score => parseInt(score));
+  const validScores = scores.filter(score => score !== '' && score !== null && score !== undefined).map(score => parseInt(score));
   if (validScores.length === 0) return 0;
-  return validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+  const average = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+  return Math.round(average * 10) / 10; // Round to 1 decimal place
 };
 
 export default function Step7({ data, updateDataAction, onNextAction }: Step7Props) {
@@ -143,7 +144,8 @@ export default function Step7({ data, updateDataAction, onNextAction }: Step7Pro
   ];
 
   const averageScore = calculateAverageScore(customerServiceScores);
-  const averageScoreNumber = parseFloat(averageScore.toFixed(1));
+  const averageScoreNumber = averageScore;
+  const displayAverageScore = averageScore.toString();
 
   return (
     <div className="space-y-6">
@@ -412,7 +414,7 @@ export default function Step7({ data, updateDataAction, onNextAction }: Step7Pro
             <h3 className="text-xl font-bold text-gray-900 mb-4">Customer Service - Average Score</h3>
             <div className="flex justify-center items-center gap-6">
               <div className={`px-6 py-4 rounded-lg border-2 ${getAverageScoreColor(averageScoreNumber)}`}>
-                <div className="text-3xl font-bold">{averageScore}</div>
+                <div className="text-3xl font-bold">{displayAverageScore}</div>
                 <div className="text-sm font-medium mt-1">{getAverageScoreLabel(averageScoreNumber)}</div>
               </div>
               <div className="text-left">

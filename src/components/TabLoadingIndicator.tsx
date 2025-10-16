@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { Skeleton, SkeletonText, SkeletonTable, SkeletonOverlay } from '@/components/ui/skeleton';
 
 interface TabLoadingIndicatorProps {
   isLoading: boolean;
@@ -35,12 +36,6 @@ export default function TabLoadingIndicator({
 
   if (!show) return null;
 
-  const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-6 h-6', 
-    lg: 'w-8 h-8'
-  };
-
   const positionClasses = {
     top: 'top-4',
     center: 'top-1/2 transform -translate-y-1/2',
@@ -50,13 +45,16 @@ export default function TabLoadingIndicator({
   return (
     <div className={`absolute left-1/2 transform -translate-x-1/2 ${positionClasses[position]} z-10`}>
       {showOverlay ? (
-        <div className="bg-white/90 backdrop-blur-sm rounded-lg px-4 py-3 shadow-lg border border-gray-200 flex items-center space-x-3">
-          <Loader2 className={`${sizeClasses[size]} animate-spin text-blue-600`} />
-          <span className="text-sm font-medium text-gray-700">{message}</span>
+        <div className="bg-white/90 backdrop-blur-sm rounded-lg px-4 py-3 shadow-lg border border-gray-200">
+          <div className="flex items-center space-x-3 mb-3">
+            <Skeleton className="w-6 h-6 rounded-full" />
+            <span className="text-sm font-medium text-gray-700">{message}</span>
+          </div>
+          <SkeletonText lines={3} />
         </div>
       ) : (
         <div className="flex items-center space-x-2">
-          <Loader2 className={`${sizeClasses[size]} animate-spin text-blue-600`} />
+          <Skeleton className="w-6 h-6 rounded-full" />
           <span className="text-sm text-gray-600">{message}</span>
         </div>
       )}
@@ -73,23 +71,18 @@ export function TabSkeletonLoader({
   showAvatar?: boolean; 
 }) {
   return (
-    <div className="space-y-3 animate-pulse">
+    <div className="space-y-3">
       {showAvatar && (
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+          <Skeleton className="w-10 h-10 rounded-full" />
           <div className="space-y-2">
-            <div className="h-4 bg-gray-200 rounded w-24"></div>
-            <div className="h-3 bg-gray-200 rounded w-16"></div>
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-16" />
           </div>
         </div>
       )}
       
-      {Array.from({ length: lines }).map((_, i) => (
-        <div key={i} className="space-y-2">
-          <div className="h-4 bg-gray-200 rounded w-full"></div>
-          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-        </div>
-      ))}
+      <SkeletonText lines={lines} />
     </div>
   );
 }
@@ -104,58 +97,12 @@ export function TableSkeletonLoader({
   columns?: number;
   showHeader?: boolean;
 }) {
-  return (
-    <div className="animate-pulse">
-      {showHeader && (
-        <div className="grid grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-          {Array.from({ length: columns }).map((_, i) => (
-            <div key={i} className="h-4 bg-gray-200 rounded"></div>
-          ))}
-        </div>
-      )}
-      
-      <div className="space-y-3">
-        {Array.from({ length: rows }).map((_, rowIndex) => (
-          <div key={rowIndex} className="grid grid-cols-4 gap-4 p-4 border border-gray-200 rounded-lg">
-            {Array.from({ length: columns }).map((_, colIndex) => (
-              <div key={colIndex} className="h-4 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  return <SkeletonTable rows={rows} columns={columns} showHeader={showHeader} />;
 }
 
 // Performance table skeleton with specific columns
 export function PerformanceTableSkeleton() {
-  return (
-    <div className="animate-pulse">
-      {/* Table Header */}
-      <div className="grid grid-cols-6 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-        <div className="h-4 bg-gray-200 rounded"></div>
-        <div className="h-4 bg-gray-200 rounded"></div>
-        <div className="h-4 bg-gray-200 rounded"></div>
-        <div className="h-4 bg-gray-200 rounded"></div>
-        <div className="h-4 bg-gray-200 rounded"></div>
-        <div className="h-4 bg-gray-200 rounded"></div>
-      </div>
-      
-      {/* Table Rows */}
-      <div className="space-y-3">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <div key={index} className="grid grid-cols-6 gap-4 p-4 border border-gray-200 rounded-lg">
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  return <SkeletonTable rows={5} columns={6} showHeader={true} />;
 }
 
 // Inline loading state for specific sections

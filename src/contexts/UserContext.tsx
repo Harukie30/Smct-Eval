@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { UserProfile } from '@/components/ProfileCard';
 import { toastMessages } from '@/lib/toastMessages';
 import clientDataService from '@/lib/clientDataService';
-import FakeLoadingScreen from '@/components/FakeLoadingScreen';
+import RealLoadingScreen from '@/components/RealLoadingScreen';
 
 export interface AuthenticatedUser {
   id: number;
@@ -144,7 +144,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           id: userWithNumberId.id,
           name: userWithNumberId.name,
           email: userWithNumberId.email,
-          roleOrPosition: userWithNumberId.position,
+          roleOrPosition: userWithNumberId.role, // Use role instead of position
           department: userWithNumberId.department,
           avatar: userWithNumberId.avatar,
           bio: userWithNumberId.bio,
@@ -218,6 +218,19 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
             accounts[accountIndex] = { ...accounts[accountIndex], ...updates };
             localStorage.setItem('accounts', JSON.stringify(accounts));
           }
+
+          // Store profile updates in employeeProfiles for other users to see
+          const employeeProfiles = JSON.parse(localStorage.getItem('employeeProfiles') || '{}');
+          employeeProfiles[user.id] = {
+            ...employeeProfiles[user.id],
+            ...updates,
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            position: user.position,
+            department: user.department
+          };
+          localStorage.setItem('employeeProfiles', JSON.stringify(employeeProfiles));
         }
       }
     }
@@ -288,11 +301,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       
       {/* Logout Loading Screen */}
       {showLogoutLoading && (
-        <FakeLoadingScreen
+        <RealLoadingScreen
           message="Logging out..."
-          duration={1500}
           onComplete={handleLogoutComplete}
-          showProgress={true}
         />
       )}
     </UserContext.Provider>

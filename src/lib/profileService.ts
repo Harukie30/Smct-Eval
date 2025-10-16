@@ -1,13 +1,50 @@
 import { UserProfile } from '@/components/ProfileCard';
-import clientDataService from './clientDataService';
+import clientDataService, { Profile } from './clientDataService';
+
+// Event system for profile updates
+export type ProfileUpdateEvent = {
+  type: 'PROFILE_UPDATED';
+  profileId: number;
+  updatedData: Partial<UserProfile>;
+  timestamp: number;
+};
+
+class ProfileUpdateManager {
+  private listeners: Set<(event: ProfileUpdateEvent) => void> = new Set();
+
+  subscribe(listener: (event: ProfileUpdateEvent) => void) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  notify(event: ProfileUpdateEvent) {
+    this.listeners.forEach(listener => listener(event));
+  }
+}
+
+export const profileUpdateManager = new ProfileUpdateManager();
 
 export async function updateProfile(profileId: string, profileData: Partial<UserProfile>): Promise<UserProfile> {
   try {
     console.log('Updating profile with ID:', profileId);
     console.log('Profile data to update:', profileData);
     
-    const updatedProfile = await clientDataService.updateProfile(parseInt(profileId), profileData);
+    // Convert UserProfile data to Profile format for clientDataService
+    const profileUpdates: Partial<Profile> = {
+      ...profileData,
+      id: parseInt(profileId)
+    };
+    
+    const updatedProfile = await clientDataService.updateProfile(parseInt(profileId), profileUpdates);
     console.log('Profile updated successfully:', updatedProfile);
+    
+    // Notify all listeners about the profile update
+    profileUpdateManager.notify({
+      type: 'PROFILE_UPDATED',
+      profileId: parseInt(profileId),
+      updatedData: profileData,
+      timestamp: Date.now()
+    });
     
     return updatedProfile as UserProfile;
   } catch (error) {

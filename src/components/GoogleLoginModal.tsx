@@ -280,10 +280,39 @@ export default function GoogleLoginModal({
           }
         }
         
+        /* Modal popup animation */
+        @keyframes modalPopup {
+          0% {
+            transform: scale(0.8) translateY(20px);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.05) translateY(-5px);
+            opacity: 0.9;
+          }
+          100% {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+          }
+        }
+        @keyframes modalPopdown {
+          0% {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(0.8) translateY(20px);
+            opacity: 0;
+          }
+        }
+        
       `}</style>
         <Dialog open={isOpen} onOpenChangeAction={handleClose}>
         <DialogContent 
-          className="sm:max-w-md mx-auto my-8 px-6 py-4 modal-bounce"
+          className="sm:max-w-md mx-auto my-8 px-6 py-4"
+          style={{
+            animation: isOpen ? 'modalPopup 0.4s ease-out' : 'modalPopdown 0.3s ease-in'
+          }}
         >
         <DialogHeader>
           <DialogTitle className="text-center text-xl font-semibold">
@@ -293,7 +322,7 @@ export default function GoogleLoginModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col items-center space-y-6 py-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-[2000ms] delay-[1000ms]">
+        <div className="flex flex-col items-center space-y-6 py-6">
           {loginStep === 'select' && (
             <>
                     <div className="w-full">

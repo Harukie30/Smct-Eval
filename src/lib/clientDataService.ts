@@ -1,5 +1,5 @@
 // Client-side data service to replace API routes
-import departmentsData from '@/data/departments-minimal.json';
+
 import positionsData from '@/data/positions.json';
 import submissionsData from '@/data/submissions.json';
 import pendingRegistrationsData from '@/data/pending-registrations.json';
@@ -7,6 +7,16 @@ import profilesData from '@/data/profiles.json';
 import accountsData from '@/data/accounts.json';
 
 // Types
+export interface Notification {
+  id: number;
+  message: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  roles: string[];
+  timestamp: string;
+  isRead: boolean;
+  actionUrl?: string; // Optional URL for clickable notifications
+}
+
 export interface Employee {
   id: number;
   name: string;
@@ -48,6 +58,7 @@ export interface Submission {
   employeeApprovedAt?: string | null;
   evaluatorSignature?: string | null;
   evaluatorApprovedAt?: string | null;
+  fullyApprovedNotified?: boolean;
 }
 
 export interface PendingRegistration {
@@ -55,7 +66,7 @@ export interface PendingRegistration {
   name: string;
   email: string;
   position: string;
-  department: string;
+  department?: string; // Made optional
   branch: string;
   hireDate: string;
   role: string;
@@ -109,6 +120,7 @@ const STORAGE_KEYS = {
   PENDING_REGISTRATIONS: 'pending_registrations',
   PROFILES: 'profiles',
   ACCOUNTS: 'accounts',
+  NOTIFICATIONS: 'notifications',
 } as const;
 
 // Helper functions for localStorage
@@ -189,6 +201,12 @@ const initializeData = () => {
   if (storedAccounts.length === 0) {
     saveToStorage(STORAGE_KEYS.ACCOUNTS, accountsData.accounts || []);
   }
+
+  // Initialize notifications (start empty)
+  const storedNotifications = getFromStorage(STORAGE_KEYS.NOTIFICATIONS, []);
+  if (storedNotifications.length === 0) {
+    saveToStorage(STORAGE_KEYS.NOTIFICATIONS, []);
+  }
 };
 
 // Force reinitialize accounts data (useful for fixing corrupted data)
@@ -206,9 +224,9 @@ initializeData();
 
 // API replacement functions
 export const clientDataService = {
-  // Departments
+  // Departments - removed since department field was removed from registration
   getDepartments: async (): Promise<string[]> => {
-    return departmentsData;
+    return []; // Return empty array since departments are no longer used
   },
 
   // Positions
@@ -257,6 +275,20 @@ export const clientDataService = {
     saveToStorage(STORAGE_KEYS.SUBMISSIONS, submissions);
     
     return newSubmission;
+  },
+
+  updateSubmission: async (id: number, updates: Partial<Submission>): Promise<Submission | null> => {
+    const submissions = await clientDataService.getSubmissions();
+    const index = submissions.findIndex(sub => sub.id === id);
+    
+    if (index === -1) {
+      return null;
+    }
+
+    submissions[index] = { ...submissions[index], ...updates };
+    saveToStorage(STORAGE_KEYS.SUBMISSIONS, submissions);
+    
+    return submissions[index];
   },
 
   // Pending Registrations
@@ -524,6 +556,117 @@ export const clientDataService = {
   // Force reinitialize accounts data (fixes corrupted data)
   forceReinitializeAccounts: (): void => {
     forceReinitializeAccounts();
+  },
+
+  // Notifications
+  getNotifications: async (userRole: string): Promise<Notification[]> => {
+    const allNotifications = getFromStorage(STORAGE_KEYS.NOTIFICATIONS, [] as Notification[]);
+    return allNotifications.filter(notification => 
+      notification.roles.includes(userRole) || 
+      notification.roles.includes('all')
+    );
+  },
+
+  createNotification: async (notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>): Promise<Notification> => {
+    const notifications = getFromStorage(STORAGE_KEYS.NOTIFICATIONS, [] as Notification[]);
+    
+    // Check for duplicate notifications (same message and roles)
+    const isDuplicate = notifications.some(existing => 
+      existing.message === notification.message && 
+      JSON.stringify(existing.roles.sort()) === JSON.stringify(notification.roles.sort())
+    );
+    
+    if (isDuplicate) {
+      console.log('Duplicate notification prevented:', notification.message);
+      return notifications.find(existing => 
+        existing.message === notification.message && 
+        JSON.stringify(existing.roles.sort()) === JSON.stringify(notification.roles.sort())
+      )!;
+    }
+    
+    const newNotification: Notification = {
+      ...notification,
+      id: Date.now(),
+      timestamp: new Date().toISOString(),
+      isRead: false
+    };
+    
+    notifications.push(newNotification);
+    saveToStorage(STORAGE_KEYS.NOTIFICATIONS, notifications);
+    
+    // Trigger storage event for real-time updates across tabs
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: STORAGE_KEYS.NOTIFICATIONS,
+        newValue: JSON.stringify(notifications)
+      }));
+    }
+    
+    return newNotification;
+  },
+
+  markNotificationAsRead: async (notificationId: number): Promise<void> => {
+    const notifications = getFromStorage(STORAGE_KEYS.NOTIFICATIONS, [] as Notification[]);
+    const notification = notifications.find(n => n.id === notificationId);
+    
+    if (notification) {
+      notification.isRead = true;
+      saveToStorage(STORAGE_KEYS.NOTIFICATIONS, notifications);
+      
+      // Trigger storage event for real-time updates
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: STORAGE_KEYS.NOTIFICATIONS,
+          newValue: JSON.stringify(notifications)
+        }));
+      }
+    }
+  },
+
+  markAllNotificationsAsRead: async (userRole: string): Promise<void> => {
+    const notifications = getFromStorage(STORAGE_KEYS.NOTIFICATIONS, [] as Notification[]);
+    const userNotifications = notifications.filter(notification => 
+      notification.roles.includes(userRole) || 
+      notification.roles.includes('all')
+    );
+    
+    userNotifications.forEach(notification => {
+      notification.isRead = true;
+    });
+    
+    saveToStorage(STORAGE_KEYS.NOTIFICATIONS, notifications);
+    
+    // Trigger storage event for real-time updates
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: STORAGE_KEYS.NOTIFICATIONS,
+        newValue: JSON.stringify(notifications)
+      }));
+    }
+  },
+
+  getUnreadNotificationCount: async (userRole: string): Promise<number> => {
+    const notifications = await clientDataService.getNotifications(userRole);
+    return notifications.filter(notification => !notification.isRead).length;
+  },
+
+  deleteNotification: async (notificationId: number): Promise<void> => {
+    const notifications = getFromStorage(STORAGE_KEYS.NOTIFICATIONS, [] as Notification[]);
+    const updatedNotifications = notifications.filter(n => n.id !== notificationId);
+    saveToStorage(STORAGE_KEYS.NOTIFICATIONS, updatedNotifications);
+    
+    // Trigger storage event for real-time updates
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: STORAGE_KEYS.NOTIFICATIONS,
+        newValue: JSON.stringify(updatedNotifications)
+      }));
+    }
+  },
+
+  // Get all accounts
+  getAccounts: async (): Promise<Account[]> => {
+    return getFromStorage(STORAGE_KEYS.ACCOUNTS, []);
   },
 };
 

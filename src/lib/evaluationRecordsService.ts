@@ -2,6 +2,7 @@
 
 import { EvaluationData } from '@/components/evaluation/types';
 import submissionsData from '@/data/submissions.json';
+import { createApprovalNotification, createFullyApprovedNotification } from './notificationUtils';
 
 export interface EvaluationRecord {
   id: number;
@@ -337,6 +338,17 @@ export const addEmployeeSignatureApproval = async (
   
   saveEvaluationRecords(records);
   
+  // Create notification for HR and Admin
+  try {
+    await createApprovalNotification(
+      records[recordIndex].employeeName,
+      approvalData.employeeName,
+      'employee'
+    );
+  } catch (notificationError) {
+    console.warn('Failed to create employee approval notification:', notificationError);
+  }
+  
   console.log(`Mock API Call: Employee signature approval added for record ${recordId}`);
   return records[recordIndex];
 };
@@ -402,6 +414,24 @@ export const addEvaluatorSignatureApproval = async (
   records[recordIndex].approvalHistory = history.filter(h => h.metadata?.recordId === recordId);
   
   saveEvaluationRecords(records);
+  
+  // Create notification for HR, Admin, and Employee
+  try {
+    await createApprovalNotification(
+      records[recordIndex].employeeName,
+      approvalData.evaluatorName,
+      'evaluator'
+    );
+  } catch (notificationError) {
+    console.warn('Failed to create evaluator approval notification:', notificationError);
+  }
+
+  // Create fully approved notification since both parties have now approved
+  try {
+    await createFullyApprovedNotification(records[recordIndex].employeeName);
+  } catch (notificationError) {
+    console.warn('Failed to create fully approved notification:', notificationError);
+  }
   
   console.log(`Mock API Call: Evaluator signature approval added for record ${recordId}`);
   return records[recordIndex];
