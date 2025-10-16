@@ -14,7 +14,6 @@ import SuspensionModal from '@/components/SuspensionModal';
 import GoogleLoginModal from '@/components/GoogleLoginModal';
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { toastMessages } from '@/lib/toastMessages';
 
 export default function LandingLoginPage() {
@@ -23,14 +22,14 @@ export default function LandingLoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [loginError, setLoginError] = useState('');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isLoggingIn,] = useState(false);
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
   const [showSuspensionModal, setShowSuspensionModal] = useState(false);
   const [suspensionData, setSuspensionData] = useState<any>(null);
   const [showGoogleLoginModal, setShowGoogleLoginModal] = useState(false);
   const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] = useState(false);
 
-  const { login, isAuthenticated, isLoading } = useUser();
+  const { login, isLoading } = useUser();
   const router = useRouter();
 
   // Remove automatic redirect - let users stay on login page even if authenticated

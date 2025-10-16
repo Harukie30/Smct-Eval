@@ -1,5 +1,5 @@
 // Client-side data service to replace API routes
-import departmentsData from '@/data/departments-minimal.json';
+
 import positionsData from '@/data/positions.json';
 import submissionsData from '@/data/submissions.json';
 import pendingRegistrationsData from '@/data/pending-registrations.json';
@@ -66,7 +66,7 @@ export interface PendingRegistration {
   name: string;
   email: string;
   position: string;
-  department: string;
+  department?: string; // Made optional
   branch: string;
   hireDate: string;
   role: string;
@@ -224,9 +224,9 @@ initializeData();
 
 // API replacement functions
 export const clientDataService = {
-  // Departments
+  // Departments - removed since department field was removed from registration
   getDepartments: async (): Promise<string[]> => {
-    return departmentsData;
+    return []; // Return empty array since departments are no longer used
   },
 
   // Positions
@@ -662,6 +662,11 @@ export const clientDataService = {
         newValue: JSON.stringify(updatedNotifications)
       }));
     }
+  },
+
+  // Get all accounts
+  getAccounts: async (): Promise<Account[]> => {
+    return getFromStorage(STORAGE_KEYS.ACCOUNTS, []);
   },
 };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo,} from 'react';
 import { X } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
@@ -13,10 +13,9 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import ViewEmployeeModal from '@/components/ViewEmployeeModal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, ChevronDown } from "lucide-react";
+import { Eye, } from "lucide-react";
 import EvaluationForm from '@/components/evaluation';
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import SearchableDropdown from "@/components/ui/searchable-dropdown";
 import mockData from '@/data/dashboard.json';
 import accountsData from '@/data/accounts.json';
@@ -31,6 +30,8 @@ import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/useToast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createApprovalNotification, createFullyApprovedNotification } from '@/lib/notificationUtils';
+import { getQuarterFromEvaluationData, getQuarterFromDate, getQuarterColor } from '@/lib/quarterUtils';
+import { useProfilePictureUpdates } from '@/hooks/useProfileUpdates';
 
 type Feedback = {
   id: number;
@@ -86,6 +87,7 @@ type Employee = {
   department: string;
   role: string;
   hireDate: string;
+  avatar?: string;
 };
 
 function getRatingColor(rating: number) {
@@ -125,11 +127,67 @@ const getRatingColorForLabel = (rating: string) => {
   }
 };
 
-import { getQuarterFromEvaluationData, getQuarterFromDate, getQuarterColor } from '@/lib/quarterUtils';
-
 export default function EvaluatorDashboard() {
   const { profile, user } = useUser();
   const { success, error } = useToast();
+  const { getUpdatedAvatar, hasAvatarUpdate } = useProfilePictureUpdates();
+
+  // Function to get time ago display
+  const getTimeAgo = (submittedAt: string) => {
+    const submissionDate = new Date(submittedAt);
+    const now = new Date();
+    const diffInMs = now.getTime() - submissionDate.getTime();
+    
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    
+    if (diffInMinutes < 1) {
+      return 'Just now';
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes}m ago`;
+    } else if (diffInHours < 24) {
+      return `${diffInHours}h ago`;
+    } else if (diffInDays < 7) {
+      return `${diffInDays}d ago`;
+    } else {
+      return new Date(submittedAt).toLocaleDateString();
+    }
+  };
+
+  // Simple 2-level highlighting system
+  const getSubmissionHighlight = (submittedAt: string, allSubmissions: any[] = []) => {
+    // Sort all submissions by date (most recent first)
+    const sortedSubmissions = [...allSubmissions].sort((a, b) => 
+      new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+    );
+    
+    // Find the position of current submission in the sorted list
+    const currentIndex = sortedSubmissions.findIndex(sub => sub.submittedAt === submittedAt);
+    
+    if (currentIndex === 0) {
+      // Most recent submission - YELLOW "New"
+      return {
+        className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
+        badge: { text: 'New', className: 'bg-yellow-200 text-yellow-800' },
+        priority: 'new'
+      };
+    } else if (currentIndex === 1) {
+      // Second most recent - BLUE "Recent"
+      return {
+        className: 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100',
+        badge: { text: 'Recent', className: 'bg-blue-100 text-blue-800' },
+        priority: 'recent'
+      };
+    } else {
+      // Older submissions - No special highlighting
+      return {
+        className: 'hover:bg-gray-50',
+        badge: null,
+        priority: 'old'
+      };
+    }
+  };
 
   // Add custom CSS for container popup animation
   useEffect(() => {
@@ -531,6 +589,7 @@ export default function EvaluatorDashboard() {
   const handleEvaluationRecordsRefresh = async () => {
     try {
       console.log('🔄 Starting manual refresh...');
+      setIsRefreshing(true);
       setIsFeedbackRefreshing(true);
       
       // Add a 1-second delay to make skeleton visible
@@ -541,10 +600,12 @@ export default function EvaluatorDashboard() {
           'Evaluation Records Refreshed',
           'Feedback data has been updated'
         );
+        setIsRefreshing(false);
         setIsFeedbackRefreshing(false);
       }, 1000); // 1-second delay to see skeleton properly
     } catch (error) {
       console.error('Error during evaluation records refresh:', error);
+      setIsRefreshing(false);
       setIsFeedbackRefreshing(false);
     }
   };
@@ -2013,7 +2074,7 @@ export default function EvaluatorDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Recent Submissions</CardTitle>
-                <CardDescription>Latest items awaiting evaluation</CardDescription>
+                <CardDescription>Latest items awaiting evaluation ({filteredSubmissions.length} total)</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="px-6 py-4 space-y-4">
@@ -2052,13 +2113,15 @@ export default function EvaluatorDashboard() {
                   </div>
                 </div>
                 {isRefreshing ? (
-                  <div className="max-h-[60vh] overflow-y-auto">
+                  <div className="max-h-[500px] overflow-y-auto">
                     <Table className="min-w-full">
-                      <TableHeader className="sticky top-0 bg-white">
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b">
                         <TableRow key="overview-header">
                           <TableHead className="px-6 py-3">Employee</TableHead>
                           <TableHead className="px-6 py-3">Category</TableHead>
-                          <TableHead className="px-6 py-3">Submitted</TableHead>
+                          <TableHead className="px-6 py-3 text-right">Rating</TableHead>
+                          <TableHead className="px-6 py-3">Date</TableHead>
+                          <TableHead className="px-6 py-3">Quarter</TableHead>
                           <TableHead className="px-6 py-3 text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -2077,8 +2140,17 @@ export default function EvaluatorDashboard() {
                             <TableCell className="px-6 py-3">
                               <Skeleton className="h-6 w-20 rounded-full" />
                             </TableCell>
+                            <TableCell className="px-6 py-3 text-right">
+                              <Skeleton className="h-4 w-12" />
+                            </TableCell>
                             <TableCell className="px-6 py-3">
-                              <Skeleton className="h-4 w-20" />
+                              <div className="space-y-2">
+                                <Skeleton className="h-4 w-20" />
+                                <Skeleton className="h-3 w-16" />
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-6 w-16 rounded-full" />
                             </TableCell>
                             <TableCell className="px-6 py-4 flex justify-end">
                               <Skeleton className="h-8 w-16" />
@@ -2089,32 +2161,66 @@ export default function EvaluatorDashboard() {
                     </Table>
                   </div>
                 ) : (
-                  <div className="max-h-[60vh] overflow-y-auto">
+                  <div className="max-h-[500px] overflow-y-auto border border-gray-200 rounded-md relative">
+                    {filteredSubmissions.length > 6 && (
+                      <div className="absolute top-2 right-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full z-20">
+                        Scroll to see more
+                      </div>
+                    )}
                     <Table className="min-w-full">
-                      <TableHeader className="sticky top-0 bg-white">
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b">
                         <TableRow key="overview-header">
                           <TableHead className="px-6 py-3">Employee</TableHead>
                           <TableHead className="px-6 py-3">Category</TableHead>
-                          <TableHead className="px-6 py-3">Submitted</TableHead>
+                          <TableHead className="px-6 py-3 text-right">Rating</TableHead>
+                          <TableHead className="px-6 py-3">Date</TableHead>
+                          <TableHead className="px-6 py-3">Quarter</TableHead>
                           <TableHead className="px-6 py-3 text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredSubmissions.length === 0 ? (
                           <TableRow key="no-submissions">
-                            <TableCell colSpan={4} className="px-6 py-3 text-center text-gray-500">
+                            <TableCell colSpan={6} className="px-6 py-3 text-center text-gray-500">
                               {overviewSearch.trim() ? 'No submissions found matching your search' : 'No recent submissions'}
                             </TableCell>
                           </TableRow>
                         ) : (
-                          filteredSubmissions.slice(0, 6).map((submission) => (
-                            <TableRow key={submission.id}>
-                              <TableCell className="px-6 py-3 font-medium text-gray-900">{submission.employeeName}</TableCell>
-                              <TableCell className="px-6 py-3">
-                                <Badge className="bg-blue-100 text-blue-800">{submission.category || 'Performance Review'}</Badge>
-                              </TableCell>
-                              <TableCell className="px-6 py-3 text-gray-600">{new Date(submission.submittedAt).toLocaleDateString()}</TableCell>
-                              <TableCell className="px-6 py-4 flex justify-end text-right">
+                          filteredSubmissions
+                            .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+                            .slice(0, 10)
+                            .map((submission) => {
+                              const highlight = getSubmissionHighlight(submission.submittedAt, filteredSubmissions);
+                              return (
+                                <TableRow key={submission.id} className={highlight.className}>
+                                  <TableCell className="px-6 py-3 font-medium">
+                                    <div className="flex items-center gap-2">
+                                      {submission.employeeName}
+                                      {highlight.badge && (
+                                        <Badge variant="secondary" className={`${highlight.badge.className} text-xs`}>
+                                          {highlight.badge.text}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="px-6 py-3">
+                                    <Badge className="bg-blue-100 text-blue-800">{submission.category || 'Performance Review'}</Badge>
+                                  </TableCell>
+                                  <TableCell className="px-6 py-3 text-right font-semibold">
+                                    {submission.rating || 'N/A'}/5
+                                  </TableCell>
+                                  <TableCell className="px-6 py-3">
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{new Date(submission.submittedAt).toLocaleDateString()}</span>
+                                      <span className="text-xs text-gray-500">{getTimeAgo(submission.submittedAt)}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="px-6 py-3">
+                                    <Badge className={getQuarterColor(getQuarterFromEvaluationData(submission.evaluationData || submission))}>
+                                      {getQuarterFromEvaluationData(submission.evaluationData || submission)}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="px-6 py-4 flex justify-end text-right">
                                 <div className="flex gap-2">
                                   <Button
                                     size="sm"
@@ -2132,7 +2238,8 @@ export default function EvaluatorDashboard() {
                                 </div>
                               </TableCell>
                             </TableRow>
-                          ))
+                            );
+                          })
                         )}
                       </TableBody>
                     </Table>
@@ -2148,6 +2255,84 @@ export default function EvaluatorDashboard() {
             // Use refresh counter as key to force re-render when data is refreshed
             const refreshKey = `employees-${employeeDataRefresh}`;
             const normalizedQuery = employeeSearch.trim().toLowerCase();
+            // Get updated profile data from localStorage with auto-update support
+            const getUpdatedEmployeeData = (employee: any) => {
+              try {
+                const employeeId = employee.employeeId || employee.id;
+                
+                // First check for real-time profile updates
+                const updatedAvatar = getUpdatedAvatar(employeeId, employee.avatar);
+                if (hasAvatarUpdate(employeeId)) {
+                  console.log('🔄 Using real-time updated avatar for:', employee.name, 'Avatar:', updatedAvatar);
+                  return {
+                    ...employee,
+                    avatar: updatedAvatar,
+                    // Keep other data as is, only update avatar from real-time updates
+                  };
+                }
+
+                // Check for updated profile data in localStorage
+                // First check if this is the current user
+                const storedUser = localStorage.getItem('authenticatedUser');
+                if (storedUser) {
+                  const userData = JSON.parse(storedUser);
+                  if (userData.id === employeeId) {
+                    console.log('🔄 Loading current user profile data for:', employee.name, 'Avatar:', userData.avatar);
+                    return {
+                      ...employee,
+                      avatar: userData.avatar || employee.avatar,
+                      name: userData.name || employee.name,
+                      email: userData.email || employee.email,
+                      position: userData.position || employee.position,
+                      department: userData.department || employee.department,
+                      bio: userData.bio || employee.bio
+                    };
+                  }
+                }
+
+                // Check for other employees' profile updates in localStorage
+                const employeeProfiles = localStorage.getItem('employeeProfiles');
+                if (employeeProfiles) {
+                  const profiles = JSON.parse(employeeProfiles);
+                  const profileData = profiles[employeeId];
+                  
+                  if (profileData) {
+                    console.log('🔄 Loading stored profile data for:', employee.name, 'Avatar:', profileData.avatar);
+                    return {
+                      ...employee,
+                      avatar: profileData.avatar || employee.avatar,
+                      name: profileData.name || employee.name,
+                      email: profileData.email || employee.email,
+                      position: profileData.position || employee.position,
+                      department: profileData.department || employee.department,
+                      bio: profileData.bio || employee.bio
+                    };
+                  }
+                }
+
+                // For demo purposes, let's also check if there are any profile updates in the accounts localStorage
+                const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+                const accountData = accounts.find((acc: any) => (acc.id === employeeId || acc.employeeId === employeeId));
+                if (accountData && (accountData.avatar || accountData.name !== employee.name)) {
+                  console.log('🔄 Loading account profile data for:', employee.name, 'Avatar:', accountData.avatar);
+                  return {
+                    ...employee,
+                    avatar: accountData.avatar || employee.avatar,
+                    name: accountData.name || employee.name,
+                    email: accountData.email || employee.email,
+                    position: accountData.position || employee.position,
+                    department: accountData.department || employee.department,
+                    bio: accountData.bio || employee.bio
+                  };
+                }
+
+                return employee;
+              } catch (error) {
+                console.error('Error getting updated employee data:', error);
+                return employee;
+              }
+            };
+
             const filtered: Employee[] = (accountsData as any).accounts.filter((e: any) => {
               // Only show active employees
               if (!e.isActive) return false;
@@ -2165,16 +2350,22 @@ export default function EvaluatorDashboard() {
               const matchesDepartment = !selectedDepartment || e.department === selectedDepartment;
 
               return matchesSearch && matchesDepartment;
-            }).map((e: any) => ({
-              // Use employeeId instead of id to match submissions data
-              id: e.employeeId || e.id,
-              name: e.name,
-              email: e.email,
-              position: e.position,
-              department: e.department,
-              role: e.role,
-              hireDate: e.hireDate
-            }));
+            }).map((e: any) => {
+              // Get updated data from localStorage
+              const updatedEmployee = getUpdatedEmployeeData(e);
+              
+              return {
+                // Use employeeId instead of id to match submissions data
+                id: updatedEmployee.employeeId || updatedEmployee.id,
+                name: updatedEmployee.name,
+                email: updatedEmployee.email,
+                position: updatedEmployee.position,
+                department: updatedEmployee.department,
+                role: updatedEmployee.role,
+                hireDate: updatedEmployee.hireDate,
+                avatar: updatedEmployee.avatar
+              };
+            });
             const sorted = [...filtered].sort((a, b) => {
               const { key, direction } = employeeSort;
               const av = a[key] ?? '';
@@ -2199,14 +2390,14 @@ export default function EvaluatorDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>Employees</CardTitle>
-                      <CardDescription>Directory of employees</CardDescription>
+                      <CardDescription>Directory of employees (includes profile updates)</CardDescription>
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleEmployeesRefresh}
                       className="flex items-center bg-blue-500 text-white hover:bg-green-600 hover:text-white"
-                      title="Refresh employee data"
+                      title="Refresh employee data (including profile updates)"
                     >
                       <span>Refresh</span>
                       <svg
@@ -2221,6 +2412,43 @@ export default function EvaluatorDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
+                  {/* Quick Stats Summary */}
+                  <div className="px-6 py-4 border-b bg-gray-50">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">{sorted.length}</div>
+                        <div className="text-sm text-gray-600">Total Employees</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {sorted.filter(e => {
+                            const employeeEvaluations = filteredSubmissions.filter(sub => sub.employeeId === e.id);
+                            const latestEvaluation = employeeEvaluations.sort((a, b) => 
+                              new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+                            )[0];
+                            const hasRecentEvaluation = latestEvaluation && 
+                              (new Date().getTime() - new Date(latestEvaluation.submittedAt).getTime()) < (90 * 24 * 60 * 60 * 1000);
+                            return hasRecentEvaluation;
+                          }).length}
+                        </div>
+                        <div className="text-sm text-gray-600">Up to Date</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-orange-600">
+                          {sorted.filter(e => {
+                            const employeeEvaluations = filteredSubmissions.filter(sub => sub.employeeId === e.id);
+                            const latestEvaluation = employeeEvaluations.sort((a, b) => 
+                              new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+                            )[0];
+                            const hasRecentEvaluation = latestEvaluation && 
+                              (new Date().getTime() - new Date(latestEvaluation.submittedAt).getTime()) < (90 * 24 * 60 * 60 * 1000);
+                            return !hasRecentEvaluation;
+                          }).length}
+                        </div>
+                        <div className="text-sm text-gray-600">Need Review</div>
+                      </div>
+                    </div>
+                  </div>
                   <div className="px-6 py-4 space-y-4">
                     <div className="flex gap-4">
                       <div className="flex items-center gap-2 w-full">
@@ -2259,16 +2487,14 @@ export default function EvaluatorDashboard() {
                     </div>
                   </div>
                   {isEmployeesRefreshing ? (
-                    <div className="max-h-[70vh] overflow-y-auto">
+                    <div className="max-h-[500px] overflow-y-auto">
                       <Table className="min-w-full">
-                        <TableHeader className="sticky top-0 bg-white">
+                        <TableHeader className="sticky top-0 bg-white z-10 border-b">
                           <TableRow key="employees-header">
-                            <TableHead className="px-6 py-3">Name</TableHead>
-                            <TableHead className="px-6 py-3">Email</TableHead>
-                            <TableHead className="px-6 py-3">Position</TableHead>
-                            <TableHead className="px-6 py-3">Department</TableHead>
+                            <TableHead className="px-6 py-3">Employee</TableHead>
+                            <TableHead className="px-6 py-3">Position & Department</TableHead>
                             <TableHead className="px-6 py-3">Role</TableHead>
-                            <TableHead className="px-6 py-3">Hire Date</TableHead>
+                            <TableHead className="px-6 py-3 text-center">Status</TableHead>
                             <TableHead className="px-6 py-3 text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -2277,27 +2503,24 @@ export default function EvaluatorDashboard() {
                             <TableRow key={`skeleton-employee-${index}`}>
                               <TableCell className="px-6 py-3">
                                 <div className="flex items-center space-x-3">
-                                  <Skeleton className="h-8 w-8 rounded-full" />
+                                  <Skeleton className="h-10 w-10 rounded-full" />
                                   <div className="space-y-2">
                                     <Skeleton className="h-4 w-24" />
-                                    <Skeleton className="h-3 w-16" />
+                                    <Skeleton className="h-3 w-32" />
                                   </div>
                                 </div>
                               </TableCell>
                               <TableCell className="px-6 py-3">
-                                <Skeleton className="h-4 w-32" />
+                                <div className="space-y-2">
+                                  <Skeleton className="h-4 w-20" />
+                                  <Skeleton className="h-5 w-16 rounded-full" />
+                                </div>
                               </TableCell>
                               <TableCell className="px-6 py-3">
-                                <Skeleton className="h-4 w-20" />
+                                <Skeleton className="h-6 w-16 rounded-full" />
                               </TableCell>
-                              <TableCell className="px-6 py-3">
-                                <Skeleton className="h-4 w-24" />
-                              </TableCell>
-                              <TableCell className="px-6 py-3">
-                                <Skeleton className="h-4 w-16" />
-                              </TableCell>
-                              <TableCell className="px-6 py-3">
-                                <Skeleton className="h-4 w-20" />
+                              <TableCell className="px-6 py-3 text-center">
+                                <Skeleton className="h-6 w-16 rounded-full mx-auto" />
                               </TableCell>
                               <TableCell className="px-6 py-3 flex justify-end">
                                 <div className="flex gap-2">
@@ -2311,40 +2534,105 @@ export default function EvaluatorDashboard() {
                       </Table>
                     </div>
                   ) : (
-                    <div className="max-h-[70vh] overflow-y-auto">
+                    <div className="max-h-[500px] overflow-y-auto">
                       <Table className="min-w-full">
-                        <TableHeader className="sticky top-0 bg-white">
+                        <TableHeader className="sticky top-0 bg-white z-10 border-b">
                           <TableRow key="employees-header">
                             <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('name')}>
-                              Name <span className="ml-1 text-xs text-gray-500">{sortIcon('name')}</span>
-                            </TableHead>
-                            <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('email')}>
-                              Email <span className="ml-1 text-xs text-gray-500">{sortIcon('email')}</span>
+                              Employee <span className="ml-1 text-xs text-gray-500">{sortIcon('name')}</span>
                             </TableHead>
                             <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('position')}>
-                              Position <span className="ml-1 text-xs text-gray-500">{sortIcon('position')}</span>
-                            </TableHead>
-                            <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('department')}>
-                              Department <span className="ml-1 text-xs text-gray-500">{sortIcon('department')}</span>
+                              Position & Department <span className="ml-1 text-xs text-gray-500">{sortIcon('position')}</span>
                             </TableHead>
                             <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('role')}>
                               Role <span className="ml-1 text-xs text-gray-500">{sortIcon('role')}</span>
                             </TableHead>
-                            <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('hireDate')}>
-                              Hire Date <span className="ml-1 text-xs text-gray-500">{sortIcon('hireDate')}</span>
-                            </TableHead>
+                            <TableHead className="px-6 py-3 text-center">Status</TableHead>
                             <TableHead className="px-6 py-3 text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {sorted.map((e) => (
-                            <TableRow key={e.id}>
-                              <TableCell className="px-6 py-3 font-medium text-gray-900">{e.name}</TableCell>
-                              <TableCell className="px-6 py-3 text-gray-600">{e.email}</TableCell>
-                              <TableCell className="px-6 py-3">{e.position}</TableCell>
-                              <TableCell className="px-6 py-3">{e.department}</TableCell>
-                              <TableCell className="px-6 py-3">{e.role}</TableCell>
-                              <TableCell className="px-6 py-3 text-gray-600">{new Date(e.hireDate).toLocaleDateString()}</TableCell>
+                          {sorted.map((e) => {
+                            // Get employee's latest evaluation to determine status
+                            const employeeEvaluations = filteredSubmissions.filter(sub => sub.employeeId === e.id);
+                            const latestEvaluation = employeeEvaluations.sort((a, b) => 
+                              new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+                            )[0];
+                            
+                            // Determine status
+                            const now = new Date();
+                            const hasRecentEvaluation = latestEvaluation && 
+                              (now.getTime() - new Date(latestEvaluation.submittedAt).getTime()) < (90 * 24 * 60 * 60 * 1000); // 90 days
+                            const status = hasRecentEvaluation ? 'Up to Date' : 'Needs Review';
+                            
+                            return (
+                            <TableRow key={e.id} className="hover:bg-gray-50">
+                              <TableCell className="px-6 py-3">
+                                <div className="flex items-center space-x-3">
+                                  <div className="relative h-10 w-10 rounded-full overflow-hidden flex items-center justify-center">
+                                    {e.avatar ? (
+                                      <img 
+                                        src={e.avatar} 
+                                        alt={e.name} 
+                                        className="h-10 w-10 rounded-full object-cover"
+                                        onError={(e) => {
+                                          // Fallback to gradient avatar if image fails to load
+                                          e.currentTarget.style.display = 'none';
+                                          const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                                          if (nextElement) {
+                                            nextElement.style.display = 'flex';
+                                          }
+                                        }}
+                                      />
+                                    ) : null}
+                                    <div 
+                                      className={`h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm ${e.avatar ? 'hidden' : 'flex'}`}
+                                    >
+                                      {e.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                    </div>
+                                    {/* Auto-update indicator */}
+                                    {hasAvatarUpdate(e.id) && (
+                                      <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                                        <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <div className="font-medium text-gray-900 flex items-center gap-2">
+                                      {e.name}
+                                      {hasAvatarUpdate(e.id) && (
+                                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                                          Updated
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-sm text-gray-500">{e.email}</div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-6 py-3">
+                                <div>
+                                  <div className="font-medium text-gray-900">{e.position}</div>
+                                  <Badge className="bg-blue-100 text-blue-800 text-xs">{e.department}</Badge>
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-6 py-3">
+                                <Badge className={
+                                  e.role === 'admin' ? 'bg-red-100 text-red-800' :
+                                  e.role === 'hr' ? 'bg-green-100 text-green-800' :
+                                  e.role === 'evaluator' ? 'bg-purple-100 text-purple-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }>
+                                  {e.role.charAt(0).toUpperCase() + e.role.slice(1)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="px-6 py-3 text-center">
+                                <Badge className={
+                                  status === 'Up to Date' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
+                                }>
+                                  {status}
+                                </Badge>
+                              </TableCell>
                               <TableCell className="px-6 py-3 text-right">
                                 <div className="flex gap-2 justify-end">
                                   <Button
@@ -2405,7 +2693,8 @@ export default function EvaluatorDashboard() {
                                 </div>
                               </TableCell>
                             </TableRow>
-                          ))}
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </div>
@@ -2596,7 +2885,7 @@ export default function EvaluatorDashboard() {
             <Card>
               <CardContent className="p-0">
                 {isFeedbackRefreshing ? (
-                  <div className="max-h-[60vh] overflow-y-auto overflow-x-auto scrollable-table">
+                  <div className="max-h-[500px] overflow-y-auto overflow-x-auto scrollable-table">
                     <Table className="min-w-full">
                       <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                         <TableRow key="feedback-header">
@@ -2661,7 +2950,7 @@ export default function EvaluatorDashboard() {
                     </Table>
                   </div>
                 ) : (
-                  <div className="max-h-[60vh] overflow-y-auto overflow-x-auto scrollable-table">
+                  <div className="max-h-[500px] overflow-y-auto overflow-x-auto scrollable-table">
                     <Table className="min-w-full">
                       <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                         <TableRow key="feedback-header">

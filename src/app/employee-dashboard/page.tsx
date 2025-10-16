@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, } from 'react';
 import { Eye, Trash, Calendar, X } from 'lucide-react';
 // useRouter removed - not used
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import DashboardShell from '@/components/DashboardShell';
 import PageTransition from '@/components/PageTransition';
 import { useUser } from '@/contexts/UserContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { getQuarterFromEvaluationData, getQuarterFromDate, getQuarterColor } from '@/lib/quarterUtils';
+import { getQuarterFromEvaluationData, getQuarterColor } from '@/lib/quarterUtils';
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 import EvaluationDetailsModal from '@/components/EvaluationDetailsModal';
 // CommentDetailModal import removed
@@ -29,11 +29,9 @@ import { getEmployeeResults, initializeMockData } from '@/lib/evaluationStorage'
 import accountsData from '@/data/accounts.json';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from 'recharts';
-import ConfirmModal from '@/components/ConfirmModal';
 import { useToast } from '@/hooks/useToast';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useTabLoading } from '@/hooks/useTabLoading';
 
 export default function EmployeeDashboard() {
   const { profile, user, isLoading: authLoading, logout } = useUser();
@@ -107,12 +105,67 @@ export default function EmployeeDashboard() {
     { id: 'account-history', label: 'Account History', icon: '📋' },
   ];
 
-  // Function to determine if a submission is "new" (within last 7 days)
-  const isNewSubmission = (submittedAt: string) => {
+  // Function to get time ago display
+  const getTimeAgo = (submittedAt: string) => {
     const submissionDate = new Date(submittedAt);
     const now = new Date();
-    const daysDifference = (now.getTime() - submissionDate.getTime()) / (1000 * 60 * 60 * 24);
-    return daysDifference <= 7; // Consider submissions within 7 days as "new"
+    const diffInMs = now.getTime() - submissionDate.getTime();
+    
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    
+    if (diffInMinutes < 1) {
+      return 'Just now';
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes}m ago`;
+    } else if (diffInHours < 24) {
+      return `${diffInHours}h ago`;
+    } else if (diffInDays < 7) {
+      return `${diffInDays}d ago`;
+    } else {
+      return new Date(submittedAt).toLocaleDateString();
+    }
+  };
+
+  // Simple 2-level highlighting system
+  const getSubmissionHighlight = (submittedAt: string, allSubmissions: any[] = []) => {
+    // Sort all submissions by date (most recent first)
+    const sortedSubmissions = [...allSubmissions].sort((a, b) => 
+      new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+    );
+    
+    // Find the position of current submission in the sorted list
+    const currentIndex = sortedSubmissions.findIndex(sub => sub.submittedAt === submittedAt);
+    
+    if (currentIndex === 0) {
+      // Most recent submission - YELLOW "New"
+      return {
+        className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
+        badge: { text: 'New', className: 'bg-yellow-200 text-yellow-800' },
+        priority: 'new'
+      };
+    } else if (currentIndex === 1) {
+      // Second most recent - BLUE "Recent"
+      return {
+        className: 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100',
+        badge: { text: 'Recent', className: 'bg-blue-100 text-blue-800' },
+        priority: 'recent'
+      };
+    } else {
+      // Older submissions - No special highlighting
+      return {
+        className: 'hover:bg-gray-50',
+        badge: null,
+        priority: 'old'
+      };
+    }
+  };
+
+  // Legacy function for backward compatibility
+  const isNewSubmission = (submittedAt: string) => {
+    const highlight = getSubmissionHighlight(submittedAt, submissions);
+    return highlight.priority === 'new' || highlight.priority === 'recent';
   };
 
   // Function to load account history (suspension records only)
@@ -1006,7 +1059,7 @@ export default function EmployeeDashboard() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 {/* Refreshing Dialog for Performance Reviews */}
                 {showRefreshingDialog && (
                   <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1045,40 +1098,51 @@ export default function EmployeeDashboard() {
                     ))}
                   </div>
                 ) : submissions.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Immediate Supervisor</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead className="text-right">Rating</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Quarter</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                  <div className="max-h-[400px] overflow-y-auto">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b">
+                        <TableRow>
+                          <TableHead>Immediate Supervisor</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead className="text-right">Rating</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Quarter</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
                     <TableBody>
-                      {submissions.slice(0, 5).map((submission) => (
-                        <TableRow 
-                          key={submission.id}
-                          className={isNewSubmission(submission.submittedAt) ? 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100' : ''}
-                        >
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              {submission.evaluationData?.supervisor || 'Not specified'}
-                              {isNewSubmission(submission.submittedAt) && (
-                                <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
-                                  NEW
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
+                      {submissions
+                        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+                        .slice(0, 5)
+                        .map((submission) => {
+                        const highlight = getSubmissionHighlight(submission.submittedAt, submissions);
+                        return (
+                          <TableRow 
+                            key={submission.id}
+                            className={highlight.className}
+                          >
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                {submission.evaluationData?.supervisor || 'Not specified'}
+                                {highlight.badge && (
+                                  <Badge variant="secondary" className={`${highlight.badge.className} text-xs`}>
+                                    {highlight.badge.text}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
                           <TableCell>
                             <Badge variant="outline">{submission.category}</Badge>
                           </TableCell>
                           <TableCell className="text-right font-semibold">
                             {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating}/5
                           </TableCell>
-                          <TableCell>{new Date(submission.submittedAt).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{new Date(submission.submittedAt).toLocaleDateString()}</span>
+                              <span className="text-xs text-gray-500">{getTimeAgo(submission.submittedAt)}</span>
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge className={getQuarterColor(getQuarterFromEvaluationData(submission.evaluationData || submission))}>
                               {getQuarterFromEvaluationData(submission.evaluationData || submission)}
@@ -1114,9 +1178,11 @@ export default function EmployeeDashboard() {
 
                           </TableCell>
                         </TableRow>
-                      ))}
+                        );
+                      })}
                     </TableBody>
                   </Table>
+                  </div>
                 ) : (
                   <div className="text-center py-8">
                     <div className="text-gray-500 text-lg mb-2">No performance reviews yet</div>
@@ -1501,38 +1567,45 @@ export default function EmployeeDashboard() {
                         <Table>
                           <TableHeader className="sticky top-0 bg-white z-10 border-b">
                             <TableRow>
-                              <TableHead className="px-6 py-4">Date</TableHead>
                               <TableHead className="px-6 py-4">Immediate Supervisor</TableHead>
                               <TableHead className="px-6 py-4">Category</TableHead>
-                              <TableHead className="px-6 py-4 text-right">Score</TableHead>
+                              <TableHead className="px-6 py-4 text-right">Rating</TableHead>
+                              <TableHead className="px-6 py-4">Date</TableHead>
                               <TableHead className="px-6 py-4">Quarter</TableHead>
                               <TableHead className="px-6 py-4 text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {submissions.map((submission) => (
-                              <TableRow 
-                                key={submission.id} 
-                                className={`hover:bg-gray-50 ${isNewSubmission(submission.submittedAt) ? 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100' : ''}`}
-                              >
-                                <TableCell className="px-6 py-4">
+                            {submissions
+                              .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+                              .map((submission) => {
+                              const highlight = getSubmissionHighlight(submission.submittedAt, submissions);
+                              return (
+                                <TableRow 
+                                  key={submission.id} 
+                                  className={highlight.className}
+                                >
+                                <TableCell className="px-6 py-4 font-medium">
                                   <div className="flex items-center gap-2">
-                                    {new Date(submission.submittedAt).toLocaleDateString()}
-                                    {isNewSubmission(submission.submittedAt) && (
-                                      <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
-                                        NEW
+                                    {submission.evaluationData?.supervisor || 'Not specified'}
+                                    {highlight.badge && (
+                                      <Badge variant="secondary" className={`${highlight.badge.className} text-xs`}>
+                                        {highlight.badge.text}
                                       </Badge>
                                     )}
                                   </div>
-                                </TableCell>
-                                <TableCell className="px-6 py-4 font-medium">
-                                  {submission.evaluationData?.supervisor || 'Not specified'}
                                 </TableCell>
                                 <TableCell className="px-6 py-4">
                                   <Badge variant="outline">{submission.category}</Badge>
                                 </TableCell>
                                 <TableCell className="px-6 py-4 text-right font-semibold">
                                   {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating}/5
+                                </TableCell>
+                                <TableCell className="px-6 py-4">
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{new Date(submission.submittedAt).toLocaleDateString()}</span>
+                                    <span className="text-xs text-gray-500">{getTimeAgo(submission.submittedAt)}</span>
+                                  </div>
                                 </TableCell>
                                 <TableCell className="px-6 py-4">
                                   <Badge className={getQuarterColor(getQuarterFromEvaluationData(submission.evaluationData || submission))}>
@@ -1568,7 +1641,8 @@ export default function EmployeeDashboard() {
                                   </Button>
                                 </TableCell>
                               </TableRow>
-                            ))}
+                              );
+                            })}
                           </TableBody>
                         </Table>
                       </div>
@@ -2154,24 +2228,29 @@ export default function EmployeeDashboard() {
                                 ))}
                               </div>
                             ) : (
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Employee</TableHead>
-                                    <TableHead>Category</TableHead>
-                                    <TableHead className="text-right">Rating</TableHead>
-                                    <TableHead>Quarter</TableHead>
-                                    <TableHead>Immediate Supervisor</TableHead>
-                                    <TableHead>Acknowledgement</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                  </TableRow>
-                                </TableHeader>
+                              <div className="max-h-[500px] overflow-y-auto">
+                                <Table>
+                                  <TableHeader className="sticky top-0 bg-white z-10 border-b">
+                                    <TableRow>
+                                      <TableHead>Date</TableHead>
+                                      <TableHead>Employee</TableHead>
+                                      <TableHead>Category</TableHead>
+                                      <TableHead className="text-right">Rating</TableHead>
+                                      <TableHead>Quarter</TableHead>
+                                      <TableHead>Immediate Supervisor</TableHead>
+                                      <TableHead>Acknowledgement</TableHead>
+                                      <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
                                 <TableBody>
-                                  {filteredHistorySubmissions.length > 0 ? filteredHistorySubmissions.map((submission) => (
+                                  {filteredHistorySubmissions.length > 0 ? filteredHistorySubmissions
+                                    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+                                    .map((submission) => {
+                                    const highlight = getSubmissionHighlight(submission.submittedAt, filteredHistorySubmissions);
+                                    return (
                                     <TableRow 
                                       key={submission.id}
-                                      className={isNewSubmission(submission.submittedAt) ? 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100' : ''}
+                                      className={highlight.className}
                                     >
                                       <TableCell>
                                         <div className="flex flex-col">
@@ -2179,15 +2258,20 @@ export default function EmployeeDashboard() {
                                             <span className="font-medium">
                                               {new Date(submission.submittedAt).toLocaleDateString()}
                                             </span>
-                                            {isNewSubmission(submission.submittedAt) && (
-                                              <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
-                                                NEW
+                                            {highlight.badge && (
+                                              <Badge variant="secondary" className={`${highlight.badge.className} text-xs`}>
+                                                {highlight.badge.text}
                                               </Badge>
                                             )}
                                           </div>
-                                          <span className="text-xs text-gray-500">
-                                            {new Date(submission.submittedAt).toLocaleTimeString()}
-                                          </span>
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-500">
+                                              {new Date(submission.submittedAt).toLocaleTimeString()}
+                                            </span>
+                                            <span className="text-xs text-blue-600 font-medium">
+                                              {getTimeAgo(submission.submittedAt)}
+                                            </span>
+                                          </div>
                                         </div>
                                       </TableCell>
                                       <TableCell className="font-medium">{submission.employeeName}</TableCell>
@@ -2292,7 +2376,8 @@ export default function EmployeeDashboard() {
                                         </div>
                                       </TableCell>
                                     </TableRow>
-                                  )) : (
+                                    );
+                                  }) : (
                                     <TableRow>
                                       <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                                         {historySearchTerm ? (
@@ -2311,6 +2396,7 @@ export default function EmployeeDashboard() {
                                   )}
                                 </TableBody>
                               </Table>
+                              </div>
                             )}
                           </div>
                         </CardContent>

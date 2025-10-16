@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SearchableDropdown from "@/components/ui/searchable-dropdown";
 import SignaturePad from '@/components/SignaturePad';
 import { AlertDialog } from "@/components/ui/alert-dialog";
@@ -18,7 +16,6 @@ import clientDataService from '@/lib/clientDataService';
 export default function RegisterPage() {
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
   const [positions, setPositions] = useState<string[]>([]);
-  const [departments, setDepartments] = useState<string[]>([]);
   const [alertDialog, setAlertDialog] = useState({
     open: false,
     title: '',
@@ -33,7 +30,6 @@ export default function RegisterPage() {
     email: '',
     contact: '',
     position: '',
-    department: '',
     branchCode: '',
     branch: '',
     password: '',
@@ -41,19 +37,15 @@ export default function RegisterPage() {
     signature: ''
   });
   const [signatureError, setSignatureError] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
 
-  // Load positions and departments from client data service
+  // Load positions from client data service
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch positions and departments using client data service
-        const [positionsData, departmentsData] = await Promise.all([
-          clientDataService.getPositions(),
-          clientDataService.getDepartments()
-        ]);
-        
+        // Fetch positions using client data service
+        const positionsData = await clientDataService.getPositions();
         setPositions(positionsData);
-        setDepartments(departmentsData);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -72,8 +64,103 @@ export default function RegisterPage() {
     });
   };
 
+  // Real-time validation functions
+  const validateField = (fieldName: string, value: string) => {
+    const errors = { ...fieldErrors };
+    
+    switch (fieldName) {
+      case 'email':
+        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          errors.email = 'Please enter a valid email address';
+        } else {
+          delete errors.email;
+        }
+        break;
+      case 'password':
+        if (value && value.length < 8) {
+          errors.password = 'Password must be at least 8 characters';
+        } else if (value && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
+          errors.password = 'Password must contain uppercase, lowercase, and number';
+        } else {
+          delete errors.password;
+        }
+        break;
+      case 'confirmPassword':
+        if (value && value !== formData.password) {
+          errors.confirmPassword = 'Passwords do not match';
+        } else {
+          delete errors.confirmPassword;
+        }
+        break;
+      case 'contact':
+        if (value && !/^\d{11}$/.test(value)) {
+          errors.contact = 'Contact number must be exactly 11 digits';
+        } else {
+          delete errors.contact;
+        }
+        break;
+      default:
+        if (value.trim() === '') {
+          errors[fieldName] = 'This field is required';
+        } else {
+          delete errors[fieldName];
+        }
+    }
+    
+    setFieldErrors(errors);
+  };
+
   const handleRegisterSubmit = async (e: any) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.firstName.trim()) {
+      showAlert('Missing Information', 'First name is required!', 'error');
+      return;
+    }
+    
+    if (!formData.lastName.trim()) {
+      showAlert('Missing Information', 'Last name is required!', 'error');
+      return;
+    }
+    
+    if (!formData.username.trim()) {
+      showAlert('Missing Information', 'Username is required!', 'error');
+      return;
+    }
+    
+    if (!formData.email.trim()) {
+      showAlert('Missing Information', 'Email is required!', 'error');
+      return;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      showAlert('Invalid Email', 'Please enter a valid email address!', 'error');
+      return;
+    }
+    
+    if (!formData.contact.trim()) {
+      showAlert('Missing Information', 'Contact number is required!', 'error');
+      return;
+    }
+    
+    if (!formData.position) {
+      showAlert('Missing Information', 'Please select your position!', 'error');
+      return;
+    }
+    
+    
+    if (!formData.branchCode) {
+      showAlert('Missing Information', 'Please select your branch code!', 'error');
+      return;
+    }
+    
+    if (!formData.branch) {
+      showAlert('Missing Information', 'Please select your branch!', 'error');
+      return;
+    }
     
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
@@ -84,6 +171,13 @@ export default function RegisterPage() {
     // Validate password length
     if (formData.password.length < 8) {
       showAlert('Password Too Short', 'Password must be at least 8 characters long!', 'warning');
+      return;
+    }
+    
+    // Validate password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
+    if (!passwordRegex.test(formData.password)) {
+      showAlert('Weak Password', 'Password must contain at least one uppercase letter, one lowercase letter, and one number!', 'warning');
       return;
     }
     
@@ -100,12 +194,33 @@ export default function RegisterPage() {
     setIsRegisterButtonClicked(true);
     
     try {
+      // Check for duplicate email or username
+      const existingAccounts = await clientDataService.getAccounts();
+      const emailExists = existingAccounts.some((account: any) => 
+        account.email.toLowerCase() === formData.email.toLowerCase()
+      );
+      
+      if (emailExists) {
+        showAlert('Email Already Exists', 'An account with this email address already exists. Please use a different email or try logging in.', 'error');
+        setIsRegisterButtonClicked(false);
+        return;
+      }
+      
+      const usernameExists = existingAccounts.some((account: any) => 
+        account.username?.toLowerCase() === formData.username.toLowerCase()
+      );
+      
+      if (usernameExists) {
+        showAlert('Username Already Exists', 'This username is already taken. Please choose a different username.', 'error');
+        setIsRegisterButtonClicked(false);
+        return;
+      }
+      
       // Create pending registration using client data service
       const registrationData = {
         name: `${formData.firstName} ${formData.lastName}`,
         email: formData.email,
         position: formData.position,
-        department: formData.department,
         branch: formData.branch,
         hireDate: new Date().toISOString().split('T')[0], // Today's date
         role: formData.position,
@@ -131,7 +246,6 @@ export default function RegisterPage() {
               email: '',
               contact: '',
               position: '',
-              department: '',
               branchCode: '',
               branch: '',
               password: '',
@@ -248,9 +362,14 @@ export default function RegisterPage() {
                           id="firstName" 
                           placeholder="John" 
                           value={formData.firstName}
-                          onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                          onChange={(e) => {
+                            setFormData({...formData, firstName: e.target.value});
+                            validateField('firstName', e.target.value);
+                          }}
+                          className={fieldErrors.firstName ? 'border-red-500' : ''}
                           required 
                         />
+                        {fieldErrors.firstName && <p className="text-sm text-red-500">{fieldErrors.firstName}</p>}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="lastName">Last name</Label>
@@ -258,9 +377,14 @@ export default function RegisterPage() {
                           id="lastName" 
                           placeholder="Doe" 
                           value={formData.lastName}
-                          onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                          onChange={(e) => {
+                            setFormData({...formData, lastName: e.target.value});
+                            validateField('lastName', e.target.value);
+                          }}
+                          className={fieldErrors.lastName ? 'border-red-500' : ''}
                           required 
                         />
+                        {fieldErrors.lastName && <p className="text-sm text-red-500">{fieldErrors.lastName}</p>}
                       </div>
                     </div>
                     
@@ -282,9 +406,14 @@ export default function RegisterPage() {
                         type="email"
                         placeholder="name@company.com"
                         value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        onChange={(e) => {
+                          setFormData({...formData, email: e.target.value});
+                          validateField('email', e.target.value);
+                        }}
+                        className={fieldErrors.email ? 'border-red-500' : ''}
                         required
                       />
+                      {fieldErrors.email && <p className="text-sm text-red-500">{fieldErrors.email}</p>}
                     </div>
                     
                     <div className="space-y-2">
@@ -298,6 +427,7 @@ export default function RegisterPage() {
                           // Only allow numbers and limit to 11 digits
                           const value = e.target.value.replace(/\D/g, '').slice(0, 11);
                           setFormData({...formData, contact: value});
+                          validateField('contact', value);
                         }}
                         onKeyPress={(e) => {
                           // Prevent non-numeric input
@@ -306,8 +436,10 @@ export default function RegisterPage() {
                           }
                         }}
                         maxLength={11}
+                        className={fieldErrors.contact ? 'border-red-500' : ''}
                         required
                       />
+                      {fieldErrors.contact && <p className="text-sm text-red-500">{fieldErrors.contact}</p>}
                     </div>
                     
                     
@@ -317,33 +449,11 @@ export default function RegisterPage() {
                         options={positions}
                         value={formData.position}
                         onValueChangeAction={(value) => {
-                          const newFormData = {...formData, position: value};
-                          // Auto-set department for Branch Managers
-                          if (value.toLowerCase().includes('branch manager')) {
-                            newFormData.department = 'Operations';
-                          }
-                          setFormData(newFormData);
+                          setFormData({...formData, position: value});
                         }}
                         placeholder="Select your position"
                         className="w-full"
                       />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="department">Department</Label>
-                      <SearchableDropdown
-                        options={departments}
-                        value={formData.department}
-                        onValueChangeAction={(value) => setFormData({...formData, department: value})}
-                        placeholder="Select your department"
-                        className="w-full"
-                        disabled={formData.position.toLowerCase().includes('branch manager')}
-                      />
-                      {formData.position.toLowerCase().includes('branch manager') && (
-                        <p className="text-sm text-blue-600 bg-blue-50 p-2 rounded-md">
-                          ℹ️ "Operations" is automatically set for Branch Managers
-                        </p>
-                      )}
                     </div>
                     
                     <div className="space-y-2">
@@ -385,9 +495,14 @@ export default function RegisterPage() {
                         type="password"
                         placeholder="••••••••"
                         value={formData.password}
-                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        onChange={(e) => {
+                          setFormData({...formData, password: e.target.value});
+                          validateField('password', e.target.value);
+                        }}
+                        className={fieldErrors.password ? 'border-red-500' : ''}
                         required
                       />
+                      {fieldErrors.password && <p className="text-sm text-red-500">{fieldErrors.password}</p>}
                     </div>
                     
                     <div className="space-y-2">
@@ -397,9 +512,14 @@ export default function RegisterPage() {
                         type="password"
                         placeholder="••••••••"
                         value={formData.confirmPassword}
-                        onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                        onChange={(e) => {
+                          setFormData({...formData, confirmPassword: e.target.value});
+                          validateField('confirmPassword', e.target.value);
+                        }}
+                        className={fieldErrors.confirmPassword ? 'border-red-500' : ''}
                         required
                       />
+                      {fieldErrors.confirmPassword && <p className="text-sm text-red-500">{fieldErrors.confirmPassword}</p>}
                     </div>
 
                     <div className="space-y-2">
