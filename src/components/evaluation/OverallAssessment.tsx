@@ -10,7 +10,6 @@ import { Check, X, AlertTriangle, Printer, Edit, CheckCircle, AlertCircle, Send 
 import { EvaluationData } from './types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/useToast';
-import { submitEvaluation } from '@/lib/evaluationSubmissionService';
 import { getQuarterlyReviewStatus, getCurrentYear } from '@/lib/quarterlyReviewUtils';
 
 interface OverallAssessmentProps {
@@ -38,6 +37,7 @@ interface OverallAssessmentProps {
     onSubmitAction?: () => void;
     onPreviousAction?: () => void;
     onApproveAction?: () => void;
+    onCloseAction?: () => void;
     isApproved?: boolean;
 }
 
@@ -71,14 +71,11 @@ const getRatingColor = (rating: string) => {
     }
 };
 
-export default function OverallAssessment({ data, updateDataAction, employee, currentUser, onSubmitAction, onPreviousAction, onApproveAction, isApproved = false }: OverallAssessmentProps) {
+export default function OverallAssessment({ data, updateDataAction, employee, currentUser, onSubmitAction, onPreviousAction, onApproveAction, onCloseAction, isApproved = false }: OverallAssessmentProps) {
     const { error } = useToast();
     
     // Submission state management
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [submissionError, setSubmissionError] = useState('');
-    const [submissionSuccess, setSubmissionSuccess] = useState(false);
-    const [retryCount, setRetryCount] = useState(0);
     
     // Quarterly review status
     const [quarterlyStatus, setQuarterlyStatus] = useState({
@@ -125,75 +122,27 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
 
 
     const handleSubmitEvaluation = async (isRetry = false) => {
-        if (!isComplete) {
-            setSubmissionError('Please complete all required fields before submitting.');
-            return;
-        }
+        // No validation required - submit directly
 
-        // Validation: Check if evaluator has a signature
-        if (!currentUser?.signature) {
-            error('Please add your signature to your profile before submitting the evaluation.');
-            return;
-        }
+        // Update the data with evaluator signature before submitting
+        const updatedData = {
+            ...data,
+            evaluatorSignatureImage: currentUser?.signature || '',
+            evaluatorSignature: currentUser?.name || data.evaluatorSignature,
+            evaluatorSignatureDate: data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
+        };
+        
+        updateDataAction(updatedData);
 
-        setIsSubmitting(true);
-        setSubmissionError('');
-        setSubmissionSuccess(false);
-
-        try {
-            // Get evaluator name from localStorage or use a default
-            const storedUser = localStorage.getItem('authenticatedUser');
-            const evaluatorName = storedUser ? JSON.parse(storedUser).name : 'Evaluator';
-
-            // Save the evaluator's signature from their profile before submitting
-            const updatedData = {
-                ...data,
-                evaluatorSignatureImage: currentUser.signature,
-                evaluatorSignature: currentUser.name || data.evaluatorSignature,
-                evaluatorSignatureDate: data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
-            };
-            
-            updateDataAction(updatedData);
-
-            // Submit evaluation via API with updated data
-            const result = await submitEvaluation(updatedData, evaluatorName);
-
-            console.log('✅ Evaluation submitted successfully:', result);
-            
-            // Notification is handled by the main evaluation form
-            
-            // Show success state
-            setSubmissionSuccess(true);
-            setRetryCount(0); // Reset retry count on success
-            
-            // Call the parent's submit action after successful submission
-            setTimeout(() => {
-                if (onSubmitAction) {
-                    onSubmitAction();
-                }
-            }, 2000);
-            
-        } catch (error) {
-            console.error('❌ Error submitting evaluation:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Failed to submit evaluation. Please try again.';
-            
-            // Add retry information to error message
-            if (isRetry) {
-                setSubmissionError(`${errorMessage} (Retry ${retryCount + 1}/3)`);
-            } else {
-                setSubmissionError(errorMessage);
-            }
-        } finally {
-            setIsSubmitting(false);
+        // Use the parent's submission logic
+        console.log('🔄 Calling parent onSubmitAction...');
+        if (onSubmitAction) {
+            onSubmitAction();
+        } else {
+            console.log('❌ onSubmitAction not provided');
         }
     };
 
-    const handleRetry = () => {
-        if (retryCount < 3) {
-            setRetryCount(prev => prev + 1);
-            handleSubmitEvaluation(true);
-        }
-    };
 
     const handlePrint = () => {
         const printContent = document.createElement('div');
@@ -509,15 +458,8 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
     const overallPercentage = (parseFloat(overallWeightedScore) / 5 * 100).toFixed(2);
     const isPass = parseFloat(overallWeightedScore) >= 3.0;
 
-    // Calculate completion status
-    const isComplete = 
-        jobKnowledgeScore > 0 && 
-        qualityOfWorkScore > 0 && 
-        adaptabilityScore > 0 && 
-        teamworkScore > 0 && 
-        reliabilityScore > 0 && 
-        ethicalScore > 0 && 
-        customerServiceScore > 0;
+    // Calculate completion status - no validation required for step 8
+    const isComplete = true;
 
 
 
@@ -1856,10 +1798,11 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                 </CardContent>
             </Card>
 
+
             {/* Remarks */}
             <Card>
                 <CardContent className="pt-6">
-                    <h4 className="font-bold text-lg text-gray-900 mb-3">REMARKS</h4>
+                    <h4 className="font-bold text-lg text-gray-900 mb-3">REMARKS *</h4>
                     <textarea
                         value={data.remarks || ''}
                         onChange={(e) => updateDataAction({ remarks: e.target.value })}
@@ -2035,30 +1978,11 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                     {/* Submit Button */}
                     <Button
                         onClick={() => handleSubmitEvaluation()}
-                        disabled={!isComplete || isSubmitting || !currentUser?.signature}
-                        className={`px-8 py-3 text-lg ${
-                            isComplete && currentUser?.signature && !isSubmitting
-                                ? 'bg-green-600 hover:bg-green-700 text-white' 
-                                : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                        }`}
+                        className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white"
                         size="lg"
                     >
-                        {isSubmitting ? (
-                            <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                Submitting...
-                            </>
-                        ) : submissionSuccess ? (
-                            <>
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Submitted Successfully
-                            </>
-                        ) : (
-                            <>
-                                <Send className="h-4 w-4 mr-2" />
-                                {isComplete ? 'Submit to Employee' : 'Complete Required Fields'}
-                            </>
-                        )}
+                        <Send className="h-4 w-4 mr-2" />
+                        Submit Evaluation
                     </Button>
                 </div>
                 
@@ -2066,64 +1990,24 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                 <div></div>
             </div>
             
-            {/* Validation Messages */}
-            <div className="text-center mt-4">
-                {!currentUser?.signature && (
-                    <p className="text-xs text-red-600">
-                        Please add your signature to your profile first
-                    </p>
-                )}
-                {!isComplete && currentUser?.signature && (
-                    <p className="text-xs text-red-600">
-                        Please complete all required performance criteria
-                    </p>
-                )}
-            </div>
+            {/* No validation messages needed since validation was removed */}
             
-            {/* Submission Status Messages */}
-            <div className="mt-8 space-y-4">
-                {submissionSuccess && (
-                    <Card className="bg-green-50 border-green-200">
-                        <CardContent className="pt-4">
-                            <div className="flex items-center gap-2">
-                                <CheckCircle className="h-5 w-5 text-green-600" />
-                                <div>
-                                    <h4 className="font-medium text-green-800 mb-1">Evaluation Submitted Successfully!</h4>
-                                    <p className="text-sm text-green-700">
-                                        The evaluation has been sent to the employee, HR department, and administrator. 
-                                        All parties will receive notifications.
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {submissionError && (
+            {/* Error Messages */}
+            {submissionError && (
+                <div className="mt-8">
                     <Card className="bg-red-50 border-red-200">
                         <CardContent className="pt-4">
                             <div className="flex items-center gap-2">
                                 <AlertCircle className="h-5 w-5 text-red-600" />
-                                <div className="flex-1">
-                                    <h4 className="font-medium text-red-800 mb-1">Submission Failed</h4>
+                                <div>
+                                    <h4 className="font-medium text-red-800 mb-1">Validation Error</h4>
                                     <p className="text-sm text-red-700">{submissionError}</p>
                                 </div>
-                                {retryCount < 3 && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleRetry}
-                                        disabled={isSubmitting}
-                                        className="ml-2 text-red-600 border-red-300 hover:bg-red-100"
-                                    >
-                                        Retry
-                                    </Button>
-                                )}
                             </div>
                         </CardContent>
                     </Card>
-                )}
-            </div>
+                </div>
+            )}
 
             {/* Auto-save indicator */}
             {showAutoSaveIndicator && (

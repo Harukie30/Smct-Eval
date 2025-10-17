@@ -21,7 +21,7 @@ interface CommentsModalProps {
   evaluatorName?: string;
   evaluationDate?: string;
   category?: string;
-  overallRating?: number;
+  overallRating?: string;
   overallComments?: string;
   evaluationData?: any;
 }
@@ -266,8 +266,8 @@ export default function CommentsModal({
                   )}
                   {overallRating && (
                     <div className="mb-2">
-                      <Badge className={`${getRatingColor(overallRating)}`}>
-                        {overallRating.toFixed(1)}/5 - {getRatingLabel(overallRating)}
+                      <Badge className={`${getRatingColor(parseFloat(overallRating))}`}>
+                        {parseFloat(overallRating).toFixed(1)}/5 - {getRatingLabel(parseFloat(overallRating))}
                       </Badge>
                     </div>
                   )}

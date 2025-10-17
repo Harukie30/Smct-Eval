@@ -128,8 +128,17 @@ export default function EmployeeDashboard() {
     }
   };
 
-  // Simple 2-level highlighting system
-  const getSubmissionHighlight = (submittedAt: string, allSubmissions: any[] = []) => {
+  // Enhanced highlighting system with approval status
+  const getSubmissionHighlight = (submittedAt: string, allSubmissions: any[] = [], submissionId?: string) => {
+    // Check if this submission is approved first
+    if (submissionId && isEvaluationApproved(submissionId)) {
+      return {
+        className: 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100',
+        badge: { text: 'Approved', className: 'bg-green-200 text-green-800' },
+        priority: 'approved'
+      };
+    }
+    
     // Sort all submissions by date (most recent first)
     const sortedSubmissions = [...allSubmissions].sort((a, b) => 
       new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
@@ -1078,10 +1087,10 @@ export default function EmployeeDashboard() {
                     {/* Table Header Skeleton */}
                     <div className="flex space-x-3 py-2 border-b">
                       <Skeleton className="h-3 w-20" />
-                      <Skeleton className="h-3 w-12" />
                       <Skeleton className="h-3 w-8" />
                       <Skeleton className="h-3 w-12" />
                       <Skeleton className="h-3 w-10" />
+                      <Skeleton className="h-3 w-16" />
                       <Skeleton className="h-3 w-12" />
                     </div>
 
@@ -1089,24 +1098,44 @@ export default function EmployeeDashboard() {
                     {Array.from({ length: 3 }).map((_, i) => (
                       <div key={i} className="flex items-center space-x-3 py-2 border-b">
                         <Skeleton className="h-3 w-16" />
-                        <Skeleton className="h-3 w-12" />
                         <Skeleton className="h-3 w-8" />
                         <Skeleton className="h-3 w-12" />
                         <Skeleton className="h-3 w-10" />
+                        <Skeleton className="h-3 w-16" />
                         <Skeleton className="h-6 w-12" />
                       </div>
                     ))}
                   </div>
                 ) : submissions.length > 0 ? (
-                  <div className="max-h-[400px] overflow-y-auto">
-                    <Table>
+                  <>
+                    {/* Simple Legend */}
+                    <div className="mb-3 mx-4 flex flex-wrap gap-4 text-xs text-gray-600">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+                        <Badge className="bg-green-200 text-green-800 text-xs">Approved</Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
+                        <Badge className="bg-yellow-200 text-yellow-800 text-xs">New</Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+                        <Badge className="bg-blue-300 text-blue-800 text-xs">Recent</Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge className="text-white bg-orange-500 text-xs">Pending</Badge>
+                      </div>
+                    </div>
+                    
+                    <div className="max-h-[400px] overflow-y-auto mx-4">
+                      <Table>
                       <TableHeader className="sticky top-0 bg-white z-10 border-b">
                         <TableRow>
                           <TableHead>Immediate Supervisor</TableHead>
-                          <TableHead>Category</TableHead>
                           <TableHead className="text-right">Rating</TableHead>
                           <TableHead>Date</TableHead>
                           <TableHead>Quarter</TableHead>
+                          <TableHead>Acknowledgement</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1115,7 +1144,7 @@ export default function EmployeeDashboard() {
                         .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
                         .slice(0, 5)
                         .map((submission) => {
-                        const highlight = getSubmissionHighlight(submission.submittedAt, submissions);
+                        const highlight = getSubmissionHighlight(submission.submittedAt, submissions, submission.id);
                         return (
                           <TableRow 
                             key={submission.id}
@@ -1131,9 +1160,6 @@ export default function EmployeeDashboard() {
                                 )}
                               </div>
                             </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{submission.category}</Badge>
-                          </TableCell>
                           <TableCell className="text-right font-semibold">
                             {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating}/5
                           </TableCell>
@@ -1147,6 +1173,45 @@ export default function EmployeeDashboard() {
                             <Badge className={getQuarterColor(getQuarterFromEvaluationData(submission.evaluationData || submission))}>
                               {getQuarterFromEvaluationData(submission.evaluationData || submission)}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {isEvaluationApproved(submission.id) ? (
+                              <div className="flex items-center space-x-3">
+                                <Badge className="bg-green-100 text-green-800">
+                                  ✓ Approved
+                                </Badge>
+                                {(() => {
+                                  const approvalData = getApprovalData(submission.id);
+                                  return approvalData?.employeeSignature ? (
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-xs text-gray-500">Signature:</span>
+                                      <div className="text-center">
+                                        {/* Signature area */}
+                                        <div className="h-6 border-b border-gray-300 flex items-center justify-center">
+                                          <img
+                                            src={approvalData.employeeSignature}
+                                            alt="Employee Signature"
+                                            className="h-4 max-w-full object-contain"
+                                          />
+                                        </div>
+                                        {/* Printed Name */}
+                                        <p className="text-xs font-medium text-gray-900 mt-1">
+                                          {approvalData.employeeName || 'Employee'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="text-xs text-gray-400">
+                                      {approvalData ? 'No signature' : 'No approval data'}
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <Badge className="text-white bg-orange-500 border-orange-300">
+                                Pending
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell className="text-right bg-">
                             <Button
@@ -1183,6 +1248,7 @@ export default function EmployeeDashboard() {
                     </TableBody>
                   </Table>
                   </div>
+                  </>
                 ) : (
                   <div className="text-center py-8">
                     <div className="text-gray-500 text-lg mb-2">No performance reviews yet</div>
@@ -1563,12 +1629,11 @@ export default function EmployeeDashboard() {
                   </CardHeader>
                   <CardContent className="p-0">
                     {submissions.length > 0 ? (
-                      <div className="max-h-[500px] overflow-y-auto">
+                      <div className="max-h-[500px] overflow-y-auto mx-4">
                         <Table>
                           <TableHeader className="sticky top-0 bg-white z-10 border-b">
                             <TableRow>
                               <TableHead className="px-6 py-4">Immediate Supervisor</TableHead>
-                              <TableHead className="px-6 py-4">Category</TableHead>
                               <TableHead className="px-6 py-4 text-right">Rating</TableHead>
                               <TableHead className="px-6 py-4">Date</TableHead>
                               <TableHead className="px-6 py-4">Quarter</TableHead>
@@ -1594,9 +1659,6 @@ export default function EmployeeDashboard() {
                                       </Badge>
                                     )}
                                   </div>
-                                </TableCell>
-                                <TableCell className="px-6 py-4">
-                                  <Badge variant="outline">{submission.category}</Badge>
                                 </TableCell>
                                 <TableCell className="px-6 py-4 text-right font-semibold">
                                   {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating}/5
@@ -1669,7 +1731,6 @@ export default function EmployeeDashboard() {
             submission.employeeName?.toLowerCase().includes(searchLower) ||
             submission.evaluator?.toLowerCase().includes(searchLower) ||
             submission.evaluationData?.supervisor?.toLowerCase().includes(searchLower) ||
-            submission.category?.toLowerCase().includes(searchLower) ||
             submission.rating?.toString().includes(searchLower) ||
             getQuarterFromEvaluationData(submission.evaluationData || submission)?.toLowerCase().includes(searchLower)
           );
@@ -2176,7 +2237,7 @@ export default function EmployeeDashboard() {
                               </div>
                               <input
                                 type="text"
-                                placeholder="Search by employee, evaluator, supervisor, category, rating, or quarter..."
+                                placeholder="Search by employee, evaluator, supervisor, rating, or quarter..."
                                 value={historySearchTerm}
                                 onChange={(e) => setHistorySearchTerm(e.target.value)}
                                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -2209,7 +2270,6 @@ export default function EmployeeDashboard() {
                                   <Skeleton className="h-3 w-12" />
                                   <Skeleton className="h-3 w-10" />
                                   <Skeleton className="h-3 w-18" />
-                                  <Skeleton className="h-3 w-14" />
                                   <Skeleton className="h-3 w-12" />
                                 </div>
 
@@ -2222,23 +2282,20 @@ export default function EmployeeDashboard() {
                                     <Skeleton className="h-3 w-8" />
                                     <Skeleton className="h-3 w-10" />
                                     <Skeleton className="h-3 w-14" />
-                                    <Skeleton className="h-3 w-12" />
                                     <Skeleton className="h-6 w-12" />
                                   </div>
                                 ))}
                               </div>
                             ) : (
-                              <div className="max-h-[500px] overflow-y-auto">
+                              <div className="max-h-[500px] overflow-y-auto mx-4">
                                 <Table>
                                   <TableHeader className="sticky top-0 bg-white z-10 border-b">
                                     <TableRow>
                                       <TableHead>Date</TableHead>
                                       <TableHead>Employee</TableHead>
-                                      <TableHead>Category</TableHead>
                                       <TableHead className="text-right">Rating</TableHead>
                                       <TableHead>Quarter</TableHead>
                                       <TableHead>Immediate Supervisor</TableHead>
-                                      <TableHead>Acknowledgement</TableHead>
                                       <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                   </TableHeader>
@@ -2275,9 +2332,6 @@ export default function EmployeeDashboard() {
                                         </div>
                                       </TableCell>
                                       <TableCell className="font-medium">{submission.employeeName}</TableCell>
-                                      <TableCell>
-                                        <Badge variant="outline">{submission.category}</Badge>
-                                      </TableCell>
                                       <TableCell className="text-right">
                                         <div className="flex items-center justify-end space-x-1">
                                           <span className="font-semibold">
@@ -2293,45 +2347,6 @@ export default function EmployeeDashboard() {
                                       </TableCell>
                                       <TableCell className="text-sm text-gray-600">
                                         {submission.evaluationData?.supervisor || 'Not specified'}
-                                      </TableCell>
-                                      <TableCell>
-                                        {isEvaluationApproved(submission.id) ? (
-                                          <div className="flex items-center space-x-3">
-                                            <Badge className="bg-green-100 text-green-800">
-                                              ✓ Approved
-                                            </Badge>
-                                            {(() => {
-                                              const approvalData = getApprovalData(submission.id);
-                                              return approvalData?.employeeSignature ? (
-                                                <div className="flex items-center space-x-2">
-                                                  <span className="text-xs text-gray-500">Signature:</span>
-                                                  <div className="text-center">
-                                                    {/* Signature area */}
-                                                    <div className="h-6 border-b border-gray-300 flex items-center justify-center">
-                                                      <img
-                                                        src={approvalData.employeeSignature}
-                                                        alt="Employee Signature"
-                                                        className="h-4 max-w-full object-contain"
-                                                      />
-                                                    </div>
-                                                    {/* Printed Name */}
-                                                    <p className="text-xs font-medium text-gray-900 mt-1">
-                                                      {approvalData.employeeName || 'Employee'}
-                                                    </p>
-                                                  </div>
-                                                </div>
-                                              ) : (
-                                                <div className="text-xs text-gray-400">
-                                                  {approvalData ? 'No signature' : 'No approval data'}
-                                                </div>
-                                              );
-                                            })()}
-                                          </div>
-                                        ) : (
-                                          <Badge className="text-white bg-orange-500 border-orange-300">
-                                            Pending
-                                          </Badge>
-                                        )}
                                       </TableCell>
                                       <TableCell className="text-right">
                                         <div className="flex items-center justify-end space-x-2">
@@ -2692,7 +2707,7 @@ export default function EmployeeDashboard() {
           const signature = selectedEvaluation?.evaluationData?.evaluatorSignatureImage || selectedEvaluation?.evaluationData?.evaluatorSignature || null;
           return signature;
         })()}
-        showApprovalButton={modalOpenedFromTab === 'history'} // Only show approval button in Evaluation History tab
+        showApprovalButton={modalOpenedFromTab === 'overview'} // Only show approval button in Overview tab
       />
 
       {/* Evaluation Details Modal */}

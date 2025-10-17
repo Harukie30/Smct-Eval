@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import SearchableDropdown from "@/components/ui/searchable-dropdown";
+import { Combobox } from "@/components/ui/combobox";
 import SignaturePad from '@/components/SignaturePad';
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import Link from 'next/link';
@@ -16,6 +16,7 @@ import clientDataService from '@/lib/clientDataService';
 export default function RegisterPage() {
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
   const [positions, setPositions] = useState<string[]>([]);
+  const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
   const [alertDialog, setAlertDialog] = useState({
     open: false,
     title: '',
@@ -46,6 +47,10 @@ export default function RegisterPage() {
         // Fetch positions using client data service
         const positionsData = await clientDataService.getPositions();
         setPositions(positionsData);
+        
+        // Fetch branches using client data service
+        const branchesData = await clientDataService.getBranches();
+        setBranches(branchesData);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -445,46 +450,42 @@ export default function RegisterPage() {
                     
                     <div className="space-y-2">
                       <Label htmlFor="position">Position</Label>
-                      <SearchableDropdown
+                      <Combobox
                         options={positions}
                         value={formData.position}
                         onValueChangeAction={(value) => {
                           setFormData({...formData, position: value});
                         }}
                         placeholder="Select your position"
-                        className="w-full"
+                        searchPlaceholder="Search positions..."
+                        emptyText="No positions found."
+                        className="w-1/2"
                       />
                     </div>
                     
                     <div className="space-y-2">
                       <Label htmlFor="branchCode">Branch Code</Label>
-                      <SearchableDropdown
+                      <Combobox
                         options={branchCodes}
                         value={formData.branchCode}
                         onValueChangeAction={(value) => setFormData({...formData, branchCode: value})}
                         placeholder="Select branch code"
-                        className="w-full"
+                        searchPlaceholder="Search branch codes..."
+                        emptyText="No branch codes found."
+                        className="w-1/2"
                       />
                     </div>
                     
                     <div className="space-y-2">
                       <Label htmlFor="branch">Branch</Label>
-                      <SearchableDropdown
-                        options={[
-                          'Head Office',
-                          'Cebu Branch',
-                          'Davao Branch',
-                          'Bacolod Branch',
-                          'Iloilo Branch',
-                          'Cagayan de Oro Branch',
-                          'Baguio Branch',
-                          'Zamboanga Branch',
-                          'General Santos Branch'
-                        ]}
+                      <Combobox
+                        options={branches}
                         value={formData.branch}
                         onValueChangeAction={(value) => setFormData({...formData, branch: value})}
                         placeholder="Select your branch"
-                        className="w-full"
+                        searchPlaceholder="Search branches..."
+                        emptyText="No branches found."
+                        className="w-1/2"
                       />
                     </div>
                     

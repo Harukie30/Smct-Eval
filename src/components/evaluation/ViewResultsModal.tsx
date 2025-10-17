@@ -23,7 +23,7 @@ type Submission = {
   evaluatorId?: number;
   evaluatorName?: string;
   period?: string;
-  overallRating?: number;
+  overallRating?: string;
   // Approval-related properties
   approvalStatus?: string;
   employeeSignature?: string | null;

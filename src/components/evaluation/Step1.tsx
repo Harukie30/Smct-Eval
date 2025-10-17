@@ -127,6 +127,23 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
     );
   };
 
+  // Check if any probationary review is selected (only one can be selected)
+  const isProbationarySelected = () => {
+    return data.reviewTypeProbationary3 || data.reviewTypeProbationary5;
+  };
+
+  // Check if any regular review is selected
+  const isRegularSelected = () => {
+    return data.reviewTypeRegularQ1 || data.reviewTypeRegularQ2 || 
+           data.reviewTypeRegularQ3 || data.reviewTypeRegularQ4;
+  };
+
+  // Check if any "others" review is selected
+  const isOthersSelected = () => {
+    return data.reviewTypeOthersImprovement || 
+           (data.reviewTypeOthersCustom && data.reviewTypeOthersCustom.trim() !== '') || false;
+  };
+
   // Auto-populate employee information when employee is selected
   useEffect(() => {
     if (employee) {
@@ -233,7 +250,34 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
       {/* Review Type Section */}
       <Card className="bg-gray-50 border-gray-200">
         <CardContent className="pt-6">
-          <h4 className="font-medium text-gray-900 mb-4">Review Type</h4>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-medium text-gray-900">Review Type</h4>
+            <div className="flex items-center gap-3">
+              <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                ℹ️ Only one option per category can be selected
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  updateDataAction({
+                    reviewTypeProbationary3: false,
+                    reviewTypeProbationary5: false,
+                    reviewTypeRegularQ1: false,
+                    reviewTypeRegularQ2: false,
+                    reviewTypeRegularQ3: false,
+                    reviewTypeRegularQ4: false,
+                    reviewTypeOthersImprovement: false,
+                    reviewTypeOthersCustom: undefined
+                  });
+                }}
+                className="text-xs px-3 py-1 h-7 bg-blue-500 text-white border-gray-300 hover:text-white hover:bg-red-400"
+              >
+                Clear All
+              </Button>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* For Probationary */}
             <div className="space-y-3">
@@ -241,23 +285,65 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <input 
-                    type="checkbox" 
+                    type="radio" 
                     id="prob3" 
+                    name="probationaryReview"
                     className="rounded"
                     checked={data.reviewTypeProbationary3}
-                    onChange={(e) => updateDataAction({ reviewTypeProbationary3: e.target.checked })}
+                    disabled={isRegularSelected() || isOthersSelected()}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        // Clear regular and others when selecting probationary
+                        updateDataAction({
+                          reviewTypeProbationary3: true,
+                          reviewTypeProbationary5: false, // Clear other probationary option
+                          reviewTypeRegularQ1: false,
+                          reviewTypeRegularQ2: false,
+                          reviewTypeRegularQ3: false,
+                          reviewTypeRegularQ4: false,
+                          reviewTypeOthersImprovement: false,
+                          reviewTypeOthersCustom: undefined
+                        });
+                      }
+                    }}
                   />
-                  <label htmlFor="prob3" className="text-sm text-gray-700">3 months</label>
+                  <label 
+                    htmlFor="prob3" 
+                    className={`text-sm ${(isRegularSelected() || isOthersSelected()) ? 'text-gray-400' : 'text-gray-700'}`}
+                  >
+                    3 months
+                  </label>
                 </div>
                 <div className="flex items-center gap-2">
                   <input 
-                    type="checkbox" 
+                    type="radio" 
                     id="prob5" 
+                    name="probationaryReview"
                     className="rounded"
                     checked={data.reviewTypeProbationary5}
-                    onChange={(e) => updateDataAction({ reviewTypeProbationary5: e.target.checked })}
+                    disabled={isRegularSelected() || isOthersSelected()}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        // Clear regular and others when selecting probationary
+                        updateDataAction({
+                          reviewTypeProbationary3: false, // Clear other probationary option
+                          reviewTypeProbationary5: true,
+                          reviewTypeRegularQ1: false,
+                          reviewTypeRegularQ2: false,
+                          reviewTypeRegularQ3: false,
+                          reviewTypeRegularQ4: false,
+                          reviewTypeOthersImprovement: false,
+                          reviewTypeOthersCustom: undefined
+                        });
+                      }
+                    }}
                   />
-                  <label htmlFor="prob5" className="text-sm text-gray-700">5 months</label>
+                  <label 
+                    htmlFor="prob5" 
+                    className={`text-sm ${(isRegularSelected() || isOthersSelected()) ? 'text-gray-400' : 'text-gray-700'}`}
+                  >
+                    5 months
+                  </label>
                 </div>
               </div>
             </div>
@@ -276,15 +362,21 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
                     name="regularReview"
                     className="rounded"
                     checked={data.reviewTypeRegularQ1}
-                    disabled={quarterlyStatus.q1}
+                    disabled={quarterlyStatus.q1 || isProbationarySelected() || isOthersSelected()}
                     onChange={(e) => {
-                      // Clear all other regular review types first
-                      updateDataAction({
-                        reviewTypeRegularQ1: e.target.checked,
-                        reviewTypeRegularQ2: false,
-                        reviewTypeRegularQ3: false,
-                        reviewTypeRegularQ4: false
-                      });
+                      if (e.target.checked) {
+                        // Clear probationary and others when selecting regular
+                        updateDataAction({
+                          reviewTypeRegularQ1: true,
+                          reviewTypeRegularQ2: false,
+                          reviewTypeRegularQ3: false,
+                          reviewTypeRegularQ4: false,
+                          reviewTypeProbationary3: false,
+                          reviewTypeProbationary5: false,
+                          reviewTypeOthersImprovement: false,
+                          reviewTypeOthersCustom: undefined
+                        });
+                      }
                     }}
                   />
                   <label 
@@ -306,15 +398,21 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
                     name="regularReview"
                     className="rounded"
                     checked={data.reviewTypeRegularQ2}
-                    disabled={quarterlyStatus.q2}
+                    disabled={quarterlyStatus.q2 || isProbationarySelected() || isOthersSelected()}
                     onChange={(e) => {
-                      // Clear all other regular review types first
-                      updateDataAction({
-                        reviewTypeRegularQ1: false,
-                        reviewTypeRegularQ2: e.target.checked,
-                        reviewTypeRegularQ3: false,
-                        reviewTypeRegularQ4: false
-                      });
+                      if (e.target.checked) {
+                        // Clear probationary and others when selecting regular
+                        updateDataAction({
+                          reviewTypeRegularQ1: false,
+                          reviewTypeRegularQ2: true,
+                          reviewTypeRegularQ3: false,
+                          reviewTypeRegularQ4: false,
+                          reviewTypeProbationary3: false,
+                          reviewTypeProbationary5: false,
+                          reviewTypeOthersImprovement: false,
+                          reviewTypeOthersCustom: undefined
+                        });
+                      }
                     }}
                   />
                   <label 
@@ -336,15 +434,21 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
                     name="regularReview"
                     className="rounded"
                     checked={data.reviewTypeRegularQ3}
-                    disabled={quarterlyStatus.q3}
+                    disabled={quarterlyStatus.q3 || isProbationarySelected() || isOthersSelected()}
                     onChange={(e) => {
-                      // Clear all other regular review types first
-                      updateDataAction({
-                        reviewTypeRegularQ1: false,
-                        reviewTypeRegularQ2: false,
-                        reviewTypeRegularQ3: e.target.checked,
-                        reviewTypeRegularQ4: false
-                      });
+                      if (e.target.checked) {
+                        // Clear probationary and others when selecting regular
+                        updateDataAction({
+                          reviewTypeRegularQ1: false,
+                          reviewTypeRegularQ2: false,
+                          reviewTypeRegularQ3: true,
+                          reviewTypeRegularQ4: false,
+                          reviewTypeProbationary3: false,
+                          reviewTypeProbationary5: false,
+                          reviewTypeOthersImprovement: false,
+                          reviewTypeOthersCustom: undefined
+                        });
+                      }
                     }}
                   />
                   <label 
@@ -366,15 +470,21 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
                     name="regularReview"
                     className="rounded"
                     checked={data.reviewTypeRegularQ4}
-                    disabled={quarterlyStatus.q4}
+                    disabled={quarterlyStatus.q4 || isProbationarySelected() || isOthersSelected()}
                     onChange={(e) => {
-                      // Clear all other regular review types first
-                      updateDataAction({
-                        reviewTypeRegularQ1: false,
-                        reviewTypeRegularQ2: false,
-                        reviewTypeRegularQ3: false,
-                        reviewTypeRegularQ4: e.target.checked
-                      });
+                      if (e.target.checked) {
+                        // Clear probationary and others when selecting regular
+                        updateDataAction({
+                          reviewTypeRegularQ1: false,
+                          reviewTypeRegularQ2: false,
+                          reviewTypeRegularQ3: false,
+                          reviewTypeRegularQ4: true,
+                          reviewTypeProbationary3: false,
+                          reviewTypeProbationary5: false,
+                          reviewTypeOthersImprovement: false,
+                          reviewTypeOthersCustom: undefined
+                        });
+                      }
                     }}
                   />
                   <label 
@@ -402,17 +512,61 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
                     id="improvement" 
                     className="rounded"
                     checked={data.reviewTypeOthersImprovement}
-                    onChange={(e) => updateDataAction({ reviewTypeOthersImprovement: e.target.checked })}
+                    disabled={isProbationarySelected() || isRegularSelected()}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        // Clear probationary and regular when selecting others
+                        updateDataAction({
+                          reviewTypeOthersImprovement: true,
+                          reviewTypeProbationary3: false,
+                          reviewTypeProbationary5: false,
+                          reviewTypeRegularQ1: false,
+                          reviewTypeRegularQ2: false,
+                          reviewTypeRegularQ3: false,
+                          reviewTypeRegularQ4: false,
+                          reviewTypeOthersCustom: undefined
+                        });
+                      } else {
+                        updateDataAction({ reviewTypeOthersImprovement: false });
+                      }
+                    }}
                   />
-                  <label htmlFor="improvement" className="text-sm text-gray-700">Performance Improvement</label>
+                  <label 
+                    htmlFor="improvement" 
+                    className={`text-sm ${(isProbationarySelected() || isRegularSelected()) ? 'text-gray-400' : 'text-gray-700'}`}
+                  >
+                    Performance Improvement
+                  </label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-700">Others:</label>
+                  <label 
+                    className={`text-sm ${(isProbationarySelected() || isRegularSelected()) ? 'text-gray-400' : 'text-gray-700'}`}
+                  >
+                    Others:
+                  </label>
                   <input
                     type="text"
                     value={data.reviewTypeOthersCustom || ''}
-                    onChange={(e) => updateDataAction({ reviewTypeOthersCustom: e.target.value })}
-                    className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+                    disabled={isProbationarySelected() || isRegularSelected()}
+                    onChange={(e) => {
+                      if (e.target.value.trim() !== '') {
+                        // Clear probationary and regular when entering custom others
+                        updateDataAction({
+                          reviewTypeOthersCustom: e.target.value,
+                          reviewTypeProbationary3: false,
+                          reviewTypeProbationary5: false,
+                          reviewTypeRegularQ1: false,
+                          reviewTypeRegularQ2: false,
+                          reviewTypeRegularQ3: false,
+                          reviewTypeRegularQ4: false,
+                          reviewTypeOthersImprovement: false
+                        });
+                      } else {
+                        updateDataAction({ reviewTypeOthersCustom: e.target.value });
+                      }
+                    }}
+                    className={`flex-1 px-2 py-1 text-sm border border-gray-300 rounded ${(isProbationarySelected() || isRegularSelected()) ? 'bg-gray-100 text-gray-400' : ''}`}
+                    placeholder={(isProbationarySelected() || isRegularSelected()) ? 'Disabled - other review type selected' : 'Enter custom review type'}
                   />
                 </div>
               </div>
@@ -696,6 +850,28 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
             <p className="text-sm text-gray-600">
               Demonstrates understanding of job responsibilities. Applies knowledge to tasks and projects. Stays updated in relevant areas.
             </p>
+          </div>
+
+          {/* Job Knowledge Reset Button */}
+          <div className="flex justify-end mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                updateDataAction({
+                  jobKnowledgeScore1: '',
+                  jobKnowledgeScore2: '',
+                  jobKnowledgeScore3: '',
+                  jobKnowledgeComments1: '',
+                  jobKnowledgeComments2: '',
+                  jobKnowledgeComments3: ''
+                });
+              }}
+              className="text-xs px-3 py-1 h-7 text-gray-600 border-gray-300 hover:bg-gray-50"
+            >
+              Clear Job Knowledge Scores
+            </Button>
           </div>
 
           {/* Evaluation Table */}

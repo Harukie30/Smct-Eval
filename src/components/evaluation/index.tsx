@@ -148,7 +148,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
     customerServiceExplanation4: '',
     customerServiceExplanation5: '',
     customerServiceComments: '',
-    overallRating: 0,
+    overallRating: '',
     overallComments: '',
     recommendations: '',
     priorityArea1: '',
@@ -174,6 +174,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
   }); // Debug log
   const [isEvaluatorApproved, setIsEvaluatorApproved] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   // Update evaluation data when employee prop changes
   useEffect(() => {
@@ -208,12 +209,34 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
   // Check if current step scores are complete
   const isCurrentStepComplete = () => {
     switch (currentStep) {
-      case 1: // Job Knowledge
-        return (
+      case 1: // Employee Information & Job Knowledge
+        // Check if at least one review type is selected
+        const hasReviewType = (
+          evaluationData.reviewTypeProbationary3 ||
+          evaluationData.reviewTypeProbationary5 ||
+          evaluationData.reviewTypeRegularQ1 ||
+          evaluationData.reviewTypeRegularQ2 ||
+          evaluationData.reviewTypeRegularQ3 ||
+          evaluationData.reviewTypeRegularQ4 ||
+          evaluationData.reviewTypeOthersImprovement ||
+          (evaluationData.reviewTypeOthersCustom && evaluationData.reviewTypeOthersCustom.trim() !== '')
+        );
+        
+        // Check if all job knowledge scores are filled
+        const hasJobKnowledgeScores = (
           evaluationData.jobKnowledgeScore1 && evaluationData.jobKnowledgeScore1 !== '' &&
           evaluationData.jobKnowledgeScore2 && evaluationData.jobKnowledgeScore2 !== '' &&
           evaluationData.jobKnowledgeScore3 && evaluationData.jobKnowledgeScore3 !== ''
         );
+        
+        // Check if basic employee information is filled
+        const hasBasicInfo = (
+          evaluationData.supervisor && evaluationData.supervisor.trim() !== '' &&
+          evaluationData.coverageFrom && evaluationData.coverageFrom.trim() !== '' &&
+          evaluationData.coverageTo && evaluationData.coverageTo.trim() !== ''
+        );
+        
+        return hasReviewType && hasJobKnowledgeScores && hasBasicInfo;
       case 2: // Quality of Work
         return (
           evaluationData.qualityOfWorkScore1 && evaluationData.qualityOfWorkScore1 !== '' &&
@@ -256,6 +279,8 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
           evaluationData.customerServiceScore4 && evaluationData.customerServiceScore4 !== '' &&
           evaluationData.customerServiceScore5 && evaluationData.customerServiceScore5 !== ''
         );
+      case 8: // Overall Assessment
+        return true; // No validation required for step 8
       default:
         return true; // For other steps, allow progression
     }
@@ -264,14 +289,46 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
   // Get step name for tooltip
   const getStepName = () => {
     switch (currentStep) {
-      case 1: return 'Job Knowledge';
+      case 1: return 'Employee Information & Job Knowledge';
       case 2: return 'Quality of Work';
       case 3: return 'Adaptability';
       case 4: return 'Teamwork';
       case 5: return 'Reliability';
       case 6: return 'Ethical & Professional Behavior';
       case 7: return 'Customer Service';
+      case 8: return 'Overall Assessment';
       default: return 'evaluation';
+    }
+  };
+
+  // Get validation message for incomplete steps
+  const getValidationMessage = () => {
+    switch (currentStep) {
+      case 1: // Employee Information & Job Knowledge
+        if (!evaluationData.reviewTypeProbationary3 && !evaluationData.reviewTypeProbationary5 && 
+            !evaluationData.reviewTypeRegularQ1 && !evaluationData.reviewTypeRegularQ2 && 
+            !evaluationData.reviewTypeRegularQ3 && !evaluationData.reviewTypeRegularQ4 && 
+            !evaluationData.reviewTypeOthersImprovement && 
+            (!evaluationData.reviewTypeOthersCustom || evaluationData.reviewTypeOthersCustom.trim() === '')) {
+          return 'Please select at least one review type';
+        }
+        if (!evaluationData.supervisor || evaluationData.supervisor.trim() === '') {
+          return 'Please enter supervisor name';
+        }
+        if (!evaluationData.coverageFrom || evaluationData.coverageFrom.trim() === '') {
+          return 'Please select coverage from date';
+        }
+        if (!evaluationData.coverageTo || evaluationData.coverageTo.trim() === '') {
+          return 'Please select coverage to date';
+        }
+        if (!evaluationData.jobKnowledgeScore1 || evaluationData.jobKnowledgeScore1 === '') {
+          return 'Please complete all job knowledge scores';
+        }
+        return 'Please complete all required fields';
+      case 8: // Overall Assessment
+        return 'Please complete all required fields';
+      default:
+        return 'Please complete all scores for this step';
     }
   };
 
@@ -292,6 +349,13 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
     confirmSubmit();
   };
 
+  const handleCloseAfterSubmission = () => {
+    // Close the modal after successful submission
+    if (onCloseAction) {
+      onCloseAction();
+    }
+  };
+
   const handleApprove = () => {
     // Mark the evaluation as approved by the evaluator
     setIsEvaluatorApproved(true);
@@ -306,8 +370,28 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
     alert('Evaluation approved by evaluator! The evaluation is now ready for employee review.');
   };
 
+  const handleSuccessDialogClose = () => {
+    setShowSuccessDialog(false);
+    // Close the main evaluation modal
+    if (onCloseAction) {
+      onCloseAction();
+    }
+  };
+
   const confirmSubmit = async () => {
+    console.log('🚀 confirmSubmit called');
     try {
+      // Validate that all required fields are completed before submission
+      console.log('🔍 Checking if current step is complete...');
+      if (!isCurrentStepComplete()) {
+        console.log('❌ Step validation failed:', getValidationMessage());
+        alert(`Cannot submit evaluation: ${getValidationMessage()}`);
+        return;
+      }
+      console.log('✅ Step validation passed');
+
+      // No additional validation needed for step 8
+
       // Calculate overall rating from evaluation data
       const overallRating = calculateOverallRating(evaluationData);
       
@@ -372,13 +456,9 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
         // Don't fail the submission if notification creation fails
       }
       
-      // Show success message
-      alert('Evaluation submitted successfully! The employee can now see their results.');
-      
-      // Close the form
-      if (onCloseAction) {
-        onCloseAction();
-      }
+      // Show success dialog instead of alert
+      console.log('🎉 Evaluation submitted successfully!');
+      setShowSuccessDialog(true);
     } catch (error) {
       console.error('Error submitting evaluation:', error);
       alert(`Error submitting evaluation: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -386,7 +466,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
   };
 
   // Helper function to calculate overall rating
-  const calculateOverallRating = (data: EvaluationData): number => {
+  const calculateOverallRating = (data: EvaluationData): string => {
     const scores: number[] = [];
     
     // Collect all numeric scores
@@ -400,9 +480,9 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
     });
     
     // Calculate average
-    if (scores.length === 0) return 0;
+    if (scores.length === 0) return '0';
     const average = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-    return Math.round(average * 10) / 10; // Round to 1 decimal place
+    return (Math.round(average * 10) / 10).toString(); // Round to 1 decimal place and return as string
   };
 
   const CurrentStepComponent = currentStep === 0 ? WelcomeStep : steps[currentStep - 1].component;
@@ -418,6 +498,48 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
           to {
             transform: scale(1);
             opacity: 1;
+          }
+        }
+        
+        @keyframes drawCheck {
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+        
+        @keyframes successBounce {
+          0% {
+            transform: scale(0.9);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.05);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        
+        .check-animation {
+          animation: drawCheck 0.6s ease-in-out 0.3s forwards;
+        }
+        
+        .success-dialog {
+          animation: successBounce 0.5s ease-out;
+        }
+        
+        .success-message {
+          animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+          0%, 100% {
+            background-color: rgb(240 253 244);
+          }
+          50% {
+            background-color: rgb(220 252 231);
           }
         }
       `}</style>
@@ -507,6 +629,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
                 onSubmitAction={handleSubmit}
                 onPreviousAction={prevStep}
                 onApproveAction={currentStep === 8 ? handleApprove : undefined}
+                onCloseAction={currentStep === 8 ? handleCloseAfterSubmission : undefined}
                 isApproved={currentStep === 8 ? isEvaluatorApproved : false}
               />
             </CardContent>
@@ -555,7 +678,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Please complete all {getStepName()} scores to continue</p>
+                      <p>{getValidationMessage()}</p>
                     </TooltipContent>
                   </Tooltip>
                 ) : (
@@ -563,7 +686,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
                     <TooltipTrigger asChild>
                       <Button 
                         onClick={nextStep} 
-                        className="px-6"
+                        className="px-6 bg-blue-500 text-white hover:bg-blue-600 hover:text-white"
                       >
                         Next
                       </Button>
@@ -626,6 +749,60 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
             className="px-4"
           >
             Cancel Evaluation
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Success Dialog */}
+    <Dialog open={showSuccessDialog} onOpenChangeAction={setShowSuccessDialog}>
+      <DialogContent className="max-w-md m-8 success-dialog" style={{
+        animation: 'dialogPopup 0.3s ease-out'
+      }}>
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold text-gray-900 flex items-center justify-center gap-2">
+            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+              <svg 
+                className="w-5 h-5 text-green-600 check-animation" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                style={{
+                  strokeDasharray: '20',
+                  strokeDashoffset: '20',
+                  animation: 'drawCheck 0.6s ease-in-out 0.3s forwards'
+                }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            Evaluation Submitted Successfully!
+          </DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+          <div className="bg-green-50 p-4 rounded-lg mb-4 success-message">
+            <p className="text-gray-700 text-center">
+              🎉 Your evaluation has been submitted successfully!<br/>
+              The employee can now view their results in their dashboard.
+            </p>
+          </div>
+          <div className="text-sm text-gray-600 text-center">
+            <p><strong>Employee:</strong> {evaluationData.employeeName}</p>
+            <p><strong>Submitted:</strong> {new Date().toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}</p>
+          </div>
+        </div>
+        <DialogFooter className="flex justify-center">
+          <Button
+            onClick={handleSuccessDialogClose}
+            className="px-8 py-2 bg-green-600 text-white hover:bg-green-700"
+          >
+            Close
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -58,7 +58,7 @@ type Submission = {
   evaluatorId?: number;
   evaluatorName?: string;
   period?: string;
-  overallRating?: number;
+  overallRating?: string;
 
   // Approval-related properties
   approvalStatus?: string;
@@ -70,7 +70,7 @@ type Submission = {
 };
 
 type PerformanceData = {
-  overallRating: number;
+  overallRating: string;
   totalReviews: number;
   goalsCompleted: number;
   totalGoals: number;
@@ -96,6 +96,39 @@ function getRatingColor(rating: number) {
   if (rating >= 3.5) return 'text-yellow-600 bg-yellow-100';
   return 'text-red-600 bg-red-100';
 }
+
+// Calculate overall rating using the same formula as employee dashboard
+const calculateOverallRating = (evaluationData: any) => {
+  if (!evaluationData) return 0;
+
+  const calculateScore = (scores: number[]) => {
+    const validScores = scores.filter(score => score !== null && score !== undefined && !isNaN(score));
+    if (validScores.length === 0) return 0;
+    return validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+  };
+
+  const jobKnowledgeScore = calculateScore([evaluationData.jobKnowledgeScore1, evaluationData.jobKnowledgeScore2, evaluationData.jobKnowledgeScore3]);
+  const qualityOfWorkScore = calculateScore([evaluationData.qualityOfWorkScore1, evaluationData.qualityOfWorkScore2, evaluationData.qualityOfWorkScore3, evaluationData.qualityOfWorkScore4, evaluationData.qualityOfWorkScore5]);
+  const adaptabilityScore = calculateScore([evaluationData.adaptabilityScore1, evaluationData.adaptabilityScore2, evaluationData.adaptabilityScore3]);
+  const teamworkScore = calculateScore([evaluationData.teamworkScore1, evaluationData.teamworkScore2, evaluationData.teamworkScore3]);
+  const reliabilityScore = calculateScore([evaluationData.reliabilityScore1, evaluationData.reliabilityScore2, evaluationData.reliabilityScore3, evaluationData.reliabilityScore4]);
+  const ethicalScore = calculateScore([evaluationData.ethicalScore1, evaluationData.ethicalScore2, evaluationData.ethicalScore3, evaluationData.ethicalScore4]);
+  const customerServiceScore = calculateScore([evaluationData.customerServiceScore1, evaluationData.customerServiceScore2, evaluationData.customerServiceScore3, evaluationData.customerServiceScore4, evaluationData.customerServiceScore5]);
+
+  const overallWeightedScore = (
+    (jobKnowledgeScore * 0.20) +
+    (qualityOfWorkScore * 0.20) +
+    (adaptabilityScore * 0.10) +
+    (teamworkScore * 0.10) +
+    (reliabilityScore * 0.05) +
+    (ethicalScore * 0.05) +
+    (customerServiceScore * 0.30)
+  );
+
+  // Ensure the score is between 0 and 5
+  const normalizedScore = Math.max(0, Math.min(5, overallWeightedScore));
+  return Math.round(normalizedScore * 10) / 10;
+};
 
 // Helper functions for rating calculations
 const getRatingLabel = (score: number) => {
@@ -2009,8 +2042,8 @@ export default function EvaluatorDashboard() {
                 <span className="text-3xl font-bold text-gray-900">{data?.overallRating || 0}</span>
                 <span className="text-sm text-gray-500">/ 5.0</span>
               </div>
-              <Badge className={`mt-2 ${getRatingColor(data?.overallRating || 0)}`}>
-                {(data?.overallRating || 0) >= 4.5 ? 'Excellent' : (data?.overallRating || 0) >= 4.0 ? 'Good' : (data?.overallRating || 0) >= 3.5 ? 'Average' : 'Needs Improvement'}
+              <Badge className={`mt-2 ${getRatingColor(parseFloat(data?.overallRating || '0'))}`}>
+                {parseFloat(data?.overallRating || '0') >= 4.5 ? 'Excellent' : parseFloat(data?.overallRating || '0') >= 4.0 ? 'Good' : parseFloat(data?.overallRating || '0') >= 3.5 ? 'Average' : 'Needs Improvement'}
               </Badge>
             </CardContent>
           </Card>
@@ -2061,7 +2094,6 @@ export default function EvaluatorDashboard() {
     const searchTerm = overviewSearch.toLowerCase();
     return (
       submission.employeeName.toLowerCase().includes(searchTerm) ||
-      (submission.category || '').toLowerCase().includes(searchTerm) ||
       (submission.evaluator || '').toLowerCase().includes(searchTerm)
     );
   });
@@ -2080,7 +2112,7 @@ export default function EvaluatorDashboard() {
                 <div className="px-6 py-4 space-y-4">
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Search submissions by employee name, category, or evaluator..."
+                      placeholder="Search submissions by employee name or evaluator..."
                       value={overviewSearch}
                       onChange={(e) => setOverviewSearch(e.target.value)}
                       className=" w-1/2 bg-gray-100 "
@@ -2118,7 +2150,6 @@ export default function EvaluatorDashboard() {
                       <TableHeader className="sticky top-0 bg-white z-10 border-b">
                         <TableRow key="overview-header">
                           <TableHead className="px-6 py-3">Employee</TableHead>
-                          <TableHead className="px-6 py-3">Category</TableHead>
                           <TableHead className="px-6 py-3 text-right">Rating</TableHead>
                           <TableHead className="px-6 py-3">Date</TableHead>
                           <TableHead className="px-6 py-3">Quarter</TableHead>
@@ -2167,11 +2198,26 @@ export default function EvaluatorDashboard() {
                         Scroll to see more
                       </div>
                     )}
+                    
+                    {/* Simple Legend */}
+                    <div className="mb-3 p-3 flex flex-wrap gap-4 text-xs text-gray-600 bg-gray-50 border-b">
+                      <div className="flex items-center gap-2 mb-2 w-full">
+                        <span className="text-sm font-medium text-gray-700">Indicators:</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
+                        <Badge className="bg-yellow-200 text-yellow-800 text-xs">New</Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+                        <Badge className="bg-blue-300 text-blue-800 text-xs">Recent</Badge>
+                      </div>
+                    </div>
+                    
                     <Table className="min-w-full">
                       <TableHeader className="sticky top-0 bg-white z-10 border-b">
                         <TableRow key="overview-header">
                           <TableHead className="px-6 py-3">Employee</TableHead>
-                          <TableHead className="px-6 py-3">Category</TableHead>
                           <TableHead className="px-6 py-3 text-right">Rating</TableHead>
                           <TableHead className="px-6 py-3">Date</TableHead>
                           <TableHead className="px-6 py-3">Quarter</TableHead>
@@ -2181,7 +2227,7 @@ export default function EvaluatorDashboard() {
                       <TableBody>
                         {filteredSubmissions.length === 0 ? (
                           <TableRow key="no-submissions">
-                            <TableCell colSpan={6} className="px-6 py-3 text-center text-gray-500">
+                            <TableCell colSpan={5} className="px-6 py-3 text-center text-gray-500">
                               {overviewSearch.trim() ? 'No submissions found matching your search' : 'No recent submissions'}
                             </TableCell>
                           </TableRow>
@@ -2203,11 +2249,18 @@ export default function EvaluatorDashboard() {
                                       )}
                                     </div>
                                   </TableCell>
-                                  <TableCell className="px-6 py-3">
-                                    <Badge className="bg-blue-100 text-blue-800">{submission.category || 'Performance Review'}</Badge>
-                                  </TableCell>
                                   <TableCell className="px-6 py-3 text-right font-semibold">
-                                    {submission.rating || 'N/A'}/5
+                                    {(() => {
+                                      // Try to calculate rating from evaluation data first
+                                      if (submission.evaluationData) {
+                                        const calculatedRating = calculateOverallRating(submission.evaluationData);
+                                        if (calculatedRating > 0 && calculatedRating <= 5) {
+                                          return `${calculatedRating}/5`;
+                                        }
+                                      }
+                                      // Fallback to stored rating
+                                      return `${submission.rating || 'N/A'}/5`;
+                                    })()}
                                   </TableCell>
                                   <TableCell className="px-6 py-3">
                                     <div className="flex flex-col">
@@ -2893,7 +2946,6 @@ export default function EvaluatorDashboard() {
                           <TableHead className="px-6 py-3">Department</TableHead>
                           <TableHead className="px-6 py-3">Position</TableHead>
                           <TableHead className="px-6 py-3">Reviewer</TableHead>
-                          <TableHead className="px-6 py-3">Category</TableHead>
                           <TableHead className="px-6 py-3">Rating</TableHead>
                           <TableHead className="px-6 py-3">Date</TableHead>
                           <TableHead className="px-6 py-3">Approval Status</TableHead>
@@ -2962,7 +3014,6 @@ export default function EvaluatorDashboard() {
                           </TableHead>
                           <TableHead className="px-6 py-3">Position</TableHead>
                           <TableHead className="px-6 py-3">Reviewer</TableHead>
-                          <TableHead className="px-6 py-3">Category</TableHead>
                           <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('rating')}>
                             Rating {getSortIcon('rating')}
                           </TableHead>
@@ -3000,14 +3051,6 @@ export default function EvaluatorDashboard() {
                                   : feedback.reviewer}
                               </div>
                             </div>
-                          </TableCell>
-                          <TableCell className="px-6 py-3">
-                            <Badge className={`text-xs ${feedback.category === 'Performance Review' ? 'bg-blue-100 text-blue-800' :
-                              feedback.category === 'Probationary Review' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
-                              {feedback.category}
-                            </Badge>
                           </TableCell>
                           <TableCell className="px-6 py-3">
                             <div className="flex items-center gap-2">
