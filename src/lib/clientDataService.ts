@@ -248,6 +248,20 @@ export const clientDataService = {
     }
   },
 
+  // Branch Codes
+  getBranchCodes: async (): Promise<string[]> => {
+    try {
+      const response = await fetch('/api/data/branch-codes');
+      if (response.ok) {
+        return await response.json();
+      }
+      throw new Error('Failed to fetch branch codes');
+    } catch (error) {
+      console.error('Error fetching branch codes:', error);
+      return []; // Return empty array as fallback
+    }
+  },
+
   // Employees
   getEmployees: async (): Promise<Employee[]> => {
     return getFromStorage(STORAGE_KEYS.EMPLOYEES, []);

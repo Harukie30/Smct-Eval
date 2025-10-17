@@ -10,13 +10,13 @@ import SignaturePad from '@/components/SignaturePad';
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import Link from 'next/link';
 import PageTransition from '@/components/PageTransition';
-import branchCodes from '@/data/branch-code.json';
 import clientDataService from '@/lib/clientDataService';
 
 export default function RegisterPage() {
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
   const [positions, setPositions] = useState<string[]>([]);
   const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
+  const [branchCodes, setBranchCodes] = useState<string[]>([]);
   const [alertDialog, setAlertDialog] = useState({
     open: false,
     title: '',
@@ -51,6 +51,10 @@ export default function RegisterPage() {
         // Fetch branches using client data service
         const branchesData = await clientDataService.getBranches();
         setBranches(branchesData);
+        
+        // Fetch branch codes using client data service
+        const branchCodesData = await clientDataService.getBranchCodes();
+        setBranchCodes(branchCodesData);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
