@@ -48,7 +48,7 @@ export interface Submission {
   evaluationData: any;
   status: 'pending' | 'completed' | 'approved';
   period: string;
-  overallRating: number;
+  overallRating: string;
   submittedAt: string;
   category?: string;
   evaluator?: string;
@@ -232,6 +232,34 @@ export const clientDataService = {
   // Positions
   getPositions: async (): Promise<string[]> => {
     return positionsData;
+  },
+
+  // Branches
+  getBranches: async (): Promise<{id: string, name: string}[]> => {
+    try {
+      const response = await fetch('/api/data/branches');
+      if (response.ok) {
+        return await response.json();
+      }
+      throw new Error('Failed to fetch branches');
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+      return []; // Return empty array as fallback
+    }
+  },
+
+  // Branch Codes
+  getBranchCodes: async (): Promise<string[]> => {
+    try {
+      const response = await fetch('/api/data/branch-codes');
+      if (response.ok) {
+        return await response.json();
+      }
+      throw new Error('Failed to fetch branch codes');
+    } catch (error) {
+      console.error('Error fetching branch codes:', error);
+      return []; // Return empty array as fallback
+    }
   },
 
   // Employees
@@ -530,7 +558,7 @@ export const clientDataService = {
     return {
       totalEvaluations: submissions.length,
       averageRating: submissions.length > 0 
-        ? submissions.reduce((sum, s) => sum + s.overallRating, 0) / submissions.length 
+        ? submissions.reduce((sum, s) => sum + parseFloat(s.overallRating || '0'), 0) / submissions.length 
         : 0,
       completedEvaluations: submissions.filter(s => s.status === 'completed').length,
     };

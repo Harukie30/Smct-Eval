@@ -40,7 +40,7 @@ interface PerformanceHistory {
 }
 
 interface PerformanceData {
-  overallRating: number;
+  overallRating: string;
   totalReviews: number;
   goalsCompleted: number;
   totalGoals: number;

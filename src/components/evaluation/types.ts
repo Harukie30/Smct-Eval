@@ -113,7 +113,7 @@ export type EvaluationData = {
   customerServiceComments: string;
 
 // Step 7: Overall Rating & Comments
-  overallRating: number;
+  overallRating: string;
   overallComments: string;
   recommendations: string;
   

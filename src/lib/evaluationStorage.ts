@@ -12,7 +12,7 @@ export interface EvaluationResult {
   submittedAt: string;
   status: 'completed' | 'pending';
   period: string;
-  overallRating: number;
+  overallRating: string;
 }
 
 const STORAGE_KEY = 'employee-evaluation-results';
