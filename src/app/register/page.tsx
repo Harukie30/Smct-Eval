@@ -35,15 +35,9 @@ interface FormDataType {
 
 export default function RegisterPage() {
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
-  const [positions, setPositions] = useState<
-    { value: number; label: string }[]
-  >([]);
-  const [branches, setBranches] = useState<{ value: string; label: string }[]>(
-    []
-  );
-  const [department, setDepartment] = useState<
-    { value: string; label: string }[]
-  >([]);
+  const [positions, setPositions] = useState<{id: string, name: string}[]>([]);
+  const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
+  const [branchCodes, setBranchCodes] = useState<string[]>([]);
   const [alertDialog, setAlertDialog] = useState({
     open: false,
     title: "",

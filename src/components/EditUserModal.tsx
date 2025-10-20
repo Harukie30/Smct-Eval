@@ -31,7 +31,7 @@ interface EditUserModalProps {
   onSave: (updatedUser: User) => void;
   departments: string[];
   branches: string[];
-  positions: string[];
+  positions: {id: string, name: string}[];
 }
 
 const EditUserModal: React.FC<EditUserModalProps> = ({
@@ -285,8 +285,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               </SelectTrigger>
               <SelectContent>
                 {positions.map((position) => (
-                  <SelectItem key={position} value={position}>
-                    {position}
+                  <SelectItem key={position.id} value={position.id}>
+                    {position.name}
                   </SelectItem>
                 ))}
               </SelectContent>
