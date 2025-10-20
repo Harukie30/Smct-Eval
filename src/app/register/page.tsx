@@ -24,6 +24,9 @@ export default function RegisterPage() {
     type: 'info' as 'success' | 'error' | 'warning' | 'info',
     onConfirm: () => {}
   });
+  // comment
+  // comment
+  // comment
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
