@@ -15,6 +15,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { getQuarterFromEvaluationData, getQuarterColor } from '@/lib/quarterUtils';
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 import EvaluationDetailsModal from '@/components/EvaluationDetailsModal';
+import PerformanceTrendModal from '@/components/PerformanceTrendModal';
 // CommentDetailModal import removed
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -57,6 +58,7 @@ export default function EmployeeDashboard() {
   const [selectedEvaluation, setSelectedEvaluation] = useState<any>(null);
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [isEvaluationDetailsModalOpen, setIsEvaluationDetailsModalOpen] = useState(false);
+  const [isPerformanceTrendModalOpen, setIsPerformanceTrendModalOpen] = useState(false);
   const [modalOpenedFromTab, setModalOpenedFromTab] = useState<string>('');
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [quarterlySearchTerm, setQuarterlySearchTerm] = useState('');
@@ -1527,10 +1529,22 @@ export default function EmployeeDashboard() {
                 {submissions.length > 0 && (
                   <Card className="mt-8">
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        💡 Performance Insights
-                      </CardTitle>
-                      <CardDescription>Actionable insights based on your performance history</CardDescription>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            💡 Performance Insights
+                          </CardTitle>
+                          <CardDescription>Actionable insights based on your performance history</CardDescription>
+                        </div>
+                        <Button
+                          onClick={() => setIsPerformanceTrendModalOpen(true)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          📊 View Graph
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3026,6 +3040,13 @@ export default function EmployeeDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Performance Trend Modal */}
+      <PerformanceTrendModal
+        isOpen={isPerformanceTrendModalOpen}
+        onCloseAction={() => setIsPerformanceTrendModalOpen(false)}
+        submissions={submissions}
+        calculateOverallRatingAction={calculateOverallRating}
+      />
 
     </ProtectedRoute>
   );

@@ -15,8 +15,8 @@ import clientDataService from '@/lib/clientDataService';
 export default function RegisterPage() {
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
   const [positions, setPositions] = useState<{id: string, name: string}[]>([]);
-  const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
-  const [branchCodes, setBranchCodes] = useState<string[]>([]);
+  const [departments, setDepartments] = useState<{id: string, name: string}[]>([]);
+  const [branchCodes, setBranchCodes] = useState<{id: string, name: string}[]>([]);
   const [alertDialog, setAlertDialog] = useState({
     open: false,
     title: '',
@@ -33,7 +33,7 @@ export default function RegisterPage() {
     contact: '',
     position: '',
     branchCode: '',
-    branch: '',
+    department: '',
     password: '',
     confirmPassword: '',
     signature: ''
@@ -49,9 +49,9 @@ export default function RegisterPage() {
         const positionsData = await clientDataService.getPositions();
         setPositions(positionsData);
         
-        // Fetch branches using client data service
-        const branchesData = await clientDataService.getBranches();
-        setBranches(branchesData);
+        // Fetch departments using client data service
+        const departmentsData = await clientDataService.getDepartments();
+        setDepartments(departmentsData);
         
         // Fetch branch codes using client data service
         const branchCodesData = await clientDataService.getBranchCodes();
@@ -167,8 +167,8 @@ export default function RegisterPage() {
       return;
     }
     
-    if (!formData.branch) {
-      showAlert('Missing Information', 'Please select your branch!', 'error');
+    if ((formData.branchCode === 'HO' || formData.branchCode === 'HO-MNL') && !formData.department) {
+      showAlert('Missing Information', 'Please select your department!', 'error');
       return;
     }
     
@@ -231,7 +231,7 @@ export default function RegisterPage() {
         name: `${formData.firstName} ${formData.lastName}`,
         email: formData.email,
         position: formData.position,
-        branch: formData.branch,
+        department: formData.department,
         hireDate: new Date().toISOString().split('T')[0], // Today's date
         role: formData.position,
         signature: formData.signature, // Include the digital signature
@@ -257,7 +257,7 @@ export default function RegisterPage() {
               contact: '',
               position: '',
               branchCode: '',
-              branch: '',
+              department: '',
               password: '',
               confirmPassword: '',
               signature: ''
@@ -452,6 +452,25 @@ export default function RegisterPage() {
                       {fieldErrors.contact && <p className="text-sm text-red-500">{fieldErrors.contact}</p>}
                     </div>
                     
+                    <div className="space-y-2">
+                      <Label htmlFor="branchCode">Branch/BranchCode</Label>
+                      <Combobox
+                        options={branchCodes}
+                        value={formData.branchCode}
+                        onValueChangeAction={(value) => {
+                          setFormData({
+                            ...formData, 
+                            branchCode: value,
+                            // Clear department if not HO or HO-MNL
+                            department: (value === 'HO' || value === 'HO-MNL') ? formData.department : ''
+                          });
+                        }}
+                        placeholder="Select branch code"
+                        searchPlaceholder="Search branch codes..."
+                        emptyText="No branch codes found."
+                        className="w-1/2"
+                      />
+                    </div>
                     
                     <div className="space-y-2">
                       <Label htmlFor="position">Position</Label>
@@ -468,31 +487,25 @@ export default function RegisterPage() {
                       />
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="branchCode">Branch Code</Label>
-                      <Combobox
-                        options={branchCodes}
-                        value={formData.branchCode}
-                        onValueChangeAction={(value) => setFormData({...formData, branchCode: value})}
-                        placeholder="Select branch code"
-                        searchPlaceholder="Search branch codes..."
-                        emptyText="No branch codes found."
-                        className="w-1/2"
-                      />
-                    </div>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="branch">Branch</Label>
-                      <Combobox
-                        options={branches}
-                        value={formData.branch}
-                        onValueChangeAction={(value) => setFormData({...formData, branch: value})}
-                        placeholder="Select your branch"
-                        searchPlaceholder="Search branches..."
-                        emptyText="No branches found."
-                        className="w-1/2"
-                      />
-                    </div>
+                    
+                    {(formData.branchCode === 'HO' || formData.branchCode === 'HO-MNL') && (
+                      <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                        <Label htmlFor="department">Department</Label>
+                        <Combobox
+                          options={departments}
+                          value={formData.department}
+                          onValueChangeAction={(value) => setFormData({...formData, department: value})}
+                          placeholder="Select your department"
+                          searchPlaceholder="Search departments..."
+                          emptyText="No departments found."
+                          className="w-1/2"
+                        />
+                        <p className="text-xs text-gray-500">
+                          Department selection is required for Head Office employees (HO & HO-MNL)
+                        </p>
+                      </div>
+                    )}
                     
                     <div className="space-y-2">
                       <Label htmlFor="registerPassword">Password</Label>

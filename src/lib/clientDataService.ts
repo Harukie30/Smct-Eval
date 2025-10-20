@@ -1,10 +1,12 @@
 // Client-side data service to replace API routes
 
 import positionsData from '@/data/positions.json';
+import departmentsData from '@/data/departments.json';
 import submissionsData from '@/data/submissions.json';
 import pendingRegistrationsData from '@/data/pending-registrations.json';
 import profilesData from '@/data/profiles.json';
 import accountsData from '@/data/accounts.json';
+import branchCodesData from '@/data/branch-code.json';
 
 // Types
 export interface Notification {
@@ -66,8 +68,8 @@ export interface PendingRegistration {
   name: string;
   email: string;
   position: string;
-  department?: string; // Made optional
-  branch: string;
+  department: string; // Required field
+  branch?: string; // Made optional
   hireDate: string;
   role: string;
   status: 'pending' | 'approved' | 'rejected';
@@ -224,9 +226,22 @@ initializeData();
 
 // API replacement functions
 export const clientDataService = {
-  // Departments - removed since department field was removed from registration
-  getDepartments: async (): Promise<string[]> => {
-    return []; // Return empty array since departments are no longer used
+  // Departments
+  getDepartments: async (): Promise<{id: string, name: string}[]> => {
+    try {
+      const response = await fetch('/api/data/departments');
+      if (!response.ok) {
+        throw new Error('Failed to fetch departments');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      // Fallback to local data if API fails
+      return departmentsData.map(dept => ({
+        id: dept.id.toString(),
+        name: dept.name
+      }));
+    }
   },
 
   // Positions
@@ -262,7 +277,7 @@ export const clientDataService = {
   },
 
   // Branch Codes
-  getBranchCodes: async (): Promise<string[]> => {
+  getBranchCodes: async (): Promise<{id: string, name: string}[]> => {
     try {
       const response = await fetch('/api/data/branch-codes');
       if (response.ok) {
@@ -271,7 +286,11 @@ export const clientDataService = {
       throw new Error('Failed to fetch branch codes');
     } catch (error) {
       console.error('Error fetching branch codes:', error);
-      return []; // Return empty array as fallback
+      // Fallback to local data if API fails
+      return branchCodesData.map(code => ({
+        id: code,
+        name: code
+      }));
     }
   },
 
