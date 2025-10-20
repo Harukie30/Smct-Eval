@@ -1,17 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import positionsData from '@/data/positions.json';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    return NextResponse.json({
-      success: true,
-      positions: positionsData
-    });
+    // Transform the positions array to match the branches structure with id and name
+    const positions = positionsData.map(position => ({
+      id: position,
+      name: position
+    }));
 
+    return NextResponse.json(positions);
   } catch (error) {
-    console.error('Get positions error:', error);
+    console.error('Error fetching positions:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { error: 'Failed to fetch positions' },
       { status: 500 }
     );
   }

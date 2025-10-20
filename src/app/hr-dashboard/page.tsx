@@ -23,7 +23,7 @@ import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 // Import data
 import accountsData from '@/data/accounts.json';
 import departmentsData from '@/data/departments.json';
-import branchData from '@/data/branch.json';
+// branchData now comes from clientDataService
 
 // TypeScript interfaces
 interface Employee {
@@ -111,7 +111,7 @@ const getQuarterColor = (quarter: string) => {
 export default function HRDashboard() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
+  const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
   const [hrMetrics, setHrMetrics] = useState<HRMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState('overview');
@@ -173,7 +173,10 @@ export default function HRDashboard() {
       }));
       setEmployees(employeesList);
       setDepartments(departmentsData);
-      setBranches(branchData);
+      
+      // Load branches from API
+      const branchesData = await clientDataService.getBranches();
+      setBranches(branchesData);
 
       // Calculate HR metrics
       const employees = employeeAccounts;
@@ -189,7 +192,7 @@ export default function HRDashboard() {
         turnoverRate: 5.2, // Mock data
         averageTenure: 2.8, // Mock data
         departmentsCount: departmentsData.length,
-        branchesCount: branchData.length,
+        branchesCount: branches.length,
         genderDistribution: {
           male: Math.floor(employees.length * 0.55),
           female: Math.floor(employees.length * 0.45)
@@ -275,7 +278,10 @@ export default function HRDashboard() {
         }));
         setEmployees(employeesList);
         setDepartments(departmentsData);
-        setBranches(branchData);
+        
+        // Load branches from API
+        const branchesData = await clientDataService.getBranches();
+        setBranches(branchesData);
 
         // Calculate HR metrics
         const employees = employeeAccounts;
@@ -291,7 +297,7 @@ export default function HRDashboard() {
           turnoverRate: 5.2, // Mock data
           averageTenure: 2.8, // Mock data
           departmentsCount: departmentsData.length,
-          branchesCount: branchData.length,
+          branchesCount: branches.length,
           genderDistribution: {
             male: Math.floor(employees.length * 0.55),
             female: Math.floor(employees.length * 0.45)
@@ -444,7 +450,7 @@ export default function HRDashboard() {
         turnoverRate: 5.2, // Mock data
         averageTenure: 2.8, // Mock data
         departmentsCount: departmentsData.length,
-        branchesCount: branchData.length,
+        branchesCount: branches.length,
         genderDistribution: {
           male: Math.floor(employeesList.length * 0.55),
           female: Math.floor(employeesList.length * 0.45)
@@ -916,7 +922,7 @@ export default function HRDashboard() {
                       {dept.name}
                       <Badge variant="outline">{stats.count} employees</Badge>
                     </CardTitle>
-                    <CardDescription>Manager: {dept.manager}</CardDescription>
+                    <CardDescription>Department Manager</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -953,7 +959,7 @@ export default function HRDashboard() {
                     {branch.name}
                     <Badge variant="outline">{stats.count} employees</Badge>
                   </CardTitle>
-                  <CardDescription>{branch.location}</CardDescription>
+                  <CardDescription>Branch Location</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -1284,7 +1290,7 @@ export default function HRDashboard() {
                     </SelectTrigger>
                     <SelectContent>
                       {branches.map(branch => (
-                        <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
+                        <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

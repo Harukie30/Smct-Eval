@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserProfile } from './ProfileCard';
 import { User, Camera, Save, X } from 'lucide-react';
 import { uploadProfileImage, deleteProfileImage } from '@/lib/imageUpload';
@@ -11,6 +12,7 @@ import { uploadProfileImage, deleteProfileImage } from '@/lib/imageUpload';
 import SignaturePad from '@/components/SignaturePad';
 import { useToast } from '@/hooks/useToast';
 import LoadingAnimation from '@/components/LoadingAnimation';
+import clientDataService from '@/lib/clientDataService';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -28,6 +30,8 @@ export default function ProfileModal({
   const [formData, setFormData] = useState<UserProfile>(profile);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
+  const [positions, setPositions] = useState<{id: string, name: string}[]>([]);
   const { success } = useToast();
 
   // Reset form data when profile changes
@@ -35,6 +39,23 @@ export default function ProfileModal({
     setFormData(profile);
     setErrors({});
   }, [profile]);
+
+  // Load branches and positions data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [branchesData, positionsData] = await Promise.all([
+          clientDataService.getBranches(),
+          clientDataService.getPositions()
+        ]);
+        setBranches(branchesData);
+        setPositions(positionsData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+    };
+    loadData();
+  }, []);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -212,12 +233,21 @@ export default function ProfileModal({
               <Label htmlFor="roleOrPosition" className="text-sm font-medium">
                 Role/Position
               </Label>
-              <Input
-                id="roleOrPosition"
+              <Select
                 value={formData.roleOrPosition || ''}
-                onChange={(e) => handleInputChange('roleOrPosition', e.target.value)}
-                placeholder="e.g., Senior Developer, Manager"
-              />
+                onValueChange={(value) => handleInputChange('roleOrPosition', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your position" />
+                </SelectTrigger>
+                <SelectContent>
+                  {positions.map((position) => (
+                    <SelectItem key={position.id} value={position.id}>
+                      {position.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Department */}
@@ -231,6 +261,28 @@ export default function ProfileModal({
                 onChange={(e) => handleInputChange('department', e.target.value)}
                 placeholder="e.g., Engineering, HR, Sales"
               />
+            </div>
+
+            {/* Branch */}
+            <div className="space-y-1.5">
+              <Label htmlFor="branch" className="text-sm font-medium">
+                Branch
+              </Label>
+              <Select
+                value={formData.branch || ''}
+                onValueChange={(value) => handleInputChange('branch', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
