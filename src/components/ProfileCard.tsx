@@ -9,6 +9,7 @@ export type UserProfile = {
   email?: string;
   avatar?: string;
   department?: string;
+  branch?: string;
   bio?: string;
   signature?: string;
 };
@@ -135,6 +136,9 @@ export default function ProfileCard({
           {profile.department && (
             <p className="text-xs text-gray-400 truncate">{profile.department}</p>
           )}
+          {profile.branch && (
+            <p className="text-xs text-gray-400 truncate">{profile.branch}</p>
+          )}
         </div>
         <div className="flex space-x-1">
           {showSettings && (
@@ -180,6 +184,9 @@ export default function ProfileCard({
           )}
           {profile.department && (
             <p className="text-blue-100 text-xs truncate">{profile.department}</p>
+          )}
+          {profile.branch && (
+            <p className="text-blue-100 text-xs truncate">{profile.branch}</p>
           )}
         </div>
       </div>

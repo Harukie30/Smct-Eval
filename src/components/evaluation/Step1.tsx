@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -17,9 +16,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { ChevronDownIcon, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { EvaluationData } from './types';
-import branches from '@/data/branch.json';
-import departments from '@/data/departments.json';
+// branches now comes from clientDataService
 import { getQuarterlyReviewStatus, getCurrentYear } from '@/lib/quarterlyReviewUtils';
+import clientDataService from '@/lib/clientDataService';
 
 interface Step1Props {
   data: EvaluationData;

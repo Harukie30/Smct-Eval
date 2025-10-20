@@ -12,6 +12,7 @@ import RealLoadingScreen from '@/components/RealLoadingScreen';
 import InstantLoadingScreen from '@/components/InstantLoadingScreen';
 import SuspensionModal from '@/components/SuspensionModal';
 import GoogleLoginModal from '@/components/GoogleLoginModal';
+import ForgotPasswordModal from '@/components/ForgotPasswordModal';
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import { toastMessages } from '@/lib/toastMessages';
@@ -28,9 +29,11 @@ export default function LandingLoginPage() {
   const [suspensionData, setSuspensionData] = useState<any>(null);
   const [showGoogleLoginModal, setShowGoogleLoginModal] = useState(false);
   const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   const { login, isLoading } = useUser();
   const router = useRouter();
+
 
   // Remove automatic redirect - let users stay on login page even if authenticated
   // This allows users to see the login form and choose to log in again or navigate elsewhere
@@ -311,9 +314,13 @@ export default function LandingLoginPage() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <Label htmlFor="password">Password</Label>
-                          <a href="#" className="text-sm text-indigo-600 hover:underline">
+                          <button 
+                            type="button"
+                            onClick={() => setShowForgotPasswordModal(true)}
+                            className="text-sm text-indigo-600 hover:underline"
+                          >
                             Forgot password?
-                          </a>
+                          </button>
                         </div>
                         <Input
                           id="password"
@@ -731,6 +738,12 @@ export default function LandingLoginPage() {
           console.log('Google login successful:', user);
           // The modal will handle the login and redirect
         }}
+      />
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        onCloseAction={() => setShowForgotPasswordModal(false)}
       />
 
       {/* Incorrect Password Dialog */}

@@ -230,8 +230,21 @@ export const clientDataService = {
   },
 
   // Positions
-  getPositions: async (): Promise<string[]> => {
-    return positionsData;
+  getPositions: async (): Promise<{id: string, name: string}[]> => {
+    try {
+      const response = await fetch('/api/data/positions');
+      if (!response.ok) {
+        throw new Error('Failed to fetch positions');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching positions:', error);
+      // Fallback to local data if API fails
+      return positionsData.map(position => ({
+        id: position,
+        name: position
+      }));
+    }
   },
 
   // Branches

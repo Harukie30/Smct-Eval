@@ -22,8 +22,8 @@ import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 // Import data
 import accountsDataRaw from '@/data/accounts.json';
 import departmentsData from '@/data/departments.json';
-import branchData from '@/data/branch.json';
-import positionsData from '@/data/positions.json';
+// branchData now comes from clientDataService
+// positionsData now comes from clientDataService
 import branchCodesData from '@/data/branch-code.json';
 
 // Extract accounts array from the new structure
@@ -141,6 +141,8 @@ const getQuarterColor = (quarter: string) => {
 
 export default function AdminDashboard() {
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [positionsData, setPositionsData] = useState<{id: string, name: string}[]>([]);
+  const [branchesData, setBranchesData] = useState<{id: string, name: string}[]>([]);
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -874,6 +876,14 @@ export default function AdminDashboard() {
   useEffect(() => {
     const loadAdminData = async () => {
       try {
+        // Load positions data
+        const positions = await clientDataService.getPositions();
+        setPositionsData(positions);
+        
+        // Load branches data
+        const branches = await clientDataService.getBranches();
+        setBranchesData(branches);
+        
         // Load persisted registration data
         const savedApproved = JSON.parse(localStorage.getItem('approvedRegistrations') || '[]');
         const savedRejected = JSON.parse(localStorage.getItem('rejectedRegistrations') || '[]');
@@ -2251,8 +2261,8 @@ export default function AdminDashboard() {
                     </SelectTrigger>
                     <SelectContent>
                       {positionsData.map((position) => (
-                        <SelectItem key={position} value={position}>
-                          {position}
+                        <SelectItem key={position.id} value={position.id}>
+                          {position.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -2316,8 +2326,8 @@ export default function AdminDashboard() {
                       <SelectValue placeholder="Select branch" />
                     </SelectTrigger>
                     <SelectContent>
-                      {branchData.map(branch => (
-                        <SelectItem key={branch.id} value={branch.name}>{branch.name}</SelectItem>
+                      {branchesData.map(branch => (
+                        <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -2752,7 +2762,7 @@ export default function AdminDashboard() {
         user={userToEdit}
         onSave={handleSaveUser}
         departments={departmentsData.map((dept: any) => dept.name)}
-        branches={branchData.map((branch: any) => branch.name)}
+        branches={branchesData.map(branch => branch.name)}
         positions={positionsData}
       />
 

@@ -14,7 +14,7 @@ import clientDataService from '@/lib/clientDataService';
 
 export default function RegisterPage() {
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
-  const [positions, setPositions] = useState<string[]>([]);
+  const [positions, setPositions] = useState<{id: string, name: string}[]>([]);
   const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
   const [branchCodes, setBranchCodes] = useState<string[]>([]);
   const [alertDialog, setAlertDialog] = useState({
