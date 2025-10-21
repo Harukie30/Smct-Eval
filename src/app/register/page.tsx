@@ -18,6 +18,7 @@ import Link from "next/link";
 import PageTransition from "@/components/PageTransition";
 import { CONFIG } from "../../../config/config";
 import { id } from "date-fns/locale";
+import clientDataService from "@/lib/clientDataService.api";
 
 interface FormDataType {
   fname: string;
@@ -27,7 +28,7 @@ interface FormDataType {
   contact: string;
   position_id: number | string;
   branch_id: number | string;
-  department_id: number | string;
+  department_id?: number | string ;
   password: string;
   password_confirmation: string;
   signature: string;
@@ -35,9 +36,9 @@ interface FormDataType {
 
 export default function RegisterPage() {
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
-  const [positions, setPositions] = useState<{value: string, label: string}[]>([]);
+  const [positions, setPositions] = useState<{value: string , label: string}[]>([]);
   const [branches, setBranches] = useState<{value: string, label: string}[]>([]);
-  const [departments, setDepartments] = useState<string[]>([]);
+  const [departments, setDepartments] = useState<{value: string, label: string}[]>([]);
   const [alertDialog, setAlertDialog] = useState({
     open: false,
     title: "",
@@ -51,7 +52,7 @@ export default function RegisterPage() {
     username: "",
     email: "",
     contact: "",
-    department_id: 0,
+    department_id: "",
     position_id: 0,
     branch_id: 0,
     password: "",
@@ -63,88 +64,30 @@ export default function RegisterPage() {
     [key: string]: any;
   }>({});
 
-  // Load positions from endpoint api /positions
+ // Load positions from client data service.api
   useEffect(() => {
-    const fetchPosition = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch(`${CONFIG.API_URL}/positions`, {
-          method: "GET",
-        });
-        if (res.ok) {
-          const response = await res.json();
+        // Fetch positions using client data service
+        const positionsData = await clientDataService.getPositions();
+        setPositions(positionsData);
 
-          // 2. Map the API response.positions array into the shape for your state
-          const mappedPositions = response.positions.map((position: any) => ({
-            value: position.id,
-            label: position.label,
-          }));
+        // Fetch departments using client data service
+        const departmentsData = await clientDataService.getDepartments();
+        setDepartments(departmentsData);
 
-          // 3. Update state with the mapped array
-          setPositions(mappedPositions);
-        }
+        // Fetch departments using client data service
+        const branchData = await clientDataService.getBranches();
+        setBranches(branchData);
+        
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
 
-    fetchPosition();
+    fetchData();
   }, []);
 
-  // Load positions from endpoint api /branches
-  useEffect(() => {
-    const fetchBranches = async () => {
-      try {
-        const res = await fetch(`${CONFIG.API_URL}/branches`, {
-          method: "GET",
-        });
-        if (res.ok) {
-          const response = await res.json();
-
-          // 2. Map the API response.positions array into the shape for your state
-          const mappedBranches = response.branches.map((branches: any) => ({
-            value: branches.id,
-            label: branches.branch_name + " /" + branches.branch_code,
-          }));
-
-          // 3. Update s tate with the mapped array
-          setBranches(mappedBranches);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
-    fetchBranches();
-  }, []);
-
-  // Load positions from endpoint api /departments
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        const res = await fetch(`${CONFIG.API_URL}/departments`, {
-          method: "GET",
-        });
-        if (res.ok) {
-          const response = await res.json();
-
-          // 2. Map the API response.positions array into the shape for your state
-          const mappedDepartments = response.departments.map(
-            (departments: any) => ({
-              value: departments.id,
-              label: departments.department_name,
-            })
-          );
-
-          // 3. Update s tate with the mapped array
-          setDepartments(mappedDepartments);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
-    fetchDepartments();
-  }, []);
 
   const showAlert = (
     title: string,
@@ -169,8 +112,6 @@ export default function RegisterPage() {
       case "email":
         if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
           errors.email = "Please enter a valid email address";
-        } else {
-          delete errors.email;
         }
         break;
       case "password":
@@ -212,93 +153,93 @@ export default function RegisterPage() {
     e.preventDefault();
 
     // Validate required fields
-    // if (!formData.fname.trim()) {
-    //   showAlert("Missing Information", "First name is required!", "error");
-    //   return;
-    // }
+    if (!formData.fname.trim()) {
+      showAlert("Missing Information", "First name is required!", "error");
+      return;
+    }
 
-    // if (!formData.lname.trim()) {
-    //   showAlert("Missing Information", "Last name is required!", "error");
-    //   return;
-    // }
+    if (!formData.lname.trim()) {
+      showAlert("Missing Information", "Last name is required!", "error");
+      return;
+    }
 
-    // if (!formData.username.trim()) {
-    //   showAlert("Missing Information", "Username is required!", "error");
-    //   return;
-    // }
+    if (!formData.username.trim()) {
+      showAlert("Missing Information", "Username is required!", "error");
+      return;
+    }
 
-    // if (!formData.email.trim()) {
-    //   showAlert("Missing Information", "Email is required!", "error");
-    //   return;
-    // }
+    if (!formData.email.trim()) {
+      showAlert("Missing Information", "Email is required!", "error");
+      return;
+    }
 
-    // // Validate email format
-    // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    // if (!emailRegex.test(formData.email)) {
-    //   showAlert(
-    //     "Invalid Email",
-    //     "Please enter a valid email address!",
-    //     "error"
-    //   );
-    //   return;
-    // }
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      showAlert(
+        "Invalid Email",
+        "Please enter a valid email address!",
+        "error"
+      );
+      return;
+    }
 
-    // if (!formData.contact.trim()) {
-    //   showAlert("Missing Information", "Contact number is required!", "error");
-    //   return;
-    // }
+    if (!formData.contact.trim()) {
+      showAlert("Missing Information", "Contact number is required!", "error");
+      return;
+    }
 
-    // if (!formData.position_id) {
-    //   showAlert("Missing Information", "Please select your position!", "error");
-    //   return;
-    // }
+    if (!formData.position_id) {
+      showAlert("Missing Information", "Please select your position!", "error");
+      return;
+    }
 
-    // if (!formData.branch_id) {
-    //   showAlert("Missing Information", "Please select your branch!", "error");
-    //   return;
-    // }
+    if (!formData.branch_id) {
+      showAlert("Missing Information", "Please select your branch!", "error");
+      return;
+    }
 
-    // // Validate passwords match
-    // if (formData.password !== formData.password_confirmation) {
-    //   showAlert(
-    //     "Password Mismatch",
-    //     "Passwords do not match! Please try again.",
-    //     "error"
-    //   );
-    //   return;
-    // }
+    // Validate passwords match
+    if (formData.password !== formData.password_confirmation) {
+      showAlert(
+        "Password Mismatch",
+        "Passwords do not match! Please try again.",
+        "error"
+      );
+      return;
+    }
 
-    // // Validate password length
-    // if (formData.password.length < 8) {
-    //   showAlert(
-    //     "Password Too Short",
-    //     "Password must be at least 8 characters long!",
-    //     "warning"
-    //   );
-    //   return;
-    // }
+    // Validate password length
+    if (formData.password.length < 8) {
+      showAlert(
+        "Password Too Short",
+        "Password must be at least 8 characters long!",
+        "warning"
+      );
+      return;
+    }
 
-    // // Validate password strength
-    // const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
-    // if (!passwordRegex.test(formData.password)) {
-    //   showAlert(
-    //     "Weak Password",
-    //     "Password must contain at least one uppercase letter, one lowercase letter, and one number!",
-    //     "warning"
-    //   );
-    //   return;
-    // }
+    // Validate password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
+    if (!passwordRegex.test(formData.password)) {
+      showAlert(
+        "Weak Password",
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number!",
+        "warning"
+      );
+      return;
+    }
 
-    // // Validate signature
-    // if (!formData.signature || formData.signature.trim() === "") {
-    //   setSignatureError(true);
-    //   showAlert(
-    //     "Signature Required",
-    //     "Please draw your digital signature to complete the registration!",
-    //     "warning"
-    //   );
-    //   return;
-    // }
+    // Validate signature
+    if (!formData.signature) {
+      setSignatureError(true);
+      showAlert(
+        "Signature Required",
+        "Please draw your digital signature to complete the registration!",
+        "warning"
+      );
+      return;
+    }
 
     setIsRegisterButtonClicked(true);
     // Then send the POST request with the user registration data
@@ -314,33 +255,12 @@ export default function RegisterPage() {
     formDataToUpload.append("branch_id", String(formData.branch_id));
     formDataToUpload.append("department_id", String(formData.department_id));
     formDataToUpload.append("password", formData.password);
-    formDataToUpload.append(
-      "password_confirmation",
-      formData.password_confirmation
-    );
+    formDataToUpload.append("password_confirmation",formData.password_confirmation);
     formDataToUpload.append("signature", formData.signature);
 
-    await fetch(`${CONFIG.API_URL}/register`, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-      body: formDataToUpload,
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const data = await res.json();
+        try {
+          const data = await clientDataService.registerUser(formDataToUpload);
 
-          if (!res.ok) {
-            // Log or show the backend validation error
-            throw {
-              ...data,
-              status: res.status,
-            };
-          }
-        }
-        if (res.ok) {
           showAlert(
             "Registration Successful!",
             "Account registration submitted successfully! Your registration is pending approval. You will be notified once approved.",
@@ -363,40 +283,21 @@ export default function RegisterPage() {
               setSignatureError(false);
               // Redirect to login page
               window.location.href = "/";
+            })
+        }catch (error : any ) {
+          // console.error(error);
+            if (error.status === 422) {
+              setFieldErrors(error.errors);
             }
-          );
+            if (error.status === 400) {
+              setFieldErrors({
+                signature: [error.message],
+              });
+            }
+        }finally{
+            setIsRegisterButtonClicked(false);
         }
-      })
-      .catch((error) => {
-        console.error(error);
-        if (error.status === 422) {
-          setFieldErrors(error.errors);
-        }
-        if (error.status === 400) {
-          setFieldErrors({
-            signature: [error.message],
-          });
-        }
-      })
-      .finally(() => {
-        setIsRegisterButtonClicked(false);
-      });
   };
-
-  // Create pending registration using client data service
-  // const registrationData = {
-  //   name: `${formData.fname} ${formData.lname}`,
-  //   email: formData.email,
-  //   position: formData.position_id,
-  //   branch: formData.branch_id,
-  //   hireDate: new Date().toISOString().split("T")[0], // Today's date
-  //   signature: formData.signature, // Include the digital signature
-  //   username: formData.username,
-  //   contact: formData.contact,
-  //   password: formData.password, // Note: In production, this should be hashed
-  // };
-
-  // const result = await clientDataService.createPendingRegistration(registrationData);
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -544,7 +445,7 @@ export default function RegisterPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <form onSubmit={handleRegisterSubmit}>
+                <form onSubmit={  handleRegisterSubmit}>
                   <div className="space-y-4">
                     {/* Personal Information */}
                     <div className="grid grid-cols-2 gap-4">
@@ -565,7 +466,7 @@ export default function RegisterPage() {
                         />
                         {fieldErrors?.fname && (
                           <p className="text-sm text-red-500">
-                            {fieldErrors.fname[0]}
+                            {fieldErrors.fname}
                           </p>
                         )}
                       </div>
@@ -586,7 +487,7 @@ export default function RegisterPage() {
                         />
                         {fieldErrors?.lname && (
                           <p className="text-sm text-red-500">
-                            {fieldErrors?.lname[0]}
+                            {fieldErrors?.lname}
                           </p>
                         )}
                       </div>
@@ -607,7 +508,7 @@ export default function RegisterPage() {
                       />
                       {fieldErrors?.username && (
                         <p className="text-sm text-red-500">
-                          {fieldErrors?.username[0]}
+                          {fieldErrors?.username}
                         </p>
                       )}
                     </div>
@@ -627,7 +528,7 @@ export default function RegisterPage() {
                       />
                       {fieldErrors?.email && (
                         <p className="text-sm text-red-500">
-                          {fieldErrors?.email[0]}
+                          {fieldErrors?.email}
                         </p>
                       )}
                     </div>
@@ -658,7 +559,7 @@ export default function RegisterPage() {
                       />
                       {fieldErrors?.contact && (
                         <p className="text-sm text-red-500">
-                          {fieldErrors?.contact[0]}
+                          {fieldErrors?.contact}
                         </p>
                       )}
                     </div>
@@ -699,7 +600,7 @@ export default function RegisterPage() {
                       <Label htmlFor="department">Department</Label>
                       <Combobox
                         options={departments}
-                        value={formData.department_id}
+                        value={String(formData.department_id)}
                         onValueChangeAction={(value) =>
                           setFormData({ ...formData, department_id: value })
                         }
@@ -731,7 +632,7 @@ export default function RegisterPage() {
                       />
                       {fieldErrors?.password && (
                         <p className="text-sm text-red-500">
-                          {fieldErrors?.password[0]}
+                          {fieldErrors?.password}
                         </p>
                       )}
                     </div>
@@ -763,7 +664,7 @@ export default function RegisterPage() {
                       />
                       {fieldErrors?.password_confirmation && (
                         <p className="text-sm text-red-500">
-                          {fieldErrors?.password_confirmation[0]}
+                          {fieldErrors?.password_confirmation}
                         </p>
                       )}
                     </div>
@@ -788,7 +689,7 @@ export default function RegisterPage() {
                       </p>
                       {fieldErrors?.signature && (
                         <small className="text-red-500">
-                          {fieldErrors?.signature[0]}
+                          {fieldErrors?.signature}
                         </small>
                       )}
                     </div>
