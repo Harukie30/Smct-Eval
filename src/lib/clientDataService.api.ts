@@ -2,7 +2,7 @@
 // This replaces the localStorage version with API calls
 
 import apiService from './apiService';
-import { Employee, Submission, PendingRegistration, Profile, Account, Notification } from './clientDataService.';
+import { Employee, Submission, PendingRegistration, Profile, Account, Notification } from './clientDataService';
 
 export const clientDataService = {
   // Authentication - now uses API
