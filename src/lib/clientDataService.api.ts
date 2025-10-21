@@ -2,7 +2,7 @@
 // This replaces the localStorage version with API calls
 
 import apiService from './apiService';
-import { Employee, Submission, PendingRegistration, Profile, Account, Notification } from './clientDataService';
+import { Employee, Submission, PendingRegistration, Profile, Account, Notification } from './clientDataService.';
 
 export const clientDataService = {
   // Authentication - now uses API
@@ -15,8 +15,12 @@ export const clientDataService = {
     return await apiService.getPositions();
   },
 
-  getBranchCodes: async (): Promise<any[]> => {
-    return await apiService.getBranchCodes();
+  getDepartments: async (): Promise<any[]> => {
+    return await apiService.getDepartments();
+  },
+  
+  getBranches: async (): Promise<any[]> => {
+    return await apiService.getBranches();
   },
 
   getAccounts: async (): Promise<Account[]> => {

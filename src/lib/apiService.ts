@@ -1,5 +1,7 @@
 // API Service Layer - replaces clientDataService for backend integration
-import { AuthenticatedUser, PendingRegistration, Account } from './clientDataService';
+import { AuthenticatedUser } from '@/contexts/UserContext';
+import { PendingRegistration, Account } from './clientDataService';
+import { CONFIG } from '../../config/config';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -93,15 +95,70 @@ export const apiService = {
   },
 
   // Data
-  getPositions: async (): Promise<string[]> => {
-    const response = await apiRequest('/api/data/positions');
-    return response.positions || [];
-  },
+    getDepartments: async (): Promise<any> => {
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/departments`, {
+          method: "GET",
+        });
 
-  getBranchCodes: async (): Promise<any[]> => {
-    const response = await apiRequest('/api/data/branch-codes');
-    return response.branchCodes || [];
-  },
+        if (res.ok) {
+          const response = await res.json();
+          return response.map((dept:any) => ({
+                          value: dept.id,
+                          name: dept.department_name
+                        }));
+        } else {
+          console.error("Failed to fetch: ", res.statusText);
+          return [];
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        return [];
+      }
+    },
+    getPositions: async (): Promise<any> => {
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/positions`, {
+          method: "GET",
+        });
+
+        if (res.ok) {
+          const response = await res.json();
+          return response.map((position:any) => ({
+                          value: position.id,
+                          name: position.label
+                        }));
+        } else {
+          console.error("Failed to fetch: ", res.statusText);
+          return [];
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        return [];
+      }
+    },
+
+   getBranches: async (): Promise<any[]> => {
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/branches`, {
+          method: "GET",
+        });
+
+        if (res.ok) {
+          const response = await res.json();
+            return response.map((branch:any) => ({
+                          value: branch.id,
+                          name: branch.branch_name+" - "+branch.branch_code
+                        }));
+        } else {
+          console.error("Failed to fetch: ", res.statusText);
+          return [];
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        return [];
+      }
+    },
 
   getAccounts: async (): Promise<Account[]> => {
     const response = await apiRequest('/api/accounts');

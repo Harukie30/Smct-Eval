@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/popover"
 
 interface ComboboxOption {
-  id: string
+  value: string | number 
   name: string
 }
 
@@ -21,8 +21,8 @@ type ComboboxOptions = string[] | ComboboxOption[]
 
 interface ComboboxProps {
   options: ComboboxOptions
-  value: string
-  onValueChangeAction: (value: string) => void
+  value: string | number
+  onValueChangeAction: (value: string |  number) => void
   placeholder?: string
   searchPlaceholder?: string
   emptyText?: string
@@ -49,8 +49,8 @@ export function Combobox({
   }
 
   // Helper function to get option value
-  const getOptionValue = (option: string | ComboboxOption): string => {
-    return typeof option === 'string' ? option : option.id
+  const getOptionValue = (option: string | ComboboxOption): string | number => {
+    return typeof option === 'string' ? option : option.value
   }
 
   // Filter options based on search term
@@ -102,7 +102,7 @@ export function Combobox({
             <div className="p-1">
               {filteredOptions.map((option, index) => (
                 <div
-                  key={typeof option === 'string' ? option : option.id}
+                  key={typeof option === 'string' ? option : option.value}
                   className={cn(
                     "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
                     value === getOptionValue(option) && "bg-accent"

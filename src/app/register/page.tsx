@@ -1,45 +1,66 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
-import SignaturePad from '@/components/SignaturePad';
+import SignaturePad from "@/components/SignaturePad";
 import { AlertDialog } from "@/components/ui/alert-dialog";
-import Link from 'next/link';
-import PageTransition from '@/components/PageTransition';
-import clientDataService from '@/lib/clientDataService';
+import Link from "next/link";
+import PageTransition from "@/components/PageTransition";
+import clientDataService from "@/lib/clientDataService.api";
+import { id } from "date-fns/locale";
+import { number } from "framer-motion";
 
 export default function RegisterPage() {
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
-  const [positions, setPositions] = useState<{id: string, name: string}[]>([]);
-  const [departments, setDepartments] = useState<{id: string, name: string}[]>([]);
-  const [branchCodes, setBranchCodes] = useState<{id: string, name: string}[]>([]);
+  const [positions, setPositions] = useState<any>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
   const [alertDialog, setAlertDialog] = useState({
     open: false,
-    title: '',
-    description: '',
-    type: 'info' as 'success' | 'error' | 'warning' | 'info',
-    onConfirm: () => {}
+    title: "",
+    description: "",
+    type: "info" as "success" | "error" | "warning" | "info",
+    onConfirm: () => {},
   });
 
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    username: '',
-    email: '',
-    contact: '',
-    position: '',
-    branchCode: '',
-    department: '',
-    password: '',
-    confirmPassword: '',
-    signature: ''
+  interface FormDataType {
+    firstName: string;
+    lastName: string;
+    username: string;
+    email: string;
+    contact: string;
+    position_id: string | number;
+    department_id?: string | number | null;
+    branch_id: string | number;
+    password: string;
+    confirmPassword: string;
+    signature: string;
+  }
+  const [formData, setFormData] = useState<FormDataType>({
+    firstName: "",
+    lastName: "",
+    username: "",
+    email: "",
+    contact: "",
+    position_id: 0,
+    department_id: "",
+    branch_id: 0,
+    password: "",
+    confirmPassword: "",
+    signature: "",
   });
   const [signatureError, setSignatureError] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
 
   // Load positions from client data service
   useEffect(() => {
@@ -48,298 +69,401 @@ export default function RegisterPage() {
         // Fetch positions using client data service
         const positionsData = await clientDataService.getPositions();
         setPositions(positionsData);
-        
+
         // Fetch departments using client data service
         const departmentsData = await clientDataService.getDepartments();
         setDepartments(departmentsData);
-        
-        // Fetch branch codes using client data service
-        const branchCodesData = await clientDataService.getBranchCodes();
-        setBranchCodes(branchCodesData);
+
+        // Fetch departments using client data service
+        const branchData = await clientDataService.getBranches();
+        setBranches(branchData);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error("Error fetching data:", error);
       }
     };
 
     fetchData();
   }, []);
 
-  const showAlert = (title: string, description: string, type: 'success' | 'error' | 'warning' | 'info', onConfirm?: () => void) => {
+  const showAlert = (
+    title: string,
+    description: string,
+    type: "success" | "error" | "warning" | "info",
+    onConfirm?: () => void
+  ) => {
     setAlertDialog({
       open: true,
       title,
       description,
       type,
-      onConfirm: onConfirm || (() => {})
+      onConfirm: onConfirm || (() => {}),
     });
   };
 
   // Real-time validation functions
   const validateField = (fieldName: string, value: string) => {
     const errors = { ...fieldErrors };
-    
+
     switch (fieldName) {
-      case 'email':
+      case "email":
         if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          errors.email = 'Please enter a valid email address';
+          errors.email = "Please enter a valid email address";
         } else {
           delete errors.email;
         }
         break;
-      case 'password':
+      case "password":
         if (value && value.length < 8) {
-          errors.password = 'Password must be at least 8 characters';
+          errors.password = "Password must be at least 8 characters";
         } else if (value && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
-          errors.password = 'Password must contain uppercase, lowercase, and number';
+          errors.password =
+            "Password must contain uppercase, lowercase, and number";
         } else {
           delete errors.password;
         }
         break;
-      case 'confirmPassword':
+      case "confirmPassword":
         if (value && value !== formData.password) {
-          errors.confirmPassword = 'Passwords do not match';
+          errors.confirmPassword = "Passwords do not match";
         } else {
           delete errors.confirmPassword;
         }
         break;
-      case 'contact':
+      case "contact":
         if (value && !/^\d{11}$/.test(value)) {
-          errors.contact = 'Contact number must be exactly 11 digits';
+          errors.contact = "Contact number must be exactly 11 digits";
         } else {
           delete errors.contact;
         }
         break;
       default:
-        if (value.trim() === '') {
-          errors[fieldName] = 'This field is required';
+        if (value.trim() === "") {
+          errors[fieldName] = "This field is required";
         } else {
           delete errors[fieldName];
         }
     }
-    
+
     setFieldErrors(errors);
   };
 
   const handleRegisterSubmit = async (e: any) => {
     e.preventDefault();
-    
+
     // Validate required fields
     if (!formData.firstName.trim()) {
-      showAlert('Missing Information', 'First name is required!', 'error');
+      showAlert("Missing Information", "First name is required!", "error");
       return;
     }
-    
+
     if (!formData.lastName.trim()) {
-      showAlert('Missing Information', 'Last name is required!', 'error');
+      showAlert("Missing Information", "Last name is required!", "error");
       return;
     }
-    
+
     if (!formData.username.trim()) {
-      showAlert('Missing Information', 'Username is required!', 'error');
+      showAlert("Missing Information", "Username is required!", "error");
       return;
     }
-    
+
     if (!formData.email.trim()) {
-      showAlert('Missing Information', 'Email is required!', 'error');
+      showAlert("Missing Information", "Email is required!", "error");
       return;
     }
-    
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      showAlert('Invalid Email', 'Please enter a valid email address!', 'error');
+      showAlert(
+        "Invalid Email",
+        "Please enter a valid email address!",
+        "error"
+      );
       return;
     }
-    
+
     if (!formData.contact.trim()) {
-      showAlert('Missing Information', 'Contact number is required!', 'error');
+      showAlert("Missing Information", "Contact number is required!", "error");
       return;
     }
-    
-    if (!formData.position) {
-      showAlert('Missing Information', 'Please select your position!', 'error');
+
+    if (!formData.position_id) {
+      showAlert("Missing Information", "Please select your position!", "error");
       return;
     }
-    
-    
-    if (!formData.branchCode) {
-      showAlert('Missing Information', 'Please select your branch code!', 'error');
+
+    if (!formData.branch_id) {
+      showAlert(
+        "Missing Information",
+        "Please select your branch code!",
+        "error"
+      );
       return;
     }
-    
-    if ((formData.branchCode === 'HO' || formData.branchCode === 'HO-MNL') && !formData.department) {
-      showAlert('Missing Information', 'Please select your department!', 'error');
+
+    if (formData.branch_id === 126 && !formData.department_id) {
+      showAlert(
+        "Missing Information",
+        "Please select your department!",
+        "error"
+      );
       return;
     }
-    
+
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
-      showAlert('Password Mismatch', 'Passwords do not match! Please try again.', 'error');
+      showAlert(
+        "Password Mismatch",
+        "Passwords do not match! Please try again.",
+        "error"
+      );
       return;
     }
-    
+
     // Validate password length
     if (formData.password.length < 8) {
-      showAlert('Password Too Short', 'Password must be at least 8 characters long!', 'warning');
+      showAlert(
+        "Password Too Short",
+        "Password must be at least 8 characters long!",
+        "warning"
+      );
       return;
     }
-    
+
     // Validate password strength
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
     if (!passwordRegex.test(formData.password)) {
-      showAlert('Weak Password', 'Password must contain at least one uppercase letter, one lowercase letter, and one number!', 'warning');
+      showAlert(
+        "Weak Password",
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number!",
+        "warning"
+      );
       return;
     }
-    
+
     // Validate signature
-    if (!formData.signature || formData.signature.trim() === '') {
+    if (!formData.signature || formData.signature.trim() === "") {
       setSignatureError(true);
-      showAlert('Signature Required', 'Please draw your digital signature to complete the registration!', 'warning');
+      showAlert(
+        "Signature Required",
+        "Please draw your digital signature to complete the registration!",
+        "warning"
+      );
       return;
     }
-    
+
     // Clear signature error if signature is valid
     setSignatureError(false);
-    
+
     setIsRegisterButtonClicked(true);
-    
+
     try {
       // Check for duplicate email or username
       const existingAccounts = await clientDataService.getAccounts();
-      const emailExists = existingAccounts.some((account: any) => 
-        account.email.toLowerCase() === formData.email.toLowerCase()
+      const emailExists = existingAccounts.some(
+        (account: any) =>
+          account.email.toLowerCase() === formData.email.toLowerCase()
       );
-      
+
       if (emailExists) {
-        showAlert('Email Already Exists', 'An account with this email address already exists. Please use a different email or try logging in.', 'error');
+        showAlert(
+          "Email Already Exists",
+          "An account with this email address already exists. Please use a different email or try logging in.",
+          "error"
+        );
         setIsRegisterButtonClicked(false);
         return;
       }
-      
-      const usernameExists = existingAccounts.some((account: any) => 
-        account.username?.toLowerCase() === formData.username.toLowerCase()
+
+      const usernameExists = existingAccounts.some(
+        (account: any) =>
+          account.username?.toLowerCase() === formData.username.toLowerCase()
       );
-      
+
       if (usernameExists) {
-        showAlert('Username Already Exists', 'This username is already taken. Please choose a different username.', 'error');
+        showAlert(
+          "Username Already Exists",
+          "This username is already taken. Please choose a different username.",
+          "error"
+        );
         setIsRegisterButtonClicked(false);
         return;
       }
-      
+
       // Create pending registration using client data service
       const registrationData = {
         name: `${formData.firstName} ${formData.lastName}`,
         email: formData.email,
-        position: formData.position,
-        department: formData.department,
-        hireDate: new Date().toISOString().split('T')[0], // Today's date
-        role: formData.position,
+        position: formData.position_id,
+        department: formData.department_id,
+        hireDate: new Date().toISOString().split("T")[0], // Today's date
+        role: formData.position_id,
         signature: formData.signature, // Include the digital signature
         username: formData.username,
         contact: formData.contact,
         password: formData.password, // Note: In production, this should be hashed
       };
-
-      const result = await clientDataService.createPendingRegistration(registrationData);
-      
-      if (result) {
-        showAlert(
-          'Registration Successful!', 
-          'Account registration submitted successfully! Your registration is pending approval. You will be notified once approved.', 
-          'success',
-          () => {
-            // Reset form
-            setFormData({
-              firstName: '',
-              lastName: '',
-              username: '',
-              email: '',
-              contact: '',
-              position: '',
-              branchCode: '',
-              department: '',
-              password: '',
-              confirmPassword: '',
-              signature: ''
-            });
-            setSignatureError(false);
-            // Redirect to login page
-            window.location.href = '/';
-          }
-        );
-      } else {
-        showAlert('Registration Failed', 'An error occurred during registration. Please try again.', 'error');
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-      showAlert('Registration Error', 'An error occurred during registration. Please try again.', 'error');
-    } finally {
-      setIsRegisterButtonClicked(false);
-    }
+    } catch (error) {}
   };
+
+  // const result = await clientDataService.createPendingRegistration(registrationData);
+
+  //     if (result) {
+  //       showAlert(
+  //         'Registration Successful!',
+  //         'Account registration submitted successfully! Your registration is pending approval. You will be notified once approved.',
+  //         'success',
+  //         () => {
+  //           // Reset form
+  //           setFormData({
+  //             firstName: '',
+  //             lastName: '',
+  //             username: '',
+  //             email: '',
+  //             contact: '',
+  //             position: '',
+  //             branchCode: '',
+  //             department: '',
+  //             password: '',
+  //             confirmPassword: '',
+  //             signature: ''
+  //           });
+  //           setSignatureError(false);
+  //           // Redirect to login page
+  //           window.location.href = '/';
+  //         }
+  //       );
+  //     } else {
+  //       showAlert('Registration Failed', 'An error occurred during registration. Please try again.', 'error');
+  //     }
+  //   } catch (error) {
+  //     console.error('Registration error:', error);
+  //     showAlert('Registration Error', 'An error occurred during registration. Please try again.', 'error');
+  //   } finally {
+  //     setIsRegisterButtonClicked(false);
+  //   }
+  // };
 
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Main Gradient Background */}
       <div className="absolute inset-0 bg-gradient-to-r from-white via-blue-50 to-blue-600"></div>
-      
+
       {/* Single Geometric Pattern Overlay - Gradient from left to right */}
       <div className="absolute inset-0">
-        <svg className="w-full h-full" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
+        <svg
+          className="w-full h-full"
+          viewBox="0 0 1000 1000"
+          preserveAspectRatio="xMidYMid slice"
+        >
           <defs>
             {/* Gradient mask for fading effect */}
             <linearGradient id="fadeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" style={{stopColor:'rgba(255,255,255,0)', stopOpacity:0}} />
-              <stop offset="30%" style={{stopColor:'rgba(255,255,255,0)', stopOpacity:0}} />
-              <stop offset="60%" style={{stopColor:'rgba(255,255,255,0.3)', stopOpacity:0.3}} />
-              <stop offset="100%" style={{stopColor:'rgba(255,255,255,1)', stopOpacity:1}} />
+              <stop
+                offset="0%"
+                style={{ stopColor: "rgba(255,255,255,0)", stopOpacity: 0 }}
+              />
+              <stop
+                offset="30%"
+                style={{ stopColor: "rgba(255,255,255,0)", stopOpacity: 0 }}
+              />
+              <stop
+                offset="60%"
+                style={{ stopColor: "rgba(255,255,255,0.3)", stopOpacity: 0.3 }}
+              />
+              <stop
+                offset="100%"
+                style={{ stopColor: "rgba(255,255,255,1)", stopOpacity: 1 }}
+              />
             </linearGradient>
-            
+
             {/* Single hexagon pattern */}
-            <pattern id="hexagons" x="0" y="0" width="100" height="87" patternUnits="userSpaceOnUse">
-              <polygon points="50,8 75,25 75,62 50,79 25,62 25,25" fill="rgba(59, 130, 246, 0.12)" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="0.8"/>
+            <pattern
+              id="hexagons"
+              x="0"
+              y="0"
+              width="100"
+              height="87"
+              patternUnits="userSpaceOnUse"
+            >
+              <polygon
+                points="50,8 75,25 75,62 50,79 25,62 25,25"
+                fill="rgba(59, 130, 246, 0.12)"
+                stroke="rgba(59, 130, 246, 0.3)"
+                strokeWidth="0.8"
+              />
             </pattern>
           </defs>
-          
+
           {/* Apply single pattern with gradient mask */}
-          <rect width="100%" height="100%" fill="url(#hexagons)" mask="url(#patternMask)"/>
-          
+          <rect
+            width="100%"
+            height="100%"
+            fill="url(#hexagons)"
+            mask="url(#patternMask)"
+          />
+
           {/* Create mask for gradient effect */}
           <mask id="patternMask">
-            <rect width="100%" height="100%" fill="url(#fadeGradient)"/>
+            <rect width="100%" height="100%" fill="url(#fadeGradient)" />
           </mask>
         </svg>
       </div>
-      
+
       {/* Single Geometric Elements - Hexagons only */}
       <div className="absolute top-20 right-20 w-24 h-24 opacity-30">
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.2)" stroke="rgba(59, 130, 246, 0.4)" strokeWidth="1"/>
+          <polygon
+            points="50,10 80,30 80,70 50,90 20,70 20,30"
+            fill="rgba(59, 130, 246, 0.2)"
+            stroke="rgba(59, 130, 246, 0.4)"
+            strokeWidth="1"
+          />
         </svg>
       </div>
-      
+
       <div className="absolute bottom-32 right-40 w-20 h-20 opacity-35">
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <polygon points="50,5 85,25 85,75 50,95 15,75 15,25" fill="rgba(59, 130, 246, 0.15)" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="1"/>
+          <polygon
+            points="50,5 85,25 85,75 50,95 15,75 15,25"
+            fill="rgba(59, 130, 246, 0.15)"
+            stroke="rgba(59, 130, 246, 0.3)"
+            strokeWidth="1"
+          />
         </svg>
       </div>
-      
+
       <div className="absolute top-40 left-20 w-16 h-16 opacity-5">
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <polygon points="50,15 75,35 75,65 50,85 25,65 25,35" fill="rgba(59, 130, 246, 0.08)" stroke="rgba(59, 130, 246, 0.15)" strokeWidth="0.5"/>
+          <polygon
+            points="50,15 75,35 75,65 50,85 25,65 25,35"
+            fill="rgba(59, 130, 246, 0.08)"
+            stroke="rgba(59, 130, 246, 0.15)"
+            strokeWidth="0.5"
+          />
         </svg>
       </div>
-      
+
       {/* Right side additional hexagons */}
       <div className="absolute top-1/2 right-10 w-12 h-12 opacity-20">
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.1)" stroke="rgba(59, 130, 246, 0.25)" strokeWidth="0.8"/>
+          <polygon
+            points="50,10 80,30 80,70 50,90 20,70 20,30"
+            fill="rgba(59, 130, 246, 0.1)"
+            stroke="rgba(59, 130, 246, 0.25)"
+            strokeWidth="0.8"
+          />
         </svg>
       </div>
-      
+
       <div className="absolute bottom-1/2 right-20 w-10 h-10 opacity-25">
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.12)" stroke="rgba(59, 130, 246, 0.2)" strokeWidth="0.6"/>
+          <polygon
+            points="50,10 80,30 80,70 50,90 20,70 20,30"
+            fill="rgba(59, 130, 246, 0.12)"
+            stroke="rgba(59, 130, 246, 0.2)"
+            strokeWidth="0.6"
+          />
         </svg>
       </div>
       {/* Main Content */}
@@ -351,7 +475,11 @@ export default function RegisterPage() {
                 {/* Logo at the top of the card */}
                 <div className="flex justify-center mb-4">
                   <Link href="/" className="flex items-center space-x-2">
-                    <img src="/smct.png" alt="SMCT Group of Companies" className="h-16 w-auto" />
+                    <img
+                      src="/smct.png"
+                      alt="SMCT Group of Companies"
+                      className="h-16 w-auto"
+                    />
                   </Link>
                 </div>
                 <CardTitle className="text-2xl text-center text-blue-700">
@@ -368,47 +496,67 @@ export default function RegisterPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="firstName">First name</Label>
-                        <Input 
-                          id="firstName" 
-                          placeholder="John" 
+                        <Input
+                          id="firstName"
+                          placeholder="John"
                           value={formData.firstName}
                           onChange={(e) => {
-                            setFormData({...formData, firstName: e.target.value});
-                            validateField('firstName', e.target.value);
+                            setFormData({
+                              ...formData,
+                              firstName: e.target.value,
+                            });
+                            validateField("firstName", e.target.value);
                           }}
-                          className={fieldErrors.firstName ? 'border-red-500' : ''}
-                          required 
+                          className={
+                            fieldErrors.firstName ? "border-red-500" : ""
+                          }
+                          required
                         />
-                        {fieldErrors.firstName && <p className="text-sm text-red-500">{fieldErrors.firstName}</p>}
+                        {fieldErrors.firstName && (
+                          <p className="text-sm text-red-500">
+                            {fieldErrors.firstName}
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="lastName">Last name</Label>
-                        <Input 
-                          id="lastName" 
-                          placeholder="Doe" 
+                        <Input
+                          id="lastName"
+                          placeholder="Doe"
                           value={formData.lastName}
                           onChange={(e) => {
-                            setFormData({...formData, lastName: e.target.value});
-                            validateField('lastName', e.target.value);
+                            setFormData({
+                              ...formData,
+                              lastName: e.target.value,
+                            });
+                            validateField("lastName", e.target.value);
                           }}
-                          className={fieldErrors.lastName ? 'border-red-500' : ''}
-                          required 
+                          className={
+                            fieldErrors.lastName ? "border-red-500" : ""
+                          }
+                          required
                         />
-                        {fieldErrors.lastName && <p className="text-sm text-red-500">{fieldErrors.lastName}</p>}
+                        {fieldErrors.lastName && (
+                          <p className="text-sm text-red-500">
+                            {fieldErrors.lastName}
+                          </p>
+                        )}
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="username">Username</Label>
-                      <Input 
-                        id="username" 
-                        placeholder="johndoe" 
+                      <Input
+                        id="username"
+                        placeholder="johndoe"
                         value={formData.username}
-                        onChange={(e) => setFormData({...formData, username: e.target.value})}
-                        required 
+                        onChange={(e) =>
+                          setFormData({ ...formData, username: e.target.value })
+                        }
+                        required
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="registerEmail">Email</Label>
                       <Input
@@ -417,15 +565,19 @@ export default function RegisterPage() {
                         placeholder="name@company.com"
                         value={formData.email}
                         onChange={(e) => {
-                          setFormData({...formData, email: e.target.value});
-                          validateField('email', e.target.value);
+                          setFormData({ ...formData, email: e.target.value });
+                          validateField("email", e.target.value);
                         }}
-                        className={fieldErrors.email ? 'border-red-500' : ''}
+                        className={fieldErrors.email ? "border-red-500" : ""}
                         required
                       />
-                      {fieldErrors.email && <p className="text-sm text-red-500">{fieldErrors.email}</p>}
+                      {fieldErrors.email && (
+                        <p className="text-sm text-red-500">
+                          {fieldErrors.email}
+                        </p>
+                      )}
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="contact">Contact Number</Label>
                       <Input
@@ -435,9 +587,11 @@ export default function RegisterPage() {
                         value={formData.contact}
                         onChange={(e) => {
                           // Only allow numbers and limit to 11 digits
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 11);
-                          setFormData({...formData, contact: value});
-                          validateField('contact', value);
+                          const value = e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 11);
+                          setFormData({ ...formData, contact: value });
+                          validateField("contact", value);
                         }}
                         onKeyPress={(e) => {
                           // Prevent non-numeric input
@@ -446,23 +600,28 @@ export default function RegisterPage() {
                           }
                         }}
                         maxLength={11}
-                        className={fieldErrors.contact ? 'border-red-500' : ''}
+                        className={fieldErrors.contact ? "border-red-500" : ""}
                         required
                       />
-                      {fieldErrors.contact && <p className="text-sm text-red-500">{fieldErrors.contact}</p>}
+                      {fieldErrors.contact && (
+                        <p className="text-sm text-red-500">
+                          {fieldErrors.contact}
+                        </p>
+                      )}
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="branchCode">Branch/BranchCode</Label>
                       <Combobox
-                        options={branchCodes}
-                        value={formData.branchCode}
+                        options={branches}
+                        value={formData.branch_id}
                         onValueChangeAction={(value) => {
                           setFormData({
-                            ...formData, 
-                            branchCode: value,
+                            ...formData,
+                            branch_id: value,
                             // Clear department if not HO or HO-MNL
-                            department: (value === 'HO' || value === 'HO-MNL') ? formData.department : ''
+                            department_id:
+                              value === 126 ? formData.department_id : null,
                           });
                         }}
                         placeholder="Select branch code"
@@ -471,14 +630,14 @@ export default function RegisterPage() {
                         className="w-1/2"
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="position">Position</Label>
                       <Combobox
                         options={positions}
-                        value={formData.position}
+                        value={formData.position_id}
                         onValueChangeAction={(value) => {
-                          setFormData({...formData, position: value});
+                          setFormData({ ...formData, position_id: value });
                         }}
                         placeholder="Select your position"
                         searchPlaceholder="Search positions..."
@@ -486,27 +645,28 @@ export default function RegisterPage() {
                         className="w-1/2"
                       />
                     </div>
-                    
-                    
-                    
-                    {(formData.branchCode === 'HO' || formData.branchCode === 'HO-MNL') && (
+
+                    {formData.branch_id === 126 && (
                       <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
                         <Label htmlFor="department">Department</Label>
                         <Combobox
                           options={departments}
-                          value={formData.department}
-                          onValueChangeAction={(value) => setFormData({...formData, department: value})}
+                          value={Number(formData.department_id)}
+                          onValueChangeAction={(value) =>
+                            setFormData({ ...formData, department_id: value })
+                          }
                           placeholder="Select your department"
                           searchPlaceholder="Search departments..."
                           emptyText="No departments found."
                           className="w-1/2"
                         />
                         <p className="text-xs text-gray-500">
-                          Department selection is required for Head Office employees (HO & HO-MNL)
+                          Department selection is required for Head Office
+                          employees (HO & HO-MNL)
                         </p>
                       </div>
                     )}
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="registerPassword">Password</Label>
                       <Input
@@ -515,15 +675,22 @@ export default function RegisterPage() {
                         placeholder="••••••••"
                         value={formData.password}
                         onChange={(e) => {
-                          setFormData({...formData, password: e.target.value});
-                          validateField('password', e.target.value);
+                          setFormData({
+                            ...formData,
+                            password: e.target.value,
+                          });
+                          validateField("password", e.target.value);
                         }}
-                        className={fieldErrors.password ? 'border-red-500' : ''}
+                        className={fieldErrors.password ? "border-red-500" : ""}
                         required
                       />
-                      {fieldErrors.password && <p className="text-sm text-red-500">{fieldErrors.password}</p>}
+                      {fieldErrors.password && (
+                        <p className="text-sm text-red-500">
+                          {fieldErrors.password}
+                        </p>
+                      )}
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="confirmPassword">Confirm password</Label>
                       <Input
@@ -532,13 +699,22 @@ export default function RegisterPage() {
                         placeholder="••••••••"
                         value={formData.confirmPassword}
                         onChange={(e) => {
-                          setFormData({...formData, confirmPassword: e.target.value});
-                          validateField('confirmPassword', e.target.value);
+                          setFormData({
+                            ...formData,
+                            confirmPassword: e.target.value,
+                          });
+                          validateField("confirmPassword", e.target.value);
                         }}
-                        className={fieldErrors.confirmPassword ? 'border-red-500' : ''}
+                        className={
+                          fieldErrors.confirmPassword ? "border-red-500" : ""
+                        }
                         required
                       />
-                      {fieldErrors.confirmPassword && <p className="text-sm text-red-500">{fieldErrors.confirmPassword}</p>}
+                      {fieldErrors.confirmPassword && (
+                        <p className="text-sm text-red-500">
+                          {fieldErrors.confirmPassword}
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -546,7 +722,7 @@ export default function RegisterPage() {
                       <SignaturePad
                         value={formData.signature}
                         onChangeAction={(signature) => {
-                          setFormData({...formData, signature});
+                          setFormData({ ...formData, signature });
                           if (signature && signatureError) {
                             setSignatureError(false);
                           }
@@ -556,37 +732,57 @@ export default function RegisterPage() {
                         hasError={signatureError}
                       />
                       <p className="text-sm text-gray-500">
-                        By drawing your signature above, you agree to the terms and conditions of this registration.
+                        By drawing your signature above, you agree to the terms
+                        and conditions of this registration.
                       </p>
                     </div>
-                    
-                    <Button 
-                      type="submit" 
+
+                    <Button
+                      type="submit"
                       className={`w-full bg-blue-600 text-white hover:bg-green-700 transition-all duration-300 ${
-                        isRegisterButtonClicked 
-                          ? 'transform scale-95 bg-blue-700 shadow-inner' 
-                          : 'hover:scale-105 hover:shadow-lg active:scale-95'
+                        isRegisterButtonClicked
+                          ? "transform scale-95 bg-blue-700 shadow-inner"
+                          : "hover:scale-105 hover:shadow-lg active:scale-95"
                       }`}
                     >
                       {isRegisterButtonClicked ? (
                         <span className="flex items-center justify-center">
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <svg
+                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
                           Creating...
                         </span>
                       ) : (
-                        'Create account'
+                        "Create account"
                       )}
                     </Button>
                   </div>
                 </form>
-                
+
                 <div className="text-center pt-4">
                   <p className="text-sm text-gray-600">
-                    Already have an account?{' '}
-                      <Link href="/" className="text-blue-600 hover:underline font-medium">
+                    Already have an account?{" "}
+                    <Link
+                      href="/"
+                      className="text-blue-600 hover:underline font-medium"
+                    >
                       Sign in here
                     </Link>
                   </p>
@@ -600,7 +796,9 @@ export default function RegisterPage() {
       {/* Alert Dialog */}
       <AlertDialog
         open={alertDialog.open}
-        onOpenChangeAction={(open) => setAlertDialog(prev => ({ ...prev, open }))}
+        onOpenChangeAction={(open) =>
+          setAlertDialog((prev) => ({ ...prev, open }))
+        }
         title={alertDialog.title}
         description={alertDialog.description}
         type={alertDialog.type}
@@ -610,4 +808,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
