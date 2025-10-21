@@ -67,94 +67,88 @@ export const apiService = {
   },
 
   // Registration
-  createPendingRegistration: async (registration: Omit<PendingRegistration, 'id' | 'status' | 'submittedAt'>): Promise<PendingRegistration> => {
-    const response = await apiRequest('/api/registrations', {
-      method: 'POST',
-      body: JSON.stringify(registration),
-    });
+  createPendingRegistration: async (formData: FormData): Promise<any> => {
+  const res = await fetch(`${CONFIG.API_URL}/register`, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: formData,
+        });
 
-    if (!response.success) {
-      throw new Error(response.message || 'Registration failed');
-    }
+        const data = await res.json();
 
-    return response.registration;
-  },
+        if (!res.ok) {
+          throw {
+            ...data,
+            status: res.status,
+          };
+        }
+
+        return data;
+      },
 
   getPendingRegistrations: async (): Promise<PendingRegistration[]> => {
     const response = await apiRequest('/api/registrations');
     return response.registrations || [];
   },
 
-  checkDuplicates: async (email?: string, username?: string): Promise<{ emailExists: boolean; usernameExists: boolean }> => {
-    const params = new URLSearchParams();
-    if (email) params.append('email', email);
-    if (username) params.append('username', username);
-
-    const response = await apiRequest(`/api/registrations/check-duplicates?${params.toString()}`);
-    return response;
-  },
-
   // Data
-    getDepartments: async (): Promise<any> => {
+    getDepartments: async ():  Promise<{ label: string; value: string }[]> => {
       try {
         const res = await fetch(`${CONFIG.API_URL}/departments`, {
           method: "GET",
         });
-
         if (res.ok) {
           const response = await res.json();
-          return response.map((dept:any) => ({
-                          value: dept.id,
-                          name: dept.department_name
-                        }));
-        } else {
-          console.error("Failed to fetch: ", res.statusText);
-          return [];
+          return response.departments.map(
+            (departments: any) => ({
+              value: departments.id,
+              label: departments.department_name,
+            })
+          );
         }
+        return [];
       } catch (error) {
         console.error("Error fetching data:", error);
-        return [];
-      }
-    },
-    getPositions: async (): Promise<any> => {
-      try {
-        const res = await fetch(`${CONFIG.API_URL}/positions`, {
-          method: "GET",
-        });
-
-        if (res.ok) {
-          const response = await res.json();
-          return response.map((position:any) => ({
-                          value: position.id,
-                          name: position.label
-                        }));
-        } else {
-          console.error("Failed to fetch: ", res.statusText);
-          return [];
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        return [];
+         return [];
       }
     },
 
-   getBranches: async (): Promise<any[]> => {
-      try {
+    getPositions: async (): Promise<{ label: string; value: string }[]> => {
+          try {
+            const res = await fetch(`${CONFIG.API_URL}/positions`, { method: "GET" });
+
+            if (res.ok) {
+              const response = await res.json();
+              return response.positions.map((position: any) => ({
+                value: position.id,
+                label: position.label,
+              }));
+            }
+
+            return []; // default empty
+          } catch (error) {
+            console.error("Error fetching positions:", error);
+            return [];
+          }
+        },
+
+   getBranches: async ():  Promise<{ label: string; value: string }[]> => {
+     try {
         const res = await fetch(`${CONFIG.API_URL}/branches`, {
           method: "GET",
         });
-
         if (res.ok) {
           const response = await res.json();
-            return response.map((branch:any) => ({
-                          value: branch.id,
-                          name: branch.branch_name+" - "+branch.branch_code
-                        }));
-        } else {
-          console.error("Failed to fetch: ", res.statusText);
-          return [];
+          return response.branches.map((branches: any) => ({
+            value: branches.id,
+            label: branches.branch_name + " /" + branches.branch_code,
+          }));
         }
-      } catch (error) {
+        return [];
+        } catch (error) {
         console.error("Error fetching data:", error);
         return [];
       }
