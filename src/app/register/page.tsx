@@ -16,15 +16,28 @@ import SignaturePad from "@/components/SignaturePad";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import PageTransition from "@/components/PageTransition";
-import clientDataService from "@/lib/clientDataService.api";
+import { CONFIG } from "../../../config/config";
 import { id } from "date-fns/locale";
-import { number } from "framer-motion";
+
+interface FormDataType {
+  fname: string;
+  lname: string;
+  username: string;
+  email: string;
+  contact: string;
+  position_id: number | string;
+  branch_id: number | string;
+  department_id: number | string;
+  password: string;
+  password_confirmation: string;
+  signature: string;
+}
 
 export default function RegisterPage() {
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
-  const [positions, setPositions] = useState<any>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [branches, setBranches] = useState<any[]>([]);
+  const [positions, setPositions] = useState<{value: string, label: string}[]>([]);
+  const [branches, setBranches] = useState<{value: string, label: string}[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
   const [alertDialog, setAlertDialog] = useState({
     open: false,
     title: "",
@@ -32,57 +45,105 @@ export default function RegisterPage() {
     type: "info" as "success" | "error" | "warning" | "info",
     onConfirm: () => {},
   });
-
-  interface FormDataType {
-    firstName: string;
-    lastName: string;
-    username: string;
-    email: string;
-    contact: string;
-    position_id: string | number;
-    department_id?: string | number | null;
-    branch_id: string | number;
-    password: string;
-    confirmPassword: string;
-    signature: string;
-  }
   const [formData, setFormData] = useState<FormDataType>({
-    firstName: "",
-    lastName: "",
+    fname: "",
+    lname: "",
     username: "",
     email: "",
     contact: "",
+    department_id: 0,
     position_id: 0,
-    department_id: "",
     branch_id: 0,
     password: "",
-    confirmPassword: "",
+    password_confirmation: "",
     signature: "",
   });
   const [signatureError, setSignatureError] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{
+    [key: string]: any;
+  }>({});
 
-  // Load positions from client data service
+  // Load positions from endpoint api /positions
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchPosition = async () => {
       try {
-        // Fetch positions using client data service
-        const positionsData = await clientDataService.getPositions();
-        setPositions(positionsData);
+        const res = await fetch(`${CONFIG.API_URL}/positions`, {
+          method: "GET",
+        });
+        if (res.ok) {
+          const response = await res.json();
 
-        // Fetch departments using client data service
-        const departmentsData = await clientDataService.getDepartments();
-        setDepartments(departmentsData);
+          // 2. Map the API response.positions array into the shape for your state
+          const mappedPositions = response.positions.map((position: any) => ({
+            value: position.id,
+            label: position.label,
+          }));
 
-        // Fetch departments using client data service
-        const branchData = await clientDataService.getBranches();
-        setBranches(branchData);
+          // 3. Update state with the mapped array
+          setPositions(mappedPositions);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
 
-    fetchData();
+    fetchPosition();
+  }, []);
+
+  // Load positions from endpoint api /branches
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/branches`, {
+          method: "GET",
+        });
+        if (res.ok) {
+          const response = await res.json();
+
+          // 2. Map the API response.positions array into the shape for your state
+          const mappedBranches = response.branches.map((branches: any) => ({
+            value: branches.id,
+            label: branches.branch_name + " /" + branches.branch_code,
+          }));
+
+          // 3. Update s tate with the mapped array
+          setBranches(mappedBranches);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchBranches();
+  }, []);
+
+  // Load positions from endpoint api /departments
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/departments`, {
+          method: "GET",
+        });
+        if (res.ok) {
+          const response = await res.json();
+
+          // 2. Map the API response.positions array into the shape for your state
+          const mappedDepartments = response.departments.map(
+            (departments: any) => ({
+              value: departments.id,
+              label: departments.department_name,
+            })
+          );
+
+          // 3. Update s tate with the mapped array
+          setDepartments(mappedDepartments);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchDepartments();
   }, []);
 
   const showAlert = (
@@ -122,11 +183,11 @@ export default function RegisterPage() {
           delete errors.password;
         }
         break;
-      case "confirmPassword":
+      case "password_confirmation":
         if (value && value !== formData.password) {
-          errors.confirmPassword = "Passwords do not match";
+          errors.password_confirmation = "Passwords do not match";
         } else {
-          delete errors.confirmPassword;
+          delete errors.password_confirmation;
         }
         break;
       case "contact":
@@ -151,198 +212,191 @@ export default function RegisterPage() {
     e.preventDefault();
 
     // Validate required fields
-    if (!formData.firstName.trim()) {
-      showAlert("Missing Information", "First name is required!", "error");
-      return;
-    }
+    // if (!formData.fname.trim()) {
+    //   showAlert("Missing Information", "First name is required!", "error");
+    //   return;
+    // }
 
-    if (!formData.lastName.trim()) {
-      showAlert("Missing Information", "Last name is required!", "error");
-      return;
-    }
+    // if (!formData.lname.trim()) {
+    //   showAlert("Missing Information", "Last name is required!", "error");
+    //   return;
+    // }
 
-    if (!formData.username.trim()) {
-      showAlert("Missing Information", "Username is required!", "error");
-      return;
-    }
+    // if (!formData.username.trim()) {
+    //   showAlert("Missing Information", "Username is required!", "error");
+    //   return;
+    // }
 
-    if (!formData.email.trim()) {
-      showAlert("Missing Information", "Email is required!", "error");
-      return;
-    }
+    // if (!formData.email.trim()) {
+    //   showAlert("Missing Information", "Email is required!", "error");
+    //   return;
+    // }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      showAlert(
-        "Invalid Email",
-        "Please enter a valid email address!",
-        "error"
-      );
-      return;
-    }
+    // // Validate email format
+    // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // if (!emailRegex.test(formData.email)) {
+    //   showAlert(
+    //     "Invalid Email",
+    //     "Please enter a valid email address!",
+    //     "error"
+    //   );
+    //   return;
+    // }
 
-    if (!formData.contact.trim()) {
-      showAlert("Missing Information", "Contact number is required!", "error");
-      return;
-    }
+    // if (!formData.contact.trim()) {
+    //   showAlert("Missing Information", "Contact number is required!", "error");
+    //   return;
+    // }
 
-    if (!formData.position_id) {
-      showAlert("Missing Information", "Please select your position!", "error");
-      return;
-    }
+    // if (!formData.position_id) {
+    //   showAlert("Missing Information", "Please select your position!", "error");
+    //   return;
+    // }
 
-    if (!formData.branch_id) {
-      showAlert(
-        "Missing Information",
-        "Please select your branch code!",
-        "error"
-      );
-      return;
-    }
+    // if (!formData.branch_id) {
+    //   showAlert("Missing Information", "Please select your branch!", "error");
+    //   return;
+    // }
 
-    if (formData.branch_id === 126 && !formData.department_id) {
-      showAlert(
-        "Missing Information",
-        "Please select your department!",
-        "error"
-      );
-      return;
-    }
+    // // Validate passwords match
+    // if (formData.password !== formData.password_confirmation) {
+    //   showAlert(
+    //     "Password Mismatch",
+    //     "Passwords do not match! Please try again.",
+    //     "error"
+    //   );
+    //   return;
+    // }
 
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      showAlert(
-        "Password Mismatch",
-        "Passwords do not match! Please try again.",
-        "error"
-      );
-      return;
-    }
+    // // Validate password length
+    // if (formData.password.length < 8) {
+    //   showAlert(
+    //     "Password Too Short",
+    //     "Password must be at least 8 characters long!",
+    //     "warning"
+    //   );
+    //   return;
+    // }
 
-    // Validate password length
-    if (formData.password.length < 8) {
-      showAlert(
-        "Password Too Short",
-        "Password must be at least 8 characters long!",
-        "warning"
-      );
-      return;
-    }
+    // // Validate password strength
+    // const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
+    // if (!passwordRegex.test(formData.password)) {
+    //   showAlert(
+    //     "Weak Password",
+    //     "Password must contain at least one uppercase letter, one lowercase letter, and one number!",
+    //     "warning"
+    //   );
+    //   return;
+    // }
 
-    // Validate password strength
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
-    if (!passwordRegex.test(formData.password)) {
-      showAlert(
-        "Weak Password",
-        "Password must contain at least one uppercase letter, one lowercase letter, and one number!",
-        "warning"
-      );
-      return;
-    }
-
-    // Validate signature
-    if (!formData.signature || formData.signature.trim() === "") {
-      setSignatureError(true);
-      showAlert(
-        "Signature Required",
-        "Please draw your digital signature to complete the registration!",
-        "warning"
-      );
-      return;
-    }
-
-    // Clear signature error if signature is valid
-    setSignatureError(false);
+    // // Validate signature
+    // if (!formData.signature || formData.signature.trim() === "") {
+    //   setSignatureError(true);
+    //   showAlert(
+    //     "Signature Required",
+    //     "Please draw your digital signature to complete the registration!",
+    //     "warning"
+    //   );
+    //   return;
+    // }
 
     setIsRegisterButtonClicked(true);
+    // Then send the POST request with the user registration data
 
-    try {
-      // Check for duplicate email or username
-      const existingAccounts = await clientDataService.getAccounts();
-      const emailExists = existingAccounts.some(
-        (account: any) =>
-          account.email.toLowerCase() === formData.email.toLowerCase()
-      );
+    const formDataToUpload = new FormData();
 
-      if (emailExists) {
-        showAlert(
-          "Email Already Exists",
-          "An account with this email address already exists. Please use a different email or try logging in.",
-          "error"
-        );
+    formDataToUpload.append("fname", formData?.fname);
+    formDataToUpload.append("lname", formData.lname);
+    formDataToUpload.append("username", formData.username);
+    formDataToUpload.append("email", formData.email);
+    formDataToUpload.append("contact", formData.contact);
+    formDataToUpload.append("position_id", String(formData.position_id));
+    formDataToUpload.append("branch_id", String(formData.branch_id));
+    formDataToUpload.append("department_id", String(formData.department_id));
+    formDataToUpload.append("password", formData.password);
+    formDataToUpload.append(
+      "password_confirmation",
+      formData.password_confirmation
+    );
+    formDataToUpload.append("signature", formData.signature);
+
+    await fetch(`${CONFIG.API_URL}/register`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: formDataToUpload,
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json();
+
+          if (!res.ok) {
+            // Log or show the backend validation error
+            throw {
+              ...data,
+              status: res.status,
+            };
+          }
+        }
+        if (res.ok) {
+          showAlert(
+            "Registration Successful!",
+            "Account registration submitted successfully! Your registration is pending approval. You will be notified once approved.",
+            "success",
+            () => {
+              // Reset form
+              setFormData({
+                fname: "",
+                lname: "",
+                username: "",
+                email: "",
+                contact: "",
+                position_id: 0,
+                department_id: 0,
+                branch_id: 0,
+                password: "",
+                password_confirmation: "",
+                signature: "",
+              });
+              setSignatureError(false);
+              // Redirect to login page
+              window.location.href = "/";
+            }
+          );
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+        if (error.status === 422) {
+          setFieldErrors(error.errors);
+        }
+        if (error.status === 400) {
+          setFieldErrors({
+            signature: [error.message],
+          });
+        }
+      })
+      .finally(() => {
         setIsRegisterButtonClicked(false);
-        return;
-      }
-
-      const usernameExists = existingAccounts.some(
-        (account: any) =>
-          account.username?.toLowerCase() === formData.username.toLowerCase()
-      );
-
-      if (usernameExists) {
-        showAlert(
-          "Username Already Exists",
-          "This username is already taken. Please choose a different username.",
-          "error"
-        );
-        setIsRegisterButtonClicked(false);
-        return;
-      }
-
-      // Create pending registration using client data service
-      const registrationData = {
-        name: `${formData.firstName} ${formData.lastName}`,
-        email: formData.email,
-        position: formData.position_id,
-        department: formData.department_id,
-        hireDate: new Date().toISOString().split("T")[0], // Today's date
-        role: formData.position_id,
-        signature: formData.signature, // Include the digital signature
-        username: formData.username,
-        contact: formData.contact,
-        password: formData.password, // Note: In production, this should be hashed
-      };
-    } catch (error) {}
+      });
   };
 
-  // const result = await clientDataService.createPendingRegistration(registrationData);
-
-  //     if (result) {
-  //       showAlert(
-  //         'Registration Successful!',
-  //         'Account registration submitted successfully! Your registration is pending approval. You will be notified once approved.',
-  //         'success',
-  //         () => {
-  //           // Reset form
-  //           setFormData({
-  //             firstName: '',
-  //             lastName: '',
-  //             username: '',
-  //             email: '',
-  //             contact: '',
-  //             position: '',
-  //             branchCode: '',
-  //             department: '',
-  //             password: '',
-  //             confirmPassword: '',
-  //             signature: ''
-  //           });
-  //           setSignatureError(false);
-  //           // Redirect to login page
-  //           window.location.href = '/';
-  //         }
-  //       );
-  //     } else {
-  //       showAlert('Registration Failed', 'An error occurred during registration. Please try again.', 'error');
-  //     }
-  //   } catch (error) {
-  //     console.error('Registration error:', error);
-  //     showAlert('Registration Error', 'An error occurred during registration. Please try again.', 'error');
-  //   } finally {
-  //     setIsRegisterButtonClicked(false);
-  //   }
+  // Create pending registration using client data service
+  // const registrationData = {
+  //   name: `${formData.fname} ${formData.lname}`,
+  //   email: formData.email,
+  //   position: formData.position_id,
+  //   branch: formData.branch_id,
+  //   hireDate: new Date().toISOString().split("T")[0], // Today's date
+  //   signature: formData.signature, // Include the digital signature
+  //   username: formData.username,
+  //   contact: formData.contact,
+  //   password: formData.password, // Note: In production, this should be hashed
   // };
+
+  // const result = await clientDataService.createPendingRegistration(registrationData);
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -495,50 +549,44 @@ export default function RegisterPage() {
                     {/* Personal Information */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="firstName">First name</Label>
+                        <Label htmlFor="fname">First name</Label>
                         <Input
-                          id="firstName"
+                          id="fname"
                           placeholder="John"
-                          value={formData.firstName}
+                          value={formData.fname}
                           onChange={(e) => {
                             setFormData({
                               ...formData,
-                              firstName: e.target.value,
+                              fname: e.target.value,
                             });
-                            validateField("firstName", e.target.value);
+                            validateField("fname", e.target.value);
                           }}
-                          className={
-                            fieldErrors.firstName ? "border-red-500" : ""
-                          }
-                          required
+                          className={fieldErrors?.fname ? "border-red-500" : ""}
                         />
-                        {fieldErrors.firstName && (
+                        {fieldErrors?.fname && (
                           <p className="text-sm text-red-500">
-                            {fieldErrors.firstName}
+                            {fieldErrors.fname[0]}
                           </p>
                         )}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="lastName">Last name</Label>
+                        <Label htmlFor="lname">Last name</Label>
                         <Input
-                          id="lastName"
+                          id="lname"
                           placeholder="Doe"
-                          value={formData.lastName}
+                          value={formData.lname}
                           onChange={(e) => {
                             setFormData({
                               ...formData,
-                              lastName: e.target.value,
+                              lname: e.target.value,
                             });
-                            validateField("lastName", e.target.value);
+                            validateField("lname", e.target.value);
                           }}
-                          className={
-                            fieldErrors.lastName ? "border-red-500" : ""
-                          }
-                          required
+                          className={fieldErrors?.lname ? "border-red-500" : ""}
                         />
-                        {fieldErrors.lastName && (
+                        {fieldErrors?.lname && (
                           <p className="text-sm text-red-500">
-                            {fieldErrors.lastName}
+                            {fieldErrors?.lname[0]}
                           </p>
                         )}
                       </div>
@@ -553,8 +601,15 @@ export default function RegisterPage() {
                         onChange={(e) =>
                           setFormData({ ...formData, username: e.target.value })
                         }
-                        required
+                        className={
+                          fieldErrors?.username ? "border-red-500" : ""
+                        }
                       />
+                      {fieldErrors?.username && (
+                        <p className="text-sm text-red-500">
+                          {fieldErrors?.username[0]}
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -568,12 +623,11 @@ export default function RegisterPage() {
                           setFormData({ ...formData, email: e.target.value });
                           validateField("email", e.target.value);
                         }}
-                        className={fieldErrors.email ? "border-red-500" : ""}
-                        required
+                        className={fieldErrors?.email ? "border-red-500" : ""}
                       />
-                      {fieldErrors.email && (
+                      {fieldErrors?.email && (
                         <p className="text-sm text-red-500">
-                          {fieldErrors.email}
+                          {fieldErrors?.email[0]}
                         </p>
                       )}
                     </div>
@@ -600,35 +654,13 @@ export default function RegisterPage() {
                           }
                         }}
                         maxLength={11}
-                        className={fieldErrors.contact ? "border-red-500" : ""}
-                        required
+                        className={fieldErrors?.contact ? "border-red-500" : ""}
                       />
-                      {fieldErrors.contact && (
+                      {fieldErrors?.contact && (
                         <p className="text-sm text-red-500">
-                          {fieldErrors.contact}
+                          {fieldErrors?.contact[0]}
                         </p>
                       )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="branchCode">Branch/BranchCode</Label>
-                      <Combobox
-                        options={branches}
-                        value={formData.branch_id}
-                        onValueChangeAction={(value) => {
-                          setFormData({
-                            ...formData,
-                            branch_id: value,
-                            // Clear department if not HO or HO-MNL
-                            department_id:
-                              value === 126 ? formData.department_id : null,
-                          });
-                        }}
-                        placeholder="Select branch code"
-                        searchPlaceholder="Search branch codes..."
-                        emptyText="No branch codes found."
-                        className="w-1/2"
-                      />
                     </div>
 
                     <div className="space-y-2">
@@ -642,30 +674,42 @@ export default function RegisterPage() {
                         placeholder="Select your position"
                         searchPlaceholder="Search positions..."
                         emptyText="No positions found."
-                        className="w-1/2"
+                        className="w-full"
+                        error={fieldErrors?.position_id}
                       />
                     </div>
 
-                    {formData.branch_id === 126 && (
-                      <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                        <Label htmlFor="department">Department</Label>
-                        <Combobox
-                          options={departments}
-                          value={Number(formData.department_id)}
-                          onValueChangeAction={(value) =>
-                            setFormData({ ...formData, department_id: value })
-                          }
-                          placeholder="Select your department"
-                          searchPlaceholder="Search departments..."
-                          emptyText="No departments found."
-                          className="w-1/2"
-                        />
-                        <p className="text-xs text-gray-500">
-                          Department selection is required for Head Office
-                          employees (HO & HO-MNL)
-                        </p>
-                      </div>
-                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="branch">Branch</Label>
+                      <Combobox
+                        options={branches}
+                        value={formData.branch_id}
+                        onValueChangeAction={(value) =>
+                          setFormData({ ...formData, branch_id: value })
+                        }
+                        placeholder="Select your branch"
+                        searchPlaceholder="Search branches..."
+                        emptyText="No branches found."
+                        className="w-full"
+                        error={fieldErrors?.branch_id}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="department">Department</Label>
+                      <Combobox
+                        options={departments}
+                        value={formData.department_id}
+                        onValueChangeAction={(value) =>
+                          setFormData({ ...formData, department_id: value })
+                        }
+                        placeholder="Select your branch"
+                        searchPlaceholder="Search branches..."
+                        emptyText="No branches found."
+                        className="w-full"
+                        error={fieldErrors?.department_id}
+                      />
+                    </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="registerPassword">Password</Label>
@@ -681,38 +725,45 @@ export default function RegisterPage() {
                           });
                           validateField("password", e.target.value);
                         }}
-                        className={fieldErrors.password ? "border-red-500" : ""}
-                        required
+                        className={
+                          fieldErrors?.password ? "border-red-500" : ""
+                        }
                       />
-                      {fieldErrors.password && (
+                      {fieldErrors?.password && (
                         <p className="text-sm text-red-500">
-                          {fieldErrors.password}
+                          {fieldErrors?.password[0]}
                         </p>
                       )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirm password</Label>
+                      <Label htmlFor="password_confirmation">
+                        Confirm password
+                      </Label>
                       <Input
-                        id="confirmPassword"
+                        id="password_confirmation"
                         type="password"
                         placeholder="••••••••"
-                        value={formData.confirmPassword}
+                        value={formData.password_confirmation}
                         onChange={(e) => {
                           setFormData({
                             ...formData,
-                            confirmPassword: e.target.value,
+                            password_confirmation: e.target.value,
                           });
-                          validateField("confirmPassword", e.target.value);
+                          validateField(
+                            "password_confirmation",
+                            e.target.value
+                          );
                         }}
                         className={
-                          fieldErrors.confirmPassword ? "border-red-500" : ""
+                          fieldErrors?.password_confirmation
+                            ? "border-red-500"
+                            : ""
                         }
-                        required
                       />
-                      {fieldErrors.confirmPassword && (
+                      {fieldErrors?.password_confirmation && (
                         <p className="text-sm text-red-500">
-                          {fieldErrors.confirmPassword}
+                          {fieldErrors?.password_confirmation[0]}
                         </p>
                       )}
                     </div>
@@ -735,6 +786,11 @@ export default function RegisterPage() {
                         By drawing your signature above, you agree to the terms
                         and conditions of this registration.
                       </p>
+                      {fieldErrors?.signature && (
+                        <small className="text-red-500">
+                          {fieldErrors?.signature[0]}
+                        </small>
+                      )}
                     </div>
 
                     <Button
@@ -744,6 +800,7 @@ export default function RegisterPage() {
                           ? "transform scale-95 bg-blue-700 shadow-inner"
                           : "hover:scale-105 hover:shadow-lg active:scale-95"
                       }`}
+                      disabled={isRegisterButtonClicked}
                     >
                       {isRegisterButtonClicked ? (
                         <span className="flex items-center justify-center">
