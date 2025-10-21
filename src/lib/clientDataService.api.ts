@@ -11,12 +11,16 @@ export const clientDataService = {
   },
 
   // Data fetching - now uses API
-  getPositions: async (): Promise<string[]> => {
+  getPositions: async (): Promise<{ label: string; value: string }[]> => {
     return await apiService.getPositions();
   },
 
-  getBranchCodes: async (): Promise<any[]> => {
-    return await apiService.getBranchCodes();
+  getDepartments: async ():  Promise<{ label: string; value: string }[]>  => {
+    return await apiService.getDepartments();
+  },
+  
+  getBranches: async (): Promise<{value: string ; label: string}[]> => {
+    return await apiService.getBranches();
   },
 
   getAccounts: async (): Promise<Account[]> => {
@@ -24,8 +28,8 @@ export const clientDataService = {
   },
 
   // Registration - now uses API
-  createPendingRegistration: async (registration: Omit<PendingRegistration, 'id' | 'status' | 'submittedAt'>): Promise<PendingRegistration> => {
-    return await apiService.createPendingRegistration(registration);
+  registerUser: async (formData: FormData): Promise<any> => {
+    return await apiService.createPendingRegistration(formData);
   },
 
   getPendingRegistrations: async (): Promise<PendingRegistration[]> => {

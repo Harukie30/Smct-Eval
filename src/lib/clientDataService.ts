@@ -113,6 +113,7 @@ export interface Account {
   suspensionReason?: string;
   suspendedAt?: string;
   suspendedBy?: string;
+  signature?: string; // Digital signature as base64 or URL
 }
 
 // Local storage keys
@@ -215,10 +216,8 @@ const initializeData = () => {
 const forceReinitializeAccounts = () => {
   if (typeof window === 'undefined') return;
   
-  console.log('Force reinitializing accounts data...');
   localStorage.removeItem(STORAGE_KEYS.ACCOUNTS);
   saveToStorage(STORAGE_KEYS.ACCOUNTS, accountsData.accounts || []);
-  console.log('Accounts data reinitialized successfully');
 };
 
 // Initialize data on module load
@@ -301,7 +300,20 @@ export const clientDataService = {
 
   getEmployee: async (id: number): Promise<Employee | null> => {
     const employees = await clientDataService.getEmployees();
-    return employees.find(emp => emp.id === id) || null;
+    const employee = employees.find(emp => emp.id === id);
+    
+    if (!employee) return null;
+    
+    // Try to get signature from accounts data if not present in employee data
+    if (!employee.signature) {
+      const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as Account[];
+      const account = accounts.find(acc => acc.employeeId === id || acc.id === id);
+      if (account?.signature) {
+        return { ...employee, signature: account.signature };
+      }
+    }
+    
+    return employee;
   },
 
   updateEmployee: async (id: number, updates: Partial<Employee>): Promise<Employee> => {
@@ -314,6 +326,16 @@ export const clientDataService = {
 
     employees[index] = { ...employees[index], ...updates, updatedAt: new Date().toISOString() };
     saveToStorage(STORAGE_KEYS.EMPLOYEES, employees);
+    
+    // Also update signature in accounts if provided
+    if (updates.signature !== undefined) {
+      const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as Account[];
+      const accountIndex = accounts.findIndex(acc => acc.employeeId === id || acc.id === id);
+      if (accountIndex !== -1) {
+        accounts[accountIndex] = { ...accounts[accountIndex], signature: updates.signature };
+        saveToStorage(STORAGE_KEYS.ACCOUNTS, accounts);
+      }
+    }
     
     return employees[index];
   },
@@ -372,26 +394,20 @@ export const clientDataService = {
   },
 
   approveRegistration: async (id: number): Promise<{ success: boolean; message: string }> => {
-    console.log('🔄 Approving registration with ID:', id);
     const pending = await clientDataService.getPendingRegistrations();
-    console.log('📋 Found pending registrations:', pending.length);
     const registration = pending.find(reg => reg.id === id);
     
     if (!registration) {
-      console.log('❌ Registration not found with ID:', id);
       return { success: false, message: 'Registration not found' };
     }
 
-    console.log('✅ Found registration to approve:', registration.name);
     // Move to accounts (which is what the admin page uses)
     const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as any[];
-    console.log('📊 Current accounts count:', accounts.length);
     // Generate unique IDs that don't conflict with existing accounts
     const existingIds = accounts.map(acc => acc.id);
     const existingEmployeeIds = accounts.map(acc => acc.employeeId).filter(id => id !== undefined);
     const maxId = Math.max(...existingIds, 0);
     const maxEmployeeId = Math.max(...existingEmployeeIds, 1000);
-    console.log('🆔 Generated IDs - ID:', maxId + 1, 'EmployeeID:', maxEmployeeId + 1);
     
     const newAccount = {
       id: maxId + 1,
@@ -417,14 +433,11 @@ export const clientDataService = {
 
     accounts.push(newAccount);
     saveToStorage(STORAGE_KEYS.ACCOUNTS, accounts);
-    console.log('💾 Saved new account to storage. New accounts count:', accounts.length);
 
     // Remove from pending
     const updatedPending = pending.filter(reg => reg.id !== id);
     saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
-    console.log('🗑️ Removed from pending. Remaining pending:', updatedPending.length);
 
-    console.log('✅ Registration approval completed successfully');
     return { success: true, message: 'Registration approved successfully' };
   },
 
@@ -451,30 +464,78 @@ export const clientDataService = {
     const index = profiles.findIndex(profile => profile.id === id);
     
     if (index === -1) {
-      throw new Error('Profile not found');
+      // Profile doesn't exist, create it
+      const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as Account[];
+      const account = accounts.find(acc => acc.employeeId === id || acc.id === id);
+      
+      const newProfile: Profile = {
+        id,
+        name: account?.name || updates.name || '',
+        email: account?.email || updates.email || '',
+        position: account?.position || updates.position || '',
+        department: account?.department || updates.department || '',
+        branch: account?.branch || updates.branch,
+        avatar: updates.avatar,
+        bio: updates.bio,
+        signature: updates.signature,
+        updatedAt: new Date().toISOString()
+      };
+      
+      profiles.push(newProfile);
+      saveToStorage(STORAGE_KEYS.PROFILES, profiles);
+      
+      // Also update signature in accounts and employees if provided
+      if (updates.signature !== undefined) {
+        const accountIndex = accounts.findIndex(acc => acc.employeeId === id || acc.id === id);
+        if (accountIndex !== -1) {
+          accounts[accountIndex] = { ...accounts[accountIndex], signature: updates.signature };
+          saveToStorage(STORAGE_KEYS.ACCOUNTS, accounts);
+        }
+        
+        const employees = await clientDataService.getEmployees();
+        const employeeIndex = employees.findIndex(emp => emp.id === id);
+        if (employeeIndex !== -1) {
+          employees[employeeIndex] = { ...employees[employeeIndex], signature: updates.signature };
+          saveToStorage(STORAGE_KEYS.EMPLOYEES, employees);
+        }
+      }
+      
+      return newProfile;
     }
 
     profiles[index] = { ...profiles[index], ...updates, updatedAt: new Date().toISOString() };
     saveToStorage(STORAGE_KEYS.PROFILES, profiles);
+    
+    // Also update signature in accounts and employees if provided
+    if (updates.signature !== undefined) {
+      const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as Account[];
+      const accountIndex = accounts.findIndex(acc => acc.employeeId === id || acc.id === id);
+      if (accountIndex !== -1) {
+        accounts[accountIndex] = { ...accounts[accountIndex], signature: updates.signature };
+        saveToStorage(STORAGE_KEYS.ACCOUNTS, accounts);
+      }
+      
+      const employees = await clientDataService.getEmployees();
+      const employeeIndex = employees.findIndex(emp => emp.id === id);
+      if (employeeIndex !== -1) {
+        employees[employeeIndex] = { ...employees[employeeIndex], signature: updates.signature };
+        saveToStorage(STORAGE_KEYS.EMPLOYEES, employees);
+      }
+    }
     
     return profiles[index];
   },
 
   // Authentication
   login: async (email: string, password: string): Promise<{ success: boolean; user?: any; message?: string; suspensionData?: any }> => {
-    console.log('Login attempt:', { email, password: '***' });
-    
     const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as Account[];
-    console.log('Loaded accounts:', accounts.length, 'accounts');
     
     // Ensure accounts is an array
     if (!Array.isArray(accounts)) {
-      console.error('Accounts data is not an array:', accounts);
       return { success: false, message: 'Data error - please refresh the page' };
     }
     
     const account = accounts.find((acc: Account) => acc.email === email && acc.password === password);
-    console.log('Found account:', account ? 'Yes' : 'No', account ? { id: account.id, email: account.email, role: account.role, isSuspended: account.isSuspended } : null);
     
     if (!account) {
       return { success: false, message: 'Invalid credentials' };
@@ -482,14 +543,12 @@ export const clientDataService = {
 
     // Check if account is suspended in accounts.json
     if (account.isSuspended) {
-      console.log('Account is suspended in accounts.json:', account);
       const suspensionData = {
         reason: account.suspensionReason || 'No reason provided',
         suspendedAt: account.suspendedAt || new Date().toISOString(),
         suspendedBy: account.suspendedBy || 'System Administrator',
         accountName: account.name || account.username || account.email
       };
-      console.log('Suspension data from accounts.json:', suspensionData);
       return { 
         success: false, 
         message: 'Account suspended',
@@ -504,14 +563,12 @@ export const clientDataService = {
     );
     
     if (suspendedEmployee) {
-      console.log('Account is suspended in admin system:', suspendedEmployee);
       const suspensionData = {
         reason: suspendedEmployee.suspensionReason || 'No reason provided',
         suspendedAt: suspendedEmployee.suspensionDate || new Date().toISOString(),
         suspendedBy: suspendedEmployee.suspendedBy || 'System Administrator',
         accountName: suspendedEmployee.name || account.name || account.username || account.email
       };
-      console.log('Suspension data from admin system:', suspensionData);
       return { 
         success: false, 
         message: 'Account suspended',
@@ -521,7 +578,6 @@ export const clientDataService = {
 
     // For accounts without employeeId (like admin), use account data directly
     if (!account.employeeId) {
-      console.log('Account without employeeId (admin account):', account);
       const adminUser = {
         id: account.id,
         name: account.name || account.username,
@@ -534,8 +590,8 @@ export const clientDataService = {
         bio: undefined,
         contact: account.contact || '',
         hireDate: account.hireDate || new Date().toISOString(),
+        signature: account.signature, // Include signature for admin accounts
       };
-      console.log('Created admin user object:', adminUser);
       return {
         success: true,
         user: adminUser
@@ -555,6 +611,7 @@ export const clientDataService = {
       user: {
         ...employee,
         role: account.role,
+        signature: account.signature || employee.signature, // Include signature from account
       }
     };
   },
@@ -637,7 +694,6 @@ export const clientDataService = {
     );
     
     if (isDuplicate) {
-      console.log('Duplicate notification prevented:', notification.message);
       return notifications.find(existing => 
         existing.message === notification.message && 
         JSON.stringify(existing.roles.sort()) === JSON.stringify(notification.roles.sort())

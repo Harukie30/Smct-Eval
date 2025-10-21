@@ -30,7 +30,7 @@ interface UserContextType {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<boolean | { suspended: true; data: any }>;
   logout: () => void;
-  updateProfile: (updates: Partial<UserProfile>) => void;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   refreshUserData: () => Promise<void>;
 }
 
@@ -195,40 +195,68 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }, 200);
   };
 
-  const updateProfile = (updates: Partial<UserProfile>) => {
+  const updateProfile = async (updates: Partial<UserProfile>) => {
     if (profile) {
       const updatedProfile = { ...profile, ...updates };
       setProfile(updatedProfile);
       
       // Update user data as well
       if (user) {
+        // Map UserProfile fields to AuthenticatedUser fields
+        const userUpdates: Partial<AuthenticatedUser> = {
+          name: updates.name,
+          email: updates.email,
+          position: updates.roleOrPosition || user.position,
+          department: updates.department,
+          branch: updates.branch,
+          avatar: updates.avatar,
+          bio: updates.bio,
+          signature: updates.signature,
+        };
+        
         const updatedUser: AuthenticatedUser = { 
           ...user, 
-          ...updates,
+          ...userUpdates,
           id: user.id // Ensure ID remains a number
         };
         setUser(updatedUser);
+        
         if (typeof window !== 'undefined') {
           localStorage.setItem('authenticatedUser', JSON.stringify(updatedUser));
           
-          // Also update the accounts data in localStorage
-          const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-          const accountIndex = accounts.findIndex((acc: any) => acc.id === user.id || acc.employeeId === user.id);
-          if (accountIndex !== -1) {
-            accounts[accountIndex] = { ...accounts[accountIndex], ...updates };
-            localStorage.setItem('accounts', JSON.stringify(accounts));
+          // Use clientDataService to update all storage locations (accounts, employees, profiles)
+          try {
+            // Update via clientDataService which syncs signature across all storage
+            // Convert UserProfile updates to compatible format (remove id and map roleOrPosition)
+            const { id: _id, roleOrPosition: _role, ...profileUpdates } = updates;
+            const mappedUpdates = {
+              ...profileUpdates,
+              position: updates.roleOrPosition || undefined
+            };
+            await clientDataService.updateProfile(user.id, mappedUpdates);
+            await clientDataService.updateEmployee(user.id, mappedUpdates);
+          } catch (error) {
+            console.error('Error updating profile via clientDataService:', error);
+            // Fallback to manual update if service fails
+            const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+            const accountIndex = accounts.findIndex((acc: any) => acc.id === user.id || acc.employeeId === user.id);
+            if (accountIndex !== -1) {
+              accounts[accountIndex] = { ...accounts[accountIndex], ...userUpdates };
+              localStorage.setItem('accounts', JSON.stringify(accounts));
+            }
           }
 
           // Store profile updates in employeeProfiles for other users to see
           const employeeProfiles = JSON.parse(localStorage.getItem('employeeProfiles') || '{}');
           employeeProfiles[user.id] = {
             ...employeeProfiles[user.id],
-            ...updates,
+            ...userUpdates,
             id: user.id,
-            name: user.name,
-            email: user.email,
-            position: user.position,
-            department: user.department
+            name: updatedUser.name,
+            email: updatedUser.email,
+            position: updatedUser.position,
+            department: updatedUser.department,
+            signature: updatedUser.signature
           };
           localStorage.setItem('employeeProfiles', JSON.stringify(employeeProfiles));
         }

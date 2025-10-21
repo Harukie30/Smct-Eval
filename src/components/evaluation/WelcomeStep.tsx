@@ -29,7 +29,10 @@ interface WelcomeStepProps {
 }
 
 export default function WelcomeStep({ employee, onStartAction, onBackAction, currentUser }: WelcomeStepProps) {
-  const hasSignature = currentUser?.signature && currentUser.signature.trim() !== '';
+  // Signature can be a PNG file (base64 data URL or file path)
+  const hasSignature = currentUser?.signature && 
+    typeof currentUser.signature === 'string' && 
+    currentUser.signature.length > 0;
   return (
     <div className="space-y-6">
       
