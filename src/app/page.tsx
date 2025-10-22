@@ -16,6 +16,7 @@ import ForgotPasswordModal from '@/components/ForgotPasswordModal';
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import { toastMessages } from '@/lib/toastMessages';
+import clientDataService from '@/lib/clientDataService.api';
 
 export default function LandingLoginPage() {
   const [username, setUsername] = useState('');
@@ -49,10 +50,8 @@ export default function LandingLoginPage() {
       // Simulate real authentication steps with actual processing
       await new Promise(resolve => setTimeout(resolve, 1200)); // Initial validation delay
       
-      const result = await login(username, password);
+      const user =  await clientDataService.login(username, password, rememberMe);
 
-      if (result === true) {
-        // Login successful - continue with real processing
         console.log('Login successful');
 
         // Simulate additional authentication steps
@@ -64,59 +63,55 @@ export default function LandingLoginPage() {
         toastMessages.login.success(username);
 
         // Set remember me preference
-        if (rememberMe) {
-          localStorage.setItem('keepLoggedIn', 'true');
-        } else {
-          localStorage.setItem('keepLoggedIn', 'false');
-        }
+        // if (rememberMe) {
+        //   localStorage.setItem('keepLoggedIn', 'true');
+        // } else {
+        //   localStorage.setItem('keepLoggedIn', 'false');
+        // }
 
         // Get user role for personalized loading message
-        const storedUser = localStorage.getItem('authenticatedUser');
-        if (storedUser) {
-          const user = JSON.parse(storedUser);
-          console.log('User role for redirect:', user.role);
+        // const storedUser = localStorage.getItem('authenticatedUser');
+        // if (user) {
+        //   console.log('User role for redirect:', user.role);
 
-          const roleDashboards: Record<string, string> = {
-            'admin': '/admin',
-            'hr': '/hr-dashboard',
-            'hr-manager': '/hr-dashboard',
-            'evaluator': '/evaluator',
-            'employee': '/employee-dashboard',
-            'manager': '/evaluator'
-          };
+        //   const roleDashboards: Record<string, string> = {
+        //     'admin': '/admin',
+        //     'hr': '/hr-dashboard',
+        //     'hr-manager': '/hr-dashboard',
+        //     'evaluator': '/evaluator',
+        //     'employee': '/employee-dashboard',
+        //     'manager': '/evaluator'
+        //   };
 
-          const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
-          console.log('Redirecting to:', dashboardPath);
+        //   const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
+        //   console.log('Redirecting to:', dashboardPath);
 
-          // Redirect immediately after all processing is complete
-          router.push(dashboardPath);
-        } else {
-          console.log('No user data found, redirecting to default dashboard');
+        //   // Redirect immediately after all processing is complete
+        //   router.push(dashboardPath);
+        // } else {
+        //   console.log('No user role data found, redirecting to default dashboard');
+        // }
           router.push('/dashboard');
-        }
-      } else if (result && typeof result === 'object' && result.suspended) {
-        // Account is suspended
-        console.log('Account suspended result:', result);
-        console.log('Suspension data:', result.data);
-        setSuspensionData(result.data);
-        setShowSuspensionModal(true);
-        setShowLoadingScreen(false); // Hide loading screen
-      } else {
-        const errorMessage = 'Invalid username or password. Please try again.';
-        setLoginError(errorMessage);
+
+  //  if (result && typeof result === 'object' && result.suspended) {
+  //       // Account is suspended
+  //       console.log('Account suspended result:', result);
+  //       console.log('Suspension data:', result.data);
+  //       setSuspensionData(result.data);
+  //       setShowSuspensionModal(true);
+  //       setShowLoadingScreen(false); // Hide loading screen
+  //     }
+      } catch(error: any ) {
+        // const errorMessage = 'Invalid username or password. Please try again.';
+        console.log(error)
+        setLoginError(error.message);
         toastMessages.login.error();
         setShowLoadingScreen(false); // Hide loading screen
         // Show incorrect password dialog
         setShowIncorrectPasswordDialog(true);
         setTimeout(() => setShowIncorrectPasswordDialog(false), 1400);
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      const errorMessage = 'An error occurred during login. Please try again.';
-      setLoginError(errorMessage);
-      toastMessages.login.networkError();
-      setShowLoadingScreen(false); // Hide loading screen
-    }
+    
   };
 
   if (isLoading) {

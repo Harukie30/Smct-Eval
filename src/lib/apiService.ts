@@ -3,67 +3,75 @@ import { AuthenticatedUser } from '@/contexts/UserContext';
 import { PendingRegistration, Account } from './clientDataService';
 import { CONFIG } from '../../config/config';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+// const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 // Helper function to get auth token
-const getAuthToken = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('authToken');
-};
+// const getAuthToken = (): string | null => {
+//   if (typeof window === 'undefined') return null;
+//   return localStorage.getItem('authToken');
+// };
 
 // Helper function to make API requests
-const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
-  const token = getAuthToken();
+// const fetch = async (endpoint: string, options: RequestInit = {}) => {
+//   const token = getAuthToken();
   
-  const config: RequestInit = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    },
-    ...options,
-  };
+//   const config: RequestInit = {
+//     headers: {
+//       'Content-Type': 'application/json',
+//       ...(token && { Authorization: `Bearer ${token}` }),
+//       ...options.headers,
+//     },
+//     ...options,
+//   };
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+//   const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
   
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-  }
+//   if (!response.ok) {
+//     const errorData = await response.json().catch(() => ({}));
+//     throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+//   }
   
-  return response.json();
-};
+//   return response.json();
+// };
 
 export const apiService = {
   // Authentication
-  login: async (email: string, password: string): Promise<{ success: boolean; user?: AuthenticatedUser; message?: string; suspensionData?: any; token?: string }> => {
-    const response = await apiRequest('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
+ login: async (username: string, password: string, rememberMe: boolean): Promise<any> => {
+    const res = await fetch(`${CONFIG.API_URL}/login`, {
+        method: "POST",
+        headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({
+                username: username,
+                password: password,
+                remember: rememberMe, 
+            }),
+      });
 
-    // Store token if login successful
-    if (response.success && response.token) {
-      localStorage.setItem('authToken', response.token);
+    const data = await res.json();
+
+    if (!res.ok) {
+        throw {
+            ...data,
+            status: res.status,
+        };
     }
 
-    return response;
-  },
+    return data;
+},
 
-  logout: async (): Promise<{ success: boolean; message: string }> => {
-    const response = await apiRequest('/api/auth/logout', {
+
+  logout: async (): Promise<any> => {
+    const response = await fetch('/api/auth/logout', {
       method: 'POST',
     });
-
-    // Remove token from localStorage
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('authenticatedUser');
-
-    return response;
   },
 
-  getCurrentUser: async (): Promise<{ success: boolean; user?: AuthenticatedUser; message?: string }> => {
-    return apiRequest('/api/auth/me');
+  getCurrentUser: async (): Promise<any> => {
+    return fetch('/api/auth/me');
   },
 
   // Registration
@@ -89,9 +97,9 @@ export const apiService = {
         return data;
       },
 
-  getPendingRegistrations: async (): Promise<PendingRegistration[]> => {
-    const response = await apiRequest('/api/registrations');
-    return response.registrations || [];
+  getPendingRegistrations: async (): Promise<any> => {
+    const response = await fetch('/api/registrations');
+    // return response.registrations || [];
   },
 
   // Data
@@ -101,7 +109,8 @@ export const apiService = {
           method: "GET",
         });
         if (res.ok) {
-          const response = await res.json();
+          const response = await res.json(); 
+          
           return response.departments.map(
             (departments: any) => ({
               value: departments.id,
@@ -154,29 +163,23 @@ export const apiService = {
       }
     },
 
-  getAccounts: async (): Promise<Account[]> => {
-    const response = await apiRequest('/api/accounts');
-    return response.accounts || [];
+  getAccounts: async (): Promise<any> => {
+    const response = await fetch('/api/accounts');
+    // return response.accounts || [];
   },
 
   // Profile management
-  updateProfile: async (id: number, updates: Partial<AuthenticatedUser>): Promise<AuthenticatedUser> => {
-    const response = await apiRequest(`/api/profiles/${id}`, {
+  updateProfile: async (id: number, updates: any): Promise<any> => {
+    const response = await fetch(`/api/profiles/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
-
-    if (!response.success) {
-      throw new Error(response.message || 'Profile update failed');
-    }
-
-    return response.profile;
   },
 
-  getProfile: async (id: number): Promise<AuthenticatedUser | null> => {
+  getProfile: async (id: number): Promise<any> => {
     try {
-      const response = await apiRequest(`/api/profiles/${id}`);
-      return response.profile || null;
+      const response = await fetch(`/api/profiles/${id}`);
+      // return response.profile || null;
     } catch (error) {
       return null;
     }
