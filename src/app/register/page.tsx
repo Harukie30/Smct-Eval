@@ -112,7 +112,7 @@ export default function RegisterPage() {
         if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
           errors.email = "Please enter a valid email address";
         }else{
-          errors.email ="";
+          errors.email = "";
         }
         break;
       case "password":
