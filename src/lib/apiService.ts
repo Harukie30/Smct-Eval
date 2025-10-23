@@ -117,7 +117,7 @@ export const apiService = {
               label: departments.department_name,
             })
           );
-        }
+        } 
         return [];
       } catch (error) {
         console.error("Error fetching data:", error);

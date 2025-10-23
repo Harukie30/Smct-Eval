@@ -71,7 +71,7 @@ export default function MainDashboard() {
 
         // Using mock data for now
         setCurrentPeriod(mockData.dashboard.currentPeriod);
-        setPerformanceData(mockData.dashboard.performanceData);
+        // setPerformanceData(mockData.dashboard.performanceData);
         setLoading(false);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -243,11 +243,11 @@ export default function MainDashboard() {
                     <span className="text-3xl font-bold text-gray-900">{performanceData.overallRating}</span>
                     <span className="text-sm text-gray-500">/ 5.0</span>
                   </div>
-                  <Badge className={`mt-2 ${getRatingColor(performanceData.overallRating)}`}>
+                  {/* <Badge className={`mt-2 ${getRatingColor(performanceData.overallRating)}`}>
                     {performanceData.overallRating >= 4.5 ? 'Excellent' :
                       performanceData.overallRating >= 4.0 ? 'Good' :
                         performanceData.overallRating >= 3.5 ? 'Average' : 'Needs Improvement'}
-                  </Badge>
+                  </Badge> */}
                 </CardContent>
               </Card>
 

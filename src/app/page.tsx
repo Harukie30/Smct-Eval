@@ -91,7 +91,7 @@ export default function LandingLoginPage() {
         // } else {
         //   console.log('No user role data found, redirecting to default dashboard');
         // }
-          router.push('/dashboard');
+          router.push('/employee-dashboard');
 
   //  if (result && typeof result === 'object' && result.suspended) {
   //       // Account is suspended
