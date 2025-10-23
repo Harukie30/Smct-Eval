@@ -23,8 +23,8 @@ export const clientDataService = {
     return await apiService.getBranches();
   },
 
-  getAccounts: async (): Promise<Account[]> => {
-    return await apiService.getAccounts();
+  getUsers: async (): Promise<Account[]> => {
+    return await apiService.getUsers();
   },
 
   // Registration - now uses API
@@ -32,7 +32,7 @@ export const clientDataService = {
     return await apiService.createPendingRegistration(formData);
   },
 
-  getPendingRegistrations: async (): Promise<PendingRegistration[]> => {
+  getPendingRegistrations: async (): Promise<any> => {
     return await apiService.getPendingRegistrations();
   },
 
@@ -41,15 +41,12 @@ export const clientDataService = {
     return await apiService.updateProfile(id, updates);
   },
 
-  getProfile: async (id: number): Promise<Profile | null> => {
-    return await apiService.getProfile(id);
-  },
+  // getProfile: async (id: number): Promise<Profile | null> => {
+  //   // return await apiService.getProfile();
+  // },
 
-  // Employee management - you'll need to implement these API endpoints
-  getEmployees: async (): Promise<Employee[]> => {
-    // TODO: Implement GET /api/employees
-    console.warn('getEmployees: API endpoint not implemented yet');
-    return [];
+  getActiveUsers: async (): Promise<Employee[]> => {
+    return await apiService.getActiveUsers();
   },
 
   getEmployee: async (id: number): Promise<Employee | null> => {

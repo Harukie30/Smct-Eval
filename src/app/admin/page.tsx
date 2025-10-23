@@ -18,6 +18,7 @@ import EditUserModal from '@/components/EditUserModal';
 import { toastMessages } from '@/lib/toastMessages';
 import clientDataService from '@/lib/clientDataService';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
+import clientDataServiceApi from '@/lib/clientDataService.api';
 
 // Import data
 import accountsDataRaw from '@/data/accounts.json';
