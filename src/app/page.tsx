@@ -281,7 +281,7 @@ export default function LandingLoginPage() {
 
               <div className="bg-white/90 backdrop-blur-md p-6 rounded-lg border border-white/30 shadow-lg animate-fade-in-up hover:shadow-xl transition-all duration-300 hover:scale-[1.02]" style={{ animationDelay: '0.4s' }}>
                 <p className="text-gray-800 font-medium">"This platform transformed our review process, saving hours of administrative work and providing meaningful insights."</p>
-                <p className="text-blue-600 mt-2 font-medium">- Sarah Johnson, HR Director</p>
+               
               </div>
             </div>
           </div>

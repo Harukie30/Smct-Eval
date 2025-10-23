@@ -59,6 +59,80 @@ export default function EvaluationRecordsTable({
   const [statusFilter, setStatusFilter] = useState(filterByStatus || '');
   const [approvalStatusFilter, setApprovalStatusFilter] = useState(filterByApprovalStatus || '');
   const [departmentFilter, setDepartmentFilter] = useState('');
+  const [seenRecords, setSeenRecords] = useState<Set<number>>(() => {
+    // Load seen records from localStorage
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('seenEvaluationRecords');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    }
+    return new Set();
+  });
+
+  // Get record highlight based on time and status
+  const getRecordHighlight = (record: EvaluationRecord) => {
+    const submittedTime = new Date(record.submittedAt).getTime();
+    const now = new Date().getTime();
+    const hoursDiff = (now - submittedTime) / (1000 * 60 * 60);
+    const isSeen = seenRecords.has(record.id);
+    
+    // Priority 1: Fully approved - GREEN
+    if (record.approvalStatus === 'fully_approved') {
+      return {
+        className: 'bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500',
+        badge: { text: 'Approved', className: 'bg-green-500 text-white' },
+        type: 'approved'
+      };
+    }
+    
+    // Priority 2: Within 24 hours and not seen - YELLOW "New"
+    if (hoursDiff <= 24 && !isSeen) {
+      return {
+        className: 'bg-yellow-100 hover:bg-yellow-200 border-l-4 border-l-yellow-500',
+        badge: { text: 'NEW', className: 'bg-yellow-500 text-white' },
+        type: 'new'
+      };
+    }
+    
+    // Priority 3: Within 48 hours and not seen - BLUE "Recent"
+    if (hoursDiff <= 48 && !isSeen) {
+      return {
+        className: 'bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500',
+        badge: { text: 'Recent', className: 'bg-blue-500 text-white' },
+        type: 'recent'
+      };
+    }
+    
+    // Default: No special highlighting
+    return {
+      className: 'hover:bg-gray-50',
+      badge: null,
+      type: 'normal'
+    };
+  };
+
+  // Count new records (within 24 hours)
+  const newRecordsCount = React.useMemo(() => {
+    return records.filter(record => {
+      const hoursDiff = (new Date().getTime() - new Date(record.submittedAt).getTime()) / (1000 * 60 * 60);
+      return hoursDiff <= 24 && !seenRecords.has(record.id);
+    }).length;
+  }, [records, seenRecords]);
+
+  // Save seen records to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('seenEvaluationRecords', JSON.stringify(Array.from(seenRecords)));
+    }
+  }, [seenRecords]);
+
+  // Mark record as seen when clicked
+  const markAsSeen = (recordId: number) => {
+    setSeenRecords(prev => {
+      const newSet = new Set(prev);
+      newSet.add(recordId);
+      return newSet;
+    });
+  };
 
   // Filter records based on props and state
   const filteredRecords = React.useMemo(() => {
@@ -183,6 +257,11 @@ export default function EvaluationRecordsTable({
                 {stats.total} total
               </Badge>
             )}
+            {newRecordsCount > 0 && (
+              <Badge className="ml-2 bg-yellow-500 text-white animate-pulse">
+                {newRecordsCount} NEW
+              </Badge>
+            )}
           </CardTitle>
           <Button onClick={refetch} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -287,6 +366,25 @@ export default function EvaluationRecordsTable({
       </CardHeader>
 
       <CardContent>
+        {/* Color Legend */}
+        <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex flex-wrap gap-4 text-xs">
+            <span className="font-medium text-gray-700">Status Indicators:</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
+              <span className="text-gray-600">NEW (&lt; 24h)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+              <span className="text-gray-600">Recent (&lt; 48h)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+              <span className="text-gray-600">Fully Approved</span>
+            </div>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -311,25 +409,47 @@ export default function EvaluationRecordsTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRecords.map((record) => (
-                  <TableRow 
-                    key={record.id} 
-                    className={onRecordSelect ? 'cursor-pointer hover:bg-gray-50' : ''}
-                    onClick={() => onRecordSelect?.(record)}
-                  >
-                    <TableCell className="font-medium">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-600">
-                            {record.employeeName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                          </span>
+                filteredRecords.map((record) => {
+                  const highlight = getRecordHighlight(record);
+                  return (
+                    <TableRow 
+                      key={record.id} 
+                      className={`${onRecordSelect ? 'cursor-pointer' : ''} ${highlight.className}`}
+                      onClick={() => {
+                        markAsSeen(record.id);
+                        onRecordSelect?.(record);
+                      }}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            highlight.type === 'new' ? 'bg-yellow-200' :
+                            highlight.type === 'recent' ? 'bg-blue-200' :
+                            highlight.type === 'approved' ? 'bg-green-200' :
+                            'bg-gray-200'
+                          }`}>
+                            <span className={`text-sm font-medium ${
+                              highlight.type === 'new' ? 'text-yellow-800' :
+                              highlight.type === 'recent' ? 'text-blue-800' :
+                              highlight.type === 'approved' ? 'text-green-800' :
+                              'text-gray-600'
+                            }`}>
+                              {record.employeeName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{record.employeeName}</span>
+                              {highlight.badge && (
+                                <Badge className={`${highlight.badge.className} text-xs px-1.5 py-0`}>
+                                  {highlight.badge.text}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500">ID: {record.employeeId}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-medium">{record.employeeName}</div>
-                          <div className="text-xs text-gray-500">ID: {record.employeeId}</div>
-                        </div>
-                      </div>
-                    </TableCell>
+                      </TableCell>
                     <TableCell>
                       <div className="text-sm">
                         <div className="font-medium">{record.evaluator}</div>
@@ -379,6 +499,7 @@ export default function EvaluationRecordsTable({
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
+                              markAsSeen(record.id);
                               onRecordSelect(record);
                             }}
                           >
@@ -391,6 +512,7 @@ export default function EvaluationRecordsTable({
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
+                              markAsSeen(record.id);
                               handleApproveRecord(record);
                             }}
                             disabled={approving}
@@ -405,7 +527,8 @@ export default function EvaluationRecordsTable({
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>

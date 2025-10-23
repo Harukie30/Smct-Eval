@@ -7,6 +7,7 @@ import pendingRegistrationsData from '@/data/pending-registrations.json';
 import profilesData from '@/data/profiles.json';
 import accountsData from '@/data/accounts.json';
 import branchCodesData from '@/data/branch-code.json';
+import { CONFIG } from '../../config/config';
 
 // Types
 export interface Notification {
@@ -225,14 +226,26 @@ initializeData();
 
 // API replacement functions
 export const clientDataService = {
-  // Departments
+  // Departments - calls external backend
   getDepartments: async (): Promise<{id: string, name: string}[]> => {
     try {
-      const response = await fetch('/api/data/departments');
-      if (!response.ok) {
-        throw new Error('Failed to fetch departments');
+      const res = await fetch(`${CONFIG.API_URL}/departments`, {
+        method: "GET",
+      });
+      if (res.ok) {
+        const response = await res.json();
+        return response.departments.map(
+          (departments: any) => ({
+            value: departments.id,
+            label: departments.department_name,
+          })
+        );
       }
-      return await response.json();
+      // Fallback to local data if API fails
+      return departmentsData.map(dept => ({
+        id: dept.id.toString(),
+        name: dept.name
+      }));
     } catch (error) {
       console.error('Error fetching departments:', error);
       // Fallback to local data if API fails
@@ -243,14 +256,24 @@ export const clientDataService = {
     }
   },
 
-  // Positions
+  // Positions - calls external backend
   getPositions: async (): Promise<{id: string, name: string}[]> => {
     try {
-      const response = await fetch('/api/data/positions');
-      if (!response.ok) {
-        throw new Error('Failed to fetch positions');
+      const res = await fetch(`${CONFIG.API_URL}/positions`, { method: "GET" });
+
+      if (res.ok) {
+        const response = await res.json();
+        return response.positions.map((position: any) => ({
+          value: position.id,
+          label: position.label,
+        }));
       }
-      return await response.json();
+
+      // Fallback to local data if API fails
+      return positionsData.map(position => ({
+        id: position,
+        name: position
+      }));
     } catch (error) {
       console.error('Error fetching positions:', error);
       // Fallback to local data if API fails
@@ -261,36 +284,54 @@ export const clientDataService = {
     }
   },
 
-  // Branches
+  // Branches - calls external backend
   getBranches: async (): Promise<{id: string, name: string}[]> => {
     try {
-      const response = await fetch('/api/data/branches');
-      if (response.ok) {
-        return await response.json();
+      const res = await fetch(`${CONFIG.API_URL}/branches`, {
+        method: "GET",
+      });
+      if (res.ok) {
+        const response = await res.json();
+        return response.branches.map((branches: any) => ({
+          value: branches.id,
+          label: branches.branch_name + " /" + branches.branch_code,
+        }));
       }
-      throw new Error('Failed to fetch branches');
+      // Fallback to hardcoded branches
+      return [
+        { id: 'HO', name: 'Head Office' },
+        { id: 'CEB', name: 'Cebu Branch' },
+        { id: 'DAV', name: 'Davao Branch' },
+        { id: 'BAC', name: 'Bacolod Branch' },
+        { id: 'ILO', name: 'Iloilo Branch' },
+        { id: 'CDO', name: 'Cagayan de Oro Branch' },
+        { id: 'BAG', name: 'Baguio Branch' },
+        { id: 'ZAM', name: 'Zamboanga Branch' },
+        { id: 'GSC', name: 'General Santos Branch' }
+      ];
     } catch (error) {
       console.error('Error fetching branches:', error);
-      return []; // Return empty array as fallback
+      // Fallback to hardcoded branches
+      return [
+        { id: 'HO', name: 'Head Office' },
+        { id: 'CEB', name: 'Cebu Branch' },
+        { id: 'DAV', name: 'Davao Branch' },
+        { id: 'BAC', name: 'Bacolod Branch' },
+        { id: 'ILO', name: 'Iloilo Branch' },
+        { id: 'CDO', name: 'Cagayan de Oro Branch' },
+        { id: 'BAG', name: 'Baguio Branch' },
+        { id: 'ZAM', name: 'Zamboanga Branch' },
+        { id: 'GSC', name: 'General Santos Branch' }
+      ];
     }
   },
 
-  // Branch Codes
+  // Branch Codes - returns local data (no API)
   getBranchCodes: async (): Promise<{id: string, name: string}[]> => {
-    try {
-      const response = await fetch('/api/data/branch-codes');
-      if (response.ok) {
-        return await response.json();
-      }
-      throw new Error('Failed to fetch branch codes');
-    } catch (error) {
-      console.error('Error fetching branch codes:', error);
-      // Fallback to local data if API fails
-      return branchCodesData.map(code => ({
-        id: code,
-        name: code
-      }));
-    }
+    return branchCodesData.map(code => ({
+      id: code,
+      name: code
+    }));
   },
 
   // Employees
@@ -783,6 +824,351 @@ export const clientDataService = {
   // Get all accounts
   getAccounts: async (): Promise<Account[]> => {
     return getFromStorage(STORAGE_KEYS.ACCOUNTS, []);
+  },
+
+  // ============================================
+  // BACKEND-READY FUNCTIONS (Option A)
+  // ============================================
+  
+  // Get single submission by ID
+  getSubmissionById: async (id: number): Promise<Submission | null> => {
+    try {
+      // Try backend first
+      const res = await fetch(`${CONFIG.API_URL}/submissions/${id}`, {
+        method: 'GET',
+      });
+      
+      if (res.ok) {
+        return await res.json();
+      }
+      
+      // Fallback to localStorage
+      const submissions = await clientDataService.getSubmissions();
+      return submissions.find(sub => sub.id === id) || null;
+      
+    } catch (error) {
+      console.error('Error fetching submission by ID:', error);
+      // Fallback to localStorage
+      const submissions = await clientDataService.getSubmissions();
+      return submissions.find(sub => sub.id === id) || null;
+    }
+  },
+
+  // Employee Approval - Update submission with employee signature
+  updateSubmissionWithEmployeeSignature: async (
+    submissionId: number, 
+    employeeSignature: string
+  ): Promise<Submission | null> => {
+    try {
+      // Try backend first
+      const res = await fetch(`${CONFIG.API_URL}/submissions/${submissionId}/employee-approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          employeeSignature,
+          employeeApprovedAt: new Date().toISOString(),
+          approvalStatus: 'employee_approved'
+        })
+      });
+      
+      if (res.ok) {
+        const updated = await res.json();
+        // Update localStorage cache
+        const submissions = await clientDataService.getSubmissions();
+        const updatedSubmissions = submissions.map(sub => 
+          sub.id === submissionId ? { ...sub, ...updated } : sub
+        );
+        saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+        return updated;
+      }
+      
+      // Fallback to localStorage
+      const submissions = await clientDataService.getSubmissions();
+      const updatedSubmissions = submissions.map(sub => {
+        if (sub.id === submissionId) {
+          return {
+            ...sub,
+            employeeSignature,
+            employeeApprovedAt: new Date().toISOString(),
+            approvalStatus: 'employee_approved'
+          };
+        }
+        return sub;
+      });
+      saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+      return updatedSubmissions.find(sub => sub.id === submissionId) || null;
+      
+    } catch (error) {
+      console.error('Error updating employee signature:', error);
+      // Fallback to localStorage
+      const submissions = await clientDataService.getSubmissions();
+      const updatedSubmissions = submissions.map(sub => {
+        if (sub.id === submissionId) {
+          return {
+            ...sub,
+            employeeSignature,
+            employeeApprovedAt: new Date().toISOString(),
+            approvalStatus: 'employee_approved'
+          };
+        }
+        return sub;
+      });
+      saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+      return updatedSubmissions.find(sub => sub.id === submissionId) || null;
+    }
+  },
+
+  // Evaluator Approval - Update submission with evaluator signature
+  updateSubmissionWithEvaluatorSignature: async (
+    submissionId: number, 
+    evaluatorSignature: string
+  ): Promise<Submission | null> => {
+    try {
+      // Try backend first
+      const res = await fetch(`${CONFIG.API_URL}/submissions/${submissionId}/evaluator-approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          evaluatorSignature,
+          evaluatorApprovedAt: new Date().toISOString(),
+          approvalStatus: 'fully_approved'
+        })
+      });
+      
+      if (res.ok) {
+        const updated = await res.json();
+        // Update localStorage cache
+        const submissions = await clientDataService.getSubmissions();
+        const updatedSubmissions = submissions.map(sub => 
+          sub.id === submissionId ? { ...sub, ...updated } : sub
+        );
+        saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+        return updated;
+      }
+      
+      // Fallback to localStorage
+      const submissions = await clientDataService.getSubmissions();
+      const updatedSubmissions = submissions.map(sub => {
+        if (sub.id === submissionId) {
+          return {
+            ...sub,
+            evaluatorSignature,
+            evaluatorApprovedAt: new Date().toISOString(),
+            approvalStatus: 'fully_approved'
+          };
+        }
+        return sub;
+      });
+      saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+      return updatedSubmissions.find(sub => sub.id === submissionId) || null;
+      
+    } catch (error) {
+      console.error('Error updating evaluator signature:', error);
+      // Fallback to localStorage
+      const submissions = await clientDataService.getSubmissions();
+      const updatedSubmissions = submissions.map(sub => {
+        if (sub.id === submissionId) {
+          return {
+            ...sub,
+            evaluatorSignature,
+            evaluatorApprovedAt: new Date().toISOString(),
+            approvalStatus: 'fully_approved'
+          };
+        }
+        return sub;
+      });
+      saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+      return updatedSubmissions.find(sub => sub.id === submissionId) || null;
+    }
+  },
+
+  // Delete Submission
+  deleteSubmission: async (id: number): Promise<{ success: boolean; message: string }> => {
+    try {
+      // Try backend first
+      const res = await fetch(`${CONFIG.API_URL}/submissions/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (res.ok) {
+        // Update localStorage cache
+        const submissions = await clientDataService.getSubmissions();
+        const updatedSubmissions = submissions.filter(sub => sub.id !== id);
+        saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+        return { success: true, message: 'Submission deleted successfully' };
+      }
+      
+      // Fallback to localStorage
+      const submissions = await clientDataService.getSubmissions();
+      const updatedSubmissions = submissions.filter(sub => sub.id !== id);
+      saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+      return { success: true, message: 'Submission deleted successfully (offline)' };
+      
+    } catch (error) {
+      console.error('Error deleting submission:', error);
+      // Fallback to localStorage
+      const submissions = await clientDataService.getSubmissions();
+      const updatedSubmissions = submissions.filter(sub => sub.id !== id);
+      saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+      return { success: true, message: 'Submission deleted successfully (offline)' };
+    }
+  },
+
+  // Get Suspended Employees
+  getSuspendedEmployees: async (): Promise<any[]> => {
+    try {
+      // Try backend first
+      const res = await fetch(`${CONFIG.API_URL}/employees/suspended`, {
+        method: 'GET',
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        // Cache for offline fallback
+        saveToStorage('suspendedEmployees', data);
+        return data;
+      }
+      
+      // Fallback to localStorage
+      return getFromStorage('suspendedEmployees', []);
+      
+    } catch (error) {
+      console.error('Error fetching suspended employees:', error);
+      // Fallback to localStorage
+      return getFromStorage('suspendedEmployees', []);
+    }
+  },
+
+  // Get Employee Violations by Email
+  getEmployeeViolations: async (email: string): Promise<any[]> => {
+    try {
+      // Try backend first
+      const res = await fetch(`${CONFIG.API_URL}/employees/${email}/violations`, {
+        method: 'GET',
+      });
+      
+      if (res.ok) {
+        return await res.json();
+      }
+      
+      // Fallback to localStorage
+      const suspendedEmployees = getFromStorage('suspendedEmployees', []) as any[];
+      return suspendedEmployees.filter((emp: any) => emp.email === email);
+      
+    } catch (error) {
+      console.error('Error fetching employee violations:', error);
+      // Fallback to localStorage
+      const suspendedEmployees = getFromStorage('suspendedEmployees', []) as any[];
+      return suspendedEmployees.filter((emp: any) => emp.email === email);
+    }
+  },
+
+  // Get Account History for a user
+  getAccountHistory: async (email: string): Promise<any[]> => {
+    try {
+      // Try backend first
+      const res = await fetch(`${CONFIG.API_URL}/employees/${email}/history`, {
+        method: 'GET',
+      });
+      
+      if (res.ok) {
+        return await res.json();
+      }
+      
+      // Fallback to localStorage
+      const suspendedEmployees = getFromStorage('suspendedEmployees', []) as any[];
+      return suspendedEmployees.filter((emp: any) => emp.email === email);
+      
+    } catch (error) {
+      console.error('Error fetching account history:', error);
+      // Fallback to localStorage
+      const suspendedEmployees = getFromStorage('suspendedEmployees', []) as any[];
+      return suspendedEmployees.filter((emp: any) => emp.email === email);
+    }
+  },
+
+  // Bulk approve submissions (for evaluator)
+  bulkApproveSubmissions: async (submissionIds: number[]): Promise<{ success: boolean; message: string }> => {
+    try {
+      // Try backend first
+      const res = await fetch(`${CONFIG.API_URL}/submissions/bulk-approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submissionIds })
+      });
+      
+      if (res.ok) {
+        return { success: true, message: 'Submissions approved successfully' };
+      }
+      
+      return { success: false, message: 'Failed to approve submissions' };
+      
+    } catch (error) {
+      console.error('Error bulk approving submissions:', error);
+      return { success: false, message: 'Failed to approve submissions' };
+    }
+  },
+
+  // Update approval status (generic)
+  updateApprovalStatus: async (
+    submissionId: number, 
+    approvalStatus: string,
+    additionalData?: Partial<Submission>
+  ): Promise<Submission | null> => {
+    try {
+      // Try backend first
+      const res = await fetch(`${CONFIG.API_URL}/submissions/${submissionId}/approval-status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          approvalStatus,
+          ...additionalData
+        })
+      });
+      
+      if (res.ok) {
+        const updated = await res.json();
+        // Update localStorage cache
+        const submissions = await clientDataService.getSubmissions();
+        const updatedSubmissions = submissions.map(sub => 
+          sub.id === submissionId ? { ...sub, ...updated } : sub
+        );
+        saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+        return updated;
+      }
+      
+      // Fallback to localStorage
+      const submissions = await clientDataService.getSubmissions();
+      const updatedSubmissions = submissions.map(sub => {
+        if (sub.id === submissionId) {
+          return {
+            ...sub,
+            approvalStatus,
+            ...additionalData
+          };
+        }
+        return sub;
+      });
+      saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+      return updatedSubmissions.find(sub => sub.id === submissionId) || null;
+      
+    } catch (error) {
+      console.error('Error updating approval status:', error);
+      // Fallback to localStorage
+      const submissions = await clientDataService.getSubmissions();
+      const updatedSubmissions = submissions.map(sub => {
+        if (sub.id === submissionId) {
+          return {
+            ...sub,
+            approvalStatus,
+            ...additionalData
+          };
+        }
+        return sub;
+      });
+      saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+      return updatedSubmissions.find(sub => sub.id === submissionId) || null;
+    }
   },
 };
 
