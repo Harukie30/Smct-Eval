@@ -102,6 +102,7 @@
       "name": "hr test",
       "email": "hr@gmail.com",
       "role": "hr-manager",
+      "availableRoles": ["hr-manager", "employee"],
       "position": "HR Manager",
       "department": "Design",
       "branch": "cebu-branch",

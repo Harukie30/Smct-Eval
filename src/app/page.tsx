@@ -13,6 +13,8 @@ import InstantLoadingScreen from '@/components/InstantLoadingScreen';
 import SuspensionModal from '@/components/SuspensionModal';
 import GoogleLoginModal from '@/components/GoogleLoginModal';
 import ForgotPasswordModal from '@/components/ForgotPasswordModal';
+import RoleSelectionModal from '@/components/RoleSelectionModal';
+import ContactDevsModal from '@/components/ContactDevsModal'; // Import new modal
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import { toastMessages } from '@/lib/toastMessages';
@@ -30,8 +32,10 @@ export default function LandingLoginPage() {
   const [showGoogleLoginModal, setShowGoogleLoginModal] = useState(false);
   const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [showRoleSelection, setShowRoleSelection] = useState(false);
+  const [showContactDevsModal, setShowContactDevsModal] = useState(false); // New state for ContactDevsModal
 
-  const { login, isLoading } = useUser();
+  const { login, isLoading, user, setUserRole } = useUser();
   const router = useRouter();
 
 
@@ -94,6 +98,11 @@ export default function LandingLoginPage() {
           console.log('No user data found, redirecting to default dashboard');
           router.push('/dashboard');
         }
+      } else if (result && typeof result === 'object' && result.requiresRoleSelection) {
+        // User has multiple roles - show role selection modal
+        console.log('Multiple roles detected, showing role selection');
+        setShowLoadingScreen(false);
+        setShowRoleSelection(true);
       } else if (result && typeof result === 'object' && result.suspended) {
         // Account is suspended
         console.log('Account suspended result:', result);
@@ -117,6 +126,13 @@ export default function LandingLoginPage() {
       toastMessages.login.networkError();
       setShowLoadingScreen(false); // Hide loading screen
     }
+  };
+
+  const handleRoleSelected = (selectedRole: string) => {
+    console.log('Role selected:', selectedRole);
+    setUserRole(selectedRole);
+    setShowRoleSelection(false);
+    // Router.push is handled inside the modal component
   };
 
   if (isLoading) {
@@ -417,16 +433,10 @@ export default function LandingLoginPage() {
             <div>
               <h3 className="font-semibold text-white mb-4">Resources</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-white hover:text-yellow-300">Help Center</a></li>
+                <li><a href="#" onClick={() => setShowContactDevsModal(true)} className="text-white hover:text-yellow-300">Help Center</a></li>
               </ul>
             </div>
-            <div>
-              <h3 className="font-semibold text-white mb-4">Company</h3>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-white hover:text-yellow-300">About Us</a></li>
-                <li><a href="#" className="text-white hover:text-yellow-300">Contact</a></li>
-              </ul>
-            </div>
+            
           </div>
           <div className="border-t border-blue-500 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p className="text-white text-sm">© 2026 SMCT Group of Companies. All rights reserved.</p>
@@ -744,6 +754,20 @@ export default function LandingLoginPage() {
       <ForgotPasswordModal
         isOpen={showForgotPasswordModal}
         onCloseAction={() => setShowForgotPasswordModal(false)}
+      />
+
+      {/* Role Selection Modal */}
+      <RoleSelectionModal
+        isOpen={showRoleSelection}
+        userName={user?.name || 'User'}
+        availableRoles={user?.availableRoles || []}
+        onRoleSelectedAction={handleRoleSelected}
+      />
+
+      {/* Contact Devs Modal */}
+      <ContactDevsModal
+        isOpen={showContactDevsModal}
+        onCloseAction={() => setShowContactDevsModal(false)}
       />
 
       {/* Incorrect Password Dialog */}

@@ -250,6 +250,20 @@
   animation: popDown 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
+/* Subtle bounce animation for role icons */
+@keyframes bounceGentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounceGentle 2s ease-in-out infinite;
+}
+
 /* Date input styling for better cross-browser compatibility */
 input[type="date"] {
   position: relative;

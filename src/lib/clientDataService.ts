@@ -115,6 +115,7 @@ export interface Account {
   suspendedAt?: string;
   suspendedBy?: string;
   signature?: string; // Digital signature as base64 or URL
+  availableRoles?: string[]; // Added for role selection modal
 }
 
 // Local storage keys
@@ -632,6 +633,7 @@ export const clientDataService = {
         contact: account.contact || '',
         hireDate: account.hireDate || new Date().toISOString(),
         signature: account.signature, // Include signature for admin accounts
+        availableRoles: account.availableRoles || [account.role], // Include available roles
       };
       return {
         success: true,
@@ -652,6 +654,7 @@ export const clientDataService = {
       user: {
         ...employee,
         role: account.role,
+        availableRoles: account.availableRoles || [account.role], // Include available roles
         signature: account.signature || employee.signature, // Include signature from account
       }
     };
@@ -826,9 +829,9 @@ export const clientDataService = {
     return getFromStorage(STORAGE_KEYS.ACCOUNTS, []);
   },
 
-  // ============================================
-  // BACKEND-READY FUNCTIONS (Option A)
-  // ============================================
+  
+  // BACKEND-READY FUNCTIONS 
+ 
   
   // Get single submission by ID
   getSubmissionById: async (id: number): Promise<Submission | null> => {

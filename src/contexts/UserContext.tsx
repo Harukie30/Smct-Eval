@@ -21,6 +21,8 @@ export interface AuthenticatedUser {
   signature?: string;
   isActive: boolean;
   lastLogin?: string;
+  availableRoles?: string[]; // For users with multiple roles (e.g., HR + Employee)
+  activeRole?: string; // Currently active role
 }
 
 interface UserContextType {
@@ -28,10 +30,12 @@ interface UserContextType {
   profile: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<boolean | { suspended: true; data: any }>;
+  login: (username: string, password: string) => Promise<boolean | { suspended: true; data: any; requiresRoleSelection?: boolean }>;
   logout: () => void;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   refreshUserData: () => Promise<void>;
+  switchRole: (role: string) => void; // New function for switching between roles
+  setUserRole: (role: string) => void; // New function for setting role after selection
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -118,7 +122,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean | { suspended: true; data: any }> => {
+  const login = async (username: string, password: string): Promise<boolean | { suspended: true; data: any; requiresRoleSelection?: boolean }> => {
     try {
       setIsLoading(true);
       
@@ -135,7 +139,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           username: authenticatedUser.email, // Use email as username
           isActive: true,
           lastLogin: new Date().toISOString(),
+          availableRoles: authenticatedUser.availableRoles, // Include available roles
+          activeRole: authenticatedUser.role, // Set initial active role
         };
+        
+        // Check if user has multiple roles (requires role selection)
+        const hasMultipleRoles = userWithNumberId.availableRoles && userWithNumberId.availableRoles.length > 1;
         
         setUser(userWithNumberId);
         
@@ -156,6 +165,11 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         if (typeof window !== 'undefined') {
           localStorage.setItem('authenticatedUser', JSON.stringify(userWithNumberId));
           localStorage.setItem('keepLoggedIn', 'true');
+        }
+        
+        // Return true with requiresRoleSelection flag if user has multiple roles
+        if (hasMultipleRoles) {
+          return { suspended: false, data: null, requiresRoleSelection: true } as any;
         }
         
         return true;
@@ -304,6 +318,42 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   };
 
+  // Set user role after selection (used in role selection modal)
+  const setUserRole = (role: string) => {
+    if (user) {
+      const updatedUser: AuthenticatedUser = {
+        ...user,
+        activeRole: role,
+        role: role, // Also update the primary role field
+      };
+      setUser(updatedUser);
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('authenticatedUser', JSON.stringify(updatedUser));
+      }
+    }
+  };
+
+  // Switch between available roles (for multi-role users)
+  const switchRole = (newRole: string) => {
+    if (user && user.availableRoles?.includes(newRole)) {
+      const updatedUser: AuthenticatedUser = {
+        ...user,
+        activeRole: newRole,
+        role: newRole, // Also update the primary role field
+      };
+      setUser(updatedUser);
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('authenticatedUser', JSON.stringify(updatedUser));
+      }
+      
+      // Show toast notification
+      const roleName = newRole === 'hr' ? 'HR Manager' : 'Employee';
+      toastMessages.generic.success('Role Switched', `You are now viewing as ${roleName}`);
+    }
+  };
+
   const value: UserContextType = {
     user,
     profile,
@@ -313,6 +363,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     logout,
     updateProfile,
     refreshUserData,
+    switchRole,
+    setUserRole,
   };
 
   // Handle logout loading screen completion
