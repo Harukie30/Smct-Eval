@@ -37,11 +37,11 @@ export const apiService = {
  login: async (username: string, password: string, rememberMe: boolean): Promise<any> => {
     const res = await fetch(`${CONFIG.API_URL}/login`, {
         method: "POST",
-        headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                        "X-Requested-With": "XMLHttpRequest",
-        },
+        
+          headers: {
+                  "Content-Type": "application/json",
+                  Accept: "application/json",
+          },
         body: JSON.stringify({
                 username: username,
                 password: password,
@@ -88,7 +88,6 @@ export const apiService = {
           method: "POST",
           headers: {
             Accept: "application/json",
-            "X-Requested-With": "XMLHttpRequest",
           },
           body: formData,
         });
