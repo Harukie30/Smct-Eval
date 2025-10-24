@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import GoogleLoginModal from '@/components/GoogleLoginModal';
 import ForgotPasswordModal from '@/components/ForgotPasswordModal';
 import RoleSelectionModal from '@/components/RoleSelectionModal';
 import ContactDevsModal from '@/components/ContactDevsModal'; // Import new modal
+import PendingApprovalModal from '@/components/PendingApprovalModal'; // Import pending approval modal
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import { toastMessages } from '@/lib/toastMessages';
@@ -34,9 +35,22 @@ export default function LandingLoginPage() {
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [showContactDevsModal, setShowContactDevsModal] = useState(false); // New state for ContactDevsModal
+  const [showPendingApprovalModal, setShowPendingApprovalModal] = useState(false); // New state for PendingApprovalModal
+  const [pendingAccountData, setPendingAccountData] = useState<any>(null); // Store pending account data
 
   const { login, isLoading, user, setUserRole } = useUser();
   const router = useRouter();
+
+  useEffect(() => {
+    if (isAboutModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isAboutModalOpen]);
 
 
   // Remove automatic redirect - let users stay on login page even if authenticated
@@ -109,6 +123,12 @@ export default function LandingLoginPage() {
         console.log('Suspension data:', result.data);
         setSuspensionData(result.data);
         setShowSuspensionModal(true);
+        setShowLoadingScreen(false); // Hide loading screen
+      } else if (result && typeof result === 'object' && result.pending) {
+        // Account is pending approval
+        console.log('Account pending approval:', result);
+        setPendingAccountData(result.pendingData);
+        setShowPendingApprovalModal(true);
         setShowLoadingScreen(false); // Hide loading screen
       } else {
         const errorMessage = 'Invalid username or password. Please try again.';
@@ -245,7 +265,7 @@ export default function LandingLoginPage() {
           >
             About
           </button>
-          <a href="#" className="text-white font-semibold hover:underline-offset-4 hover:underline hover:text-blue-100">Contact</a>
+          
         </nav>
       </header>
       
@@ -768,6 +788,14 @@ export default function LandingLoginPage() {
       <ContactDevsModal
         isOpen={showContactDevsModal}
         onCloseAction={() => setShowContactDevsModal(false)}
+      />
+
+      {/* Pending Approval Modal */}
+      <PendingApprovalModal
+        isOpen={showPendingApprovalModal}
+        onClose={() => setShowPendingApprovalModal(false)}
+        userEmail={pendingAccountData?.email}
+        userName={pendingAccountData?.name}
       />
 
       {/* Incorrect Password Dialog */}

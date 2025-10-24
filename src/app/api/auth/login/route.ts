@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import fs from 'fs';
+import path from 'path';
+
+// Helper function to read pending registrations
+function getPendingRegistrations() {
+  try {
+    const filePath = path.join(process.cwd(), 'src', 'data', 'pending-registrations.json');
+    const fileContents = fs.readFileSync(filePath, 'utf8');
+    const data = JSON.parse(fileContents);
+    return data || [];
+  } catch (error) {
+    console.error('Error reading pending registrations:', error);
+    return [];
+  }
+}
 
 // Mock data - replace with your actual database
 const accounts = [
@@ -54,6 +69,23 @@ export async function POST(request: NextRequest) {
         { success: false, message: 'Email and password are required' },
         { status: 400 }
       );
+    }
+
+    // Check if email exists in pending registrations
+    const pendingRegistrations = getPendingRegistrations();
+    const pendingAccount = pendingRegistrations.find((reg: any) => reg.email === email && reg.status === 'pending');
+    
+    if (pendingAccount) {
+      return NextResponse.json({
+        success: false,
+        pending: true,
+        message: 'Account pending approval',
+        pendingData: {
+          name: pendingAccount.name,
+          email: pendingAccount.email,
+          submittedAt: pendingAccount.submittedAt
+        }
+      }, { status: 403 });
     }
 
     // Find account

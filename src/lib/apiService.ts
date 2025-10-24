@@ -36,7 +36,7 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
 
 export const apiService = {
   // Authentication
-  login: async (email: string, password: string): Promise<{ success: boolean; user?: AuthenticatedUser; message?: string; suspensionData?: any; token?: string }> => {
+  login: async (email: string, password: string): Promise<{ success: boolean; user?: AuthenticatedUser; message?: string; suspensionData?: any; pending?: boolean; pendingData?: any; token?: string }> => {
     const response = await apiRequest('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),

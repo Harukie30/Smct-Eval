@@ -2171,45 +2171,44 @@ export default function EvaluatorDashboard() {
                 <CardDescription>Latest items awaiting evaluation ({filteredSubmissions.length} total)</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="px-6 py-4 space-y-4">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Search submissions by employee name or evaluator..."
-                      value={overviewSearch}
-                      onChange={(e) => setOverviewSearch(e.target.value)}
-                      className=" w-1/2 bg-gray-100 "
-                    />
-                    {overviewSearch && (
-                      <Button
-                        size="sm"
-                        onClick={() => setOverviewSearch('')}
-                        className="px-3 py-2 text-white hover:text-white bg-blue-400 hover:bg-blue-500"
-                      >
-                        ⌫ Clear
-                      </Button>
-                    )}
+                {/* Search and Filter Controls */}
+                <div className="px-6 py-4 flex gap-2 border-b border-gray-200">
+                  <Input
+                    placeholder="Search submissions by employee name or evaluator..."
+                    value={overviewSearch}
+                    onChange={(e) => setOverviewSearch(e.target.value)}
+                    className="w-1/2 bg-gray-100"
+                  />
+                  {overviewSearch && (
                     <Button
                       size="sm"
-                      onClick={handleEvaluationRecordsRefresh}
-                      disabled={isFeedbackRefreshing}
-                      className="px-3 py-2 text-white hover:text-white bg-blue-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                      title="Refresh submissions data"
+                      onClick={() => setOverviewSearch('')}
+                      className="px-3 py-2 text-white hover:text-white bg-blue-400 hover:bg-blue-500"
                     >
-                      {isFeedbackRefreshing ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Refreshing...
-                        </>
-                      ) : (
-                        <> Refresh <span><RefreshCw className="h-3 w-3" /></span> </>
-                      )}
+                      ⌫ Clear
                     </Button>
-                  </div>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={handleEvaluationRecordsRefresh}
+                    disabled={isFeedbackRefreshing}
+                    className="px-3 py-2 text-white hover:text-white bg-blue-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    title="Refresh submissions data"
+                  >
+                    {isFeedbackRefreshing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Refreshing...
+                      </>
+                    ) : (
+                      <> Refresh <span><RefreshCw className="h-3 w-3" /></span> </>
+                    )}
+                  </Button>
                 </div>
                 {isRefreshing ? (
-                  <div className="max-h-[500px] overflow-y-auto">
+                  <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
                     <Table className="min-w-full">
-                      <TableHeader className="sticky top-0 bg-white z-10 border-b">
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                         <TableRow key="overview-header">
                           <TableHead className="px-6 py-3">Employee</TableHead>
                           <TableHead className="px-6 py-3 text-right">Rating</TableHead>
@@ -2254,18 +2253,11 @@ export default function EvaluatorDashboard() {
                     </Table>
                   </div>
                 ) : (
-                  <div className="max-h-[500px] overflow-y-auto border border-gray-200 rounded-md relative">
-                    {filteredSubmissions.length > 6 && (
-                      <div className="absolute top-2 right-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full z-20">
-                        Scroll to see more
-                      </div>
-                    )}
-                    
+                  <>
                     {/* Simple Legend */}
-                    <div className="mb-3 p-3 flex flex-wrap gap-4 text-xs text-gray-600 bg-gray-50 border-b">
-                      <div className="flex items-center gap-2 mb-2 w-full">
-                        <span className="text-sm font-medium text-gray-700">Indicators:</span>
-                      </div>
+                    <div className="m-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex flex-wrap gap-4 text-xs">
+                        <span className="text-sm font-medium text-gray-700 mr-2">Indicators:</span>
                       <div className="flex items-center gap-1">
                         <div className="w-2 h-2 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
                         <Badge className="bg-yellow-200 text-yellow-800 text-xs">New</Badge>
@@ -2279,9 +2271,12 @@ export default function EvaluatorDashboard() {
                         <Badge className="bg-green-500 text-white text-xs">Approved</Badge>
                       </div>
                     </div>
+                    </div>
                     
+                    {/* Scrollable Table */}
+                    <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
                     <Table className="min-w-full">
-                      <TableHeader className="sticky top-0 bg-white z-10 border-b">
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                         <TableRow key="overview-header">
                           <TableHead className="px-6 py-3">Employee</TableHead>
                           <TableHead className="px-6 py-3 text-right">Rating</TableHead>
@@ -2300,7 +2295,6 @@ export default function EvaluatorDashboard() {
                         ) : (
                           filteredSubmissions
                             .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-                            .slice(0, 10)
                             .map((submission) => {
                               const highlight = getSubmissionHighlight(submission.submittedAt, submission.id, submission.approvalStatus);
                               return (
@@ -2368,7 +2362,8 @@ export default function EvaluatorDashboard() {
                         )}
                       </TableBody>
                     </Table>
-                  </div>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>

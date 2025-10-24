@@ -209,9 +209,13 @@ export default function EmployeeDashboard() {
     }
   };
 
-
-
-
+  // Function to determine highlighting for account history items
+  const getAccountHistoryHighlight = (item: any) => {
+    if (item.type === 'violation') {
+      return 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100';
+    }
+    return 'hover:bg-gray-50'; // Default or no highlight
+  };
 
   // Comments & feedback functionality removed
 
@@ -1127,9 +1131,9 @@ export default function EmployeeDashboard() {
                       </div>
                     </div>
                     
-                    <div className="max-h-[400px] overflow-y-auto mx-4">
+                    <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table mx-4">
                       <Table>
-                      <TableHeader className="sticky top-0 bg-white z-10 border-b">
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
                         <TableRow>
                           <TableHead>Immediate Supervisor</TableHead>
                           <TableHead className="text-right">Rating</TableHead>
@@ -1142,7 +1146,6 @@ export default function EmployeeDashboard() {
                     <TableBody>
                       {submissions
                         .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-                        .slice(0, 5)
                         .map((submission) => {
                         const highlight = getSubmissionHighlight(submission.submittedAt, submissions, submission.id);
                         return (
@@ -2014,9 +2017,9 @@ export default function EmployeeDashboard() {
                               </div>
                             )}
                           </div>
-                          <div className="overflow-x-auto">
+                          <div className="max-h-[300px] md:max-h-[450px] lg:max-h-[650px] xl:max-h-[700px] overflow-y-auto overflow-x-auto scrollable-table">
                             {isRefreshingQuarterly || loading ? (
-                              <div className="space-y-2">
+                              <div className="space-y-2 p-4">
                                 {/* Table Header Skeleton */}
                                 <div className="flex space-x-3 py-2 border-b">
                                   <Skeleton className="h-3 w-12" />
@@ -2043,7 +2046,7 @@ export default function EmployeeDashboard() {
                               </div>
                             ) : (
                               <Table>
-                                <TableHeader>
+                                <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
                                   <TableRow>
                                     <TableHead>Quarter</TableHead>
                                     <TableHead>Dates</TableHead>
@@ -2315,9 +2318,9 @@ export default function EmployeeDashboard() {
                               </div>
                             )}
                           </div>
-                          <div className="overflow-x-auto">
+                          <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
                             {isRefreshingHistory || loading ? (
-                              <div className="space-y-2">
+                              <div className="space-y-2 p-4">
                                 {/* Table Header Skeleton */}
                                 <div className="flex space-x-3 py-2 border-b">
                                   <Skeleton className="h-3 w-12" />
@@ -2343,9 +2346,8 @@ export default function EmployeeDashboard() {
                                 ))}
                               </div>
                             ) : (
-                              <div className="max-h-[500px] overflow-y-auto mx-4">
-                                <Table>
-                                  <TableHeader className="sticky top-0 bg-white z-10 border-b">
+                              <Table>
+                                  <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
                                     <TableRow>
                                       <TableHead>Date</TableHead>
                                       <TableHead>Employee</TableHead>
@@ -2467,7 +2469,6 @@ export default function EmployeeDashboard() {
                                   )}
                                 </TableBody>
                               </Table>
-                              </div>
                             )}
                           </div>
                         </CardContent>
@@ -2534,7 +2535,7 @@ export default function EmployeeDashboard() {
                     )}
 
                     {/* Search Bar */}
-                    <div className="mb-6 w-1/2">
+                    <div className="mb-6 w-1/3">
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -569,7 +569,7 @@ export const clientDataService = {
   },
 
   // Authentication
-  login: async (email: string, password: string): Promise<{ success: boolean; user?: any; message?: string; suspensionData?: any }> => {
+  login: async (email: string, password: string): Promise<{ success: boolean; user?: any; message?: string; suspensionData?: any; pending?: boolean; pendingData?: any }> => {
     const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as Account[];
     
     // Ensure accounts is an array
@@ -658,6 +658,66 @@ export const clientDataService = {
         signature: account.signature || employee.signature, // Include signature from account
       }
     };
+  },
+
+  // Get user by ID (for session restoration with avatar/signature)
+  getUserById: async (userId: number): Promise<any | null> => {
+    try {
+      const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as Account[];
+      const employees = getFromStorage(STORAGE_KEYS.EMPLOYEES, []) as Employee[];
+      
+      // Find the account
+      const account = accounts.find((acc: Account) => acc.id === userId);
+      if (!account) {
+        return null;
+      }
+
+      // If account has employeeId, merge with employee data
+      if (account.employeeId) {
+        const employee = employees.find((emp: Employee) => emp.id === account.employeeId);
+        if (employee) {
+          return {
+            id: account.id,
+            username: account.username,
+            email: account.email,
+            role: account.role,
+            name: employee.name,
+            position: employee.position,
+            department: employee.department,
+            branch: employee.branch,
+            hireDate: employee.hireDate,
+            avatar: employee.avatar,
+            bio: employee.bio,
+            signature: account.signature || employee.signature,
+            isActive: account.isActive,
+            lastLogin: account.lastLogin,
+            availableRoles: account.availableRoles || [account.role],
+          };
+        }
+      }
+
+      // Return account data if no employee found
+      return {
+        id: account.id,
+        username: account.username,
+        name: account.name || account.username,
+        email: account.email,
+        role: account.role,
+        position: account.position || 'System Administrator',
+        department: account.department || 'IT',
+        branch: account.branch || 'head-office',
+        hireDate: account.hireDate || new Date().toISOString(),
+        avatar: undefined,
+        bio: undefined,
+        signature: account.signature,
+        isActive: account.isActive,
+        lastLogin: account.lastLogin,
+        availableRoles: account.availableRoles || [account.role],
+      };
+    } catch (error) {
+      console.error('Error getting user by ID:', error);
+      return null;
+    }
   },
 
   // Image upload simulation (returns a data URL)

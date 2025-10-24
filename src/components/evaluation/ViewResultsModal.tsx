@@ -1494,7 +1494,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                         <div className="h-20 border-2 border-dashed border-white rounded-lg flex items-center justify-center bg-gray-50 relative">
                           {/* Name as background text - always show */}
                           <span className="text-md text-gray-900 font-bold">
-                            {approvalData?.employeeName || currentUserName || 'Employee Name'}
+                            {submission.employeeName || 'Employee Name'}
                           </span>
                           {/* Signature overlay - centered and overlapping */}
                           {signatureLoading ? (
@@ -1574,7 +1574,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                       {/* Employee Name and Date */}
                       <div className="text-center">
                         <p className="text-sm font-medium text-gray-900">
-                          {approvalData?.employeeName || currentUserName || 'Employee Name'}
+                          {submission.employeeName || 'Employee Name'}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
                           {submission.employeeApprovedAt ? new Date(submission.employeeApprovedAt).toLocaleDateString('en-US', {
@@ -1594,12 +1594,12 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                         <div className="h-20 border-2 border-dashed border-white rounded-lg flex items-center justify-center bg-gray-50 relative">
                           {/* Name as background text - always show */}
                           <span className="text-md text-gray-900 font-bold">
-                            {submission.evaluationData.evaluatorSignature || currentUserName || 'Evaluator Name'}
+                            {submission.evaluator || submission.evaluationData?.evaluatorSignature || submission.evaluationData?.evaluatorName || 'Evaluator Name'}
                           </span>
-                          {/* Signature overlay - centered and overlapping */}
-                          {currentUserSignature ? (
+                          {/* Signature overlay - automatically show when signature exists */}
+                          {(submission.evaluatorSignature || submission.evaluationData?.evaluatorSignatureImage || submission.evaluationData?.evaluatorSignature) ? (
                             <img 
-                              src={currentUserSignature} 
+                              src={submission.evaluatorSignature || submission.evaluationData?.evaluatorSignatureImage || submission.evaluationData?.evaluatorSignature}
                               alt="Evaluator Signature" 
                               className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-16 max-w-full object-contain"
                               onError={(e) => {
@@ -1615,10 +1615,14 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                       {/* Evaluator Name and Date */}
                       <div className="text-center">
                         <p className="text-sm font-medium text-gray-900">
-                          {submission.evaluationData.evaluatorSignature || currentUserName || 'Evaluator Name'}
+                          {submission.evaluator || submission.evaluationData?.evaluatorSignature || submission.evaluationData?.evaluatorName || 'Evaluator Name'}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          {submission.evaluationData.evaluatorSignatureDate || 'Not specified'}
+                          {submission.evaluatorApprovedAt || submission.evaluationData?.evaluatorSignatureDate ? new Date(submission.evaluatorApprovedAt || submission.evaluationData?.evaluatorSignatureDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          }) : 'Not specified'}
                         </p>
                       </div>
                     </div>

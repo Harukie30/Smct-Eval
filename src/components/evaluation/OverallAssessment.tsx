@@ -36,9 +36,7 @@ interface OverallAssessmentProps {
     };
     onSubmitAction?: () => void;
     onPreviousAction?: () => void;
-    onApproveAction?: () => void;
     onCloseAction?: () => void;
-    isApproved?: boolean;
 }
 
 const getRatingIcon = (rating: string) => {
@@ -71,7 +69,7 @@ const getRatingColor = (rating: string) => {
     }
 };
 
-export default function OverallAssessment({ data, updateDataAction, employee, currentUser, onSubmitAction, onPreviousAction, onApproveAction, onCloseAction, isApproved = false }: OverallAssessmentProps) {
+export default function OverallAssessment({ data, updateDataAction, employee, currentUser, onSubmitAction, onPreviousAction, onCloseAction }: OverallAssessmentProps) {
     const { error } = useToast();
     
     // Submission state management
@@ -122,7 +120,11 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
 
 
     const handleSubmitEvaluation = async (isRetry = false) => {
-        // No validation required - submit directly
+        // Validate evaluator has a signature
+        if (!currentUser?.signature) {
+            error('Please add your signature to your profile before submitting the evaluation.');
+            return;
+        }
 
         // Update the data with evaluator signature before submitting
         const updatedData = {
@@ -320,18 +322,6 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
     const handlePrevious = () => {
         if (onPreviousAction) {
             onPreviousAction();
-        }
-    };
-
-    const handleApprove = () => {
-        // Validation: Check if evaluator has a signature
-        if (!currentUser?.signature) {
-            error('Please add your signature to your profile before approving the evaluation.');
-            return;
-        }
-        
-        if (onApproveAction) {
-            onApproveAction();
         }
     };
 
@@ -1881,8 +1871,8 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         <span className="text-md text-gray-900 font-bold">
                                             {data.evaluatorSignature || currentUser?.name || 'Evaluator Name'}
                                         </span>
-                                        {/* Signature overlay - centered and overlapping */}
-                                        {isApproved && currentUser?.signature && (
+                                        {/* Signature overlay - automatically show when signature exists */}
+                                        {currentUser?.signature && (
                                             <img 
                                                 src={currentUser.signature} 
                                                 alt="Evaluator Signature" 
@@ -1892,48 +1882,13 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                                 }}
                                             />
                                         )}
+                                        {/* Show message if no signature */}
+                                        {!currentUser?.signature && (
+                                            <span className="text-xs text-red-600">
+                                                Please add signature to your profile
+                                            </span>
+                                        )}
                                     </div>
-                                </div>
-                                
-                                {/* Action Section */}
-                                <div className="mt-4">
-                                    {/* Approve Button - Only show if not approved */}
-                                    {!isApproved && onApproveAction && (
-                                        <div className="space-y-2">
-                                            <Button
-                                                onClick={handleApprove}
-                                                disabled={!currentUser?.signature}
-                                                className={`px-8 py-2 text-sm font-medium ${
-                                                    currentUser?.signature 
-                                                        ? 'bg-green-600 hover:bg-green-700 text-white' 
-                                                        : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                                                }`}
-                                            >
-                                                {currentUser?.signature ? 'Approve Evaluation' : 'Signature Required'}
-                                            </Button>
-                                            {!currentUser?.signature && (
-                                                <p className="text-xs text-red-600 text-center">
-                                                    Please add your signature to your profile first
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                    
-                                    {/* Approved Status - Only show if approved */}
-                                    {isApproved && (
-                                        <div className="space-y-2">
-                                            <div className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium">
-                                                ✓ Approved
-                                            </div>
-                                            <p className="text-xs text-gray-500">
-                                                {data.evaluatorApprovedAt ? new Date(data.evaluatorApprovedAt).toLocaleDateString('en-US', {
-                                                    year: 'numeric',
-                                                    month: 'long',
-                                                    day: 'numeric'
-                                                }) : 'Unknown date'}
-                                            </p>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                             

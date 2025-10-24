@@ -30,7 +30,7 @@ interface UserContextType {
   profile: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<boolean | { suspended: true; data: any; requiresRoleSelection?: boolean }>;
+  login: (username: string, password: string) => Promise<boolean | { suspended: true; data: any; requiresRoleSelection?: boolean; pending?: boolean; pendingData?: any }>;
   logout: () => void;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   refreshUserData: () => Promise<void>;
@@ -58,6 +58,36 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [showLogoutLoading, setShowLogoutLoading] = useState(false);
 
+  // Helper function to save user data without large binary fields (avatar, signature)
+  const saveUserToLocalStorage = (userData: AuthenticatedUser) => {
+    if (typeof window !== 'undefined') {
+      try {
+        // Create a lightweight copy without large binary data
+        const { avatar, signature, ...essentialData } = userData;
+        localStorage.setItem('authenticatedUser', JSON.stringify(essentialData));
+      } catch (error) {
+        console.error('Failed to save user to localStorage:', error);
+        // Fallback: try to save without any optional fields
+        try {
+          const minimalData = {
+            id: userData.id,
+            username: userData.username,
+            name: userData.name,
+            email: userData.email,
+            role: userData.role,
+            position: userData.position,
+            department: userData.department,
+            hireDate: userData.hireDate,
+            isActive: userData.isActive,
+          };
+          localStorage.setItem('authenticatedUser', JSON.stringify(minimalData));
+        } catch (fallbackError) {
+          console.error('Failed to save minimal user data:', fallbackError);
+        }
+      }
+    }
+  };
+
   // Check if user is already logged in on app start
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -80,20 +110,63 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         if (storedUser) {
           try {
             const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
             
-            // Convert to UserProfile format
-            const userProfile: UserProfile = {
-              id: parsedUser.id,
-              name: parsedUser.name,
-              email: parsedUser.email,
-              roleOrPosition: parsedUser.position,
-              department: parsedUser.department,
-              avatar: parsedUser.avatar,
-              bio: parsedUser.bio,
-              signature: parsedUser.signature,
-            };
-            setProfile(userProfile);
+            // Fetch full user data including avatar and signature from data source
+            try {
+              const fullUserData = await clientDataService.getUserById(parsedUser.id);
+              if (fullUserData) {
+                // Merge stored data with fresh avatar/signature from data source
+                const completeUser = {
+                  ...parsedUser,
+                  avatar: fullUserData.avatar,
+                  signature: fullUserData.signature,
+                  bio: fullUserData.bio,
+                };
+                setUser(completeUser);
+                
+                // Convert to UserProfile format
+                const userProfile: UserProfile = {
+                  id: completeUser.id,
+                  name: completeUser.name,
+                  email: completeUser.email,
+                  roleOrPosition: completeUser.position,
+                  department: completeUser.department,
+                  avatar: completeUser.avatar,
+                  bio: completeUser.bio,
+                  signature: completeUser.signature,
+                };
+                setProfile(userProfile);
+              } else {
+                // Fallback if user not found
+                setUser(parsedUser);
+                const userProfile: UserProfile = {
+                  id: parsedUser.id,
+                  name: parsedUser.name,
+                  email: parsedUser.email,
+                  roleOrPosition: parsedUser.position,
+                  department: parsedUser.department,
+                  avatar: parsedUser.avatar,
+                  bio: parsedUser.bio,
+                  signature: parsedUser.signature,
+                };
+                setProfile(userProfile);
+              }
+            } catch (fetchError) {
+              console.error('Error fetching full user data:', fetchError);
+              // Use stored data as fallback
+              setUser(parsedUser);
+              const userProfile: UserProfile = {
+                id: parsedUser.id,
+                name: parsedUser.name,
+                email: parsedUser.email,
+                roleOrPosition: parsedUser.position,
+                department: parsedUser.department,
+                avatar: parsedUser.avatar,
+                bio: parsedUser.bio,
+                signature: parsedUser.signature,
+              };
+              setProfile(userProfile);
+            }
             
             // Ensure keepLoggedIn is set to true for future sessions
             localStorage.setItem('keepLoggedIn', 'true');
@@ -161,9 +234,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         };
         setProfile(userProfile);
 
-        // Store in localStorage
+        // Store in localStorage (without large binary data)
+        saveUserToLocalStorage(userWithNumberId);
         if (typeof window !== 'undefined') {
-          localStorage.setItem('authenticatedUser', JSON.stringify(userWithNumberId));
           localStorage.setItem('keepLoggedIn', 'true');
         }
         
@@ -177,6 +250,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         // Account is suspended, return suspension data
         console.log('UserContext: Account suspended, returning suspension data:', loginResult.suspensionData);
         return { suspended: true, data: loginResult.suspensionData };
+      } else if (loginResult.message === 'Account pending approval' && loginResult.pendingData) {
+        // Account is pending approval, return pending data
+        console.log('UserContext: Account pending approval, returning pending data:', loginResult.pendingData);
+        return { suspended: false, data: null, pending: true, pendingData: loginResult.pendingData } as any;
       }
       
       return false;
@@ -235,9 +312,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         };
         setUser(updatedUser);
         
+        // Store updated user without large binary data
+        saveUserToLocalStorage(updatedUser);
+        
         if (typeof window !== 'undefined') {
-          localStorage.setItem('authenticatedUser', JSON.stringify(updatedUser));
-          
           // Use clientDataService to update all storage locations (accounts, employees, profiles)
           try {
             // Update via clientDataService which syncs signature across all storage
@@ -308,9 +386,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           };
           setProfile(updatedProfile);
           
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('authenticatedUser', JSON.stringify(updatedUser));
-          }
+          // Store updated user without large binary data
+          saveUserToLocalStorage(updatedUser);
         }
       } catch (error) {
         console.error('Error refreshing user data:', error);
@@ -328,9 +405,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       };
       setUser(updatedUser);
       
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('authenticatedUser', JSON.stringify(updatedUser));
-      }
+      // Store updated user without large binary data
+      saveUserToLocalStorage(updatedUser);
     }
   };
 
@@ -344,9 +420,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       };
       setUser(updatedUser);
       
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('authenticatedUser', JSON.stringify(updatedUser));
-      }
+      // Store updated user without large binary data
+      saveUserToLocalStorage(updatedUser);
       
       // Show toast notification
       const roleName = newRole === 'hr' ? 'HR Manager' : 'Employee';
