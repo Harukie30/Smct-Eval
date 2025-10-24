@@ -41,31 +41,28 @@ const sanctum_csrf = async ():Promise<any> => {
 
 export const apiService = {
   // Authentication
- login: async (username: string, password: string, rememberMe: boolean): Promise<any> => {
-  try{
-    await sanctum_csrf();
-    const res = await fetch(`${CONFIG.API_URL}/login`, 
-      {
+  login: async (username: string, password: string, rememberMe: boolean): Promise<any> => {
+    try {
+      await sanctum_csrf();
+
+      const res = await fetch(`${CONFIG.API_URL}/login`, {
         method: "POST",
         credentials: 'include',
         headers: {
-                  "Content-Type": "application/json",
-                  "Accept": "application/json",
-          },
-        body: JSON.stringify({
-                username: username,
-                password: password,
-                remember: rememberMe, 
-            }),
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({ username, password, remember: rememberMe }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        return data;
+
+      const response = await res.json();
+
+      if (!res.ok) {
+        throw { ...response, status: res.status };
       }
-      return [];
-    }catch(error){
-      console.log('Error :', error);
-      return [];
+      return response;
+    } catch (error) {
+      throw error;
     }
   },
 
@@ -88,35 +85,37 @@ export const apiService = {
           }
         }
         );
-        if(res.ok){
-          const response = await res.json();
-          return response ;
-        }
+        const response = await res.json();
+           if (!res.ok) {
+                 throw { ...response, status: res.status };
+            }
+          return response;
       } catch (error) {
-        return null;
+        // rethrow so the caller knows login failed
+        throw error;
       }
     },
 
   // Registration
   createPendingRegistration: async (formData: FormData): Promise<any> => {
     try{
+      await sanctum_csrf();
       const res = await fetch(`${CONFIG.API_URL}/register`, 
         {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
             "Accept": "application/json",
           }, 
         body: formData
         });
-        if (res.ok) {
-          const data = await res.json();
-         return data;
+        const response = await res.json();
+        if (!res.ok) {
+         throw { ...response , status: res.status }
         }
-        return [];
+        return response;
       }catch(error){
         console.log('Error fetching data;', error);
-        return [];
+        throw error;
       }
     },
 
@@ -130,16 +129,16 @@ export const apiService = {
           "Accept": 'application/json'
         }
       });
-      if(res.ok){
-        const response = await res.json();
+      const response = await res.json();
+        if (!res.ok) {
+         throw { ...response , status: res.status }
+        }
         return response;
+      }catch(error){
+        console.log('Error fetching data;', error);
+        throw error;
       }
-      return [];
-    }catch(error){
-      console.log('Error fetching data:',error);
-      return [];
-    }
-  },
+    },
   
   getActiveUsers: async (): Promise<any> => {
     try{
@@ -151,17 +150,17 @@ export const apiService = {
           "Accept": 'application/json'
         }
       });
-      if(res.ok){
-        const response = await res.json();
+       const response = await res.json();
+        if (!res.ok) {
+         throw { ...response , status: res.status }
+        }
         return response;
+      }catch(error){
+        console.log('Error fetching data;', error);
+        throw error;
       }
-      return [];
-    }catch(error){
-      console.log('Error fetching data:',error);
-      return [];
-    }
-   
-  },
+    },
+
   // Data
     getDepartments: async ():  Promise<{ label: string; value: string }[]> => {
       try {
@@ -172,20 +171,19 @@ export const apiService = {
             "Accept": 'application/json'
           }
         });
-        if (res.ok) {
-          const response = await res.json(); 
-          
-          return response.departments.map(
-            (departments: any) => ({
-              value: departments.id,
-              label: departments.department_name,
-            })
-          );
+        const response = await res.json(); 
+        if (!res.ok) {
+          throw { ...response, status: res.status }
         } 
-        return [];
+        return response.departments.map(
+          (departments: any) => ({
+            value: departments.id,
+            label: departments.department_name,
+          })
+        );
       } catch (error) {
         console.error("Error fetching data:", error);
-         return [];
+        throw error;
       }
     },
 
@@ -198,17 +196,17 @@ export const apiService = {
                       "Accept":'application/json'
                     }
               });
-            if (res.ok) {
-              const response = await res.json();
-              return response.positions.map((position: any) => ({
-                value: position.id,
-                label: position.label,
-              }));
+            const response = await res.json();
+            if (!res.ok) {
+              throw { ...response , status: res.status }
             }
-            return []; 
+            return response.positions.map((position: any) => ({
+              value: position.id,
+              label: position.label,
+            })); 
           } catch (error) {
             console.error("Error fetching positions:", error);
-            return [];
+           throw error;
           }
         },
 
@@ -220,23 +218,23 @@ export const apiService = {
             "Accept":'application/json'
             }
         });
-        if (res.ok) {
-          const response = await res.json();
-          return response.branches.map((branches: any) => ({
-            value: branches.id,
-            label: branches.branch_name + " /" + branches.branch_code,
-          }));
+        const response = await res.json();
+        if (!res.ok) {
+          throw { ...response, status: res.status }
         }
-        return [];
+        return response.branches.map((branches: any) => ({
+          value: branches.id,
+          label: branches.branch_name + " /" + branches.branch_code,
+        }));
         } catch (error) {
         console.error("Error fetching data:", error);
-        return [];
+        throw error;
       }
     },
 
   getUsers: async (): Promise<any> => {
     try{
-      const response = await fetch(`${CONFIG.API_URL}/users`, 
+      const res = await fetch(`${CONFIG.API_URL}/users`, 
       {
         method: 'GET',
         credentials: 'include',
@@ -244,16 +242,16 @@ export const apiService = {
           "Accept":'application/json'
         }
       });
-      if(response.ok){
-        const data = await response.json();
-        return data;
+      const response = await res.json();
+        if (!res.ok) {
+         throw { ...response , status: res.status }
+        }
+        return response;
+      }catch(error){
+        console.log('Error fetching data;', error);
+        throw error;
       }
-      return [];
-    }catch(error){
-      console.log('Error fetching accounts:', error);
-      return [];
-    }
-  },
+    },
 
   // Profile management
   updateProfile: async (formData: FormData): Promise<any> => {
@@ -264,21 +262,20 @@ export const apiService = {
           method: 'PUT',
           credentials: 'include',
           headers: {
-            'Content-Type': 'application/json',
             'Accept':'application/json'
           },
           body: formData
         });
-        if(res.ok){
-          const response = await res.json();
-          return response;
+        const response = await res.json();
+        if (!res.ok) {
+         throw { ...response , status: res.status }
         }
-        return [];
+        return response;
       }catch(error){
-        console.log('Error:' , error);
-        return [];
+        console.log('Error fetching data;', error);
+        throw error;
       }
-      },
+    },
 
 
 }

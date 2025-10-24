@@ -51,6 +51,7 @@ export default function LandingLoginPage() {
       await new Promise(resolve => setTimeout(resolve, 1200)); // Initial validation delay
       
       const user =  await clientDataService.login(username, password, rememberMe);
+      if (user) {
 
         console.log('Login successful');
 
@@ -71,27 +72,25 @@ export default function LandingLoginPage() {
 
         // Get user role for personalized loading message
         // const storedUser = localStorage.getItem('authenticatedUser');
-        // if (user) {
-        //   console.log('User role for redirect:', user.role);
+          console.log('User role for redirect:', user.role);
 
-        //   const roleDashboards: Record<string, string> = {
-        //     'admin': '/admin',
-        //     'hr': '/hr-dashboard',
-        //     'hr-manager': '/hr-dashboard',
-        //     'evaluator': '/evaluator',
-        //     'employee': '/employee-dashboard',
-        //     'manager': '/evaluator'
-        //   };
+          const roleDashboards: Record<string, string> = {
+            'admin': '/admin',
+            'hr': '/hr-dashboard',
+            'hr-manager': '/hr-dashboard',
+            'evaluator': '/evaluator',
+            'employee': '/employee-dashboard',
+            'manager': '/evaluator'
+          };
 
-        //   const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
-        //   console.log('Redirecting to:', dashboardPath);
+          const dashboardPath = roleDashboards[user.role || ''];
+          console.log('Redirecting to:', dashboardPath);
 
-        //   // Redirect immediately after all processing is complete
-        //   router.push(dashboardPath);
-        // } else {
-        //   console.log('No user role data found, redirecting to default dashboard');
-        // }
-          router.push('/employee-dashboard');
+          // Redirect immediately after all processing is complete
+          router.push(dashboardPath);
+        } else {
+          console.log('No user role data found, redirecting to default dashboard');
+        }
 
   //  if (result && typeof result === 'object' && result.suspended) {
   //       // Account is suspended

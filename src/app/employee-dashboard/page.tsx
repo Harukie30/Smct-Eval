@@ -15,6 +15,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { getQuarterFromEvaluationData, getQuarterColor } from '@/lib/quarterUtils';
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 import EvaluationDetailsModal from '@/components/EvaluationDetailsModal';
+import PerformanceTrendModal from '@/components/PerformanceTrendModal';
 // CommentDetailModal import removed
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -57,6 +58,7 @@ export default function EmployeeDashboard() {
   const [selectedEvaluation, setSelectedEvaluation] = useState<any>(null);
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [isEvaluationDetailsModalOpen, setIsEvaluationDetailsModalOpen] = useState(false);
+  const [isPerformanceTrendModalOpen, setIsPerformanceTrendModalOpen] = useState(false);
   const [modalOpenedFromTab, setModalOpenedFromTab] = useState<string>('');
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [quarterlySearchTerm, setQuarterlySearchTerm] = useState('');
@@ -208,10 +210,6 @@ export default function EmployeeDashboard() {
       return [];
     }
   };
-
-
-
-
 
   // Comments & feedback functionality removed
 
@@ -1527,10 +1525,22 @@ export default function EmployeeDashboard() {
                 {submissions.length > 0 && (
                   <Card className="mt-8">
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        💡 Performance Insights
-                      </CardTitle>
-                      <CardDescription>Actionable insights based on your performance history</CardDescription>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            💡 Performance Insights
+                          </CardTitle>
+                          <CardDescription>Actionable insights based on your performance history</CardDescription>
+                        </div>
+                        <Button
+                          onClick={() => setIsPerformanceTrendModalOpen(true)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          📊 View Graph
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1625,27 +1635,7 @@ export default function EmployeeDashboard() {
                 <Card className="mt-8">
                   <CardHeader>
                     <CardTitle>All Performance Reviews</CardTitle>
-                    <CardDescription>
-                      Complete history of your performance evaluations
-                      <div className="flex items-center gap-4 mt-2 text-xs">
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
-                          <span className="text-red-700">Poor (&lt;2.5)</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-orange-100 border border-orange-300 rounded"></div>
-                          <span className="text-orange-700">Low (&lt;3.0)</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-blue-100 border border-blue-300 rounded"></div>
-                          <span className="text-blue-700">Good (3.0-3.9)</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
-                          <span className="text-green-700">Excellent (≥4.0)</span>
-                        </div>
-                      </div>
-                    </CardDescription>
+                    <CardDescription>Complete history of your performance evaluations</CardDescription>
                   </CardHeader>
                   <CardContent className="p-0">
                     {submissions.length > 0 ? (
@@ -1665,18 +1655,10 @@ export default function EmployeeDashboard() {
                               .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
                               .map((submission) => {
                               const highlight = getSubmissionHighlight(submission.submittedAt, submissions);
-                              const rating = submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating;
-                              const isLowPerformance = rating < 3.0;
-                              const isPoorPerformance = rating < 2.5;
-                              
                               return (
                                 <TableRow 
                                   key={submission.id} 
-                                  className={`${highlight.className} ${
-                                    isPoorPerformance ? 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100' :
-                                    isLowPerformance ? 'bg-orange-50 border-l-4 border-l-orange-400 hover:bg-orange-100' :
-                                    ''
-                                  }`}
+                                  className={highlight.className}
                                 >
                                 <TableCell className="px-6 py-4 font-medium">
                                   <div className="flex items-center gap-2">
@@ -1689,35 +1671,7 @@ export default function EmployeeDashboard() {
                                   </div>
                                 </TableCell>
                                 <TableCell className="px-6 py-4 text-right font-semibold">
-                                  {(() => {
-                                    const rating = submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating;
-                                    const isLowPerformance = rating < 3.0;
-                                    const isPoorPerformance = rating < 2.5;
-                                    
-                                    return (
-                                      <div className={`flex items-center justify-end gap-2 ${
-                                        isPoorPerformance ? 'text-red-700' : 
-                                        isLowPerformance ? 'text-orange-600' : 
-                                        'text-gray-900'
-                                      }`}>
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                          isPoorPerformance ? 'bg-red-100 text-red-800' :
-                                          isLowPerformance ? 'bg-orange-100 text-orange-800' :
-                                          rating >= 4.0 ? 'bg-green-100 text-green-800' :
-                                          rating >= 3.5 ? 'bg-blue-100 text-blue-800' :
-                                          'bg-blue-100 text-blue-800'
-                                        }`}>
-                                          {isPoorPerformance ? 'POOR' : 
-                                           isLowPerformance ? 'LOW' : 
-                                           rating >= 4.0 ? 'EXCELLENT' :
-                                           rating >= 3.5 ? 'GOOD' : 'FAIR'}
-                                        </span>
-                                        <span className="font-bold">
-                                          {rating}/5
-                                        </span>
-                                      </div>
-                                    );
-                                  })()}
+                                  {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating}/5
                                 </TableCell>
                                 <TableCell className="px-6 py-4">
                                   <div className="flex flex-col">
@@ -3081,6 +3035,14 @@ export default function EmployeeDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Performance Trend Modal */}
+      <PerformanceTrendModal
+        isOpen={isPerformanceTrendModalOpen}
+        onCloseAction={() => setIsPerformanceTrendModalOpen(false)}
+        submissions={submissions}
+        calculateOverallRatingAction={calculateOverallRating}
+      />
 
     </ProtectedRoute>
   );
