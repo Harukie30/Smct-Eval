@@ -15,6 +15,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { getQuarterFromEvaluationData, getQuarterColor } from '@/lib/quarterUtils';
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 import EvaluationDetailsModal from '@/components/EvaluationDetailsModal';
+import PerformanceTrendModal from '@/components/PerformanceTrendModal';
 // CommentDetailModal import removed
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -23,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import clientDataService from '@/lib/clientDataService';
+import clientDataService from '@/lib/clientDataService.api';
 import { getEmployeeResults, initializeMockData } from '@/lib/evaluationStorage';
 // commentsService import removed
 import accountsData from '@/data/accounts.json';
@@ -57,6 +58,7 @@ export default function EmployeeDashboard() {
   const [selectedEvaluation, setSelectedEvaluation] = useState<any>(null);
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [isEvaluationDetailsModalOpen, setIsEvaluationDetailsModalOpen] = useState(false);
+  const [isPerformanceTrendModalOpen, setIsPerformanceTrendModalOpen] = useState(false);
   const [modalOpenedFromTab, setModalOpenedFromTab] = useState<string>('');
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [quarterlySearchTerm, setQuarterlySearchTerm] = useState('');
@@ -207,14 +209,6 @@ export default function EmployeeDashboard() {
       console.error('Error loading account history:', error);
       return [];
     }
-  };
-
-  // Function to determine highlighting for account history items
-  const getAccountHistoryHighlight = (item: any) => {
-    if (item.type === 'violation') {
-      return 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100';
-    }
-    return 'hover:bg-gray-50'; // Default or no highlight
   };
 
   // Comments & feedback functionality removed
@@ -457,40 +451,40 @@ export default function EmployeeDashboard() {
   // Comprehensive refresh function for all dashboard data
   const refreshDashboardData = async (showToast = true, showModal = false, isInitialLoad = false) => {
 
-    try {
-      if (profile?.email) {
-        // Fetch fresh submissions data
-        const allSubmissions = await clientDataService.getSubmissions();
-        const userSubmissions = allSubmissions.filter((submission: any) =>
-          submission.employeeName === profile.name ||
-          submission.evaluationData?.employeeEmail === profile.email
-        );
-        const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
-        setSubmissions(finalSubmissions);
+    // try {
+    //   if (profile?.email) {
+    //     // Fetch fresh submissions data
+    //     const allSubmissions = await clientDataService.getSubmissions();
+    //     const userSubmissions = allSubmissions.filter((submission: any) =>
+    //       submission.employeeName === profile.name ||
+    //       submission.evaluationData?.employeeEmail === profile.email
+    //     );
+    //     const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
+    //     setSubmissions(finalSubmissions);
 
-        // Refresh evaluation results
-        const results = getEmployeeResults(profile.email);
-        setEvaluationResults(results);
+    //     // Refresh evaluation results
+    //     const results = getEmployeeResults(profile.email);
+    //     setEvaluationResults(results);
 
-        // Refresh account history
-        const history = loadAccountHistory(profile.email);
-        setAccountHistory(history);
+    //     // Refresh account history
+    //     const history = loadAccountHistory(profile.email);
+    //     setAccountHistory(history);
 
-        // Comments functionality removed
+    //     // Comments functionality removed
 
 
-      }
-    } catch (error) {
-      console.error('Error refreshing dashboard data:', error);
-    } finally {
-      // Show appropriate success message
-      if (showToast) {
-        const message = isInitialLoad
-          ? 'Dashboard loaded successfully!'
-          : 'Dashboard refreshed successfully!';
-        success(message, 'All your data has been updated');
-      }
-    }
+    //   }
+    // } catch (error) {
+    //   console.error('Error refreshing dashboard data:', error);
+    // } finally {
+    //   // Show appropriate success message
+    //   if (showToast) {
+    //     const message = isInitialLoad
+    //       ? 'Dashboard loaded successfully!'
+    //       : 'Dashboard refreshed successfully!';
+    //     success(message, 'All your data has been updated');
+    //   }
+    // }
   };
 
   // Auto-refresh functionality using shared hook
@@ -562,18 +556,18 @@ export default function EmployeeDashboard() {
 
       // Fetch submissions data using client data service
       try {
-        const allSubmissions = await clientDataService.getSubmissions();
+        // const allSubmissions = await clientDataService.getSubmissions();
         // Filter submissions to only show current user's data
-        const userSubmissions = profile?.email
-          ? allSubmissions.filter((submission: any) =>
-            submission.employeeName === profile.name ||
-            submission.evaluationData?.employeeEmail === profile.email
-          )
-          : [];
+        // const userSubmissions = profile?.email
+        //   ? allSubmissions.filter((submission: any) =>
+        //     submission.employeeName === profile.name ||
+        //     submission.evaluationData?.employeeEmail === profile.email
+        //   )
+        //   : [];
 
         // If no user-specific submissions found, show all submissions for testing
-        const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
-        setSubmissions(finalSubmissions);
+        // const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
+        // setSubmissions(finalSubmissions);
 
         // Show success toast
         success('Performance reviews refreshed successfully', 'All performance data has been updated');
@@ -1131,9 +1125,9 @@ export default function EmployeeDashboard() {
                       </div>
                     </div>
                     
-                    <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table mx-4">
+                    <div className="max-h-[400px] overflow-y-auto mx-4">
                       <Table>
-                      <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b">
                         <TableRow>
                           <TableHead>Immediate Supervisor</TableHead>
                           <TableHead className="text-right">Rating</TableHead>
@@ -1146,6 +1140,7 @@ export default function EmployeeDashboard() {
                     <TableBody>
                       {submissions
                         .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+                        .slice(0, 5)
                         .map((submission) => {
                         const highlight = getSubmissionHighlight(submission.submittedAt, submissions, submission.id);
                         return (
@@ -1530,10 +1525,22 @@ export default function EmployeeDashboard() {
                 {submissions.length > 0 && (
                   <Card className="mt-8">
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        💡 Performance Insights
-                      </CardTitle>
-                      <CardDescription>Actionable insights based on your performance history</CardDescription>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            💡 Performance Insights
+                          </CardTitle>
+                          <CardDescription>Actionable insights based on your performance history</CardDescription>
+                        </div>
+                        <Button
+                          onClick={() => setIsPerformanceTrendModalOpen(true)}
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          📊 View Graph
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1628,27 +1635,7 @@ export default function EmployeeDashboard() {
                 <Card className="mt-8">
                   <CardHeader>
                     <CardTitle>All Performance Reviews</CardTitle>
-                    <CardDescription>
-                      Complete history of your performance evaluations
-                      <div className="flex items-center gap-4 mt-2 text-xs">
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
-                          <span className="text-red-700">Poor (&lt;2.5)</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-orange-100 border border-orange-300 rounded"></div>
-                          <span className="text-orange-700">Low (&lt;3.0)</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-blue-100 border border-blue-300 rounded"></div>
-                          <span className="text-blue-700">Good (3.0-3.9)</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
-                          <span className="text-green-700">Excellent (≥4.0)</span>
-                        </div>
-                      </div>
-                    </CardDescription>
+                    <CardDescription>Complete history of your performance evaluations</CardDescription>
                   </CardHeader>
                   <CardContent className="p-0">
                     {submissions.length > 0 ? (
@@ -1668,18 +1655,10 @@ export default function EmployeeDashboard() {
                               .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
                               .map((submission) => {
                               const highlight = getSubmissionHighlight(submission.submittedAt, submissions);
-                              const rating = submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating;
-                              const isLowPerformance = rating < 3.0;
-                              const isPoorPerformance = rating < 2.5;
-                              
                               return (
                                 <TableRow 
                                   key={submission.id} 
-                                  className={`${highlight.className} ${
-                                    isPoorPerformance ? 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100' :
-                                    isLowPerformance ? 'bg-orange-50 border-l-4 border-l-orange-400 hover:bg-orange-100' :
-                                    ''
-                                  }`}
+                                  className={highlight.className}
                                 >
                                 <TableCell className="px-6 py-4 font-medium">
                                   <div className="flex items-center gap-2">
@@ -1692,35 +1671,7 @@ export default function EmployeeDashboard() {
                                   </div>
                                 </TableCell>
                                 <TableCell className="px-6 py-4 text-right font-semibold">
-                                  {(() => {
-                                    const rating = submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating;
-                                    const isLowPerformance = rating < 3.0;
-                                    const isPoorPerformance = rating < 2.5;
-                                    
-                                    return (
-                                      <div className={`flex items-center justify-end gap-2 ${
-                                        isPoorPerformance ? 'text-red-700' : 
-                                        isLowPerformance ? 'text-orange-600' : 
-                                        'text-gray-900'
-                                      }`}>
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                          isPoorPerformance ? 'bg-red-100 text-red-800' :
-                                          isLowPerformance ? 'bg-orange-100 text-orange-800' :
-                                          rating >= 4.0 ? 'bg-green-100 text-green-800' :
-                                          rating >= 3.5 ? 'bg-blue-100 text-blue-800' :
-                                          'bg-blue-100 text-blue-800'
-                                        }`}>
-                                          {isPoorPerformance ? 'POOR' : 
-                                           isLowPerformance ? 'LOW' : 
-                                           rating >= 4.0 ? 'EXCELLENT' :
-                                           rating >= 3.5 ? 'GOOD' : 'FAIR'}
-                                        </span>
-                                        <span className="font-bold">
-                                          {rating}/5
-                                        </span>
-                                      </div>
-                                    );
-                                  })()}
+                                  {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating}/5
                                 </TableCell>
                                 <TableCell className="px-6 py-4">
                                   <div className="flex flex-col">
@@ -2017,9 +1968,9 @@ export default function EmployeeDashboard() {
                               </div>
                             )}
                           </div>
-                          <div className="max-h-[300px] md:max-h-[450px] lg:max-h-[650px] xl:max-h-[700px] overflow-y-auto overflow-x-auto scrollable-table">
+                          <div className="overflow-x-auto">
                             {isRefreshingQuarterly || loading ? (
-                              <div className="space-y-2 p-4">
+                              <div className="space-y-2">
                                 {/* Table Header Skeleton */}
                                 <div className="flex space-x-3 py-2 border-b">
                                   <Skeleton className="h-3 w-12" />
@@ -2046,7 +1997,7 @@ export default function EmployeeDashboard() {
                               </div>
                             ) : (
                               <Table>
-                                <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                                <TableHeader>
                                   <TableRow>
                                     <TableHead>Quarter</TableHead>
                                     <TableHead>Dates</TableHead>
@@ -2318,9 +2269,9 @@ export default function EmployeeDashboard() {
                               </div>
                             )}
                           </div>
-                          <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
+                          <div className="overflow-x-auto">
                             {isRefreshingHistory || loading ? (
-                              <div className="space-y-2 p-4">
+                              <div className="space-y-2">
                                 {/* Table Header Skeleton */}
                                 <div className="flex space-x-3 py-2 border-b">
                                   <Skeleton className="h-3 w-12" />
@@ -2346,8 +2297,9 @@ export default function EmployeeDashboard() {
                                 ))}
                               </div>
                             ) : (
-                              <Table>
-                                  <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                              <div className="max-h-[500px] overflow-y-auto mx-4">
+                                <Table>
+                                  <TableHeader className="sticky top-0 bg-white z-10 border-b">
                                     <TableRow>
                                       <TableHead>Date</TableHead>
                                       <TableHead>Employee</TableHead>
@@ -2469,6 +2421,7 @@ export default function EmployeeDashboard() {
                                   )}
                                 </TableBody>
                               </Table>
+                              </div>
                             )}
                           </div>
                         </CardContent>
@@ -2535,7 +2488,7 @@ export default function EmployeeDashboard() {
                     )}
 
                     {/* Search Bar */}
-                    <div className="mb-6 w-1/3">
+                    <div className="mb-6 w-1/2">
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3082,6 +3035,14 @@ export default function EmployeeDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Performance Trend Modal */}
+      <PerformanceTrendModal
+        isOpen={isPerformanceTrendModalOpen}
+        onCloseAction={() => setIsPerformanceTrendModalOpen(false)}
+        submissions={submissions}
+        calculateOverallRatingAction={calculateOverallRating}
+      />
 
     </ProtectedRoute>
   );
