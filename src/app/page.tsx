@@ -103,14 +103,14 @@ export default function LandingLoginPage() {
             'manager': '/evaluator'
           };
 
-          const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
+          const dashboardPath = roleDashboards[user.role || ''] || '';
           console.log('Redirecting to:', dashboardPath);
 
           // Redirect immediately after all processing is complete
           router.push(dashboardPath);
         } else {
           console.log('No user data found, redirecting to default dashboard');
-          router.push('/dashboard');
+          router.push('');
         }
       } else if (result && typeof result === 'object' && result.requiresRoleSelection) {
         // User has multiple roles - show role selection modal
