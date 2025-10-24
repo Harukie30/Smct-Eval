@@ -124,7 +124,7 @@ export const apiService = {
       const res = await fetch(`${CONFIG.API_URL}/getAll_Pending_users`,
       {
         method: "GET",
-        credentials: 'include',
+        // credentials: 'include',
         headers: {
           "Accept": 'application/json'
         }
@@ -145,7 +145,7 @@ export const apiService = {
       const res = await fetch(`${CONFIG.API_URL}/getAll_Active_users`,
       {
         method: "GET",
-        credentials: 'include',
+        // credentials: 'include',
         headers: {
           "Accept": 'application/json'
         }

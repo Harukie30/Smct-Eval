@@ -24,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import clientDataService from '@/lib/clientDataService';
+import clientDataService from '@/lib/clientDataService.api';
 import { getEmployeeResults, initializeMockData } from '@/lib/evaluationStorage';
 // commentsService import removed
 import accountsData from '@/data/accounts.json';
@@ -451,40 +451,40 @@ export default function EmployeeDashboard() {
   // Comprehensive refresh function for all dashboard data
   const refreshDashboardData = async (showToast = true, showModal = false, isInitialLoad = false) => {
 
-    try {
-      if (profile?.email) {
-        // Fetch fresh submissions data
-        const allSubmissions = await clientDataService.getSubmissions();
-        const userSubmissions = allSubmissions.filter((submission: any) =>
-          submission.employeeName === profile.name ||
-          submission.evaluationData?.employeeEmail === profile.email
-        );
-        const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
-        setSubmissions(finalSubmissions);
+    // try {
+    //   if (profile?.email) {
+    //     // Fetch fresh submissions data
+    //     const allSubmissions = await clientDataService.getSubmissions();
+    //     const userSubmissions = allSubmissions.filter((submission: any) =>
+    //       submission.employeeName === profile.name ||
+    //       submission.evaluationData?.employeeEmail === profile.email
+    //     );
+    //     const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
+    //     setSubmissions(finalSubmissions);
 
-        // Refresh evaluation results
-        const results = getEmployeeResults(profile.email);
-        setEvaluationResults(results);
+    //     // Refresh evaluation results
+    //     const results = getEmployeeResults(profile.email);
+    //     setEvaluationResults(results);
 
-        // Refresh account history
-        const history = loadAccountHistory(profile.email);
-        setAccountHistory(history);
+    //     // Refresh account history
+    //     const history = loadAccountHistory(profile.email);
+    //     setAccountHistory(history);
 
-        // Comments functionality removed
+    //     // Comments functionality removed
 
 
-      }
-    } catch (error) {
-      console.error('Error refreshing dashboard data:', error);
-    } finally {
-      // Show appropriate success message
-      if (showToast) {
-        const message = isInitialLoad
-          ? 'Dashboard loaded successfully!'
-          : 'Dashboard refreshed successfully!';
-        success(message, 'All your data has been updated');
-      }
-    }
+    //   }
+    // } catch (error) {
+    //   console.error('Error refreshing dashboard data:', error);
+    // } finally {
+    //   // Show appropriate success message
+    //   if (showToast) {
+    //     const message = isInitialLoad
+    //       ? 'Dashboard loaded successfully!'
+    //       : 'Dashboard refreshed successfully!';
+    //     success(message, 'All your data has been updated');
+    //   }
+    // }
   };
 
   // Auto-refresh functionality using shared hook
@@ -556,18 +556,18 @@ export default function EmployeeDashboard() {
 
       // Fetch submissions data using client data service
       try {
-        const allSubmissions = await clientDataService.getSubmissions();
+        // const allSubmissions = await clientDataService.getSubmissions();
         // Filter submissions to only show current user's data
-        const userSubmissions = profile?.email
-          ? allSubmissions.filter((submission: any) =>
-            submission.employeeName === profile.name ||
-            submission.evaluationData?.employeeEmail === profile.email
-          )
-          : [];
+        // const userSubmissions = profile?.email
+        //   ? allSubmissions.filter((submission: any) =>
+        //     submission.employeeName === profile.name ||
+        //     submission.evaluationData?.employeeEmail === profile.email
+        //   )
+        //   : [];
 
         // If no user-specific submissions found, show all submissions for testing
-        const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
-        setSubmissions(finalSubmissions);
+        // const finalSubmissions = userSubmissions.length > 0 ? userSubmissions : allSubmissions;
+        // setSubmissions(finalSubmissions);
 
         // Show success toast
         success('Performance reviews refreshed successfully', 'All performance data has been updated');
