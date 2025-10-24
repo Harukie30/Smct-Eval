@@ -2,7 +2,7 @@
 // This replaces the localStorage version with API calls
 
 import apiService from './apiService';
-import { Employee, Submission, PendingRegistration, Profile, Account, Notification } from './clientDataService';
+// import { Employee, Submission, PendingRegistration, Profile, Account, Notification } from './clientDataService';
 
 export const clientDataService = {
   // Authentication - now uses API
@@ -23,7 +23,7 @@ export const clientDataService = {
     return await apiService.getBranches();
   },
 
-  getUsers: async (): Promise<Account[]> => {
+  getUsers: async (): Promise<any> => {
     return await apiService.getUsers();
   },
 
@@ -37,48 +37,48 @@ export const clientDataService = {
   },
 
   // Profile management - now uses API
-  updateProfile: async (id: number, updates: Partial<Profile>): Promise<Profile> => {
-    return await apiService.updateProfile(id, updates);
+  updateProfile: async (formData : FormData): Promise<any> => {
+    return await apiService.updateProfile(formData);
   },
 
   // getProfile: async (id: number): Promise<Profile | null> => {
   //   // return await apiService.getProfile();
   // },
 
-  getActiveUsers: async (): Promise<Employee[]> => {
+  getActiveUsers: async (): Promise<any> => {
     return await apiService.getActiveUsers();
   },
 
-  getEmployee: async (id: number): Promise<Employee | null> => {
+  getEmployee: async (id: number): Promise<any> => {
     // TODO: Implement GET /api/employees/:id
     console.warn('getEmployee: API endpoint not implemented yet');
     return null;
   },
 
-  updateEmployee: async (id: number, updates: Partial<Employee>): Promise<Employee> => {
+  updateEmployee: async (id: number): Promise<any> => {
     // TODO: Implement PUT /api/employees/:id
     console.warn('updateEmployee: API endpoint not implemented yet');
     throw new Error('Not implemented');
   },
 
-  // Submissions - you'll need to implement these API endpoints
-  getSubmissions: async (): Promise<Submission[]> => {
-    // TODO: Implement GET /api/submissions
-    console.warn('getSubmissions: API endpoint not implemented yet');
-    return [];
-  },
+  // // Submissions - you'll need to implement these API endpoints
+  // getSubmissions: async (): Promise<Submission[]> => {
+  //   // TODO: Implement GET /api/submissions
+  //   console.warn('getSubmissions: API endpoint not implemented yet');
+  //   return [];
+  // },
 
-  createSubmission: async (submission: Omit<Submission, 'id'>): Promise<Submission> => {
-    // TODO: Implement POST /api/submissions
-    console.warn('createSubmission: API endpoint not implemented yet');
-    throw new Error('Not implemented');
-  },
+  // createSubmission: async (submission: Omit<Submission, 'id'>): Promise<Submission> => {
+  //   // TODO: Implement POST /api/submissions
+  //   console.warn('createSubmission: API endpoint not implemented yet');
+  //   throw new Error('Not implemented');
+  // },
 
-  updateSubmission: async (id: number, updates: Partial<Submission>): Promise<Submission | null> => {
-    // TODO: Implement PUT /api/submissions/:id
-    console.warn('updateSubmission: API endpoint not implemented yet');
-    throw new Error('Not implemented');
-  },
+  // updateSubmission: async (id: number, updates: Partial<Submission>): Promise<Submission | null> => {
+  //   // TODO: Implement PUT /api/submissions/:id
+  //   console.warn('updateSubmission: API endpoint not implemented yet');
+  //   throw new Error('Not implemented');
+  // },
 
   // Notifications - you'll need to implement these API endpoints
   getNotifications: async (userRole: string): Promise<Notification[]> => {
