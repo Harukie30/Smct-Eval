@@ -116,14 +116,28 @@ export default function SignaturePad({
   const clearSignature = () => {
     onChangeAction(null);
     setHasSignature(false);
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    
+    // Small delay to ensure canvas is rendered before resetting
+    setTimeout(() => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    const rect = canvas.getBoundingClientRect();
-    ctx.clearRect(0, 0, rect.width, rect.height);
+      // Reset canvas dimensions to match current display size
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+
+      // Re-apply drawing styles after resizing
+      ctx.strokeStyle = "#1f2937";
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      // Clear the canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }, 0);
   };
 
   return (

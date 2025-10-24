@@ -40,18 +40,23 @@ export default function ContactDevsModal({ isOpen, onCloseAction }: ContactDevsM
 
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
-      <DialogContent className="sm:max-w-xl animate-popup text-center">
+      <DialogContent className="sm:max-w-xl bg-blue-50 text-center relative overflow-hidden animate-popup">
+       
+        
         <DialogHeader>
-          <DialogTitle>Meet Our Developers</DialogTitle>
+          <DialogTitle className="flex items-center font-bold text-xl justify-center gap-3">
+            <img src="/web-server.png" alt="Team" className="w-17 h-15" />
+            Meet Our Developers
+          </DialogTitle>
         </DialogHeader>
-        <div className="space-y-6 px-6 py-4">
+        <div className="space-y-6 px-6 py-4 relative z-10">
           <p className="text-gray-700 leading-relaxed mb-7">
             Click on a developer's icon to learn more about their work or connect with them!
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 justify-items-center max-h-72 overflow-y-auto custom-scrollbar pr-2">
             {developers.map((dev) => (
-              <Link key={dev.id} href={dev.link} passHref target="_blank" rel="noopener noreferrer" className="flex flex-col items-center group cursor-pointer">
-                <div className="h-15 w-15 mb-2  overflow-hidden bg-gray-100 group-hover:bg-blue-50 transition-all transform group-hover:scale-110 shadow-sm group-hover:shadow-md">
+              <Link key={dev.id} href={dev.link} passHref target="_blank" rel="noopener noreferrer" className="flex flex-col items-center group cursor-pointer p-3 rounded-lg hover:bg-white/60 backdrop-blur-sm transition-all">
+                <div className="h-15 w-15 mb-2 overflow-hidden bg-white/80 group-hover:bg-blue-50 transition-all transform group-hover:scale-110 shadow-md group-hover:shadow-xl rounded-lg border-2 border-white/50">
                   <img src={dev.avatar} alt={dev.name} className="w-full h-full object-cover" />
                 </div>
                 <span className="text-sm font-medium text-gray-800 group-hover:text-blue-600 transition-colors">{dev.name}</span>

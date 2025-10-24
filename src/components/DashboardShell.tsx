@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Bell, X, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Bell, X, Trash2, MessageCircle } from "lucide-react";
 import ProfileCard, { UserProfile } from "./ProfileCard";
 import ProfileModal from "./ProfileModal";
+import ContactDevsModal from "./ContactDevsModal";
 import { useUser } from '@/contexts/UserContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Notification } from '@/lib/clientDataService';
@@ -45,6 +46,7 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const [isContactDevsModalOpen, setIsContactDevsModalOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
   const { profile: userProfile, updateProfile, logout } = useUser();
@@ -155,6 +157,17 @@ export default function DashboardShell(props: DashboardShellProps) {
                 {currentPeriod}
               </Badge>
             ) : null}
+
+            {/* Contact Developers Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsContactDevsModalOpen(true)}
+              className="relative p-2 hover:bg-gray-100"
+              title="Contact Developers"
+            >
+              <MessageCircle className="h-5 w-5 text-blue-600" />
+            </Button>
 
             {/* Notification Bell */}
             <div className="relative" ref={notificationRef}>
@@ -346,6 +359,12 @@ export default function DashboardShell(props: DashboardShellProps) {
           onSave={handleSaveProfile}
         />
       )}
+
+      {/* Contact Developers Modal */}
+      <ContactDevsModal
+        isOpen={isContactDevsModalOpen}
+        onCloseAction={() => setIsContactDevsModalOpen(false)}
+      />
     </div>
   );
 }
