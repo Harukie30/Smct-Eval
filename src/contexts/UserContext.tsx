@@ -57,7 +57,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const fetchUser = async () => {
     try {
       const res = await fetch(`${CONFIG.API_URL}/profile`, {
-        credentials: "include", // 🔑 includes Laravel session cookie
+        credentials: "include", 
       });
 
       if (!res.ok) throw new Error("Not authenticated");
