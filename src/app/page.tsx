@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,9 @@ import InstantLoadingScreen from '@/components/InstantLoadingScreen';
 import SuspensionModal from '@/components/SuspensionModal';
 import GoogleLoginModal from '@/components/GoogleLoginModal';
 import ForgotPasswordModal from '@/components/ForgotPasswordModal';
+import RoleSelectionModal from '@/components/RoleSelectionModal';
+import ContactDevsModal from '@/components/ContactDevsModal'; // Import new modal
+import PendingApprovalModal from '@/components/PendingApprovalModal'; // Import pending approval modal
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import { toastMessages } from '@/lib/toastMessages';
@@ -31,14 +34,18 @@ export default function LandingLoginPage() {
   const [showGoogleLoginModal, setShowGoogleLoginModal] = useState(false);
   const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [showRoleSelection, setShowRoleSelection] = useState(false);
+  const [showContactDevsModal, setShowContactDevsModal] = useState(false); // New state for ContactDevsModal
+  const [showPendingApprovalModal, setShowPendingApprovalModal] = useState(false); // New state for PendingApprovalModal
+  const [pendingAccountData, setPendingAccountData] = useState<any>(null); // Store pending account data
 
-  const { login, isLoading } = useUser();
+  const { login, isLoading, user, setUserRole } = useUser();
   const router = useRouter();
   // Force refresh accounts data on login page load (clears cache)
   useEffect(() => {
     clientDataService.forceRefreshAccounts();
   }, []);
-
+  
   useEffect(() => {
     if (isAboutModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -70,6 +77,7 @@ export default function LandingLoginPage() {
         // Login successful - continue with real processing
         console.log('✅ Login successful');
 
+
         // Simulate additional authentication steps
         await new Promise(resolve => setTimeout(resolve, 1000)); // Session creation
         await new Promise(resolve => setTimeout(resolve, 800)); // Permission loading
@@ -79,11 +87,11 @@ export default function LandingLoginPage() {
         toastMessages.login.success(username);
 
         // Set remember me preference
-        // if (rememberMe) {
-        //   localStorage.setItem('keepLoggedIn', 'true');
-        // } else {
-        //   localStorage.setItem('keepLoggedIn', 'false');
-        // }
+        if (rememberMe) {
+          localStorage.setItem('keepLoggedIn', 'true');
+        } else {
+          localStorage.setItem('keepLoggedIn', 'false');
+        }
 
         // IMPORTANT: Wait a bit longer to ensure UserContext state is fully updated
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -100,6 +108,7 @@ export default function LandingLoginPage() {
         if (storedUser) {
           const userData = JSON.parse(storedUser);
           console.log('✅ User role for redirect:', userData.role);
+
 
           const roleDashboards: Record<string, string> = {
             'admin': '/admin',
@@ -131,7 +140,53 @@ export default function LandingLoginPage() {
           console.log('📦 Available localStorage keys:', Object.keys(localStorage));
           setShowLoadingScreen(false);
           setLoginError('Session error. Please try logging in again.');
+
         }
+      } else if (result && typeof result === 'object' && result.requiresRoleSelection) {
+        // User has multiple roles - show role selection modal
+        console.log('Multiple roles detected, showing role selection');
+        setShowLoadingScreen(false);
+        setShowRoleSelection(true);
+      } else if (result && typeof result === 'object' && result.suspended) {
+        // Account is suspended
+        console.log('Account suspended result:', result);
+        console.log('Suspension data:', result.data);
+        setSuspensionData(result.data);
+        setShowSuspensionModal(true);
+        setShowLoadingScreen(false); // Hide loading screen
+      } else if (result && typeof result === 'object' && result.pending) {
+        // Account is pending approval
+        console.log('Account pending approval:', result);
+        setPendingAccountData(result.pendingData);
+        setShowPendingApprovalModal(true);
+        setShowLoadingScreen(false); // Hide loading screen
+      } else {
+        const errorMessage = 'Invalid username or password. Please try again.';
+        setLoginError(errorMessage);
+   const login = async (username: string, password: string, rememberMe: boolean): Promise<User | null> => {
+  try {
+    setIsLoading(true);
+    await apiService.login(username, password, rememberMe);
+    await fetchUser(); // Fetch authenticated user data
+
+   const login = async (username: string, password: string, rememberMe: boolean): Promise<User | null> => {
+  try {
+    setIsLoading(true);
+    await apiService.login(username, password, rememberMe);
+    await fetchUser(); // Fetch authenticated user data
+
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    setUser(storedUser);
+    setIsAuthenticated(true);
+    return storedUser; // ✅ return user so you can use it in the login form
+  } catch (err) {
+    console.error('Login failed:', err);
+    setIsAuthenticated(false);
+    throw err;
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   //  if (result && typeof result === 'object' && result.suspended) {
   //       // Account is suspended
@@ -151,19 +206,25 @@ export default function LandingLoginPage() {
         setShowIncorrectPasswordDialog(true);
         setTimeout(() => setShowIncorrectPasswordDialog(false), 1400);
       }
-    
+    } catch (error) {
+      console.error('Login error:', error);
+      const errorMessage = 'An error occurred during login. Please try again.';
+      setLoginError(errorMessage);
+      toastMessages.login.networkError();
+      setShowLoadingScreen(false); // Hide loading screen
+    }
   };
 
-  if (isLoading) {
-    return (
-      <PageTransition>
-        <RealLoadingScreen
-          message="Initializing System..."
-          onComplete={() => setShowLoadingScreen(false)}
-        />
-      </PageTransition>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <PageTransition>
+  //       <RealLoadingScreen
+  //         message="Initializing System..."
+  //         onComplete={() => setShowLoadingScreen(false)}
+  //       />
+  //     </PageTransition>
+  //   );
+  // }
 
   // Remove automatic redirect screen - show login form even if authenticated
 
@@ -264,7 +325,7 @@ export default function LandingLoginPage() {
           >
             About
           </button>
-          <a href="#" className="text-white font-semibold hover:underline-offset-4 hover:underline hover:text-blue-100">Contact</a>
+          
         </nav>
       </header>
       
@@ -316,7 +377,7 @@ export default function LandingLoginPage() {
 
               <div className="bg-white/90 backdrop-blur-md p-6 rounded-lg border border-white/30 shadow-lg animate-fade-in-up hover:shadow-xl transition-all duration-300 hover:scale-[1.02]" style={{ animationDelay: '0.4s' }}>
                 <p className="text-gray-800 font-medium">"This platform transformed our review process, saving hours of administrative work and providing meaningful insights."</p>
-                <p className="text-blue-600 mt-2 font-medium">- Sarah Johnson, HR Director</p>
+               
               </div>
             </div>
           </div>
@@ -452,16 +513,10 @@ export default function LandingLoginPage() {
             <div>
               <h3 className="font-semibold text-white mb-4">Resources</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-white hover:text-yellow-300">Help Center</a></li>
+                <li><a href="#" onClick={() => setShowContactDevsModal(true)} className="text-white hover:text-yellow-300">Help Center</a></li>
               </ul>
             </div>
-            <div>
-              <h3 className="font-semibold text-white mb-4">Company</h3>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-white hover:text-yellow-300">About Us</a></li>
-                <li><a href="#" className="text-white hover:text-yellow-300">Contact</a></li>
-              </ul>
-            </div>
+            
           </div>
           <div className="border-t border-blue-500 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p className="text-white text-sm">© 2026 SMCT Group of Companies. All rights reserved.</p>
@@ -779,6 +834,28 @@ export default function LandingLoginPage() {
       <ForgotPasswordModal
         isOpen={showForgotPasswordModal}
         onCloseAction={() => setShowForgotPasswordModal(false)}
+      />
+
+      {/* Role Selection Modal */}
+      <RoleSelectionModal
+        isOpen={showRoleSelection}
+        userName={user?.name || 'User'}
+        availableRoles={user?.availableRoles || []}
+        onRoleSelectedAction={handleRoleSelected}
+      />
+
+      {/* Contact Devs Modal */}
+      <ContactDevsModal
+        isOpen={showContactDevsModal}
+        onCloseAction={() => setShowContactDevsModal(false)}
+      />
+
+      {/* Pending Approval Modal */}
+      <PendingApprovalModal
+        isOpen={showPendingApprovalModal}
+        onClose={() => setShowPendingApprovalModal(false)}
+        userEmail={pendingAccountData?.email}
+        userName={pendingAccountData?.name}
       />
 
       {/* Incorrect Password Dialog */}
