@@ -7,7 +7,7 @@ export const createEvaluationNotification = async (employeeName: string, evaluat
   await clientDataService.createNotification({
     message: `New evaluation submitted for ${employeeName}`,
     type: 'info',
-    roles: ['manager', 'evaluator', 'hr', 'hr-manager'],
+    roles: ['manager', 'evaluator', 'hr', 'admin'],
     actionUrl: '/evaluator?tab=feedback' // Navigate to evaluator feedback tab
   });
 
@@ -26,7 +26,7 @@ export const createApprovalNotification = async (employeeName: string, approverN
     await clientDataService.createNotification({
       message: `Evaluation for ${employeeName} approved by ${approverName} (${approverType})`,
       type: 'success',
-      roles: ['hr', 'hr-manager', 'admin'],
+      roles: ['hr', 'admin'],
       actionUrl: '/hr-dashboard?tab=evaluations'
     });
 
@@ -50,7 +50,7 @@ export const createFullyApprovedNotification = async (employeeName: string) => {
     await clientDataService.createNotification({
       message: `Evaluation for ${employeeName} is now fully approved by both parties!`,
       type: 'success',
-      roles: ['hr', 'hr-manager', 'admin'],
+      roles: ['hr', 'admin'],
       actionUrl: '/hr-dashboard'
     });
 

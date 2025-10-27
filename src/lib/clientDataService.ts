@@ -1109,6 +1109,16 @@ export const clientDataService = {
     }
   },
 
+  // Force refresh accounts data from JSON (clears cache)
+  forceRefreshAccounts: (): void => {
+    if (typeof window === 'undefined') return;
+    
+    console.log('🔄 Force refreshing accounts data...');
+    localStorage.removeItem(STORAGE_KEYS.ACCOUNTS);
+    saveToStorage(STORAGE_KEYS.ACCOUNTS, accountsData.accounts || []);
+    console.log('✅ Accounts data refreshed from source');
+  },
+
   // Get all accounts
   getAccounts: async (): Promise<Account[]> => {
     return getFromStorage(STORAGE_KEYS.ACCOUNTS, []);

@@ -19,6 +19,7 @@ import PendingApprovalModal from '@/components/PendingApprovalModal'; // Import 
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import { toastMessages } from '@/lib/toastMessages';
+import clientDataService from '@/lib/clientDataService';
 
 export default function LandingLoginPage() {
   const [username, setUsername] = useState('');
@@ -40,6 +41,11 @@ export default function LandingLoginPage() {
 
   const { login, isLoading, user, setUserRole } = useUser();
   const router = useRouter();
+
+  // Force refresh accounts data on login page load (clears cache)
+  useEffect(() => {
+    clientDataService.forceRefreshAccounts();
+  }, []);
 
   useEffect(() => {
     if (isAboutModalOpen) {
