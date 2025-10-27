@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo,} from 'react';
 import { X } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';  
@@ -165,6 +166,7 @@ export default function EvaluatorDashboard() {
   const { profile, user } = useUser();
   const { success, error } = useToast();
   const { getUpdatedAvatar, hasAvatarUpdate } = useProfilePictureUpdates();
+  const searchParams = useSearchParams();
 
   // Function to get time ago display
   const getTimeAgo = (submittedAt: string) => {
@@ -204,6 +206,14 @@ export default function EvaluatorDashboard() {
       localStorage.setItem('seenEvaluationSubmissions', JSON.stringify(Array.from(seenSubmissions)));
     }
   }, [seenSubmissions]);
+
+  // Handle URL parameter changes for tab navigation
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== active) {
+      setActive(tab);
+    }
+  }, [searchParams]);
 
   // Mark submission as seen
   const markSubmissionAsSeen = (submissionId: number) => {
@@ -344,7 +354,9 @@ export default function EvaluatorDashboard() {
     };
   }, []);
 
-  const [active, setActive] = useState('overview');
+  // Initialize active tab from URL parameter or default to 'overview'
+  const tabParam = searchParams.get('tab');
+  const [active, setActive] = useState(tabParam || 'overview');
 
   // Custom tab change handler with auto-refresh functionality
   const handleTabChange = (tabId: string) => {

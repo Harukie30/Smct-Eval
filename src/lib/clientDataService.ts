@@ -1076,6 +1076,39 @@ export const clientDataService = {
     }
   },
 
+  // Migrate old notification URLs (tab=reviews -> tab=overview for employees)
+  migrateNotificationUrls: async (): Promise<void> => {
+    const notifications = getFromStorage(STORAGE_KEYS.NOTIFICATIONS, [] as Notification[]);
+    let updated = false;
+    
+    const migratedNotifications = notifications.map(notification => {
+      // Only update employee notifications with reviews tab
+      if (notification.roles.includes('employee') && 
+          notification.actionUrl && 
+          notification.actionUrl.includes('/employee-dashboard?tab=reviews')) {
+        updated = true;
+        return {
+          ...notification,
+          actionUrl: notification.actionUrl.replace('?tab=reviews', '?tab=overview')
+        };
+      }
+      return notification;
+    });
+    
+    if (updated) {
+      saveToStorage(STORAGE_KEYS.NOTIFICATIONS, migratedNotifications);
+      console.log('✅ Migrated notification URLs from reviews to overview tab');
+      
+      // Trigger storage event for real-time updates
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: STORAGE_KEYS.NOTIFICATIONS,
+          newValue: JSON.stringify(migratedNotifications)
+        }));
+      }
+    }
+  },
+
   // Get all accounts
   getAccounts: async (): Promise<Account[]> => {
     return getFromStorage(STORAGE_KEYS.ACCOUNTS, []);

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, } from 'react';
 import { Eye, Trash, Calendar, X } from 'lucide-react';
-// useRouter removed - not used
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,9 +36,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function EmployeeDashboard() {
   const { profile, user, isLoading: authLoading, logout } = useUser();
   const { success, error } = useToast();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  
+  // Initialize activeTab from URL parameter or default to 'overview'
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam || 'overview');
 
   // Individual loading states for each tab content
   const [isRefreshingReviews, setIsRefreshingReviews] = useState(false);
@@ -381,6 +385,9 @@ export default function EmployeeDashboard() {
         // Initialize mock data on first load (now empty)
         initializeMockData();
 
+        // Migrate old notification URLs from reviews tab to overview tab
+        await clientDataService.migrateNotificationUrls();
+
         // Use the comprehensive refresh function to load all data with modal
         await refreshDashboardData(false, true, true);
 
@@ -408,7 +415,13 @@ export default function EmployeeDashboard() {
     }
   }, [profile]);
 
-
+  // Handle URL parameter changes for tab navigation
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   // Fallback timeout to prevent infinite loading
   useEffect(() => {

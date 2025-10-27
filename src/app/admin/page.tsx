@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -139,6 +140,7 @@ const getQuarterColor = (quarter: string) => {
 };
 
 export default function AdminDashboard() {
+  const searchParams = useSearchParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [positionsData, setPositionsData] = useState<{id: string, name: string}[]>([]);
   const [branchesData, setBranchesData] = useState<{id: string, name: string}[]>([]);
@@ -148,7 +150,10 @@ export default function AdminDashboard() {
   const [suspendedEmployees, setSuspendedEmployees] = useState<SuspendedEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [active, setActive] = useState('overview');
+  
+  // Initialize active tab from URL parameter or default to 'overview'
+  const tabParam = searchParams.get('tab');
+  const [active, setActive] = useState(tabParam || 'overview');
 
   // Function to refresh user data (used by shared hook)
   const refreshUserData = async () => {
@@ -252,6 +257,14 @@ export default function AdminDashboard() {
     dashboardName: 'Admin Dashboard',
     customMessage: 'Welcome back! Refreshing your admin dashboard data...'
   });
+
+  // Handle URL parameter changes for tab navigation
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== active) {
+      setActive(tab);
+    }
+  }, [searchParams]);
 
   // Real-time data updates via localStorage events
   useEffect(() => {

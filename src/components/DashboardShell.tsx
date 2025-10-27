@@ -12,6 +12,7 @@ import { useUser } from '@/contexts/UserContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Notification } from '@/lib/clientDataService';
 import clientDataService from '@/lib/clientDataService';
+import { useRouter } from 'next/navigation';
 
 export type SidebarItem = {
   id: string;
@@ -53,6 +54,7 @@ export default function DashboardShell(props: DashboardShellProps) {
   const notificationRef = useRef<HTMLDivElement>(null);
 
   const { profile: userProfile, updateProfile, logout } = useUser();
+  const router = useRouter();
   
   // Get user role for notifications
   const userRole = userProfile?.roleOrPosition || 'employee';
@@ -104,10 +106,17 @@ export default function DashboardShell(props: DashboardShellProps) {
       await markAsRead(notification.id);
     }
     
-    // Show notification details modal
-    setSelectedNotification(notification);
-    setIsNotificationDetailOpen(true);
-    setIsNotificationPanelOpen(false); // Close the notification panel
+    // Close the notification panel
+    setIsNotificationPanelOpen(false);
+    
+    // Navigate to the action URL if it exists
+    if (notification.actionUrl) {
+      router.push(notification.actionUrl);
+    } else {
+      // If no actionUrl, show the notification details modal as fallback
+      setSelectedNotification(notification);
+      setIsNotificationDetailOpen(true);
+    }
   };
 
   const handleMarkAllAsRead = async () => {
