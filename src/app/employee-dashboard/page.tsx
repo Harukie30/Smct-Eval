@@ -34,7 +34,7 @@ import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function EmployeeDashboard() {
-  const { profile, user, isLoading: authLoading, logout } = useUser();
+  const {  isLoading: authLoading, logout } = useUser();
   const { success, error } = useToast();
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);

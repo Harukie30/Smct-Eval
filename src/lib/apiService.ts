@@ -36,6 +36,7 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
 
 export const apiService = {
   // Authentication
+<<<<<<< Updated upstream
   login: async (email: string, password: string): Promise<{ success: boolean; user?: AuthenticatedUser; message?: string; suspensionData?: any; pending?: boolean; pendingData?: any; token?: string }> => {
     const response = await apiRequest('/api/auth/login', {
       method: 'POST',
@@ -52,7 +53,43 @@ export const apiService = {
 
   logout: async (): Promise<{ success: boolean; message: string }> => {
     const response = await apiRequest('/api/auth/logout', {
+=======
+ login: async (username: string, password: string, rememberMe: boolean) => {
+    await sanctum_csrf();
+
+    const res = await fetch(`${CONFIG.API_URL}/login`, {
       method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ username, password, remember: rememberMe }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.message || 'Invalid credentials');
+
+    return data;
+  },
+
+  getUser: async () => {
+    const res = await fetch(`${CONFIG.API_URL}/current_user`, {
+      credentials: 'include',
+    });
+
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    return data.current_user || data; // handle both structures
+  },
+
+  logout: async () => {
+    await fetch(`${CONFIG.API_URL}/logout`, {
+>>>>>>> Stashed changes
+      method: 'POST',
+      credentials: 'include',
     });
 
     // Remove token from localStorage
@@ -62,9 +99,12 @@ export const apiService = {
     return response;
   },
 
+<<<<<<< Updated upstream
   getCurrentUser: async (): Promise<{ success: boolean; user?: AuthenticatedUser; message?: string }> => {
     return apiRequest('/api/auth/me');
   },
+=======
+>>>>>>> Stashed changes
 
   // Registration
   createPendingRegistration: async (formData: FormData): Promise<any> => {

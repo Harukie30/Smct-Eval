@@ -67,6 +67,7 @@ export default function LandingLoginPage() {
       // Simulate real authentication steps with actual processing
       await new Promise(resolve => setTimeout(resolve, 1200)); // Initial validation delay
       
+<<<<<<< Updated upstream
       const result = await login(username, password);
 
       if (result === true) {
@@ -133,6 +134,39 @@ export default function LandingLoginPage() {
       } else {
         const errorMessage = 'Invalid username or password. Please try again.';
         setLoginError(errorMessage);
+=======
+   const login = async (username: string, password: string, rememberMe: boolean): Promise<User | null> => {
+  try {
+    setIsLoading(true);
+    await apiService.login(username, password, rememberMe);
+    await fetchUser(); // Fetch authenticated user data
+
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    setUser(storedUser);
+    setIsAuthenticated(true);
+    return storedUser; // ✅ return user so you can use it in the login form
+  } catch (err) {
+    console.error('Login failed:', err);
+    setIsAuthenticated(false);
+    throw err;
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+  //  if (result && typeof result === 'object' && result.suspended) {
+  //       // Account is suspended
+  //       console.log('Account suspended result:', result);
+  //       console.log('Suspension data:', result.data);
+  //       setSuspensionData(result.data);
+  //       setShowSuspensionModal(true);
+  //       setShowLoadingScreen(false); // Hide loading screen
+  //     }
+      } catch(error: any ) {
+        // const errorMessage = 'Invalid username or password. Please try again.';
+        console.log(error)
+        setLoginError(error.message);
+>>>>>>> Stashed changes
         toastMessages.login.error();
         setShowLoadingScreen(false); // Hide loading screen
         // Show incorrect password dialog
@@ -155,16 +189,16 @@ export default function LandingLoginPage() {
     // Router.push is handled inside the modal component
   };
 
-  if (isLoading) {
-    return (
-      <PageTransition>
-        <RealLoadingScreen
-          message="Initializing System..."
-          onComplete={() => setShowLoadingScreen(false)}
-        />
-      </PageTransition>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <PageTransition>
+  //       <RealLoadingScreen
+  //         message="Initializing System..."
+  //         onComplete={() => setShowLoadingScreen(false)}
+  //       />
+  //     </PageTransition>
+  //   );
+  // }
 
   // Remove automatic redirect screen - show login form even if authenticated
 
