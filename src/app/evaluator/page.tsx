@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo,} from 'react';
 import { X } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';  
@@ -23,7 +22,7 @@ import accountsData from '@/data/accounts.json';
 import departments from '@/data/departments.json';
 import { UserProfile } from '@/components/ProfileCard';
 import clientDataService from '@/lib/clientDataService';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { withAuth } from '@/hoc';
 import PageTransition from '@/components/PageTransition';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
@@ -162,11 +161,10 @@ const getRatingColorForLabel = (rating: string) => {
   }
 };
 
-export default function EvaluatorDashboard() {
+function EvaluatorDashboard() {
   const { profile, user } = useUser();
   const { success, error } = useToast();
   const { getUpdatedAvatar, hasAvatarUpdate } = useProfilePictureUpdates();
-  const searchParams = useSearchParams();
 
   // Function to get time ago display
   const getTimeAgo = (submittedAt: string) => {
@@ -207,14 +205,6 @@ export default function EvaluatorDashboard() {
     }
   }, [seenSubmissions]);
 
-  // Handle URL parameter changes for tab navigation
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && tab !== active) {
-      setActive(tab);
-    }
-  }, [searchParams]);
-
   // Mark submission as seen
   const markSubmissionAsSeen = (submissionId: number) => {
     setSeenSubmissions(prev => {
@@ -231,7 +221,43 @@ export default function EvaluatorDashboard() {
     const hoursDiff = (now - submissionTime) / (1000 * 60 * 60);
     const isSeen = seenSubmissions.has(submissionId);
     
-    // Priority 1: Fully approved - GREEN (always visible)
+    // Priority 1: Within 24 hours and not seen - YELLOW "New" (highest priority)
+    if (hoursDiff <= 24 && !isSeen) {
+      // Check if also fully approved
+      if (approvalStatus === 'fully_approved') {
+        return {
+          className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
+          badge: { text: 'New', className: 'bg-yellow-500 text-white' },
+          secondaryBadge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
+          priority: 'new-approved'
+        };
+      }
+      return {
+        className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
+        badge: { text: 'New', className: 'bg-yellow-500 text-white' },
+        priority: 'new'
+      };
+    }
+    
+    // Priority 2: Within 48 hours and not seen - BLUE "Recent"
+    if (hoursDiff <= 48 && !isSeen) {
+      // Check if also fully approved
+      if (approvalStatus === 'fully_approved') {
+        return {
+          className: 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100',
+          badge: { text: 'Recent', className: 'bg-blue-500 text-white' },
+          secondaryBadge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
+          priority: 'recent-approved'
+        };
+      }
+      return {
+        className: 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100',
+        badge: { text: 'Recent', className: 'bg-blue-500 text-white' },
+        priority: 'recent'
+      };
+    }
+    
+    // Priority 3: Fully approved but older - GREEN
     if (approvalStatus === 'fully_approved') {
       return {
         className: 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100',
@@ -240,30 +266,12 @@ export default function EvaluatorDashboard() {
       };
     }
     
-    // Priority 2: Within 24 hours and not seen - YELLOW "New"
-    if (hoursDiff <= 24 && !isSeen) {
-      return {
-        className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
-        badge: { text: 'New', className: 'bg-yellow-200 text-yellow-800' },
-        priority: 'new'
-      };
-    } 
-    // Priority 3: Within 48 hours and not seen - BLUE "Recent"
-    else if (hoursDiff <= 48 && !isSeen) {
-      return {
-        className: 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100',
-        badge: { text: 'Recent', className: 'bg-blue-100 text-blue-800' },
-        priority: 'recent'
-      };
-    } 
     // Default: Older or already seen - No special highlighting
-    else {
-      return {
-        className: 'hover:bg-gray-50',
-        badge: null,
-        priority: 'old'
-      };
-    }
+    return {
+      className: 'hover:bg-gray-50',
+      badge: null,
+      priority: 'old'
+    };
   };
 
   // Add custom CSS for container popup animation
@@ -354,9 +362,7 @@ export default function EvaluatorDashboard() {
     };
   }, []);
 
-  // Initialize active tab from URL parameter or default to 'overview'
-  const tabParam = searchParams.get('tab');
-  const [active, setActive] = useState(tabParam || 'overview');
+  const [active, setActive] = useState('overview');
 
   // Custom tab change handler with auto-refresh functionality
   const handleTabChange = (tabId: string) => {
@@ -2272,6 +2278,11 @@ export default function EvaluatorDashboard() {
                                           {highlight.badge.text}
                                         </Badge>
                                       )}
+                                      {highlight.secondaryBadge && (
+                                        <Badge variant="secondary" className={`${highlight.secondaryBadge.className} text-xs`}>
+                                          {highlight.secondaryBadge.text}
+                                        </Badge>
+                                      )}
                                     </div>
                                   </TableCell>
                                   <TableCell className="px-6 py-3 text-right font-semibold">
@@ -2806,7 +2817,7 @@ export default function EvaluatorDashboard() {
               <CardContent>
                 <div className="flex flex-col md:flex-row gap-4 mb-6">
                   {/* Search */}
-                  <div className="flex-1 w-1/5">
+                  <div className="flex-1">
                     <Label htmlFor="feedback-search" className="text-sm font-medium">Search</Label>
                     <div className="mt-1 relative">
                       <div className="relative w-full">
@@ -3099,6 +3110,11 @@ export default function EvaluatorDashboard() {
                                       {highlight.badge && (
                                         <Badge className={`${highlight.badge.className} text-xs px-1.5 py-0`}>
                                           {highlight.badge.text}
+                                        </Badge>
+                                      )}
+                                      {highlight.secondaryBadge && (
+                                        <Badge className={`${highlight.secondaryBadge.className} text-xs px-1.5 py-0`}>
+                                          {highlight.secondaryBadge.text}
                                         </Badge>
                                       )}
                                     </div>
@@ -3475,8 +3491,7 @@ export default function EvaluatorDashboard() {
   };
 
   return (
-    <ProtectedRoute requiredRole={["evaluator", "manager"]}>
-      
+    <>
       {/* Loading Screen - Shows during initial load */}
       {(loading || !data) && (
         <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -3677,8 +3692,11 @@ export default function EvaluatorDashboard() {
         />
 
       </PageTransition>
-    </ProtectedRoute>
+    </>
   );
 }
+
+// Wrap with HOC for authentication (evaluator or manager role)
+export default withAuth(EvaluatorDashboard, { requiredRole: ['evaluator', 'manager'] });
 
 

@@ -19,6 +19,7 @@ import PageTransition from "@/components/PageTransition";
 import { CONFIG } from "../../../config/config";
 import { id } from "date-fns/locale";
 import clientDataService from "@/lib/clientDataService.api";
+import { withPublicPage } from "@/hoc";
 
 interface FormDataType {
   fname: string;
@@ -34,7 +35,7 @@ interface FormDataType {
   signature: string;
 }
 
-export default function RegisterPage() {
+function RegisterPage() {
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
   const [positions, setPositions] = useState<{value: string , label: string}[]>([]);
   const [branches, setBranches] = useState<{value: string, label: string}[]>([]);
@@ -766,3 +767,7 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+// Wrap with HOC for public page with transitions
+// redirectIfAuthenticated: true means logged-in users will be redirected to their dashboard
+export default withPublicPage(RegisterPage, { redirectIfAuthenticated: true });

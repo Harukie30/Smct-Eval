@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { UserProfile } from '@/components/ProfileCard';
 import { toastMessages } from '@/lib/toastMessages';
 import clientDataService from '@/lib/clientDataService';
+import { apiService } from '@/lib/apiService';
 import RealLoadingScreen from '@/components/RealLoadingScreen';
 
 export interface AuthenticatedUser {
@@ -31,7 +32,7 @@ interface UserContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<boolean | { suspended: true; data: any; requiresRoleSelection?: boolean; pending?: boolean; pendingData?: any }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   refreshUserData: () => Promise<void>;
   switchRole: (role: string) => void; // New function for switching between roles
@@ -265,12 +266,23 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     // Show logout toast
     toastMessages.generic.info('Logging out...', 'See you next time!');
     
     // Show logout loading screen
     setShowLogoutLoading(true);
+    
+    try {
+      // ✅ Notify backend of logout
+      console.log('🔄 Calling backend logout API...');
+      await apiService.logout();
+      console.log('✅ Backend logout successful');
+    } catch (error) {
+      console.error('❌ Backend logout failed:', error);
+      // Continue with local logout even if backend call fails
+      // This ensures user can still log out from frontend
+    }
     
     // Clear user data after a short delay
     setTimeout(() => {
@@ -281,7 +293,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('authenticatedUser');
         localStorage.removeItem('keepLoggedIn');
+        localStorage.removeItem('authToken'); // Clear auth token
         sessionStorage.clear();
+        console.log('✅ Local storage cleared');
       }
     }, 200);
   };

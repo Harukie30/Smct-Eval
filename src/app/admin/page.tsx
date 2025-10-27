@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
+import { withAuth } from '@/hoc';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -139,7 +140,7 @@ const getQuarterColor = (quarter: string) => {
   return 'bg-gray-100 text-gray-800';
 };
 
-export default function AdminDashboard() {
+function AdminDashboard() {
   const searchParams = useSearchParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [positionsData, setPositionsData] = useState<{id: string, name: string}[]>([]);
@@ -2702,3 +2703,6 @@ export default function AdminDashboard() {
     </DashboardShell>
   );
 }
+
+// Wrap with HOC for authentication
+export default withAuth(AdminDashboard, { requiredRole: 'admin' });
