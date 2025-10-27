@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/UserContext';
 
@@ -17,12 +17,39 @@ export default function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, isAuthenticated, isLoading } = useUser();
   const router = useRouter();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Give auth state time to stabilize before checking
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsCheckingAuth(false);
+    }, 500); // 500ms grace period for auth state to settle
+
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push(fallbackPath);
+    // Only redirect if:
+    // 1. Not in loading state
+    // 2. Grace period has passed
+    // 3. User is not authenticated
+    // 4. No user in localStorage (double-check)
+    if (!isLoading && !isCheckingAuth && !isAuthenticated) {
+      // Double-check localStorage before redirecting
+      const storedUser = typeof window !== 'undefined' 
+        ? localStorage.getItem('authenticatedUser') 
+        : null;
+      
+      if (!storedUser) {
+        console.log('🔒 ProtectedRoute: Not authenticated, redirecting to', fallbackPath);
+        router.push(fallbackPath);
+      } else {
+        console.log('⚠️ ProtectedRoute: Context says not auth, but localStorage has user. Waiting...');
+        // User exists in localStorage but context hasn't loaded yet
+        // Don't redirect - give it more time
+      }
     }
-  }, [isAuthenticated, isLoading, router, fallbackPath]);
+  }, [isAuthenticated, isLoading, isCheckingAuth, router, fallbackPath]);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && requiredRole) {
@@ -47,18 +74,43 @@ export default function ProtectedRoute({
     }
   }, [isAuthenticated, isLoading, user?.role, requiredRole, router]);
 
-  if (isLoading) {
+  // Show loading screen during:
+  // 1. UserContext is loading user data
+  // 2. Grace period is active (checking auth)
+  if (isLoading || isCheckingAuth) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">
+            {isLoading ? 'Loading...' : 'Verifying authentication...'}
+          </p>
         </div>
       </div>
     );
   }
 
   if (!isAuthenticated) {
+    // Double-check localStorage before blocking render
+    const storedUser = typeof window !== 'undefined' 
+      ? localStorage.getItem('authenticatedUser') 
+      : null;
+    
+    if (storedUser) {
+      // User exists in localStorage but context hasn't synced yet
+      // Show loading instead of redirecting
+      console.log('⏳ ProtectedRoute: Context not synced yet, showing loading...');
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Syncing authentication...</p>
+          </div>
+        </div>
+      );
+    }
+    
+    console.log('🔒 ProtectedRoute: Rendering null, will redirect');
     return null; // Will redirect in useEffect
   }
 

@@ -1,14 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import DashboardShell, { SidebarItem } from "@/components/DashboardShell";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
+import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -171,6 +166,7 @@ const getQuarterColor = (quarter: string) => {
 };
 
 export default function AdminDashboard() {
+  const searchParams = useSearchParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [positionsData, setPositionsData] = useState<{ id: string; name: string }[]>([]);
   const [branchesData, setBranchesData] = useState<{ id: string; name: string }[]>([]);
@@ -180,7 +176,9 @@ export default function AdminDashboard() {
   const [suspendedEmployees, setSuspendedEmployees] = useState<SuspendedEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [active, setActive] = useState("overview");
+  // Initialize active tab from URL parameter or default to 'overview'
+  const tabParam = searchParams.get('tab');
+  const [active, setActive] = useState(tabParam || 'overview');
 
   // Function to refresh user data (used by shared hook)
   const refreshUserData = async () => {
@@ -300,6 +298,14 @@ export default function AdminDashboard() {
     dashboardName: "Admin Dashboard",
     customMessage: "Welcome back! Refreshing your admin dashboard data...",
   });
+
+  // Handle URL parameter changes for tab navigation
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== active) {
+      setActive(tab);
+    }
+  }, [searchParams]);
 
   // Real-time data updates via localStorage events
   useEffect(() => {
@@ -2016,9 +2022,9 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="max-h-[70vh] overflow-y-auto">
+                <div className="max-h-[450px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   <Table>
-                    <TableHeader className="sticky top-0 bg-white">
+                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
@@ -2171,9 +2177,9 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="max-h-[70vh] overflow-y-auto">
+              <div className="max-h-[450px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 <Table>
-                  <TableHeader className="sticky top-0 bg-white">
+                  <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>

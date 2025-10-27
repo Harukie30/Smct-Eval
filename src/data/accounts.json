@@ -79,6 +79,7 @@
       "name": "evaluate evaluate1",
       "email": "evaluator@gmail.com",
       "role": "manager",
+      "availableRoles": ["manager", "employee"],
       "position": "Engineering Manager",
       "department": "Engineering",
       "branch": "cebu-branch",
@@ -96,9 +97,29 @@
       "password": "12345678zx",
       "name": "hr test",
       "email": "hr@gmail.com",
-      "role": "hr-manager",
-      "availableRoles": ["hr-manager", "employee"],
+      "role": "hr",
+      "availableRoles": ["hr", "manager", "employee"],
       "position": "HR Manager",
+      "department": "Design",
+      "branch": "cebu-branch",
+      "isActive": true,
+      "contact": "",
+      "hireDate": "2025-09-10",
+      "avatar": null,
+      "bio": null,
+      "updatedAt": "2025-09-10T03:02:22.026Z"
+
+    },
+    {
+      "id": 7,
+      "employeeId": 1005,
+      "username": "hr-1234",
+      "password": "12345678zx",
+      "name": "hr test",
+      "email": "hr2@gmail.com",
+      "role": "hr",
+      "availableRoles": ["hr", "employee"],
+      "position": "HR Employee",
       "department": "Design",
       "branch": "cebu-branch",
       "isActive": true,
@@ -134,18 +155,6 @@
         "generate_reports",
         "manage_users",
         "view_hr_reports"
-      ],
-      "dashboard": "/hr-dashboard"
-    },
-    "hr-manager": {
-      "permissions": [
-        "view_all_profiles",
-        "manage_evaluations",
-        "generate_reports",
-        "manage_users",
-        "view_hr_reports",
-        "approve_hr_actions",
-        "manage_hr_policies"
       ],
       "dashboard": "/hr-dashboard"
     },

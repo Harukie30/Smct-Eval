@@ -117,6 +117,19 @@ export default function ForgotPasswordModal({ isOpen, onCloseAction }: ForgotPas
               }
             }
             
+            @keyframes spinOnce {
+              0% {
+                transform: rotate(0deg);
+              }
+              100% {
+                transform: rotate(360deg);
+              }
+            }
+            
+            .spin-once {
+              animation: spinOnce 0.6s ease-in-out 0.2s;
+            }
+            
             .success-checkmark {
               animation: successScale 0.3s ease-out 0.4s both;
             }
@@ -154,11 +167,13 @@ export default function ForgotPasswordModal({ isOpen, onCloseAction }: ForgotPas
           <>
             <DialogHeader>
               <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                  </svg>
-                </div>
+                
+                  <img 
+                    src="/password.png" 
+                    alt="Forgot Password" 
+                    className="w-20 h-20 spin-once"
+                  />
+               
               </div>
               <DialogTitle className="text-xl font-bold text-gray-900 text-center">
                 Reset Your Password

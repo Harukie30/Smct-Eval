@@ -16,7 +16,7 @@ import ForgotPasswordModal from '@/components/ForgotPasswordModal';
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import { toastMessages } from '@/lib/toastMessages';
-import clientDataService from '@/lib/clientDataService.api';
+import clientDataService from '@/lib/clientDataService';
 
 export default function LandingLoginPage() {
   const [username, setUsername] = useState('');
@@ -34,7 +34,21 @@ export default function LandingLoginPage() {
 
   const { login, isLoading } = useUser();
   const router = useRouter();
+  // Force refresh accounts data on login page load (clears cache)
+  useEffect(() => {
+    clientDataService.forceRefreshAccounts();
+  }, []);
 
+  useEffect(() => {
+    if (isAboutModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isAboutModalOpen]);
 
   // Remove automatic redirect - let users stay on login page even if authenticated
   // This allows users to see the login form and choose to log in again or navigate elsewhere
@@ -52,8 +66,9 @@ export default function LandingLoginPage() {
       
       const user =  await clientDataService.login(username, password, rememberMe);
       if (user) {
-
-        console.log('Login successful');
+      if (result === true) {
+        // Login successful - continue with real processing
+        console.log('✅ Login successful');
 
         // Simulate additional authentication steps
         await new Promise(resolve => setTimeout(resolve, 1000)); // Session creation
@@ -70,9 +85,21 @@ export default function LandingLoginPage() {
         //   localStorage.setItem('keepLoggedIn', 'false');
         // }
 
+        // IMPORTANT: Wait a bit longer to ensure UserContext state is fully updated
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         // Get user role for personalized loading message
-        // const storedUser = localStorage.getItem('authenticatedUser');
-          console.log('User role for redirect:', user.role);
+        const storedUser = localStorage.getItem('authenticatedUser');
+        console.log('🔍 DEBUG - localStorage check:', {
+          hasStoredUser: !!storedUser,
+          storedUserData: storedUser ? JSON.parse(storedUser) : null,
+          keepLoggedIn: localStorage.getItem('keepLoggedIn'),
+          isAuthenticated: !!user // Check if user state is set
+        });
+        
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          console.log('✅ User role for redirect:', userData.role);
 
           const roleDashboards: Record<string, string> = {
             'admin': '/admin',
@@ -83,13 +110,27 @@ export default function LandingLoginPage() {
             'manager': '/evaluator'
           };
 
-          const dashboardPath = roleDashboards[user.role || ''];
-          console.log('Redirecting to:', dashboardPath);
-
-          // Redirect immediately after all processing is complete
+          const dashboardPath = roleDashboards[userData.role || ''] || '';
+          console.log('🚀 Redirecting to:', dashboardPath);
+          
+          if (!dashboardPath) {
+            console.error('❌ No dashboard path found for role:', userData.role);
+            setShowLoadingScreen(false);
+            setLoginError('Invalid user role. Please contact support.');
+            return;
+          }
+          
+          // Wait to ensure authentication state is propagated
+          console.log('⏳ Waiting for authentication state to propagate...');
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          console.log('🔄 Executing redirect now...');
           router.push(dashboardPath);
         } else {
-          console.log('No user role data found, redirecting to default dashboard');
+          console.error('❌ No user data found in localStorage!');
+          console.log('📦 Available localStorage keys:', Object.keys(localStorage));
+          setShowLoadingScreen(false);
+          setLoginError('Session error. Please try logging in again.');
         }
 
   //  if (result && typeof result === 'object' && result.suspended) {
