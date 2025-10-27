@@ -16,6 +16,7 @@ import SignaturePad from "@/components/SignaturePad";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import PageTransition from "@/components/PageTransition";
+import { CONFIG } from "../../../config/config";
 import { id } from "date-fns/locale";
 import clientDataService from "@/lib/clientDataService.api";
 
@@ -111,8 +112,6 @@ export default function RegisterPage() {
       case "email":
         if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
           errors.email = "Please enter a valid email address";
-        }else{
-          errors.email = "";
         }
         break;
       case "password":
@@ -247,7 +246,7 @@ export default function RegisterPage() {
 
     const formDataToUpload = new FormData();
 
-    formDataToUpload.append("fname", formData.fname);
+    formDataToUpload.append("fname", formData?.fname);
     formDataToUpload.append("lname", formData.lname);
     formDataToUpload.append("username", formData.username);
     formDataToUpload.append("email", formData.email);
@@ -256,6 +255,7 @@ export default function RegisterPage() {
     formDataToUpload.append("branch_id", String(formData.branch_id));
     formDataToUpload.append("department_id", String(formData.department_id));
     formDataToUpload.append("password", formData.password);
+    formDataToUpload.append("password_confirmation",formData.password_confirmation);
     formDataToUpload.append("signature", formData.signature);
 
         try {
@@ -600,7 +600,7 @@ export default function RegisterPage() {
                       <Label htmlFor="department">Department</Label>
                       <Combobox
                         options={departments}
-                        value={Number(formData.department_id)}
+                        value={String(formData.department_id)}
                         onValueChangeAction={(value) =>
                           setFormData({ ...formData, department_id: value })
                         }

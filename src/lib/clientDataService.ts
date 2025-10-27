@@ -134,11 +134,11 @@ const getFromStorage = <T>(key: string, defaultValue: T): T => {
     
     const parsed = JSON.parse(stored);
     
-    // // If we expect an array but got an object, return default
-    // if (Array.isArray(defaultValue) && !Array.isArray(parsed)) {
-    //   console.warn(`Expected array for key "${key}" but got object, returning default`);
-    //   return defaultValue;
-    // }
+    // If we expect an array but got an object, return default
+    if (Array.isArray(defaultValue) && !Array.isArray(parsed)) {
+      console.warn(`Expected array for key "${key}" but got object, returning default`);
+      return defaultValue;
+    }
     
     return parsed;
   } catch {
