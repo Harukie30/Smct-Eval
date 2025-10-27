@@ -3,13 +3,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Bell, X, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Bell, X, Trash2, MessageCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import ProfileCard, { UserProfile } from "./ProfileCard";
 import ProfileModal from "./ProfileModal";
+import ContactDevsModal from "./ContactDevsModal";
 import { useUser } from '@/contexts/UserContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Notification } from '@/lib/clientDataService';
 import clientDataService from '@/lib/clientDataService';
+import { useRouter } from 'next/navigation';
 
 export type SidebarItem = {
   id: string;
@@ -45,9 +48,13 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const [isContactDevsModalOpen, setIsContactDevsModalOpen] = useState(false);
+  const [isNotificationDetailOpen, setIsNotificationDetailOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
 
   const { profile: userProfile, updateProfile, logout } = useUser();
+  const router = useRouter();
   
   // Get user role for notifications
   const userRole = userProfile?.roleOrPosition || 'employee';
@@ -94,14 +101,21 @@ export default function DashboardShell(props: DashboardShellProps) {
   };
 
   const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read
     if (!notification.isRead) {
       await markAsRead(notification.id);
     }
     
-    // Handle notification action if it has a URL
+    // Close the notification panel
+    setIsNotificationPanelOpen(false);
+    
+    // Navigate to the action URL if it exists
     if (notification.actionUrl) {
-      // You can implement navigation logic here
-      console.log('Navigate to:', notification.actionUrl);
+      router.push(notification.actionUrl);
+    } else {
+      // If no actionUrl, show the notification details modal as fallback
+      setSelectedNotification(notification);
+      setIsNotificationDetailOpen(true);
     }
   };
 
@@ -155,6 +169,17 @@ export default function DashboardShell(props: DashboardShellProps) {
                 {currentPeriod}
               </Badge>
             ) : null}
+
+            {/* Contact Developers Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsContactDevsModalOpen(true)}
+              className="relative p-2 hover:bg-gray-100"
+              title="Contact Developers"
+            >
+              <MessageCircle className="h-5 w-5 text-blue-600" />
+            </Button>
 
             {/* Notification Bell */}
             <div className="relative" ref={notificationRef}>
@@ -346,6 +371,129 @@ export default function DashboardShell(props: DashboardShellProps) {
           onSave={handleSaveProfile}
         />
       )}
+
+      {/* Contact Developers Modal */}
+      <ContactDevsModal
+        isOpen={isContactDevsModalOpen}
+        onCloseAction={() => setIsContactDevsModalOpen(false)}
+      />
+
+      {/* Notification Detail Modal */}
+      <Dialog open={isNotificationDetailOpen} onOpenChangeAction={setIsNotificationDetailOpen}>
+        <DialogContent 
+          className="max-w-lg w-full mx-4 p-6"
+          style={{
+            animation: 'modalPopup 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+        >
+          <style jsx>{`
+            @keyframes modalPopup {
+              0% {
+                opacity: 0;
+                transform: scale(0.95) translateY(-10px);
+              }
+              100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+              }
+            }
+          `}</style>
+          <DialogHeader className="pb-4 border-b mb-2">
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <span className="text-3xl">{selectedNotification && getNotificationIcon(selectedNotification.type)}</span>
+              Notification Details
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedNotification && (
+            <div className="space-y-6 py-4">
+              {/* Notification Type Badge */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-gray-700 w-24">Type:</span>
+                <Badge 
+                  className={`px-3 py-1 text-sm font-medium ${
+                    selectedNotification.type === 'success' ? 'bg-green-100 text-green-800' :
+                    selectedNotification.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                    selectedNotification.type === 'error' ? 'bg-red-100 text-red-800' :
+                    'bg-blue-100 text-blue-800'
+                  }`}
+                >
+                  {selectedNotification.type.toUpperCase()}
+                </Badge>
+              </div>
+
+              {/* Location/Destination (Where notification points to) */}
+              {selectedNotification.actionUrl && (
+                <div className="space-y-2">
+                  <span className="text-sm font-semibold text-gray-700 block">📍 Navigate To:</span>
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">
+                        {selectedNotification.actionUrl.includes('reviews') ? '📝' :
+                         selectedNotification.actionUrl.includes('history') && selectedNotification.actionUrl.includes('account') ? '📋' :
+                         selectedNotification.actionUrl.includes('history') ? '📈' :
+                         selectedNotification.actionUrl.includes('overview') ? '📊' :
+                         '🔗'}
+                      </span>
+                      <div>
+                        <div className="text-blue-900 text-sm font-bold">
+                          {(() => {
+                            const url = selectedNotification.actionUrl;
+                            // Match employee dashboard sidebar tabs
+                            if (url.includes('tab=overview') || url.includes('overview')) return 'Overview';
+                            if (url.includes('tab=reviews') || url.includes('reviews')) return 'Performance Reviews';
+                            if (url.includes('tab=account-history') || url.includes('account-history')) return 'Account History';
+                            if (url.includes('tab=history') || url.includes('history')) return 'Evaluation History';
+                            // Fallback
+                            return 'Dashboard';
+                          })()}
+                        </div>
+                        <div className="text-blue-600 text-xs mt-1">
+                          Click notification to go there
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Message */}
+              <div className="space-y-2">
+                <span className="text-sm font-semibold text-gray-700 block">Message:</span>
+                <p className="text-base text-gray-900 bg-gray-50 p-4 rounded-lg border border-gray-200 leading-relaxed">
+                  {selectedNotification.message}
+                </p>
+              </div>
+
+              {/* Timestamp */}
+              <div className="flex items-center gap-3 text-sm">
+                <span className="font-semibold text-gray-700 w-24">Received:</span>
+                <span className="text-gray-600">{new Date(selectedNotification.timestamp).toLocaleString()}</span>
+              </div>
+
+              {/* Status */}
+              <div className="flex items-center gap-3 text-sm">
+                <span className="font-semibold text-gray-700 w-24">Status:</span>
+                {selectedNotification.isRead ? (
+                  <Badge className="bg-gray-100 text-gray-800 px-3 py-1">Read</Badge>
+                ) : (
+                  <Badge className="bg-blue-100 text-blue-800 px-3 py-1">Unread</Badge>
+                )}
+              </div>
+
+              {/* Close Button */}
+              <div className="pt-6 border-t flex justify-end">
+                <Button 
+                  onClick={() => setIsNotificationDetailOpen(false)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

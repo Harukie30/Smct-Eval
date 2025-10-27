@@ -92,7 +92,8 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Return all pending registrations (for admin use)
-    const { password, ...safeRegistrations } = pendingRegistrations.map(reg => {
+    // Remove passwords from each registration for security
+    const safeRegistrations = pendingRegistrations.map(reg => {
       const { password, ...safeReg } = reg;
       return safeReg;
     });

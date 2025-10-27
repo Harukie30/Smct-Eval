@@ -2,7 +2,7 @@
 
 import { useState, useEffect, } from 'react';
 import { Eye, Trash, Calendar, X } from 'lucide-react';
-// useRouter removed - not used
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,6 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { getQuarterFromEvaluationData, getQuarterColor } from '@/lib/quarterUtils';
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 import EvaluationDetailsModal from '@/components/EvaluationDetailsModal';
-import PerformanceTrendModal from '@/components/PerformanceTrendModal';
 // CommentDetailModal import removed
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -37,9 +36,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function EmployeeDashboard() {
   const { profile, user, isLoading: authLoading, logout } = useUser();
   const { success, error } = useToast();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  
+  // Initialize activeTab from URL parameter or default to 'overview'
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam || 'overview');
 
   // Individual loading states for each tab content
   const [isRefreshingReviews, setIsRefreshingReviews] = useState(false);
@@ -58,13 +61,13 @@ export default function EmployeeDashboard() {
   const [selectedEvaluation, setSelectedEvaluation] = useState<any>(null);
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [isEvaluationDetailsModalOpen, setIsEvaluationDetailsModalOpen] = useState(false);
-  const [isPerformanceTrendModalOpen, setIsPerformanceTrendModalOpen] = useState(false);
   const [modalOpenedFromTab, setModalOpenedFromTab] = useState<string>('');
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [quarterlySearchTerm, setQuarterlySearchTerm] = useState('');
   const [selectedQuarter, setSelectedQuarter] = useState<string>('');
   const [accountHistory, setAccountHistory] = useState<any[]>([]);
   const [accountHistorySearchTerm, setAccountHistorySearchTerm] = useState('');
+  const [overviewSearchTerm, setOverviewSearchTerm] = useState('');
   // Comments & feedback functionality removed
   
   // Date filtering states for quarterly performance
@@ -211,9 +214,13 @@ export default function EmployeeDashboard() {
     }
   };
 
-
-
-
+  // Function to determine highlighting for account history items
+  const getAccountHistoryHighlight = (item: any) => {
+    if (item.type === 'violation') {
+      return 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100';
+    }
+    return 'hover:bg-gray-50'; // Default or no highlight
+  };
 
   // Comments & feedback functionality removed
 
@@ -379,6 +386,9 @@ export default function EmployeeDashboard() {
         // Initialize mock data on first load (now empty)
         initializeMockData();
 
+        // Migrate old notification URLs from reviews tab to overview tab
+        await clientDataService.migrateNotificationUrls();
+
         // Use the comprehensive refresh function to load all data with modal
         await refreshDashboardData(false, true, true);
 
@@ -406,7 +416,13 @@ export default function EmployeeDashboard() {
     }
   }, [profile]);
 
-
+  // Handle URL parameter changes for tab navigation
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   // Fallback timeout to prevent infinite loading
   useEffect(() => {
@@ -1069,6 +1085,35 @@ export default function EmployeeDashboard() {
                     <span>Refresh</span>
                   </Button>
                 </div>
+                
+                {/* Search Bar */}
+                <div className="mt-4 relative w-1/5">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg
+                      className="h-5 w-5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <Input
+                    type="text"
+                    placeholder="Search by supervisor, rating, date, quarter..."
+                    value={overviewSearchTerm}
+                    onChange={(e) => setOverviewSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2 w-full border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                  {overviewSearchTerm && (
+                    <button
+                      onClick={() => setOverviewSearchTerm('')}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="h-5 w-5 text-lg" />
+                    </button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="p-0">
                 {/* Refreshing Dialog for Performance Reviews */}
@@ -1108,44 +1153,96 @@ export default function EmployeeDashboard() {
                       </div>
                     ))}
                   </div>
-                ) : submissions.length > 0 ? (
-                  <>
-                    {/* Simple Legend */}
-                    <div className="mb-3 mx-4 flex flex-wrap gap-4 text-xs text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
-                        <Badge className="bg-green-200 text-green-800 text-xs">Approved</Badge>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
-                        <Badge className="bg-yellow-200 text-yellow-800 text-xs">New</Badge>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
-                        <Badge className="bg-blue-300 text-blue-800 text-xs">Recent</Badge>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Badge className="text-white bg-orange-500 text-xs">Pending</Badge>
-                      </div>
-                    </div>
+                ) : (() => {
+                  // Filter submissions based on search term
+                  const filteredSubmissions = submissions.filter((submission) => {
+                    if (!overviewSearchTerm) return true;
                     
-                    <div className="max-h-[400px] overflow-y-auto mx-4">
-                      <Table>
-                      <TableHeader className="sticky top-0 bg-white z-10 border-b">
-                        <TableRow>
-                          <TableHead>Immediate Supervisor</TableHead>
-                          <TableHead className="text-right">Rating</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Quarter</TableHead>
-                          <TableHead>Acknowledgement</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                    <TableBody>
-                      {submissions
-                        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-                        .slice(0, 5)
-                        .map((submission) => {
+                    const searchLower = overviewSearchTerm.toLowerCase();
+                    const supervisor = (submission.evaluationData?.supervisor || 'not specified').toLowerCase();
+                    const rating = submission.evaluationData ? calculateOverallRating(submission.evaluationData).toString() : submission.rating.toString();
+                    const date = new Date(submission.submittedAt).toLocaleDateString().toLowerCase();
+                    const quarter = getQuarterFromEvaluationData(submission.evaluationData || submission).toLowerCase();
+                    const acknowledgement = isEvaluationApproved(submission.id) ? 'approved' : 'pending';
+                    
+                    return supervisor.includes(searchLower) ||
+                           rating.includes(searchLower) ||
+                           date.includes(searchLower) ||
+                           quarter.includes(searchLower) ||
+                           acknowledgement.includes(searchLower);
+                  });
+
+                  // Check if we have any submissions and filtered results
+                  if (submissions.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <div className="text-gray-500 text-lg mb-2">No performance reviews yet</div>
+                        <div className="text-gray-400 text-sm">Your evaluations will appear here once they are completed by your manager.</div>
+                      </div>
+                    );
+                  }
+
+                  if (filteredSubmissions.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <div className="text-gray-500 text-lg mb-2">No results found</div>
+                        <div className="text-gray-400 text-sm mb-4">No performance reviews match "{overviewSearchTerm}"</div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setOverviewSearchTerm('')}
+                          className="text-white hover:text-white bg-blue-500 hover:bg-blue-600"
+                        >
+                          Clear search
+                        </Button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <>
+                      {/* Search Results Count */}
+                      {overviewSearchTerm && (
+                        <div className="mb-3 mx-4 text-sm text-gray-600">
+                          Found <span className="font-semibold text-blue-600">{filteredSubmissions.length}</span> result{filteredSubmissions.length !== 1 ? 's' : ''} for "{overviewSearchTerm}"
+                        </div>
+                      )}
+
+                      {/* Simple Legend */}
+                      <div className="mb-3 mx-4 flex flex-wrap gap-4 text-xs text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+                          <Badge className="bg-green-200 text-green-800 text-xs">Approved</Badge>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
+                          <Badge className="bg-yellow-200 text-yellow-800 text-xs">New</Badge>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+                          <Badge className="bg-blue-300 text-blue-800 text-xs">Recent</Badge>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Badge className="text-white bg-orange-500 text-xs">Pending</Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table mx-4">
+                        <Table>
+                        <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                          <TableRow>
+                            <TableHead>Immediate Supervisor</TableHead>
+                            <TableHead className="text-right">Rating</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Quarter</TableHead>
+                            <TableHead>Acknowledgement</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                      <TableBody>
+                        {filteredSubmissions
+                          .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+                          .map((submission) => {
                         const highlight = getSubmissionHighlight(submission.submittedAt, submissions, submission.id);
                         return (
                           <TableRow 
@@ -1251,12 +1348,8 @@ export default function EmployeeDashboard() {
                   </Table>
                   </div>
                   </>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="text-gray-500 text-lg mb-2">No performance reviews yet</div>
-                    <div className="text-gray-400 text-sm">Your evaluations will appear here once they are completed by your manager.</div>
-                  </div>
-                )}
+                  );
+                })()}
               </CardContent>
             </Card>
           </>
@@ -1529,22 +1622,10 @@ export default function EmployeeDashboard() {
                 {submissions.length > 0 && (
                   <Card className="mt-8">
                     <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="flex items-center gap-2">
-                            💡 Performance Insights
-                          </CardTitle>
-                          <CardDescription>Actionable insights based on your performance history</CardDescription>
-                        </div>
-                        <Button
-                          onClick={() => setIsPerformanceTrendModalOpen(true)}
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-2"
-                        >
-                          📊 View Graph
-                        </Button>
-                      </div>
+                      <CardTitle className="flex items-center gap-2">
+                        💡 Performance Insights
+                      </CardTitle>
+                      <CardDescription>Actionable insights based on your performance history</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1639,13 +1720,33 @@ export default function EmployeeDashboard() {
                 <Card className="mt-8">
                   <CardHeader>
                     <CardTitle>All Performance Reviews</CardTitle>
-                    <CardDescription>Complete history of your performance evaluations</CardDescription>
+                    <CardDescription>
+                      Complete history of your performance evaluations
+                      <div className="flex items-center gap-4 mt-2 text-xs">
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
+                          <span className="text-red-700">Poor (&lt;2.5)</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-orange-100 border border-orange-300 rounded"></div>
+                          <span className="text-orange-700">Low (&lt;3.0)</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-blue-100 border border-blue-300 rounded"></div>
+                          <span className="text-blue-700">Good (3.0-3.9)</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
+                          <span className="text-green-700">Excellent (≥4.0)</span>
+                        </div>
+                      </div>
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="p-0">
                     {submissions.length > 0 ? (
-                      <div className="max-h-[500px] overflow-y-auto mx-4">
+                      <div className="max-h-[500px] overflow-y-auto overflow-x-hidden rounded-lg border mx-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                         <Table>
-                          <TableHeader className="sticky top-0 bg-white z-10 border-b">
+                          <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
                             <TableRow>
                               <TableHead className="px-6 py-4">Immediate Supervisor</TableHead>
                               <TableHead className="px-6 py-4 text-right">Rating</TableHead>
@@ -1659,10 +1760,18 @@ export default function EmployeeDashboard() {
                               .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
                               .map((submission) => {
                               const highlight = getSubmissionHighlight(submission.submittedAt, submissions);
+                              const rating = submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating;
+                              const isLowPerformance = rating < 3.0;
+                              const isPoorPerformance = rating < 2.5;
+                              
                               return (
                                 <TableRow 
                                   key={submission.id} 
-                                  className={highlight.className}
+                                  className={`${highlight.className} ${
+                                    isPoorPerformance ? 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100' :
+                                    isLowPerformance ? 'bg-orange-50 border-l-4 border-l-orange-400 hover:bg-orange-100' :
+                                    ''
+                                  }`}
                                 >
                                 <TableCell className="px-6 py-4 font-medium">
                                   <div className="flex items-center gap-2">
@@ -1675,7 +1784,35 @@ export default function EmployeeDashboard() {
                                   </div>
                                 </TableCell>
                                 <TableCell className="px-6 py-4 text-right font-semibold">
-                                  {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating}/5
+                                  {(() => {
+                                    const rating = submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating;
+                                    const isLowPerformance = rating < 3.0;
+                                    const isPoorPerformance = rating < 2.5;
+                                    
+                                    return (
+                                      <div className={`flex items-center justify-end gap-2 ${
+                                        isPoorPerformance ? 'text-red-700' : 
+                                        isLowPerformance ? 'text-orange-600' : 
+                                        'text-gray-900'
+                                      }`}>
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                          isPoorPerformance ? 'bg-red-100 text-red-800' :
+                                          isLowPerformance ? 'bg-orange-100 text-orange-800' :
+                                          rating >= 4.0 ? 'bg-green-100 text-green-800' :
+                                          rating >= 3.5 ? 'bg-blue-100 text-blue-800' :
+                                          'bg-blue-100 text-blue-800'
+                                        }`}>
+                                          {isPoorPerformance ? 'POOR' : 
+                                           isLowPerformance ? 'LOW' : 
+                                           rating >= 4.0 ? 'EXCELLENT' :
+                                           rating >= 3.5 ? 'GOOD' : 'FAIR'}
+                                        </span>
+                                        <span className="font-bold">
+                                          {rating}/5
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
                                 </TableCell>
                                 <TableCell className="px-6 py-4">
                                   <div className="flex flex-col">
@@ -1972,9 +2109,9 @@ export default function EmployeeDashboard() {
                               </div>
                             )}
                           </div>
-                          <div className="overflow-x-auto">
+                          <div className="max-h-[300px] md:max-h-[450px] lg:max-h-[650px] xl:max-h-[700px] overflow-y-auto overflow-x-auto scrollable-table">
                             {isRefreshingQuarterly || loading ? (
-                              <div className="space-y-2">
+                              <div className="space-y-2 p-4">
                                 {/* Table Header Skeleton */}
                                 <div className="flex space-x-3 py-2 border-b">
                                   <Skeleton className="h-3 w-12" />
@@ -2001,7 +2138,7 @@ export default function EmployeeDashboard() {
                               </div>
                             ) : (
                               <Table>
-                                <TableHeader>
+                                <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
                                   <TableRow>
                                     <TableHead>Quarter</TableHead>
                                     <TableHead>Dates</TableHead>
@@ -2273,9 +2410,9 @@ export default function EmployeeDashboard() {
                               </div>
                             )}
                           </div>
-                          <div className="overflow-x-auto">
+                          <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
                             {isRefreshingHistory || loading ? (
-                              <div className="space-y-2">
+                              <div className="space-y-2 p-4">
                                 {/* Table Header Skeleton */}
                                 <div className="flex space-x-3 py-2 border-b">
                                   <Skeleton className="h-3 w-12" />
@@ -2301,9 +2438,8 @@ export default function EmployeeDashboard() {
                                 ))}
                               </div>
                             ) : (
-                              <div className="max-h-[500px] overflow-y-auto mx-4">
-                                <Table>
-                                  <TableHeader className="sticky top-0 bg-white z-10 border-b">
+                              <Table>
+                                  <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
                                     <TableRow>
                                       <TableHead>Date</TableHead>
                                       <TableHead>Employee</TableHead>
@@ -2425,7 +2561,6 @@ export default function EmployeeDashboard() {
                                   )}
                                 </TableBody>
                               </Table>
-                              </div>
                             )}
                           </div>
                         </CardContent>
@@ -2492,7 +2627,7 @@ export default function EmployeeDashboard() {
                     )}
 
                     {/* Search Bar */}
-                    <div className="mb-6 w-1/2">
+                    <div className="mb-6 w-1/3">
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3039,14 +3174,6 @@ export default function EmployeeDashboard() {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Performance Trend Modal */}
-      <PerformanceTrendModal
-        isOpen={isPerformanceTrendModalOpen}
-        onCloseAction={() => setIsPerformanceTrendModalOpen(false)}
-        submissions={submissions}
-        calculateOverallRatingAction={calculateOverallRating}
-      />
 
     </ProtectedRoute>
   );

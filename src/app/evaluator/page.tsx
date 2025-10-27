@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo,} from 'react';
 import { X } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';  
@@ -85,6 +86,7 @@ type Employee = {
   email: string;
   position: string;
   department: string;
+  branch?: string;
   role: string;
   hireDate: string;
   avatar?: string;
@@ -164,6 +166,7 @@ export default function EvaluatorDashboard() {
   const { profile, user } = useUser();
   const { success, error } = useToast();
   const { getUpdatedAvatar, hasAvatarUpdate } = useProfilePictureUpdates();
+  const searchParams = useSearchParams();
 
   // Function to get time ago display
   const getTimeAgo = (submittedAt: string) => {
@@ -188,32 +191,73 @@ export default function EvaluatorDashboard() {
     }
   };
 
-  // Simple 2-level highlighting system
-  const getSubmissionHighlight = (submittedAt: string, allSubmissions: any[] = []) => {
-    // Sort all submissions by date (most recent first)
-    const sortedSubmissions = [...allSubmissions].sort((a, b) => 
-      new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-    );
+  // Track seen submissions in localStorage
+  const [seenSubmissions, setSeenSubmissions] = useState<Set<number>>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('seenEvaluationSubmissions');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    }
+    return new Set();
+  });
+
+  // Save seen submissions when they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('seenEvaluationSubmissions', JSON.stringify(Array.from(seenSubmissions)));
+    }
+  }, [seenSubmissions]);
+
+  // Handle URL parameter changes for tab navigation
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== active) {
+      setActive(tab);
+    }
+  }, [searchParams]);
+
+  // Mark submission as seen
+  const markSubmissionAsSeen = (submissionId: number) => {
+    setSeenSubmissions(prev => {
+      const newSet = new Set(prev);
+      newSet.add(submissionId);
+      return newSet;
+    });
+  };
+
+  // Enhanced time-based highlighting system with seen tracking and approval status
+  const getSubmissionHighlight = (submittedAt: string, submissionId: number, approvalStatus?: string) => {
+    const submissionTime = new Date(submittedAt).getTime();
+    const now = new Date().getTime();
+    const hoursDiff = (now - submissionTime) / (1000 * 60 * 60);
+    const isSeen = seenSubmissions.has(submissionId);
     
-    // Find the position of current submission in the sorted list
-    const currentIndex = sortedSubmissions.findIndex(sub => sub.submittedAt === submittedAt);
+    // Priority 1: Fully approved - GREEN (always visible)
+    if (approvalStatus === 'fully_approved') {
+      return {
+        className: 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100',
+        badge: { text: 'Approved', className: 'bg-green-500 text-white' },
+        priority: 'approved'
+      };
+    }
     
-    if (currentIndex === 0) {
-      // Most recent submission - YELLOW "New"
+    // Priority 2: Within 24 hours and not seen - YELLOW "New"
+    if (hoursDiff <= 24 && !isSeen) {
       return {
         className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
         badge: { text: 'New', className: 'bg-yellow-200 text-yellow-800' },
         priority: 'new'
       };
-    } else if (currentIndex === 1) {
-      // Second most recent - BLUE "Recent"
+    } 
+    // Priority 3: Within 48 hours and not seen - BLUE "Recent"
+    else if (hoursDiff <= 48 && !isSeen) {
       return {
         className: 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100',
         badge: { text: 'Recent', className: 'bg-blue-100 text-blue-800' },
         priority: 'recent'
       };
-    } else {
-      // Older submissions - No special highlighting
+    } 
+    // Default: Older or already seen - No special highlighting
+    else {
       return {
         className: 'hover:bg-gray-50',
         badge: null,
@@ -310,7 +354,9 @@ export default function EvaluatorDashboard() {
     };
   }, []);
 
-  const [active, setActive] = useState('overview');
+  // Initialize active tab from URL parameter or default to 'overview'
+  const tabParam = searchParams.get('tab');
+  const [active, setActive] = useState(tabParam || 'overview');
 
   // Custom tab change handler with auto-refresh functionality
   const handleTabChange = (tabId: string) => {
@@ -319,50 +365,42 @@ export default function EvaluatorDashboard() {
     // Auto-refresh data when switching to specific tabs (no modals)
     if (tabId === 'feedback') {
       // Refresh evaluation records data
-      console.log('🔄 Starting feedback refresh...');
       setIsFeedbackRefreshing(true);
       
       // Add a 1-second delay to make skeleton visible
       setTimeout(() => {
         refreshEvaluatorData().then(() => {
-          console.log('✅ Feedback refresh completed');
           // Show success toast for feedback refresh
           success(
             'Evaluation Records Refreshed',
             'Feedback data has been updated'
           );
         }).finally(() => {
-          console.log('🏁 Setting isFeedbackRefreshing to false');
           setIsFeedbackRefreshing(false);
         });
       }, 1000); // 1-second delay to see skeleton properly
     } else if (tabId === 'employees') {
       // Refresh employees data
-      console.log('🔄 Starting employees refresh...');
       setIsEmployeesRefreshing(true);
       
       // Add a 1-second delay to make skeleton visible
       setTimeout(() => {
         refreshEvaluatorData().then(() => {
-          console.log('✅ Employees refresh completed');
           // Show success toast for employees refresh
           success(
             'Employees Refreshed',
             'Employee data has been updated'
           );
         }).finally(() => {
-          console.log('🏁 Setting isEmployeesRefreshing to false');
           setIsEmployeesRefreshing(false);
         });
       }, 1000); // 1-second delay to see skeleton properly
     } else if (tabId === 'account-history') {
       // Refresh account history data
-      console.log('🔄 Starting account history refresh...');
       setIsAccountHistoryRefreshing(true);
       setTimeout(() => {
         const history = loadAccountHistory();
         setAccountHistory(history);
-        console.log('✅ Account history refresh completed');
         success(
           'Account History Refreshed',
           'Account history data has been updated'
@@ -371,20 +409,17 @@ export default function EvaluatorDashboard() {
       }, 1000); // 1-second delay to see skeleton properly
     } else if (tabId === 'overview') {
       // Refresh overview data when switching to overview tab
-      console.log('🔄 Starting overview refresh...');
       setIsRefreshing(true);
       
       // Add a 2-second delay to make skeleton visible
       setTimeout(() => {
         refreshEvaluatorData().then(() => {
-          console.log('✅ Overview refresh completed');
           // Show success toast for overview refresh
           success(
             'Overview Refreshed',
             'Recent submissions data has been updated'
           );
         }).finally(() => {
-          console.log('🏁 Setting isRefreshing to false');
           setIsRefreshing(false);
         });
       }, 1000); // 2-second delay to see skeleton properly
@@ -473,7 +508,6 @@ export default function EvaluatorDashboard() {
     const handleStorageChange = (e: StorageEvent) => {
       // Only refresh if the change is from another tab/window
       if (e.key === 'submissions' && e.newValue !== e.oldValue) {
-        console.log('📊 Submissions data updated, refreshing evaluator dashboard...');
         refreshSubmissions();
       }
     };
@@ -517,6 +551,7 @@ export default function EvaluatorDashboard() {
   const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] = useState(false);
   const [isDialogClosing, setIsDialogClosing] = useState(false);
   const [isSuccessDialogClosing, setIsSuccessDialogClosing] = useState(false);
+  const [isDeleteDialogClosing, setIsDeleteDialogClosing] = useState(false);
 
 
   // Function to refresh employee data
@@ -550,9 +585,7 @@ export default function EvaluatorDashboard() {
           'Employee Data Refreshed',
           `Successfully loaded ${uniqueData.length} employee records`
         );
-        console.log(`✅ Successfully refreshed ${uniqueData.length} employee records`);
       } else {
-        console.warn('Invalid employee data structure received from API');
         setEmployeeDataRefresh(prev => prev + 1);
         error(
           'Invalid Data',
@@ -597,9 +630,7 @@ export default function EvaluatorDashboard() {
           'Evaluation Records Refreshed',
           `Successfully loaded ${uniqueData.length} evaluation records`
         );
-        console.log(`✅ Successfully refreshed ${uniqueData.length} evaluation records`);
       } else {
-        console.warn('Invalid data structure received from API');
         setRecentSubmissions([]);
         error(
           'Invalid Data',
@@ -621,14 +652,12 @@ export default function EvaluatorDashboard() {
   // Function to handle refresh with modal
   const handleEvaluationRecordsRefresh = async () => {
     try {
-      console.log('🔄 Starting manual refresh...');
       setIsRefreshing(true);
       setIsFeedbackRefreshing(true);
       
       // Add a 1-second delay to make skeleton visible
       setTimeout(async () => {
         await refreshSubmissions();
-        console.log('✅ Manual refresh completed');
         success(
           'Evaluation Records Refreshed',
           'Feedback data has been updated'
@@ -749,7 +778,6 @@ export default function EvaluatorDashboard() {
   // Function to handle account history refresh
   const handleAccountHistoryRefresh = async () => {
     try {
-      console.log('🔄 Starting account history refresh...');
       setIsAccountHistoryRefreshing(true);
       
       // Add a 1-second delay to make skeleton visible
@@ -757,8 +785,6 @@ export default function EvaluatorDashboard() {
         const history = loadAccountHistory();
         setAccountHistory(history);
         
-        
-        console.log('✅ Account history refresh completed');
         success(
           'Account History Refreshed',
           'Account history data has been updated'
@@ -805,13 +831,11 @@ export default function EvaluatorDashboard() {
   // Function to handle employees refresh with modal
   const handleEmployeesRefresh = async () => {
     try {
-      console.log('🔄 Starting manual employees refresh...');
       setIsEmployeesRefreshing(true);
       
       // Add a 1-second delay to make skeleton visible
       setTimeout(async () => {
         await refreshEmployeeData();
-        console.log('✅ Manual employees refresh completed');
         setIsEmployeesRefreshing(false);
       }, 1000); // 1-second delay to see skeleton properly
     } catch (error) {
@@ -898,23 +922,30 @@ export default function EvaluatorDashboard() {
         `Evaluation record for ${recordToDelete.employeeName} has been deleted successfully`
       );
 
-      // Close modal and reset state
-      setIsDeleteModalOpen(false);
-      setRecordToDelete(null);
-      setDeletePassword('');
-      setDeletePasswordError('');
-      // Show success dialog with animated check
-      setShowDeleteSuccessDialog(true);
+      // Trigger pop-down animation before closing
+      setIsDeleteDialogClosing(true);
       
-      // Start pop-down animation after 1 second, then close after 1.3 seconds
+      // Close modal and reset state after animation
       setTimeout(() => {
-        setIsSuccessDialogClosing(true);
-      }, 1000);
-      
-      setTimeout(() => {
-        setShowDeleteSuccessDialog(false);
-        setIsSuccessDialogClosing(false);
-      }, 1300);
+        setIsDeleteModalOpen(false);
+        setRecordToDelete(null);
+        setDeletePassword('');
+        setDeletePasswordError('');
+        setIsDeleteDialogClosing(false);
+        
+        // Show success dialog with animated check
+        setShowDeleteSuccessDialog(true);
+        
+        // Start pop-down animation after 1 second, then close after 1.3 seconds
+        setTimeout(() => {
+          setIsSuccessDialogClosing(true);
+        }, 1000);
+        
+        setTimeout(() => {
+          setShowDeleteSuccessDialog(false);
+          setIsSuccessDialogClosing(false);
+        }, 1300);
+      }, 300); // Match animation duration
 
     } catch (err) {
       console.error('Error deleting record:', err);
@@ -927,16 +958,22 @@ export default function EvaluatorDashboard() {
 
   // Function to cancel delete
   const handleCancelDelete = () => {
-    setIsDeleteModalOpen(false);
-    setRecordToDelete(null);
-    setDeletePassword('');
-    setDeletePasswordError('');
+    // Trigger pop-down animation
+    setIsDeleteDialogClosing(true);
+    
+    // Wait for animation to complete before closing
+    setTimeout(() => {
+      setIsDeleteModalOpen(false);
+      setRecordToDelete(null);
+      setDeletePassword('');
+      setDeletePasswordError('');
+      setIsDeleteDialogClosing(false);
+    }, 300); // Match animation duration
   };
 
   const handleProfileSave = (updatedProfile: UserProfile) => {
     // Profile is now managed by UserContext
     // Optionally refresh data or show success message
-    console.log('Profile updated:', updatedProfile);
   };
 
 
@@ -1588,21 +1625,9 @@ export default function EvaluatorDashboard() {
         // Don't set approvalStatus here - let getCorrectApprovalStatus determine it
       };
 
-      console.log('🔍 Debug - Updated submission:', {
-        id: updatedSubmission.id,
-        calculatedApprovalStatus: getCorrectApprovalStatus(updatedSubmission),
-        evaluatorSignature: updatedSubmission.evaluatorSignature ? 'Present' : 'Missing',
-        evaluatorApprovedAt: updatedSubmission.evaluatorApprovedAt,
-        hasEmployeeSignature: (updatedSubmission.employeeSignature || updatedSubmission.evaluationData?.employeeSignature) ? 'Present' : 'Missing'
-      });
-
       // Update the submissions array
       setRecentSubmissions(prev => {
         const updated = prev.map(sub => sub.id === feedback.id ? updatedSubmission : sub);
-        console.log('🔍 Debug - Updated recentSubmissions state:', {
-          totalSubmissions: updated.length,
-          updatedSubmission: updated.find(sub => sub.id === feedback.id)
-        });
         return updated;
       });
 
@@ -1617,16 +1642,6 @@ export default function EvaluatorDashboard() {
 
       // Refresh the submissions data to ensure UI updates
       await refreshSubmissions();
-
-      // Debug: Check if the data was properly updated
-      const refreshedSubmissions = await clientDataService.getSubmissions();
-      const refreshedSubmission = refreshedSubmissions.find(sub => sub.id === feedback.id) as any;
-      console.log('🔍 Debug - After refresh:', {
-        id: refreshedSubmission?.id,
-        approvalStatus: refreshedSubmission?.approvalStatus,
-        evaluatorSignature: refreshedSubmission?.evaluatorSignature ? 'Present' : 'Missing',
-        evaluatorApprovedAt: refreshedSubmission?.evaluatorApprovedAt
-      });
 
       alert(`Evaluation for ${feedback.employeeName} has been approved successfully!`);
 
@@ -1918,11 +1933,6 @@ export default function EvaluatorDashboard() {
       uniqueKey: item.uniqueKey || `fallback-${index}-${Date.now()}`
     }));
 
-    // Debug: Log approval statuses
-    console.log('🔍 Debug - filteredFeedbackData approval statuses:',
-      finalData.map(item => ({ id: item.id, employeeName: item.employeeName, approvalStatus: item.approvalStatus }))
-    );
-
     return finalData;
   }, [recentSubmissions, feedbackSearch, feedbackDepartmentFilter, feedbackDateFilter, feedbackDateRange, feedbackQuarterFilter, feedbackApprovalStatusFilter, feedbackSort]);
 
@@ -2105,49 +2115,61 @@ export default function EvaluatorDashboard() {
           <div className="grid grid-cols-1 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Recent Submissions</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Recent Submissions
+                  {(() => {
+                    const newCount = filteredSubmissions.filter(sub => {
+                      const hoursDiff = (new Date().getTime() - new Date(sub.submittedAt).getTime()) / (1000 * 60 * 60);
+                      return hoursDiff <= 24 && !seenSubmissions.has(sub.id);
+                    }).length;
+                    return newCount > 0 ? (
+                      <Badge className="bg-yellow-500 text-white animate-pulse">
+                        {newCount} NEW
+                      </Badge>
+                    ) : null;
+                  })()}
+                </CardTitle>
                 <CardDescription>Latest items awaiting evaluation ({filteredSubmissions.length} total)</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="px-6 py-4 space-y-4">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Search submissions by employee name or evaluator..."
-                      value={overviewSearch}
-                      onChange={(e) => setOverviewSearch(e.target.value)}
-                      className=" w-1/2 bg-gray-100 "
-                    />
-                    {overviewSearch && (
-                      <Button
-                        size="sm"
-                        onClick={() => setOverviewSearch('')}
-                        className="px-3 py-2 text-white hover:text-white bg-blue-400 hover:bg-blue-500"
-                      >
-                        ⌫ Clear
-                      </Button>
-                    )}
+                {/* Search and Filter Controls */}
+                <div className="px-6 py-4 flex gap-2 border-b border-gray-200">
+                  <Input
+                    placeholder="Search submissions by employee name or evaluator..."
+                    value={overviewSearch}
+                    onChange={(e) => setOverviewSearch(e.target.value)}
+                    className="w-1/2 bg-gray-100"
+                  />
+                  {overviewSearch && (
                     <Button
                       size="sm"
-                      onClick={handleEvaluationRecordsRefresh}
-                      disabled={isFeedbackRefreshing}
-                      className="px-3 py-2 text-white hover:text-white bg-blue-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                      title="Refresh submissions data"
+                      onClick={() => setOverviewSearch('')}
+                      className="px-3 py-2 text-white hover:text-white bg-blue-400 hover:bg-blue-500"
                     >
-                      {isFeedbackRefreshing ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Refreshing...
-                        </>
-                      ) : (
-                        <> Refresh <span><RefreshCw className="h-3 w-3" /></span> </>
-                      )}
+                      ⌫ Clear
                     </Button>
-                  </div>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={handleEvaluationRecordsRefresh}
+                    disabled={isFeedbackRefreshing}
+                    className="px-3 py-2 text-white hover:text-white bg-blue-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    title="Refresh submissions data"
+                  >
+                    {isFeedbackRefreshing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Refreshing...
+                      </>
+                    ) : (
+                      <> Refresh <span><RefreshCw className="h-3 w-3" /></span> </>
+                    )}
+                  </Button>
                 </div>
                 {isRefreshing ? (
-                  <div className="max-h-[500px] overflow-y-auto">
+                  <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
                     <Table className="min-w-full">
-                      <TableHeader className="sticky top-0 bg-white z-10 border-b">
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                         <TableRow key="overview-header">
                           <TableHead className="px-6 py-3">Employee</TableHead>
                           <TableHead className="px-6 py-3 text-right">Rating</TableHead>
@@ -2192,18 +2214,11 @@ export default function EvaluatorDashboard() {
                     </Table>
                   </div>
                 ) : (
-                  <div className="max-h-[500px] overflow-y-auto border border-gray-200 rounded-md relative">
-                    {filteredSubmissions.length > 6 && (
-                      <div className="absolute top-2 right-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full z-20">
-                        Scroll to see more
-                      </div>
-                    )}
-                    
+                  <>
                     {/* Simple Legend */}
-                    <div className="mb-3 p-3 flex flex-wrap gap-4 text-xs text-gray-600 bg-gray-50 border-b">
-                      <div className="flex items-center gap-2 mb-2 w-full">
-                        <span className="text-sm font-medium text-gray-700">Indicators:</span>
-                      </div>
+                    <div className="m-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex flex-wrap gap-4 text-xs">
+                        <span className="text-sm font-medium text-gray-700 mr-2">Indicators:</span>
                       <div className="flex items-center gap-1">
                         <div className="w-2 h-2 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
                         <Badge className="bg-yellow-200 text-yellow-800 text-xs">New</Badge>
@@ -2212,10 +2227,17 @@ export default function EvaluatorDashboard() {
                         <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
                         <Badge className="bg-blue-300 text-blue-800 text-xs">Recent</Badge>
                       </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+                        <Badge className="bg-green-500 text-white text-xs">Approved</Badge>
+                      </div>
+                    </div>
                     </div>
                     
+                    {/* Scrollable Table */}
+                    <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
                     <Table className="min-w-full">
-                      <TableHeader className="sticky top-0 bg-white z-10 border-b">
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                         <TableRow key="overview-header">
                           <TableHead className="px-6 py-3">Employee</TableHead>
                           <TableHead className="px-6 py-3 text-right">Rating</TableHead>
@@ -2234,11 +2256,14 @@ export default function EvaluatorDashboard() {
                         ) : (
                           filteredSubmissions
                             .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-                            .slice(0, 10)
                             .map((submission) => {
-                              const highlight = getSubmissionHighlight(submission.submittedAt, filteredSubmissions);
+                              const highlight = getSubmissionHighlight(submission.submittedAt, submission.id, submission.approvalStatus);
                               return (
-                                <TableRow key={submission.id} className={highlight.className}>
+                                <TableRow 
+                                  key={submission.id} 
+                                  className={highlight.className}
+                                  onClick={() => markSubmissionAsSeen(submission.id)}
+                                >
                                   <TableCell className="px-6 py-3 font-medium">
                                     <div className="flex items-center gap-2">
                                       {submission.employeeName}
@@ -2278,7 +2303,9 @@ export default function EvaluatorDashboard() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      markSubmissionAsSeen(submission.id);
                                       setSelectedEvaluationSubmission(submission);
                                       setIsViewResultsModalOpen(true);
                                     }}
@@ -2296,7 +2323,8 @@ export default function EvaluatorDashboard() {
                         )}
                       </TableBody>
                     </Table>
-                  </div>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -2316,7 +2344,6 @@ export default function EvaluatorDashboard() {
                 // First check for real-time profile updates
                 const updatedAvatar = getUpdatedAvatar(employeeId, employee.avatar);
                 if (hasAvatarUpdate(employeeId)) {
-                  console.log('🔄 Using real-time updated avatar for:', employee.name, 'Avatar:', updatedAvatar);
                   return {
                     ...employee,
                     avatar: updatedAvatar,
@@ -2330,7 +2357,6 @@ export default function EvaluatorDashboard() {
                 if (storedUser) {
                   const userData = JSON.parse(storedUser);
                   if (userData.id === employeeId) {
-                    console.log('🔄 Loading current user profile data for:', employee.name, 'Avatar:', userData.avatar);
                     return {
                       ...employee,
                       avatar: userData.avatar || employee.avatar,
@@ -2350,7 +2376,6 @@ export default function EvaluatorDashboard() {
                   const profileData = profiles[employeeId];
                   
                   if (profileData) {
-                    console.log('🔄 Loading stored profile data for:', employee.name, 'Avatar:', profileData.avatar);
                     return {
                       ...employee,
                       avatar: profileData.avatar || employee.avatar,
@@ -2367,7 +2392,6 @@ export default function EvaluatorDashboard() {
                 const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
                 const accountData = accounts.find((acc: any) => (acc.id === employeeId || acc.employeeId === employeeId));
                 if (accountData && (accountData.avatar || accountData.name !== employee.name)) {
-                  console.log('🔄 Loading account profile data for:', employee.name, 'Avatar:', accountData.avatar);
                   return {
                     ...employee,
                     avatar: accountData.avatar || employee.avatar,
@@ -2763,7 +2787,20 @@ export default function EvaluatorDashboard() {
             {/* Search and Filter Controls */}
             <Card>
               <CardHeader>
-                <CardTitle>All Feedback/Evaluation Records</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  All Feedback/Evaluation Records
+                  {(() => {
+                    const newCount = filteredFeedbackData.filter(feedback => {
+                      const hoursDiff = (new Date().getTime() - new Date(feedback.date).getTime()) / (1000 * 60 * 60);
+                      return hoursDiff <= 24 && !seenSubmissions.has(feedback.id);
+                    }).length;
+                    return newCount > 0 ? (
+                      <Badge className="bg-yellow-500 text-white animate-pulse">
+                        {newCount} NEW
+                      </Badge>
+                    ) : null;
+                  })()}
+                </CardTitle>
                 <CardDescription>Complete feedback history and evaluation records</CardDescription>
               </CardHeader>
               <CardContent>
@@ -2937,6 +2974,25 @@ export default function EvaluatorDashboard() {
             {/* Feedback Table */}
             <Card>
               <CardContent className="p-0">
+                {/* Color Legend */}
+                <div className="m-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex flex-wrap gap-4 text-xs">
+                    <span className="font-medium text-gray-700">Status Indicators:</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
+                      <span className="text-gray-600 bg-yellow-500 text-white rounded-full px-2 py-1">NEW </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+                      <span className="text-gray-600 bg-blue-500 text-white rounded-full px-2 py-1">Recent </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+                      <span className="text-gray-600 bg-green-500 text-white rounded-full px-2 py-1">Fully Approved</span>
+                    </div>
+                  </div>
+                </div>  
+
                 {isFeedbackRefreshing ? (
                   <div className="max-h-[500px] overflow-y-auto overflow-x-auto scrollable-table">
                     <Table className="min-w-full">
@@ -3027,14 +3083,29 @@ export default function EvaluatorDashboard() {
                         </TableRow>
                       </TableHeader>
                       <TableBody className="divide-y divide-gray-200">
-                        {filteredFeedbackData.map((feedback) => (
-                        <TableRow key={feedback.uniqueKey} className="hover:bg-gray-50">
-                          <TableCell className="px-6 py-3">
-                            <div>
-                              <div className="font-medium text-gray-900">{feedback.employeeName}</div>
-                              <div className="text-sm text-gray-500">{feedback.employeeEmail}</div>
-                            </div>
-                          </TableCell>
+                        {filteredFeedbackData.map((feedback) => {
+                          const highlight = getSubmissionHighlight(feedback.date, feedback.id, feedback.approvalStatus);
+                          return (
+                            <TableRow 
+                              key={feedback.uniqueKey} 
+                              className={highlight.className}
+                              onClick={() => markSubmissionAsSeen(feedback.id)}
+                            >
+                              <TableCell className="px-6 py-3">
+                                <div className="flex items-center gap-2">
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-gray-900">{feedback.employeeName}</span>
+                                      {highlight.badge && (
+                                        <Badge className={`${highlight.badge.className} text-xs px-1.5 py-0`}>
+                                          {highlight.badge.text}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-sm text-gray-500">{feedback.employeeEmail}</div>
+                                  </div>
+                                </div>
+                              </TableCell>
                           <TableCell className="px-6 py-3">
                             <Badge variant="outline" className="text-xs">
                               {feedback.department}
@@ -3124,7 +3195,11 @@ export default function EvaluatorDashboard() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => viewEvaluationForm(feedback)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  markSubmissionAsSeen(feedback.id);
+                                  viewEvaluationForm(feedback);
+                                }}
                                 className="text-xs px-2 py-1 bg-green-600 hover:bg-green-300 text-white "
                               >
                                 ☰ View 
@@ -3133,7 +3208,11 @@ export default function EvaluatorDashboard() {
                               <Button
                                 
                                 size="sm"
-                                onClick={() => printFeedback(feedback)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  markSubmissionAsSeen(feedback.id);
+                                  printFeedback(feedback);
+                                }}
                                 className="text-xs bg-gray-500 text-white px-2 py-1"
                               >
                                 ⎙ Print
@@ -3144,7 +3223,10 @@ export default function EvaluatorDashboard() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleDeleteClick(feedback)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteClick(feedback);
+                                }}
                                 className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200"
                                 title="Delete this evaluation record"
                               >
@@ -3153,7 +3235,8 @@ export default function EvaluatorDashboard() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                          );
+                        })}
                     </TableBody>
                   </Table>
                 </div>
@@ -3520,8 +3603,8 @@ export default function EvaluatorDashboard() {
 
         {/* Delete Confirmation Modal with Password */}
         <Dialog open={isDeleteModalOpen} onOpenChangeAction={setIsDeleteModalOpen}>
-          <DialogContent className="sm:max-w-md mx-4 my-8 bg-white animate-in fade-in-0 zoom-in-95 duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
-            <div className="space-y-6 p-2 animate-in slide-in-from-bottom-4 duration-500">
+          <DialogContent className={`sm:max-w-md mx-4 my-8 bg-white ${isDeleteDialogClosing ? 'animate-popdown' : 'animate-popup'}`}>
+            <div className="space-y-6 p-2">
               <div className="text-center">
                 <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4 animate-pulse">
                   <svg className="h-6 w-6 text-red-600 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">

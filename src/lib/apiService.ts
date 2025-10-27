@@ -1,5 +1,7 @@
 // API Service Layer - replaces clientDataService for backend integration
-import { AuthenticatedUser, PendingRegistration, Account } from './clientDataService';
+import { AuthenticatedUser } from '@/contexts/UserContext';
+import { PendingRegistration, Account } from './clientDataService';
+import { CONFIG } from '../../config/config';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -34,7 +36,7 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
 
 export const apiService = {
   // Authentication
-  login: async (email: string, password: string): Promise<{ success: boolean; user?: AuthenticatedUser; message?: string; suspensionData?: any; token?: string }> => {
+  login: async (email: string, password: string): Promise<{ success: boolean; user?: AuthenticatedUser; message?: string; suspensionData?: any; pending?: boolean; pendingData?: any; token?: string }> => {
     const response = await apiRequest('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -65,43 +67,92 @@ export const apiService = {
   },
 
   // Registration
-  createPendingRegistration: async (registration: Omit<PendingRegistration, 'id' | 'status' | 'submittedAt'>): Promise<PendingRegistration> => {
-    const response = await apiRequest('/api/registrations', {
-      method: 'POST',
-      body: JSON.stringify(registration),
-    });
+  createPendingRegistration: async (formData: FormData): Promise<any> => {
+  const res = await fetch(`${CONFIG.API_URL}/register`, {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: formData,
+        });
 
-    if (!response.success) {
-      throw new Error(response.message || 'Registration failed');
-    }
+        const data = await res.json();
 
-    return response.registration;
-  },
+        if (!res.ok) {
+          throw {
+            ...data,
+            status: res.status,
+          };
+        }
+
+        return data;
+      },
 
   getPendingRegistrations: async (): Promise<PendingRegistration[]> => {
     const response = await apiRequest('/api/registrations');
     return response.registrations || [];
   },
 
-  checkDuplicates: async (email?: string, username?: string): Promise<{ emailExists: boolean; usernameExists: boolean }> => {
-    const params = new URLSearchParams();
-    if (email) params.append('email', email);
-    if (username) params.append('username', username);
-
-    const response = await apiRequest(`/api/registrations/check-duplicates?${params.toString()}`);
-    return response;
-  },
-
   // Data
-  getPositions: async (): Promise<string[]> => {
-    const response = await apiRequest('/api/data/positions');
-    return response.positions || [];
-  },
+    getDepartments: async ():  Promise<{ label: string; value: string }[]> => {
+      try {
+        const res = await fetch(`${CONFIG.API_URL}/departments`, {
+          method: "GET",
+        });
+        if (res.ok) {
+          const response = await res.json();
+          return response.departments.map(
+            (departments: any) => ({
+              value: departments.id,
+              label: departments.department_name,
+            })
+          );
+        }
+        return [];
+      } catch (error) {
+        console.error("Error fetching data:", error);
+         return [];
+      }
+    },
 
-  getBranchCodes: async (): Promise<any[]> => {
-    const response = await apiRequest('/api/data/branch-codes');
-    return response.branchCodes || [];
-  },
+    getPositions: async (): Promise<{ label: string; value: string }[]> => {
+          try {
+            const res = await fetch(`${CONFIG.API_URL}/positions`, { method: "GET" });
+
+            if (res.ok) {
+              const response = await res.json();
+              return response.positions.map((position: any) => ({
+                value: position.id,
+                label: position.label,
+              }));
+            }
+
+            return []; // default empty
+          } catch (error) {
+            console.error("Error fetching positions:", error);
+            return [];
+          }
+        },
+
+   getBranches: async ():  Promise<{ label: string; value: string }[]> => {
+     try {
+        const res = await fetch(`${CONFIG.API_URL}/branches`, {
+          method: "GET",
+        });
+        if (res.ok) {
+          const response = await res.json();
+          return response.branches.map((branches: any) => ({
+            value: branches.id,
+            label: branches.branch_name + " /" + branches.branch_code,
+          }));
+        }
+        return [];
+        } catch (error) {
+        console.error("Error fetching data:", error);
+        return [];
+      }
+    },
 
   getAccounts: async (): Promise<Account[]> => {
     const response = await apiRequest('/api/accounts');

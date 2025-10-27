@@ -660,9 +660,8 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
             <Input
               id="supervisor"
               value={data.supervisor || ''}
-              onChange={(e) => updateDataAction({ supervisor: e.target.value })}
-              placeholder="Enter supervisor name"
-              className="bg-yellow-100 border-yellow-300"
+              readOnly
+              className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
           </div>
 

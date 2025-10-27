@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Plus, RefreshCcw } from "lucide-react";
 
 import EditUserModal from '@/components/EditUserModal';
 import { toastMessages } from '@/lib/toastMessages';
@@ -42,7 +43,6 @@ interface Employee {
   username?: string;
   password?: string;
   isActive?: boolean;
-  lastLogin?: string;
   avatar?: string | null;
   bio?: string | null;
   contact?: string;
@@ -140,6 +140,7 @@ const getQuarterColor = (quarter: string) => {
 };
 
 export default function AdminDashboard() {
+  const searchParams = useSearchParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [positionsData, setPositionsData] = useState<{id: string, name: string}[]>([]);
   const [branchesData, setBranchesData] = useState<{id: string, name: string}[]>([]);
@@ -149,7 +150,10 @@ export default function AdminDashboard() {
   const [suspendedEmployees, setSuspendedEmployees] = useState<SuspendedEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [active, setActive] = useState('overview');
+  
+  // Initialize active tab from URL parameter or default to 'overview'
+  const tabParam = searchParams.get('tab');
+  const [active, setActive] = useState(tabParam || 'overview');
 
   // Function to refresh user data (used by shared hook)
   const refreshUserData = async () => {
@@ -253,6 +257,14 @@ export default function AdminDashboard() {
     dashboardName: 'Admin Dashboard',
     customMessage: 'Welcome back! Refreshing your admin dashboard data...'
   });
+
+  // Handle URL parameter changes for tab navigation
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== active) {
+      setActive(tab);
+    }
+  }, [searchParams]);
 
   // Real-time data updates via localStorage events
   useEffect(() => {
@@ -398,7 +410,6 @@ export default function AdminDashboard() {
           username: account.username,
           password: account.password,
           isActive: account.isActive,
-          lastLogin: account.lastLogin,
           avatar: account.avatar,
           bio: account.bio,
           contact: account.contact,
@@ -1045,7 +1056,7 @@ export default function AdminDashboard() {
     { id: 'dashboards', label: 'Employee Monitoring', icon: '💻' },
     { id: 'users', label: 'User Management', icon: '👥' },
     { id: 'evaluated-reviews', label: 'Evaluated Reviews', icon: '📋' },
-    { id: 'settings', label: 'Settings', icon: '⚙️' },
+    
   ];
 
   if (loading || !systemMetrics || !dashboardStats) {
@@ -1389,7 +1400,7 @@ export default function AdminDashboard() {
                     >
                       {isRefreshing ? (
                         <>
-                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
@@ -1397,7 +1408,14 @@ export default function AdminDashboard() {
                         </>
                       ) : (
                         <>
-                          <span>🔄</span>
+                          <span className="text-white"><svg
+                              className="h-5 w-5 font-bold"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg></span>
                           Refresh
                         </>
                       )}
@@ -1657,7 +1675,7 @@ export default function AdminDashboard() {
                     >
                       {isRefreshing ? (
                         <>
-                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
@@ -1665,24 +1683,31 @@ export default function AdminDashboard() {
                         </>
                       ) : (
                         <>
-                          <span>🔄</span>
+                          <span className="text-white"><svg
+                              className="h-5 w-5 font-bold"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg></span>
                           Refresh
                         </>
                       )}
                     </Button>
                     <Button
                       onClick={() => setIsAddUserModalOpen(true)}
-                      className="flex items-center bg-blue-500 text-white hover:bg-green-400 hover:text-gray-600 gap-2"
+                      className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2"
                     >
-                      <span>➕</span>
+                      <Plus className="h-5 w-5 font-blod " />
                       Add User
                     </Button>
                   </div>
                 </div>
 
-                <div className="max-h-[70vh] overflow-y-auto">
+                <div className="max-h-[450px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   <Table>
-                    <TableHeader className="sticky top-0 bg-white">
+                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
@@ -1691,7 +1716,6 @@ export default function AdminDashboard() {
                         <TableHead>Role</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Approved Date</TableHead>
-                        <TableHead>Last Login</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1721,12 +1745,6 @@ export default function AdminDashboard() {
                             {employee.approvedDate ? 
                               new Date(employee.approvedDate).toLocaleDateString() : 
                               'N/A'
-                            }
-                          </TableCell>
-                          <TableCell>
-                            {employee.lastLogin ? 
-                              new Date(employee.lastLogin).toLocaleDateString() : 
-                              'Never'
                             }
                           </TableCell>
                           <TableCell>
@@ -1806,7 +1824,7 @@ export default function AdminDashboard() {
                   >
                     {isRefreshing ? (
                       <>
-                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -1814,7 +1832,14 @@ export default function AdminDashboard() {
                       </>
                     ) : (
                       <>
-                        <span>🔄</span>
+                        <span className="text-white"><svg
+                            className="h-5 w-5 font-bold"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg></span>
                         Refresh
                       </>
                     )}
@@ -1823,9 +1848,9 @@ export default function AdminDashboard() {
               </div>
 
 
-              <div className="max-h-[70vh] overflow-y-auto">
+              <div className="max-h-[450px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 <Table>
-                  <TableHeader className="sticky top-0 bg-white">
+                  <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
@@ -1953,11 +1978,11 @@ export default function AdminDashboard() {
                     variant="outline"
                     onClick={handleRefreshEvaluatedReviews}
                     disabled={isRefreshing}
-                    className="flex items-center gap-2"
+                    className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
                   >
                     {isRefreshing ? (
                       <>
-                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -1965,14 +1990,14 @@ export default function AdminDashboard() {
                       </>
                     ) : (
                       <>
-                        <span>🔄</span>
+                        <RefreshCcw className="h-5 w-5" />
                         Refresh
                       </>
                     )}
                   </Button>
                   <Button
                     variant="outline"
-                    className="bg-purple-500 text-white hover:bg-purple-600 hover:text-white"
+                    className="bg-blue-500 text-white hover:bg-blue-600 hover:text-white"
                   >
                     Export Reviews
                   </Button>
@@ -2118,97 +2143,7 @@ export default function AdminDashboard() {
         </Card>
       )}
 
-      {active === 'settings' && (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>System Settings</CardTitle>
-              <CardDescription>Configure system-wide settings and preferences</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="font-semibold">General Settings</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <Label>System Name</Label>
-                      <Input defaultValue="SMCT Performance Management System" />
-                    </div>
-                    <div>
-                      <Label>Default Language</Label>
-                      <Select defaultValue="en">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="en">English</SelectItem>
-                          <SelectItem value="es">Spanish</SelectItem>
-                          <SelectItem value="fr">French</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Time Zone</Label>
-                      <Select defaultValue="utc">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="utc">UTC</SelectItem>
-                          <SelectItem value="est">Eastern Time</SelectItem>
-                          <SelectItem value="pst">Pacific Time</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Security Settings</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <Label>Session Timeout (minutes)</Label>
-                      <Input type="number" defaultValue="30" />
-                    </div>
-                    <div>
-                      <Label>Password Policy</Label>
-                      <Select defaultValue="medium">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Low</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Two-Factor Authentication</Label>
-                      <Select defaultValue="enabled">
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="enabled">Enabled</SelectItem>
-                          <SelectItem value="disabled">Disabled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-4 mt-6">
-                <Button variant="outline">Reset to Defaults</Button>
-                <Button className="bg-green-500 text-white hover:bg-green-600 hover:text-white">
-                  Save Settings
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      
 
       {/* Add User Modal */}
       <Dialog open={isAddUserModalOpen} onOpenChangeAction={setIsAddUserModalOpen}>

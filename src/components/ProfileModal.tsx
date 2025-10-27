@@ -331,9 +331,9 @@ export default function ProfileModal({
               variant="outline"
               onClick={handleCancel}
               disabled={isLoading}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 hover:text-white text-white"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5 text-white" />
               Cancel
             </Button>
             <Button
