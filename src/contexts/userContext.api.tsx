@@ -1,4 +1,5 @@
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -466,6 +467,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   );
 };
 =======
+=======
+>>>>>>> Stashed changes
 // 'use client';
 
 // import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -932,4 +935,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 //     </UserContext.Provider>
 //   );
 // };
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes

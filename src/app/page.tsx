@@ -68,6 +68,7 @@ export default function LandingLoginPage() {
       await new Promise(resolve => setTimeout(resolve, 1200)); // Initial validation delay
       
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       const result = await login(username, password);
 
       if (result === true) {
@@ -141,6 +142,14 @@ export default function LandingLoginPage() {
     await apiService.login(username, password, rememberMe);
     await fetchUser(); // Fetch authenticated user data
 
+=======
+   const login = async (username: string, password: string, rememberMe: boolean): Promise<User | null> => {
+  try {
+    setIsLoading(true);
+    await apiService.login(username, password, rememberMe);
+    await fetchUser(); // Fetch authenticated user data
+
+>>>>>>> Stashed changes
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
     setUser(storedUser);
     setIsAuthenticated(true);
@@ -182,6 +191,7 @@ export default function LandingLoginPage() {
     }
   };
 
+<<<<<<< Updated upstream
   const handleRoleSelected = (selectedRole: string) => {
     console.log('Role selected:', selectedRole);
     setUserRole(selectedRole);
@@ -189,6 +199,8 @@ export default function LandingLoginPage() {
     // Router.push is handled inside the modal component
   };
 
+=======
+>>>>>>> Stashed changes
   // if (isLoading) {
   //   return (
   //     <PageTransition>

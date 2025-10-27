@@ -37,10 +37,48 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
 export const apiService = {
   // Authentication
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   login: async (email: string, password: string): Promise<{ success: boolean; user?: AuthenticatedUser; message?: string; suspensionData?: any; pending?: boolean; pendingData?: any; token?: string }> => {
     const response = await apiRequest('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+=======
+ login: async (username: string, password: string, rememberMe: boolean) => {
+    await sanctum_csrf();
+
+    const res = await fetch(`${CONFIG.API_URL}/login`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ username, password, remember: rememberMe }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.message || 'Invalid credentials');
+
+    return data;
+  },
+
+  getUser: async () => {
+    const res = await fetch(`${CONFIG.API_URL}/current_user`, {
+      credentials: 'include',
+    });
+
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    return data.current_user || data; // handle both structures
+  },
+
+  logout: async () => {
+    await fetch(`${CONFIG.API_URL}/logout`, {
+      method: 'POST',
+      credentials: 'include',
+>>>>>>> Stashed changes
     });
 
     // Store token if login successful
@@ -51,6 +89,7 @@ export const apiService = {
     return response;
   },
 
+<<<<<<< Updated upstream
   logout: async (): Promise<{ success: boolean; message: string }> => {
     const response = await apiRequest('/api/auth/logout', {
 =======
@@ -103,6 +142,8 @@ export const apiService = {
   getCurrentUser: async (): Promise<{ success: boolean; user?: AuthenticatedUser; message?: string }> => {
     return apiRequest('/api/auth/me');
   },
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 
