@@ -72,14 +72,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    fetchUser(); // Check session on app load
+    fetchUser(); 
   }, []);
 
-  // 🔑 Login using Sanctum
   const login = async (username: string, password: string) => {
     setIsLoading(true);
     try {
-      // Get CSRF cookie first
       await fetch(`http://localhost:8000/sanctum/csrf-cookie`, {
         credentials: "include",
       });
@@ -99,7 +97,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(errorData.message || "Invalid credentials");
       }
 
-      // After successful login, fetch the current user
       await fetchUser();
       return user;
     } catch (error) {
@@ -110,7 +107,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // 🚪 Logout (server + frontend)
   const logout = async () => {
     setShowLogoutLoading(true);
     try {
@@ -120,11 +116,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       });
       toastMessages.generic.info("Logging out...", "See you next time!");
     } catch (err) {
-      console.warn("Logout error:", err);
+      console.error("Logout error:", err);
     } finally {
       setUser(null);
       setShowLogoutLoading(false);
-      router.push("/login");
+      router.push("/");
     }
   };
 

@@ -561,7 +561,7 @@ export default function HRDashboard() {
         activeItemId={active}
         onChangeActive={handleTabChange}
         topSummary={topSummary}
-        profile={{ name: 'HR Manager', roleOrPosition: 'Human Resources' }}
+        // profile={{ name: 'HR Manager', roleOrPosition: 'Human Resources' }}
       >
              {active === 'overview' && (
          <div className="relative space-y-6 h-[calc(100vh-300px)] overflow-y-auto pr-2">
