@@ -33,8 +33,9 @@ import { useToast } from '@/hooks/useToast';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { Skeleton } from '@/components/ui/skeleton';
 
+
 export default function EmployeeDashboard() {
-  const {  isLoading: authLoading, logout } = useUser();
+  const { profile, user,  isLoading: authLoading, logout } = useUser();
   const { success, error } = useToast();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
