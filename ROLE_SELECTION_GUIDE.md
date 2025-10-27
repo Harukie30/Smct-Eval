@@ -26,7 +26,7 @@
 // In your login page (e.g., src/app/login/page.tsx or wherever you have login)
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/UserContext';
 import RoleSelectionModal from '@/components/RoleSelectionModal';
 import ContactDevsModal from '@/components/ContactDevsModal'; // Import new modal
 ```
@@ -35,7 +35,7 @@ import ContactDevsModal from '@/components/ContactDevsModal'; // Import new moda
 
 ```typescript
 export default function LoginPage() {
-  const { login, setUserRole, user } = useUser();
+  const { login, setUserRole, user } = useAuth();
   const router = useRouter();
   
   const [email, setEmail] = useState('');
@@ -172,12 +172,12 @@ Provides a direct way for users to send feedback, report bugs, or make suggestio
 ### **In DashboardShell or Profile Menu:**
 
 ```typescript
-import { useUser } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import { DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 
 export default function DashboardShell() {
-  const { user, switchRole } = useUser();
+  const { user, switchRole } = useAuth();
   const router = useRouter();
   
   const handleSwitchRole = (newRole: string) => {
@@ -440,14 +440,14 @@ Just update the modal component to include additional role cards:
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/UserContext';
 import RoleSelectionModal from '@/components/RoleSelectionModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ContactDevsModal from '@/components/ContactDevsModal';
 
 export default function LoginPage() {
-  const { login, setUserRole, user } = useUser();
+  const { login, setUserRole, user } = useAuth();
   const router = useRouter();
   
   const [email, setEmail] = useState('');

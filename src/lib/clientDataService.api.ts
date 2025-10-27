@@ -6,9 +6,9 @@ import { Employee, Submission, PendingRegistration, Profile, Account, Notificati
 
 export const clientDataService = {
   // Authentication - now uses API
-  login: async (email: string, password: string) => {
-    return await apiService.login(email, password);
-  },
+  // login: async (email: string, password: string) => {
+  //   return await apiService.login(email, password);
+  // },
 
   // Data fetching - now uses API
   getPositions: async (): Promise<{ label: string; value: string }[]> => {

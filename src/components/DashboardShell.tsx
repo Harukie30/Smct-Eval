@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import ProfileCard, { UserProfile } from "./ProfileCard";
 import ProfileModal from "./ProfileModal";
 import ContactDevsModal from "./ContactDevsModal";
-import { useUser } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/UserContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Notification } from '@/lib/clientDataService';
 import clientDataService from '@/lib/clientDataService';
@@ -53,7 +53,7 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
 
-  const { profile: userProfile, updateProfile, logout } = useUser();
+  const { profile: userProfile, updateProfile, logout } = useAuth();
   const router = useRouter();
   
   // Get user role for notifications

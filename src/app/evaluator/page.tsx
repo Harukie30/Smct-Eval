@@ -27,7 +27,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import PageTransition from '@/components/PageTransition';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
-import { useUser } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/useToast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createApprovalNotification, createFullyApprovedNotification } from '@/lib/notificationUtils';
@@ -163,7 +163,7 @@ const getRatingColorForLabel = (rating: string) => {
 };
 
 export default function EvaluatorDashboard() {
-  const { profile, user } = useUser();
+  const { profile, user } = useAuth();
   const { success, error } = useToast();
   const { getUpdatedAvatar, hasAvatarUpdate } = useProfilePictureUpdates();
   const searchParams = useSearchParams();
