@@ -71,7 +71,7 @@ export default function LandingLoginPage() {
 
       if (result === true) {
         // Login successful - continue with real processing
-        console.log('Login successful');
+        console.log('✅ Login successful');
 
         // Simulate additional authentication steps
         await new Promise(resolve => setTimeout(resolve, 1000)); // Session creation
@@ -88,11 +88,21 @@ export default function LandingLoginPage() {
           localStorage.setItem('keepLoggedIn', 'false');
         }
 
+        // IMPORTANT: Wait a bit longer to ensure UserContext state is fully updated
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         // Get user role for personalized loading message
         const storedUser = localStorage.getItem('authenticatedUser');
+        console.log('🔍 DEBUG - localStorage check:', {
+          hasStoredUser: !!storedUser,
+          storedUserData: storedUser ? JSON.parse(storedUser) : null,
+          keepLoggedIn: localStorage.getItem('keepLoggedIn'),
+          isAuthenticated: !!user // Check if user state is set
+        });
+        
         if (storedUser) {
-          const user = JSON.parse(storedUser);
-          console.log('User role for redirect:', user.role);
+          const userData = JSON.parse(storedUser);
+          console.log('✅ User role for redirect:', userData.role);
 
           const roleDashboards: Record<string, string> = {
             'admin': '/admin',
@@ -103,14 +113,27 @@ export default function LandingLoginPage() {
             'manager': '/evaluator'
           };
 
-          const dashboardPath = roleDashboards[user.role || ''] || '';
-          console.log('Redirecting to:', dashboardPath);
-
-          // Redirect immediately after all processing is complete
+          const dashboardPath = roleDashboards[userData.role || ''] || '';
+          console.log('🚀 Redirecting to:', dashboardPath);
+          
+          if (!dashboardPath) {
+            console.error('❌ No dashboard path found for role:', userData.role);
+            setShowLoadingScreen(false);
+            setLoginError('Invalid user role. Please contact support.');
+            return;
+          }
+          
+          // Wait to ensure authentication state is propagated
+          console.log('⏳ Waiting for authentication state to propagate...');
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          console.log('🔄 Executing redirect now...');
           router.push(dashboardPath);
         } else {
-          console.log('No user data found, redirecting to default dashboard');
-          router.push('');
+          console.error('❌ No user data found in localStorage!');
+          console.log('📦 Available localStorage keys:', Object.keys(localStorage));
+          setShowLoadingScreen(false);
+          setLoginError('Session error. Please try logging in again.');
         }
       } else if (result && typeof result === 'object' && result.requiresRoleSelection) {
         // User has multiple roles - show role selection modal

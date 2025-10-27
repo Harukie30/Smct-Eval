@@ -1692,9 +1692,9 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="max-h-[70vh] overflow-y-auto">
+                <div className="max-h-[450px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   <Table>
-                    <TableHeader className="sticky top-0 bg-white">
+                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
@@ -1835,9 +1835,9 @@ export default function AdminDashboard() {
               </div>
 
 
-              <div className="max-h-[70vh] overflow-y-auto">
+              <div className="max-h-[450px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 <Table>
-                  <TableHeader className="sticky top-0 bg-white">
+                  <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>

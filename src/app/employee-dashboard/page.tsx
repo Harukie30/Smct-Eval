@@ -1652,9 +1652,9 @@ export default function EmployeeDashboard() {
                   </CardHeader>
                   <CardContent className="p-0">
                     {submissions.length > 0 ? (
-                      <div className="max-h-[500px] overflow-y-auto mx-4">
+                      <div className="max-h-[500px] overflow-y-auto overflow-x-hidden rounded-lg border mx-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                         <Table>
-                          <TableHeader className="sticky top-0 bg-white z-10 border-b">
+                          <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
                             <TableRow>
                               <TableHead className="px-6 py-4">Immediate Supervisor</TableHead>
                               <TableHead className="px-6 py-4 text-right">Rating</TableHead>

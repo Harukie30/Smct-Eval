@@ -14,11 +14,11 @@ interface Developer {
 }
 
 const developers: Developer[] = [
-  { id: 'dev1', name: 'Dev_allan', avatar: '/backend.png', link: 'https://chat.smctgroup.ph/direct/DevunderscoreAllandashj' },
-  { id: 'dev2', name: 'Dev_jenecil', avatar: '/backend.png', link: 'https://chat.smctgroup.ph/direct/dev_jenecil' },
-  { id: 'dev3', name: 'Dev_Macmac', avatar: '/backend.png', link: 'https://chat.smctgroup.ph/direct/Dev-IT_Macmac' },
-  { id: 'dev4', name: 'Dev_zart', avatar: '/ux.png', link: 'https://chat.smctgroup.ph/direct/dev_zart' },
-  { id: 'dev5', name: 'Dev_tian', avatar: '/backend.png', link: 'https://chat.smctgroup.ph/direct/dev_tian' },
+  { id: 'dev1', name: 'Dev_allan', avatar: '/allan.webp', link: 'https://chat.smctgroup.ph/direct/DevunderscoreAllandashj' },
+  { id: 'dev2', name: 'Dev_jenecil', avatar: '/jenecil.jpg', link: 'https://chat.smctgroup.ph/direct/dev_jenecil' },
+  { id: 'dev3', name: 'Dev_Macmac', avatar: '/Macmac.jpg', link: 'https://chat.smctgroup.ph/direct/Dev-IT_Macmac' },
+  { id: 'dev4', name: 'Dev_zart', avatar: '/zart.jpg', link: 'https://chat.smctgroup.ph/direct/dev_zart' },
+  { id: 'dev5', name: 'Dev_tian', avatar: '/Tian.jpg', link: 'https://chat.smctgroup.ph/direct/dev_tian' },
 ];
 
 interface ContactDevsModalProps {
@@ -41,7 +41,6 @@ export default function ContactDevsModal({ isOpen, onCloseAction }: ContactDevsM
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
       <DialogContent className="sm:max-w-xl bg-blue-50 text-center relative overflow-hidden animate-popup">
-       
         
         <DialogHeader>
           <DialogTitle className="flex items-center font-bold text-xl justify-center gap-3">
@@ -49,13 +48,24 @@ export default function ContactDevsModal({ isOpen, onCloseAction }: ContactDevsM
             Meet Our Developers
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-6 px-6 py-4 relative z-10">
+        <div className="space-y-6 px-6 py-4">
           <p className="text-gray-700 leading-relaxed mb-7">
             Click on a developer's icon to learn more about their work or connect with them!
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 justify-items-center max-h-72 overflow-y-auto custom-scrollbar pr-2">
+          <div className="relative grid grid-cols-2 md:grid-cols-3 gap-4 justify-items-center max-h-72 overflow-y-auto custom-scrollbar pr-2 bg-white/50 rounded-lg p-2">
+            {/* Simple Background Image with Fade */}
+            <div 
+              className="absolute inset-0 z-0 rounded-lg pointer-events-none"
+              style={{
+                backgroundImage: 'url(/eval-bg.png)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                opacity: 0.6
+              }}
+            />
             {developers.map((dev) => (
-              <Link key={dev.id} href={dev.link} passHref target="_blank" rel="noopener noreferrer" className="flex flex-col items-center group cursor-pointer p-3 rounded-lg hover:bg-white/60 backdrop-blur-sm transition-all">
+              <Link key={dev.id} href={dev.link} passHref target="_blank" rel="noopener noreferrer" className="relative z-10 flex flex-col items-center group cursor-pointer p-3 rounded-lg hover:bg-white/60 backdrop-blur-sm transition-all">
                 <div className="h-15 w-15 mb-2 overflow-hidden bg-white/80 group-hover:bg-blue-50 transition-all transform group-hover:scale-110 shadow-md group-hover:shadow-xl rounded-lg border-2 border-white/50">
                   <img src={dev.avatar} alt={dev.name} className="w-full h-full object-cover" />
                 </div>
