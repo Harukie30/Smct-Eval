@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardShell from '@/components/DashboardShell';
 import PageTransition from '@/components/PageTransition';
 import { useUser } from '@/contexts/UserContext';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { withAuth } from '@/hoc';
 import { getQuarterFromEvaluationData, getQuarterColor } from '@/lib/quarterUtils';
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 import EvaluationDetailsModal from '@/components/EvaluationDetailsModal';
@@ -33,7 +33,7 @@ import { useToast } from '@/hooks/useToast';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function EmployeeDashboard() {
+function EmployeeDashboard() {
   const { profile, user, isLoading: authLoading, logout } = useUser();
   const { success, error } = useToast();
   const searchParams = useSearchParams();
@@ -845,11 +845,11 @@ export default function EmployeeDashboard() {
     setShowLogoutSuccess(true);
 
     // Close dialog and logout after success animation
-    setTimeout(() => {
+    setTimeout(async () => {
       setIsLogoutDialogOpen(false);
       setShowLogoutSuccess(false);
       // Use the UserContext logout which includes loading screen
-      logout();
+      await logout();
     }, 1500);
   };
 
@@ -2815,7 +2815,7 @@ export default function EmployeeDashboard() {
   };
 
   return (
-    <ProtectedRoute>
+    <>
       {/* Loading Screen - Shows during initial load, authentication, and auto-refresh */}
       {(loading || authLoading || !profile) && (
         <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -3175,6 +3175,9 @@ export default function EmployeeDashboard() {
         </DialogContent>
       </Dialog>
 
-    </ProtectedRoute>
+    </>
   );
 }
+
+// Wrap with HOC for authentication
+export default withAuth(EmployeeDashboard, { requiredRole: 'employee' });

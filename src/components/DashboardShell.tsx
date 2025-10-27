@@ -96,8 +96,8 @@ export default function DashboardShell(props: DashboardShellProps) {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
   };
 
   const handleNotificationClick = async (notification: Notification) => {

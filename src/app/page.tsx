@@ -20,8 +20,9 @@ import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import { toastMessages } from '@/lib/toastMessages';
 import clientDataService from '@/lib/clientDataService';
+import { withPublicPage } from '@/hoc';
 
-export default function LandingLoginPage() {
+function LandingLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -858,3 +859,7 @@ export default function LandingLoginPage() {
     </div>
   );
 }
+
+// Wrap with HOC for public page with transitions
+// redirectIfAuthenticated: true means logged-in users will be redirected to their dashboard
+export default withPublicPage(LandingLoginPage, { redirectIfAuthenticated: true });
