@@ -36,16 +36,8 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
 
 export const apiService = {
   // Authentication
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-  login: async (email: string, password: string): Promise<{ success: boolean; user?: AuthenticatedUser; message?: string; suspensionData?: any; pending?: boolean; pendingData?: any; token?: string }> => {
-    const response = await apiRequest('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-=======
  login: async (username: string, password: string, rememberMe: boolean) => {
     await sanctum_csrf();
-
     const res = await fetch(`${CONFIG.API_URL}/login`, {
       method: 'POST',
       credentials: 'include',
@@ -78,7 +70,6 @@ export const apiService = {
     await fetch(`${CONFIG.API_URL}/logout`, {
       method: 'POST',
       credentials: 'include',
->>>>>>> Stashed changes
     });
 
     // Store token if login successful
@@ -89,10 +80,6 @@ export const apiService = {
     return response;
   },
 
-<<<<<<< Updated upstream
-  logout: async (): Promise<{ success: boolean; message: string }> => {
-    const response = await apiRequest('/api/auth/logout', {
-=======
  login: async (username: string, password: string, rememberMe: boolean) => {
     await sanctum_csrf();
 
@@ -126,7 +113,6 @@ export const apiService = {
 
   logout: async () => {
     await fetch(`${CONFIG.API_URL}/logout`, {
->>>>>>> Stashed changes
       method: 'POST',
       credentials: 'include',
     });
