@@ -348,8 +348,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="hr">HR Employee</SelectItem>
-                <SelectItem value="hr-manager">HR Manager</SelectItem>
+                <SelectItem value="hr">HR</SelectItem>
                 <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="evaluator">Evaluator</SelectItem>
                 <SelectItem value="employee">Employee</SelectItem>

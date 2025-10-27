@@ -417,78 +417,270 @@ export const clientDataService = {
 
   // Pending Registrations
   getPendingRegistrations: async (): Promise<PendingRegistration[]> => {
-    return getFromStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, []);
+    try {
+      // Try backend API first
+      const res = await fetch('/api/registrations', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        // Cache the data for offline fallback
+        if (data.success && data.registrations) {
+          saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, data.registrations);
+          return data.registrations;
+        }
+      }
+      
+      // Fallback to localStorage
+      console.warn('Backend API failed, using localStorage fallback');
+      return getFromStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, []);
+      
+    } catch (error) {
+      console.error('Error fetching pending registrations:', error);
+      // Fallback to localStorage
+      return getFromStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, []);
+    }
   },
 
   createPendingRegistration: async (registration: Omit<PendingRegistration, 'id' | 'status' | 'submittedAt'>): Promise<PendingRegistration> => {
-    const pending = await clientDataService.getPendingRegistrations();
-    const newRegistration: PendingRegistration = {
-      ...registration,
-      id: Date.now(),
-      status: 'pending',
-      submittedAt: new Date().toISOString(),
-    };
-    
-    pending.push(newRegistration);
-    saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, pending);
-    
-    return newRegistration;
+    try {
+      // Try backend API first
+      const res = await fetch('/api/registrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(registration),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.registration) {
+          // Cache the new registration for offline fallback
+          const pending = await clientDataService.getPendingRegistrations();
+          pending.push(data.registration);
+          saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, pending);
+          return data.registration;
+        }
+      }
+      
+      // Fallback to localStorage
+      console.warn('Backend API failed, using localStorage fallback');
+      const pending = await clientDataService.getPendingRegistrations();
+      const newRegistration: PendingRegistration = {
+        ...registration,
+        id: Date.now(),
+        status: 'pending',
+        submittedAt: new Date().toISOString(),
+      };
+      
+      pending.push(newRegistration);
+      saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, pending);
+      
+      return newRegistration;
+      
+    } catch (error) {
+      console.error('Error creating pending registration:', error);
+      // Fallback to localStorage
+      const pending = await clientDataService.getPendingRegistrations();
+      const newRegistration: PendingRegistration = {
+        ...registration,
+        id: Date.now(),
+        status: 'pending',
+        submittedAt: new Date().toISOString(),
+      };
+      
+      pending.push(newRegistration);
+      saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, pending);
+      
+      return newRegistration;
+    }
   },
 
   approveRegistration: async (id: number): Promise<{ success: boolean; message: string }> => {
-    const pending = await clientDataService.getPendingRegistrations();
-    const registration = pending.find(reg => reg.id === id);
-    
-    if (!registration) {
-      return { success: false, message: 'Registration not found' };
+    try {
+      // Try backend API first
+      const res = await fetch(`/api/registrations/${id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          // Now handle the localStorage logic (until backend has full database)
+          const pending = await clientDataService.getPendingRegistrations();
+          const registration = pending.find(reg => reg.id === id);
+          
+          if (registration) {
+            // Move to accounts
+            const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as any[];
+            const existingIds = accounts.map(acc => acc.id);
+            const existingEmployeeIds = accounts.map(acc => acc.employeeId).filter(id => id !== undefined);
+            const maxId = Math.max(...existingIds, 0);
+            const maxEmployeeId = Math.max(...existingEmployeeIds, 1000);
+            
+            const newAccount = {
+              id: maxId + 1,
+              employeeId: maxEmployeeId + 1,
+              name: registration.name,
+              email: registration.email,
+              position: registration.position,
+              department: registration.department,
+              branch: registration.branch,
+              role: registration.role,
+              hireDate: registration.hireDate,
+              avatar: null,
+              bio: null,
+              contact: registration.contact || '',
+              updatedAt: new Date().toISOString(),
+              username: registration.username,
+              password: registration.password,
+              signature: registration.signature,
+              isActive: true,
+              approvedDate: new Date().toISOString(),
+            };
+
+            accounts.push(newAccount);
+            saveToStorage(STORAGE_KEYS.ACCOUNTS, accounts);
+
+            // Remove from pending
+            const updatedPending = pending.filter(reg => reg.id !== id);
+            saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
+          }
+          
+          return { success: true, message: data.message || 'Registration approved successfully' };
+        }
+      }
+      
+      // Fallback to localStorage only
+      console.warn('Backend API failed, using localStorage fallback');
+      const pending = await clientDataService.getPendingRegistrations();
+      const registration = pending.find(reg => reg.id === id);
+      
+      if (!registration) {
+        return { success: false, message: 'Registration not found' };
+      }
+
+      const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as any[];
+      const existingIds = accounts.map(acc => acc.id);
+      const existingEmployeeIds = accounts.map(acc => acc.employeeId).filter(id => id !== undefined);
+      const maxId = Math.max(...existingIds, 0);
+      const maxEmployeeId = Math.max(...existingEmployeeIds, 1000);
+      
+      const newAccount = {
+        id: maxId + 1,
+        employeeId: maxEmployeeId + 1,
+        name: registration.name,
+        email: registration.email,
+        position: registration.position,
+        department: registration.department,
+        branch: registration.branch,
+        role: registration.role,
+        hireDate: registration.hireDate,
+        avatar: null,
+        bio: null,
+        contact: registration.contact || '',
+        updatedAt: new Date().toISOString(),
+        username: registration.username,
+        password: registration.password,
+        signature: registration.signature,
+        isActive: true,
+        approvedDate: new Date().toISOString(),
+      };
+
+      accounts.push(newAccount);
+      saveToStorage(STORAGE_KEYS.ACCOUNTS, accounts);
+
+      const updatedPending = pending.filter(reg => reg.id !== id);
+      saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
+
+      return { success: true, message: 'Registration approved successfully' };
+      
+    } catch (error) {
+      console.error('Error approving registration:', error);
+      // Fallback to localStorage on error (same logic as above)
+      const pending = await clientDataService.getPendingRegistrations();
+      const registration = pending.find(reg => reg.id === id);
+      
+      if (!registration) {
+        return { success: false, message: 'Registration not found' };
+      }
+
+      const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as any[];
+      const existingIds = accounts.map(acc => acc.id);
+      const existingEmployeeIds = accounts.map(acc => acc.employeeId).filter(id => id !== undefined);
+      const maxId = Math.max(...existingIds, 0);
+      const maxEmployeeId = Math.max(...existingEmployeeIds, 1000);
+      
+      const newAccount = {
+        id: maxId + 1,
+        employeeId: maxEmployeeId + 1,
+        name: registration.name,
+        email: registration.email,
+        position: registration.position,
+        department: registration.department,
+        branch: registration.branch,
+        role: registration.role,
+        hireDate: registration.hireDate,
+        avatar: null,
+        bio: null,
+        contact: registration.contact || '',
+        updatedAt: new Date().toISOString(),
+        username: registration.username,
+        password: registration.password,
+        signature: registration.signature,
+        isActive: true,
+        approvedDate: new Date().toISOString(),
+      };
+
+      accounts.push(newAccount);
+      saveToStorage(STORAGE_KEYS.ACCOUNTS, accounts);
+
+      const updatedPending = pending.filter(reg => reg.id !== id);
+      saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
+
+      return { success: true, message: 'Registration approved successfully' };
     }
-
-    // Move to accounts (which is what the admin page uses)
-    const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as any[];
-    // Generate unique IDs that don't conflict with existing accounts
-    const existingIds = accounts.map(acc => acc.id);
-    const existingEmployeeIds = accounts.map(acc => acc.employeeId).filter(id => id !== undefined);
-    const maxId = Math.max(...existingIds, 0);
-    const maxEmployeeId = Math.max(...existingEmployeeIds, 1000);
-    
-    const newAccount = {
-      id: maxId + 1,
-      employeeId: maxEmployeeId + 1,
-      name: registration.name,
-      email: registration.email,
-      position: registration.position,
-      department: registration.department,
-      branch: registration.branch,
-      role: registration.role,
-      hireDate: registration.hireDate,
-      avatar: null,
-      bio: null,
-      contact: registration.contact || '',
-      updatedAt: new Date().toISOString(),
-      // Include additional fields from registration
-      username: registration.username,
-      password: registration.password,
-      signature: registration.signature,
-      isActive: true, // New employees are active by default
-      approvedDate: new Date().toISOString(), // Record when the user was approved
-    };
-
-    accounts.push(newAccount);
-    saveToStorage(STORAGE_KEYS.ACCOUNTS, accounts);
-
-    // Remove from pending
-    const updatedPending = pending.filter(reg => reg.id !== id);
-    saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
-
-    return { success: true, message: 'Registration approved successfully' };
   },
 
   rejectRegistration: async (id: number): Promise<{ success: boolean; message: string }> => {
-    const pending = await clientDataService.getPendingRegistrations();
-    const updatedPending = pending.filter(reg => reg.id !== id);
-    saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
+    try {
+      // Try backend API first
+      const res = await fetch(`/api/registrations/${id}/reject`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          // Remove from localStorage
+          const pending = await clientDataService.getPendingRegistrations();
+          const updatedPending = pending.filter(reg => reg.id !== id);
+          saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
+          
+          return { success: true, message: data.message || 'Registration rejected successfully' };
+        }
+      }
+      
+      // Fallback to localStorage
+      console.warn('Backend API failed, using localStorage fallback');
+      const pending = await clientDataService.getPendingRegistrations();
+      const updatedPending = pending.filter(reg => reg.id !== id);
+      saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
 
-    return { success: true, message: 'Registration rejected' };
+      return { success: true, message: 'Registration rejected' };
+      
+    } catch (error) {
+      console.error('Error rejecting registration:', error);
+      // Fallback to localStorage on error
+      const pending = await clientDataService.getPendingRegistrations();
+      const updatedPending = pending.filter(reg => reg.id !== id);
+      saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
+
+      return { success: true, message: 'Registration rejected' };
+    }
   },
 
   // Profiles
@@ -882,6 +1074,49 @@ export const clientDataService = {
         newValue: JSON.stringify(updatedNotifications)
       }));
     }
+  },
+
+  // Migrate old notification URLs (tab=reviews -> tab=overview for employees)
+  migrateNotificationUrls: async (): Promise<void> => {
+    const notifications = getFromStorage(STORAGE_KEYS.NOTIFICATIONS, [] as Notification[]);
+    let updated = false;
+    
+    const migratedNotifications = notifications.map(notification => {
+      // Only update employee notifications with reviews tab
+      if (notification.roles.includes('employee') && 
+          notification.actionUrl && 
+          notification.actionUrl.includes('/employee-dashboard?tab=reviews')) {
+        updated = true;
+        return {
+          ...notification,
+          actionUrl: notification.actionUrl.replace('?tab=reviews', '?tab=overview')
+        };
+      }
+      return notification;
+    });
+    
+    if (updated) {
+      saveToStorage(STORAGE_KEYS.NOTIFICATIONS, migratedNotifications);
+      console.log('✅ Migrated notification URLs from reviews to overview tab');
+      
+      // Trigger storage event for real-time updates
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: STORAGE_KEYS.NOTIFICATIONS,
+          newValue: JSON.stringify(migratedNotifications)
+        }));
+      }
+    }
+  },
+
+  // Force refresh accounts data from JSON (clears cache)
+  forceRefreshAccounts: (): void => {
+    if (typeof window === 'undefined') return;
+    
+    console.log('🔄 Force refreshing accounts data...');
+    localStorage.removeItem(STORAGE_KEYS.ACCOUNTS);
+    saveToStorage(STORAGE_KEYS.ACCOUNTS, accountsData.accounts || []);
+    console.log('✅ Accounts data refreshed from source');
   },
 
   // Get all accounts

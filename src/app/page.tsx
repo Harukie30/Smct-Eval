@@ -19,6 +19,7 @@ import PendingApprovalModal from '@/components/PendingApprovalModal'; // Import 
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import { toastMessages } from '@/lib/toastMessages';
+import clientDataService from '@/lib/clientDataService';
 
 export default function LandingLoginPage() {
   const [username, setUsername] = useState('');
@@ -40,7 +41,11 @@ export default function LandingLoginPage() {
 
   const { login, isLoading, user, setUserRole } = useUser();
   const router = useRouter();
-
+  // Force refresh accounts data on login page load (clears cache)
+  useEffect(() => {
+    clientDataService.forceRefreshAccounts();
+  }, []);
+  
   useEffect(() => {
     if (isAboutModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -51,7 +56,6 @@ export default function LandingLoginPage() {
       document.body.style.overflow = 'unset';
     };
   }, [isAboutModalOpen]);
-
 
   // Remove automatic redirect - let users stay on login page even if authenticated
   // This allows users to see the login form and choose to log in again or navigate elsewhere
@@ -67,13 +71,12 @@ export default function LandingLoginPage() {
       // Simulate real authentication steps with actual processing
       await new Promise(resolve => setTimeout(resolve, 1200)); // Initial validation delay
       
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-      const result = await login(username, password);
-
+      const user =  await clientDataService.login(username, password, rememberMe);
+      if (user) {
       if (result === true) {
         // Login successful - continue with real processing
-        console.log('Login successful');
+        console.log('✅ Login successful');
+
 
         // Simulate additional authentication steps
         await new Promise(resolve => setTimeout(resolve, 1000)); // Session creation
@@ -90,11 +93,22 @@ export default function LandingLoginPage() {
           localStorage.setItem('keepLoggedIn', 'false');
         }
 
+        // IMPORTANT: Wait a bit longer to ensure UserContext state is fully updated
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         // Get user role for personalized loading message
         const storedUser = localStorage.getItem('authenticatedUser');
+        console.log('🔍 DEBUG - localStorage check:', {
+          hasStoredUser: !!storedUser,
+          storedUserData: storedUser ? JSON.parse(storedUser) : null,
+          keepLoggedIn: localStorage.getItem('keepLoggedIn'),
+          isAuthenticated: !!user // Check if user state is set
+        });
+        
         if (storedUser) {
-          const user = JSON.parse(storedUser);
-          console.log('User role for redirect:', user.role);
+          const userData = JSON.parse(storedUser);
+          console.log('✅ User role for redirect:', userData.role);
+
 
           const roleDashboards: Record<string, string> = {
             'admin': '/admin',
@@ -105,14 +119,28 @@ export default function LandingLoginPage() {
             'manager': '/evaluator'
           };
 
-          const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
-          console.log('Redirecting to:', dashboardPath);
-
-          // Redirect immediately after all processing is complete
+          const dashboardPath = roleDashboards[userData.role || ''] || '';
+          console.log('🚀 Redirecting to:', dashboardPath);
+          
+          if (!dashboardPath) {
+            console.error('❌ No dashboard path found for role:', userData.role);
+            setShowLoadingScreen(false);
+            setLoginError('Invalid user role. Please contact support.');
+            return;
+          }
+          
+          // Wait to ensure authentication state is propagated
+          console.log('⏳ Waiting for authentication state to propagate...');
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          console.log('🔄 Executing redirect now...');
           router.push(dashboardPath);
         } else {
-          console.log('No user data found, redirecting to default dashboard');
-          router.push('/dashboard');
+          console.error('❌ No user data found in localStorage!');
+          console.log('📦 Available localStorage keys:', Object.keys(localStorage));
+          setShowLoadingScreen(false);
+          setLoginError('Session error. Please try logging in again.');
+
         }
       } else if (result && typeof result === 'object' && result.requiresRoleSelection) {
         // User has multiple roles - show role selection modal
@@ -135,21 +163,18 @@ export default function LandingLoginPage() {
       } else {
         const errorMessage = 'Invalid username or password. Please try again.';
         setLoginError(errorMessage);
-=======
    const login = async (username: string, password: string, rememberMe: boolean): Promise<User | null> => {
   try {
     setIsLoading(true);
     await apiService.login(username, password, rememberMe);
     await fetchUser(); // Fetch authenticated user data
 
-=======
    const login = async (username: string, password: string, rememberMe: boolean): Promise<User | null> => {
   try {
     setIsLoading(true);
     await apiService.login(username, password, rememberMe);
     await fetchUser(); // Fetch authenticated user data
 
->>>>>>> Stashed changes
     const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
     setUser(storedUser);
     setIsAuthenticated(true);
@@ -175,7 +200,6 @@ export default function LandingLoginPage() {
         // const errorMessage = 'Invalid username or password. Please try again.';
         console.log(error)
         setLoginError(error.message);
->>>>>>> Stashed changes
         toastMessages.login.error();
         setShowLoadingScreen(false); // Hide loading screen
         // Show incorrect password dialog
@@ -191,16 +215,6 @@ export default function LandingLoginPage() {
     }
   };
 
-<<<<<<< Updated upstream
-  const handleRoleSelected = (selectedRole: string) => {
-    console.log('Role selected:', selectedRole);
-    setUserRole(selectedRole);
-    setShowRoleSelection(false);
-    // Router.push is handled inside the modal component
-  };
-
-=======
->>>>>>> Stashed changes
   // if (isLoading) {
   //   return (
   //     <PageTransition>

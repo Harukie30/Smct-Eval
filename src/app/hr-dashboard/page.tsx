@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -109,12 +110,16 @@ const getQuarterColor = (quarter: string) => {
 };
 
 export default function HRDashboard() {
+  const searchParams = useSearchParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
   const [hrMetrics, setHrMetrics] = useState<HRMetrics | null>(null);
   const [loading, setLoading] = useState(true);
-  const [active, setActive] = useState('overview');
+  
+  // Initialize active tab from URL parameter or default to 'overview'
+  const tabParam = searchParams.get('tab');
+  const [active, setActive] = useState(tabParam || 'overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedBranch, setSelectedBranch] = useState('all');
@@ -232,6 +237,14 @@ export default function HRDashboard() {
     dashboardName: 'HR Dashboard',
     customMessage: 'Welcome back! Refreshing your HR dashboard data...'
   });
+
+  // Handle URL parameter changes for tab navigation
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== active) {
+      setActive(tab);
+    }
+  }, [searchParams]);
 
   // Real-time data updates via localStorage events
   useEffect(() => {

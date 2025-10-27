@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo,} from 'react';
 import { X } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';  
@@ -165,6 +166,7 @@ export default function EvaluatorDashboard() {
   const { profile, user } = useUser();
   const { success, error } = useToast();
   const { getUpdatedAvatar, hasAvatarUpdate } = useProfilePictureUpdates();
+  const searchParams = useSearchParams();
 
   // Function to get time ago display
   const getTimeAgo = (submittedAt: string) => {
@@ -204,6 +206,14 @@ export default function EvaluatorDashboard() {
       localStorage.setItem('seenEvaluationSubmissions', JSON.stringify(Array.from(seenSubmissions)));
     }
   }, [seenSubmissions]);
+
+  // Handle URL parameter changes for tab navigation
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== active) {
+      setActive(tab);
+    }
+  }, [searchParams]);
 
   // Mark submission as seen
   const markSubmissionAsSeen = (submissionId: number) => {
@@ -344,7 +354,9 @@ export default function EvaluatorDashboard() {
     };
   }, []);
 
-  const [active, setActive] = useState('overview');
+  // Initialize active tab from URL parameter or default to 'overview'
+  const tabParam = searchParams.get('tab');
+  const [active, setActive] = useState(tabParam || 'overview');
 
   // Custom tab change handler with auto-refresh functionality
   const handleTabChange = (tabId: string) => {
@@ -353,50 +365,42 @@ export default function EvaluatorDashboard() {
     // Auto-refresh data when switching to specific tabs (no modals)
     if (tabId === 'feedback') {
       // Refresh evaluation records data
-      console.log('🔄 Starting feedback refresh...');
       setIsFeedbackRefreshing(true);
       
       // Add a 1-second delay to make skeleton visible
       setTimeout(() => {
         refreshEvaluatorData().then(() => {
-          console.log('✅ Feedback refresh completed');
           // Show success toast for feedback refresh
           success(
             'Evaluation Records Refreshed',
             'Feedback data has been updated'
           );
         }).finally(() => {
-          console.log('🏁 Setting isFeedbackRefreshing to false');
           setIsFeedbackRefreshing(false);
         });
       }, 1000); // 1-second delay to see skeleton properly
     } else if (tabId === 'employees') {
       // Refresh employees data
-      console.log('🔄 Starting employees refresh...');
       setIsEmployeesRefreshing(true);
       
       // Add a 1-second delay to make skeleton visible
       setTimeout(() => {
         refreshEvaluatorData().then(() => {
-          console.log('✅ Employees refresh completed');
           // Show success toast for employees refresh
           success(
             'Employees Refreshed',
             'Employee data has been updated'
           );
         }).finally(() => {
-          console.log('🏁 Setting isEmployeesRefreshing to false');
           setIsEmployeesRefreshing(false);
         });
       }, 1000); // 1-second delay to see skeleton properly
     } else if (tabId === 'account-history') {
       // Refresh account history data
-      console.log('🔄 Starting account history refresh...');
       setIsAccountHistoryRefreshing(true);
       setTimeout(() => {
         const history = loadAccountHistory();
         setAccountHistory(history);
-        console.log('✅ Account history refresh completed');
         success(
           'Account History Refreshed',
           'Account history data has been updated'
@@ -405,20 +409,17 @@ export default function EvaluatorDashboard() {
       }, 1000); // 1-second delay to see skeleton properly
     } else if (tabId === 'overview') {
       // Refresh overview data when switching to overview tab
-      console.log('🔄 Starting overview refresh...');
       setIsRefreshing(true);
       
       // Add a 2-second delay to make skeleton visible
       setTimeout(() => {
         refreshEvaluatorData().then(() => {
-          console.log('✅ Overview refresh completed');
           // Show success toast for overview refresh
           success(
             'Overview Refreshed',
             'Recent submissions data has been updated'
           );
         }).finally(() => {
-          console.log('🏁 Setting isRefreshing to false');
           setIsRefreshing(false);
         });
       }, 1000); // 2-second delay to see skeleton properly
@@ -507,7 +508,6 @@ export default function EvaluatorDashboard() {
     const handleStorageChange = (e: StorageEvent) => {
       // Only refresh if the change is from another tab/window
       if (e.key === 'submissions' && e.newValue !== e.oldValue) {
-        console.log('📊 Submissions data updated, refreshing evaluator dashboard...');
         refreshSubmissions();
       }
     };
@@ -585,9 +585,7 @@ export default function EvaluatorDashboard() {
           'Employee Data Refreshed',
           `Successfully loaded ${uniqueData.length} employee records`
         );
-        console.log(`✅ Successfully refreshed ${uniqueData.length} employee records`);
       } else {
-        console.warn('Invalid employee data structure received from API');
         setEmployeeDataRefresh(prev => prev + 1);
         error(
           'Invalid Data',
@@ -632,9 +630,7 @@ export default function EvaluatorDashboard() {
           'Evaluation Records Refreshed',
           `Successfully loaded ${uniqueData.length} evaluation records`
         );
-        console.log(`✅ Successfully refreshed ${uniqueData.length} evaluation records`);
       } else {
-        console.warn('Invalid data structure received from API');
         setRecentSubmissions([]);
         error(
           'Invalid Data',
@@ -656,14 +652,12 @@ export default function EvaluatorDashboard() {
   // Function to handle refresh with modal
   const handleEvaluationRecordsRefresh = async () => {
     try {
-      console.log('🔄 Starting manual refresh...');
       setIsRefreshing(true);
       setIsFeedbackRefreshing(true);
       
       // Add a 1-second delay to make skeleton visible
       setTimeout(async () => {
         await refreshSubmissions();
-        console.log('✅ Manual refresh completed');
         success(
           'Evaluation Records Refreshed',
           'Feedback data has been updated'
@@ -784,7 +778,6 @@ export default function EvaluatorDashboard() {
   // Function to handle account history refresh
   const handleAccountHistoryRefresh = async () => {
     try {
-      console.log('🔄 Starting account history refresh...');
       setIsAccountHistoryRefreshing(true);
       
       // Add a 1-second delay to make skeleton visible
@@ -792,8 +785,6 @@ export default function EvaluatorDashboard() {
         const history = loadAccountHistory();
         setAccountHistory(history);
         
-        
-        console.log('✅ Account history refresh completed');
         success(
           'Account History Refreshed',
           'Account history data has been updated'
@@ -840,13 +831,11 @@ export default function EvaluatorDashboard() {
   // Function to handle employees refresh with modal
   const handleEmployeesRefresh = async () => {
     try {
-      console.log('🔄 Starting manual employees refresh...');
       setIsEmployeesRefreshing(true);
       
       // Add a 1-second delay to make skeleton visible
       setTimeout(async () => {
         await refreshEmployeeData();
-        console.log('✅ Manual employees refresh completed');
         setIsEmployeesRefreshing(false);
       }, 1000); // 1-second delay to see skeleton properly
     } catch (error) {
@@ -985,7 +974,6 @@ export default function EvaluatorDashboard() {
   const handleProfileSave = (updatedProfile: UserProfile) => {
     // Profile is now managed by UserContext
     // Optionally refresh data or show success message
-    console.log('Profile updated:', updatedProfile);
   };
 
 
@@ -1637,21 +1625,9 @@ export default function EvaluatorDashboard() {
         // Don't set approvalStatus here - let getCorrectApprovalStatus determine it
       };
 
-      console.log('🔍 Debug - Updated submission:', {
-        id: updatedSubmission.id,
-        calculatedApprovalStatus: getCorrectApprovalStatus(updatedSubmission),
-        evaluatorSignature: updatedSubmission.evaluatorSignature ? 'Present' : 'Missing',
-        evaluatorApprovedAt: updatedSubmission.evaluatorApprovedAt,
-        hasEmployeeSignature: (updatedSubmission.employeeSignature || updatedSubmission.evaluationData?.employeeSignature) ? 'Present' : 'Missing'
-      });
-
       // Update the submissions array
       setRecentSubmissions(prev => {
         const updated = prev.map(sub => sub.id === feedback.id ? updatedSubmission : sub);
-        console.log('🔍 Debug - Updated recentSubmissions state:', {
-          totalSubmissions: updated.length,
-          updatedSubmission: updated.find(sub => sub.id === feedback.id)
-        });
         return updated;
       });
 
@@ -1666,16 +1642,6 @@ export default function EvaluatorDashboard() {
 
       // Refresh the submissions data to ensure UI updates
       await refreshSubmissions();
-
-      // Debug: Check if the data was properly updated
-      const refreshedSubmissions = await clientDataService.getSubmissions();
-      const refreshedSubmission = refreshedSubmissions.find(sub => sub.id === feedback.id) as any;
-      console.log('🔍 Debug - After refresh:', {
-        id: refreshedSubmission?.id,
-        approvalStatus: refreshedSubmission?.approvalStatus,
-        evaluatorSignature: refreshedSubmission?.evaluatorSignature ? 'Present' : 'Missing',
-        evaluatorApprovedAt: refreshedSubmission?.evaluatorApprovedAt
-      });
 
       alert(`Evaluation for ${feedback.employeeName} has been approved successfully!`);
 
@@ -1966,11 +1932,6 @@ export default function EvaluatorDashboard() {
       ...item,
       uniqueKey: item.uniqueKey || `fallback-${index}-${Date.now()}`
     }));
-
-    // Debug: Log approval statuses
-    console.log('🔍 Debug - filteredFeedbackData approval statuses:',
-      finalData.map(item => ({ id: item.id, employeeName: item.employeeName, approvalStatus: item.approvalStatus }))
-    );
 
     return finalData;
   }, [recentSubmissions, feedbackSearch, feedbackDepartmentFilter, feedbackDateFilter, feedbackDateRange, feedbackQuarterFilter, feedbackApprovalStatusFilter, feedbackSort]);
@@ -2383,7 +2344,6 @@ export default function EvaluatorDashboard() {
                 // First check for real-time profile updates
                 const updatedAvatar = getUpdatedAvatar(employeeId, employee.avatar);
                 if (hasAvatarUpdate(employeeId)) {
-                  console.log('🔄 Using real-time updated avatar for:', employee.name, 'Avatar:', updatedAvatar);
                   return {
                     ...employee,
                     avatar: updatedAvatar,
@@ -2397,7 +2357,6 @@ export default function EvaluatorDashboard() {
                 if (storedUser) {
                   const userData = JSON.parse(storedUser);
                   if (userData.id === employeeId) {
-                    console.log('🔄 Loading current user profile data for:', employee.name, 'Avatar:', userData.avatar);
                     return {
                       ...employee,
                       avatar: userData.avatar || employee.avatar,
@@ -2417,7 +2376,6 @@ export default function EvaluatorDashboard() {
                   const profileData = profiles[employeeId];
                   
                   if (profileData) {
-                    console.log('🔄 Loading stored profile data for:', employee.name, 'Avatar:', profileData.avatar);
                     return {
                       ...employee,
                       avatar: profileData.avatar || employee.avatar,
@@ -2434,7 +2392,6 @@ export default function EvaluatorDashboard() {
                 const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
                 const accountData = accounts.find((acc: any) => (acc.id === employeeId || acc.employeeId === employeeId));
                 if (accountData && (accountData.avatar || accountData.name !== employee.name)) {
-                  console.log('🔄 Loading account profile data for:', employee.name, 'Avatar:', accountData.avatar);
                   return {
                     ...employee,
                     avatar: accountData.avatar || employee.avatar,
