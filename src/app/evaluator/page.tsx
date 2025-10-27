@@ -2806,7 +2806,7 @@ export default function EvaluatorDashboard() {
               <CardContent>
                 <div className="flex flex-col md:flex-row gap-4 mb-6">
                   {/* Search */}
-                  <div className="flex-1">
+                  <div className="flex-1 w-1/5">
                     <Label htmlFor="feedback-search" className="text-sm font-medium">Search</Label>
                     <div className="mt-1 relative">
                       <div className="relative w-full">
