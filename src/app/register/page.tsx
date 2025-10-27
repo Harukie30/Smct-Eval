@@ -575,7 +575,7 @@ export default function RegisterPage() {
                         placeholder="Select your position"
                         searchPlaceholder="Search positions..."
                         emptyText="No positions found."
-                        className="w-full"
+                        className="w-1/2"
                         error={fieldErrors?.position_id}
                       />
                     </div>
@@ -591,7 +591,7 @@ export default function RegisterPage() {
                         placeholder="Select your branch"
                         searchPlaceholder="Search branches..."
                         emptyText="No branches found."
-                        className="w-full"
+                        className="w-1/2"
                         error={fieldErrors?.branch_id}
                       />
                     </div>
@@ -607,7 +607,7 @@ export default function RegisterPage() {
                         placeholder="Select your branch"
                         searchPlaceholder="Search branches..."
                         emptyText="No branches found."
-                        className="w-full"
+                        className="w-1/2"
                         error={fieldErrors?.department_id}
                       />
                     </div>

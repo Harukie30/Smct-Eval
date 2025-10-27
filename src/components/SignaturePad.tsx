@@ -25,6 +25,29 @@ export default function SignaturePad({
   const [hasSignature, setHasSignature] = useState(false);
   const [previewImage, setPreviewImage] = useState<string>("");
 
+  // Helper function to get coordinates
+  const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>, canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
+  };
+
+  // Load existing signature when value changes
+  useEffect(() => {
+    if (value && typeof value === 'string' && value.length > 0) {
+      setHasSignature(true);
+      setPreviewImage(value);
+    } else {
+      setHasSignature(false);
+      setPreviewImage("");
+    }
+  }, [value]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -32,18 +55,16 @@ export default function SignaturePad({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Set canvas size
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * window.devicePixelRatio;
-    canvas.height = rect.height * window.devicePixelRatio;
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    // Set canvas size to match display size exactly
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
 
     // Set drawing styles
     ctx.strokeStyle = "#1f2937"; // Dark gray
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-  }, [value]);
+  }, []);
 
   const startDrawing = (
     e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
@@ -55,12 +76,9 @@ export default function SignaturePad({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-
+    const { x, y } = getCoordinates(e, canvas);
     ctx.beginPath();
-    ctx.moveTo(clientX - rect.left, clientY - rect.top);
+    ctx.moveTo(x, y);
   };
 
   const draw = (
@@ -74,11 +92,8 @@ export default function SignaturePad({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-
-    ctx.lineTo(clientX - rect.left, clientY - rect.top);
+    const { x, y } = getCoordinates(e, canvas);
+    ctx.lineTo(x, y);
     ctx.stroke();
   };
 
@@ -91,23 +106,38 @@ export default function SignaturePad({
     const canvas = canvasRef.current;
     if (canvas) {
       const dataURL = canvas.toDataURL("image/png");
-      const file = dataURLtoFile(dataURL, "signature.png");
-      setPreviewImage(URL.createObjectURL(file));
-      onChangeAction(file);
+      setPreviewImage(dataURL);
+      // Store as base64 string (can be saved to localStorage/JSON)
+      // If backend needs File, convert using: dataURLtoFile(dataURL, "signature.png")
+      onChangeAction(dataURL);
     }
   };
 
   const clearSignature = () => {
     onChangeAction(null);
     setHasSignature(false);
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    
+    // Small delay to ensure canvas is rendered before resetting
+    setTimeout(() => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    const rect = canvas.getBoundingClientRect();
-    ctx.clearRect(0, 0, rect.width, rect.height);
+      // Reset canvas dimensions to match current display size
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+
+      // Re-apply drawing styles after resizing
+      ctx.strokeStyle = "#1f2937";
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      // Clear the canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }, 0);
   };
 
   return (
@@ -130,6 +160,7 @@ export default function SignaturePad({
             className={`w-full h-32 cursor-crosshair bg-white rounded border ${
               hasError ? "border-red-300" : "border-gray-200"
             }`}
+            style={{ display: 'block' }}
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
