@@ -18,20 +18,26 @@ export default function RoleSelectionModal({
 }: RoleSelectionModalProps) {
   const router = useRouter();
   
-  const handleHRRole = () => {
+  const handleHRRole = async () => {
     onRoleSelectedAction('hr');
+    // Wait for state to update before navigating
+    await new Promise(resolve => setTimeout(resolve, 100));
     router.push('/hr-dashboard');
   };
   
-  const handleEvaluatorRole = () => {
+  const handleEvaluatorRole = async () => {
     // Handle evaluator or manager roles
     const evaluatorRole = availableRoles.find(role => role === 'evaluator' || role === 'manager') || 'evaluator';
     onRoleSelectedAction(evaluatorRole);
+    // Wait for state to update before navigating
+    await new Promise(resolve => setTimeout(resolve, 100));
     router.push('/evaluator');
   };
   
-  const handleEmployeeRole = () => {
+  const handleEmployeeRole = async () => {
     onRoleSelectedAction('employee');
+    // Wait for state to update before navigating
+    await new Promise(resolve => setTimeout(resolve, 100));
     router.push('/employee-dashboard');
   };
   

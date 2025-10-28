@@ -24,6 +24,7 @@ export interface AuthenticatedUser {
   lastLogin?: string;
   availableRoles?: string[]; // For users with multiple roles (e.g., HR + Employee)
   activeRole?: string; // Currently active role
+  roleSelectionPending?: boolean; // True when user needs to select from multiple roles
 }
 
 interface UserContextType {
@@ -206,6 +207,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       if (loginResult.success && loginResult.user) {
         const authenticatedUser = loginResult.user;
         
+        // Check if user has multiple roles (requires role selection)
+        const hasMultipleRoles = authenticatedUser.availableRoles && authenticatedUser.availableRoles.length > 1;
+        
         // Ensure ID is a number
         const userWithNumberId: AuthenticatedUser = {
           ...authenticatedUser,
@@ -215,10 +219,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           lastLogin: new Date().toISOString(),
           availableRoles: authenticatedUser.availableRoles, // Include available roles
           activeRole: authenticatedUser.role, // Set initial active role
+          roleSelectionPending: hasMultipleRoles, // Flag to indicate role selection is needed
         };
-        
-        // Check if user has multiple roles (requires role selection)
-        const hasMultipleRoles = userWithNumberId.availableRoles && userWithNumberId.availableRoles.length > 1;
         
         setUser(userWithNumberId);
         
@@ -416,6 +418,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         ...user,
         activeRole: role,
         role: role, // Also update the primary role field
+        roleSelectionPending: false, // Clear the pending flag
       };
       setUser(updatedUser);
       

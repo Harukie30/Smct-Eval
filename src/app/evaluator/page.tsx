@@ -2173,7 +2173,23 @@ function EvaluatorDashboard() {
                   </Button>
                 </div>
                 {isRefreshing ? (
-                  <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
+                  <div className="relative max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
+                    {/* Centered Loading Spinner */}
+                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                      <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                        <div className="relative">
+                          {/* Spinning ring */}
+                          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                          {/* Logo in center */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">Loading submissions...</p>
+                      </div>
+                    </div>
+                    
+                    {/* Table structure visible in background */}
                     <Table className="min-w-full">
                       <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                         <TableRow key="overview-header">
@@ -2538,15 +2554,15 @@ function EvaluatorDashboard() {
                     </div>
                   </div>
                   <div className="px-6 py-4 space-y-4">
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 w-1/2">
                       <div className="flex items-center gap-2 w-full">
                         {/* Search input with clear button inside */}
-                        <div className="relative flex-1">
+                        <div className="relative flex-1 w-1/2">
                           <Input
                             placeholder="Search employees by name, email, position, department, role"
                             value={employeeSearch}
                             onChange={(e) => setEmployeeSearch(e.target.value)}
-                            className="w-full pr-10"
+                            className=" pr-10"
                           />
                           {employeeSearch && (
                             <button
@@ -2567,7 +2583,7 @@ function EvaluatorDashboard() {
                             setSelectedDepartment(value === 'All Departments' ? '' : value)
                           }
                           placeholder="All Departments"
-                          className="w-[200px]"
+                          className="w-[200px]" 
                         />
 
                       </div>
@@ -2575,7 +2591,23 @@ function EvaluatorDashboard() {
                     </div>
                   </div>
                   {isEmployeesRefreshing ? (
-                    <div className="max-h-[500px] overflow-y-auto">
+                    <div className="relative max-h-[500px] overflow-y-auto">
+                      {/* Centered Loading Spinner with Logo */}
+                      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                        <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                          <div className="relative">
+                            {/* Spinning ring */}
+                            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                            {/* Logo in center */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600 font-medium">Loading employees...</p>
+                        </div>
+                      </div>
+                      
+                      {/* Table structure visible in background */}
                       <Table className="min-w-full">
                         <TableHeader className="sticky top-0 bg-white z-10 border-b">
                           <TableRow key="employees-header">
@@ -3005,7 +3037,23 @@ function EvaluatorDashboard() {
                 </div>  
 
                 {isFeedbackRefreshing ? (
-                  <div className="max-h-[500px] overflow-y-auto overflow-x-auto scrollable-table">
+                  <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto scrollable-table">
+                    {/* Centered Loading Spinner with Logo */}
+                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                      <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                        <div className="relative">
+                          {/* Spinning ring */}
+                          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                          {/* Logo in center */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">Loading evaluation records...</p>
+                      </div>
+                    </div>
+                    
+                    {/* Table structure visible in background */}
                     <Table className="min-w-full">
                       <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                         <TableRow key="feedback-header">
@@ -3329,7 +3377,23 @@ function EvaluatorDashboard() {
 
                   {/* Account History Table */}
                   {isAccountHistoryRefreshing ? (
-                    <div className="overflow-x-auto">
+                    <div className="relative overflow-x-auto">
+                      {/* Centered Loading Spinner with Logo */}
+                      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                        <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                          <div className="relative">
+                            {/* Spinning ring */}
+                            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                            {/* Logo in center */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600 font-medium">Loading account history...</p>
+                        </div>
+                      </div>
+                      
+                      {/* Table structure visible in background */}
                       <Table>
                         <TableHeader>
                           <TableRow>
