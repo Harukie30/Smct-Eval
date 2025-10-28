@@ -25,6 +25,7 @@ interface FormDataType {
   fname: string;
   lname: string;
   username: string;
+  employee_id: string;
   email: string;
   contact: string;
   position_id: number | string;
@@ -51,6 +52,7 @@ function RegisterPage() {
     fname: "",
     lname: "",
     username: "",
+    employee_id: "",
     email: "",
     contact: "",
     department_id: "",
@@ -115,6 +117,13 @@ function RegisterPage() {
           errors.email = "Please enter a valid email address";
         }
         break;
+      case "employee_id":
+        if (value && !/^\d{4}-\d{6}$/.test(value)) {
+          errors.employee_id = "Format: 1234-567890 (4 digits, dash, 6 digits)";
+        } else {
+          delete errors.employee_id;
+        }
+        break;
       case "password":
         if (value && value.length < 8) {
           errors.password = "Password must be at least 8 characters";
@@ -166,6 +175,22 @@ function RegisterPage() {
 
     if (!formData.username.trim()) {
       showAlert("Missing Information", "Username is required!", "error");
+      return;
+    }
+
+    if (!formData.employee_id.trim()) {
+      showAlert("Missing Information", "Employee ID is required!", "error");
+      return;
+    }
+
+    // Validate Employee ID format (1234-567890)
+    const employeeIdRegex = /^\d{4}-\d{6}$/;
+    if (!employeeIdRegex.test(formData.employee_id)) {
+      showAlert(
+        "Invalid Employee ID",
+        "Employee ID must be in format: 1234-567890 (4 digits, dash, 6 digits)",
+        "error"
+      );
       return;
     }
 
@@ -250,6 +275,7 @@ function RegisterPage() {
     formDataToUpload.append("fname", formData?.fname);
     formDataToUpload.append("lname", formData.lname);
     formDataToUpload.append("username", formData.username);
+    formDataToUpload.append("employee_id", formData.employee_id);
     formDataToUpload.append("email", formData.email);
     formDataToUpload.append("contact", formData.contact);
     formDataToUpload.append("position_id", String(formData.position_id));
@@ -272,6 +298,7 @@ function RegisterPage() {
                 fname: "",
                 lname: "",
                 username: "",
+                employee_id: "",
                 email: "",
                 contact: "",
                 position_id: 0,
@@ -510,6 +537,48 @@ function RegisterPage() {
                       {fieldErrors?.username && (
                         <p className="text-sm text-red-500">
                           {fieldErrors?.username}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 w-1/4">
+                      <Label htmlFor="employee_id">Employee ID</Label>
+                      <Input
+                        id="employee_id"
+                        placeholder="****-******"
+                        value={formData.employee_id}
+                        onChange={(e) => {
+                          // Remove all non-numeric characters except dash
+                          let value = e.target.value.replace(/[^\d-]/g, "");
+                          
+                          // Remove all dashes first
+                          value = value.replace(/-/g, "");
+                          
+                          // Limit to 10 digits (4 + 6)
+                          value = value.slice(0, 10);
+                          
+                          // Add dash after first 4 digits
+                          if (value.length > 4) {
+                            value = value.slice(0, 4) + "-" + value.slice(4);
+                          }
+                          
+                          setFormData({ ...formData, employee_id: value });
+                          validateField("employee_id", value);
+                        }}
+                        onKeyPress={(e) => {
+                          // Only allow numbers
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        maxLength={11}
+                        className={
+                          fieldErrors?.employee_id ? "border-red-500" : ""
+                        }
+                      />
+                      {fieldErrors?.employee_id && (
+                        <p className="text-sm text-red-500">
+                          {fieldErrors?.employee_id}
                         </p>
                       )}
                     </div>

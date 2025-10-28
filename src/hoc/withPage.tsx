@@ -155,7 +155,9 @@ export function withPublicPage<P extends object>(
           
           // Redirect logged-in users to their dashboard
           require('react').useEffect(() => {
-            if (!isLoading && isAuthenticated && user) {
+            if (!isLoading && isAuthenticated && user && user.role && !user.roleSelectionPending) {
+              // User is authenticated, has a role selected, and role selection is complete
+              // Redirect them to their dashboard
               const roleDashboards: Record<string, string> = {
                 'admin': '/admin',
                 'hr': '/hr-dashboard',
@@ -164,9 +166,11 @@ export function withPublicPage<P extends object>(
                 'manager': '/evaluator'
               };
               
-              const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
-              console.log('🔄 withPublicPage: User already logged in, redirecting to', dashboardPath);
+              const dashboardPath = roleDashboards[user.role] || '/dashboard';
+              console.log('🔄 withPublicPage: User already logged in with role', user.role, '- redirecting to', dashboardPath);
               router.push(dashboardPath);
+            } else if (user && user.roleSelectionPending) {
+              console.log('🔄 withPublicPage: Role selection pending, not redirecting');
             }
           }, [isAuthenticated, user, isLoading, router]);
           
@@ -182,8 +186,9 @@ export function withPublicPage<P extends object>(
             );
           }
           
-          // Don't render page if authenticated (will redirect)
-          if (isAuthenticated) {
+          // Don't render page if authenticated and has a role AND role selection is complete (will redirect)
+          // If role selection is pending, render page to show RoleSelectionModal
+          if (isAuthenticated && user?.role && !user?.roleSelectionPending) {
             return null;
           }
           

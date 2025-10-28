@@ -1100,7 +1100,7 @@ function EmployeeDashboard() {
                   </div>
                   <Input
                     type="text"
-                    placeholder="Search by supervisor, rating, date, quarter..."
+                    placeholder="Search by supervisor, rating, date."
                     value={overviewSearchTerm}
                     onChange={(e) => setOverviewSearchTerm(e.target.value)}
                     className="pl-10 pr-4 py-2 w-full border-gray-300 focus:border-blue-500 focus:ring-blue-500"
@@ -1116,42 +1116,66 @@ function EmployeeDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                {/* Refreshing Dialog for Performance Reviews */}
-                {showRefreshingDialog && (
-                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                      <div>
-                        <h4 className="text-sm font-medium text-blue-900">Refreshing...</h4>
-                        <p className="text-xs text-blue-700">{refreshingMessage}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {isRefreshingOverview || loading ? (
-                  <div className="space-y-2">
-                    {/* Table Header Skeleton */}
-                    <div className="flex space-x-3 py-2 border-b">
-                      <Skeleton className="h-3 w-20" />
-                      <Skeleton className="h-3 w-8" />
-                      <Skeleton className="h-3 w-12" />
-                      <Skeleton className="h-3 w-10" />
-                      <Skeleton className="h-3 w-16" />
-                      <Skeleton className="h-3 w-12" />
+                  <div className="relative max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table mx-4">
+                    {/* Centered Loading Spinner with Logo */}
+                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                      <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                        <div className="relative">
+                          {/* Spinning ring */}
+                          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                          {/* Logo in center */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">Loading performance reviews...</p>
+                      </div>
                     </div>
 
-                    {/* Table Rows Skeleton */}
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <div key={i} className="flex items-center space-x-3 py-2 border-b">
-                        <Skeleton className="h-3 w-16" />
-                        <Skeleton className="h-3 w-8" />
-                        <Skeleton className="h-3 w-12" />
-                        <Skeleton className="h-3 w-10" />
-                        <Skeleton className="h-3 w-16" />
-                        <Skeleton className="h-6 w-12" />
-                      </div>
-                    ))}
+                    {/* Table structure visible in background */}
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                        <TableRow>
+                          <TableHead>Immediate Supervisor</TableHead>
+                          <TableHead className="text-right">Rating</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Quarter</TableHead>
+                          <TableHead>Acknowledgement</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <TableRow key={i}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-5 w-12 rounded-full" />
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Skeleton className="h-4 w-12" />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                <Skeleton className="h-4 w-20" />
+                                <Skeleton className="h-3 w-16" />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-5 w-16 rounded-full" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-5 w-20 rounded-full" />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Skeleton className="h-8 w-16" />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 ) : (() => {
                   // Filter submissions based on search term
@@ -1359,8 +1383,23 @@ function EmployeeDashboard() {
         return (
           <div className="relative h-[calc(100vh-200px)] overflow-y-auto">
             {isRefreshingReviews || loading ? (
-              <div className="space-y-6">
-                {/* Performance Analytics Skeleton */}
+              <div className="relative space-y-6 min-h-[500px]">
+                {/* Centered Loading Spinner with Logo */}
+                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                    <div className="relative">
+                      {/* Spinning ring */}
+                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                      {/* Logo in center */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 font-medium">Loading performance reviews...</p>
+                  </div>
+                </div>
+
+                {/* Performance Analytics Skeleton (visible in background) */}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
                   <Card className="h-fit">
                     <CardHeader>
@@ -1385,7 +1424,7 @@ function EmployeeDashboard() {
                   </Card>
                 </div>
 
-                {/* Performance Reviews Table Skeleton */}
+                {/* Performance Reviews Table Skeleton (visible in background) */}
                 <Card>
                   <CardHeader>
                     <div className="flex justify-between items-center">
@@ -1890,33 +1929,51 @@ function EmployeeDashboard() {
         return (
           <div className="relative">
             {isRefreshingHistory || loading ? (
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-48" />
-                  <Skeleton className="h-4 w-64" />
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {/* Table Header Skeleton */}
-                    <div className="flex space-x-4">
-                      <Skeleton className="h-8 w-24" />
-                      <Skeleton className="h-8 w-32" />
-                      <Skeleton className="h-8 w-28" />
-                    </div>
-
-                    {/* Table Rows Skeleton */}
-                    {Array.from({ length: 8 }).map((_, i) => (
-                      <div key={i} className="flex items-center space-x-4 py-3 border-b">
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-4 w-16" />
-                        <Skeleton className="h-4 w-12" />
+              <div className="relative min-h-[500px]">
+                {/* Centered Loading Spinner with Logo */}
+                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                    <div className="relative">
+                      {/* Spinning ring */}
+                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                      {/* Logo in center */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
                       </div>
-                    ))}
+                    </div>
+                    <p className="text-sm text-gray-600 font-medium">Loading evaluation history...</p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+
+                {/* Card skeleton visible in background */}
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-64" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Table Header Skeleton */}
+                      <div className="flex space-x-4">
+                        <Skeleton className="h-8 w-24" />
+                        <Skeleton className="h-8 w-32" />
+                        <Skeleton className="h-8 w-28" />
+                      </div>
+
+                      {/* Table Rows Skeleton */}
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="flex items-center space-x-4 py-3 border-b">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-4 w-16" />
+                          <Skeleton className="h-4 w-12" />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             ) : (
               <Card>
                 <CardHeader>
@@ -1960,19 +2017,6 @@ function EmployeeDashboard() {
                           </div>
                         </CardHeader>
                         <CardContent>
-                          {/* Refreshing Dialog for Quarterly Performance */}
-                          {showRefreshingDialog && (
-                            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                              <div className="flex items-center gap-3">
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                                <div>
-                                  <h4 className="text-sm font-medium text-blue-900">Refreshing...</h4>
-                                  <p className="text-xs text-blue-700">{refreshingMessage}</p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
                           {/* Search Bar */}
                           <div className="mb-6 w-1/2">
                             <div className="relative">
@@ -2109,33 +2153,51 @@ function EmployeeDashboard() {
                               </div>
                             )}
                           </div>
-                          <div className="max-h-[300px] md:max-h-[450px] lg:max-h-[650px] xl:max-h-[700px] overflow-y-auto overflow-x-auto scrollable-table">
+                          <div className="relative max-h-[300px] md:max-h-[450px] lg:max-h-[650px] xl:max-h-[700px] overflow-y-auto overflow-x-auto scrollable-table">
                             {isRefreshingQuarterly || loading ? (
-                              <div className="space-y-2 p-4">
-                                {/* Table Header Skeleton */}
-                                <div className="flex space-x-3 py-2 border-b">
-                                  <Skeleton className="h-3 w-12" />
-                                  <Skeleton className="h-3 w-18" />
-                                  <Skeleton className="h-3 w-14" />
-                                  <Skeleton className="h-3 w-12" />
-                                  <Skeleton className="h-3 w-16" />
-                                  <Skeleton className="h-3 w-10" />
-                                  <Skeleton className="h-3 w-12" />
+                              <>
+                                {/* Centered Loading Spinner with Logo */}
+                                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                                    <div className="relative">
+                                      {/* Spinning ring */}
+                                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                                      {/* Logo in center */}
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                                      </div>
+                                    </div>
+                                    <p className="text-sm text-gray-600 font-medium">Loading quarterly data...</p>
+                                  </div>
                                 </div>
 
-                                {/* Table Rows Skeleton */}
-                                {Array.from({ length: 3 }).map((_, i) => (
-                                  <div key={i} className="flex items-center space-x-3 py-2 border-b">
-                                    <Skeleton className="h-4 w-8" />
-                                    <Skeleton className="h-3 w-6" />
+                                {/* Table skeleton visible in background */}
+                                <div className="space-y-2 p-4">
+                                  {/* Table Header Skeleton */}
+                                  <div className="flex space-x-3 py-2 border-b">
                                     <Skeleton className="h-3 w-12" />
-                                    <Skeleton className="h-3 w-10" />
+                                    <Skeleton className="h-3 w-18" />
                                     <Skeleton className="h-3 w-14" />
                                     <Skeleton className="h-3 w-12" />
-                                    <Skeleton className="h-6 w-14" />
+                                    <Skeleton className="h-3 w-16" />
+                                    <Skeleton className="h-3 w-10" />
+                                    <Skeleton className="h-3 w-12" />
                                   </div>
-                                ))}
-                              </div>
+
+                                  {/* Table Rows Skeleton */}
+                                  {Array.from({ length: 3 }).map((_, i) => (
+                                    <div key={i} className="flex items-center space-x-3 py-2 border-b">
+                                      <Skeleton className="h-4 w-8" />
+                                      <Skeleton className="h-3 w-6" />
+                                      <Skeleton className="h-3 w-12" />
+                                      <Skeleton className="h-3 w-10" />
+                                      <Skeleton className="h-3 w-14" />
+                                      <Skeleton className="h-3 w-12" />
+                                      <Skeleton className="h-6 w-14" />
+                                    </div>
+                                  ))}
+                                </div>
+                              </>
                             ) : (
                               <Table>
                                 <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
@@ -2388,7 +2450,7 @@ function EmployeeDashboard() {
                               </div>
                               <input
                                 type="text"
-                                placeholder="Search by employee, evaluator, supervisor, rating, or quarter..."
+                                placeholder="Search by employee, evaluator, supervisor,."
                                 value={historySearchTerm}
                                 onChange={(e) => setHistorySearchTerm(e.target.value)}
                                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -2577,33 +2639,51 @@ function EmployeeDashboard() {
         return (
           <div className="relative">
             {isRefreshingAccountHistory || loading ? (
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-3 w-60" />
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {/* Tabs Skeleton */}
-                    <div className="flex space-x-2">
-                      <Skeleton className="h-6 w-24" />
-                      <Skeleton className="h-6 w-20" />
+              <div className="relative min-h-[500px]">
+                {/* Centered Loading Spinner with Logo */}
+                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                    <div className="relative">
+                      {/* Spinning ring */}
+                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                      {/* Logo in center */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                      </div>
                     </div>
-
-                    {/* Table Content Skeleton */}
-                    <div className="space-y-2">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className="flex items-center space-x-3 py-2 border-b">
-                          <Skeleton className="h-3 w-20" />
-                          <Skeleton className="h-3 w-16" />
-                          <Skeleton className="h-3 w-14" />
-                          <Skeleton className="h-3 w-12" />
-                        </div>
-                      ))}
-                    </div>
+                    <p className="text-sm text-gray-600 font-medium">Loading account history...</p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+
+                {/* Card skeleton visible in background */}
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-3 w-60" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {/* Tabs Skeleton */}
+                      <div className="flex space-x-2">
+                        <Skeleton className="h-6 w-24" />
+                        <Skeleton className="h-6 w-20" />
+                      </div>
+
+                      {/* Table Content Skeleton */}
+                      <div className="space-y-2">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className="flex items-center space-x-3 py-2 border-b">
+                            <Skeleton className="h-3 w-20" />
+                            <Skeleton className="h-3 w-16" />
+                            <Skeleton className="h-3 w-14" />
+                            <Skeleton className="h-3 w-12" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             ) : (
               <Card>
                 <CardHeader>
@@ -2613,19 +2693,6 @@ function EmployeeDashboard() {
                 <CardContent>
                   {/* Account History Section */}
                   <div className="mt-6">
-                    {/* Refreshing Dialog for Account History Table */}
-                    {showRefreshingDialog && (
-                      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                          <div>
-                            <h4 className="text-sm font-medium text-blue-900">Refreshing...</h4>
-                            <p className="text-xs text-blue-700">{refreshingMessage}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
                     {/* Search Bar */}
                     <div className="mb-6 w-1/3">
                       <div className="relative">

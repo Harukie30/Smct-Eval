@@ -804,6 +804,7 @@ function LandingLoginPage() {
       <ForgotPasswordModal
         isOpen={showForgotPasswordModal}
         onCloseAction={() => setShowForgotPasswordModal(false)}
+        onContactDevsAction={() => setShowContactDevsModal(true)}
       />
 
       {/* Role Selection Modal */}
