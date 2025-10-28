@@ -13,23 +13,17 @@ import clientDataService from "@/lib/clientDataService"; // still used for fetch
 import RealLoadingScreen from "@/components/RealLoadingScreen";
 import { CONFIG } from "../../config/config";
 export interface AuthenticatedUser {
-  id: number;
-  username: string;
+   id?: string | number;
   fname: string;
   lname: string;
+  roles: { id: number; name: string }[];
   email: string;
-  role: string;
-  position_id: string;
-  department_id?: string;
-  branch_id: string;
-  availableRoles?: string[];
-  hireDate?: string;
   avatar?: string;
+  departments?: { value: number | string; label: string };
+  branches: { value: number | string; branch_name: string };
+  positions: { value: number | string; label: string }  ;
   bio?: string;
   signature?: string;
-  full_name?: string;
-  isActive: string;
-  roles: { id: number; name: string }[];
 }
 
 interface UserContextType {
@@ -91,13 +85,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         },
         body: JSON.stringify({ username, password }),
       });
+      await fetchUser();
 
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || "Invalid credentials");
       }
 
-      await fetchUser();
       return user;
     } catch (error) {
       setUser(null);
@@ -131,7 +125,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   // 🔁 Switch active role
   const switchRole = (role: string) => {
-    if (user && user.availableRoles?.includes(role)) {
+    if (user && user.roles) {
       const updated = { ...user, role, activeRole: role };
       setUser(updated);
       toastMessages.generic.success(

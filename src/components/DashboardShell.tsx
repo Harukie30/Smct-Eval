@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Bell, X, Trash2, MessageCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-// import ProfileCard, { fetchUser } from "./ProfileCard";
+import ProfileCard, { UserProfile } from "./ProfileCard";
 import ProfileModal from "./ProfileModal";
 import ContactDevsModal from "./ContactDevsModal";
 import { useAuth } from '@/contexts/UserContext';
@@ -28,8 +28,8 @@ type DashboardShellProps = {
   onChangeActive: (id: string) => void;
   topSummary: React.ReactNode;
   children: React.ReactNode;
-  // profile?: fetchUser | null;
-  // onSaveProfile?: (updatedProfile: fetchUser) => void;
+  profile?: UserProfile | null;
+  onSaveProfile?: (updatedProfile: UserProfile) => void;
 };
 
 export default function DashboardShell(props: DashboardShellProps) {
@@ -41,8 +41,8 @@ export default function DashboardShell(props: DashboardShellProps) {
     onChangeActive,
     topSummary,
     children,
-    // profile,
-    // onSaveProfile,
+    profile,
+    onSaveProfile,
   } = props;
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -53,11 +53,11 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
 
-  const { user, logout } = useAuth();
+  const {  user, logout } = useAuth();
   const router = useRouter();
   
   // Get user role for notifications
-  const userRole = user?.roles[0].name || 'employee';
+  const userRole = user?.roles[0]?.name || 'employee';
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(userRole);
 
   // Close notification panel when clicking outside
@@ -81,20 +81,20 @@ export default function DashboardShell(props: DashboardShellProps) {
     setIsProfileModalOpen(true);
   };
 
-  // const handleSaveProfile = async (updatedProfile: fetchUser) => {
-  //   try {
-  //     // Update in context
-  //     // updateProfile(updatedProfile);
+  const handleSaveProfile = async (updatedProfile: UserProfile) => {
+    try {
+      // Update in context
+      // updateProfile(updatedProfile);
 
-  //     // Call parent callback if provided
-  //     if (onSaveProfile) {
-  //       await onSaveProfile(updatedProfile);
-  //     }
-  //     setIsProfileModalOpen(false);
-  //   } catch (error) {
-  //     console.error('Error saving profile:', error);
-  //   }
-  // };
+      // Call parent callback if provided
+      if (onSaveProfile) {
+        await onSaveProfile(updatedProfile);
+      }
+      setIsProfileModalOpen(false);
+    } catch (error) {
+      console.error('Error saving profile:', error);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -277,17 +277,17 @@ export default function DashboardShell(props: DashboardShellProps) {
                 </div>
               )}
             </div>
-{/* 
-            {fetchUser && (
+
+            {user && (
               <ProfileCard
-                profile={fetchUser}
+                profile={user}
                 variant="header"
                 showLogout={true}
                 showSettings={false}
                 onEditProfile={handleEditProfile}
                 onLogout={handleLogout}
               />
-            )} */}
+            )}
           </div>
         </div>
       </header>
@@ -363,14 +363,14 @@ export default function DashboardShell(props: DashboardShellProps) {
       </div>
 
       {/* Profile Modal */}
-      {/* {fetchUser && (
+      {user && (
         <ProfileModal
           isOpen={isProfileModalOpen}
           onClose={() => setIsProfileModalOpen(false)}
-          profile={fetchUser}
+          profile={user}
           onSave={handleSaveProfile}
         />
-      )} */}
+      )}
 
       {/* Contact Developers Modal */}
       <ContactDevsModal
@@ -497,5 +497,3 @@ export default function DashboardShell(props: DashboardShellProps) {
     </div>
   );
 }
-
-

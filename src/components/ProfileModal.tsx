@@ -7,17 +7,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserProfile } from './ProfileCard';
 import { User, Camera, Save, X } from 'lucide-react';
-import { uploadProfileImage, deleteProfileImage } from '@/lib/imageUpload';
+import { uploadProfileImage } from '@/lib/imageUpload';
 // Removed profileService import - we'll use UserContext directly
 import SignaturePad from '@/components/SignaturePad';
 import { useToast } from '@/hooks/useToast';
 import LoadingAnimation from '@/components/LoadingAnimation';
-import clientDataService from '@/lib/clientDataService';
+import clientDataService from '@/lib/clientDataService.api';
+import { CONFIG } from '../../config/config';
 
 interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  profile: UserProfile & { id?: string | number };
+  profile: UserProfile;
   onSave: (updatedProfile: UserProfile) => void;
 }
 
@@ -30,8 +31,6 @@ export default function ProfileModal({
   const [formData, setFormData] = useState<UserProfile>(profile);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
-  const [positions, setPositions] = useState<{id: string, name: string}[]>([]);
   const { success } = useToast();
 
   // Reset form data when profile changes
@@ -40,44 +39,36 @@ export default function ProfileModal({
     setErrors({});
   }, [profile]);
 
-  // Load branches and positions data
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [branchesData, positionsData] = await Promise.all([
-          clientDataService.getBranches(),
-          clientDataService.getPositions()
-        ]);
-        setBranches(branchesData);
-        setPositions(positionsData);
-      } catch (error) {
-        console.error('Error loading data:', error);
-      }
-    };
-    loadData();
-  }, []);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+    if (!formData.fname.trim()) {
+      newErrors.fname = 'Name is required';
+    }
+    
+    if (!formData.lname.trim()) {
+      newErrors.lname = 'Name is required';
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    if (formData.name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters long';
+    if (formData.fname.trim().length < 2) {
+      newErrors.fname = 'Name must be at least 2 characters long';
+    }
+    
+    if (formData.lname.trim().length < 2) {
+      newErrors.lname = 'Name must be at least 2 characters long';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  };  
 
   const handleInputChange = (field: keyof UserProfile, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({ ...prev, [field]: value  }));
     
     // Clear error when user starts typing
     if (errors[field]) {
@@ -95,7 +86,7 @@ export default function ProfileModal({
 
       try {
         setIsLoading(true);
-        const imageUrl = await uploadProfileImage(file);
+        const imageUrl = await uploadProfileImage(file, profile.username as string);
         setFormData(prev => ({ ...prev, avatar: imageUrl }));
         setErrors(prev => ({ ...prev, avatar: '' }));
       } catch (error) {
@@ -119,15 +110,6 @@ export default function ProfileModal({
       // Add a small delay to show the loading animation
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // If avatar changed and old avatar exists, delete the old one
-      if (formData.avatar !== profile.avatar && profile.avatar && !profile.avatar.startsWith('data:')) {
-        try {
-          await deleteProfileImage(profile.avatar);
-        } catch (error) {
-          console.warn('Failed to delete old avatar:', error);
-        }
-      }
-
       // Call onSave directly - this will update the UserContext and localStorage
       await onSave(formData);
       
@@ -166,16 +148,16 @@ export default function ProfileModal({
                 {formData.avatar ? (
                   <img 
                     src={formData.avatar} 
-                    alt={formData.name} 
+                    alt={formData.fname} 
                     className="h-24 w-24 rounded-full object-cover"
                   />
                 ) : (
-                  formData.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                  formData.fname.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
                 )}
               </div>
               <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
                 <Camera className="w-4 h-4" />
-                <input
+                <Input
                   type="file"
                   accept="image/*"
                   onChange={handleAvatarChange}
@@ -191,22 +173,37 @@ export default function ProfileModal({
             </p>
           </div>
 
-          {/* Form Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-10">
-            {/* Name */}
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* First Name */}
             <div className="space-y-1.5">
-              <Label htmlFor="name" className="text-sm font-medium">
-                Full Name *
+              <Label htmlFor="fname" className="text-sm font-medium">
+                First Name *
               </Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                placeholder="Enter your full name"
-                className={errors.name ? 'border-red-500' : ''}
+                id="fname"
+                value={formData.fname ?? ""}
+                onChange={(e) => handleInputChange('fname', e.target.value)}
+                placeholder="Enter your first name"
+                className={errors.fname ? 'border-red-500' : ''}
               />
-              {errors.name && (
-                <p className="text-sm text-red-600">{errors.name}</p>
+              {errors.fname && (
+                <p className="text-sm text-red-600">{errors.fname}</p>
+              )}
+            </div>
+            {/* Last Name */}
+            <div className="space-y-1.5">
+              <Label htmlFor="lname" className="text-sm font-medium">
+                Last Name *
+              </Label>
+              <Input
+                id="lname"
+                value={formData.lname ?? ""}
+                onChange={(e) => handleInputChange('lname', e.target.value)}
+                placeholder="Enter your last name"
+                className={errors.fname ? 'border-red-500' : ''}
+              />
+              {errors.fname && (
+                <p className="text-sm text-red-600">{errors.lname}</p>
               )}
             </div>
 
@@ -229,63 +226,55 @@ export default function ProfileModal({
             </div>
 
             {/* Role/Position */}
-            <div className="space-y-1.5">
-              <Label htmlFor="roleOrPosition" className="text-sm font-medium">
-                Role/Position
+              <div className="space-y-1.5">
+              <Label htmlFor="" className="text-sm font-medium">
+               Position
               </Label>
-              <Select
-                value={formData.roleOrPosition || ''}
-                onValueChange={(value) => handleInputChange('roleOrPosition', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select your position" />
-                </SelectTrigger>
-                <SelectContent>
-                  {positions.map((position) => (
-                    <SelectItem key={position.id} value={position.id}>
-                      {position.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                id="position"
+                value={formData.positions?.label ?? ""}
+                className={errors.fname ? 'border-red-500' : ''}
+                readOnly
+              />
+              {errors.position && (
+                <p className="text-sm text-red-600">{errors.position}</p>
+              )}
             </div>
 
-            {/* Department */}
+          {/* Department */}
+          <div className={formData.departments ? "" : "hidden"}>
             <div className="space-y-1.5">
-              <Label htmlFor="department" className="text-sm font-medium">
-                Department
+              <Label htmlFor="" className="text-sm font-medium">
+               Department
               </Label>
               <Input
                 id="department"
-                value={formData.department || ''}
-                onChange={(e) => handleInputChange('department', e.target.value)}
-                placeholder="e.g., Engineering, HR, Sales"
+                value={formData.departments?.label ?? ""}
+                className={errors.department ? 'border-red-500' : ''}
+                readOnly
               />
-            </div>
-
-            {/* Branch */}
-            <div className="space-y-1.5">
-              <Label htmlFor="branch" className="text-sm font-medium">
-                Branch
-              </Label>
-              <Select
-                value={formData.branch || ''}
-                onValueChange={(value) => handleInputChange('branch', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select your branch" />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {errors.department && (
+                <p className="text-sm text-red-600">{errors.department}</p>
+              )}
             </div>
           </div>
 
+            {/* Branch */}
+            <div className="space-y-1.5">
+              <Label htmlFor="" className="text-sm font-medium">
+               Branch
+              </Label>
+              <Input
+                id="branch"
+                value={formData.branches.branch_name ?? ""}
+                className={errors.branches ? 'border-red-500' : ''}
+                readOnly
+              />
+              {errors.branch && (
+                <p className="text-sm text-red-600">{errors.branch}</p>
+              )}
+            </div>
+          </div>
           {/* Additional Information */}
           <div className="space-y-2">
             <Label htmlFor="bio" className="text-sm font-medium">
@@ -306,7 +295,7 @@ export default function ProfileModal({
               Digital Signature
             </Label>
             <SignaturePad
-              value={formData.signature || ''}
+              value={`${CONFIG.STORAGE_URL}/${formData.signature}` || ''}
               onChangeAction={(signature) => handleInputChange('signature', signature)}
               className="w-full"
               required={false}

@@ -37,7 +37,7 @@ export default function ProtectedRoute({
   useEffect(() => {
     if (!isLoading && isAuthenticated && requiredRole) {
       const hasRequiredRole = Array.isArray(requiredRole)
-        ? requiredRole.includes(user?.role || "")
+        ? requiredRole.includes(user?.roles[0] || "")
         : user?.role === requiredRole;
 
       if (!hasRequiredRole) {

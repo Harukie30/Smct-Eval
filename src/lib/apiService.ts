@@ -22,7 +22,7 @@ export const apiService = {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        Accept: 'application/json',
+        "Accept": 'application/json',
       },
       body: JSON.stringify({ username, password }),
     });
@@ -51,7 +51,7 @@ export const apiService = {
   const res = await fetch(`${CONFIG.API_URL}/register`, {
           method: "POST",
           headers: {
-            Accept: "application/json",
+            "Accept": "application/json",
             "X-Requested-With": "XMLHttpRequest",
           },
           body: formData,
@@ -153,14 +153,26 @@ export const apiService = {
     // return response.profile;
   },
 
-  getProfile: async (id: number): Promise<any> => {
-    try {
-      const response = await fetch(`/api/profiles/${id}`);
-      // return response.profile || null;
-    } catch (error) {
-      return null;
-    }
-  },
-};
+uploadAvatar: async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('image', file);
 
+    const response = await fetch(`${CONFIG.API_URL}/upload_avatar`, {
+      credentials: 'include',
+      method: 'PATCH',
+      headers: {
+        "Content-Type": 'multipart/form-data',
+        "Accept": 'application/json',
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Image upload failed');
+    }
+
+    const data = await response.json();
+    return data.imageUrl;
+  },
+}
 export default apiService;

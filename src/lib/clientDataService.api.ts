@@ -37,13 +37,9 @@ export const clientDataService = {
   },
 
   // Profile management - now uses API
-  updateProfile: async (id: number, updates: Partial<Profile>): Promise<Profile> => {
-    return await apiService.updateProfile(id, updates);
-  },
-
-  getProfile: async (id: number): Promise<Profile | null> => {
-    return await apiService.getProfile(id);
-  },
+  // updateProfile: async (id: number, updates: Partial<Profile>): Promise<Profile> => {
+  //   return await apiService.updateProfile(id, updates);
+  // },
 
   // Employee management - you'll need to implement these API endpoints
   getEmployees: async (): Promise<Employee[]> => {
@@ -155,10 +151,8 @@ export const clientDataService = {
   },
 
   // Image upload - you'll need to implement this API endpoint
-  uploadImage: async (file: File): Promise<string> => {
-    // TODO: Implement POST /api/upload/image
-    console.warn('uploadImage: API endpoint not implemented yet');
-    throw new Error('Not implemented');
+  uploadAvatar: async (file: File): Promise<string> => {
+    return await apiService.uploadAvatar(file);
   },
 };
 
