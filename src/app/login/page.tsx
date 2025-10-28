@@ -29,8 +29,10 @@ import { useAuth } from "@/contexts/UserContext";
 import { useRouter } from "next/navigation";
 import { toastMessages } from "@/lib/toastMessages";
 import clientDataService from "@/lib/clientDataService";
+import ContactDevsModal from "@/components/ContactDevsModal";
 
 export default function LandingLoginPage() {
+  const [showContactDevsModal, setShowContactDevsModal] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -286,12 +288,6 @@ export default function LandingLoginPage() {
           >
             About
           </button>
-          <a
-            href="#"
-            className="text-white font-semibold hover:underline-offset-4 hover:underline hover:text-blue-100"
-          >
-            Contact
-          </a>
         </nav>
       </header>
 
@@ -451,21 +447,6 @@ export default function LandingLoginPage() {
                           required
                         />
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          id="remember-me"
-                          type="checkbox"
-                          checked={rememberMe}
-                          onChange={(e) => setRememberMe(e.target.checked)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <Label
-                          htmlFor="remember-me"
-                          className="text-sm text-gray-600"
-                        >
-                          Remember me
-                        </Label>
-                      </div>
                       {loginError && (
                         <div className="text-red-600 text-sm text-center bg-red-50 p-2 rounded">
                           {loginError}
@@ -558,26 +539,13 @@ export default function LandingLoginPage() {
               <h3 className="font-semibold text-white mb-4">Resources</h3>
               <ul className="space-y-2">
                 <li>
-                  <a href="#" className="text-white hover:text-yellow-300">
-                    Help Center
-                  </a>
+                  <a href="#" onClick={(e) => { e.preventDefault();  setShowContactDevsModal(true)}} className="text-white hover:text-yellow-300">Help Center</a>
                 </li>
               </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold text-white mb-4">Company</h3>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="text-white hover:text-yellow-300">
-                    About Us
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-white hover:text-yellow-300">
-                    Contact
-                  </a>
-                </li>
-              </ul>
+              <ContactDevsModal
+                isOpen={showContactDevsModal}
+                onCloseAction={() => setShowContactDevsModal(false)}
+              />
             </div>
           </div>
           <div className="border-t border-blue-500 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
