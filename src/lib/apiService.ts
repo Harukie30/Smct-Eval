@@ -13,36 +13,37 @@ export const sanctum_csrf = async () => {
 };
 
 export const apiService = {
+
   // Authentication
-//  login: async (username: string, password: string) => {
-//     await sanctum_csrf();
-//     const res = await fetch(`${CONFIG.API_URL}/login`, {
-//       method: 'POST',
-//       credentials: 'include',
-//       headers: {
-//         'Content-Type': 'application/json',
-//         Accept: 'application/json',
-//       },
-//       body: JSON.stringify({ username, password }),
-//     });
+ login: async (username: string, password: string) => {
+    // await sanctum_csrf();
+    const res = await fetch(`${CONFIG.API_URL}/login`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ username, password }),
+    });
 
-//     const data = await res.json();
+    const data = await res.json();
 
-//     if (!res.ok) throw new Error(data.message || 'Invalid credentials');
+    if (!res.ok) throw new Error(data.message || 'Invalid credentials');
 
-//     return data;
-//   },
+    return data;
+  },
 
-//   getUser: async () => {
-//     const res = await fetch(`${CONFIG.API_URL}/current_user`, {
-//       credentials: 'include',
-//     });
+  getUser: async () => {
+    const res = await fetch(`${CONFIG.API_URL}/current_user`, {
+      credentials: 'include',
+    });
 
-//     if (!res.ok) return null;
+    if (!res.ok) return null;
 
-//     const data = await res.json();
-//     return data.current_user || data; // handle both structures
-//   },
+    const data = await res.json();
+    return data.current_user || data; // handle both structures
+  },
 
 
   // Registration
