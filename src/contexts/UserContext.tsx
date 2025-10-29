@@ -13,15 +13,16 @@ import clientDataService from "@/lib/clientDataService"; // still used for fetch
 import RealLoadingScreen from "@/components/RealLoadingScreen";
 import { CONFIG } from "../../config/config";
 export interface AuthenticatedUser {
-   id?: string | number;
+  id?: string | number;
   fname: string;
   lname: string;
+  username: string;
   roles: { id: number; name: string }[];
   email: string;
   avatar?: string;
   departments?: { value: number | string; label: string };
   branches: { value: number | string; branch_name: string };
-  positions: { value: number | string; label: string }  ;
+  positions: { value: number | string; label: string };
   bio?: string;
   signature?: string;
 }
@@ -37,6 +38,7 @@ interface UserContextType {
   logout: () => Promise<void>;
   refreshUserData: () => Promise<void>;
   switchRole: (role: string) => void;
+  fetchUser?: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -51,7 +53,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const fetchUser = async () => {
     try {
       const res = await fetch(`${CONFIG.API_URL}/profile`, {
-        credentials: "include", 
+        credentials: "include",
       });
 
       if (!res.ok) throw new Error("Not authenticated");
@@ -66,39 +68,33 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    fetchUser(); 
+    fetchUser();
   }, []);
 
   const login = async (username: string, password: string) => {
     setIsLoading(true);
-    try {
       await fetch(`http://localhost:8000/sanctum/csrf-cookie`, {
         credentials: "include",
       });
-
+      
       const res = await fetch(`${CONFIG.API_URL}/login`, {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Accept: "application/json",
+          "Accept": "application/json",
         },
         body: JSON.stringify({ username, password }),
       });
-      await fetchUser();
-
+      
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Invalid credentials");
+        setIsLoading(false);
+        return null;
       }
-
+      
+      await fetchUser();
       return user;
-    } catch (error) {
-      setUser(null);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
+   
   };
 
   const logout = async () => {
@@ -143,6 +139,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     logout,
     refreshUserData,
     switchRole,
+    fetchUser,
   };
 
   return (

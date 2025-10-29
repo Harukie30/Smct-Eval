@@ -1,14 +1,9 @@
 import clientDataService from './clientDataService.api';
 
-export async function uploadProfileImage(file: File): Promise<any | null> {
-  try {
+export async function uploadProfileImage(formData :FormData): Promise<any | null> {
     // Use client-side image upload (converts to data URL)
-    const imageUrl = await clientDataService.uploadAvatar(file);
+    const imageUrl = await clientDataService.uploadAvatar(formData);
     return imageUrl;
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    throw error;
-  }
 }
 
 // export async function deleteProfileImage(imageUrl: string): Promise<void> {

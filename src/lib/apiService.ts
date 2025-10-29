@@ -7,7 +7,7 @@ import { CONFIG } from '../../config/config';
 
 // Helper function to get auth token
 export const sanctum_csrf = async () => {
-  await fetch(`${CONFIG.API_URL}/sanctum/csrf-cookie`, {
+  await fetch(`http://localhost:8000/sanctum/csrf-cookie`, {
     credentials: 'include',
   });
 };
@@ -153,15 +153,14 @@ export const apiService = {
     // return response.profile;
   },
 
-uploadAvatar: async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('image', file);
+uploadAvatar: async (formData : FormData): Promise<any> => {
+
+    await sanctum_csrf();
 
     const response = await fetch(`${CONFIG.API_URL}/upload_avatar`, {
+      method: 'POST',
       credentials: 'include',
-      method: 'PATCH',
       headers: {
-        "Content-Type": 'multipart/form-data',
         "Accept": 'application/json',
       },
       body: formData,
@@ -172,7 +171,7 @@ uploadAvatar: async (file: File): Promise<string> => {
     }
 
     const data = await response.json();
-    return data.imageUrl;
+    return data;
   },
 }
 export default apiService;

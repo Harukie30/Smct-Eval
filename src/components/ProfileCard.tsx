@@ -1,11 +1,13 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { LogOut, User, Settings } from 'lucide-react';
+import { CONFIG } from '../../config/config';
 
 export type UserProfile = {
   id?: string | number;
   fname: string;
   lname: string;
+  username: string;
   roles: { id: number; name: string }[];
   email: string;
   avatar?: string;
@@ -73,7 +75,7 @@ export default function ProfileCard({
       <div className={`flex items-center space-x-3 ${className}`}>
         <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
           {profile.avatar ? (
-            <img src={profile.avatar} alt={profile.fname} className="h-8 w-8 rounded-full" />
+            <img src={`${CONFIG.STORAGE_URL}/${profile.avatar}`} alt={profile.fname} className="h-8 w-8 rounded-full" />
           ) : (
             getInitials(profile.fname)
           )}

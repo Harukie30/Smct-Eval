@@ -151,8 +151,8 @@ export const clientDataService = {
   },
 
   // Image upload - you'll need to implement this API endpoint
-  uploadAvatar: async (file: File): Promise<string> => {
-    return await apiService.uploadAvatar(file);
+  uploadAvatar: async (formData: FormData): Promise<string> => {
+    return await apiService.uploadAvatar(formData);
   },
 };
 

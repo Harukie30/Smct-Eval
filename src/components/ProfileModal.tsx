@@ -1,19 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserProfile } from './ProfileCard';
-import { User, Camera, Save, X } from 'lucide-react';
-import { uploadProfileImage } from '@/lib/imageUpload';
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { UserProfile } from "./ProfileCard";
+import { User, Camera, Save, X } from "lucide-react";
+import { uploadProfileImage } from "@/lib/imageUpload";
 // Removed profileService import - we'll use UserContext directly
-import SignaturePad from '@/components/SignaturePad';
-import { useToast } from '@/hooks/useToast';
-import LoadingAnimation from '@/components/LoadingAnimation';
-import clientDataService from '@/lib/clientDataService.api';
-import { CONFIG } from '../../config/config';
+import SignaturePad from "@/components/SignaturePad";
+import { useToast } from "@/hooks/useToast";
+import LoadingAnimation from "@/components/LoadingAnimation";
+import clientDataService from "@/lib/clientDataService.api";
+import { CONFIG } from "../../config/config";
+import { useAuth } from "@/contexts/UserContext";
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -32,6 +44,7 @@ export default function ProfileModal({
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { success } = useToast();
+  const { fetchUser } = useAuth();
 
   // Reset form data when profile changes
   useEffect(() => {
@@ -39,68 +52,81 @@ export default function ProfileModal({
     setErrors({});
   }, [profile]);
 
-
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.fname.trim()) {
-      newErrors.fname = 'Name is required';
+      newErrors.fname = "Name is required";
     }
-    
+
     if (!formData.lname.trim()) {
-      newErrors.lname = 'Name is required';
+      newErrors.lname = "Name is required";
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address";
     }
 
     if (formData.fname.trim().length < 2) {
-      newErrors.fname = 'Name must be at least 2 characters long';
+      newErrors.fname = "Name must be at least 2 characters long";
     }
-    
+
     if (formData.lname.trim().length < 2) {
-      newErrors.lname = 'Name must be at least 2 characters long';
+      newErrors.lname = "Name must be at least 2 characters long";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };  
+  };
 
   const handleInputChange = (field: keyof UserProfile, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value  }));
-    
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
-  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        setErrors(prev => ({ ...prev, avatar: 'File size must be less than 5MB' }));
-        return;
-      }
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      // 5MB limit
+      setErrors((prev) => ({
+        ...prev,
+        avatar: "File size must be less than 5MB",
+      }));
+      return;
+    }
 
-      try {
-        setIsLoading(true);
-        const imageUrl = await uploadProfileImage(file, profile.username as string);
-        setFormData(prev => ({ ...prev, avatar: imageUrl }));
-        setErrors(prev => ({ ...prev, avatar: '' }));
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        setErrors(prev => ({ ...prev, avatar: 'Failed to upload image. Please try again.' }));
-      } finally {
-        setIsLoading(false);
-      }
+    try {
+      setIsLoading(true);
+      const formData = new FormData();
+      formData.append("file", file);
+      const imageUrl = await uploadProfileImage(formData);
+      setFormData((prev) => ({
+        ...prev,
+        avatar: `user-avatars/${imageUrl.img_url}`,
+      }));
+      setErrors((prev) => ({ ...prev, avatar: "" })); // Clear any previous error
+      fetchUser?.();
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      setErrors((prev) => ({
+        ...prev,
+        avatar: "Failed to upload image. Please try again.",
+      }));
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -108,17 +134,20 @@ export default function ProfileModal({
     setIsLoading(true);
     try {
       // Add a small delay to show the loading animation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Call onSave directly - this will update the UserContext and localStorage
       await onSave(formData);
-      
+
       // Show success toast
-      success('Profile updated successfully!');
+      success("Profile updated successfully!");
       onClose();
     } catch (error) {
-      console.error('Error saving profile:', error);
-      setErrors(prev => ({ ...prev, general: 'Failed to save profile. Please try again.' }));
+      console.error("Error saving profile:", error);
+      setErrors((prev) => ({
+        ...prev,
+        general: "Failed to save profile. Please try again.",
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -134,7 +163,7 @@ export default function ProfileModal({
     <Dialog open={isOpen} onOpenChangeAction={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto px-6 py-6 animate-popup">
         <DialogHeader className="px-1 ">
-        <DialogTitle className="flex items-center gap-2 text-xl bg-blue-200 px-3 py-2 rounded-lg">
+          <DialogTitle className="flex items-center gap-2 text-xl bg-blue-200 px-3 py-2 rounded-lg">
             <User className="w-5 h-5" />
             Edit Profile
           </DialogTitle>
@@ -146,13 +175,18 @@ export default function ProfileModal({
             <div className="relative">
               <div className="h-24 w-24 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-2xl">
                 {formData.avatar ? (
-                  <img 
-                    src={formData.avatar} 
-                    alt={formData.fname} 
+                  <img
+                    src={`${CONFIG.STORAGE_URL}/${formData.avatar}` || ""}
+                    alt={formData.fname}
                     className="h-24 w-24 rounded-full object-cover"
                   />
                 ) : (
-                  formData.fname.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                  formData.fname
+                    .split(" ")
+                    .map((n) => n[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase()
                 )}
               </div>
               <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
@@ -173,7 +207,7 @@ export default function ProfileModal({
             </p>
           </div>
 
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* First Name */}
             <div className="space-y-1.5">
               <Label htmlFor="fname" className="text-sm font-medium">
@@ -182,9 +216,9 @@ export default function ProfileModal({
               <Input
                 id="fname"
                 value={formData.fname ?? ""}
-                onChange={(e) => handleInputChange('fname', e.target.value)}
+                onChange={(e) => handleInputChange("fname", e.target.value)}
                 placeholder="Enter your first name"
-                className={errors.fname ? 'border-red-500' : ''}
+                className={errors.fname ? "border-red-500" : ""}
               />
               {errors.fname && (
                 <p className="text-sm text-red-600">{errors.fname}</p>
@@ -198,9 +232,9 @@ export default function ProfileModal({
               <Input
                 id="lname"
                 value={formData.lname ?? ""}
-                onChange={(e) => handleInputChange('lname', e.target.value)}
+                onChange={(e) => handleInputChange("lname", e.target.value)}
                 placeholder="Enter your last name"
-                className={errors.fname ? 'border-red-500' : ''}
+                className={errors.fname ? "border-red-500" : ""}
               />
               {errors.fname && (
                 <p className="text-sm text-red-600">{errors.lname}</p>
@@ -215,10 +249,10 @@ export default function ProfileModal({
               <Input
                 id="email"
                 type="email"
-                value={formData.email || ''}
-                onChange={(e) => handleInputChange('email', e.target.value)}
+                value={formData.email || ""}
+                onChange={(e) => handleInputChange("email", e.target.value)}
                 placeholder="Enter your email address"
-                className={errors.email ? 'border-red-500' : ''}
+                className={errors.email ? "border-red-500" : ""}
               />
               {errors.email && (
                 <p className="text-sm text-red-600">{errors.email}</p>
@@ -226,14 +260,14 @@ export default function ProfileModal({
             </div>
 
             {/* Role/Position */}
-              <div className="space-y-1.5">
+            <div className="space-y-1.5">
               <Label htmlFor="" className="text-sm font-medium">
-               Position
+                Position
               </Label>
               <Input
                 id="position"
                 value={formData.positions?.label ?? ""}
-                className={errors.fname ? 'border-red-500' : ''}
+                className={errors.fname ? "border-red-500" : ""}
                 readOnly
               />
               {errors.position && (
@@ -241,33 +275,33 @@ export default function ProfileModal({
               )}
             </div>
 
-          {/* Department */}
-          <div className={formData.departments ? "" : "hidden"}>
-            <div className="space-y-1.5">
-              <Label htmlFor="" className="text-sm font-medium">
-               Department
-              </Label>
-              <Input
-                id="department"
-                value={formData.departments?.label ?? ""}
-                className={errors.department ? 'border-red-500' : ''}
-                readOnly
-              />
-              {errors.department && (
-                <p className="text-sm text-red-600">{errors.department}</p>
-              )}
+            {/* Department */}
+            <div className={formData.departments ? "" : "hidden"}>
+              <div className="space-y-1.5">
+                <Label htmlFor="" className="text-sm font-medium">
+                  Department
+                </Label>
+                <Input
+                  id="department"
+                  value={formData.departments?.label ?? ""}
+                  className={errors.department ? "border-red-500" : ""}
+                  readOnly
+                />
+                {errors.department && (
+                  <p className="text-sm text-red-600">{errors.department}</p>
+                )}
+              </div>
             </div>
-          </div>
 
             {/* Branch */}
             <div className="space-y-1.5">
               <Label htmlFor="" className="text-sm font-medium">
-               Branch
+                Branch
               </Label>
               <Input
                 id="branch"
                 value={formData.branches.branch_name ?? ""}
-                className={errors.branches ? 'border-red-500' : ''}
+                className={errors.branches ? "border-red-500" : ""}
                 readOnly
               />
               {errors.branch && (
@@ -282,8 +316,8 @@ export default function ProfileModal({
             </Label>
             <Textarea
               id="bio"
-              value={formData.bio || ''}
-              onChange={(e) => handleInputChange('bio', e.target.value)}
+              value={formData.bio || ""}
+              onChange={(e) => handleInputChange("bio", e.target.value)}
               placeholder="Tell us a bit about yourself..."
               rows={3}
             />
@@ -295,14 +329,17 @@ export default function ProfileModal({
               Digital Signature
             </Label>
             <SignaturePad
-              value={`${CONFIG.STORAGE_URL}/${formData.signature}` || ''}
-              onChangeAction={(signature) => handleInputChange('signature', signature)}
+              value={`${CONFIG.STORAGE_URL}/${formData.signature}` || ""}
+              onChangeAction={(signature) =>
+                handleInputChange("signature", signature)
+              }
               className="w-full"
               required={false}
               hasError={false}
             />
             <p className="text-sm text-gray-500">
-              Update your digital signature for official documents and approvals.
+              Update your digital signature for official documents and
+              approvals.
             </p>
           </div>
 
