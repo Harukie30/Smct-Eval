@@ -39,7 +39,6 @@ export default function ProfileModal({
   const { success } = useToast();
   const { fetchUser } = useAuth();
 
-  console.log("ProfileModal formData:", profile.signature);
   // Reset form data when profile changes
   useEffect(() => {
     setFormData(profile);
@@ -64,7 +63,7 @@ export default function ProfileModal({
     if (formData.email.trim().length < 1) {
       newErrors.email = "Email must be filled out";
     }
-    
+
     if (formData.fname.trim().length < 2) {
       newErrors.fname = "Name must be at least 2 characters long";
     }
@@ -286,7 +285,7 @@ export default function ProfileModal({
                 </Label>
                 <Input
                   id="department"
-                  value={formData.departments?.label ?? ""}
+                  value={formData.departments?.department_name ?? ""}
                   className={errors.department ? "border-red-500" : ""}
                   readOnly
                 />

@@ -11,7 +11,7 @@ export type UserProfile = {
   roles: { id: number; name: string }[];
   email: string;
   avatar?: string;
-  departments?: { value: number | string; label: string };
+  departments?: { value: number | string; department_name: string };
   branches: { value: number | string; branch_name: string };
   positions: { value: number | string; label: string }  ;
   bio?: string;
@@ -138,7 +138,7 @@ export default function ProfileCard({
             <p className="text-xs text-gray-500 truncate">{profile.roles[0].name}</p>
           )}
           {profile.departments && (
-            <p className="text-xs text-gray-400 truncate">{profile.departments.label}</p>
+            <p className="text-xs text-gray-400 truncate">{profile.departments.department_name}</p>
           )}
           {profile.branches && (
             <>
@@ -192,7 +192,7 @@ export default function ProfileCard({
             <p className="text-blue-100 text-xs truncate">{profile.roles[0].name}</p>
           )}
           {profile.departments && (
-            <p className="text-blue-100 text-xs truncate">{profile.departments.label}</p>
+            <p className="text-blue-100 text-xs truncate">{profile.departments.department_name}</p>
           )}
           {profile.branches && (
             <>
