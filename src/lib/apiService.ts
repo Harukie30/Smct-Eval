@@ -14,37 +14,6 @@ export const sanctum_csrf = async () => {
 
 export const apiService = {
 
-  // Authentication
- login: async (username: string, password: string) => {
-    // await sanctum_csrf();
-    const res = await fetch(`${CONFIG.API_URL}/login`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        "Accept": 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.message || 'Invalid credentials');
-
-    return data;
-  },
-
-  getUser: async () => {
-    const res = await fetch(`${CONFIG.API_URL}/current_user`, {
-      credentials: 'include',
-    });
-
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    return data.current_user || data; // handle both structures
-  },
-
 
   // Registration
   createPendingRegistration: async (formData: FormData): Promise<any> => {
@@ -68,6 +37,30 @@ export const apiService = {
 
         return data;
       },
+  // Registration
+  updateEmployee_auth: async (formData: FormData): Promise<any> => {
+    await sanctum_csrf();
+    const res = await fetch(`${CONFIG.API_URL}/update_employee_auth`, {
+          method: "POST",
+          credentials: 'include',
+          headers: {
+            "Accept": "application/json",
+          },
+          body: formData,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw {
+            ...data,
+            status: res.status,
+          };
+        }
+
+        return data;
+      },
+
 
   getPendingRegistrations: async (): Promise<any | null> => {
     const response = await fetch('/api/registrations');

@@ -26,6 +26,8 @@ import LoadingAnimation from "@/components/LoadingAnimation";
 import clientDataService from "@/lib/clientDataService.api";
 import { CONFIG } from "../../config/config";
 import { useAuth } from "@/contexts/UserContext";
+import { updateEmployee } from "@/lib/employeeService";
+import { tr } from "date-fns/locale";
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -81,7 +83,6 @@ export default function ProfileModal({
 
   const handleInputChange = (field: keyof UserProfile, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
@@ -130,6 +131,11 @@ export default function ProfileModal({
     if (!validateForm()) {
       return;
     }
+    
+    const data = new FormData();
+    Object.entries(formData).forEach(([key, value]) => {
+      data.append(key, value as string); // cast if needed
+    });
 
     setIsLoading(true);
     try {
@@ -137,7 +143,7 @@ export default function ProfileModal({
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Call onSave directly - this will update the UserContext and localStorage
-      await onSave(formData);
+      await clientDataService.updateEmployee_auth(data);
 
       // Show success toast
       success("Profile updated successfully!");
@@ -328,11 +334,9 @@ export default function ProfileModal({
             <Label htmlFor="signature" className="text-sm font-medium">
               Digital Signature
             </Label>
-            <SignaturePad
-              value={`${CONFIG.STORAGE_URL}/${formData.signature}` || ""}
-              onChangeAction={(signature) =>
-                handleInputChange("signature", signature)
-              }
+          <SignaturePad
+              value={formData.signature ? `${CONFIG.STORAGE_URL}/${formData.signature}` : ""}
+              onChangeAction={(signature) => handleInputChange("signature", signature)}
               className="w-full"
               required={false}
               hasError={false}

@@ -31,6 +31,10 @@ export const clientDataService = {
   registerUser: async (formData: FormData): Promise<any> => {
     return await apiService.createPendingRegistration(formData);
   },
+  
+  updateEmployee_auth: async (formData: FormData): Promise<any> => {
+    return await apiService.updateEmployee_auth(formData);
+  },
 
   getPendingRegistrations: async (): Promise<PendingRegistration[]> => {
     return await apiService.getPendingRegistrations();
