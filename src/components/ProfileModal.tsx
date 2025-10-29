@@ -9,13 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { UserProfile } from "./ProfileCard";
 import { User, Camera, Save, X } from "lucide-react";
 import { uploadProfileImage } from "@/lib/imageUpload";
@@ -26,8 +19,6 @@ import LoadingAnimation from "@/components/LoadingAnimation";
 import clientDataService from "@/lib/clientDataService.api";
 import { CONFIG } from "../../config/config";
 import { useAuth } from "@/contexts/UserContext";
-import { updateEmployee } from "@/lib/employeeService";
-import { tr } from "date-fns/locale";
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -48,7 +39,7 @@ export default function ProfileModal({
   const { success } = useToast();
   const { fetchUser } = useAuth();
 
-  console.log("ProfileModal formData:", formData.signature);
+  console.log("ProfileModal formData:", profile.signature);
   // Reset form data when profile changes
   useEffect(() => {
     setFormData(profile);
@@ -66,10 +57,14 @@ export default function ProfileModal({
       newErrors.lname = "Name is required";
     }
 
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) ) {
       newErrors.email = "Please enter a valid email address";
     }
 
+    if (formData.email.trim().length < 1) {
+      newErrors.email = "Email must be filled out";
+    }
+    
     if (formData.fname.trim().length < 2) {
       newErrors.fname = "Name must be at least 2 characters long";
     }
@@ -148,6 +143,7 @@ export default function ProfileModal({
 
       // Show success toast
       success("Profile updated successfully!");
+      fetchUser?.();
       onClose();
     } catch (error) {
       console.error("Error saving profile:", error);
@@ -268,13 +264,13 @@ export default function ProfileModal({
 
             {/* Role/Position */}
             <div className="space-y-1.5">
-              <Label htmlFor="" className="text-sm font-medium">
+              <Label htmlFor="position" className="text-sm font-medium">
                 Position
               </Label>
               <Input
                 id="position"
                 value={formData.positions?.label ?? ""}
-                className={errors.fname ? "border-red-500" : ""}
+                className={errors.position ? "border-red-500" : ""}
                 readOnly
               />
               {errors.position && (
@@ -335,13 +331,14 @@ export default function ProfileModal({
             <Label htmlFor="signature" className="text-sm font-medium">
               Digital Signature
             </Label>
-          <SignaturePad
-              value={formData.signature ? `${CONFIG.STORAGE_URL}/${formData.signature}` : ""}
-              onChangeAction={(signature) => handleInputChange("signature", signature)}
-              className="w-full"
-              required={false}
-              hasError={false}
-            />
+            <SignaturePad
+                value={formData.signature ? `${CONFIG.STORAGE_URL}/${profile.signature}` : ""}
+                onChangeAction={(signature) => handleInputChange("signature", signature)}
+                className="w-full"
+                required={false}
+                hasError={false}
+              />
+
             <p className="text-sm text-gray-500">
               Update your digital signature for official documents and
               approvals.
