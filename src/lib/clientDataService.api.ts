@@ -39,7 +39,10 @@ export const clientDataService = {
   getPendingRegistrations: async (): Promise<PendingRegistration[]> => {
     return await apiService.getPendingRegistrations();
   },
-
+  
+  getActiveRegistrations: async (): Promise<PendingRegistration[]> => {
+    return await apiService.getActiveRegistrations();
+  },
   // Profile management - now uses API
   // updateProfile: async (id: number, updates: Partial<Profile>): Promise<Profile> => {
   //   return await apiService.updateProfile(id, updates);

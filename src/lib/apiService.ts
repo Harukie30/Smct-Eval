@@ -63,8 +63,41 @@ export const apiService = {
 
 
   getPendingRegistrations: async (): Promise<any | null> => {
-    const response = await fetch('/api/registrations');
-    // return response.registrations || [];
+    try{
+      const response = await fetch(`${CONFIG.API_URL}/getAll_Pending_users`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch pending registrations');
+      }
+
+      const data = await response.json();
+      return data.users || [];
+    } catch (error) {
+      console.error("Error fetching pending registrations:", error);
+      return [];
+    }
+  },
+  
+  getActiveRegistrations: async (): Promise<any | null> => {
+    try{
+      const response = await fetch(`${CONFIG.API_URL}/getAll_Active_users`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch active registrations');
+      }
+
+      const data = await response.json();
+      return data.users ;
+    } catch (error) {
+      console.error("Error fetching active registrations:", error);
+      return [];
+    }
   },
 
   // Data
@@ -132,19 +165,7 @@ export const apiService = {
     // return response.accounts || [];
   },
 
-  // Profile management
-  updateProfile: async (id: number, updates: Partial<AuthenticatedUser>): Promise<any> => {
-    const response = await fetch(`/api/profiles/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updates),
-    });
 
-    // if (!response.success) {
-    //   throw new Error(response.message || 'Profile update failed');
-    // }
-
-    // return response.profile;
-  },
 
 uploadAvatar: async (formData : FormData): Promise<any> => {
 

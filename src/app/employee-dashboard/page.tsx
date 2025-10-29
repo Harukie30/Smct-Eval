@@ -559,7 +559,7 @@ export default function EmployeeDashboard() {
         const allSubmissions = await clientDataService.getSubmissions();
         const userSubmissions = allSubmissions.filter(
           (submission: any) =>
-            submission.employeeName === user.full_name ||
+            submission.employeeName === user.fname ||
             submission.evaluationData?.employeeEmail === user.email
         );
         const finalSubmissions =
@@ -664,7 +664,7 @@ export default function EmployeeDashboard() {
         const userSubmissions = user?.email
           ? allSubmissions.filter(
               (submission: any) =>
-                submission.employeeName === user.full_name ||
+                submission.employeeName === user.fname ||
                 submission.evaluationData?.employeeEmail === user.email
             )
           : [];
@@ -810,7 +810,7 @@ export default function EmployeeDashboard() {
     }
 
     setEvaluationToApprove(submission);
-    setEmployeeApprovalName(user?.full_name || user?.full_name || "");
+    setEmployeeApprovalName(user?.fname || user?.fname || "");
     setIsApprovalDialogOpen(true);
   };
 
@@ -870,7 +870,7 @@ export default function EmployeeDashboard() {
         approvedAt: new Date().toISOString(),
         employeeSignature: employeeSignature,
         employeeName:
-          employeeApprovalName || user.full_name || user?.full_name || "",
+          employeeApprovalName || user.fname || user?.fname || "",
         employeeEmail: user.email || user?.email || "",
       };
 
@@ -3795,7 +3795,7 @@ export default function EmployeeDashboard() {
         approvalData={
           selectedEvaluation ? getApprovalData(selectedEvaluation.id) : null
         }
-        currentUserName={user?.full_name || user?.full_name}
+        currentUserName={user?.fname || user?.lname}
         currentUserSignature={(() => {
           const signature =
             selectedEvaluation?.evaluationData?.evaluatorSignatureImage ||

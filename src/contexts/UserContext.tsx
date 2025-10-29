@@ -20,7 +20,7 @@ export interface AuthenticatedUser {
   roles: { id: number; name: string }[];
   email: string;
   avatar?: string;
-  departments?: { value: number | string; label: string };
+  departments?: { value: number | string; department_name: string };
   branches: { value: number | string; branch_name: string };
   positions: { value: number | string; label: string };
   bio?: string;
