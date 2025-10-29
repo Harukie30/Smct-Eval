@@ -48,6 +48,7 @@ export default function ProfileModal({
   const { success } = useToast();
   const { fetchUser } = useAuth();
 
+  console.log("ProfileModal formData:", formData.signature);
   // Reset form data when profile changes
   useEffect(() => {
     setFormData(profile);
@@ -134,7 +135,7 @@ export default function ProfileModal({
     
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
-      data.append(key, value as string); // cast if needed
+      data.append(key, value as string); 
     });
 
     setIsLoading(true);

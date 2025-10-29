@@ -93,16 +93,20 @@ export default function SignaturePad({
     setIsDrawing(false);
     setHasSignature(true);
 
-    // Convert canvas to data URL and call onChange
     const canvas = canvasRef.current;
-    if (canvas) {
-      const dataURL = canvas.toDataURL("image/png");
-      setPreviewImage(dataURL);
-      // Store as base64 string (can be saved to localStorage/JSON)
-      // If backend needs File, convert using: dataURLtoFile(dataURL, "signature.png")
-      onChangeAction(dataURL);
-    }
+    if (!canvas) return;
+
+    // Convert canvas to data URL
+    const dataURL = canvas.toDataURL("image/png");
+    setPreviewImage(dataURL);
+
+    // Convert data URL to File object
+    const file = dataURLtoFile(dataURL, "signature.png");
+
+    // Pass the binary file to onChange
+    onChangeAction(file);
   };
+
 
   const clearSignature = () => {
     setPreviewImage("");
