@@ -3,142 +3,24 @@ import { AuthenticatedUser } from '@/contexts/UserContext';
 import { PendingRegistration, Account } from './clientDataService';
 import { CONFIG } from '../../config/config';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+// const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 // Helper function to get auth token
-const getAuthToken = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('authToken');
-};
-
-// Helper function to make API requests
-const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
-  const token = getAuthToken();
-  
-  const config: RequestInit = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    },
-    ...options,
-  };
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-  
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-  }
-  
-  return response.json();
+export const sanctum_csrf = async () => {
+  await fetch(`http://localhost:8000/sanctum/csrf-cookie`, {
+    credentials: 'include',
+  });
 };
 
 export const apiService = {
-  // Authentication
- login: async (username: string, password: string, rememberMe: boolean) => {
-    await sanctum_csrf();
-    const res = await fetch(`${CONFIG.API_URL}/login`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({ username, password, remember: rememberMe }),
-    });
 
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.message || 'Invalid credentials');
-
-    return data;
-  },
-
-  getUser: async () => {
-    const res = await fetch(`${CONFIG.API_URL}/current_user`, {
-      credentials: 'include',
-    });
-
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    return data.current_user || data; // handle both structures
-  },
-
-  logout: async () => {
-    await fetch(`${CONFIG.API_URL}/logout`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-
-    // Store token if login successful
-    if (response.success && response.token) {
-      localStorage.setItem('authToken', response.token);
-    }
-
-    return response;
-  },
-
- login: async (username: string, password: string, rememberMe: boolean) => {
-    await sanctum_csrf();
-
-    const res = await fetch(`${CONFIG.API_URL}/login`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({ username, password, remember: rememberMe }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.message || 'Invalid credentials');
-
-    return data;
-  },
-
-  getUser: async () => {
-    const res = await fetch(`${CONFIG.API_URL}/current_user`, {
-      credentials: 'include',
-    });
-
-    if (!res.ok) return null;
-
-    const data = await res.json();
-    return data.current_user || data; // handle both structures
-  },
-
-  logout: async () => {
-    await fetch(`${CONFIG.API_URL}/logout`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-
-    // Remove token from localStorage
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('authenticatedUser');
-
-    return response;
-  },
-
-<<<<<<< Updated upstream
-  getCurrentUser: async (): Promise<{ success: boolean; user?: AuthenticatedUser; message?: string }> => {
-    return apiRequest('/api/auth/me');
-  },
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
   // Registration
   createPendingRegistration: async (formData: FormData): Promise<any> => {
   const res = await fetch(`${CONFIG.API_URL}/register`, {
           method: "POST",
           headers: {
-            Accept: "application/json",
+            "Accept": "application/json",
             "X-Requested-With": "XMLHttpRequest",
           },
           body: formData,
@@ -155,10 +37,67 @@ export const apiService = {
 
         return data;
       },
+  // Registration
+  updateEmployee_auth: async (formData: FormData): Promise<any> => {
+    await sanctum_csrf();
+    const res = await fetch(`${CONFIG.API_URL}/update_employee_auth`, {
+          method: "POST",
+          credentials: 'include',
+          headers: {
+            "Accept": "application/json",
+          },
+          body: formData,
+        });
 
-  getPendingRegistrations: async (): Promise<PendingRegistration[]> => {
-    const response = await apiRequest('/api/registrations');
-    return response.registrations || [];
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw {
+            ...data,
+            status: res.status,
+          };
+        }
+
+        return data;
+      },
+
+
+  getPendingRegistrations: async (): Promise<any | null> => {
+    try{
+      const response = await fetch(`${CONFIG.API_URL}/getAll_Pending_users`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch pending registrations');
+      }
+
+      const data = await response.json();
+      return data.users || [];
+    } catch (error) {
+      console.error("Error fetching pending registrations:", error);
+      return [];
+    }
+  },
+  
+  getActiveRegistrations: async (): Promise<any | null> => {
+    try{
+      const response = await fetch(`${CONFIG.API_URL}/getAll_Active_users`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch active registrations');
+      }
+
+      const data = await response.json();
+      return data.users ;
+    } catch (error) {
+      console.error("Error fetching active registrations:", error);
+      return [];
+    }
   },
 
   // Data
@@ -221,33 +160,32 @@ export const apiService = {
       }
     },
 
-  getAccounts: async (): Promise<Account[]> => {
-    const response = await apiRequest('/api/accounts');
-    return response.accounts || [];
+  getAccounts: async (): Promise<any> => {
+    const response = await fetch('/api/accounts');
+    // return response.accounts || [];
   },
 
-  // Profile management
-  updateProfile: async (id: number, updates: Partial<AuthenticatedUser>): Promise<AuthenticatedUser> => {
-    const response = await apiRequest(`/api/profiles/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updates),
+
+
+uploadAvatar: async (formData : FormData): Promise<any> => {
+
+    await sanctum_csrf();
+
+    const response = await fetch(`${CONFIG.API_URL}/upload_avatar`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        "Accept": 'application/json',
+      },
+      body: formData,
     });
 
-    if (!response.success) {
-      throw new Error(response.message || 'Profile update failed');
+    if (!response.ok) {
+      throw new Error('Image upload failed');
     }
 
-    return response.profile;
+    const data = await response.json();
+    return data;
   },
-
-  getProfile: async (id: number): Promise<AuthenticatedUser | null> => {
-    try {
-      const response = await apiRequest(`/api/profiles/${id}`);
-      return response.profile || null;
-    } catch (error) {
-      return null;
-    }
-  },
-};
-
+}
 export default apiService;

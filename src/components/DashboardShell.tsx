@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import ProfileCard, { UserProfile } from "./ProfileCard";
 import ProfileModal from "./ProfileModal";
 import ContactDevsModal from "./ContactDevsModal";
-import { useUser } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/UserContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Notification } from '@/lib/clientDataService';
 import clientDataService from '@/lib/clientDataService';
@@ -53,11 +53,11 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
 
-  const { profile: userProfile, updateProfile, logout } = useUser();
+  const {  user, logout } = useAuth();
   const router = useRouter();
   
   // Get user role for notifications
-  const userRole = userProfile?.roleOrPosition || 'employee';
+  const userRole = user?.roles[0]?.name || 'employee';
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(userRole);
 
   // Close notification panel when clicking outside
@@ -84,7 +84,7 @@ export default function DashboardShell(props: DashboardShellProps) {
   const handleSaveProfile = async (updatedProfile: UserProfile) => {
     try {
       // Update in context
-      updateProfile(updatedProfile);
+      // updateProfile(updatedProfile);
 
       // Call parent callback if provided
       if (onSaveProfile) {
@@ -278,9 +278,9 @@ export default function DashboardShell(props: DashboardShellProps) {
               )}
             </div>
 
-            {userProfile && (
+            {user && (
               <ProfileCard
-                profile={userProfile}
+                profile={user}
                 variant="header"
                 showLogout={true}
                 showSettings={false}
@@ -363,11 +363,11 @@ export default function DashboardShell(props: DashboardShellProps) {
       </div>
 
       {/* Profile Modal */}
-      {userProfile && (
+      {user && (
         <ProfileModal
           isOpen={isProfileModalOpen}
           onClose={() => setIsProfileModalOpen(false)}
-          profile={userProfile}
+          profile={user}
           onSave={handleSaveProfile}
         />
       )}
@@ -497,5 +497,3 @@ export default function DashboardShell(props: DashboardShellProps) {
     </div>
   );
 }
-
-

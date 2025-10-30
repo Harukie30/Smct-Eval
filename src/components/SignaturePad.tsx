@@ -23,7 +23,7 @@ export default function SignaturePad({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string>("");
+  const [previewImage, setPreviewImage] = useState<string>(value ?? "");
 
   // Helper function to get coordinates
   const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>, canvas: HTMLCanvasElement) => {
@@ -38,15 +38,6 @@ export default function SignaturePad({
   };
 
   // Load existing signature when value changes
-  useEffect(() => {
-    if (value && typeof value === 'string' && value.length > 0) {
-      setHasSignature(true);
-      setPreviewImage(value);
-    } else {
-      setHasSignature(false);
-      setPreviewImage("");
-    }
-  }, [value]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -102,18 +93,23 @@ export default function SignaturePad({
     setIsDrawing(false);
     setHasSignature(true);
 
-    // Convert canvas to data URL and call onChange
     const canvas = canvasRef.current;
-    if (canvas) {
-      const dataURL = canvas.toDataURL("image/png");
-      setPreviewImage(dataURL);
-      // Store as base64 string (can be saved to localStorage/JSON)
-      // If backend needs File, convert using: dataURLtoFile(dataURL, "signature.png")
-      onChangeAction(dataURL);
-    }
+    if (!canvas) return;
+
+    // Convert canvas to data URL
+    const dataURL = canvas.toDataURL("image/png");
+    setPreviewImage(dataURL);
+
+    // Convert data URL to File object
+    const file = dataURLtoFile(dataURL, "signature.png");
+
+    // Pass the binary file to onChange
+    onChangeAction(file);
   };
 
+
   const clearSignature = () => {
+    setPreviewImage("");
     onChangeAction(null);
     setHasSignature(false);
     
@@ -125,7 +121,7 @@ export default function SignaturePad({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      // Reset canvas dimensions to match current display size
+      // Reset canvas dimensions to match current display size  
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
 
@@ -140,6 +136,8 @@ export default function SignaturePad({
     }, 0);
   };
 
+  console.log(previewImage)
+
   return (
     <div className={`space-y-3 ${className}`}>
       <div
@@ -147,9 +145,9 @@ export default function SignaturePad({
           hasError ? "border-red-300 bg-red-50" : "border-gray-300"
         }`}
       >
-        {hasSignature ? (
+        {previewImage ? (
           <Image
-            src={previewImage ?? ""}
+            src={previewImage}
             alt="Signature"
             width={700}
             height={700}
@@ -195,7 +193,7 @@ export default function SignaturePad({
           variant="outline"
           size="sm"
           onClick={clearSignature}
-          disabled={!hasSignature}
+          disabled={!previewImage}
           className="text-red-600 border-red-300 hover:bg-red-50"
         >
           Clear Signature

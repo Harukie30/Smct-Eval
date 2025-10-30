@@ -18,9 +18,9 @@ import RoleSelectionModal from '@/components/RoleSelectionModal';
 const [showRoleSelection, setShowRoleSelection] = useState(false);
 ```
 
-### **3. Updated useUser Hook** (Line 36)
+### **3. Updated useAuth Hook** (Line 36)
 ```typescript
-const { login, isLoading, user, setUserRole } = useUser();
+const { login, isLoading, user, setUserRole } = useAuth();
 // Added: user, setUserRole
 ```
 
