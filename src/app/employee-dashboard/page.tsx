@@ -64,6 +64,17 @@ import {
   initializeMockData,
 } from "@/lib/evaluationStorage";
 // commentsService import removed
+<<<<<<< HEAD
+import accountsData from '@/data/accounts.json';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { Line, LineChart, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { useToast } from '@/hooks/useToast';
+import { useAutoRefresh } from '@/hooks/useAutoRefresh';
+import { Skeleton } from '@/components/ui/skeleton';
+
+function EmployeeDashboard() {
+  const { profile, user, isLoading: authLoading, logout } = useUser();
+=======
 import accountsData from "@/data/accounts.json";
 import {
   ChartContainer,
@@ -77,6 +88,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function EmployeeDashboard() {
   const { user, isLoading: authLoading, logout } = useAuth();
+>>>>>>> cristian
   const { success, error } = useToast();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -1322,6 +1334,8 @@ export default function EmployeeDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
+<<<<<<< HEAD
+=======
                 {/* Refreshing Dialog for Performance Reviews */}
                 {showRefreshingDialog && (
                   <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1339,6 +1353,7 @@ export default function EmployeeDashboard() {
                   </div>
                 )}
 
+>>>>>>> cristian
                 {isRefreshingOverview || loading ? (
                   <div className="relative max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table mx-4">
                     {/* Centered Loading Spinner with Logo */}
@@ -1356,6 +1371,51 @@ export default function EmployeeDashboard() {
                       </div>
                     </div>
 
+<<<<<<< HEAD
+                    {/* Table structure visible in background */}
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                        <TableRow>
+                          <TableHead>Immediate Supervisor</TableHead>
+                          <TableHead className="text-right">Rating</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Quarter</TableHead>
+                          <TableHead>Acknowledgement</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <TableRow key={i}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-5 w-12 rounded-full" />
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Skeleton className="h-4 w-12" />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                <Skeleton className="h-4 w-20" />
+                                <Skeleton className="h-3 w-16" />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-5 w-16 rounded-full" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-5 w-20 rounded-full" />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Skeleton className="h-8 w-16" />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+=======
                     {/* Table Rows Skeleton */}
                     {Array.from({ length: 3 }).map((_, i) => (
                       <div
@@ -1370,6 +1430,7 @@ export default function EmployeeDashboard() {
                         <Skeleton className="h-6 w-12" />
                       </div>
                     ))}
+>>>>>>> cristian
                   </div>
                 ) : (
                   (() => {
@@ -1400,6 +1461,71 @@ export default function EmployeeDashboard() {
                           ? "approved"
                           : "pending";
 
+<<<<<<< HEAD
+                  if (filteredSubmissions.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <div className="text-gray-500 text-lg mb-2">No results found</div>
+                        <div className="text-gray-400 text-sm mb-4">No performance reviews match "{overviewSearchTerm}"</div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setOverviewSearchTerm('')}
+                          className="text-white hover:text-white bg-blue-500 hover:bg-blue-600"
+                        >
+                          Clear search
+                        </Button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <>
+                      {/* Search Results Count */}
+                      {overviewSearchTerm && (
+                        <div className="mb-3 mx-4 text-sm text-gray-600">
+                          Found <span className="font-semibold text-blue-600">{filteredSubmissions.length}</span> result{filteredSubmissions.length !== 1 ? 's' : ''} for "{overviewSearchTerm}"
+                        </div>
+                      )}
+
+                      {/* Simple Legend */}
+                      <div className="mb-3 mx-4 flex flex-wrap gap-4 text-xs text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+                          <Badge className="bg-green-200 text-green-800 text-xs">Approved</Badge>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
+                          <Badge className="bg-yellow-200 text-yellow-800 text-xs">New</Badge>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+                          <Badge className="bg-blue-300 text-blue-800 text-xs">Recent</Badge>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Badge className="text-white bg-orange-500 text-xs">Pending</Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table mx-4">
+                        <Table>
+                        <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                          <TableRow>
+                            <TableHead>Immediate Supervisor</TableHead>
+                            <TableHead className="text-right">Rating</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Quarter</TableHead>
+                            <TableHead>Acknowledgement</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                      <TableBody>
+                        {filteredSubmissions
+                          .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+                          .map((submission) => {
+                        const highlight = getSubmissionHighlight(submission.submittedAt, submissions, submission.id);
+=======
+>>>>>>> cristian
                         return (
                           supervisor.includes(searchLower) ||
                           rating.includes(searchLower) ||
@@ -2426,6 +2552,18 @@ export default function EmployeeDashboard() {
         return (
           <div className="relative">
             {isRefreshingHistory || loading ? (
+<<<<<<< HEAD
+              <div className="relative min-h-[500px]">
+                {/* Centered Loading Spinner with Logo */}
+                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                    <div className="relative">
+                      {/* Spinning ring */}
+                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                      {/* Logo in center */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+=======
               <Card>
                 <CardHeader>
                   <Skeleton className="h-6 w-48" />
@@ -2451,6 +2589,7 @@ export default function EmployeeDashboard() {
                         <Skeleton className="h-4 w-20" />
                         <Skeleton className="h-4 w-16" />
                         <Skeleton className="h-4 w-12" />
+>>>>>>> cristian
                       </div>
                     </div>
                     <p className="text-sm text-gray-600 font-medium">Loading evaluation history...</p>
@@ -2543,6 +2682,8 @@ export default function EmployeeDashboard() {
                           </div>
                         </CardHeader>
                         <CardContent>
+<<<<<<< HEAD
+=======
                           {/* Refreshing Dialog for Quarterly Performance */}
                           {showRefreshingDialog && (
                             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -2560,6 +2701,7 @@ export default function EmployeeDashboard() {
                             </div>
                           )}
 
+>>>>>>> cristian
                           {/* Search Bar */}
                           <div className="mb-6 w-1/2">
                             <div className="relative">
@@ -2771,6 +2913,12 @@ export default function EmployeeDashboard() {
                                   </div>
                                 </div>
 
+<<<<<<< HEAD
+                                {/* Table skeleton visible in background */}
+                                <div className="space-y-2 p-4">
+                                  {/* Table Header Skeleton */}
+                                  <div className="flex space-x-3 py-2 border-b">
+=======
                                 {/* Table Rows Skeleton */}
                                 {Array.from({ length: 3 }).map((_, i) => (
                                   <div
@@ -2779,6 +2927,7 @@ export default function EmployeeDashboard() {
                                   >
                                     <Skeleton className="h-4 w-8" />
                                     <Skeleton className="h-3 w-6" />
+>>>>>>> cristian
                                     <Skeleton className="h-3 w-12" />
                                     <Skeleton className="h-3 w-18" />
                                     <Skeleton className="h-3 w-14" />
