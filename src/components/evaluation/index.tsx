@@ -400,8 +400,8 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
         employeeId: parseInt(evaluationData.employeeId),
         employeeEmail: employee?.email || `${evaluationData.employeeName.toLowerCase().replace(/\s+/g, '.')}@smct.com`,
         employeeName: evaluationData.employeeName,
-        evaluatorId: 1, // You can make this dynamic based on current user
-        evaluatorName: 'Current Evaluator', // You can make this dynamic
+        evaluatorId: currentUser?.id || 1,
+        evaluatorName: currentUser?.name || 'Evaluator',
         evaluationData: {
           ...evaluationData,
           overallRating,
@@ -423,24 +423,26 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
           employeeId: parseInt(evaluationData.employeeId),
           employeeName: evaluationData.employeeName,
           employeeEmail: employee?.email || `${evaluationData.employeeName.toLowerCase().replace(/\s+/g, '.')}@smct.com`,
-          evaluatorId: 1, // You can make this dynamic based on current user
-          evaluatorName: 'Current Evaluator', // You can make this dynamic
+          evaluatorId: currentUser?.id || 1,
+          evaluatorName: currentUser?.name || 'Evaluator',
           evaluationData: {
             ...evaluationData,
             overallRating,
             // Ensure evaluator signature is included
             evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',
             evaluatorSignature: evaluationData.evaluatorSignature || currentUser?.name || 'Evaluator',
-            evaluatorSignatureDate: evaluationData.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
+            evaluatorSignatureDate: evaluationData.evaluatorSignatureDate || new Date().toISOString().split('T')[0],
+            // Include supervisor/evaluator info
+            supervisor: evaluationData.supervisor || currentUser?.name || 'Evaluator',
           },
           status: 'completed',
           period: new Date().toISOString().slice(0, 7), // YYYY-MM format
           overallRating,
           submittedAt: new Date().toISOString(),
           category: 'Performance Review',
-          evaluator: 'Current Evaluator',
+          evaluator: currentUser?.name || 'Evaluator',
         });
-        console.log('Also stored in client data service');
+        console.log('Also stored in client data service with evaluator:', currentUser?.name);
       } catch (clientError) {
         console.log('Client data service storage failed, but localStorage storage succeeded:', clientError);
       }
@@ -458,6 +460,17 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
       
       // Show success dialog instead of alert
       console.log('🎉 Evaluation submitted successfully!');
+      
+      // Manually trigger a storage event for same-tab updates
+      // This helps the HR dashboard refresh even when in the same tab
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'submissions',
+        newValue: Date.now().toString(),
+        oldValue: (Date.now() - 1).toString(),
+        storageArea: localStorage,
+        url: window.location.href
+      }));
+      
       setShowSuccessDialog(true);
     } catch (error) {
       console.error('Error submitting evaluation:', error);
@@ -543,7 +556,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
           }
         }
       `}</style>
-      <div className="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 overflow-y-auto">
+      <div className="max-h-[95vh] bg-gradient-to-br from-blue-50 to-indigo-100 p-6 overflow-y-auto">
       <div className="w-full mx-auto px-4">
         <div className="max-w-5xl mx-auto">
 
@@ -619,19 +632,28 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <CurrentStepComponent
-                data={evaluationData}
-                updateDataAction={updateEvaluationData}
-                employee={employee}
-                currentUser={currentUser}
-                onStartAction={startEvaluation}
-                onNextAction={nextStep}
-                onSubmitAction={handleSubmit}
-                onPreviousAction={prevStep}
-                onApproveAction={currentStep === 8 ? handleApprove : undefined}
-                onCloseAction={currentStep === 8 ? handleCloseAfterSubmission : undefined}
-                isApproved={currentStep === 8 ? isEvaluatorApproved : false}
-              />
+              {currentStep === 8 ? (
+                <OverallAssessment
+                  data={evaluationData}
+                  updateDataAction={updateEvaluationData}
+                  employee={employee}
+                  currentUser={currentUser}
+                  onSubmitAction={handleSubmit}
+                  onPreviousAction={prevStep}
+                  onCloseAction={handleCloseAfterSubmission}
+                />
+              ) : (
+                <CurrentStepComponent
+                  data={evaluationData}
+                  updateDataAction={updateEvaluationData}
+                  employee={employee}
+                  currentUser={currentUser}
+                  onStartAction={startEvaluation}
+                  onNextAction={nextStep}
+                  onSubmitAction={handleSubmit}
+                  onPreviousAction={prevStep}
+                />
+              )}
             </CardContent>
           </Card>
         )}

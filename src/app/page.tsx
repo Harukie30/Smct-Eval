@@ -17,6 +17,7 @@ import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import { toastMessages } from '@/lib/toastMessages';
 import clientDataService from '@/lib/clientDataService';
+import ContactDevsModal from '@/components/ContactDevsModal';
 import { withPublicPage } from '@/hoc';
 
 function LandingLoginPage() {
@@ -32,8 +33,9 @@ function LandingLoginPage() {
   const [showGoogleLoginModal, setShowGoogleLoginModal] = useState(false);
   const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [showContactDevsModal, setShowContactDevsModal] = useState(false);
 
-  const { login, isLoading } = useUser();
+  const { login, isLoading, user } = useUser();
   const router = useRouter();
   // Force refresh accounts data on login page load (clears cache)
   useEffect(() => {
@@ -57,7 +59,7 @@ function LandingLoginPage() {
   const handleLogin = async (e: any) => {
     e.preventDefault();
     setLoginError('');
-    
+
     // Show loading screen immediately - use flushSync for instant rendering
     setShowLoadingScreen(true);
 
@@ -65,9 +67,10 @@ function LandingLoginPage() {
       // Simulate real authentication steps with actual processing
       await new Promise(resolve => setTimeout(resolve, 1200)); // Initial validation delay
 
-      const result =  await clientDataService.login(username, password);
-      if (result) {
-        // Login successful - continue with real processing
+      const result = await login(username, password);
+
+      if (result === true) {
+        // Login successful - single role user
         console.log('✅ Login successful');
 
         // Simulate additional authentication steps
@@ -79,11 +82,11 @@ function LandingLoginPage() {
         toastMessages.login.success(username);
 
         // Set remember me preference
-        // if (rememberMe) {
-        //   localStorage.setItem('keepLoggedIn', 'true');
-        // } else {
-        //   localStorage.setItem('keepLoggedIn', 'false');
-        // }
+        if (rememberMe) {
+          localStorage.setItem('keepLoggedIn', 'true');
+        } else {
+          localStorage.setItem('keepLoggedIn', 'false');
+        }
 
         // IMPORTANT: Wait a bit longer to ensure UserContext state is fully updated
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -94,9 +97,9 @@ function LandingLoginPage() {
           hasStoredUser: !!storedUser,
           storedUserData: storedUser ? JSON.parse(storedUser) : null,
           keepLoggedIn: localStorage.getItem('keepLoggedIn'),
-          isAuthenticated: !! result // Check if user state is set
+          isAuthenticated: !!result
         });
-        
+
         if (storedUser) {
           const userData = JSON.parse(storedUser);
           console.log('✅ User role for redirect:', userData.role);
@@ -112,18 +115,18 @@ function LandingLoginPage() {
 
           const dashboardPath = roleDashboards[userData.role || ''] || '';
           console.log('🚀 Redirecting to:', dashboardPath);
-          
+
           if (!dashboardPath) {
             console.error('❌ No dashboard path found for role:', userData.role);
             setShowLoadingScreen(false);
             setLoginError('Invalid user role. Please contact support.');
             return;
           }
-          
+
           // Wait to ensure authentication state is propagated
           console.log('⏳ Waiting for authentication state to propagate...');
           await new Promise(resolve => setTimeout(resolve, 300));
-          
+
           console.log('🔄 Executing redirect now...');
           router.push(dashboardPath);
         } else {
@@ -132,27 +135,28 @@ function LandingLoginPage() {
           setShowLoadingScreen(false);
           setLoginError('Session error. Please try logging in again.');
         }
+      } else if (result && typeof result === 'object' && result.suspended) {
+        // Account is suspended
+        console.log('Account suspended result:', result);
+        console.log('Suspension data:', result.data);
+        setSuspensionData(result.data);
+        setShowSuspensionModal(true);
+        setShowLoadingScreen(false);
+      } else {
+        // Login failed
+        throw new Error('Invalid username or password');
       }
+    } catch (error: any) {
+      // const errorMessage = 'Invalid username or password. Please try again.';
+      console.log(error)
+      setLoginError(error.message);
+      toastMessages.login.error();
+      setShowLoadingScreen(false); // Hide loading screen
+      // Show incorrect password dialog
+      setShowIncorrectPasswordDialog(true);
+      setTimeout(() => setShowIncorrectPasswordDialog(false), 1400);
+    }
 
-  //  if (result && typeof result === 'object' && result.suspended) {
-  //       // Account is suspended
-  //       console.log('Account suspended result:', result);
-  //       console.log('Suspension data:', result.data);
-  //       setSuspensionData(result.data);
-  //       setShowSuspensionModal(true);
-  //       setShowLoadingScreen(false); // Hide loading screen
-  //     }
-      } catch(error: any ) {
-        // const errorMessage = 'Invalid username or password. Please try again.';
-        console.log(error)
-        setLoginError(error.message);
-        toastMessages.login.error();
-        setShowLoadingScreen(false); // Hide loading screen
-        // Show incorrect password dialog
-        setShowIncorrectPasswordDialog(true);
-        setTimeout(() => setShowIncorrectPasswordDialog(false), 1400);
-      }
-    
   };
 
   if (isLoading) {
@@ -171,13 +175,13 @@ function LandingLoginPage() {
   // Show instant loading screen during login process
   if (showLoadingScreen) {
     return (
-      <div style={{ 
-        position: 'fixed', 
-        top: 0, 
-        left: 0, 
-        width: '100%', 
-        height: '100%', 
-        zIndex: 9999 
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: 9999
       }}>
         <InstantLoadingScreen
           message="Authenticating..."
@@ -191,73 +195,73 @@ function LandingLoginPage() {
     <div className="min-h-screen relative overflow-hidden">
       {/* Main Gradient Background */}
       <div className="absolute inset-0 bg-gradient-to-r from-white via-blue-50 to-blue-600"></div>
-      
+
       {/* Single Geometric Pattern Overlay - Gradient from left to right */}
       <div className="absolute inset-0">
         <svg className="w-full h-full" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
           <defs>
             {/* Gradient mask for fading effect */}
             <linearGradient id="fadeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" style={{stopColor:'rgba(255,255,255,0)', stopOpacity:0}} />
-              <stop offset="30%" style={{stopColor:'rgba(255,255,255,0)', stopOpacity:0}} />
-              <stop offset="60%" style={{stopColor:'rgba(255,255,255,0.3)', stopOpacity:0.3}} />
-              <stop offset="100%" style={{stopColor:'rgba(255,255,255,1)', stopOpacity:1}} />
+              <stop offset="0%" style={{ stopColor: 'rgba(255,255,255,0)', stopOpacity: 0 }} />
+              <stop offset="30%" style={{ stopColor: 'rgba(255,255,255,0)', stopOpacity: 0 }} />
+              <stop offset="60%" style={{ stopColor: 'rgba(255,255,255,0.3)', stopOpacity: 0.3 }} />
+              <stop offset="100%" style={{ stopColor: 'rgba(255,255,255,1)', stopOpacity: 1 }} />
             </linearGradient>
-            
+
             {/* Single hexagon pattern */}
             <pattern id="hexagons" x="0" y="0" width="100" height="87" patternUnits="userSpaceOnUse">
-              <polygon points="50,8 75,25 75,62 50,79 25,62 25,25" fill="rgba(59, 130, 246, 0.12)" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="0.8"/>
+              <polygon points="50,8 75,25 75,62 50,79 25,62 25,25" fill="rgba(59, 130, 246, 0.12)" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="0.8" />
             </pattern>
           </defs>
-          
+
           {/* Apply single pattern with gradient mask */}
-          <rect width="100%" height="100%" fill="url(#hexagons)" mask="url(#patternMask)"/>
-          
+          <rect width="100%" height="100%" fill="url(#hexagons)" mask="url(#patternMask)" />
+
           {/* Create mask for gradient effect */}
           <mask id="patternMask">
-            <rect width="100%" height="100%" fill="url(#fadeGradient)"/>
+            <rect width="100%" height="100%" fill="url(#fadeGradient)" />
           </mask>
         </svg>
       </div>
-      
+
       {/* Single Geometric Elements - Hexagons only */}
       <div className="absolute top-20 right-20 w-24 h-24 opacity-30">
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.2)" stroke="rgba(59, 130, 246, 0.4)" strokeWidth="1"/>
+          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.2)" stroke="rgba(59, 130, 246, 0.4)" strokeWidth="1" />
         </svg>
       </div>
-      
+
       <div className="absolute bottom-32 right-40 w-20 h-20 opacity-35">
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <polygon points="50,5 85,25 85,75 50,95 15,75 15,25" fill="rgba(59, 130, 246, 0.15)" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="1"/>
+          <polygon points="50,5 85,25 85,75 50,95 15,75 15,25" fill="rgba(59, 130, 246, 0.15)" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="1" />
         </svg>
       </div>
-      
+
       <div className="absolute top-40 left-20 w-16 h-16 opacity-5">
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <polygon points="50,15 75,35 75,65 50,85 25,65 25,35" fill="rgba(59, 130, 246, 0.08)" stroke="rgba(59, 130, 246, 0.15)" strokeWidth="0.5"/>
+          <polygon points="50,15 75,35 75,65 50,85 25,65 25,35" fill="rgba(59, 130, 246, 0.08)" stroke="rgba(59, 130, 246, 0.15)" strokeWidth="0.5" />
         </svg>
       </div>
-      
+
       {/* Right side additional hexagons */}
       <div className="absolute top-1/2 right-10 w-12 h-12 opacity-20">
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.1)" stroke="rgba(59, 130, 246, 0.25)" strokeWidth="0.8"/>
+          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.1)" stroke="rgba(59, 130, 246, 0.25)" strokeWidth="0.8" />
         </svg>
       </div>
-      
+
       <div className="absolute bottom-1/2 right-20 w-10 h-10 opacity-25">
         <svg viewBox="0 0 100 100" className="w-full h-full">
-          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.12)" stroke="rgba(59, 130, 246, 0.2)" strokeWidth="0.6"/>
+          <polygon points="50,10 80,30 80,70 50,90 20,70 20,30" fill="rgba(59, 130, 246, 0.12)" stroke="rgba(59, 130, 246, 0.2)" strokeWidth="0.6" />
         </svg>
       </div>
-      
+
 
       {/* Header */}
       <header className="relative z-10 flex justify-between items-center p-6">
-      <div className="flex items-center space-x-3">
-                <img src="/smct.png" alt="SMCT Group of Companies" className="h-30 w-auto" />
-              </div>
+        <div className="flex items-center space-x-3">
+          <img src="/smct.png" alt="SMCT Group of Companies" className="h-30 w-auto" />
+        </div>
         <nav className="hidden md:flex bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 space-x-6">
           <button
             onClick={() => setIsAboutModalOpen(true)}
@@ -265,21 +269,21 @@ function LandingLoginPage() {
           >
             About
           </button>
-          <a href="#" className="text-white font-semibold hover:underline-offset-4 hover:underline hover:text-blue-100">Contact</a>
+
         </nav>
       </header>
-      
+
 
       {/* Main Content */}
       <main className="relative z-10 container mx-auto px-4 py-8">
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Left Column - Landing Content */}
           <div className="flex flex-col justify-center space-y-8 relative group">
             {/* Subtle backdrop for better text readability */}
-            
+
             <div className="relative z-10 animate-fade-in-up">
-              
+
               <h1 className="text-4xl md:text-5xl font-bold text-gray-800 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
                 Streamline Your <span className="text-blue-600 transition-colors duration-300 hover:text-blue-700">Performance Reviews</span>
               </h1>
@@ -316,8 +320,8 @@ function LandingLoginPage() {
               </div>
 
               <div className="bg-white/90 backdrop-blur-md p-6 rounded-lg border border-white/30 shadow-lg animate-fade-in-up hover:shadow-xl transition-all duration-300 hover:scale-[1.02]" style={{ animationDelay: '0.4s' }}>
-                <p className="text-gray-800 font-medium">"This platform transformed our review process, saving hours of administrative work and providing meaningful insights."</p>
-                <p className="text-blue-600 mt-2 font-medium">- Sarah Johnson, HR Director</p>
+                <p className="text-gray-800 font-medium">"This platform transformed your review process, saving hours of administrative work and providing meaningful insights."</p>
+
               </div>
             </div>
           </div>
@@ -350,7 +354,7 @@ function LandingLoginPage() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <Label htmlFor="password">Password</Label>
-                          <button 
+                          <button
                             type="button"
                             onClick={() => setShowForgotPasswordModal(true)}
                             className="text-sm text-indigo-600 hover:underline"
@@ -453,14 +457,7 @@ function LandingLoginPage() {
             <div>
               <h3 className="font-semibold text-white mb-4">Resources</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-white hover:text-yellow-300">Help Center</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold text-white mb-4">Company</h3>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-white hover:text-yellow-300">About Us</a></li>
-                <li><a href="#" className="text-white hover:text-yellow-300">Contact</a></li>
+                <li><a href="#" onClick={() => setShowContactDevsModal(true)} className="text-white hover:text-yellow-300">Help Center</a></li>
               </ul>
             </div>
           </div>
@@ -495,7 +492,7 @@ function LandingLoginPage() {
 
       {/* About Modal */}
       <Dialog open={isAboutModalOpen} onOpenChangeAction={setIsAboutModalOpen}>
-        <DialogContent 
+        <DialogContent
           className="max-w-4xl max-h-[85vh] overflow-y-auto mx-4 my-8 p-6 animate-in zoom-in-95 duration-300 custom-scrollbar"
           style={{
             animation: isAboutModalOpen ? 'modalPopup 0.3s ease-out' : 'modalPopdown 0.3s ease-in'
@@ -781,6 +778,12 @@ function LandingLoginPage() {
         isOpen={showForgotPasswordModal}
         onCloseAction={() => setShowForgotPasswordModal(false)}
         onContactDevsAction={() => setShowContactDevsModal(true)}
+      />
+
+      {/* Contact Developers Modal */}
+      <ContactDevsModal
+        isOpen={showContactDevsModal}
+        onCloseAction={() => setShowContactDevsModal(false)}
       />
 
       {/* Incorrect Password Dialog */}

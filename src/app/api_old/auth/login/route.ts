@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+/*import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
@@ -17,47 +17,7 @@ function getPendingRegistrations() {
   }
 }
 
-// Mock data - replace with your actual database
-const accounts = [
-  {
-    id: 1,
-    email: 'admin@smct.com',
-    password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
-    role: 'admin',
-    name: 'System Administrator',
-    position: 'System Administrator',
-    department: 'IT',
-    branch: 'head-office',
-    isActive: true,
-    isSuspended: false
-  },
-  {
-    id: 2,
-    email: 'evaluator@smct.com',
-    password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
-    role: 'evaluator',
-    employeeId: 1001,
-    name: 'John Evaluator',
-    position: 'HR Manager',
-    department: 'Human Resources',
-    branch: 'head-office',
-    isActive: true,
-    isSuspended: false
-  },
-  {
-    id: 3,
-    email: 'employee@smct.com',
-    password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
-    role: 'employee',
-    employeeId: 1002,
-    name: 'Jane Employee',
-    position: 'Software Developer',
-    department: 'IT',
-    branch: 'head-office',
-    isActive: true,
-    isSuspended: false
-  }
-];
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -160,3 +120,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+*/
