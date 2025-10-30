@@ -1731,7 +1731,7 @@ export default function AdminDashboard() {
                           <TableCell>{employee.branches.branch_name}</TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {employee.roles?.map(role => role.name).join(", ") || "No role"}
+                              {employee.roles?.map((role : any) => role.name).join(", ") || "No role"}
                             </Badge>
                           </TableCell>
                           <TableCell>
