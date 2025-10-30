@@ -6,9 +6,9 @@ import { Employee, Submission, PendingRegistration, Profile, Account, Notificati
 
 export const clientDataService = {
   // Authentication - now uses API
-  login: async (email: string, password: string) => {
-    return await apiService.login(email, password);
-  },
+  // login: async (email: string, password: string) => {
+  //   return await apiService.login(email, password);
+  // },
 
   // Data fetching - now uses API
   getPositions: async (): Promise<{ label: string; value: string }[]> => {
@@ -31,19 +31,22 @@ export const clientDataService = {
   registerUser: async (formData: FormData): Promise<any> => {
     return await apiService.createPendingRegistration(formData);
   },
+  
+  updateEmployee_auth: async (formData: FormData): Promise<any> => {
+    return await apiService.updateEmployee_auth(formData);
+  },
 
   getPendingRegistrations: async (): Promise<PendingRegistration[]> => {
     return await apiService.getPendingRegistrations();
   },
-
+  
+  getActiveRegistrations: async (): Promise<PendingRegistration[]> => {
+    return await apiService.getActiveRegistrations();
+  },
   // Profile management - now uses API
-  updateProfile: async (id: number, updates: Partial<Profile>): Promise<Profile> => {
-    return await apiService.updateProfile(id, updates);
-  },
-
-  getProfile: async (id: number): Promise<Profile | null> => {
-    return await apiService.getProfile(id);
-  },
+  // updateProfile: async (id: number, updates: Partial<Profile>): Promise<Profile> => {
+  //   return await apiService.updateProfile(id, updates);
+  // },
 
   // Employee management - you'll need to implement these API endpoints
   getEmployees: async (): Promise<Employee[]> => {
@@ -155,10 +158,8 @@ export const clientDataService = {
   },
 
   // Image upload - you'll need to implement this API endpoint
-  uploadImage: async (file: File): Promise<string> => {
-    // TODO: Implement POST /api/upload/image
-    console.warn('uploadImage: API endpoint not implemented yet');
-    throw new Error('Not implemented');
+  uploadAvatar: async (formData: FormData): Promise<string> => {
+    return await apiService.uploadAvatar(formData);
   },
 };
 

@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo,} from 'react';
 import { X } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';  
@@ -23,7 +22,7 @@ import accountsData from '@/data/accounts.json';
 import departments from '@/data/departments.json';
 import { UserProfile } from '@/components/ProfileCard';
 import clientDataService from '@/lib/clientDataService';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { withAuth } from '@/hoc';
 import PageTransition from '@/components/PageTransition';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
@@ -162,11 +161,10 @@ const getRatingColorForLabel = (rating: string) => {
   }
 };
 
-export default function EvaluatorDashboard() {
+function EvaluatorDashboard() {
   const { profile, user } = useUser();
   const { success, error } = useToast();
   const { getUpdatedAvatar, hasAvatarUpdate } = useProfilePictureUpdates();
-  const searchParams = useSearchParams();
 
   // Function to get time ago display
   const getTimeAgo = (submittedAt: string) => {
@@ -207,14 +205,6 @@ export default function EvaluatorDashboard() {
     }
   }, [seenSubmissions]);
 
-  // Handle URL parameter changes for tab navigation
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && tab !== active) {
-      setActive(tab);
-    }
-  }, [searchParams]);
-
   // Mark submission as seen
   const markSubmissionAsSeen = (submissionId: number) => {
     setSeenSubmissions(prev => {
@@ -231,7 +221,43 @@ export default function EvaluatorDashboard() {
     const hoursDiff = (now - submissionTime) / (1000 * 60 * 60);
     const isSeen = seenSubmissions.has(submissionId);
     
-    // Priority 1: Fully approved - GREEN (always visible)
+    // Priority 1: Within 24 hours and not seen - YELLOW "New" (highest priority)
+    if (hoursDiff <= 24 && !isSeen) {
+      // Check if also fully approved
+      if (approvalStatus === 'fully_approved') {
+        return {
+          className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
+          badge: { text: 'New', className: 'bg-yellow-500 text-white' },
+          secondaryBadge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
+          priority: 'new-approved'
+        };
+      }
+      return {
+        className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
+        badge: { text: 'New', className: 'bg-yellow-500 text-white' },
+        priority: 'new'
+      };
+    }
+    
+    // Priority 2: Within 48 hours and not seen - BLUE "Recent"
+    if (hoursDiff <= 48 && !isSeen) {
+      // Check if also fully approved
+      if (approvalStatus === 'fully_approved') {
+        return {
+          className: 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100',
+          badge: { text: 'Recent', className: 'bg-blue-500 text-white' },
+          secondaryBadge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
+          priority: 'recent-approved'
+        };
+      }
+      return {
+        className: 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100',
+        badge: { text: 'Recent', className: 'bg-blue-500 text-white' },
+        priority: 'recent'
+      };
+    }
+    
+    // Priority 3: Fully approved but older - GREEN
     if (approvalStatus === 'fully_approved') {
       return {
         className: 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100',
@@ -240,30 +266,12 @@ export default function EvaluatorDashboard() {
       };
     }
     
-    // Priority 2: Within 24 hours and not seen - YELLOW "New"
-    if (hoursDiff <= 24 && !isSeen) {
-      return {
-        className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
-        badge: { text: 'New', className: 'bg-yellow-200 text-yellow-800' },
-        priority: 'new'
-      };
-    } 
-    // Priority 3: Within 48 hours and not seen - BLUE "Recent"
-    else if (hoursDiff <= 48 && !isSeen) {
-      return {
-        className: 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100',
-        badge: { text: 'Recent', className: 'bg-blue-100 text-blue-800' },
-        priority: 'recent'
-      };
-    } 
     // Default: Older or already seen - No special highlighting
-    else {
-      return {
-        className: 'hover:bg-gray-50',
-        badge: null,
-        priority: 'old'
-      };
-    }
+    return {
+      className: 'hover:bg-gray-50',
+      badge: null,
+      priority: 'old'
+    };
   };
 
   // Add custom CSS for container popup animation
@@ -354,9 +362,7 @@ export default function EvaluatorDashboard() {
     };
   }, []);
 
-  // Initialize active tab from URL parameter or default to 'overview'
-  const tabParam = searchParams.get('tab');
-  const [active, setActive] = useState(tabParam || 'overview');
+  const [active, setActive] = useState('overview');
 
   // Custom tab change handler with auto-refresh functionality
   const handleTabChange = (tabId: string) => {
@@ -474,8 +480,13 @@ export default function EvaluatorDashboard() {
           item.employeeName
         );
 
+        // Filter to show only evaluations created by this evaluator
+        const evaluatorFiltered = validData.filter((item: any) => 
+          item.evaluatorId === user?.id
+        );
+
         // Remove duplicates based on ID
-        const uniqueData = validData.filter((item: any, index: number, self: any[]) =>
+        const uniqueData = evaluatorFiltered.filter((item: any, index: number, self: any[]) =>
           index === self.findIndex(t => t.id === item.id)
         );
 
@@ -618,8 +629,13 @@ export default function EvaluatorDashboard() {
           item.employeeName
         );
 
+        // Filter to show only evaluations created by this evaluator
+        const evaluatorFiltered = validData.filter((item: any) => 
+          item.evaluatorId === user?.id
+        );
+
         // Remove duplicates based on ID
-        const uniqueData = validData.filter((item: any, index: number, self: any[]) =>
+        const uniqueData = evaluatorFiltered.filter((item: any, index: number, self: any[]) =>
           index === self.findIndex(t => t.id === item.id)
         );
 
@@ -1834,6 +1850,7 @@ export default function EvaluatorDashboard() {
         category: submission.category || 'Performance Review',
         rating: calculatedRating,
         date: submission.submittedAt || new Date().toISOString(),
+        submittedAt: submission.submittedAt, // Preserve original submission timestamp for highlighting
         comment: submission.evaluationData?.overallComments || 'Performance evaluation completed',
         // Approval-related properties - use correct status based on signatures
         approvalStatus: getCorrectApprovalStatus(submission),
@@ -1955,8 +1972,13 @@ export default function EvaluatorDashboard() {
             item.employeeName
           );
 
+          // Filter to show only evaluations created by this evaluator
+          const evaluatorFiltered = validData.filter((item: any) => 
+            item.evaluatorId === user?.id
+          );
+
           // Remove duplicates based on ID
-          const uniqueData = validData.filter((item: any, index: number, self: any[]) =>
+          const uniqueData = evaluatorFiltered.filter((item: any, index: number, self: any[]) =>
             index === self.findIndex(t => t.id === item.id)
           );
 
@@ -2167,7 +2189,23 @@ export default function EvaluatorDashboard() {
                   </Button>
                 </div>
                 {isRefreshing ? (
-                  <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
+                  <div className="relative max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
+                    {/* Centered Loading Spinner */}
+                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                      <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                        <div className="relative">
+                          {/* Spinning ring */}
+                          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                          {/* Logo in center */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">Loading submissions...</p>
+                      </div>
+                    </div>
+                    
+                    {/* Table structure visible in background */}
                     <Table className="min-w-full">
                       <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                         <TableRow key="overview-header">
@@ -2270,6 +2308,11 @@ export default function EvaluatorDashboard() {
                                       {highlight.badge && (
                                         <Badge variant="secondary" className={`${highlight.badge.className} text-xs`}>
                                           {highlight.badge.text}
+                                        </Badge>
+                                      )}
+                                      {highlight.secondaryBadge && (
+                                        <Badge variant="secondary" className={`${highlight.secondaryBadge.className} text-xs`}>
+                                          {highlight.secondaryBadge.text}
                                         </Badge>
                                       )}
                                     </div>
@@ -2527,15 +2570,15 @@ export default function EvaluatorDashboard() {
                     </div>
                   </div>
                   <div className="px-6 py-4 space-y-4">
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 w-1/2">
                       <div className="flex items-center gap-2 w-full">
                         {/* Search input with clear button inside */}
-                        <div className="relative flex-1">
+                        <div className="relative flex-1 w-1/2">
                           <Input
                             placeholder="Search employees by name, email, position, department, role"
                             value={employeeSearch}
                             onChange={(e) => setEmployeeSearch(e.target.value)}
-                            className="w-full pr-10"
+                            className=" pr-10"
                           />
                           {employeeSearch && (
                             <button
@@ -2556,7 +2599,7 @@ export default function EvaluatorDashboard() {
                             setSelectedDepartment(value === 'All Departments' ? '' : value)
                           }
                           placeholder="All Departments"
-                          className="w-[200px]"
+                          className="w-[200px]" 
                         />
 
                       </div>
@@ -2564,7 +2607,23 @@ export default function EvaluatorDashboard() {
                     </div>
                   </div>
                   {isEmployeesRefreshing ? (
-                    <div className="max-h-[500px] overflow-y-auto">
+                    <div className="relative max-h-[500px] overflow-y-auto">
+                      {/* Centered Loading Spinner with Logo */}
+                      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                        <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                          <div className="relative">
+                            {/* Spinning ring */}
+                            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                            {/* Logo in center */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600 font-medium">Loading employees...</p>
+                        </div>
+                      </div>
+                      
+                      {/* Table structure visible in background */}
                       <Table className="min-w-full">
                         <TableHeader className="sticky top-0 bg-white z-10 border-b">
                           <TableRow key="employees-header">
@@ -2791,7 +2850,8 @@ export default function EvaluatorDashboard() {
                   All Feedback/Evaluation Records
                   {(() => {
                     const newCount = filteredFeedbackData.filter(feedback => {
-                      const hoursDiff = (new Date().getTime() - new Date(feedback.date).getTime()) / (1000 * 60 * 60);
+                      if (!feedback.submittedAt) return false;
+                      const hoursDiff = (new Date().getTime() - new Date(feedback.submittedAt).getTime()) / (1000 * 60 * 60);
                       return hoursDiff <= 24 && !seenSubmissions.has(feedback.id);
                     }).length;
                     return newCount > 0 ? (
@@ -2994,7 +3054,23 @@ export default function EvaluatorDashboard() {
                 </div>  
 
                 {isFeedbackRefreshing ? (
-                  <div className="max-h-[500px] overflow-y-auto overflow-x-auto scrollable-table">
+                  <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto scrollable-table">
+                    {/* Centered Loading Spinner with Logo */}
+                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                      <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                        <div className="relative">
+                          {/* Spinning ring */}
+                          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                          {/* Logo in center */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">Loading evaluation records...</p>
+                      </div>
+                    </div>
+                    
+                    {/* Table structure visible in background */}
                     <Table className="min-w-full">
                       <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                         <TableRow key="feedback-header">
@@ -3084,7 +3160,7 @@ export default function EvaluatorDashboard() {
                       </TableHeader>
                       <TableBody className="divide-y divide-gray-200">
                         {filteredFeedbackData.map((feedback) => {
-                          const highlight = getSubmissionHighlight(feedback.date, feedback.id, feedback.approvalStatus);
+                          const highlight = getSubmissionHighlight(feedback.submittedAt || feedback.date, feedback.id, feedback.approvalStatus);
                           return (
                             <TableRow 
                               key={feedback.uniqueKey} 
@@ -3099,6 +3175,11 @@ export default function EvaluatorDashboard() {
                                       {highlight.badge && (
                                         <Badge className={`${highlight.badge.className} text-xs px-1.5 py-0`}>
                                           {highlight.badge.text}
+                                        </Badge>
+                                      )}
+                                      {highlight.secondaryBadge && (
+                                        <Badge className={`${highlight.secondaryBadge.className} text-xs px-1.5 py-0`}>
+                                          {highlight.secondaryBadge.text}
                                         </Badge>
                                       )}
                                     </div>
@@ -3313,7 +3394,23 @@ export default function EvaluatorDashboard() {
 
                   {/* Account History Table */}
                   {isAccountHistoryRefreshing ? (
-                    <div className="overflow-x-auto">
+                    <div className="relative overflow-x-auto">
+                      {/* Centered Loading Spinner with Logo */}
+                      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                        <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                          <div className="relative">
+                            {/* Spinning ring */}
+                            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                            {/* Logo in center */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600 font-medium">Loading account history...</p>
+                        </div>
+                      </div>
+                      
+                      {/* Table structure visible in background */}
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -3475,8 +3572,7 @@ export default function EvaluatorDashboard() {
   };
 
   return (
-    <ProtectedRoute requiredRole={["evaluator", "manager"]}>
-      
+    <>
       {/* Loading Screen - Shows during initial load */}
       {(loading || !data) && (
         <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -3677,8 +3773,11 @@ export default function EvaluatorDashboard() {
         />
 
       </PageTransition>
-    </ProtectedRoute>
+    </>
   );
 }
+
+// Wrap with HOC for authentication (evaluator or manager role)
+export default withAuth(EvaluatorDashboard, { requiredRole: ['evaluator', 'manager'] });
 
 

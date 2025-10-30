@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
+import { withAuth } from '@/hoc';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import { ChevronDown, Plus, RefreshCcw } from "lucide-react";
 import EditUserModal from '@/components/EditUserModal';
 import { toastMessages } from '@/lib/toastMessages';
 import clientDataService from '@/lib/clientDataService';
+import clientDataServiceApi from '@/lib/clientDataService.api';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 
 // Import data
@@ -139,7 +141,7 @@ const getQuarterColor = (quarter: string) => {
   return 'bg-gray-100 text-gray-800';
 };
 
-export default function AdminDashboard() {
+function AdminDashboard() {
   const searchParams = useSearchParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [positionsData, setPositionsData] = useState<{id: string, name: string}[]>([]);
@@ -150,10 +152,10 @@ export default function AdminDashboard() {
   const [suspendedEmployees, setSuspendedEmployees] = useState<SuspendedEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
   // Initialize active tab from URL parameter or default to 'overview'
   const tabParam = searchParams.get('tab');
   const [active, setActive] = useState(tabParam || 'overview');
+  const [values, setValues] = useState<any>({});
 
   // Function to refresh user data (used by shared hook)
   const refreshUserData = async () => {
@@ -218,7 +220,7 @@ export default function AdminDashboard() {
       } : null);
 
       // Also refresh pending registrations and evaluated reviews
-      await loadPendingRegistrations();
+      // await loadPendingRegistrations();
       await loadEvaluatedReviews();
 
       // Update system metrics to reflect current state
@@ -245,7 +247,6 @@ export default function AdminDashboard() {
       setIsRefreshing(false);
     }
   };
-
   // Auto-refresh functionality using shared hook
   const {
     showRefreshModal,
@@ -310,7 +311,7 @@ export default function AdminDashboard() {
   const [reinstatedSearchTerm, setReinstatedSearchTerm] = useState('');
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [userManagementTab, setUserManagementTab] = useState<'active' | 'new'>('active');
-  const [approvedRegistrations, setApprovedRegistrations] = useState<number[]>([]);
+  const [approvedRegistrations, setApprovedRegistrations] = useState<any[]>([]);
   const [rejectedRegistrations, setRejectedRegistrations] = useState<number[]>([]);
   const [pendingRegistrations, setPendingRegistrations] = useState<any[]>([]);
   const [evaluatedReviews, setEvaluatedReviews] = useState<any[]>([]);
@@ -339,16 +340,21 @@ export default function AdminDashboard() {
 
 
   // Function to load pending registrations
-  const loadPendingRegistrations = async () => {
-    try {
-      const pendingRegistrations = await clientDataService.getPendingRegistrations();
-      setPendingRegistrations(pendingRegistrations);
-    } catch (error) {
-      console.error('Error loading pending registrations:', error);
-      setPendingRegistrations([]);
-    }
-  };
+    useEffect(() => {
+      const load_users = async () => {
+        try {
+          const pendingRegistrations = await clientDataServiceApi.getPendingRegistrations();
+          setPendingRegistrations(pendingRegistrations);
 
+          const activeRegistrations = await clientDataServiceApi.getActiveRegistrations();
+          setApprovedRegistrations(activeRegistrations);
+        } catch (error) {
+          console.error('Error loading pending registrations:', error);
+        }
+      };
+      load_users();
+    }, []);
+    console.log('📥 Loaded active registrations:', approvedRegistrations);
   // Function to load evaluated reviews from client data service
   const loadEvaluatedReviews = async () => {
     try {
@@ -490,11 +496,11 @@ export default function AdminDashboard() {
 
       if (result.success) {
         // Add to approved list
-        const newApproved = [...approvedRegistrations, registrationId];
-        setApprovedRegistrations(newApproved);
+        // const newApproved = [...approvedRegistrations, registrationId];
+        // setApprovedRegistrations(newApproved);
 
         // Store in localStorage for persistence
-        localStorage.setItem('approvedRegistrations', JSON.stringify(newApproved));
+        // localStorage.setItem('approvedRegistrations', JSON.stringify(newApproved));
 
         // Remove from rejected list if it was there
         const newRejected = rejectedRegistrations.filter(id => id !== registrationId);
@@ -502,7 +508,7 @@ export default function AdminDashboard() {
         localStorage.setItem('rejectedRegistrations', JSON.stringify(newRejected));
 
         // Reload pending registrations to get updated data
-        await loadPendingRegistrations();
+        // await loadPendingRegistrations();
 
         // Refresh active users data to show the newly approved user
         await refreshDashboardData(false, false);
@@ -532,12 +538,12 @@ export default function AdminDashboard() {
         localStorage.setItem('rejectedRegistrations', JSON.stringify(newRejected));
 
         // Remove from approved list if it was there
-        const newApproved = approvedRegistrations.filter(id => id !== registrationId);
-        setApprovedRegistrations(newApproved);
-        localStorage.setItem('approvedRegistrations', JSON.stringify(newApproved));
+        // const newApproved = approvedRegistrations.filter(id => id !== registrationId);
+        // setApprovedRegistrations(newApproved);
+        // localStorage.setItem('approvedRegistrations', JSON.stringify(newApproved));
 
         // Reload pending registrations to get updated data
-        await loadPendingRegistrations();
+        // await loadPendingRegistrations();
 
         // Show success toast
         toastMessages.user.rejected(registrationName);
@@ -838,51 +844,51 @@ export default function AdminDashboard() {
     );
   };
 
-  // Function to get newly registered accounts from pending registrations
-  const getNewlyRegisteredAccounts = () => {
-    return pendingRegistrations
-      .filter(registration => {
-        // Only hide registrations that are actually approved in the file (status === 'approved')
-        // Don't hide based on localStorage approvedRegistrations array
-        return registration.status !== 'approved';
-      })
-      .map(registration => {
-        let status: 'pending_verification' | 'approved' | 'rejected' = 'pending_verification';
+  // // Function to get newly registered accounts from pending registrations
+  // const getNewlyRegisteredAccounts = () => {
+  //   return pendingRegistrations
+  //     .filter(registration => {
+  //       // Only hide registrations that are actually approved in the file (status === 'approved')
+  //       // Don't hide based on localStorage approvedRegistrations array
+  //       return registration.status !== 'approved';
+  //     })
+  //     .map(registration => {
+  //       let status: 'pending_verification' | 'approved' | 'rejected' = 'pending_verification';
 
-        // Check localStorage for status overrides (only if the registration is still in pending)
-        if (rejectedRegistrations.includes(registration.id)) {
-          status = 'rejected';
-        } else if (registration.status === 'rejected') {
-          status = 'rejected';
-        }
-        // Note: We don't set status to 'approved' here because approved registrations
-        // should be removed from pending-registrations.json entirely
+  //       // Check localStorage for status overrides (only if the registration is still in pending)
+  //       if (rejectedRegistrations.includes(registration.id)) {
+  //         status = 'rejected';
+  //       } else if (registration.status === 'rejected') {
+  //         status = 'rejected';
+  //       }
+  //       // Note: We don't set status to 'approved' here because approved registrations
+  //       // should be removed from pending-registrations.json entirely
 
-        return {
-          id: registration.id,
-          name: `${registration.firstName} ${registration.lastName}`,
-          email: registration.email,
-          position: registration.position,
-          department: registration.department,
-          branch: registration.branch,
-          registrationDate: new Date(registration.submittedAt),
-          status
-        };
-      });
-  };
+  //       return {
+  //         id: registration.id,
+  //         name: `${registration.firstName} ${registration.lastName}`,
+  //         email: registration.email,
+  //         position: registration.position,
+  //         department: registration.department,
+  //         branch: registration.branch,
+  //         registrationDate: new Date(registration.submittedAt),
+  //         status
+  //       };
+  //     });
+  // };
 
-  const getFilteredNewAccounts = () => {
-    const newAccounts = getNewlyRegisteredAccounts();
-    if (!userSearchTerm) return newAccounts;
+  // const getFilteredNewAccounts = () => {
+  //   const newAccounts = getNewlyRegisteredAccounts();
+  //   if (!userSearchTerm) return newAccounts;
 
-    return newAccounts.filter(account =>
-      account.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      account.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      account.position.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      account.department.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      (account.branch || '').toLowerCase().includes(userSearchTerm.toLowerCase())
-    );
-  };
+  //   return newAccounts.filter(account =>
+  //     account.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+  //     account.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+  //     account.position.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+  //     account.department.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+  //     (account.branch || '').toLowerCase().includes(userSearchTerm.toLowerCase())
+  //   );
+  // };
 
   useEffect(() => {
     const loadAdminData = async () => {
@@ -898,7 +904,7 @@ export default function AdminDashboard() {
         // Load persisted registration data
         const savedApproved = JSON.parse(localStorage.getItem('approvedRegistrations') || '[]');
         const savedRejected = JSON.parse(localStorage.getItem('rejectedRegistrations') || '[]');
-        setApprovedRegistrations(savedApproved);
+        // setApprovedRegistrations(savedApproved);
         setRejectedRegistrations(savedRejected);
 
         // Load fresh data from accounts.json
@@ -949,7 +955,7 @@ export default function AdminDashboard() {
         setSuspendedEmployees(savedSuspendedEmployees);
 
         // Load pending registrations
-        await loadPendingRegistrations();
+        // await loadPendingRegistrations();
 
         // Load evaluated reviews
         await loadEvaluatedReviews();
@@ -1128,7 +1134,6 @@ export default function AdminDashboard() {
       activeItemId={active}
       onChangeActive={setActive}
       topSummary={topSummary}
-      profile={{ name: 'System Administrator', roleOrPosition: 'Admin' }}
     >
       {active === 'overview' && (
         <div className="space-y-6">
@@ -1208,7 +1213,7 @@ export default function AdminDashboard() {
                 <div className="flex justify-between items-center">
                   <div className="flex space-x-4">
                     <Input placeholder="Search reviews..." className="w-64" />
-                    <Select>
+                    <Select value={values} onValueChange={setValues}>
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="Filter by status" />
                       </SelectTrigger>
@@ -1219,7 +1224,7 @@ export default function AdminDashboard() {
                         <SelectItem value="pending">Pending</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Select>
+                    <Select value={values} onValueChange={setValues}>
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="Filter by department" />
                       </SelectTrigger>
@@ -1379,7 +1384,7 @@ export default function AdminDashboard() {
                       value={suspendedSearchTerm}
                       onChange={(e) => setSuspendedSearchTerm(e.target.value)}
                     />
-                    <Select>
+                    <Select value={values} onValueChange={setValues}>
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="Filter by status" />
                       </SelectTrigger>
@@ -1518,7 +1523,7 @@ export default function AdminDashboard() {
                       value={reinstatedSearchTerm}
                       onChange={(e) => setReinstatedSearchTerm(e.target.value)}
                     />
-                    <Select>
+                    <Select value={values} onValueChange={setValues}>
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="Filter by department" />
                       </SelectTrigger>
@@ -1630,7 +1635,7 @@ export default function AdminDashboard() {
                 className="flex items-center gap-2"
               >
                 <span>👥</span>
-                Active Users ({getFilteredActiveEmployees().length})
+                Active Users ({approvedRegistrations.length})
               </Button>
               <Button
                 variant={userManagementTab === 'new' ? 'default' : 'outline'}
@@ -1638,7 +1643,7 @@ export default function AdminDashboard() {
                 className="flex items-center gap-2"
               >
                 <span>🆕</span>
-                New Registrations ({getFilteredNewAccounts().length})
+                New Registrations ({pendingRegistrations.length})
               </Button>
             </div>
 
@@ -1653,7 +1658,7 @@ export default function AdminDashboard() {
                       value={userSearchTerm}
                       onChange={(e) => setUserSearchTerm(e.target.value)}
                     />
-                    <Select>
+                    <Select value={values} onValueChange={setValues}>
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="Filter by role" />
                       </SelectTrigger>
@@ -1712,40 +1717,34 @@ export default function AdminDashboard() {
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Position</TableHead>
-                        <TableHead>Department</TableHead>
+                        <TableHead>Branches</TableHead>
                         <TableHead>Role</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Approved Date</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {getFilteredActiveEmployees().slice(0, 10).map((employee) => (
+                      {approvedRegistrations.map((employee) => (
                         <TableRow key={employee.id}>
-                          <TableCell className="font-medium">{employee.name}</TableCell>
+                          <TableCell className="font-medium">{employee.fname} {employee.lname}</TableCell>
                           <TableCell>{employee.email}</TableCell>
-                          <TableCell>{employee.position}</TableCell>
-                          <TableCell>{employee.department}</TableCell>
+                          <TableCell>{employee.positions.label}</TableCell>
+                          <TableCell>{employee.branches.branch_name}</TableCell>
                           <TableCell>
-                            <Badge variant="outline">{employee.role}</Badge>
+                            <Badge variant="outline">
+                              {employee.roles?.map((role : any) => role.name).join(", ") || "No role"}
+                            </Badge>
                           </TableCell>
                           <TableCell>
-                            {wasEmployeeReinstated(employee.id) ? (
+                            {employee.reinstated ? (
                               <Badge
                                 className="text-blue-600 bg-blue-100"
-                                title={`Reinstated on ${getEmployeeReinstatementDate(employee.id) ? new Date(getEmployeeReinstatementDate(employee.id)!).toLocaleDateString() : 'Unknown date'}`}
                               >
                                 Reinstated
                               </Badge>
                             ) : (
                               <Badge className="text-green-600 bg-green-100">Active</Badge>
                             )}
-                          </TableCell>
-                          <TableCell>
-                            {employee.approvedDate ? 
-                              new Date(employee.approvedDate).toLocaleDateString() : 
-                              'N/A'
-                            }
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
@@ -1803,7 +1802,7 @@ export default function AdminDashboard() {
                     value={userSearchTerm}
                     onChange={(e) => setUserSearchTerm(e.target.value)}
                   />
-                  <Select>
+                  <Select value={values} onValueChange={setValues}>
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
@@ -1847,7 +1846,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-
               <div className="max-h-[450px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 <Table>
                   <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
@@ -1855,27 +1853,27 @@ export default function AdminDashboard() {
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Position</TableHead>
-                      <TableHead>Department</TableHead>
+                      <TableHead>Branches</TableHead>
                       <TableHead>Registration Date</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {getFilteredNewAccounts().map((account) => (
+                    {pendingRegistrations.map((account) => (
                       <TableRow key={account.id}>
-                        <TableCell className="font-medium">{account.name}</TableCell>
+                        <TableCell className="font-medium">{account.fname} {account.lname}</TableCell>                      
                         <TableCell>{account.email}</TableCell>
-                        <TableCell>{account.position}</TableCell>
-                        <TableCell>{account.department}</TableCell>
-                        <TableCell>{account.registrationDate.toLocaleDateString()}</TableCell>
+                        <TableCell>{account.positions.label}</TableCell>
+                        <TableCell>{account.branches.branch_name}</TableCell>
+                        <TableCell>{new Date(account.created_at).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <Badge className={
-                            account.status === 'rejected'
+                            account.is_active === 'declined'
                               ? 'bg-red-100 text-red-800 hover:bg-red-200'
                               : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
                           }>
-                            {account.status === 'rejected'
+                            {account.is_active === 'declined'
                               ? 'REJECTED'
                               : 'PENDING VERIFICATION'
                             }
@@ -1883,7 +1881,7 @@ export default function AdminDashboard() {
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
-                            {account.status === 'pending_verification' && (
+                            {account.is_active === 'pending' && (
                               <>
                                 <Button
                                   variant="ghost"
@@ -1922,7 +1920,7 @@ export default function AdminDashboard() {
                 </Table>
               </div>
 
-              {getFilteredNewAccounts().length === 0 && (
+              {pendingRegistrations.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   {userSearchTerm ? 'No new registrations match your search.' : 'No new registrations found.'}
                 </div>
@@ -1948,7 +1946,7 @@ export default function AdminDashboard() {
                     value={userSearchTerm}
                     onChange={(e) => setUserSearchTerm(e.target.value)}
                   />
-                  <Select>
+                  <Select value={values} onValueChange={setValues}>
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="Filter by rating" />
                     </SelectTrigger>
@@ -1960,7 +1958,7 @@ export default function AdminDashboard() {
                       <SelectItem value="needs-improvement">Needs Improvement (0-69)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select>
+                  <Select value={values} onValueChange={setValues}>
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="Filter by period" />
                     </SelectTrigger>
@@ -2704,3 +2702,6 @@ export default function AdminDashboard() {
     </DashboardShell>
   );
 }
+
+// Wrap with HOC for authentication
+export default withAuth(AdminDashboard, { requiredRole: 'admin' });
