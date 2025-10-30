@@ -177,6 +177,12 @@ function HRDashboard() {
         // Add a small delay to ensure spinner is visible
         await new Promise(resolve => setTimeout(resolve, 800));
         await fetchRecentSubmissions();
+      } else if (tabId === 'evaluation-records') {
+        setRecordsRefreshing(true);
+        // Add a small delay to ensure spinner is visible
+        await new Promise(resolve => setTimeout(resolve, 800));
+        await fetchRecentSubmissions();
+        setRecordsRefreshing(false);
       } else if (tabId === 'employees') {
         await refreshEmployeeData();
       }
@@ -817,7 +823,7 @@ function HRDashboard() {
       const quarter = getQuarterFromDate(submission.submittedAt).toLowerCase();
       const date = new Date(submission.submittedAt).toLocaleDateString().toLowerCase();
       const approvalStatus = submission.approvalStatus || (
-        submission.employeeSignature && submission.evaluatorSignature 
+        submission.employeeSignature && (submission.evaluatorSignature || submission.evaluationData?.evaluatorSignature)
           ? 'fully approved' 
           : 'pending'
       );
@@ -873,7 +879,7 @@ function HRDashboard() {
         <CardContent>
           <div className="text-3xl font-bold text-orange-600">
             {recentSubmissions.filter(sub => {
-              const approvalStatus = sub.approvalStatus || (sub.employeeSignature && sub.evaluatorSignature ? 'fully_approved' : 'pending');
+              const approvalStatus = sub.approvalStatus || (sub.employeeSignature && (sub.evaluatorSignature || sub.evaluationData?.evaluatorSignature) ? 'fully_approved' : 'pending');
               return approvalStatus === 'pending';
             }).length}
           </div>
@@ -889,7 +895,7 @@ function HRDashboard() {
         <CardContent>
           <div className="text-3xl font-bold text-green-600">
             {recentSubmissions.filter(sub => {
-              const approvalStatus = sub.approvalStatus || (sub.employeeSignature && sub.evaluatorSignature ? 'fully_approved' : 'pending');
+              const approvalStatus = sub.approvalStatus || (sub.employeeSignature && (sub.evaluatorSignature || sub.evaluationData?.evaluatorSignature) ? 'fully_approved' : 'pending');
               return approvalStatus === 'fully_approved';
             }).length}
           </div>
@@ -1106,11 +1112,21 @@ function HRDashboard() {
                     ) : (
                       filteredSubmissions.slice(0, 10).map((submission) => {
                          const quarter = getQuarterFromDate(submission.submittedAt);
-                         const approvalStatus = submission.approvalStatus || (
-                           submission.employeeSignature && submission.evaluatorSignature 
-                             ? 'fully_approved' 
-                             : 'pending'
-                         );
+                         
+                         // Check if both parties have signed (handle empty strings too)
+                         const hasEmployeeSignature = !!(submission.employeeSignature && submission.employeeSignature.trim());
+                         const hasEvaluatorSignature = !!((submission.evaluatorSignature && submission.evaluatorSignature.trim()) || 
+                           (submission.evaluationData?.evaluatorSignature && submission.evaluationData?.evaluatorSignature.trim()));
+                         
+                         // Determine approval status - SIGNATURES HAVE PRIORITY over stored status
+                         let approvalStatus = 'pending';
+                         if (hasEmployeeSignature && hasEvaluatorSignature) {
+                           approvalStatus = 'fully_approved';
+                         } else if (hasEmployeeSignature) {
+                           approvalStatus = 'employee_approved';
+                         } else if (submission.approvalStatus && submission.approvalStatus !== 'pending') {
+                           approvalStatus = submission.approvalStatus;
+                         }
                          
                          // Calculate time difference for indicators
                          const submittedDate = new Date(submission.submittedAt);
@@ -1120,14 +1136,15 @@ function HRDashboard() {
                          const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
                          const isApproved = approvalStatus === 'fully_approved';
                          
-                         // Determine row background color based on status
+                         // Determine row background color - APPROVAL STATUS HAS PRIORITY
                          let rowClassName = "hover:bg-gray-100 transition-colors";
-                         if (isNew) {
+                         if (isApproved) {
+                           // Approved is always green (highest priority)
+                           rowClassName = "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
+                         } else if (isNew) {
                            rowClassName = "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
                          } else if (isRecent) {
                            rowClassName = "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
-                         } else if (isApproved) {
-                           rowClassName = "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
                          }
                          
                          return (
@@ -1413,7 +1430,7 @@ function HRDashboard() {
                           <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
                         </div>
                       </div>
-                      <p className="text-sm text-gray-600 font-medium">Loading evaluation records...</p>
+                      <p className="text-sm text-gray-600 font-medium">Refreshing evaluation records...</p>
                     </div>
                   </div>
                   
@@ -1428,8 +1445,9 @@ function HRDashboard() {
                         Department{getSortIcon('department')}
                       </TableHead>
                       <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('evaluator')}>
-                        Evaluator{getSortIcon('evaluator')}
+                        Evaluator/HR{getSortIcon('evaluator')}
                       </TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('quarter')}>
                         Quarter{getSortIcon('quarter')}
                       </TableHead>
@@ -1440,204 +1458,57 @@ function HRDashboard() {
                         Status{getSortIcon('status')}
                       </TableHead>
                       <TableHead>Employee Sign</TableHead>
+                      <TableHead>Evaluator Sign</TableHead>
                       <TableHead>HR Sign</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(() => {
-                      // Apply all filters
-                      const filtered = recentSubmissions
-                        .filter((sub) => {
-                          // Search filter
-                          if (recordsSearchTerm) {
-                            const searchLower = recordsSearchTerm.toLowerCase();
-                            const employeeName = sub.employeeName?.toLowerCase() || '';
-                            const department = sub.evaluationData?.department?.toLowerCase() || '';
-                            const position = sub.evaluationData?.position?.toLowerCase() || '';
-                            const evaluator = (sub.evaluationData?.supervisor || sub.evaluator || '').toLowerCase();
-                            
-                            if (!employeeName.includes(searchLower) && 
-                                !department.includes(searchLower) && 
-                                !position.includes(searchLower) && 
-                                !evaluator.includes(searchLower)) {
-                              return false;
-                            }
-                          }
-
-                          // Department filter
-                          if (recordsDepartmentFilter && sub.evaluationData?.department !== recordsDepartmentFilter) {
-                            return false;
-                          }
-
-                          // Approval status filter
-                          if (recordsApprovalFilter) {
-                            const approvalStatus = sub.approvalStatus || 
-                              (sub.employeeSignature && sub.evaluatorSignature ? 'fully_approved' : 'pending');
-                            if (approvalStatus !== recordsApprovalFilter) {
-                              return false;
-                            }
-                          }
-
-                          // Quarter filter
-                          if (recordsQuarterFilter) {
-                            const quarter = getQuarterFromDate(sub.submittedAt);
-                            if (quarter !== recordsQuarterFilter) {
-                              return false;
-                            }
-                          }
-
-                          // Date range filter
-                          if (recordsDateRange.from || recordsDateRange.to) {
-                            const subDate = new Date(sub.submittedAt);
-                            if (recordsDateRange.from && subDate < new Date(recordsDateRange.from)) {
-                              return false;
-                            }
-                            if (recordsDateRange.to && subDate > new Date(recordsDateRange.to)) {
-                              return false;
-                            }
-                          }
-
-                          return true;
-                        })
-                        .sort((a, b) => {
-                          // Apply sorting
-                          const { field, direction } = recordsSort;
-                          const mult = direction === 'asc' ? 1 : -1;
-                          
-                          if (field === 'employeeName') {
-                            return mult * (a.employeeName || '').localeCompare(b.employeeName || '');
-                          } else if (field === 'department') {
-                            return mult * (a.evaluationData?.department || '').localeCompare(b.evaluationData?.department || '');
-                          } else if (field === 'evaluator') {
-                            return mult * (a.evaluationData?.supervisor || a.evaluator || '').localeCompare(b.evaluationData?.supervisor || b.evaluator || '');
-                          } else if (field === 'quarter') {
-                            return mult * getQuarterFromDate(a.submittedAt).localeCompare(getQuarterFromDate(b.submittedAt));
-                          } else if (field === 'date') {
-                            return mult * (new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime());
-                          } else if (field === 'status') {
-                            const statusA = a.approvalStatus || (a.employeeSignature && a.evaluatorSignature ? 'fully_approved' : 'pending');
-                            const statusB = b.approvalStatus || (b.employeeSignature && b.evaluatorSignature ? 'fully_approved' : 'pending');
-                            return mult * statusA.localeCompare(statusB);
-                          }
-                          return 0;
-                        });
-
-                      if (filtered.length === 0) {
-                        return (
-                          <TableRow>
-                            <TableCell colSpan={9} className="text-center py-12">
-                              <div className="text-gray-500">
-                                <p className="text-sm font-medium">No evaluation records found</p>
-                                <p className="text-xs mt-1">Try adjusting your filters</p>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      }
-
-                      return filtered.map((submission) => {
-                        const quarter = getQuarterFromDate(submission.submittedAt);
-                        const approvalStatus = submission.approvalStatus || 
-                          (submission.employeeSignature && submission.evaluatorSignature ? 'fully_approved' : 'pending');
-                        
-                        // Calculate time difference for row highlighting
-                        const submittedDate = new Date(submission.submittedAt);
-                        const now = new Date();
-                        const hoursDiff = (now.getTime() - submittedDate.getTime()) / (1000 * 60 * 60);
-                        const isNew = hoursDiff <= 24;
-                        const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
-                        const isApproved = approvalStatus === 'fully_approved';
-                        
-                        // Determine row background color
-                        let rowClassName = "hover:bg-gray-100 transition-colors";
-                        if (isNew) {
-                          rowClassName = "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
-                        } else if (isRecent) {
-                          rowClassName = "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
-                        } else if (isApproved) {
-                          rowClassName = "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
-                        }
-
-                        return (
-                          <TableRow key={submission.id} className={rowClassName}>
-                            <TableCell>
-                              <div>
-                                <div className="font-medium text-gray-900">{submission.employeeName}</div>
-                                <div className="text-sm text-gray-500">{submission.evaluationData?.position || 'N/A'}</div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="text-xs">
-                                {submission.evaluationData?.department || 'N/A'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {submission.evaluationData?.supervisor || submission.evaluator || 'N/A'}
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={getQuarterColor(quarter)}>
-                                {quarter}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm text-gray-600">
-                              {new Date(submission.submittedAt).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={
-                                approvalStatus === 'fully_approved' ? 'bg-green-100 text-green-800' :
-                                'bg-gray-100 text-gray-800'
-                              }>
-                                {approvalStatus === 'fully_approved' ? '✓ Approved' : '⏳ Pending'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {submission.employeeSignature ? (
-                                <Badge className="bg-green-100 text-green-800 text-xs">✓ Signed</Badge>
-                              ) : (
-                                <Badge className="bg-gray-100 text-gray-600 text-xs">⏳ Pending</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {submission.evaluatorSignature ? (
-                                <Badge className="bg-green-100 text-green-800 text-xs">✓ Signed</Badge>
-                              ) : (
-                                <Badge className="bg-gray-100 text-gray-600 text-xs">⏳ Pending</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => viewSubmissionDetails(submission)}
-                                  className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white"
-                                >
-                                  ☰ View
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => printFeedback(submission)}
-                                  className="text-xs px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white"
-                                >
-                                  ⎙ Print
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDeleteRecordClick(submission)}
-                                  className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200"
-                                  title="Delete this evaluation record"
-                                >
-                                  ❌ Delete
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      });
-                    })()}
+                    {/* Skeleton loading rows */}
+                    {Array.from({ length: 8 }).map((_, index) => (
+                      <TableRow key={`skeleton-${index}`}>
+                        <TableCell className="px-6 py-3">
+                          <div className="space-y-1">
+                            <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="h-2.5 w-20 bg-gray-200 rounded animate-pulse"></div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <div className="h-5 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <div className="flex gap-2">
+                            <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="h-6 w-14 bg-gray-200 rounded animate-pulse"></div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>
@@ -1650,13 +1521,15 @@ function HRDashboard() {
                         Employee{getSortIcon('employeeName')}
                       </TableHead>
                       <TableHead className="px-6 py-3">Department</TableHead>
-                      <TableHead className="px-6 py-3">HR</TableHead>
+                      <TableHead className="px-6 py-3">Evaluator/HR</TableHead>
+                      <TableHead className="px-6 py-3">Type</TableHead>
                       <TableHead className="px-6 py-3">Quarter</TableHead>
                       <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('date')}>
                         Date{getSortIcon('date')}
                       </TableHead>
                       <TableHead className="px-6 py-3">Status</TableHead>
                       <TableHead className="px-6 py-3">Employee Sign</TableHead>
+                      <TableHead className="px-6 py-3">Evaluator Sign</TableHead>
                       <TableHead className="px-6 py-3">HR Sign</TableHead>
                       <TableHead className="px-6 py-3">Actions</TableHead>
                     </TableRow>
@@ -1676,7 +1549,17 @@ function HRDashboard() {
                         }
                         if (recordsDepartmentFilter && sub.evaluationData?.department !== recordsDepartmentFilter) return false;
                         if (recordsApprovalFilter) {
-                          const status = sub.approvalStatus || (sub.employeeSignature && sub.evaluatorSignature ? 'fully_approved' : 'pending');
+                          const hasEmpSig = !!(sub.employeeSignature && sub.employeeSignature.trim());
+                          const hasEvalSig = !!((sub.evaluatorSignature && sub.evaluatorSignature.trim()) || 
+                            (sub.evaluationData?.evaluatorSignature && sub.evaluationData?.evaluatorSignature.trim()));
+                          let status = 'pending';
+                          if (hasEmpSig && hasEvalSig) {
+                            status = 'fully_approved';
+                          } else if (hasEmpSig) {
+                            status = 'employee_approved';
+                          } else if (sub.approvalStatus && sub.approvalStatus !== 'pending') {
+                            status = sub.approvalStatus;
+                          }
                           if (status !== recordsApprovalFilter) return false;
                         }
                         if (recordsQuarterFilter && getQuarterFromDate(sub.submittedAt) !== recordsQuarterFilter) return false;
@@ -1711,7 +1594,7 @@ function HRDashboard() {
                       if (sorted.length === 0) {
                         return (
                           <TableRow>
-                            <TableCell colSpan={9} className="text-center py-12 text-gray-500">
+                            <TableCell colSpan={11} className="text-center py-12 text-gray-500">
                               No evaluation records found
                             </TableCell>
                           </TableRow>
@@ -1720,18 +1603,40 @@ function HRDashboard() {
 
                       return sorted.map((submission) => {
                         const quarter = getQuarterFromDate(submission.submittedAt);
-                        const approvalStatus = submission.approvalStatus || 
-                          (submission.employeeSignature && submission.evaluatorSignature ? 'fully_approved' : 'pending');
-
-                        // Row highlighting logic
+                        
+                        // Check if both parties have signed (handle empty strings too)
+                        const hasEmployeeSignature = !!(submission.employeeSignature && submission.employeeSignature.trim());
+                        const hasEvaluatorSignature = !!((submission.evaluatorSignature && submission.evaluatorSignature.trim()) || 
+                          (submission.evaluationData?.evaluatorSignature && submission.evaluationData?.evaluatorSignature.trim()));
+                        
+                        // Determine approval status - SIGNATURES HAVE PRIORITY over stored status
+                        let approvalStatus = 'pending';
+                        if (hasEmployeeSignature && hasEvaluatorSignature) {
+                          // Both signed = fully approved (regardless of stored status)
+                          approvalStatus = 'fully_approved';
+                        } else if (hasEmployeeSignature) {
+                          // Only employee signed
+                          approvalStatus = 'employee_approved';
+                        } else if (submission.approvalStatus && submission.approvalStatus !== 'pending') {
+                          // No signatures detected, use stored status
+                          approvalStatus = submission.approvalStatus;
+                        }
+                        
+                        // Row highlighting logic - Approval status takes priority
                         const hoursDiff = (new Date().getTime() - new Date(submission.submittedAt).getTime()) / (1000 * 60 * 60);
                         let rowClassName = 'hover:bg-gray-50';
-                        if (hoursDiff <= 24) {
-                          rowClassName = 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200';
-                        } else if (hoursDiff <= 48) {
-                          rowClassName = 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100';
-                        } else if (approvalStatus === 'fully_approved') {
+                        
+                        // Priority 1: Fully approved evaluations are always green
+                        if (approvalStatus === 'fully_approved') {
                           rowClassName = 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100';
+                        }
+                        // Priority 2: New evaluations (less than 24 hours, not yet approved)
+                        else if (hoursDiff <= 24) {
+                          rowClassName = 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200';
+                        }
+                        // Priority 3: Recent evaluations (24-48 hours, not yet approved)
+                        else if (hoursDiff <= 48) {
+                          rowClassName = 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100';
                         }
 
                         return (
@@ -1749,6 +1654,20 @@ function HRDashboard() {
                             </TableCell>
                             <TableCell className="px-6 py-3 text-sm">
                               {submission.evaluationData?.supervisor || submission.evaluator || 'N/A'}
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              {(() => {
+                                // Determine if it's from Evaluator or HR by checking the evaluator's role
+                                const evaluatorAccount = (accountsData as any).accounts.find((acc: any) => 
+                                  acc.id === submission.evaluatorId || acc.employeeId === submission.evaluatorId
+                                );
+                                const isHR = evaluatorAccount?.role === 'hr';
+                                return (
+                                  <Badge className={isHR ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}>
+                                    {isHR ? '👔 HR' : '📋 Evaluator'}
+                                  </Badge>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell className="px-6 py-3">
                               <Badge className={getQuarterColor(quarter)}>
@@ -1774,11 +1693,42 @@ function HRDashboard() {
                               )}
                             </TableCell>
                             <TableCell className="px-6 py-3">
-                              {submission.evaluatorSignature ? (
-                                <Badge className="bg-green-100 text-green-800 text-xs">✓ Signed</Badge>
-                              ) : (
-                                <Badge className="bg-gray-100 text-gray-600 text-xs">⏳ Pending</Badge>
-                              )}
+                              {(() => {
+                                // Check if evaluator is HR or Evaluator
+                                const evaluatorAccount = (accountsData as any).accounts.find((acc: any) => 
+                                  acc.id === submission.evaluatorId || acc.employeeId === submission.evaluatorId
+                                );
+                                const isHR = evaluatorAccount?.role === 'hr';
+                                const hasSigned = submission.evaluatorSignature || submission.evaluationData?.evaluatorSignature;
+                                
+                                // Show signed status only if it's from an Evaluator
+                                if (!isHR && hasSigned) {
+                                  return <Badge className="bg-green-100 text-green-800 text-xs">✓ Signed</Badge>;
+                                } else if (!isHR && !hasSigned) {
+                                  return <Badge className="bg-gray-100 text-gray-600 text-xs">⏳ Pending</Badge>;
+                                } else {
+                                  return <span className="text-xs text-gray-400">—</span>;
+                                }
+                              })()}
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              {(() => {
+                                // Check if evaluator is HR or Evaluator
+                                const evaluatorAccount = (accountsData as any).accounts.find((acc: any) => 
+                                  acc.id === submission.evaluatorId || acc.employeeId === submission.evaluatorId
+                                );
+                                const isHR = evaluatorAccount?.role === 'hr';
+                                const hasSigned = submission.evaluatorSignature || submission.evaluationData?.evaluatorSignature;
+                                
+                                // Show signed status only if it's from HR
+                                if (isHR && hasSigned) {
+                                  return <Badge className="bg-green-100 text-green-800 text-xs">✓ Signed</Badge>;
+                                } else if (isHR && !hasSigned) {
+                                  return <Badge className="bg-gray-100 text-gray-600 text-xs">⏳ Pending</Badge>;
+                                } else {
+                                  return <span className="text-xs text-gray-400">—</span>;
+                                }
+                              })()}
                             </TableCell>
                             <TableCell className="px-6 py-3">
                               <div className="flex gap-2">
@@ -1819,6 +1769,7 @@ function HRDashboard() {
               )}
 
               {/* Results Counter */}
+              {!recordsRefreshing && (
               <div className="m-4 text-center text-sm text-gray-600">
                 Showing {(() => {
                   const filtered = recentSubmissions.filter((sub) => {
@@ -1833,7 +1784,17 @@ function HRDashboard() {
                     }
                     if (recordsDepartmentFilter && sub.evaluationData?.department !== recordsDepartmentFilter) return false;
                     if (recordsApprovalFilter) {
-                      const status = sub.approvalStatus || (sub.employeeSignature && sub.evaluatorSignature ? 'fully_approved' : 'pending');
+                      const hasEmpSig = !!(sub.employeeSignature && sub.employeeSignature.trim());
+                      const hasEvalSig = !!((sub.evaluatorSignature && sub.evaluatorSignature.trim()) || 
+                        (sub.evaluationData?.evaluatorSignature && sub.evaluationData?.evaluatorSignature.trim()));
+                      let status = 'pending';
+                      if (hasEmpSig && hasEvalSig) {
+                        status = 'fully_approved';
+                      } else if (hasEmpSig) {
+                        status = 'employee_approved';
+                      } else if (sub.approvalStatus && sub.approvalStatus !== 'pending') {
+                        status = sub.approvalStatus;
+                      }
                       if (status !== recordsApprovalFilter) return false;
                     }
                     if (recordsQuarterFilter && getQuarterFromDate(sub.submittedAt) !== recordsQuarterFilter) return false;
@@ -1844,6 +1805,7 @@ function HRDashboard() {
                   return filtered.length;
                 })()} of {recentSubmissions.length} evaluation records
               </div>
+              )}
             </CardContent>
           </Card>
         </div>
