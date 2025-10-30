@@ -22,33 +22,31 @@ import clientDataServiceApi from '@/lib/clientDataService.api';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 
 // Import data
-import accountsDataRaw from '@/data/accounts.json';
-import departmentsData from '@/data/departments.json';
+// import accountsDataRaw from '@/data/accounts.json';
+// import departmentsData from '@/data/departments.json';
 // branchData now comes from clientDataService
 // positionsData now comes from clientDataService
-import branchCodesData from '@/data/branch-code.json';
+// import branchCodesData from '@/data/branch-code.json';
 
 // Extract accounts array from the new structure
-const accountsData = accountsDataRaw.accounts || [];
+// const accountsData = accountsDataRaw.accounts || [];
 
 // TypeScript interfaces
 interface Employee {
   id: number;
-  name: string;
+  fname: string;
+  lname: string;
   email: string;
-  position: string;
-  department: string;
-  branch?: string;
-  hireDate: string;
-  role: string;
-  username?: string;
-  password?: string;
-  isActive?: boolean;
+  positions: { value: string | number; label: string }[];
+  departments?: { value: string | number; department_name: string }[];
+  branches: { value: string | number; branch_name: string }[];
+  roles: {name: string }[];
+  username: string;
+  password: string;
+  isActive: string;
   avatar?: string | null;
   bio?: string | null;
-  contact?: string;
-  updatedAt?: string;
-  approvedDate?: string; // Date when the user was approved
+  contact: string;
 }
 
 interface SystemMetrics {
@@ -98,11 +96,12 @@ interface Review {
 
 interface SuspendedEmployee {
   id: number;
-  name: string;
+  fname: string;
+  lname: string;
   email: string;
-  position: string;
-  department: string;
-  branch: string;
+  positions: { value: string | number; label: string }[];
+  departments?: { value: string | number; department_name: string }[];
+  branches: { value: string | number; branch_name: string }[];
   suspensionDate: string;
   suspensionReason: string;
   suspensionDuration: string;
@@ -143,8 +142,9 @@ const getQuarterColor = (quarter: string) => {
 export default function AdminDashboard() {
   const searchParams = useSearchParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [positionsData, setPositionsData] = useState<{id: string, name: string}[]>([]);
-  const [branchesData, setBranchesData] = useState<{id: string, name: string}[]>([]);
+  const [positionsData, setPositionsData] = useState<{value: string | number, label: string}[]>([]);
+  const [branchesData, setBranchesData] = useState<{value: string | number, label: string}[]>([]);
+  const [departmentsData, setDepartmentsData] = useState<{value: string | number, label: string}[]>([]);
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -164,66 +164,66 @@ export default function AdminDashboard() {
     try {
       // Load accounts data directly (no merging needed)
       const employees = await loadAccountsData();
-      console.log('📊 Loaded employees:', employees.length);
+      // console.log('📊 Loaded employees:', employees.length);
 
-      const filteredEmployees = filterDeletedEmployees(employees);
-      console.log('✅ Filtered employees:', filteredEmployees.length);
+      // const filteredEmployees = filterDeletedEmployees(employees);
+      // console.log('✅ Filtered employees:', filteredEmployees.length);
 
-      setEmployees(filteredEmployees);
+      // setEmployees(filteredEmployees);
 
       // Update system metrics with actual data (will be updated by updateSystemMetrics)
-      setSystemMetrics(prev => prev ? {
-        ...prev,
-        totalUsers: filteredEmployees.length,
-        activeUsers: filteredEmployees.length
-      } : null);
+      // setSystemMetrics(prev => prev ? {
+      //   ...prev,
+      //   totalUsers: filteredEmployees.length,
+      //   activeUsers: filteredEmployees.length
+      // } : null);
 
       // Update dashboard stats with actual data
-      setDashboardStats(prev => prev ? {
-        ...prev,
-        employeeDashboard: {
-          ...prev.employeeDashboard,
-          activeUsers: filteredEmployees.filter((emp: any) => {
-            const role = emp.role?.toLowerCase() || '';
-            return role === 'employee' ||
-              role.includes('representative') ||
-              role.includes('designer') ||
-              role.includes('developer') ||
-              role.includes('specialist') ||
-              role.includes('analyst') ||
-              role.includes('coordinator') ||
-              role.includes('assistant');
-          }).length
-        },
-        hrDashboard: {
-          ...prev.hrDashboard,
-          activeUsers: filteredEmployees.filter((emp: any) => {
-            const role = emp.role?.toLowerCase() || '';
-            return role === 'hr' ||
-              role === 'hr-manager' ||
-              role.includes('hr') ||
-              role.includes('human resources');
-          }).length
-        },
-        evaluatorDashboard: {
-          ...prev.evaluatorDashboard,
-          activeUsers: filteredEmployees.filter((emp: any) => {
-            const role = emp.role?.toLowerCase() || '';
-            return role === 'evaluator' ||
-              role.includes('manager') ||
-              role.includes('supervisor') ||
-              role.includes('director') ||
-              role.includes('lead');
-          }).length
-        }
-      } : null);
+      // setDashboardStats(prev => prev ? {
+      //   ...prev,
+      //   employeeDashboard: {
+      //     ...prev.employeeDashboard,
+      //     activeUsers: filteredEmployees.filter((emp: any) => {
+      //       const role = emp.role?.toLowerCase() || '';
+      //       return role === 'employee' ||
+      //         role.includes('representative') ||
+      //         role.includes('designer') ||
+      //         role.includes('developer') ||
+      //         role.includes('specialist') ||
+      //         role.includes('analyst') ||
+      //         role.includes('coordinator') ||
+      //         role.includes('assistant');
+      //     }).length
+      //   },
+      //   hrDashboard: {
+      //     ...prev.hrDashboard,
+      //     activeUsers: filteredEmployees.filter((emp: any) => {
+      //       const role = emp.role?.toLowerCase() || '';
+      //       return role === 'hr' ||
+      //         role === 'hr-manager' ||
+      //         role.includes('hr') ||
+      //         role.includes('human resources');
+      //     }).length
+      //   },
+      //   evaluatorDashboard: {
+      //     ...prev.evaluatorDashboard,
+      //     activeUsers: filteredEmployees.filter((emp: any) => {
+      //       const role = emp.role?.toLowerCase() || '';
+      //       return role === 'evaluator' ||
+      //         role.includes('manager') ||
+      //         role.includes('supervisor') ||
+      //         role.includes('director') ||
+      //         role.includes('lead');
+      //     }).length
+      //   }
+      // } : null);
 
       // Also refresh pending registrations and evaluated reviews
       // await loadPendingRegistrations();
       await loadEvaluatedReviews();
 
       // Update system metrics to reflect current state
-      updateSystemMetrics();
+      // updateSystemMetrics();
 
       console.log('✅ User data refresh completed successfully');
 
@@ -236,8 +236,8 @@ export default function AdminDashboard() {
       // Fallback: load accounts data directly
       try {
         const employees = await loadAccountsData();
-        const filteredEmployees = filterDeletedEmployees(employees);
-        setEmployees(filteredEmployees);
+        // const filteredEmployees = filterDeletedEmployees(employees);
+        // setEmployees(filteredEmployees);
         console.log('🔄 Fallback refresh completed');
       } catch (fallbackError) {
         console.error('❌ Fallback refresh also failed:', fallbackError);
@@ -393,40 +393,39 @@ export default function AdminDashboard() {
 
   // Function to load accounts data directly (no merging needed since accounts.json is now the single source)
   const loadAccountsData = async () => {
-    try {
       // Load from localStorage first (for any runtime updates)
       const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
 
       // If localStorage has data, use it; otherwise use the imported data
-      const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : accountsData;
+      // const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : accountsData;
 
       // Filter out admin accounts and convert to Employee format
-      const employees = accounts
-        .filter((account: any) => account.role !== 'admin') // Exclude admin accounts from employee list
-        .map((account: any) => ({
-          id: account.employeeId || account.id,
-          name: account.name,
-          email: account.email,
-          position: account.position,
-          department: account.department,
-          branch: account.branch,
-          hireDate: account.hireDate,
-          role: account.role,
-          username: account.username,
-          password: account.password,
-          isActive: account.isActive,
-          avatar: account.avatar,
-          bio: account.bio,
-          contact: account.contact,
-          updatedAt: account.updatedAt,
-          approvedDate: account.approvedDate
-        }));
+  //     const employees = accounts
+  //       .filter((account: any) => account.role !== 'admin') // Exclude admin accounts from employee list
+  //       .map((account: any) => ({
+  //         id: account.employeeId || account.id,
+  //         name: account.name,
+  //         email: account.email,
+  //         position: account.position,
+  //         department: account.department,
+  //         branch: account.branch,
+  //         hireDate: account.hireDate,
+  //         role: account.role,
+  //         username: account.username,
+  //         password: account.password,
+  //         isActive: account.isActive,
+  //         avatar: account.avatar,
+  //         bio: account.bio,
+  //         contact: account.contact,
+  //         updatedAt: account.updatedAt,
+  //         approvedDate: account.approvedDate
+  //       }));
 
-      return employees;
-    } catch (error) {
-      console.error('Error loading accounts data:', error);
-      return [];
-    }
+  //     return employees;
+  //   } catch (error) {
+  //     console.error('Error loading accounts data:', error);
+  //     return [];
+  //   }
   };
 
   // Function to open suspend modal
@@ -481,7 +480,7 @@ export default function AdminDashboard() {
     setEmployees(prev => prev.filter(emp => emp.id !== employeeToDelete.id));
 
     // Show success toast
-    toastMessages.user.deleted(employeeToDelete.name);
+    toastMessages.user.deleted(employeeToDelete.fname);
 
     // Close modal
     setIsDeleteModalOpen(false);
@@ -565,11 +564,12 @@ export default function AdminDashboard() {
     // Create new suspended employee
     const newSuspendedEmployee: SuspendedEmployee = {
       id: selectedEmployee.id,
-      name: selectedEmployee.name,
+      fname: selectedEmployee.fname,
+      lname: selectedEmployee.lname,
       email: selectedEmployee.email,
-      position: selectedEmployee.position,
-      department: selectedEmployee.department,
-      branch: selectedEmployee.branch || '',
+      positions: selectedEmployee.positions || [],
+      departments: selectedEmployee.departments,
+      branches: selectedEmployee.branches || [] ,
       suspensionDate: new Date().toISOString().split('T')[0],
       suspensionReason: suspendForm.reason,
       suspensionDuration: suspendForm.duration,
@@ -584,12 +584,12 @@ export default function AdminDashboard() {
 
       if (existingIndex !== -1) {
         // Employee already exists, update the existing record
-        console.log(`Updating existing suspended employee: ${selectedEmployee.name} (ID: ${selectedEmployee.id})`);
+        console.log(`Updating existing suspended employee: ${selectedEmployee.fname} (ID: ${selectedEmployee.id})`);
         updated = [...prev];
         updated[existingIndex] = newSuspendedEmployee;
       } else {
         // Employee doesn't exist, add new record
-        console.log(`Adding new suspended employee: ${selectedEmployee.name} (ID: ${selectedEmployee.id})`);
+        console.log(`Adding new suspended employee: ${selectedEmployee.fname} (ID: ${selectedEmployee.id})`);
         updated = [...prev, newSuspendedEmployee];
       }
 
@@ -599,7 +599,7 @@ export default function AdminDashboard() {
     });
 
     // Show success toast
-    toastMessages.user.suspended(selectedEmployee.name);
+    toastMessages.user.suspended(selectedEmployee.fname);
 
     // Update system metrics to reflect the suspension
     updateSystemMetrics();
@@ -622,7 +622,7 @@ export default function AdminDashboard() {
 
   // Function to reinstate employee
   const handleReinstateEmployee = (employeeId: number) => {
-    // Find the employee to get their name
+    // Find the employee to get their fname
     const employee = suspendedEmployees.find(emp => emp.id === employeeId);
 
     setSuspendedEmployees(prev => {
@@ -643,7 +643,7 @@ export default function AdminDashboard() {
 
     // Show success toast
     if (employee) {
-      toastMessages.user.reinstated(employee.name);
+      toastMessages.user.reinstated(employee.fname);
     }
 
     // Update system metrics to reflect the reinstatement
@@ -677,7 +677,7 @@ export default function AdminDashboard() {
     localStorage.setItem('deletedEmployees', JSON.stringify(deletedEmployees));
 
     // Show success toast
-    toastMessages.user.deleted(reinstatedEmployeeToDelete.name);
+    toastMessages.user.deleted(reinstatedEmployeeToDelete.fname);
 
     // Update system metrics to reflect the deletion
     updateSystemMetrics();
@@ -689,16 +689,16 @@ export default function AdminDashboard() {
 
   // Function to filter out suspended employees from User Management
   // Only shows employees who are NOT currently suspended (includes reinstated employees)
-  const getActiveEmployees = () => {
-    const currentlySuspendedIds = suspendedEmployees
-      .filter(emp => emp.status === 'suspended') // Only currently suspended
-      .map(emp => emp.id);
+  // const getActiveEmployees = () => {
+  //   const currentlySuspendedIds = suspendedEmployees
+  //     .filter(emp => emp.status === 'suspended') // Only currently suspended
+  //     .map(emp => emp.id);
 
-    return employees.filter(emp => 
-      !currentlySuspendedIds.includes(emp.id) && 
-      (emp.isActive !== false) // Include employees where isActive is true or undefined
-    );
-  };
+  //   return employees.filter(emp => 
+  //     !currentlySuspendedIds.includes(emp.id) && 
+  //     // (emp.isActive !== false) // Include employees where isActive is true or undefined
+  //   );
+  // };
 
   // Function to check if an employee was previously suspended and reinstated
   const wasEmployeeReinstated = (employeeId: number) => {
@@ -713,13 +713,13 @@ export default function AdminDashboard() {
 
   // Function to update system metrics with correct active user count
   const updateSystemMetrics = () => {
-    const activeEmployees = getActiveEmployees();
+    // const activeEmployees = getActiveEmployees();
     const currentlySuspendedCount = suspendedEmployees.filter(emp => emp.status === 'suspended').length;
 
     setSystemMetrics(prev => prev ? {
       ...prev,
       totalUsers: employees.length, // Total users in system
-      activeUsers: activeEmployees.length, // Active users (includes reinstated)
+      // activeUsers: activeEmployees.length, // Active users (includes reinstated)
       suspendedUsers: currentlySuspendedCount // Currently suspended users
     } : null);
 
@@ -728,36 +728,36 @@ export default function AdminDashboard() {
       ...prev,
       employeeDashboard: {
         ...prev.employeeDashboard,
-        activeUsers: activeEmployees.filter((emp: any) => {
-          const role = emp.role?.toLowerCase() || '';
-          return role === 'employee' ||
-            role.includes('representative') ||
-            role.includes('designer') ||
-            role.includes('developer') ||
-            role.includes('analyst') ||
-            role.includes('coordinator');
-        }).length
+        // activeUsers: activeEmployees.filter((emp: any) => {
+        //   const role = emp.role?.toLowerCase() || '';
+        //   return role === 'employee' ||
+        //     role.includes('representative') ||
+        //     role.includes('designer') ||
+        //     role.includes('developer') ||
+        //     role.includes('analyst') ||
+        //     role.includes('coordinator');
+        // }).length
       },
       hrDashboard: {
         ...prev.hrDashboard,
-        activeUsers: activeEmployees.filter((emp: any) => {
-          const role = emp.role?.toLowerCase() || '';
-          return role === 'hr' ||
-            role === 'hr-manager' ||
-            role.includes('hr') ||
-            role.includes('human resources');
-        }).length
+        // activeUsers: activeEmployees.filter((emp: any) => {
+        //   const role = emp.role?.toLowerCase() || '';
+        //   return role === 'hr' ||
+        //     role === 'hr-manager' ||
+        //     role.includes('hr') ||
+        //     role.includes('human resources');
+        // }).length
       },
       evaluatorDashboard: {
         ...prev.evaluatorDashboard,
-        activeUsers: activeEmployees.filter((emp: any) => {
-          const role = emp.role?.toLowerCase() || '';
-          return role === 'evaluator' ||
-            role.includes('manager') ||
-            role.includes('supervisor') ||
-            role.includes('director') ||
-            role.includes('lead');
-        }).length
+        // activeUsers: activeEmployees.filter((emp: any) => {
+        //   const role = emp.role?.toLowerCase() || '';
+        //   return role === 'evaluator' ||
+        //     role.includes('manager') ||
+        //     role.includes('supervisor') ||
+        //     role.includes('director') ||
+        //     role.includes('lead');
+        // }).length
       }
     } : null);
   };
@@ -802,46 +802,46 @@ export default function AdminDashboard() {
   };
 
   // Search filter functions
-  const getFilteredSuspendedEmployees = () => {
-    const activeSuspended = getActiveSuspendedEmployees();
-    if (!suspendedSearchTerm) return activeSuspended;
+  // const getFilteredSuspendedEmployees = () => {
+  //   const activeSuspended = getActiveSuspendedEmployees();
+  //   if (!suspendedSearchTerm) return activeSuspended;
 
-    return activeSuspended.filter(employee =>
-      employee.name.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
-      employee.position.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
-      employee.department.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
-      (employee.branch || '').toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
-      employee.suspensionReason.toLowerCase().includes(suspendedSearchTerm.toLowerCase())
-    );
-  };
+  //   return activeSuspended.filter(employee =>
+  //     employee.fname.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
+  //     employee.email.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
+  //     employee.positions.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
+  //     employee.departments.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
+  //     (employee.branches.branch_name || '').toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
+  //     employee.suspensionReason.toLowerCase().includes(suspendedSearchTerm.toLowerCase())
+  //   );
+  // };
 
-  const getFilteredReinstatedEmployees = () => {
-    const reinstated = getReinstatedEmployees();
-    if (!reinstatedSearchTerm) return reinstated;
+  // const getFilteredReinstatedEmployees = () => {
+  //   const reinstated = getReinstatedEmployees();
+  //   if (!reinstatedSearchTerm) return reinstated;
 
-    return reinstated.filter(employee =>
-      employee.name.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
-      employee.position.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
-      employee.department.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
-      (employee.branch || '').toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
-      employee.suspensionReason.toLowerCase().includes(reinstatedSearchTerm.toLowerCase())
-    );
-  };
+  //   return reinstated.filter(employee =>
+  //     employee.name.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
+  //     employee.email.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
+  //     employee.position.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
+  //     employee.department.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
+  //     (employee.branch || '').toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
+  //     employee.suspensionReason.toLowerCase().includes(reinstatedSearchTerm.toLowerCase())
+  //   );
+  // };
 
-  const getFilteredActiveEmployees = () => {
-    const activeEmployees = getActiveEmployees();
-    if (!userSearchTerm) return activeEmployees;
+  // const getFilteredActiveEmployees = () => {
+  //   const activeEmployees = getActiveEmployees();
+  //   if (!userSearchTerm) return activeEmployees;
 
-    return activeEmployees.filter(employee =>
-      employee.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      employee.position.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      employee.department.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      (employee.branch || '').toLowerCase().includes(userSearchTerm.toLowerCase())
-    );
-  };
+  //   return activeEmployees.filter(employee =>
+  //     employee.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+  //     employee.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+  //     employee.position.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+  //     employee.department.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+  //     (employee.branch || '').toLowerCase().includes(userSearchTerm.toLowerCase())
+  //   );
+  // };
 
   // // Function to get newly registered accounts from pending registrations
   // const getNewlyRegisteredAccounts = () => {
@@ -893,11 +893,11 @@ export default function AdminDashboard() {
     const loadAdminData = async () => {
       try {
         // Load positions data
-        const positions = await clientDataService.getPositions();
+        const positions = await clientDataServiceApi.getPositions();
         setPositionsData(positions);
         
         // Load branches data
-        const branches = await clientDataService.getBranches();
+        const branches = await clientDataServiceApi.getBranches();
         setBranchesData(branches);
         
         // Load persisted registration data
@@ -1230,7 +1230,7 @@ export default function AdminDashboard() {
                       <SelectContent>
                         <SelectItem value="all">All Departments</SelectItem>
                         {departmentsData.map(dept => (
-                          <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                          <SelectItem key={dept.value} value={dept.value}>{dept.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -1360,7 +1360,7 @@ export default function AdminDashboard() {
                 className={`flex items-center ${dashboardTab === 'suspended' ? 'bg-red-600 hover:bg-red-700 text-white' : 'hover:bg-red-50'}`}
               >
                 <span>⚠️</span>
-                Suspended Employees ({getFilteredSuspendedEmployees().length})
+                {/* Suspended Employees ({getFilteredSuspendedEmployees().length}) */}
               </Button>
               <Button
                 variant={dashboardTab === 'reinstated' ? 'default' : 'outline'}
@@ -1368,7 +1368,7 @@ export default function AdminDashboard() {
                 className={`flex items-center gap-2 ${dashboardTab === 'reinstated' ? 'bg-green-600 hover:bg-green-700 text-white' : 'hover:bg-green-50'}`}
               >
                 <span>✅</span>
-                Reinstated Records ({getFilteredReinstatedEmployees().length})
+                {/* Reinstated Records ({getFilteredReinstatedEmployees().length}) */}
               </Button>
             </div>
 
@@ -1453,7 +1453,7 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {getFilteredSuspendedEmployees().map((employee) => (
+                      {/* {getFilteredSuspendedEmployees().map((employee) => (
                         <TableRow key={employee.id}>
                           <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{employee.email}</TableCell>
@@ -1497,17 +1497,17 @@ export default function AdminDashboard() {
                               )}
                             </div>
                           </TableCell>
-                        </TableRow>
-                      ))}
+                        </TableRow> */}
+                      {/* ))} */}
                     </TableBody>
                   </Table>
                 </div>
 
-                {getFilteredSuspendedEmployees().length === 0 && (
+                {/* {getFilteredSuspendedEmployees().length === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     {suspendedSearchTerm ? 'No suspended employees match your search.' : 'No suspended employees found.'}
                   </div>
-                )}
+                )} */}
               </div>
             )}
 
@@ -1565,7 +1565,7 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {getFilteredReinstatedEmployees().map((employee) => (
+                      {/* {getFilteredReinstatedEmployees().map((employee) => (
                         <TableRow key={employee.id}>
                           <TableCell className="font-medium">{employee.name}</TableCell>
                           <TableCell>{employee.email}</TableCell>
@@ -1603,16 +1603,16 @@ export default function AdminDashboard() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ))} */}
                     </TableBody>
                   </Table>
                 </div>
 
-                {getFilteredReinstatedEmployees().length === 0 && (
+                {/* {getFilteredReinstatedEmployees().length === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     {reinstatedSearchTerm ? 'No reinstated employees match your search.' : 'No reinstated employees found.'}
                   </div>
-                )}
+                )} */}
               </div>
             )}
           </CardContent>
@@ -2150,7 +2150,6 @@ export default function AdminDashboard() {
             <DialogDescription>Create a new user account with appropriate permissions</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 px-2">
             {/* Personal Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
@@ -2193,8 +2192,8 @@ export default function AdminDashboard() {
                     </SelectTrigger>
                     <SelectContent>
                       {positionsData.map((position) => (
-                        <SelectItem key={position.id} value={position.id}>
-                          {position.name}
+                        <SelectItem key={position.value} value={position.value}>
+                          {position.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -2229,27 +2228,11 @@ export default function AdminDashboard() {
                     </SelectTrigger>
                     <SelectContent>
                       {departmentsData.map(dept => (
-                        <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                        <SelectItem key={dept.value} value={dept.value}>{dept.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="branchCode" className="text-sm font-medium">Branch Code</Label>
-                  <Select value={newUser.branchCode} onValueChange={(value) => setNewUser({ ...newUser, branchCode: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select branch code" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branchCodesData.map((code) => (
-                        <SelectItem key={code} value={code}>
-                          {code}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="branch" className="text-sm font-medium">Branch</Label>
@@ -2259,7 +2242,7 @@ export default function AdminDashboard() {
                     </SelectTrigger>
                     <SelectContent>
                       {branchesData.map(branch => (
-                        <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                        <SelectItem key={branch.value} value={branch.value}>{branch.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -2371,7 +2354,7 @@ export default function AdminDashboard() {
           <DialogHeader className="pb-4 bg-yellow-200/70 rounded-lg">
             <DialogTitle className='text-black'>Suspend Employee</DialogTitle>
             <DialogDescription className='text-black'>
-              Suspend {selectedEmployee?.name} from the system
+              Suspend {selectedEmployee?.fname} from the system
             </DialogDescription>
           </DialogHeader>
 
@@ -2530,7 +2513,7 @@ export default function AdminDashboard() {
               Suspension Details
             </DialogTitle>
             <DialogDescription>
-              {selectedSuspendedEmployee?.name}
+              {selectedSuspendedEmployee?.fname}
             </DialogDescription>
           </DialogHeader>
 
@@ -2619,7 +2602,7 @@ export default function AdminDashboard() {
               Delete Employee
             </DialogTitle>
             <DialogDescription className='text-red-700'>
-              This action cannot be undone. Are you sure you want to permanently delete {employeeToDelete?.name || reinstatedEmployeeToDelete?.name}?
+              This action cannot be undone. Are you sure you want to permanently delete {employeeToDelete?.fname || reinstatedEmployeeToDelete?.fname}?
             </DialogDescription>
           </DialogHeader>
 
@@ -2647,10 +2630,10 @@ export default function AdminDashboard() {
               <div className="text-sm text-gray-700">
                 <p className="font-medium">Employee Details:</p>
                 <div className="mt-2 space-y-1">
-                  <p><span className="font-medium">Name:</span> {employeeToDelete?.name}</p>
+                  <p><span className="font-medium">Name:</span> {employeeToDelete?.fname}</p>
                   <p><span className="font-medium">Email:</span> {employeeToDelete?.email}</p>
-                  <p><span className="font-medium">Position:</span> {employeeToDelete?.position}</p>
-                  <p><span className="font-medium">Department:</span> {employeeToDelete?.department}</p>
+                  {/* <p><span className="font-medium">Position:</span> {employeeToDelete?.positions?.value}</p>
+                  <p><span className="font-medium">Department:</span> {employeeToDelete?.departments?.value}</p> */}
                 </div>
               </div>
             </div>
@@ -2693,9 +2676,9 @@ export default function AdminDashboard() {
         onClose={() => setIsEditModalOpen(false)}
         user={userToEdit}
         onSave={handleSaveUser}
-        departments={departmentsData.map((dept: any) => dept.name)}
-        branches={branchesData.map(branch => branch.name)}
-        positions={positionsData}
+        departments={departmentsData.map((dept: any) => dept.label)}
+        branches={branchesData.map(branch => branch.label)}
+        positions={positionsData.map((pos: any) => pos.label)}
       />
 
     </DashboardShell>

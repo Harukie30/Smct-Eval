@@ -47,7 +47,7 @@ export default function LandingLoginPage() {
     useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
-  const { login, isLoading } = useAuth();
+  const {  login, isLoading } = useAuth();
   const router = useRouter();
   // Force refresh accounts data on login page load (clears cache)
   useEffect(() => {
