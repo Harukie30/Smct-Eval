@@ -480,8 +480,13 @@ function EvaluatorDashboard() {
           item.employeeName
         );
 
+        // Filter to show only evaluations created by this evaluator
+        const evaluatorFiltered = validData.filter((item: any) => 
+          item.evaluatorId === user?.id
+        );
+
         // Remove duplicates based on ID
-        const uniqueData = validData.filter((item: any, index: number, self: any[]) =>
+        const uniqueData = evaluatorFiltered.filter((item: any, index: number, self: any[]) =>
           index === self.findIndex(t => t.id === item.id)
         );
 
@@ -624,8 +629,13 @@ function EvaluatorDashboard() {
           item.employeeName
         );
 
+        // Filter to show only evaluations created by this evaluator
+        const evaluatorFiltered = validData.filter((item: any) => 
+          item.evaluatorId === user?.id
+        );
+
         // Remove duplicates based on ID
-        const uniqueData = validData.filter((item: any, index: number, self: any[]) =>
+        const uniqueData = evaluatorFiltered.filter((item: any, index: number, self: any[]) =>
           index === self.findIndex(t => t.id === item.id)
         );
 
@@ -1840,6 +1850,7 @@ function EvaluatorDashboard() {
         category: submission.category || 'Performance Review',
         rating: calculatedRating,
         date: submission.submittedAt || new Date().toISOString(),
+        submittedAt: submission.submittedAt, // Preserve original submission timestamp for highlighting
         comment: submission.evaluationData?.overallComments || 'Performance evaluation completed',
         // Approval-related properties - use correct status based on signatures
         approvalStatus: getCorrectApprovalStatus(submission),
@@ -1961,8 +1972,13 @@ function EvaluatorDashboard() {
             item.employeeName
           );
 
+          // Filter to show only evaluations created by this evaluator
+          const evaluatorFiltered = validData.filter((item: any) => 
+            item.evaluatorId === user?.id
+          );
+
           // Remove duplicates based on ID
-          const uniqueData = validData.filter((item: any, index: number, self: any[]) =>
+          const uniqueData = evaluatorFiltered.filter((item: any, index: number, self: any[]) =>
             index === self.findIndex(t => t.id === item.id)
           );
 
@@ -2834,7 +2850,8 @@ function EvaluatorDashboard() {
                   All Feedback/Evaluation Records
                   {(() => {
                     const newCount = filteredFeedbackData.filter(feedback => {
-                      const hoursDiff = (new Date().getTime() - new Date(feedback.date).getTime()) / (1000 * 60 * 60);
+                      if (!feedback.submittedAt) return false;
+                      const hoursDiff = (new Date().getTime() - new Date(feedback.submittedAt).getTime()) / (1000 * 60 * 60);
                       return hoursDiff <= 24 && !seenSubmissions.has(feedback.id);
                     }).length;
                     return newCount > 0 ? (
@@ -3143,7 +3160,7 @@ function EvaluatorDashboard() {
                       </TableHeader>
                       <TableBody className="divide-y divide-gray-200">
                         {filteredFeedbackData.map((feedback) => {
-                          const highlight = getSubmissionHighlight(feedback.date, feedback.id, feedback.approvalStatus);
+                          const highlight = getSubmissionHighlight(feedback.submittedAt || feedback.date, feedback.id, feedback.approvalStatus);
                           return (
                             <TableRow 
                               key={feedback.uniqueKey} 

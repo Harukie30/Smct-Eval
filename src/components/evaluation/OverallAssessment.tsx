@@ -504,7 +504,8 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         id="prob3" 
                                         className="rounded"
                                         checked={data.reviewTypeProbationary3}
-                                        onChange={(e) => updateDataAction({ reviewTypeProbationary3: e.target.checked })}
+                                        disabled
+                                        readOnly
                                     />
                                     <label htmlFor="prob3" className="text-sm text-gray-700">3 months</label>
                                 </div>
@@ -514,7 +515,8 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         id="prob5" 
                                         className="rounded"
                                         checked={data.reviewTypeProbationary5}
-                                        onChange={(e) => updateDataAction({ reviewTypeProbationary5: e.target.checked })}
+                                        disabled
+                                        readOnly
                                     />
                                     <label htmlFor="prob5" className="text-sm text-gray-700">5 months</label>
                                 </div>
@@ -535,16 +537,8 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ1}
-                                        disabled={quarterlyStatus.q1}
-                                        onChange={(e) => {
-                                            // Clear all other regular review types first
-                                            updateDataAction({
-                                                reviewTypeRegularQ1: e.target.checked,
-                                                reviewTypeRegularQ2: false,
-                                                reviewTypeRegularQ3: false,
-                                                reviewTypeRegularQ4: false
-                                            });
-                                        }}
+                                        disabled
+                                        readOnly
                                     />
                                     <label 
                                         htmlFor="q1" 
@@ -565,16 +559,8 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ2}
-                                        disabled={quarterlyStatus.q2}
-                                        onChange={(e) => {
-                                            // Clear all other regular review types first
-                                            updateDataAction({
-                                                reviewTypeRegularQ1: false,
-                                                reviewTypeRegularQ2: e.target.checked,
-                                                reviewTypeRegularQ3: false,
-                                                reviewTypeRegularQ4: false
-                                            });
-                                        }}
+                                        disabled
+                                        readOnly
                                     />
                                     <label 
                                         htmlFor="q2" 
@@ -595,16 +581,8 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ3}
-                                        disabled={quarterlyStatus.q3}
-                                        onChange={(e) => {
-                                            // Clear all other regular review types first
-                                            updateDataAction({
-                                                reviewTypeRegularQ1: false,
-                                                reviewTypeRegularQ2: false,
-                                                reviewTypeRegularQ3: e.target.checked,
-                                                reviewTypeRegularQ4: false
-                                            });
-                                        }}
+                                        disabled
+                                        readOnly
                                     />
                                     <label 
                                         htmlFor="q3" 
@@ -625,16 +603,8 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         name="regularReview"
                                         className="rounded"
                                         checked={data.reviewTypeRegularQ4}
-                                        disabled={quarterlyStatus.q4}
-                                        onChange={(e) => {
-                                            // Clear all other regular review types first
-                                            updateDataAction({
-                                                reviewTypeRegularQ1: false,
-                                                reviewTypeRegularQ2: false,
-                                                reviewTypeRegularQ3: false,
-                                                reviewTypeRegularQ4: e.target.checked
-                                            });
-                                        }}
+                                        disabled
+                                        readOnly
                                     />
                                     <label 
                                         htmlFor="q4" 
@@ -661,7 +631,8 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         id="improvement" 
                                         className="rounded"
                                         checked={data.reviewTypeOthersImprovement}
-                                        onChange={(e) => updateDataAction({ reviewTypeOthersImprovement: e.target.checked })}
+                                        disabled
+                                        readOnly
                                     />
                                     <label htmlFor="improvement" className="text-sm text-gray-700">Performance Improvement</label>
                                 </div>
@@ -670,9 +641,10 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <input
                                         type="text"
                                         value={data.reviewTypeOthersCustom || ''}
-                                        onChange={(e) => updateDataAction({ reviewTypeOthersCustom: e.target.value })}
-                                        className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+                                        className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded bg-gray-50"
                                         placeholder="Enter custom review type"
+                                        disabled
+                                        readOnly
                                     />
                                 </div>
                             </div>

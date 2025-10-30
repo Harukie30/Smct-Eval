@@ -186,8 +186,7 @@ export function withPublicPage<P extends object>(
             );
           }
           
-          // Don't render page if authenticated and has a role AND role selection is complete (will redirect)
-          // If role selection is pending, render page to show RoleSelectionModal
+          // Don't render page if authenticated and has a role (will redirect)
           if (isAuthenticated && user?.role && !user?.roleSelectionPending) {
             return null;
           }

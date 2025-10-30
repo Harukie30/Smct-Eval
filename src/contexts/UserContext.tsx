@@ -3,7 +3,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserProfile } from '@/components/ProfileCard';
 import { toastMessages } from '@/lib/toastMessages';
+// Use localStorage version with accounts.json (until backend is ready)
 import clientDataService from '@/lib/clientDataService';
+// import clientDataService from '@/lib/clientDataService.api'; // Switch to this when backend is ready
 import { apiService } from '@/lib/apiService';
 import RealLoadingScreen from '@/components/RealLoadingScreen';
 
@@ -292,12 +294,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       setProfile(null);
       
       // Clear storage only if in browser
+      // Note: Laravel Sanctum cookies are cleared by the backend
       if (typeof window !== 'undefined') {
         localStorage.removeItem('authenticatedUser');
         localStorage.removeItem('keepLoggedIn');
-        localStorage.removeItem('authToken'); // Clear auth token
         sessionStorage.clear();
-        console.log('✅ Local storage cleared');
+        console.log('✅ Local storage cleared (cookies cleared by backend)');
       }
     }, 200);
   };
