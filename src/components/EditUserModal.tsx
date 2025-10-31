@@ -8,20 +8,21 @@ import SignaturePad from '@/components/SignaturePad';
 import LoadingAnimation from '@/components/LoadingAnimation';
 import { useToast } from '@/hooks/useToast';
 import { CONFIG } from '../../config/config';
+import clientDataService from '@/lib/clientDataService.api';
 
 interface User {
   id: number;
   fname: string;
   lname: string;
   email: string;
-  positions: {value: string, label: string};
-  departments:  {value: string, label: string};
-  branches:  {value: string, label: string};
-  role?: string;
+  position_id: string | number;
+  department_id?: string  | number ;
+  branch_id:string  | number;
+  roles?: any;
   username?: string;
   password?: string;
   contact?: string;
-  isActive?: string ;
+  is_active?: string ;
   signature?: string;
 }
 
@@ -30,9 +31,9 @@ interface EditUserModalProps {
   onClose: () => void;
   user: User | null;
   onSave: (updatedUser: User) => void;
-  departments: string[];
-  branches: string[];
-  positions: {value: string, label: string}[];
+  positions: {value: string | number, label: string}[];
+  departments:  {value: string | number, label: string}[];
+  branches:  {value: string | number, label: string}[];
 }
 
 const EditUserModal: React.FC<EditUserModalProps> = ({
@@ -49,23 +50,21 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     fname: '',
     lname: '',
     email: '',
-    positions: {value: '', label: ''},
-    departments: {value: '', label: ''},
-    branches: {value: '', label: ''},
-    role: '',
+    position_id: 0,
+    department_id: "",
+    branch_id: 0,
+    roles: '' ,
     username: '',
     password: '',
     contact: '',
-    isActive: '',
+    is_active: '',
     signature: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { success } = useToast();
 
-  console.log('ajbahbjzh:', user  );
   // Update form data when user prop changes
   useEffect(() => {
     if (user) { 
@@ -74,20 +73,20 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         fname: user.fname || '',
         lname: user.lname || '',
         email: user.email || '',
-        positions: user.positions || '',
-        departments: user.departments || '',
-        branches: user.branches || '',
-        role: user.role || '',
+        position_id: user.position_id || '',
+        department_id: user.department_id || '',
+        branch_id: user.branch_id || '',
+        roles: user.roles?.[0].name || '',
         username: user.username || '',
-        password: user.password || '',
         contact: user.contact || '',
-        isActive: user.isActive,
+        is_active: user.is_active ,
         signature: user.signature || ''
       });
       setErrors({});
     }
   }, [user]);
 
+  
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -105,19 +104,15 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       newErrors.email = 'Please enter a valid email address';
     }
 
-    if (!formData.positions.label.trim()) {
+    if (!formData.position_id) {
       newErrors.positions = 'Position is required';
     }
 
-    if (!formData.departments.label.trim()) {
-      newErrors.department = 'Department is required';
-    }
-
-    if (!formData.branches.label.trim()) {
+    if (!formData.branch_id) {
       newErrors.branches = 'Branch is required';
     }
 
-    if (!formData.role?.trim()) {
+    if (!formData.roles) {
       newErrors.role = 'Role is required';
     }
 
@@ -127,10 +122,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
     if (formData.contact && !/^\d{10,15}$/.test(formData.contact.replace(/\D/g, ''))) {
       newErrors.contact = 'Please enter a valid phone number';
-    }
-
-    if (formData.password && formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
     }
 
     setErrors(newErrors);
@@ -151,17 +142,20 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       }));
     }
   };
-
+ 
+  // todo
+  
   const handleSave = async () => {
     if (validateForm()) {
       console.log('Starting save process...');
       setIsSaving(true);
       try {
-        // Simulate a delay to show the loading animation
         await new Promise(resolve => setTimeout(resolve, 1000));
-        console.log('Calling onSave...');
-        await onSave(formData);
-        console.log('Save completed, closing modal...');
+            const data = new FormData();
+              Object.entries(formData).forEach(([key, value]) => {
+                data.append(key, value as string); 
+              });
+        const save = await clientDataService.updateEmployee(data ,formData.id);
         success('Success! Your changes have been saved.');
         onClose();
       } catch (error) {
@@ -245,39 +239,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             {errors.username && <p className="text-sm text-red-500">{errors.username}</p>}
           </div>
 
-          {/* Password */}
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password || ''}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                className={errors.password ? 'border-red-500 pr-10' : 'pr-10 bg-white'}
-                placeholder="Enter password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-              >
-                {showPassword ? (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                )}
-              </button>
-            </div>
-            {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
-            <p className="text-xs text-gray-500">Leave empty to keep current password</p>
-          </div>
-
           {/* Contact */}
           <div className="space-y-2">
             <Label htmlFor="contact">Contact Number</Label>
@@ -295,14 +256,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           <div className="space-y-2">
             <Label htmlFor="position">Position *</Label>
             <Select
-              value={formData.positions.value}
-              onValueChange={(value) => handleInputChange('positions', value)}
+              value={formData.position_id}
+              onValueChange={(value) => handleInputChange('position_id', value)}
             >
               <SelectTrigger className={errors.positions ? 'border-red-500' : 'bg-white'}>
                 <SelectValue placeholder="Select position" />
               </SelectTrigger>
               <SelectContent>
-                {positions.map((positions, index) => (
+                {positions?.map((positions, index) => (
                   <SelectItem key={index} value={positions.value}>
                     {positions.label}
                   </SelectItem>
@@ -316,16 +277,16 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           <div className="space-y-2">
             <Label htmlFor="department">Department *</Label>
             <Select
-              value={formData. departments.value}
-              onValueChange={(value) => handleInputChange('departments', value)}
+              value={formData.department_id}
+              onValueChange={(value) => handleInputChange('department_id', value)}
             >
               <SelectTrigger className={errors.department ? 'border-red-500' : 'bg-white'}>
                 <SelectValue placeholder="Select department" />
               </SelectTrigger>
               <SelectContent>
-                {departments.map((department) => (
-                  <SelectItem key={department} value={department}>
-                    {department}
+                {departments.map((department, index) => (
+                  <SelectItem key={index} value={department.value}>
+                    {department.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -337,16 +298,16 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           <div className="space-y-2">
             <Label htmlFor="branch">Branch *</Label>
             <Select
-              value={formData.branches.value}
-              onValueChange={(value) => handleInputChange('branches', value)}
+              value={formData.branch_id}
+              onValueChange={(value) => handleInputChange('branch_id', value)}
             >
               <SelectTrigger className={errors.branches ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Select branch" />
               </SelectTrigger>
               <SelectContent>
-                {branches.map((branch) => (
-                  <SelectItem key={branch} value={branch}>
-                    {branch}
+                {branches.map((branch, index) => (
+                  <SelectItem key={index} value={branch.value}>
+                    {branch.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -358,8 +319,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           <div className="space-y-2">
             <Label htmlFor="role">Role *</Label>
             <Select
-              value={formData.role || ''}
-              onValueChange={(value) => handleInputChange('role', value)}
+              // value={formData.roles?.[0]?.name || ''}
+              onValueChange={(value) => handleInputChange('roles', value)}
             >
               <SelectTrigger className={errors.role ? 'border-red-500' : ''}>
                 <SelectValue placeholder="Select role" />
@@ -375,23 +336,20 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             {errors.role && <p className="text-sm text-red-500">{errors.role}</p>}
           </div>
 
-          {/* Active Status */}
+            {/* Email */}
           <div className="space-y-2">
-            <Label htmlFor="isActive">Status</Label>
-            <Select
-              value={formData.isActive ? 'active' : 'inactive'}
-              onValueChange={(value) => handleInputChange('isActive', value === 'active')}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="email">Status</Label>
+            <Input
+              id="isActive"
+              type="text"
+              value={formData.is_active}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              className={errors.email ? 'border-red-500' : 'bg-white'}
+              readOnly
+            />
+            {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
           </div>
-        </div>
+          </div>
 
         {/* Digital Signature - Full Width */}
         <div className="w-full space-y-2 pt-4 mt-4 border-t border-gray-200">

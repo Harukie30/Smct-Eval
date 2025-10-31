@@ -136,7 +136,6 @@ export default function SignaturePad({
     }, 0);
   };
 
-  console.log(previewImage)
 
   return (
     <div className={`space-y-3 ${className}`}>

@@ -37,7 +37,8 @@ export const apiService = {
 
         return data;
       },
-  // Registration
+
+
   updateEmployee_auth: async (formData: FormData): Promise<any> => {
     await sanctum_csrf();
     const res = await fetch(`${CONFIG.API_URL}/update_employee_auth`, {
@@ -60,7 +61,29 @@ export const apiService = {
 
         return data;
       },
-
+      
+      updateEmployee: async (formData: FormData, id :string | number): Promise<any> => {
+        await sanctum_csrf();
+        const res = await fetch(`${CONFIG.API_URL}/update_user/${id}`, {
+              method: "POST",
+              credentials: 'include',
+              headers: {
+                "Accept": "application/json",
+              },
+              body: formData,
+            });
+    
+            const data = await res.json();
+    
+            if (!res.ok) {
+              throw {
+                ...data,
+                status: res.status,
+              };
+            }
+    
+            return data;
+          },
 
   getPendingRegistrations: async (): Promise<any | null> => {
     try{
@@ -106,16 +129,16 @@ export const apiService = {
         const res = await fetch(`${CONFIG.API_URL}/departments`, {
           method: "GET",
         });
-        if (res.ok) {
-          const response = await res.json();
-          return response.departments.map(
-            (departments: any) => ({
-              value: departments.id,
-              label: departments.department_name,
-            })
-          );
+        if (!res.ok) {
+          throw new Error('Failed to save departments');
         }
-        return [];
+        const response = await res.json();
+        return response.departments.map(
+          (departments: any) => ({
+            value: departments.id,
+            label: departments.department_name,
+          })
+        );
       } catch (error) {
         console.error("Error fetching data:", error);
          return [];
@@ -124,17 +147,19 @@ export const apiService = {
 
     getPositions: async (): Promise<{ label: string; value: string }[]> => {
           try {
-            const res = await fetch(`${CONFIG.API_URL}/positions`, { method: "GET" });
-
-            if (res.ok) {
-              const response = await res.json();
-              return response.positions.map((position: any) => ({
-                value: position.id,
-                label: position.label,
-              }));
+            const res = await fetch(`${CONFIG.API_URL}/positions`, { 
+              method: "GET" 
+            });
+            
+            if (!res.ok) {
+               throw new Error('Failed to save positions');
             }
+            const response = await res.json();
+            return response.positions.map((position: any) => ({
+              value: position.id,
+              label: position.label,
+            }));
 
-            return []; // default empty
           } catch (error) {
             console.error("Error fetching positions:", error);
             return [];
@@ -146,14 +171,14 @@ export const apiService = {
         const res = await fetch(`${CONFIG.API_URL}/branches`, {
           method: "GET",
         });
-        if (res.ok) {
-          const response = await res.json();
-          return response.branches.map((branches: any) => ({
-            value: branches.id,
-            label: branches.branch_name + " /" + branches.branch_code,
-          }));
+        if (!res.ok) {
+               throw new Error('Failed to save positions');
         }
-        return [];
+        const response = await res.json();
+        return response.branches.map((branches: any) => ({
+          value: branches.id,
+          label: branches.branch_name + " /" + branches.branch_code,
+        }));
         } catch (error) {
         console.error("Error fetching data:", error);
         return [];

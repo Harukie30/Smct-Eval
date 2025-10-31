@@ -353,7 +353,6 @@ export default function AdminDashboard() {
       };
       load_users();
     }, []);
-    console.log('📥 Loaded active registrations:', approvedRegistrations);
   // Function to load evaluated reviews from client data service
   const loadEvaluatedReviews = async () => {
     try {
@@ -576,6 +575,8 @@ export default function AdminDashboard() {
       suspendedBy: suspendForm.suspendedBy,
       status: 'suspended'
     };
+
+   
 
     // Check if employee already exists in suspended list and update or add accordingly
     setSuspendedEmployees(prev => {
@@ -895,16 +896,18 @@ export default function AdminDashboard() {
         // Load positions data
         const positions = await clientDataServiceApi.getPositions();
         setPositionsData(positions);
-        
         // Load branches data
         const branches = await clientDataServiceApi.getBranches();
         setBranchesData(branches);
         
+        const departments = await clientDataServiceApi.getDepartments();
+        setDepartmentsData(departments);
+
         // Load persisted registration data
-        const savedApproved = JSON.parse(localStorage.getItem('approvedRegistrations') || '[]');
-        const savedRejected = JSON.parse(localStorage.getItem('rejectedRegistrations') || '[]');
+        // const savedApproved = JSON.parse(localStorage.getItem('approvedRegistrations') || '[]');
+        // const savedRejected = JSON.parse(localStorage.getItem('rejectedRegistrations') || '[]');
         // setApprovedRegistrations(savedApproved);
-        setRejectedRegistrations(savedRejected);
+        // setRejectedRegistrations(savedRejected);
 
         // Load fresh data from accounts.json
         await refreshDashboardData(false, false);
@@ -2676,9 +2679,9 @@ export default function AdminDashboard() {
         onClose={() => setIsEditModalOpen(false)}
         user={userToEdit}
         onSave={handleSaveUser}
-        departments={departmentsData.map((dept: any) => dept.label)}
-        branches={branchesData.map(branch => branch.label)}
-        positions={positionsData.map((pos: any) => pos.label)}
+        departments={departmentsData}
+        branches={branchesData}
+        positions={positionsData}
       />
 
     </DashboardShell>
