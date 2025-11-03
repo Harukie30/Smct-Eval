@@ -628,9 +628,9 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
                 onNextAction={nextStep}
                 onSubmitAction={handleSubmit}
                 onPreviousAction={prevStep}
-                onApproveAction={currentStep === 8 ? handleApprove : undefined}
+                // onApproveAction={currentStep === 8 ? handleApprove : undefined}
                 onCloseAction={currentStep === 8 ? handleCloseAfterSubmission : undefined}
-                isApproved={currentStep === 8 ? isEvaluatorApproved : false}
+                // isApproved={currentStep === 8 ? isEvaluatorApproved : false}
               />
             </CardContent>
           </Card>

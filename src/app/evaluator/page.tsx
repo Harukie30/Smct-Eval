@@ -1620,7 +1620,7 @@ export default function EvaluatorDashboard() {
       try {
         await createApprovalNotification(
           feedback.employeeName,
-          currentUser?.name || 'Evaluator',
+          currentUser?.fname || 'Evaluator',
           'evaluator'
         );
       } catch (notificationError) {
@@ -3480,7 +3480,7 @@ export default function EvaluatorDashboard() {
             {selectedEmployee && (
               <EvaluationForm
                 employee={selectedEmployee}
-                currentUser={user}
+                // currentUser={user}
                 onCloseAction={() => {
                   setIsEvaluationModalOpen(false);
                   setSelectedEmployee(null);

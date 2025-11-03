@@ -28,7 +28,7 @@ interface EditUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
-  // onSave: (formData: any) => void;
+  onSave: () => void;
   positions: {value: string | number, label: string}[];
   departments:  {value: string | number, label: string}[];
   branches:  {value: string | number, label: string}[];
@@ -38,7 +38,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   isOpen,
   onClose,
   user,
-  // onSave,
+  onSave,
   departments,
   branches,
   positions
@@ -164,6 +164,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         const save = await clientDataService.updateEmployee(data ,formData.id);
         success('Success! Your changes have been saved.');
         onClose();
+        onSave();
       } catch (error) {
         console.error('Error saving user:', error);
         // You might want to show an error message here

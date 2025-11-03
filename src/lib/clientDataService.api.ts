@@ -5,11 +5,7 @@ import apiService from './apiService';
 import { Employee, Submission, PendingRegistration, Profile, Account, Notification } from './clientDataService';
 
 export const clientDataService = {
-  // Authentication - now uses API
-  // login: async (email: string, password: string) => {
-  //   return await apiService.login(email, password);
-  // },
-
+ 
   // Data fetching - now uses API
   getPositions: async (): Promise<{ label: string; value: string }[]> => {
     return await apiService.getPositions();
@@ -43,26 +39,13 @@ export const clientDataService = {
   getActiveRegistrations: async (): Promise<PendingRegistration[]> => {
     return await apiService.getActiveRegistrations();
   },
-  // Profile management - now uses API
-  // updateProfile: async (id: number, updates: Partial<Profile>): Promise<Profile> => {
-  //   return await apiService.updateProfile(id, updates);
-  // },
-
-  // Employee management - you'll need to implement these API endpoints
-  getEmployees: async (): Promise<Employee[]> => {
-    // TODO: Implement GET /api/employees
-    console.warn('getEmployees: API endpoint not implemented yet');
-    return [];
-  },
-
-  getEmployee: async (id: number): Promise<Employee | null> => {
-    // TODO: Implement GET /api/employees/:id
-    console.warn('getEmployee: API endpoint not implemented yet');
-    return null;
-  },
 
   updateEmployee: async (formData: FormData , id: string | number): Promise<any> => {
     return await apiService.updateEmployee(formData, id );
+  },
+  
+  deleteUser: async (id: string | number): Promise<any> => {
+    return await apiService.deleteUser(id );
   },
 
   // Submissions - you'll need to implement these API endpoints

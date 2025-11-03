@@ -61,28 +61,51 @@ export const apiService = {
         return data;
       },
       
-      updateEmployee: async (formData: FormData, id :string | number): Promise<any> => {
-        await sanctum_csrf();
-        const res = await fetch(`${CONFIG.API_URL}/update_user/${id}`, {
-              method: "POST",
-              credentials: 'include',
-              headers: {
-                "Accept": "application/json",
-              },
-              body: formData,
-            });
-    
-            const data = await res.json();
-    
-            if (!res.ok) {
-              throw {
-                ...data,
-                status: res.status,
-              };
-            }
-    
-            return data;
+  updateEmployee: async (formData: FormData, id :string | number): Promise<any> => {
+    await sanctum_csrf();
+    const res = await fetch(`${CONFIG.API_URL}/update_user/${id}`, {
+          method: "POST",
+          credentials: 'include',
+          headers: {
+            "Accept": "application/json",
           },
+          body: formData,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw {
+            ...data,
+            status: res.status,
+          };
+        }
+
+        return data;
+  },
+  
+  deleteUser: async (id :string | number): Promise<any> => {
+    await sanctum_csrf();
+    const res = await fetch(`${CONFIG.API_URL}/delete_user/${id}`, {
+          method: "POST",
+          credentials: 'include',
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+          },
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw {
+            ...data,
+            status: res.status,
+          };
+        }
+
+        return data;
+  },
 
   getPendingRegistrations: async (): Promise<any | null> => {
     try{

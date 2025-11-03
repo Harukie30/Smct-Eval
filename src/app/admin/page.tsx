@@ -37,10 +37,10 @@ interface Employee {
   fname: string;
   lname: string;
   email: string;
-  positions: { value: string | number; label: string }[];
-  departments?: { value: string | number; department_name: string }[];
-  branches: { value: string | number; branch_name: string }[];
-  roles: {name: string }[];
+  positions: any;
+  departments?: any;
+  branches: any;
+  roles: any;
   username: string;
   password: string;
   isActive: string;
@@ -331,15 +331,7 @@ export default function AdminDashboard() {
     suspendedBy: 'Admin'
   });
 
-  // Function to filter out deleted employees
-  const filterDeletedEmployees = (employeeList: Employee[]) => {
-    const deletedEmployees = JSON.parse(localStorage.getItem('deletedEmployees') || '[]');
-    return employeeList.filter(emp => !deletedEmployees.includes(emp.id));
-  };
-
-
   // Function to load pending registrations
-    useEffect(() => {
       const load_users = async () => {
         try {
           const pendingRegistrations = await clientDataServiceApi.getPendingRegistrations();
@@ -351,8 +343,14 @@ export default function AdminDashboard() {
           console.error('Error loading pending registrations:', error);
         }
       };
+
+    useEffect(()=>{
       load_users();
-    }, []);
+    },[])
+      
+      const handleSaveUser = async () => {
+        await  load_users();
+      };
   // Function to load evaluated reviews from client data service
   const loadEvaluatedReviews = async () => {
     try {
@@ -393,7 +391,7 @@ export default function AdminDashboard() {
   // Function to load accounts data directly (no merging needed since accounts.json is now the single source)
   const loadAccountsData = async () => {
       // Load from localStorage first (for any runtime updates)
-      const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+      // const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
 
       // If localStorage has data, use it; otherwise use the imported data
       // const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : accountsData;
@@ -450,37 +448,14 @@ export default function AdminDashboard() {
     setIsEditModalOpen(true);
   };
 
-  // const handleSaveUser = async (updatedUser: any) => {
-  //   try {
-  //     // Update user using client data service
-  //     await clientDataService.updateEmployee(updatedUser.id, updatedUser);
-
-  //     // Refresh user data to get updated information
-  //     await refreshDashboardData(false, false);
-
-  //     // Show success toast
-  //     toastMessages.user.updated(updatedUser.name);
-  //   } catch (error) {
-  //     console.error('Error updating user:', error);
-  //     toastMessages.generic.error('Update Failed', 'Failed to update user information. Please try again.');
-  //   }
-  // };
-
   // Function to handle delete employee
-  const handleDeleteEmployee = () => {
+  const handleDeleteEmployee = async () => {
     if (!employeeToDelete) return;
 
-    // Store deleted employee ID in localStorage for persistence
-    const deletedEmployees = JSON.parse(localStorage.getItem('deletedEmployees') || '[]');
-    deletedEmployees.push(employeeToDelete.id);
-    localStorage.setItem('deletedEmployees', JSON.stringify(deletedEmployees));
-
-    // Remove employee from the list
-    setEmployees(prev => prev.filter(emp => emp.id !== employeeToDelete.id));
-
+    await clientDataServiceApi.deleteUser(employeeToDelete.id);
+    await load_users();
     // Show success toast
     toastMessages.user.deleted(employeeToDelete.fname);
-
     // Close modal
     setIsDeleteModalOpen(false);
     setEmployeeToDelete(null);
@@ -2635,8 +2610,8 @@ export default function AdminDashboard() {
                 <div className="mt-2 space-y-1">
                   <p><span className="font-medium">Name:</span> {employeeToDelete?.fname}</p>
                   <p><span className="font-medium">Email:</span> {employeeToDelete?.email}</p>
-                  {/* <p><span className="font-medium">Position:</span> {employeeToDelete?.positions?.value}</p>
-                  <p><span className="font-medium">Department:</span> {employeeToDelete?.departments?.value}</p> */}
+                  <p><span className="font-medium">Position:</span> {employeeToDelete?.positions.label}</p>
+                  <p><span className="font-medium">Department:</span> {employeeToDelete?.departments?.department_name}</p>
                 </div>
               </div>
             </div>
@@ -2658,11 +2633,7 @@ export default function AdminDashboard() {
               <Button
                 className='bg-red-600 hover:bg-red-700 text-white'
                 onClick={() => {
-                  if (reinstatedEmployeeToDelete) {
-                    handleDeleteReinstatedEmployee();
-                  } else {
                     handleDeleteEmployee();
-                  }
                 }}
               >
                 🗑️ Delete Permanently
@@ -2678,7 +2649,7 @@ export default function AdminDashboard() {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         user={userToEdit}
-        // onSave={handleSaveUser}
+        onSave={handleSaveUser}
         departments={departmentsData}
         branches={branchesData}
         positions={positionsData}
