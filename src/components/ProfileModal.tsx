@@ -119,10 +119,10 @@ export default function ProfileModal({
       setIsLoading(false);
     }
   };
-
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (!validateForm()) {
       return;
     }
@@ -136,10 +136,10 @@ export default function ProfileModal({
     try {
       // Add a small delay to show the loading animation
       await new Promise((resolve) => setTimeout(resolve, 1000));
-
+      
       // Call onSave directly - this will update the UserContext and localStorage
       await clientDataService.updateEmployee_auth(data);
-
+      
       // Show success toast
       success("Profile updated successfully!");
       fetchUser?.();
@@ -154,7 +154,7 @@ export default function ProfileModal({
       setIsLoading(false);
     }
   };
-
+  
   const handleCancel = () => {
     setFormData(profile); // Reset to original data
     setErrors({});
@@ -331,7 +331,7 @@ export default function ProfileModal({
               Digital Signature
             </Label>
             <SignaturePad
-                value={formData.signature ? `${CONFIG.STORAGE_URL}/${profile.signature}` : ""}
+                value={`${CONFIG.STORAGE_URL}/${profile.signature}`}
                 onChangeAction={(signature) => handleInputChange("signature", signature)}
                 className="w-full"
                 required={false}

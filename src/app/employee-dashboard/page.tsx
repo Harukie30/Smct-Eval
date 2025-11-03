@@ -21,15 +21,6 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-<<<<<<< HEAD
-import DashboardShell from '@/components/DashboardShell';
-import PageTransition from '@/components/PageTransition';
-import { useUser } from '@/contexts/UserContext';
-import { withAuth } from '@/hoc';
-import { getQuarterFromEvaluationData, getQuarterColor } from '@/lib/quarterUtils';
-import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
-import EvaluationDetailsModal from '@/components/EvaluationDetailsModal';
-=======
 import DashboardShell from "@/components/DashboardShell";
 import PageTransition from "@/components/PageTransition";
 import { useAuth } from "@/contexts/UserContext";
@@ -40,7 +31,6 @@ import {
 } from "@/lib/quarterUtils";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import EvaluationDetailsModal from "@/components/EvaluationDetailsModal";
->>>>>>> cristian
 // CommentDetailModal import removed
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
@@ -64,17 +54,6 @@ import {
   initializeMockData,
 } from "@/lib/evaluationStorage";
 // commentsService import removed
-<<<<<<< HEAD
-import accountsData from '@/data/accounts.json';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Line, LineChart, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { useToast } from '@/hooks/useToast';
-import { useAutoRefresh } from '@/hooks/useAutoRefresh';
-import { Skeleton } from '@/components/ui/skeleton';
-
-function EmployeeDashboard() {
-  const { profile, user, isLoading: authLoading, logout } = useUser();
-=======
 import accountsData from "@/data/accounts.json";
 import {
   ChartContainer,
@@ -88,7 +67,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function EmployeeDashboard() {
   const { user, isLoading: authLoading, logout } = useAuth();
->>>>>>> cristian
   const { success, error } = useToast();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -985,11 +963,11 @@ export default function EmployeeDashboard() {
     setShowLogoutSuccess(true);
 
     // Close dialog and logout after success animation
-    setTimeout(async () => {
+    setTimeout(() => {
       setIsLogoutDialogOpen(false);
       setShowLogoutSuccess(false);
       // Use the UserContext logout which includes loading screen
-      await logout();
+      logout();
     }, 1500);
   };
 
@@ -1318,7 +1296,7 @@ export default function EmployeeDashboard() {
                   </div>
                   <Input
                     type="text"
-                    placeholder="Search by supervisor, rating, date."
+                    placeholder="Search by supervisor, rating, date, quarter..."
                     value={overviewSearchTerm}
                     onChange={(e) => setOverviewSearchTerm(e.target.value)}
                     className="pl-10 pr-4 py-2 w-full border-gray-300 focus:border-blue-500 focus:ring-blue-500"
@@ -1334,8 +1312,6 @@ export default function EmployeeDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-<<<<<<< HEAD
-=======
                 {/* Refreshing Dialog for Performance Reviews */}
                 {showRefreshingDialog && (
                   <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1353,69 +1329,18 @@ export default function EmployeeDashboard() {
                   </div>
                 )}
 
->>>>>>> cristian
                 {isRefreshingOverview || loading ? (
-                  <div className="relative max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table mx-4">
-                    {/* Centered Loading Spinner with Logo */}
-                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                      <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                        <div className="relative">
-                          {/* Spinning ring */}
-                          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                          {/* Logo in center */}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-600 font-medium">Loading performance reviews...</p>
-                      </div>
+                  <div className="space-y-2">
+                    {/* Table Header Skeleton */}
+                    <div className="flex space-x-3 py-2 border-b">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-8" />
+                      <Skeleton className="h-3 w-12" />
+                      <Skeleton className="h-3 w-10" />
+                      <Skeleton className="h-3 w-16" />
+                      <Skeleton className="h-3 w-12" />
                     </div>
 
-<<<<<<< HEAD
-                    {/* Table structure visible in background */}
-                    <Table>
-                      <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
-                        <TableRow>
-                          <TableHead>Immediate Supervisor</TableHead>
-                          <TableHead className="text-right">Rating</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Quarter</TableHead>
-                          <TableHead>Acknowledgement</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <TableRow key={i}>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Skeleton className="h-4 w-24" />
-                                <Skeleton className="h-5 w-12 rounded-full" />
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Skeleton className="h-4 w-12" />
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
-                                <Skeleton className="h-4 w-20" />
-                                <Skeleton className="h-3 w-16" />
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-5 w-16 rounded-full" />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-5 w-20 rounded-full" />
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Skeleton className="h-8 w-16" />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-=======
                     {/* Table Rows Skeleton */}
                     {Array.from({ length: 3 }).map((_, i) => (
                       <div
@@ -1430,7 +1355,6 @@ export default function EmployeeDashboard() {
                         <Skeleton className="h-6 w-12" />
                       </div>
                     ))}
->>>>>>> cristian
                   </div>
                 ) : (
                   (() => {
@@ -1461,71 +1385,6 @@ export default function EmployeeDashboard() {
                           ? "approved"
                           : "pending";
 
-<<<<<<< HEAD
-                  if (filteredSubmissions.length === 0) {
-                    return (
-                      <div className="text-center py-8">
-                        <div className="text-gray-500 text-lg mb-2">No results found</div>
-                        <div className="text-gray-400 text-sm mb-4">No performance reviews match "{overviewSearchTerm}"</div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setOverviewSearchTerm('')}
-                          className="text-white hover:text-white bg-blue-500 hover:bg-blue-600"
-                        >
-                          Clear search
-                        </Button>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <>
-                      {/* Search Results Count */}
-                      {overviewSearchTerm && (
-                        <div className="mb-3 mx-4 text-sm text-gray-600">
-                          Found <span className="font-semibold text-blue-600">{filteredSubmissions.length}</span> result{filteredSubmissions.length !== 1 ? 's' : ''} for "{overviewSearchTerm}"
-                        </div>
-                      )}
-
-                      {/* Simple Legend */}
-                      <div className="mb-3 mx-4 flex flex-wrap gap-4 text-xs text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
-                          <Badge className="bg-green-200 text-green-800 text-xs">Approved</Badge>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
-                          <Badge className="bg-yellow-200 text-yellow-800 text-xs">New</Badge>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
-                          <Badge className="bg-blue-300 text-blue-800 text-xs">Recent</Badge>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Badge className="text-white bg-orange-500 text-xs">Pending</Badge>
-                        </div>
-                      </div>
-                      
-                      <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table mx-4">
-                        <Table>
-                        <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
-                          <TableRow>
-                            <TableHead>Immediate Supervisor</TableHead>
-                            <TableHead className="text-right">Rating</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Quarter</TableHead>
-                            <TableHead>Acknowledgement</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                      <TableBody>
-                        {filteredSubmissions
-                          .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-                          .map((submission) => {
-                        const highlight = getSubmissionHighlight(submission.submittedAt, submissions, submission.id);
-=======
->>>>>>> cristian
                         return (
                           supervisor.includes(searchLower) ||
                           rating.includes(searchLower) ||
@@ -1799,23 +1658,8 @@ export default function EmployeeDashboard() {
         return (
           <div className="relative h-[calc(100vh-200px)] overflow-y-auto">
             {isRefreshingReviews || loading ? (
-              <div className="relative space-y-6 min-h-[500px]">
-                {/* Centered Loading Spinner with Logo */}
-                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                    <div className="relative">
-                      {/* Spinning ring */}
-                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                      {/* Logo in center */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 font-medium">Loading performance reviews...</p>
-                  </div>
-                </div>
-
-                {/* Performance Analytics Skeleton (visible in background) */}
+              <div className="space-y-6">
+                {/* Performance Analytics Skeleton */}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
                   <Card className="h-fit">
                     <CardHeader>
@@ -1840,7 +1684,7 @@ export default function EmployeeDashboard() {
                   </Card>
                 </div>
 
-                {/* Performance Reviews Table Skeleton (visible in background) */}
+                {/* Performance Reviews Table Skeleton */}
                 <Card>
                   <CardHeader>
                     <div className="flex justify-between items-center">
@@ -2552,18 +2396,6 @@ export default function EmployeeDashboard() {
         return (
           <div className="relative">
             {isRefreshingHistory || loading ? (
-<<<<<<< HEAD
-              <div className="relative min-h-[500px]">
-                {/* Centered Loading Spinner with Logo */}
-                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                    <div className="relative">
-                      {/* Spinning ring */}
-                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                      {/* Logo in center */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-=======
               <Card>
                 <CardHeader>
                   <Skeleton className="h-6 w-48" />
@@ -2589,42 +2421,11 @@ export default function EmployeeDashboard() {
                         <Skeleton className="h-4 w-20" />
                         <Skeleton className="h-4 w-16" />
                         <Skeleton className="h-4 w-12" />
->>>>>>> cristian
                       </div>
-                    </div>
-                    <p className="text-sm text-gray-600 font-medium">Loading evaluation history...</p>
+                    ))}
                   </div>
-                </div>
-
-                {/* Card skeleton visible in background */}
-                <Card>
-                  <CardHeader>
-                    <Skeleton className="h-6 w-48" />
-                    <Skeleton className="h-4 w-64" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {/* Table Header Skeleton */}
-                      <div className="flex space-x-4">
-                        <Skeleton className="h-8 w-24" />
-                        <Skeleton className="h-8 w-32" />
-                        <Skeleton className="h-8 w-28" />
-                      </div>
-
-                      {/* Table Rows Skeleton */}
-                      {Array.from({ length: 8 }).map((_, i) => (
-                        <div key={i} className="flex items-center space-x-4 py-3 border-b">
-                          <Skeleton className="h-4 w-32" />
-                          <Skeleton className="h-4 w-24" />
-                          <Skeleton className="h-4 w-20" />
-                          <Skeleton className="h-4 w-16" />
-                          <Skeleton className="h-4 w-12" />
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                </CardContent>
+              </Card>
             ) : (
               <Card>
                 <CardHeader>
@@ -2682,8 +2483,6 @@ export default function EmployeeDashboard() {
                           </div>
                         </CardHeader>
                         <CardContent>
-<<<<<<< HEAD
-=======
                           {/* Refreshing Dialog for Quarterly Performance */}
                           {showRefreshingDialog && (
                             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -2701,7 +2500,6 @@ export default function EmployeeDashboard() {
                             </div>
                           )}
 
->>>>>>> cristian
                           {/* Search Bar */}
                           <div className="mb-6 w-1/2">
                             <div className="relative">
@@ -2895,30 +2693,20 @@ export default function EmployeeDashboard() {
                               </div>
                             )}
                           </div>
-                          <div className="relative max-h-[300px] md:max-h-[450px] lg:max-h-[650px] xl:max-h-[700px] overflow-y-auto overflow-x-auto scrollable-table">
+                          <div className="max-h-[300px] md:max-h-[450px] lg:max-h-[650px] xl:max-h-[700px] overflow-y-auto overflow-x-auto scrollable-table">
                             {isRefreshingQuarterly || loading ? (
-                              <>
-                                {/* Centered Loading Spinner with Logo */}
-                                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                                    <div className="relative">
-                                      {/* Spinning ring */}
-                                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                                      {/* Logo in center */}
-                                      <div className="absolute inset-0 flex items-center justify-center">
-                                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                                      </div>
-                                    </div>
-                                    <p className="text-sm text-gray-600 font-medium">Loading quarterly data...</p>
-                                  </div>
+                              <div className="space-y-2 p-4">
+                                {/* Table Header Skeleton */}
+                                <div className="flex space-x-3 py-2 border-b">
+                                  <Skeleton className="h-3 w-12" />
+                                  <Skeleton className="h-3 w-18" />
+                                  <Skeleton className="h-3 w-14" />
+                                  <Skeleton className="h-3 w-12" />
+                                  <Skeleton className="h-3 w-16" />
+                                  <Skeleton className="h-3 w-10" />
+                                  <Skeleton className="h-3 w-12" />
                                 </div>
 
-<<<<<<< HEAD
-                                {/* Table skeleton visible in background */}
-                                <div className="space-y-2 p-4">
-                                  {/* Table Header Skeleton */}
-                                  <div className="flex space-x-3 py-2 border-b">
-=======
                                 {/* Table Rows Skeleton */}
                                 {Array.from({ length: 3 }).map((_, i) => (
                                   <div
@@ -2927,30 +2715,14 @@ export default function EmployeeDashboard() {
                                   >
                                     <Skeleton className="h-4 w-8" />
                                     <Skeleton className="h-3 w-6" />
->>>>>>> cristian
                                     <Skeleton className="h-3 w-12" />
-                                    <Skeleton className="h-3 w-18" />
+                                    <Skeleton className="h-3 w-10" />
                                     <Skeleton className="h-3 w-14" />
                                     <Skeleton className="h-3 w-12" />
-                                    <Skeleton className="h-3 w-16" />
-                                    <Skeleton className="h-3 w-10" />
-                                    <Skeleton className="h-3 w-12" />
+                                    <Skeleton className="h-6 w-14" />
                                   </div>
-
-                                  {/* Table Rows Skeleton */}
-                                  {Array.from({ length: 3 }).map((_, i) => (
-                                    <div key={i} className="flex items-center space-x-3 py-2 border-b">
-                                      <Skeleton className="h-4 w-8" />
-                                      <Skeleton className="h-3 w-6" />
-                                      <Skeleton className="h-3 w-12" />
-                                      <Skeleton className="h-3 w-10" />
-                                      <Skeleton className="h-3 w-14" />
-                                      <Skeleton className="h-3 w-12" />
-                                      <Skeleton className="h-6 w-14" />
-                                    </div>
-                                  ))}
-                                </div>
-                              </>
+                                ))}
+                              </div>
                             ) : (
                               <Table>
                                 <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
@@ -3387,7 +3159,7 @@ export default function EmployeeDashboard() {
                               </div>
                               <input
                                 type="text"
-                                placeholder="Search by employee, evaluator, supervisor,."
+                                placeholder="Search by employee, evaluator, supervisor, rating, or quarter..."
                                 value={historySearchTerm}
                                 onChange={(e) =>
                                   setHistorySearchTerm(e.target.value)
@@ -3668,19 +3440,6 @@ export default function EmployeeDashboard() {
         return (
           <div className="relative">
             {isRefreshingAccountHistory || loading ? (
-<<<<<<< HEAD
-              <div className="relative min-h-[500px]">
-                {/* Centered Loading Spinner with Logo */}
-                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                    <div className="relative">
-                      {/* Spinning ring */}
-                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                      {/* Logo in center */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                      </div>
-=======
               <Card>
                 <CardHeader>
                   <Skeleton className="h-4 w-48" />
@@ -3707,41 +3466,10 @@ export default function EmployeeDashboard() {
                           <Skeleton className="h-3 w-12" />
                         </div>
                       ))}
->>>>>>> cristian
                     </div>
-                    <p className="text-sm text-gray-600 font-medium">Loading account history...</p>
                   </div>
-                </div>
-
-                {/* Card skeleton visible in background */}
-                <Card>
-                  <CardHeader>
-                    <Skeleton className="h-4 w-48" />
-                    <Skeleton className="h-3 w-60" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {/* Tabs Skeleton */}
-                      <div className="flex space-x-2">
-                        <Skeleton className="h-6 w-24" />
-                        <Skeleton className="h-6 w-20" />
-                      </div>
-
-                      {/* Table Content Skeleton */}
-                      <div className="space-y-2">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                          <div key={i} className="flex items-center space-x-3 py-2 border-b">
-                            <Skeleton className="h-3 w-20" />
-                            <Skeleton className="h-3 w-16" />
-                            <Skeleton className="h-3 w-14" />
-                            <Skeleton className="h-3 w-12" />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                </CardContent>
+              </Card>
             ) : (
               <Card>
                 <CardHeader>
@@ -3753,8 +3481,6 @@ export default function EmployeeDashboard() {
                 <CardContent>
                   {/* Account History Section */}
                   <div className="mt-6">
-<<<<<<< HEAD
-=======
                     {/* Refreshing Dialog for Account History Table */}
                     {showRefreshingDialog && (
                       <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -3772,7 +3498,6 @@ export default function EmployeeDashboard() {
                       </div>
                     )}
 
->>>>>>> cristian
                     {/* Search Bar */}
                     <div className="mb-6 w-1/3">
                       <div className="relative">
@@ -4026,7 +3751,7 @@ export default function EmployeeDashboard() {
   };
 
   return (
-    <>
+    <ProtectedRoute>
       {/* Loading Screen - Shows during initial load, authentication, and auto-refresh */}
       {(loading || authLoading || !user) && (
         <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -4561,14 +4286,6 @@ export default function EmployeeDashboard() {
           )}
         </DialogContent>
       </Dialog>
-<<<<<<< HEAD
-
-    </>
-=======
     </ProtectedRoute>
->>>>>>> cristian
   );
 }
-
-// Wrap with HOC for authentication
-export default withAuth(EmployeeDashboard, { requiredRole: 'employee' });

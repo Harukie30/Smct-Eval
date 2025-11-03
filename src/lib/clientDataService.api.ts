@@ -61,10 +61,8 @@ export const clientDataService = {
     return null;
   },
 
-  updateEmployee: async (id: number, updates: Partial<Employee>): Promise<Employee> => {
-    // TODO: Implement PUT /api/employees/:id
-    console.warn('updateEmployee: API endpoint not implemented yet');
-    throw new Error('Not implemented');
+  updateEmployee: async (formData: FormData , id: string | number): Promise<any> => {
+    return await apiService.updateEmployee(formData, id );
   },
 
   // Submissions - you'll need to implement these API endpoints
