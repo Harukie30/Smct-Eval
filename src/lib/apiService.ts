@@ -21,7 +21,6 @@ export const apiService = {
           method: "POST",
           headers: {
             "Accept": "application/json",
-            "X-Requested-With": "XMLHttpRequest",
           },
           body: formData,
         });

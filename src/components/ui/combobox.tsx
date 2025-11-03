@@ -21,7 +21,7 @@ type ComboboxOptions = string[] | ComboboxOption[];
 
 interface ComboboxProps {
   options: ComboboxOptions;
-  value: string | number;
+  value?: string | number;
   onValueChangeAction: (value: string | number) => void;
   placeholder?: string;
   searchPlaceholder?: string;

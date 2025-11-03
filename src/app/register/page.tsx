@@ -600,7 +600,7 @@ export default function RegisterPage() {
                       <Label htmlFor="department">Department</Label>
                       <Combobox
                         options={departments}
-                        value={String(formData.department_id)}
+                        value={formData.department_id}
                         onValueChangeAction={(value) =>
                           setFormData({ ...formData, department_id: value })
                         }

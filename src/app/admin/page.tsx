@@ -450,21 +450,21 @@ export default function AdminDashboard() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveUser = async (updatedUser: any) => {
-    try {
-      // Update user using client data service
-      await clientDataService.updateEmployee(updatedUser.id, updatedUser);
+  // const handleSaveUser = async (updatedUser: any) => {
+  //   try {
+  //     // Update user using client data service
+  //     await clientDataService.updateEmployee(updatedUser.id, updatedUser);
 
-      // Refresh user data to get updated information
-      await refreshDashboardData(false, false);
+  //     // Refresh user data to get updated information
+  //     await refreshDashboardData(false, false);
 
-      // Show success toast
-      toastMessages.user.updated(updatedUser.name);
-    } catch (error) {
-      console.error('Error updating user:', error);
-      toastMessages.generic.error('Update Failed', 'Failed to update user information. Please try again.');
-    }
-  };
+  //     // Show success toast
+  //     toastMessages.user.updated(updatedUser.name);
+  //   } catch (error) {
+  //     console.error('Error updating user:', error);
+  //     toastMessages.generic.error('Update Failed', 'Failed to update user information. Please try again.');
+  //   }
+  // };
 
   // Function to handle delete employee
   const handleDeleteEmployee = () => {
@@ -2678,7 +2678,7 @@ export default function AdminDashboard() {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         user={userToEdit}
-        onSave={handleSaveUser}
+        // onSave={handleSaveUser}
         departments={departmentsData}
         branches={branchesData}
         positions={positionsData}

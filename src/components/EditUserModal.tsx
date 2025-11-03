@@ -4,11 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import SignaturePad from '@/components/SignaturePad';
 import LoadingAnimation from '@/components/LoadingAnimation';
 import { useToast } from '@/hooks/useToast';
-import { CONFIG } from '../../config/config';
 import clientDataService from '@/lib/clientDataService.api';
+import { Combobox } from './ui/combobox';
 
 interface User {
   id: number;
@@ -23,14 +22,13 @@ interface User {
   password?: string;
   contact?: string;
   is_active?: string ;
-  signature?: string;
 }
 
 interface EditUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
-  onSave: (updatedUser: User) => void;
+  // onSave: (formData: any) => void;
   positions: {value: string | number, label: string}[];
   departments:  {value: string | number, label: string}[];
   branches:  {value: string | number, label: string}[];
@@ -40,7 +38,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   isOpen,
   onClose,
   user,
-  onSave,
+  // onSave,
   departments,
   branches,
   positions
@@ -58,7 +56,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     password: '',
     contact: '',
     is_active: '',
-    signature: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -76,17 +73,16 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         position_id: user.position_id || '',
         department_id: user.department_id || '',
         branch_id: user.branch_id || '',
-        roles: user.roles?.[0].name || '',
+        roles: user?.roles?.[0].name || '',
         username: user.username || '',
         contact: user.contact || '',
-        is_active: user.is_active ,
-        signature: user.signature || ''
+        is_active: user.is_active || '',
+        password: '' 
       });
       setErrors({});
     }
   }, [user]);
 
-  
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -124,6 +120,18 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       newErrors.contact = 'Please enter a valid phone number';
     }
 
+    if(formData.password == null) {
+      delete newErrors.password;
+    }
+    else if (formData.password && formData.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
+    } else if (formData.password && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      newErrors.password =
+        "Password must contain uppercase, lowercase, and number";
+    } else{
+      delete newErrors.password;
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -142,7 +150,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       }));
     }
   };
- 
   // todo
   
   const handleSave = async () => {
@@ -151,10 +158,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       setIsSaving(true);
       try {
         await new Promise(resolve => setTimeout(resolve, 1000));
-            const data = new FormData();
-              Object.entries(formData).forEach(([key, value]) => {
-                data.append(key, value as string); 
-              });
+        const data = new FormData();
+        Object.entries(formData).forEach(([key, value]) => {
+          data.append(key, value as string); 
+        });
         const save = await clientDataService.updateEmployee(data ,formData.id);
         success('Success! Your changes have been saved.');
         onClose();
@@ -252,74 +259,59 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             {errors.contact && <p className="text-sm text-red-500">{errors.contact}</p>}
           </div>
 
-          {/* Position */}
           <div className="space-y-2">
-            <Label htmlFor="position">Position *</Label>
-            <Select
+            <Label htmlFor="department">Position *</Label>
+            <Combobox
+              options={positions}
               value={formData.position_id}
-              onValueChange={(value) => handleInputChange('position_id', value)}
-            >
-              <SelectTrigger className={errors.positions ? 'border-red-500' : 'bg-white'}>
-                <SelectValue placeholder="Select position" />
-              </SelectTrigger>
-              <SelectContent>
-                {positions?.map((positions, index) => (
-                  <SelectItem key={index} value={positions.value}>
-                    {positions.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.position && <p className="text-sm text-red-500">{errors.position}</p>}
+              onValueChangeAction={(value) =>
+                setFormData({ ...formData, position_id: value })
+              }
+              placeholder="Select your branch"
+              searchPlaceholder="Search branches..."
+              emptyText="No branches found."
+              className="w-full"
+              error={errors.position_id}
+            />
           </div>
 
-          {/* Department */}
           <div className="space-y-2">
-            <Label htmlFor="department">Department *</Label>
-            <Select
-              value={formData.department_id}
-              onValueChange={(value) => handleInputChange('department_id', value)}
-            >
-              <SelectTrigger className={errors.department ? 'border-red-500' : 'bg-white'}>
-                <SelectValue placeholder="Select department" />
-              </SelectTrigger>
-              <SelectContent>
-                {departments.map((department, index) => (
-                  <SelectItem key={index} value={department.value}>
-                    {department.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.department && <p className="text-sm text-red-500">{errors.department}</p>}
-          </div>
-
-          {/* Branch */}
-          <div className="space-y-2">
-            <Label htmlFor="branch">Branch *</Label>
-            <Select
+            <Label htmlFor="department">Branch *</Label>
+            <Combobox
+              options={branches}
               value={formData.branch_id}
-              onValueChange={(value) => handleInputChange('branch_id', value)}
-            >
-              <SelectTrigger className={errors.branches ? 'border-red-500' : ''}>
-                <SelectValue placeholder="Select branch" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((branch, index) => (
-                  <SelectItem key={index} value={branch.value}>
-                    {branch.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.branch && <p className="text-sm text-red-500">{errors.branch}</p>}
+              onValueChangeAction={(value) =>
+                setFormData({ ...formData, branch_id: value })
+              }
+              placeholder="Select your branch"
+              searchPlaceholder="Search branches..."
+              emptyText="No branches found."
+              className="w-full"
+              error={errors.branch_id}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="department">Department</Label>
+            <Combobox
+              options={departments}
+              value={formData.department_id}
+              onValueChangeAction={(value) =>
+                setFormData({ ...formData, department_id: value })
+              }
+              placeholder="Select your branch"
+              searchPlaceholder="Search branches..."
+              emptyText="No branches found."
+              className="w-full"
+              error={errors.department_id}
+            />
           </div>
 
           {/* Role */}
           <div className="space-y-2">
             <Label htmlFor="role">Role *</Label>
             <Select
-              // value={formData.roles?.[0]?.name || ''}
+              value={formData.roles}
               onValueChange={(value) => handleInputChange('roles', value)}
             >
               <SelectTrigger className={errors.role ? 'border-red-500' : ''}>
@@ -336,7 +328,20 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             {errors.role && <p className="text-sm text-red-500">{errors.role}</p>}
           </div>
 
-            {/* Email */}
+            {/* New Password */}
+          <div className="space-y-2">
+            <Label htmlFor="password">New Password</Label>
+            <Input
+              id="password"
+              type="text"
+              onChange={(e) => handleInputChange('password', e.target.value)}
+              className={errors.password ? 'border-red-500' : 'bg-white'}
+              placeholder='Set new Password'
+            />
+            {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+          </div>
+
+            {/* Status */}
           <div className="space-y-2">
             <Label htmlFor="email">Status</Label>
             <Input
@@ -349,23 +354,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             />
             {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
           </div>
-          </div>
 
-        {/* Digital Signature - Full Width */}
-        <div className="w-full space-y-2 pt-4 mt-4 border-t border-gray-200">
-          <Label htmlFor="signature" className="text-base font-medium">Digital Signature</Label>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <SignaturePad
-              value={`${CONFIG.STORAGE_URL}/${formData.signature}` || ''}
-              onChangeAction={(signature) => handleInputChange('signature', signature)}
-              className="w-full"
-              required={false}
-              hasError={false}
-            />
-          </div>
-          <p className="text-sm text-gray-500">
-            Update the user's digital signature if needed. This signature will be used for official documents.
-          </p>
         </div>
 
         <DialogFooter className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
