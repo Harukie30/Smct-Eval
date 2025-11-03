@@ -221,17 +221,33 @@ function EvaluatorDashboard() {
     const hoursDiff = (now - submissionTime) / (1000 * 60 * 60);
     const isSeen = seenSubmissions.has(submissionId);
     
-    // Priority 1: Within 24 hours and not seen - YELLOW "New" (highest priority)
-    if (hoursDiff <= 24 && !isSeen) {
-      // Check if also fully approved
-      if (approvalStatus === 'fully_approved') {
+    // Priority 1: Fully approved - ALWAYS GREEN (highest priority)
+    if (approvalStatus === 'fully_approved') {
+      // Show additional badge if it's new/recent
+      if (hoursDiff <= 24 && !isSeen) {
         return {
-          className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
-          badge: { text: 'New', className: 'bg-yellow-500 text-white' },
-          secondaryBadge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
-          priority: 'new-approved'
+          className: 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100',
+          badge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
+          secondaryBadge: { text: 'New', className: 'bg-yellow-500 text-white' },
+          priority: 'approved-new'
+        };
+      } else if (hoursDiff <= 48 && !isSeen) {
+        return {
+          className: 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100',
+          badge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
+          secondaryBadge: { text: 'Recent', className: 'bg-blue-500 text-white' },
+          priority: 'approved-recent'
         };
       }
+      return {
+        className: 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100',
+        badge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
+        priority: 'approved'
+      };
+    }
+    
+    // Priority 2: Within 24 hours and not seen - YELLOW "New"
+    if (hoursDiff <= 24 && !isSeen) {
       return {
         className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
         badge: { text: 'New', className: 'bg-yellow-500 text-white' },
@@ -239,30 +255,12 @@ function EvaluatorDashboard() {
       };
     }
     
-    // Priority 2: Within 48 hours and not seen - BLUE "Recent"
+    // Priority 3: Within 48 hours and not seen - BLUE "Recent"
     if (hoursDiff <= 48 && !isSeen) {
-      // Check if also fully approved
-      if (approvalStatus === 'fully_approved') {
-        return {
-          className: 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100',
-          badge: { text: 'Recent', className: 'bg-blue-500 text-white' },
-          secondaryBadge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
-          priority: 'recent-approved'
-        };
-      }
       return {
         className: 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100',
         badge: { text: 'Recent', className: 'bg-blue-500 text-white' },
         priority: 'recent'
-      };
-    }
-    
-    // Priority 3: Fully approved but older - GREEN
-    if (approvalStatus === 'fully_approved') {
-      return {
-        className: 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100',
-        badge: { text: 'Approved', className: 'bg-green-500 text-white' },
-        priority: 'approved'
       };
     }
     
@@ -2295,7 +2293,21 @@ function EvaluatorDashboard() {
                           filteredSubmissions
                             .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
                             .map((submission) => {
-                              const highlight = getSubmissionHighlight(submission.submittedAt, submission.id, submission.approvalStatus);
+                              // Check signatures to determine actual approval status
+                              const hasEmployeeSignature = !!(submission.employeeSignature && submission.employeeSignature.trim());
+                              const hasEvaluatorSignature = !!((submission.evaluatorSignature && submission.evaluatorSignature.trim()) || 
+                                (submission.evaluationData?.evaluatorSignature && submission.evaluationData?.evaluatorSignature.trim()));
+                              
+                              let actualApprovalStatus = 'pending';
+                              if (hasEmployeeSignature && hasEvaluatorSignature) {
+                                actualApprovalStatus = 'fully_approved';
+                              } else if (hasEmployeeSignature) {
+                                actualApprovalStatus = 'employee_approved';
+                              } else if (submission.approvalStatus && submission.approvalStatus !== 'pending') {
+                                actualApprovalStatus = submission.approvalStatus;
+                              }
+                              
+                              const highlight = getSubmissionHighlight(submission.submittedAt, submission.id, actualApprovalStatus);
                               return (
                                 <TableRow 
                                   key={submission.id} 
@@ -3160,7 +3172,20 @@ function EvaluatorDashboard() {
                       </TableHeader>
                       <TableBody className="divide-y divide-gray-200">
                         {filteredFeedbackData.map((feedback) => {
-                          const highlight = getSubmissionHighlight(feedback.submittedAt || feedback.date, feedback.id, feedback.approvalStatus);
+                          // Check signatures to determine actual approval status
+                          const hasEmployeeSignature = !!(feedback.employeeSignature && typeof feedback.employeeSignature === 'string' && feedback.employeeSignature.trim());
+                          const hasEvaluatorSignature = !!(feedback.evaluatorSignature && typeof feedback.evaluatorSignature === 'string' && feedback.evaluatorSignature.trim());
+                          
+                          let actualApprovalStatus = 'pending';
+                          if (hasEmployeeSignature && hasEvaluatorSignature) {
+                            actualApprovalStatus = 'fully_approved';
+                          } else if (hasEmployeeSignature) {
+                            actualApprovalStatus = 'employee_approved';
+                          } else if (feedback.approvalStatus && feedback.approvalStatus !== 'pending') {
+                            actualApprovalStatus = feedback.approvalStatus;
+                          }
+                          
+                          const highlight = getSubmissionHighlight(feedback.submittedAt || feedback.date, feedback.id, actualApprovalStatus);
                           return (
                             <TableRow 
                               key={feedback.uniqueKey} 
@@ -3220,12 +3245,12 @@ function EvaluatorDashboard() {
                           <TableCell className="px-6 py-3">
                             {/* Approval Status */}
                             <Badge className={
-                              feedback.approvalStatus === 'fully_approved' ? 'bg-green-100 text-green-800' :
-                                feedback.approvalStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                              actualApprovalStatus === 'fully_approved' ? 'bg-green-100 text-green-800' :
+                                actualApprovalStatus === 'rejected' ? 'bg-red-100 text-red-800' :
                                   'bg-gray-100 text-gray-800'
                             }>
-                              {feedback.approvalStatus === 'fully_approved' ? '✓ Fully Approved' :
-                                feedback.approvalStatus === 'rejected' ? '❌ Rejected' :
+                              {actualApprovalStatus === 'fully_approved' ? '✓ Fully Approved' :
+                                actualApprovalStatus === 'rejected' ? '❌ Rejected' :
                                   '⏳ Pending'}
                             </Badge>
                           </TableCell>
