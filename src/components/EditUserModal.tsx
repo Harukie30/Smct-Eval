@@ -73,11 +73,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         position_id: user.position_id || '',
         department_id: user.department_id || '',
         branch_id: user.branch_id || '',
-        roles: user?.roles?.[0].name || '',
+        roles: user?.roles?.[0]?.name || '',
         username: user.username || '',
         contact: user.contact || '',
         is_active: user.is_active || '',
-        password: '' 
       });
       setErrors({});
     }
@@ -150,7 +149,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       }));
     }
   };
-  // todo
+ 
   
   const handleSave = async () => {
     if (validateForm()) {

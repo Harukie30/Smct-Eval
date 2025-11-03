@@ -163,7 +163,7 @@ const getRatingColorForLabel = (rating: string) => {
 };
 
 export default function EvaluatorDashboard() {
-  const { profile, user } = useAuth();
+  const {  user } = useAuth();
   const { success, error } = useToast();
   const { getUpdatedAvatar, hasAvatarUpdate } = useProfilePictureUpdates();
   const searchParams = useSearchParams();
@@ -296,35 +296,6 @@ export default function EvaluatorDashboard() {
     };
   }, []);
 
-
-
-  // Helper function to map user data to currentUser format
-  const getCurrentUserData = () => {
-    if (user) {
-      // AuthenticatedUser type
-      return {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        position: user.position,
-        department: user.department,
-        role: user.role,
-        signature: user.signature // Include signature from user
-      };
-    } else if (profile) {
-      // UserProfile type
-      return {
-        id: typeof profile.id === 'string' ? parseInt(profile.id) || 0 : profile.id || 0,
-        name: profile.name,
-        email: profile.email || '',
-        position: profile.roleOrPosition || '',
-        department: profile.department || '',
-        role: profile.roleOrPosition || '',
-        signature: profile.signature // Include signature from profile
-      };
-    }
-    return undefined;
-  };
 
   // Add custom styles for better table scrolling
   useEffect(() => {
@@ -866,7 +837,7 @@ export default function EvaluatorDashboard() {
     }
 
     // Get current user data to verify password
-    const currentUser = getCurrentUserData();
+    const currentUser = user;
     if (!currentUser) {
       setDeletePasswordError('User not found. Please refresh and try again.');
       return;
@@ -1597,7 +1568,7 @@ export default function EvaluatorDashboard() {
 
   // Evaluator approval function
   const handleEvaluatorApproval = async (feedback: any) => {
-    const currentUser = getCurrentUserData();
+    const currentUser = user;
 
     if (!currentUser?.signature) {
       alert('Please add a signature to your profile before approving evaluations.');
@@ -3509,7 +3480,7 @@ export default function EvaluatorDashboard() {
             {selectedEmployee && (
               <EvaluationForm
                 employee={selectedEmployee}
-                currentUser={getCurrentUserData()}
+                currentUser={user}
                 onCloseAction={() => {
                   setIsEvaluationModalOpen(false);
                   setSelectedEmployee(null);
@@ -3578,8 +3549,8 @@ export default function EvaluatorDashboard() {
           isOpen={isViewResultsModalOpen}
           onCloseAction={() => setIsViewResultsModalOpen(false)}
           submission={selectedEvaluationSubmission}
-          currentUserName={getCurrentUserData()?.name}
-          currentUserSignature={getCurrentUserData()?.signature}
+          currentUserName={user?.fname}
+          currentUserSignature={user?.signature}
           isEvaluatorView={true}
         />
 
