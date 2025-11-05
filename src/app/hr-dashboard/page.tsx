@@ -4479,7 +4479,11 @@ function HRDashboard() {
         {/* Employee Evaluation Modal */}
         {isEvaluationModalOpen && employeeToEvaluate && currentUser && (
           <Dialog open={isEvaluationModalOpen} onOpenChangeAction={setIsEvaluationModalOpen}>
+<<<<<<< Updated upstream
             <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden p-0 evaluation-container">
+=======
+            <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden p-0 animate-popup">
+>>>>>>> Stashed changes
               <EvaluationForm
                 key={`hr-eval-${employeeToEvaluate.id}-${isEvaluationModalOpen}`}
                 employee={{
