@@ -769,7 +769,10 @@ export const clientDataService = {
       return { success: false, message: 'Data error - please refresh the page' };
     }
     
-    const account = accounts.find((acc: Account) => acc.email === email && acc.password === password);
+    // Check both username and email fields
+    const account = accounts.find((acc: Account) => 
+      (acc.email === email || acc.username === email) && acc.password === password
+    );
     
     if (!account) {
       return { success: false, message: 'Invalid credentials' };

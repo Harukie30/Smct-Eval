@@ -96,8 +96,8 @@ export default function DashboardShell(props: DashboardShellProps) {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
   };
 
   const handleNotificationClick = async (notification: Notification) => {
@@ -175,10 +175,10 @@ export default function DashboardShell(props: DashboardShellProps) {
               variant="ghost"
               size="sm"
               onClick={() => setIsContactDevsModalOpen(true)}
-              className="relative p-2 hover:bg-gray-100"
+              className="relative p-3  hover:bg-blue-700 bg-blue-500 border rounded-lg  transition-all hover:scale-110"
               title="Contact Developers"
             >
-              <MessageCircle className="h-5 w-5 text-blue-600" />
+              <MessageCircle className="h-10 w-10 text-white " />
             </Button>
 
             {/* Notification Bell */}

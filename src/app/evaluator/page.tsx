@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo,} from 'react';
 import { X } from 'lucide-react';
 import { RefreshCw } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';  
@@ -14,7 +13,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import ViewEmployeeModal from '@/components/ViewEmployeeModal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, } from "lucide-react";
+import { Eye, FileText, Download } from "lucide-react";
 import EvaluationForm from '@/components/evaluation';
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 import SearchableDropdown from "@/components/ui/searchable-dropdown";
@@ -23,16 +22,23 @@ import accountsData from '@/data/accounts.json';
 import departments from '@/data/departments.json';
 import { UserProfile } from '@/components/ProfileCard';
 import clientDataService from '@/lib/clientDataService';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { withAuth } from '@/hoc';
 import PageTransition from '@/components/PageTransition';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
-import { useAuth } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/useToast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createApprovalNotification, createFullyApprovedNotification } from '@/lib/notificationUtils';
 import { getQuarterFromEvaluationData, getQuarterFromDate, getQuarterColor } from '@/lib/quarterUtils';
 import { useProfilePictureUpdates } from '@/hooks/useProfileUpdates';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { Line, LineChart, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Calendar, Trash } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type Feedback = {
   id: number;
@@ -162,11 +168,10 @@ const getRatingColorForLabel = (rating: string) => {
   }
 };
 
-export default function EvaluatorDashboard() {
-  const {  user } = useAuth();
+function EvaluatorDashboard() {
+  const { profile, user } = useUser();
   const { success, error } = useToast();
   const { getUpdatedAvatar, hasAvatarUpdate } = useProfilePictureUpdates();
-  const searchParams = useSearchParams();
 
   // Function to get time ago display
   const getTimeAgo = (submittedAt: string) => {
@@ -207,14 +212,6 @@ export default function EvaluatorDashboard() {
     }
   }, [seenSubmissions]);
 
-  // Handle URL parameter changes for tab navigation
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && tab !== active) {
-      setActive(tab);
-    }
-  }, [searchParams]);
-
   // Mark submission as seen
   const markSubmissionAsSeen = (submissionId: number) => {
     setSeenSubmissions(prev => {
@@ -230,40 +227,66 @@ export default function EvaluatorDashboard() {
     const now = new Date().getTime();
     const hoursDiff = (now - submissionTime) / (1000 * 60 * 60);
     const isSeen = seenSubmissions.has(submissionId);
+    const isPending = !approvalStatus || approvalStatus === 'pending' || approvalStatus === 'employee_approved';
     
-    // Priority 1: Fully approved - GREEN (always visible)
+    // Priority 1: Fully approved - ALWAYS GREEN (highest priority)
     if (approvalStatus === 'fully_approved') {
+      // Show additional badge if it's new/recent
+      if (hoursDiff <= 24 && !isSeen) {
+        return {
+          className: 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100',
+          badge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
+          secondaryBadge: { text: 'New', className: 'bg-yellow-500 text-white' },
+          priority: 'approved-new'
+        };
+      } else if (hoursDiff <= 48 && !isSeen) {
+        return {
+          className: 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100',
+          badge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
+          secondaryBadge: { text: 'Recent', className: 'bg-blue-500 text-white' },
+          priority: 'approved-recent'
+        };
+      }
       return {
         className: 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100',
-        badge: { text: 'Approved', className: 'bg-green-500 text-white' },
+        badge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
         priority: 'approved'
       };
     }
     
-    // Priority 2: Within 24 hours and not seen - YELLOW "New"
-    if (hoursDiff <= 24 && !isSeen) {
+    // Priority 2: New (within 24 hours) AND Pending - YELLOW "New" highlight
+    if (isPending && hoursDiff <= 24 && !isSeen) {
       return {
         className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
-        badge: { text: 'New', className: 'bg-yellow-200 text-yellow-800' },
-        priority: 'new'
-      };
-    } 
-    // Priority 3: Within 48 hours and not seen - BLUE "Recent"
-    else if (hoursDiff <= 48 && !isSeen) {
-      return {
-        className: 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100',
-        badge: { text: 'Recent', className: 'bg-blue-100 text-blue-800' },
-        priority: 'recent'
-      };
-    } 
-    // Default: Older or already seen - No special highlighting
-    else {
-      return {
-        className: 'hover:bg-gray-50',
-        badge: null,
-        priority: 'old'
+        badge: { text: 'New', className: 'bg-yellow-500 text-white' },
+        priority: 'new-pending'
       };
     }
+    
+    // Priority 3: Pending and within 24 hours (even if seen) - still show yellow
+    if (isPending && hoursDiff <= 24) {
+      return {
+        className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
+        badge: { text: 'Pending', className: 'bg-yellow-500 text-white' },
+        priority: 'pending-new'
+      };
+    }
+    
+    // Priority 3: Within 48 hours and not seen - BLUE "Recent"
+    if (hoursDiff <= 48 && !isSeen) {
+      return {
+        className: 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100',
+        badge: { text: 'Recent', className: 'bg-blue-500 text-white' },
+        priority: 'recent'
+      };
+    }
+    
+    // Default: Older or already seen - No special highlighting
+    return {
+      className: 'hover:bg-gray-50',
+      badge: null,
+      priority: 'old'
+    };
   };
 
   // Add custom CSS for container popup animation
@@ -297,6 +320,35 @@ export default function EvaluatorDashboard() {
   }, []);
 
 
+
+  // Helper function to map user data to currentUser format
+  const getCurrentUserData = () => {
+    if (user) {
+      // AuthenticatedUser type
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        position: user.position,
+        department: user.department,
+        role: user.role,
+        signature: user.signature // Include signature from user
+      };
+    } else if (profile) {
+      // UserProfile type
+      return {
+        id: typeof profile.id === 'string' ? parseInt(profile.id) || 0 : profile.id || 0,
+        name: profile.name,
+        email: profile.email || '',
+        position: profile.roleOrPosition || '',
+        department: profile.department || '',
+        role: profile.roleOrPosition || '',
+        signature: profile.signature // Include signature from profile
+      };
+    }
+    return undefined;
+  };
+
   // Add custom styles for better table scrolling
   useEffect(() => {
     const style = document.createElement('style');
@@ -325,9 +377,7 @@ export default function EvaluatorDashboard() {
     };
   }, []);
 
-  // Initialize active tab from URL parameter or default to 'overview'
-  const tabParam = searchParams.get('tab');
-  const [active, setActive] = useState(tabParam || 'overview');
+  const [active, setActive] = useState('overview');
 
   // Custom tab change handler with auto-refresh functionality
   const handleTabChange = (tabId: string) => {
@@ -394,8 +444,91 @@ export default function EvaluatorDashboard() {
           setIsRefreshing(false);
         });
       }, 1000); // 2-second delay to see skeleton properly
+    } else if (tabId === 'reviews') {
+      // Refresh reviews data when switching to reviews tab
+      setIsReviewsRefreshing(true);
+      
+      // Add a 1-second delay to make skeleton visible
+      setTimeout(() => {
+        refreshEvaluatorData().then(() => {
+          // Show success toast for reviews refresh
+          success(
+            'Performance Reviews Refreshed',
+            'Reviews data has been updated'
+          );
+        }).finally(() => {
+          setIsReviewsRefreshing(false);
+        });
+      }, 1000); // 1-second delay to see skeleton properly
+    } else if (tabId === 'history') {
+      setIsHistoryRefreshing(true);
+      // Add a 1-second delay to make skeleton visible
+      setTimeout(() => {
+        refreshEvaluatorData().then(() => {
+          // Show success toast for history refresh
+          success(
+            'Evaluation History Refreshed',
+            'History data has been updated'
+          );
+        }).finally(() => {
+          setIsHistoryRefreshing(false);
+        });
+      }, 1000); // 1-second delay to see skeleton properly
     }
   };
+  
+  // Helper function for Evaluation History
+  const isNewSubmission = (submittedAt: string) => {
+    const submissionTime = new Date(submittedAt).getTime();
+    const now = new Date().getTime();
+    const hoursDiff = (now - submissionTime) / (1000 * 60 * 60);
+    return hoursDiff <= 24;
+  };
+  
+  const clearDateFilter = () => {
+    setDateFilter({});
+  };
+  
+  // Refresh function for Quarterly Performance table
+  const handleRefreshQuarterly = async () => {
+    setIsQuarterlyRefreshing(true);
+    setRefreshingMessage('Refreshing quarterly performance...');
+    setShowRefreshingDialog(true);
+    try {
+      // Add a small delay to simulate loading
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Refresh data
+      await refreshEvaluatorData();
+      // Show success toast
+      success('Quarterly performance refreshed successfully', 'All quarterly data has been updated');
+    } catch (error) {
+      console.error('Error refreshing quarterly performance:', error);
+    } finally {
+      setIsQuarterlyRefreshing(false);
+      setShowRefreshingDialog(false);
+    }
+  };
+  
+  // Refresh function for Evaluation History table
+  const handleRefreshHistory = async () => {
+    setIsHistoryRefreshing(true);
+    setRefreshingMessage('Refreshing evaluation history...');
+    setShowRefreshingDialog(true);
+    try {
+      // Add a small delay to simulate loading
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Refresh data
+      await refreshEvaluatorData();
+      // Show success toast
+      success('Evaluation history refreshed successfully', 'All evaluation records have been updated');
+    } catch (error) {
+      console.error('Error refreshing evaluation history:', error);
+    } finally {
+      setIsHistoryRefreshing(false);
+      setShowRefreshingDialog(false);
+    }
+  };
+  
   const [currentPeriod, setCurrentPeriod] = useState('');
   const [data, setData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -445,8 +578,13 @@ export default function EvaluatorDashboard() {
           item.employeeName
         );
 
+        // Filter to show only evaluations created by this evaluator
+        const evaluatorFiltered = validData.filter((item: any) => 
+          item.evaluatorId === user?.id
+        );
+
         // Remove duplicates based on ID
-        const uniqueData = validData.filter((item: any, index: number, self: any[]) =>
+        const uniqueData = evaluatorFiltered.filter((item: any, index: number, self: any[]) =>
           index === self.findIndex(t => t.id === item.id)
         );
 
@@ -503,12 +641,24 @@ export default function EvaluatorDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isEmployeesRefreshing, setIsEmployeesRefreshing] = useState(false);
   const [isFeedbackRefreshing, setIsFeedbackRefreshing] = useState(false);
+  const [isReviewsRefreshing, setIsReviewsRefreshing] = useState(false);
   const [isAccountHistoryRefreshing, setIsAccountHistoryRefreshing] = useState(false);
+  const [isHistoryRefreshing, setIsHistoryRefreshing] = useState(false);
+  const [isQuarterlyRefreshing, setIsQuarterlyRefreshing] = useState(false);
   const [employeeDataRefresh, setEmployeeDataRefresh] = useState(0);
   
   // Account History state
   const [accountHistory, setAccountHistory] = useState<any[]>([]);
   const [accountHistorySearchTerm, setAccountHistorySearchTerm] = useState('');
+  
+  // Evaluation History tab state
+  const [historySearchTerm, setHistorySearchTerm] = useState('');
+  const [quarterlySearchTerm, setQuarterlySearchTerm] = useState('');
+  const [selectedQuarter, setSelectedQuarter] = useState<string>('');
+  const [dateFilter, setDateFilter] = useState<{from?: Date, to?: Date}>({});
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [showRefreshingDialog, setShowRefreshingDialog] = useState(false);
+  const [refreshingMessage, setRefreshingMessage] = useState('');
   
   // Violations Storage state
 
@@ -589,8 +739,13 @@ export default function EvaluatorDashboard() {
           item.employeeName
         );
 
+        // Filter to show only evaluations created by this evaluator
+        const evaluatorFiltered = validData.filter((item: any) => 
+          item.evaluatorId === user?.id
+        );
+
         // Remove duplicates based on ID
-        const uniqueData = validData.filter((item: any, index: number, self: any[]) =>
+        const uniqueData = evaluatorFiltered.filter((item: any, index: number, self: any[]) =>
           index === self.findIndex(t => t.id === item.id)
         );
 
@@ -837,7 +992,7 @@ export default function EvaluatorDashboard() {
     }
 
     // Get current user data to verify password
-    const currentUser = user;
+    const currentUser = getCurrentUserData();
     if (!currentUser) {
       setDeletePasswordError('User not found. Please refresh and try again.');
       return;
@@ -1568,7 +1723,7 @@ export default function EvaluatorDashboard() {
 
   // Evaluator approval function
   const handleEvaluatorApproval = async (feedback: any) => {
-    const currentUser = user;
+    const currentUser = getCurrentUserData();
 
     if (!currentUser?.signature) {
       alert('Please add a signature to your profile before approving evaluations.');
@@ -1620,7 +1775,7 @@ export default function EvaluatorDashboard() {
       try {
         await createApprovalNotification(
           feedback.employeeName,
-          currentUser?.fname || 'Evaluator',
+          currentUser?.name || 'Evaluator',
           'evaluator'
         );
       } catch (notificationError) {
@@ -1633,27 +1788,138 @@ export default function EvaluatorDashboard() {
     }
   };
 
+  // Function to export evaluation records to CSV
+  const exportEvaluationRecordsToCSV = () => {
+    try {
+      // Get filtered feedback data for export
+      const dataToExport = filteredFeedbackData;
+      
+      if (dataToExport.length === 0) {
+        error('No Data', 'There are no evaluation records to export.');
+        return;
+      }
+
+      // Prepare CSV headers
+      const headers = [
+        'Employee Name',
+        'Employee Email',
+        'Department',
+        'Position',
+        'Reviewer',
+        'Rating',
+        'Overall Rating',
+        'Date',
+        'Quarter',
+        'Approval Status',
+        'Employee Signature',
+        'Evaluator Signature',
+        'Comments'
+      ];
+
+      // Prepare CSV rows
+      const rows = dataToExport.map((feedback: any) => {
+        const originalSubmission = recentSubmissions.find(s => s.id === feedback.id);
+        const hasEmployeeSignature = !!(
+          (feedback.employeeSignature && feedback.employeeSignature.trim() && feedback.employeeSignature.startsWith('data:image')) ||
+          (originalSubmission?.employeeSignature && originalSubmission.employeeSignature.trim() && originalSubmission.employeeSignature.startsWith('data:image')) ||
+          (originalSubmission?.evaluationData?.employeeSignature && originalSubmission.evaluationData.employeeSignature.trim() && originalSubmission.evaluationData.employeeSignature.startsWith('data:image'))
+        );
+        
+        const hasEvaluatorSignature = !!(
+          (originalSubmission?.evaluationData?.evaluatorSignatureImage && originalSubmission.evaluationData.evaluatorSignatureImage.trim() && originalSubmission.evaluationData.evaluatorSignatureImage.startsWith('data:image')) ||
+          ((originalSubmission as any)?.evaluatorSignatureImage && (originalSubmission as any).evaluatorSignatureImage.trim() && (originalSubmission as any).evaluatorSignatureImage.startsWith('data:image'))
+        );
+
+        let actualApprovalStatus = 'pending';
+        if (hasEmployeeSignature && hasEvaluatorSignature) {
+          actualApprovalStatus = 'fully_approved';
+        } else if (hasEmployeeSignature) {
+          actualApprovalStatus = 'employee_approved';
+        } else if (feedback.approvalStatus && feedback.approvalStatus !== 'pending') {
+          actualApprovalStatus = feedback.approvalStatus;
+        }
+
+        const rating = feedback.rating || 0;
+        const overallRating = getRatingLabel(rating);
+        const quarter = getQuarterFromEvaluationData(originalSubmission?.evaluationData || feedback);
+
+        return [
+          feedback.employeeName || '',
+          feedback.employeeEmail || '',
+          feedback.department || '',
+          feedback.position || '',
+          feedback.reviewer || '',
+          rating.toFixed(1),
+          overallRating,
+          new Date(feedback.date || feedback.submittedAt || '').toLocaleDateString(),
+          quarter,
+          actualApprovalStatus === 'fully_approved' ? 'Fully Approved' :
+            actualApprovalStatus === 'employee_approved' ? 'Employee Approved' :
+            actualApprovalStatus === 'rejected' ? 'Rejected' : 'Pending',
+          hasEmployeeSignature ? 'Yes' : 'No',
+          hasEvaluatorSignature ? 'Yes' : 'No',
+          (feedback.comment || '').replace(/"/g, '""') // Escape quotes in CSV
+        ];
+      });
+
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(','),
+        ...rows.map((row: any[]) => row.map((cell: any) => `"${cell}"`).join(','))
+      ].join('\n');
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `evaluation_records_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      success(
+        'Export Successful',
+        `Successfully exported ${dataToExport.length} evaluation record(s) to CSV.`
+      );
+    } catch (err) {
+      console.error('Error exporting evaluation records:', err);
+      error(
+        'Export Failed',
+        'Failed to export evaluation records. Please try again.'
+      );
+    }
+  };
+
   // Function to determine correct approval status based on signatures
+  // Following the same logic as HR Dashboard for consistency
   const getCorrectApprovalStatus = (submission: any) => {
-    // Check for employee signature - only count actual image signatures or approval dates
+    // Check if both parties have signed (handle empty strings too)
+    // Employee signature should be an actual signature image (base64 data URL)
     const hasEmployeeSignature = !!(
-      submission.employeeSignature || 
-      submission.employeeApprovedAt
+      (submission.employeeSignature && submission.employeeSignature.trim() && submission.employeeSignature.startsWith('data:image')) ||
+      (submission.evaluationData?.employeeSignature && submission.evaluationData.employeeSignature.trim() && submission.evaluationData.employeeSignature.startsWith('data:image'))
     );
     
-    // Check for evaluator signature - only count actual image signatures or approval dates
+    // Evaluator signature - check for actual signature image, not just the name
     const hasEvaluatorSignature = !!(
-      submission.evaluatorSignature || 
-      submission.evaluatorApprovedAt
+      (submission.evaluatorSignatureImage && submission.evaluatorSignatureImage.trim() && submission.evaluatorSignatureImage.startsWith('data:image')) ||
+      (submission.evaluationData?.evaluatorSignatureImage && submission.evaluationData.evaluatorSignatureImage.trim() && submission.evaluationData.evaluatorSignatureImage.startsWith('data:image'))
     );
-
-
+    
+    // Determine approval status - SIGNATURES HAVE PRIORITY over stored status
     if (hasEmployeeSignature && hasEvaluatorSignature) {
+      // Both signed = fully approved (regardless of stored status)
       return 'fully_approved';
     } else if (hasEmployeeSignature) {
-      return 'fully_approved';
-    } else if (hasEvaluatorSignature) {
-      return 'pending';
+      // Only employee signed
+      return 'employee_approved';
+    } else if (submission.approvalStatus && submission.approvalStatus !== 'pending') {
+      // No signatures detected, use stored status
+      return submission.approvalStatus;
     } else {
       return 'pending';
     }
@@ -1805,6 +2071,7 @@ export default function EvaluatorDashboard() {
         category: submission.category || 'Performance Review',
         rating: calculatedRating,
         date: submission.submittedAt || new Date().toISOString(),
+        submittedAt: submission.submittedAt, // Preserve original submission timestamp for highlighting
         comment: submission.evaluationData?.overallComments || 'Performance evaluation completed',
         // Approval-related properties - use correct status based on signatures
         approvalStatus: getCorrectApprovalStatus(submission),
@@ -1926,8 +2193,13 @@ export default function EvaluatorDashboard() {
             item.employeeName
           );
 
+          // Filter to show only evaluations created by this evaluator
+          const evaluatorFiltered = validData.filter((item: any) => 
+            item.evaluatorId === user?.id
+          );
+
           // Remove duplicates based on ID
-          const uniqueData = validData.filter((item: any, index: number, self: any[]) =>
+          const uniqueData = evaluatorFiltered.filter((item: any, index: number, self: any[]) =>
             index === self.findIndex(t => t.id === item.id)
           );
 
@@ -1957,10 +2229,50 @@ export default function EvaluatorDashboard() {
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'employees', label: 'Employees', icon: '👥' },
     { id: 'feedback', label: 'Evaluation Records', icon: '🗂️' },
+    { id: 'reviews', label: 'Performance Reviews', icon: '📝' },
+    { id: 'history', label: 'Evaluation History', icon: '📈' },
     { id: 'account-history', label: 'Account History', icon: '📋' },
   ];
 
   // Loading state is now handled in the main return statement
+
+  // Calculate statistics from actual submission data
+  const stats = useMemo(() => {
+    const evaluatorSubmissions = recentSubmissions.filter(sub => sub.evaluatorId === user?.id);
+    
+    // Calculate average rating
+    const ratings = evaluatorSubmissions
+      .map(sub => {
+        if (sub.evaluationData) {
+          return calculateOverallRating(sub.evaluationData);
+        }
+        return sub.rating || 0;
+      })
+      .filter(r => r > 0);
+    
+    const averageRating = ratings.length > 0 
+      ? (ratings.reduce((sum, r) => sum + r, 0) / ratings.length).toFixed(1)
+      : '0.0';
+
+    // Count pending approvals (not fully approved)
+    const pendingCount = evaluatorSubmissions.filter(sub => {
+      const status = getCorrectApprovalStatus(sub);
+      return status !== 'fully_approved';
+    }).length;
+
+    // Count fully approved
+    const approvedCount = evaluatorSubmissions.filter(sub => {
+      const status = getCorrectApprovalStatus(sub);
+      return status === 'fully_approved';
+    }).length;
+
+    return {
+      totalEvaluations: evaluatorSubmissions.length,
+      averageRating,
+      pendingApprovals: pendingCount,
+      completedApprovals: approvedCount
+    };
+  }, [recentSubmissions, user?.id]);
 
   const topSummary = (
     <>
@@ -2012,51 +2324,56 @@ export default function EvaluatorDashboard() {
           </Card>
         </>
       ) : (
-        // Actual cards
+        // Actual cards with real data
         <>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Overall Rating</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Total Evaluations</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-2">
-                <span className="text-3xl font-bold text-gray-900">{data?.overallRating || 0}</span>
+                <span className="text-3xl font-bold text-gray-900">{stats.totalEvaluations}</span>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">Conducted by you</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Average Rating</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <span className="text-3xl font-bold text-gray-900">{stats.averageRating}</span>
                 <span className="text-sm text-gray-500">/ 5.0</span>
               </div>
-              <Badge className={`mt-2 ${getRatingColor(parseFloat(data?.overallRating || '0'))}`}>
-                {parseFloat(data?.overallRating || '0') >= 4.5 ? 'Excellent' : parseFloat(data?.overallRating || '0') >= 4.0 ? 'Good' : parseFloat(data?.overallRating || '0') >= 3.5 ? 'Average' : 'Needs Improvement'}
+              <Badge className={`mt-2 ${getRatingColor(parseFloat(stats.averageRating))}`}>
+                {parseFloat(stats.averageRating) >= 4.5 ? 'Excellent' : parseFloat(stats.averageRating) >= 4.0 ? 'Good' : parseFloat(stats.averageRating) >= 3.5 ? 'Average' : 'Needs Improvement'}
               </Badge>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Reviews to Verify</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Pending Approvals</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{Math.max(0, 10 - (data?.totalReviews || 0))}</div>
-              <p className="text-sm text-gray-500 mt-1">Pending this quarter</p>
+              <div className="text-3xl font-bold text-yellow-600">{stats.pendingApprovals}</div>
+              <p className="text-sm text-gray-500 mt-1">Awaiting approval</p>
+              <Progress 
+                value={stats.totalEvaluations > 0 ? (stats.pendingApprovals / stats.totalEvaluations) * 100 : 0} 
+                className="mt-2" 
+              />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Goals Reviewed</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Fully Approved</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-gray-900">{data?.goalsCompleted || 0}/{data?.totalGoals || 0}</div>
-              <p className="text-sm text-gray-500 mt-1">Completed</p>
-              <Progress value={((data?.goalsCompleted || 0) / (data?.totalGoals || 1)) * 100} className="mt-2" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Performance Trend</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">{data?.performanceTrend || 'N/A'}</div>
-              <p className="text-sm text-gray-500 mt-1">vs last quarter</p>
+              <div className="text-3xl font-bold text-green-600">{stats.completedApprovals}</div>
+              <p className="text-sm text-gray-500 mt-1">Completed & signed</p>
             </CardContent>
           </Card>
         </>
@@ -2138,7 +2455,23 @@ export default function EvaluatorDashboard() {
                   </Button>
                 </div>
                 {isRefreshing ? (
-                  <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
+                  <div className="relative max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
+                    {/* Centered Loading Spinner */}
+                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                      <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                        <div className="relative">
+                          {/* Spinning ring */}
+                          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                          {/* Logo in center */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">Loading submissions...</p>
+                      </div>
+                    </div>
+                    
+                    {/* Table structure visible in background */}
                     <Table className="min-w-full">
                       <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                         <TableRow key="overview-header">
@@ -2228,7 +2561,35 @@ export default function EvaluatorDashboard() {
                           filteredSubmissions
                             .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
                             .map((submission) => {
-                              const highlight = getSubmissionHighlight(submission.submittedAt, submission.id, submission.approvalStatus);
+                              // Check if both parties have signed - must be actual signature images (base64 data URLs)
+                              // Employee signature should be an actual signature image
+                              const hasEmployeeSignature = !!(
+                                (submission.employeeSignature && submission.employeeSignature.trim() && submission.employeeSignature.startsWith('data:image')) ||
+                                (submission.evaluationData?.employeeSignature && submission.evaluationData.employeeSignature.trim() && submission.evaluationData.employeeSignature.startsWith('data:image'))
+                              );
+                              
+                              // Evaluator signature - check for actual signature image, not just the name
+                              const hasEvaluatorSignature = !!(
+                                (submission.evaluationData?.evaluatorSignatureImage && submission.evaluationData.evaluatorSignatureImage.trim() && submission.evaluationData.evaluatorSignatureImage.startsWith('data:image')) ||
+                                ((submission as any).evaluatorSignatureImage && (submission as any).evaluatorSignatureImage.trim() && (submission as any).evaluatorSignatureImage.startsWith('data:image'))
+                              );
+                              
+                              // Determine approval status - SIGNATURES HAVE PRIORITY over stored status - same as HR dashboard
+                              let actualApprovalStatus = 'pending';
+                              if (hasEmployeeSignature && hasEvaluatorSignature) {
+                                // Both signed = fully approved (regardless of stored status)
+                                actualApprovalStatus = 'fully_approved';
+                              } else if (hasEmployeeSignature) {
+                                // Only employee signed
+                                actualApprovalStatus = 'employee_approved';
+                              } else if (submission.approvalStatus && submission.approvalStatus !== 'pending') {
+                                // No signatures detected, use stored status
+                                actualApprovalStatus = submission.approvalStatus;
+                              } else {
+                                actualApprovalStatus = 'pending';
+                              }
+                              
+                              const highlight = getSubmissionHighlight(submission.submittedAt, submission.id, actualApprovalStatus);
                               return (
                                 <TableRow 
                                   key={submission.id} 
@@ -2241,6 +2602,11 @@ export default function EvaluatorDashboard() {
                                       {highlight.badge && (
                                         <Badge variant="secondary" className={`${highlight.badge.className} text-xs`}>
                                           {highlight.badge.text}
+                                        </Badge>
+                                      )}
+                                      {highlight.secondaryBadge && (
+                                        <Badge variant="secondary" className={`${highlight.secondaryBadge.className} text-xs`}>
+                                          {highlight.secondaryBadge.text}
                                         </Badge>
                                       )}
                                     </div>
@@ -2498,15 +2864,15 @@ export default function EvaluatorDashboard() {
                     </div>
                   </div>
                   <div className="px-6 py-4 space-y-4">
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 w-1/2">
                       <div className="flex items-center gap-2 w-full">
                         {/* Search input with clear button inside */}
-                        <div className="relative flex-1">
+                        <div className="relative flex-1 w-1/2">
                           <Input
                             placeholder="Search employees by name, email, position, department, role"
                             value={employeeSearch}
                             onChange={(e) => setEmployeeSearch(e.target.value)}
-                            className="w-full pr-10"
+                            className=" pr-10"
                           />
                           {employeeSearch && (
                             <button
@@ -2527,7 +2893,7 @@ export default function EvaluatorDashboard() {
                             setSelectedDepartment(value === 'All Departments' ? '' : value)
                           }
                           placeholder="All Departments"
-                          className="w-[200px]"
+                          className="w-[200px]" 
                         />
 
                       </div>
@@ -2535,7 +2901,23 @@ export default function EvaluatorDashboard() {
                     </div>
                   </div>
                   {isEmployeesRefreshing ? (
-                    <div className="max-h-[500px] overflow-y-auto">
+                    <div className="relative max-h-[500px] overflow-y-auto">
+                      {/* Centered Loading Spinner with Logo */}
+                      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                        <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                          <div className="relative">
+                            {/* Spinning ring */}
+                            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                            {/* Logo in center */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600 font-medium">Loading employees...</p>
+                        </div>
+                      </div>
+                      
+                      {/* Table structure visible in background */}
                       <Table className="min-w-full">
                         <TableHeader className="sticky top-0 bg-white z-10 border-b">
                           <TableRow key="employees-header">
@@ -2684,59 +3066,28 @@ export default function EvaluatorDashboard() {
                               <TableCell className="px-6 py-3 text-right">
                                 <div className="flex gap-2 justify-end">
                                   <Button
+                                    variant="ghost"
                                     size="sm"
-                                    variant="outline"
-                                    className='bg-green-500 hover:bg-green-600 text-white border-green-500'
+                                    className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700"
                                     onClick={() => {
                                       setSelectedEmployeeForView(e);
                                       setIsViewEmployeeModalOpen(true);
                                     }}
+                                    title="View employee details"
                                   >
-                                    <svg
-                                      className="w-4 h-4 mr-2"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                      />
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                      />
-                                    </svg>
-                                    View
+                                    <Eye className="h-4 w-4 text-white" />
                                   </Button>
                                   <Button
+                                    variant="ghost"
                                     size="sm"
-                                    className='bg-blue-500 hover:bg-yellow-400 hover:text-black'
+                                    className="h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700"
                                     onClick={() => {
                                       setSelectedEmployee(e);
                                       setIsEvaluationModalOpen(true);
                                     }}
+                                    title="Evaluate employee performance"
                                   >
-                                    <svg
-                                      className="w-4 h-4 mr-2"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                      />
-                                    </svg>
-                                    Evaluate
+                                    <FileText className="h-4 w-4 text-white" />
                                   </Button>
                                 </div>
                               </TableCell>
@@ -2762,7 +3113,8 @@ export default function EvaluatorDashboard() {
                   All Feedback/Evaluation Records
                   {(() => {
                     const newCount = filteredFeedbackData.filter(feedback => {
-                      const hoursDiff = (new Date().getTime() - new Date(feedback.date).getTime()) / (1000 * 60 * 60);
+                      if (!feedback.submittedAt) return false;
+                      const hoursDiff = (new Date().getTime() - new Date(feedback.submittedAt).getTime()) / (1000 * 60 * 60);
                       return hoursDiff <= 24 && !seenSubmissions.has(feedback.id);
                     }).length;
                     return newCount > 0 ? (
@@ -2913,28 +3265,44 @@ export default function EvaluatorDashboard() {
                   </div>
 
 
-                  {/* Refresh Button */}
-                  <div className="w-full md:w-32">
-                    <Label className="text-sm font-medium opacity-0">Refresh</Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleEvaluationRecordsRefresh}
-                      disabled={isFeedbackRefreshing}
-                      className="mt-1 w-full text-xs bg-blue-500 hover:bg-green-600 text-center text-white  hover:text-white disabled:cursor-not-allowed"
-                      title="Refresh evaluation records data"
-                    >
-                      {isFeedbackRefreshing ? (
-                        <>
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
-                          Refreshing...
-                        </>
-                      ) : (
-                        <>
-
-                          Refresh <span><RefreshCw className="h-3 w-3" /></span> </>
-                      )}
-                    </Button>
+                  {/* Refresh and Export Buttons */}
+                  <div className="w-full md:w-auto flex gap-2">
+                    <div className="w-full md:w-32">
+                      <Label className="text-sm font-medium opacity-0">Refresh</Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleEvaluationRecordsRefresh}
+                        disabled={isFeedbackRefreshing}
+                        className="mt-1 w-full text-xs bg-blue-500 hover:bg-green-600 text-center text-white hover:text-white disabled:cursor-not-allowed"
+                        title="Refresh evaluation records data"
+                      >
+                        {isFeedbackRefreshing ? (
+                          <>
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                            Refreshing...
+                          </>
+                        ) : (
+                          <>
+                            Refresh <span><RefreshCw className="h-3 w-3" /></span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <div className="w-full md:w-32">
+                      <Label className="text-sm font-medium opacity-0">Export</Label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={exportEvaluationRecordsToCSV}
+                        disabled={isFeedbackRefreshing || filteredFeedbackData.length === 0}
+                        className="mt-1 w-full text-xs bg-green-600 hover:bg-green-700 text-center text-white hover:text-white disabled:cursor-not-allowed disabled:bg-gray-400"
+                        title="Export evaluation records to CSV"
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        Export CSV
+                      </Button>
+                    </div>
                   </div>
 
 
@@ -2965,7 +3333,23 @@ export default function EvaluatorDashboard() {
                 </div>  
 
                 {isFeedbackRefreshing ? (
-                  <div className="max-h-[500px] overflow-y-auto overflow-x-auto scrollable-table">
+                  <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto scrollable-table">
+                    {/* Centered Loading Spinner with Logo */}
+                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                      <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                        <div className="relative">
+                          {/* Spinning ring */}
+                          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                          {/* Logo in center */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">Loading evaluation records...</p>
+                      </div>
+                    </div>
+                    
+                    {/* Table structure visible in background */}
                     <Table className="min-w-full">
                       <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                         <TableRow key="feedback-header">
@@ -3055,12 +3439,48 @@ export default function EvaluatorDashboard() {
                       </TableHeader>
                       <TableBody className="divide-y divide-gray-200">
                         {filteredFeedbackData.map((feedback) => {
-                          const highlight = getSubmissionHighlight(feedback.date, feedback.id, feedback.approvalStatus);
+                          // Check signatures to determine actual approval status
+                          // Find the original submission to check evaluationData if needed
+                          const originalSubmission = recentSubmissions.find(s => s.id === feedback.id);
+                          
+                          // Check if both parties have signed - must be actual signature images (base64 data URLs)
+                          // Employee signature should be an actual signature image
+                          const hasEmployeeSignature = !!(
+                            (feedback.employeeSignature && feedback.employeeSignature.trim() && feedback.employeeSignature.startsWith('data:image')) ||
+                            (originalSubmission?.employeeSignature && originalSubmission.employeeSignature.trim() && originalSubmission.employeeSignature.startsWith('data:image')) ||
+                            (originalSubmission?.evaluationData?.employeeSignature && originalSubmission.evaluationData.employeeSignature.trim() && originalSubmission.evaluationData.employeeSignature.startsWith('data:image'))
+                          );
+                          
+                          // Evaluator signature - check for actual signature image, not just the name
+                          const hasEvaluatorSignature = !!(
+                            (originalSubmission?.evaluationData?.evaluatorSignatureImage && originalSubmission.evaluationData.evaluatorSignatureImage.trim() && originalSubmission.evaluationData.evaluatorSignatureImage.startsWith('data:image')) ||
+                            ((originalSubmission as any)?.evaluatorSignatureImage && (originalSubmission as any).evaluatorSignatureImage.trim() && (originalSubmission as any).evaluatorSignatureImage.startsWith('data:image'))
+                          );
+                          
+                          // Determine approval status - SIGNATURES HAVE PRIORITY over stored status - same as HR dashboard
+                          let actualApprovalStatus = 'pending';
+                          if (hasEmployeeSignature && hasEvaluatorSignature) {
+                            // Both signed = fully approved (regardless of stored status)
+                            actualApprovalStatus = 'fully_approved';
+                          } else if (hasEmployeeSignature) {
+                            // Only employee signed
+                            actualApprovalStatus = 'employee_approved';
+                          } else if (feedback.approvalStatus && feedback.approvalStatus !== 'pending') {
+                            // No signatures detected, use stored status
+                            actualApprovalStatus = feedback.approvalStatus;
+                          } else {
+                            actualApprovalStatus = 'pending';
+                          }
+                          
+                          const highlight = getSubmissionHighlight(feedback.submittedAt || feedback.date, feedback.id, actualApprovalStatus);
                           return (
                             <TableRow 
                               key={feedback.uniqueKey} 
                               className={highlight.className}
-                              onClick={() => markSubmissionAsSeen(feedback.id)}
+                              onClick={() => {
+                                markSubmissionAsSeen(feedback.id);
+                                viewEvaluationForm(feedback);
+                              }}
                             >
                               <TableCell className="px-6 py-3">
                                 <div className="flex items-center gap-2">
@@ -3070,6 +3490,11 @@ export default function EvaluatorDashboard() {
                                       {highlight.badge && (
                                         <Badge className={`${highlight.badge.className} text-xs px-1.5 py-0`}>
                                           {highlight.badge.text}
+                                        </Badge>
+                                      )}
+                                      {highlight.secondaryBadge && (
+                                        <Badge className={`${highlight.secondaryBadge.className} text-xs px-1.5 py-0`}>
+                                          {highlight.secondaryBadge.text}
                                         </Badge>
                                       )}
                                     </div>
@@ -3110,12 +3535,12 @@ export default function EvaluatorDashboard() {
                           <TableCell className="px-6 py-3">
                             {/* Approval Status */}
                             <Badge className={
-                              feedback.approvalStatus === 'fully_approved' ? 'bg-green-100 text-green-800' :
-                                feedback.approvalStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                              actualApprovalStatus === 'fully_approved' ? 'bg-green-100 text-green-800' :
+                                actualApprovalStatus === 'rejected' ? 'bg-red-100 text-red-800' :
                                   'bg-gray-100 text-gray-800'
                             }>
-                              {feedback.approvalStatus === 'fully_approved' ? '✓ Fully Approved' :
-                                feedback.approvalStatus === 'rejected' ? '❌ Rejected' :
+                              {actualApprovalStatus === 'fully_approved' ? '✓ Fully Approved' :
+                                actualApprovalStatus === 'rejected' ? '❌ Rejected' :
                                   '⏳ Pending'}
                             </Badge>
                           </TableCell>
@@ -3143,7 +3568,7 @@ export default function EvaluatorDashboard() {
                           <TableCell className="px-6 py-3">
                             {/* Evaluator Signature Status */}
                             <div className="flex items-center space-x-2">
-                              {feedback.evaluatorSignature ? (
+                              {(feedback.evaluatorSignature || originalSubmission?.evaluationData?.evaluatorSignature) ? (
                                 <div className="flex items-center space-x-1 text-blue-600">
                                   <span className="text-xs">✓</span>
                                   <span className="text-xs font-medium">Signed</span>
@@ -3216,6 +3641,1210 @@ export default function EvaluatorDashboard() {
             </Card>
           </div>
         );
+      case 'reviews':
+        // Filter submissions to show only evaluations created by this evaluator
+        const filteredReviews = recentSubmissions
+          .filter(submission => submission.evaluatorId === user?.id)
+          .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+
+        return (
+          <div className="relative h-[calc(100vh-200px)] overflow-y-auto">
+            {isReviewsRefreshing || loading ? (
+              <div className="relative space-y-6 min-h-[500px]">
+                {/* Centered Loading Spinner with Logo */}
+                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                    <div className="relative">
+                      {/* Spinning ring */}
+                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                      {/* Logo in center */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 font-medium">Loading performance reviews...</p>
+                  </div>
+                </div>
+
+                {/* Performance Analytics Skeleton (visible in background) */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+                  <Card className="h-fit">
+                    <CardHeader>
+                      <Skeleton className="h-6 w-48" />
+                    </CardHeader>
+                    <CardContent>
+                      <Skeleton className="h-64 w-full" />
+                    </CardContent>
+                  </Card>
+                  <Card className="h-fit">
+                    <CardHeader>
+                      <Skeleton className="h-6 w-40" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-4 w-5/6" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Performance Reviews Table Skeleton (visible in background) */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <Skeleton className="h-6 w-48" />
+                      <Skeleton className="h-8 w-24" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="flex items-center space-x-4">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-4 w-16" />
+                          <Skeleton className="h-4 w-12" />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Performance Analytics Section */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+                    {/* Performance Trend Chart */}
+                    <Card className="h-fit">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          📈 Performance Trend
+                        </CardTitle>
+                        <CardDescription>Rating progression of evaluations you've conducted</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {(() => {
+                          // Prepare chart data from submissions
+                          const chartData = filteredReviews
+                            .filter(s => (s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating || 0) > 0)
+                            .map((submission, index) => ({
+                              review: `Review ${filteredReviews.length - index}`,
+                              rating: submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating || 0,
+                              date: new Date(submission.submittedAt).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric'
+                              }),
+                              fullDate: new Date(submission.submittedAt).toLocaleDateString()
+                            }))
+                            .reverse(); // Show oldest to newest
+
+                          const chartConfig = {
+                            rating: {
+                              label: "Rating",
+                              color: "hsl(var(--chart-1))",
+                            },
+                          };
+
+                          if (chartData.length === 0) {
+                            return (
+                              <div className="h-64 flex items-center justify-center">
+                                <div className="text-center">
+                                  <div className="text-4xl mb-2">📊</div>
+                                  <div className="text-sm text-gray-500">No data available</div>
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    Complete your first evaluation to see trends
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="h-80">
+                              <ChartContainer config={chartConfig}>
+                                <LineChart
+                                  data={chartData}
+                                  margin={{
+                                    left: 20,
+                                    right: 20,
+                                    top: 20,
+                                    bottom: 60,
+                                  }}
+                                >
+                                  <CartesianGrid
+                                    strokeDasharray="2 2"
+                                    stroke="#e5e7eb"
+                                    opacity={0.3}
+                                  />
+                                  <XAxis
+                                    dataKey="date"
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tickMargin={16}
+                                    tick={{ fontSize: 11, fill: '#6b7280' }}
+                                    tickFormatter={(value) => value}
+                                    interval={0}
+                                    angle={-45}
+                                    textAnchor="end"
+                                    height={60}
+                                  />
+                                  <YAxis
+                                    domain={[0, 5]}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tickMargin={12}
+                                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                                    tickFormatter={(value) => `${value}.0`}
+                                    ticks={[0, 1, 2, 3, 4, 5]}
+                                  />
+                                  <ChartTooltip
+                                    cursor={{ stroke: '#3b82f6', strokeWidth: 1, strokeDasharray: '3 3' }}
+                                    content={<ChartTooltipContent
+                                      formatter={(value, name) => [
+                                        `${value}/5.0`,
+                                        "Rating"
+                                      ]}
+                                      labelFormatter={(label, payload) => {
+                                        if (payload && payload[0]) {
+                                          return payload[0].payload.review;
+                                        }
+                                        return label;
+                                      }}
+                                      className="bg-white border border-gray-200 shadow-lg rounded-lg"
+                                    />}
+                                  />
+                                  <Line
+                                    dataKey="rating"
+                                    type="monotone"
+                                    stroke="#3b82f6"
+                                    strokeWidth={3}
+                                    dot={{
+                                      fill: "#3b82f6",
+                                      stroke: "#ffffff",
+                                      strokeWidth: 2,
+                                      r: 5,
+                                    }}
+                                    activeDot={{
+                                      r: 7,
+                                      stroke: "#3b82f6",
+                                      strokeWidth: 2,
+                                      fill: "#ffffff",
+                                    }}
+                                  />
+                                </LineChart>
+                              </ChartContainer>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Chart Legend and Info */}
+                        <div className="mt-6 px-4 py-3 bg-gray-50 rounded-lg border">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-4 h-4 bg-blue-500 rounded-full flex-shrink-0"></div>
+                              <span className="text-sm font-medium text-gray-700">Performance Rating Trend</span>
+                            </div>
+                            <div className="text-sm text-gray-600 bg-white px-3 py-1 rounded-md border">
+                              <span className="font-medium">{filteredReviews.filter(s => (s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating || 0) > 0).length}</span> evaluation{filteredReviews.filter(s => (s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating || 0) > 0).length !== 1 ? 's' : ''} tracked
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Performance Summary */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          📊 Performance Summary
+                        </CardTitle>
+                        <CardDescription>Your overall performance insights</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {(() => {
+                          const ratings = filteredReviews.map(s =>
+                            s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating || 0
+                          ).filter(r => r > 0);
+                          const averageRating = ratings.length > 0 ? (ratings.reduce((sum, r) => sum + r, 0) / ratings.length).toFixed(1) : '0.0';
+                          const latestRating = ratings.length > 0 ? ratings[0] : 0;
+                          const trend = ratings.length > 1 ? (latestRating - ratings[1]) : 0;
+
+                          return (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Average Rating</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-2xl font-bold">{averageRating}</span>
+                                  <span className="text-sm text-gray-500">/5.0</span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Latest Rating</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg font-semibold">{latestRating}</span>
+                                  <span className="text-sm text-gray-500">/5.0</span>
+                                  {trend !== 0 && (
+                                    <Badge className={trend > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                                      {trend > 0 ? '↗' : '↘'} {Math.abs(trend).toFixed(1)}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Total Reviews</span>
+                                <Badge variant="outline">{filteredReviews.length}</Badge>
+                              </div>
+
+                              <div className="pt-2 border-t">
+                                <div className="text-sm font-medium mb-2">Performance Level</div>
+                                <Badge className={
+                                  parseFloat(averageRating) >= 4.5 ? 'bg-green-100 text-green-800' :
+                                    parseFloat(averageRating) >= 4.0 ? 'bg-blue-100 text-blue-800' :
+                                      parseFloat(averageRating) >= 3.5 ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-red-100 text-red-800'
+                                }>
+                                  {parseFloat(averageRating) >= 4.5 ? 'Outstanding' :
+                                    parseFloat(averageRating) >= 4.0 ? 'Exceeds Expectations' :
+                                      parseFloat(averageRating) >= 3.5 ? 'Meets Expectations' :
+                                        'Needs Improvement'}
+                                </Badge>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                {/* Performance Insights */}
+                <Card className="mt-8">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      💡 Performance Insights
+                    </CardTitle>
+                    <CardDescription>Actionable insights based on your performance history</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(() => {
+                        const ratings = filteredReviews.map(s =>
+                          s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating || 0
+                        ).filter(r => r > 0);
+                        const averageRating = ratings.length > 0 ? (ratings.reduce((sum, r) => sum + r, 0) / ratings.length) : 0;
+                        const latestRating = ratings.length > 0 ? ratings[0] : 0;
+                        const trend = ratings.length > 1 ? (latestRating - ratings[1]) : 0;
+
+                        const insights = [];
+
+                        if (filteredReviews.length === 0) {
+                          // Show message when no evaluations exist
+                          insights.push({
+                            type: 'improvement',
+                            icon: '📝',
+                            title: 'No Evaluations Yet',
+                            message: 'Start conducting evaluations to see insights and track performance trends over time.'
+                          });
+                        } else {
+                          if (averageRating >= 4.5) {
+                            insights.push({
+                              type: 'excellent',
+                              icon: '🏆',
+                              title: 'Outstanding Performance',
+                              message: 'You\'re performing exceptionally well! Consider mentoring others or taking on leadership opportunities.'
+                            });
+                          } else if (averageRating >= 4.0) {
+                            insights.push({
+                              type: 'good',
+                              icon: '⭐',
+                              title: 'Strong Performance',
+                              message: 'You\'re exceeding expectations. Focus on maintaining this level and identifying areas for continued growth.'
+                            });
+                          } else if (averageRating >= 3.5) {
+                            insights.push({
+                              type: 'average',
+                              icon: '📈',
+                              title: 'Solid Performance',
+                              message: 'You\'re meeting expectations. Consider setting specific goals to push beyond your current level.'
+                            });
+                          } else {
+                            insights.push({
+                              type: 'improvement',
+                              icon: '🎯',
+                              title: 'Growth Opportunity',
+                              message: 'There\'s room for improvement. Focus on one key area at a time and seek feedback regularly.'
+                            });
+                          }
+
+                          if (trend > 0.2) {
+                            insights.push({
+                              type: 'improving',
+                              icon: '🚀',
+                              title: 'Improving Trend',
+                              message: 'Great job! Your performance is trending upward. Keep up the momentum!'
+                            });
+                          } else if (trend < -0.2) {
+                            insights.push({
+                              type: 'declining',
+                              icon: '⚠️',
+                              title: 'Performance Dip',
+                              message: 'Your recent performance has declined. Consider discussing challenges with your manager.'
+                            });
+                          }
+
+                          if (filteredReviews.length >= 3) {
+                            insights.push({
+                              type: 'consistency',
+                              icon: '📊',
+                              title: 'Consistent Reviews',
+                              message: 'You have a solid review history. This shows reliability and commitment to performance.'
+                            });
+                          }
+                        }
+
+                        // If no insights, show a default message
+                        if (insights.length === 0) {
+                          insights.push({
+                            type: 'improvement',
+                            icon: '📈',
+                            title: 'Getting Started',
+                            message: 'Complete more evaluations to receive personalized insights about your evaluation patterns.'
+                          });
+                        }
+
+                        return insights.map((insight, index) => (
+                          <div key={index} className={`p-4 rounded-lg border ${insight.type === 'excellent' ? 'bg-green-50 border-green-200' :
+                            insight.type === 'good' ? 'bg-blue-50 border-blue-200' :
+                              insight.type === 'improving' ? 'bg-emerald-50 border-emerald-200' :
+                                insight.type === 'declining' ? 'bg-red-50 border-red-200' :
+                                  'bg-yellow-50 border-yellow-200'
+                            }`}>
+                            <div className="flex items-start gap-3">
+                              <span className="text-2xl">{insight.icon}</span>
+                              <div>
+                                <h4 className="font-semibold text-sm mb-1">{insight.title}</h4>
+                                <p className="text-sm text-gray-600">{insight.message}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* All Performance Reviews Table */}
+                <Card className="mt-8">
+                  <CardHeader>
+                    <CardTitle>All Performance Reviews</CardTitle>
+                    <CardDescription>
+                      Complete history of performance evaluations you've conducted
+                      <div className="flex items-center gap-4 mt-2 text-xs">
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
+                          <span className="text-red-700">Poor (&lt;2.5)</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-orange-100 border border-orange-300 rounded"></div>
+                          <span className="text-orange-700">Low (&lt;3.0)</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-blue-100 border border-blue-300 rounded"></div>
+                          <span className="text-blue-700">Good (3.0-3.9)</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
+                          <span className="text-green-700">Excellent (≥4.0)</span>
+                        </div>
+                      </div>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {filteredReviews.length > 0 ? (
+                      <div className="max-h-[500px] overflow-y-auto overflow-x-hidden rounded-lg border mx-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                        <Table>
+                          <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                            <TableRow>
+                              <TableHead className="px-6 py-4">Employee</TableHead>
+                              <TableHead className="px-6 py-4 text-right">Rating</TableHead>
+                              <TableHead className="px-6 py-4">Date</TableHead>
+                              <TableHead className="px-6 py-4">Quarter</TableHead>
+                              <TableHead className="px-6 py-4 text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredReviews
+                              .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+                              .map((submission) => {
+                                const highlight = getSubmissionHighlight(submission.submittedAt, submission.id, submission.approvalStatus);
+                                const rating = submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating || 0;
+                                const isLowPerformance = rating < 3.0;
+                                const isPoorPerformance = rating < 2.5;
+                                
+                                return (
+                                  <TableRow 
+                                    key={submission.id} 
+                                    className={`${highlight.className} ${
+                                      isPoorPerformance ? 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100' :
+                                      isLowPerformance ? 'bg-orange-50 border-l-4 border-l-orange-400 hover:bg-orange-100' :
+                                      ''
+                                    }`}
+                                  >
+                                    <TableCell className="px-6 py-4 font-medium">
+                                      <div className="flex items-center gap-2">
+                                        {submission.employeeName || 'Unknown'}
+                                        {highlight.badge && (
+                                          <Badge variant="secondary" className={`${highlight.badge.className} text-xs`}>
+                                            {highlight.badge.text}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="px-6 py-4 text-right font-semibold">
+                                      {(() => {
+                                        const rating = submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating || 0;
+                                        const isLowPerformance = rating < 3.0;
+                                        const isPoorPerformance = rating < 2.5;
+                                        
+                                        return (
+                                          <div className={`flex items-center justify-end gap-2 ${
+                                            isPoorPerformance ? 'text-red-700' : 
+                                            isLowPerformance ? 'text-orange-600' : 
+                                            'text-gray-900'
+                                          }`}>
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                              isPoorPerformance ? 'bg-red-100 text-red-800' :
+                                              isLowPerformance ? 'bg-orange-100 text-orange-800' :
+                                              rating >= 4.0 ? 'bg-green-100 text-green-800' :
+                                              rating >= 3.5 ? 'bg-blue-100 text-blue-800' :
+                                              'bg-blue-100 text-blue-800'
+                                            }`}>
+                                              {isPoorPerformance ? 'POOR' : 
+                                               isLowPerformance ? 'LOW' : 
+                                               rating >= 4.0 ? 'EXCELLENT' :
+                                               rating >= 3.5 ? 'GOOD' : 'FAIR'}
+                                            </span>
+                                            <span className="font-bold">
+                                              {rating}/5
+                                            </span>
+                                          </div>
+                                        );
+                                      })()}
+                                    </TableCell>
+                                    <TableCell className="px-6 py-4">
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">{new Date(submission.submittedAt).toLocaleDateString()}</span>
+                                        <span className="text-xs text-gray-500">{getTimeAgo(submission.submittedAt)}</span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="px-6 py-4">
+                                      <Badge className={getQuarterColor(getQuarterFromEvaluationData(submission.evaluationData || submission))}>
+                                        {getQuarterFromEvaluationData(submission.evaluationData || submission)}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="px-6 py-4 text-right">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          viewEvaluationForm(submission);
+                                        }}
+                                        className="text-white bg-blue-500 hover:text-white hover:bg-blue-600"
+                                      >
+                                        <Eye className="w-4 h-4" />
+                                        View
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 px-6">
+                        <div className="text-gray-500 text-lg mb-2">No performance reviews yet</div>
+                        <div className="text-gray-400 text-sm">Your evaluation history will appear here once reviews are completed.</div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        );
+      case 'history':
+        // Filter submissions to show only evaluations created by this evaluator
+        const filteredHistorySubmissions = recentSubmissions
+          .filter(submission => submission.evaluatorId === user?.id)
+          .filter(submission => {
+            if (!historySearchTerm) return true;
+
+            const searchLower = historySearchTerm.toLowerCase();
+            return (
+              submission.employeeName?.toLowerCase().includes(searchLower) ||
+              submission.evaluatorName?.toLowerCase().includes(searchLower) ||
+              submission.evaluator?.toLowerCase().includes(searchLower) ||
+              submission.evaluationData?.supervisor?.toLowerCase().includes(searchLower) ||
+              (submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating || 0).toString().includes(searchLower) ||
+              getQuarterFromEvaluationData(submission.evaluationData || submission)?.toLowerCase().includes(searchLower)
+            );
+          });
+
+        return (
+          <div className="relative">
+            {isHistoryRefreshing || loading ? (
+              <div className="relative min-h-[500px]">
+                {/* Centered Loading Spinner with Logo */}
+                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                    <div className="relative">
+                      {/* Spinning ring */}
+                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                      {/* Logo in center */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 font-medium">Loading evaluation history...</p>
+                  </div>
+                </div>
+
+                {/* Card skeleton visible in background */}
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-64" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Table Header Skeleton */}
+                      <div className="flex space-x-4">
+                        <Skeleton className="h-8 w-24" />
+                        <Skeleton className="h-8 w-32" />
+                        <Skeleton className="h-8 w-28" />
+                      </div>
+
+                      {/* Table Rows Skeleton */}
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <div key={i} className="flex items-center space-x-4 py-3 border-b">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-4 w-16" />
+                          <Skeleton className="h-4 w-12" />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Evaluation History</CardTitle>
+                  <CardDescription>Complete timeline of evaluations you've conducted</CardDescription>
+                </CardHeader>
+                <CardContent>
+
+                  {/* Tabbed Interface for Tables */}
+                  <Tabs defaultValue="quarterly" className="w-full">
+                    <TabsList className="grid w-1/2 bg-gray-200 grid-cols-2">
+                      <TabsTrigger value="quarterly">📊 Quarterly Performance</TabsTrigger>
+                      <TabsTrigger value="history">📈 Evaluation History</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="quarterly" className="mt-6">
+                      <Card>
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <CardTitle>Quarterly Performance Summary</CardTitle>
+                              <CardDescription>Performance overview grouped by quarter</CardDescription>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleRefreshQuarterly}
+                              disabled={isQuarterlyRefreshing}
+                              className="flex items-center bg-blue-500 text-white hover:bg-green-700 hover:text-white space-x-2"
+                            >
+                              <RefreshCw className={`h-4 w-4 ${isQuarterlyRefreshing ? 'animate-spin' : ''}`} />
+                              <span>Refresh</span>
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          {/* Search Bar */}
+                          <div className="mb-6 w-1/2">
+                            <div className="relative">
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                              </div>
+                              <input
+                                type="text"
+                                placeholder="Search quarterly data..."
+                                value={quarterlySearchTerm}
+                                onChange={(e) => setQuarterlySearchTerm(e.target.value)}
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                              />
+                              {quarterlySearchTerm && (
+                                <button
+                                  onClick={() => setQuarterlySearchTerm('')}
+                                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                                >
+                                  <X className="h-5 w-5 text-red-400 hover:text-red-600" />
+                                </button>
+                              )}
+                            </div>
+                            {quarterlySearchTerm && (
+                              <div className="mt-2 text-sm text-gray-600">
+                                Searching quarterly data...
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Date Range Filter */}
+                          <div className="mb-6">
+                            <div className="flex items-center gap-4">
+                              <span className="text-sm font-medium text-gray-700">Filter by Date Range:</span>
+                              <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-[280px] justify-start text-left font-normal",
+                                      !dateFilter.from && "text-muted-foreground"
+                                    )}
+                                  >
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    {dateFilter.from ? (
+                                      dateFilter.to ? (
+                                        <>
+                                          {dateFilter.from.toLocaleDateString()} - {dateFilter.to.toLocaleDateString()}
+                                        </>
+                                      ) : (
+                                        dateFilter.from.toLocaleDateString()
+                                      )
+                                    ) : (
+                                      "Pick a date range"
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <CalendarComponent
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={dateFilter.from}
+                                    selected={dateFilter.from ? { from: dateFilter.from, to: dateFilter.to } : undefined}
+                                    onSelect={(range) => setDateFilter(range || {})}
+                                    numberOfMonths={1}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              {(dateFilter.from || dateFilter.to) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={clearDateFilter}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                            {(dateFilter.from || dateFilter.to) && (
+                              <div className="mt-2 text-sm text-gray-600">
+                                Filtering by date range: {dateFilter.from?.toLocaleDateString()} - {dateFilter.to?.toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Quarter Filter Buttons */}
+                          <div className="mb-6">
+                            <div className="flex flex-wrap gap-2 items-center">
+                              <span className="text-sm font-medium text-gray-700 mr-2">Filter by Quarter:</span>
+                              <Button
+                                variant={selectedQuarter === '' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setSelectedQuarter('')}
+                                className={`text-xs ${selectedQuarter === '' ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                              >
+                                All Quarters
+                              </Button>
+                              {['Q1', 'Q2', 'Q3', 'Q4'].map((quarter) => (
+                                <Button
+                                  key={quarter}
+                                  variant={selectedQuarter === quarter ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => setSelectedQuarter(quarter)}
+                                  className={`text-xs font-medium transition-all duration-200 ${selectedQuarter === quarter ? `${getQuarterColor(quarter)} border-2 shadow-md transform scale-105` : `${getQuarterColor(quarter)} border border-gray-300 hover:shadow-sm hover:scale-102`}`}
+                                >
+                                  {quarter}
+                                </Button>
+                              ))}
+                              {selectedQuarter && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setSelectedQuarter('')}
+                                  className="text-xs text-white bg-red-500 hover:text-white hover:bg-red-600 border border-red-500 shadow-sm transition-all duration-200 hover:shadow-md"
+                                >
+                                  Clear Filter
+                                </Button>
+                              )}
+                            </div>
+                            {selectedQuarter && (
+                              <div className="mt-2 text-sm text-gray-600">
+                                Showing data for {selectedQuarter} only
+                              </div>
+                            )}
+                          </div>
+                          <div className="relative max-h-[300px] md:max-h-[450px] lg:max-h-[650px] xl:max-h-[700px] overflow-y-auto overflow-x-auto scrollable-table">
+                            {isQuarterlyRefreshing || loading ? (
+                              <>
+                                {/* Centered Loading Spinner with Logo */}
+                                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                                    <div className="relative">
+                                      {/* Spinning ring */}
+                                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                                      {/* Logo in center */}
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                                      </div>
+                                    </div>
+                                    <p className="text-sm text-gray-600 font-medium">Loading quarterly data...</p>
+                                  </div>
+                                </div>
+
+                                {/* Table skeleton visible in background */}
+                                <div className="space-y-2 p-4">
+                                  {/* Table Header Skeleton */}
+                                  <div className="flex space-x-3 py-2 border-b">
+                                    <Skeleton className="h-3 w-12" />
+                                    <Skeleton className="h-3 w-18" />
+                                    <Skeleton className="h-3 w-14" />
+                                    <Skeleton className="h-3 w-12" />
+                                    <Skeleton className="h-3 w-16" />
+                                    <Skeleton className="h-3 w-10" />
+                                    <Skeleton className="h-3 w-12" />
+                                  </div>
+
+                                  {/* Table Rows Skeleton */}
+                                  {Array.from({ length: 3 }).map((_, i) => (
+                                    <div key={i} className="flex items-center space-x-3 py-2 border-b">
+                                      <Skeleton className="h-4 w-8" />
+                                      <Skeleton className="h-3 w-6" />
+                                      <Skeleton className="h-3 w-12" />
+                                      <Skeleton className="h-3 w-10" />
+                                      <Skeleton className="h-3 w-14" />
+                                      <Skeleton className="h-3 w-12" />
+                                      <Skeleton className="h-6 w-14" />
+                                    </div>
+                                  ))}
+                                </div>
+                              </>
+                            ) : (
+                              <Table>
+                                <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                                  <TableRow>
+                                    <TableHead>Quarter</TableHead>
+                                    <TableHead>Dates</TableHead>
+                                    <TableHead>Total Evaluations</TableHead>
+                                    <TableHead>Average Rating</TableHead>
+                                    <TableHead>Latest Rating</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {(() => {
+                                    // Filter submissions by evaluator first
+                                    const evaluatorSubmissions = recentSubmissions.filter(submission => submission.evaluatorId === user?.id);
+                                    
+                                    // Group submissions by quarter
+                                    const quarterlyData = evaluatorSubmissions.reduce((acc, submission) => {
+                                      const quarter = getQuarterFromEvaluationData(submission.evaluationData || submission);
+                                      if (!acc[quarter]) {
+                                        acc[quarter] = {
+                                          quarter,
+                                          submissions: [],
+                                          averageRating: 0,
+                                          totalEvaluations: 0,
+                                          latestRating: 0,
+                                          dateRange: ''
+                                        };
+                                      }
+                                      acc[quarter].submissions.push(submission);
+                                      return acc;
+                                    }, {} as any);
+
+                                    // Calculate statistics for each quarter
+                                    Object.keys(quarterlyData).forEach(quarter => {
+                                      const data = quarterlyData[quarter];
+                                      const ratings = data.submissions.map((s: any) =>
+                                        s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating || 0
+                                      ).filter((r: any) => r > 0);
+                                      data.totalEvaluations = ratings.length;
+                                      data.averageRating = ratings.length > 0 ? (ratings.reduce((a: any, b: any) => a + b, 0) / ratings.length).toFixed(1) : 0;
+                                      data.latestRating = ratings.length > 0 ? ratings[ratings.length - 1] : 0;
+                                      
+                                      // Calculate date range for this quarter
+                                      if (data.submissions.length > 0) {
+                                        const dates = data.submissions.map((s: any) => new Date(s.submittedAt)).sort((a: any, b: any) => a - b);
+                                        const startDate = dates[0];
+                                        const endDate = dates[dates.length - 1];
+                                        
+                                        if (startDate.getTime() === endDate.getTime()) {
+                                          data.dateRange = startDate.toLocaleDateString();
+                                        } else {
+                                          data.dateRange = `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
+                                        }
+                                      }
+                                    });
+
+                                    // Sort quarters chronologically
+                                    const sortedQuarters = Object.values(quarterlyData).sort((a: any, b: any) => {
+                                      const quarterOrder: { [key: string]: number } = { 'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4 };
+                                      const aQuarter = a.quarter.split(' ')[0];
+                                      const bQuarter = b.quarter.split(' ')[0];
+                                      return (quarterOrder[aQuarter] || 0) - (quarterOrder[bQuarter] || 0);
+                                    });
+
+                                    // Filter quarters based on selected quarter and date range
+                                    let filteredQuarters = selectedQuarter
+                                      ? sortedQuarters.filter((q: any) => q.quarter.startsWith(selectedQuarter))
+                                      : sortedQuarters;
+
+                                    // Apply date range filter
+                                    if (dateFilter.from || dateFilter.to) {
+                                      filteredQuarters = filteredQuarters.filter((quarterData: any) => {
+                                        return quarterData.submissions.some((submission: any) => {
+                                          const submissionDate = new Date(submission.submittedAt);
+                                          const submissionDateOnly = new Date(submissionDate.getFullYear(), submissionDate.getMonth(), submissionDate.getDate());
+                                          const fromDateOnly = dateFilter.from ? new Date(dateFilter.from.getFullYear(), dateFilter.from.getMonth(), dateFilter.from.getDate()) : null;
+                                          const toDateOnly = dateFilter.to ? new Date(dateFilter.to.getFullYear(), dateFilter.to.getMonth(), dateFilter.to.getDate()) : null;
+                                          
+                                          const isAfterFrom = !fromDateOnly || submissionDateOnly >= fromDateOnly;
+                                          const isBeforeTo = !toDateOnly || submissionDateOnly <= toDateOnly;
+                                          
+                                          return isAfterFrom && isBeforeTo;
+                                        });
+                                      });
+                                    }
+
+                                    // Filter by search term
+                                    if (quarterlySearchTerm) {
+                                      filteredQuarters = filteredQuarters.filter((quarterData: any) => {
+                                        const searchLower = quarterlySearchTerm.toLowerCase();
+                                        return quarterData.quarter.toLowerCase().includes(searchLower) ||
+                                          quarterData.submissions.some((s: any) =>
+                                            s.employeeName?.toLowerCase().includes(searchLower) ||
+                                            s.evaluatorName?.toLowerCase().includes(searchLower)
+                                          );
+                                      });
+                                    }
+
+                                    return filteredQuarters.length > 0 ? filteredQuarters.map((quarterData: any) => {
+                                      const hasNewSubmission = quarterData.submissions.some((submission: any) => 
+                                        isNewSubmission(submission.submittedAt)
+                                      );
+                                      
+                                      return (
+                                        <TableRow 
+                                          key={quarterData.quarter}
+                                          className={hasNewSubmission ? 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100' : ''}
+                                        >
+                                          <TableCell>
+                                            <div className="flex items-center gap-2">
+                                              <Badge className={getQuarterColor(quarterData.quarter)}>
+                                                {quarterData.quarter}
+                                              </Badge>
+                                              {hasNewSubmission && (
+                                                <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                                                  NEW
+                                                </Badge>
+                                              )}
+                                            </div>
+                                          </TableCell>
+                                          <TableCell>
+                                            <div className="text-sm text-gray-600">
+                                              {quarterData.dateRange || 'No dates available'}
+                                            </div>
+                                          </TableCell>
+                                          <TableCell className="font-medium">
+                                            {quarterData.totalEvaluations}
+                                          </TableCell>
+                                          <TableCell>
+                                            <div className="flex items-center space-x-1">
+                                              <span className="font-semibold">{quarterData.averageRating}</span>
+                                              <span className="text-gray-500">/5.0</span>
+                                            </div>
+                                          </TableCell>
+                                          <TableCell>
+                                            <div className="flex items-center space-x-1">
+                                              <span className="font-medium">{quarterData.latestRating}</span>
+                                              <span className="text-gray-500">/5.0</span>
+                                            </div>
+                                          </TableCell>
+                                          <TableCell>
+                                            <Badge className={
+                                              parseFloat(quarterData.averageRating) >= 4.5 ? 'bg-green-100 text-green-800' :
+                                                parseFloat(quarterData.averageRating) >= 4.0 ? 'bg-blue-100 text-blue-800' :
+                                                  parseFloat(quarterData.averageRating) >= 3.5 ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-red-100 text-red-800'
+                                            }>
+                                              {parseFloat(quarterData.averageRating) >= 4.5 ? 'Outstanding' :
+                                                parseFloat(quarterData.averageRating) >= 4.0 ? 'Exceeds Expectations' :
+                                                  parseFloat(quarterData.averageRating) >= 3.5 ? 'Meets Expectations' :
+                                                    'Needs Improvement'}
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell>
+                                            <Button
+                                              size="sm"
+                                              onClick={() => {
+                                                const quarterSubmissions = evaluatorSubmissions.filter(submission =>
+                                                  getQuarterFromEvaluationData(submission.evaluationData || submission) === quarterData.quarter
+                                                );
+                                                if (quarterSubmissions.length > 0) {
+                                                  viewEvaluationForm(quarterSubmissions[0]);
+                                                }
+                                              }}
+                                              className="bg-blue-500 text-white hover:bg-green-700 hover:text-white"
+                                            >
+                                              <Eye className="w-4 h-4" />
+                                              View
+                                            </Button>
+                                          </TableCell>
+                                        </TableRow>
+                                      );
+                                    }) : (
+                                      <TableRow>
+                                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                                          <p>No quarterly data available</p>
+                                          <p className="text-sm">Evaluations will be grouped by quarter once available</p>
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })()}
+                                </TableBody>
+                              </Table>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    <TabsContent value="history" className="mt-6">
+                      <Card>
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <CardTitle>Evaluation History</CardTitle>
+                              <CardDescription>Complete timeline of evaluations you've conducted</CardDescription>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleRefreshHistory}
+                              disabled={isHistoryRefreshing}
+                              className="flex items-center bg-blue-500 text-white hover:bg-green-700 hover:text-white space-x-2"
+                            >
+                              <RefreshCw className={`h-4 w-4 ${isHistoryRefreshing ? 'animate-spin' : ''}`} />
+                              <span>Refresh</span>
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          {/* Refreshing Dialog for History Table */}
+                          {showRefreshingDialog && (
+                            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                <div>
+                                  <h4 className="text-sm font-medium text-blue-900">Refreshing table...</h4>
+                                  <p className="text-xs text-blue-700">{refreshingMessage}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Search Bar */}
+                          <div className="mb-6 w-1/2">
+                            <div className="relative">
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                              </div>
+                              <input
+                                type="text"
+                                placeholder="Search by employee, evaluator, supervisor..."
+                                value={historySearchTerm}
+                                onChange={(e) => setHistorySearchTerm(e.target.value)}
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                              />
+                              {historySearchTerm && (
+                                <button
+                                  onClick={() => setHistorySearchTerm('')}
+                                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                                >
+                                  <X className="h-5 w-5 text-red-400 hover:text-red-600" />
+                                </button>
+                              )}
+                            </div>
+                            {historySearchTerm && (
+                              <div className="mt-2 text-sm text-gray-600">
+                                Showing {filteredHistorySubmissions.length} of {recentSubmissions.filter(submission => submission.evaluatorId === user?.id).length} evaluations
+                              </div>
+                            )}
+                          </div>
+                          <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
+                            {isHistoryRefreshing || loading ? (
+                              <div className="space-y-2 p-4">
+                                {/* Table Header Skeleton */}
+                                <div className="flex space-x-3 py-2 border-b">
+                                  <Skeleton className="h-3 w-12" />
+                                  <Skeleton className="h-3 w-14" />
+                                  <Skeleton className="h-3 w-12" />
+                                  <Skeleton className="h-3 w-12" />
+                                  <Skeleton className="h-3 w-10" />
+                                  <Skeleton className="h-3 w-18" />
+                                  <Skeleton className="h-3 w-12" />
+                                </div>
+
+                                {/* Table Rows Skeleton */}
+                                {Array.from({ length: 4 }).map((_, i) => (
+                                  <div key={i} className="flex items-center space-x-3 py-2 border-b">
+                                    <Skeleton className="h-3 w-14" />
+                                    <Skeleton className="h-3 w-16" />
+                                    <Skeleton className="h-3 w-12" />
+                                    <Skeleton className="h-3 w-8" />
+                                    <Skeleton className="h-3 w-10" />
+                                    <Skeleton className="h-3 w-14" />
+                                    <Skeleton className="h-6 w-12" />
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <Table>
+                                <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                                  <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Employee</TableHead>
+                                    <TableHead className="text-right">Rating</TableHead>
+                                    <TableHead>Quarter</TableHead>
+                                    <TableHead>Immediate Supervisor</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {filteredHistorySubmissions.length > 0 ? filteredHistorySubmissions
+                                    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+                                    .map((submission) => {
+                                      const actualApprovalStatus = getCorrectApprovalStatus(submission);
+                                      const highlight = getSubmissionHighlight(submission.submittedAt, submission.id, actualApprovalStatus);
+                                      return (
+                                        <TableRow 
+                                          key={submission.id}
+                                          className={highlight.className}
+                                        >
+                                          <TableCell>
+                                            <div className="flex flex-col">
+                                              <div className="flex items-center gap-2">
+                                                <span className="font-medium">
+                                                  {new Date(submission.submittedAt).toLocaleDateString()}
+                                                </span>
+                                                {highlight.badge && (
+                                                  <Badge variant="secondary" className={`${highlight.badge.className} text-xs`}>
+                                                    {highlight.badge.text}
+                                                  </Badge>
+                                                )}
+                                              </div>
+                                              <div className="flex items-center gap-2">
+                                                <span className="text-xs text-gray-500">
+                                                  {new Date(submission.submittedAt).toLocaleTimeString()}
+                                                </span>
+                                                <span className="text-xs text-blue-600 font-medium">
+                                                  {getTimeAgo(submission.submittedAt)}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          </TableCell>
+                                          <TableCell className="font-medium">{submission.employeeName}</TableCell>
+                                          <TableCell className="text-right">
+                                            <div className="flex items-center justify-end space-x-1">
+                                              <span className="font-semibold">
+                                                {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating || 0}
+                                              </span>
+                                              <span className="text-gray-500">/5</span>
+                                            </div>
+                                          </TableCell>
+                                          <TableCell>
+                                            <Badge className={getQuarterColor(getQuarterFromEvaluationData(submission.evaluationData || submission))}>
+                                              {getQuarterFromEvaluationData(submission.evaluationData || submission)}
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell className="text-sm text-gray-600">
+                                            {submission.evaluationData?.supervisor || 'Not specified'}
+                                          </TableCell>
+                                          <TableCell className="text-right">
+                                            <div className="flex items-center justify-end space-x-2">
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                  viewEvaluationForm(submission);
+                                                }}
+                                                className="text-white bg-blue-500 hover:text-blue-800 border-blue-200 hover:border-blue-300"
+                                              >
+                                                <Eye className="w-4 h-4" />
+                                                View
+                                              </Button>
+                                            </div>
+                                          </TableCell>
+                                        </TableRow>
+                                      );
+                                    }) : (
+                                      <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                                          {historySearchTerm ? (
+                                            <>
+                                              <p>No evaluations found matching "{historySearchTerm}"</p>
+                                              <p className="text-sm">Try adjusting your search terms</p>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <p>No evaluation history found</p>
+                                              <p className="text-sm">Completed evaluations will appear here</p>
+                                            </>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    )}
+                                </TableBody>
+                              </Table>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        );
       case 'account-history':
         return (
           <div className="space-y-6">
@@ -3284,7 +4913,23 @@ export default function EvaluatorDashboard() {
 
                   {/* Account History Table */}
                   {isAccountHistoryRefreshing ? (
-                    <div className="overflow-x-auto">
+                    <div className="relative overflow-x-auto">
+                      {/* Centered Loading Spinner with Logo */}
+                      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                        <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                          <div className="relative">
+                            {/* Spinning ring */}
+                            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                            {/* Logo in center */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600 font-medium">Loading account history...</p>
+                        </div>
+                      </div>
+                      
+                      {/* Table structure visible in background */}
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -3446,8 +5091,7 @@ export default function EvaluatorDashboard() {
   };
 
   return (
-    <ProtectedRoute requiredRole={["evaluator", "manager"]}>
-      
+    <>
       {/* Loading Screen - Shows during initial load */}
       {(loading || !data) && (
         <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -3480,7 +5124,7 @@ export default function EvaluatorDashboard() {
             {selectedEmployee && (
               <EvaluationForm
                 employee={selectedEmployee}
-                // currentUser={user}
+                currentUser={getCurrentUserData()}
                 onCloseAction={() => {
                   setIsEvaluationModalOpen(false);
                   setSelectedEmployee(null);
@@ -3549,8 +5193,8 @@ export default function EvaluatorDashboard() {
           isOpen={isViewResultsModalOpen}
           onCloseAction={() => setIsViewResultsModalOpen(false)}
           submission={selectedEvaluationSubmission}
-          currentUserName={user?.fname}
-          currentUserSignature={user?.signature}
+          currentUserName={getCurrentUserData()?.name}
+          currentUserSignature={getCurrentUserData()?.signature}
           isEvaluatorView={true}
         />
 
@@ -3648,8 +5292,11 @@ export default function EvaluatorDashboard() {
         />
 
       </PageTransition>
-    </ProtectedRoute>
+    </>
   );
 }
+
+// Wrap with HOC for authentication (evaluator or manager role)
+export default withAuth(EvaluatorDashboard, { requiredRole: ['evaluator', 'manager'] });
 
 
