@@ -29,7 +29,7 @@ interface EditUserModalProps {
   user: User | null;
   onSave: (updatedUser: User) => void;
   departments: string[];
-  branches: string[];
+  branches: string[] | {id: string, name: string}[];
   positions: {id: string, name: string}[];
 }
 
@@ -72,7 +72,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         email: user.email || '',
         position: user.position || '',
         department: user.department || '',
-        branch: user.branch || '',
+        branch: (user.branch && typeof user.branch === 'string') ? user.branch : (user.branch ? String(user.branch) : ''),
         role: user.role || '',
         username: user.username || '',
         password: user.password || '',
@@ -106,7 +106,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       newErrors.department = 'Department is required';
     }
 
-    if (!formData.branch.trim()) {
+    if (formData.branch && typeof formData.branch === 'string' && !formData.branch.trim()) {
       newErrors.branch = 'Branch is required';
     }
 
@@ -331,8 +331,12 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           <div className="space-y-2 w-1/2">
             <Label htmlFor="branch">Branch *</Label>
             <Combobox
-              options={branches}
-              value={formData.branch}
+              options={
+                Array.isArray(branches) && branches.length > 0 && typeof branches[0] === 'object' && !('value' in branches[0])
+                  ? (branches as {id: string, name: string}[]).map(b => ({ value: b.name, label: b.name }))
+                  : (branches as string[])
+              }
+              value={formData.branch || ''}
               onValueChangeAction={(value) => handleInputChange('branch', value as string)}
               placeholder="Select branch"
               searchPlaceholder="Search branches..."
