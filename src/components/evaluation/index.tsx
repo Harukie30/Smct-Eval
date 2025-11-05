@@ -60,6 +60,23 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
   console.log('EvaluationForm received employee:', employee); // Debug log
   
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-8 = actual steps
+  const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
+  
+  // Reset animation when returning to welcome step or on initial mount
+  useEffect(() => {
+    if (currentStep === 0) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        setWelcomeAnimationKey(prev => prev + 1);
+      }, 10);
+    }
+  }, [currentStep]);
+  
+  // Trigger animation on initial mount
+  useEffect(() => {
+    setWelcomeAnimationKey(prev => prev + 1);
+  }, []);
+  
   const [evaluationData, setEvaluationData] = useState<EvaluationData>({
     employeeId: employee?.id?.toString() || '',
     employeeName: employee?.name || '',
@@ -555,6 +572,31 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
             background-color: rgb(220 252 231);
           }
         }
+        
+        @keyframes welcomePopup {
+          0% {
+            transform: scale(0.9) translateY(20px);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.02) translateY(-5px);
+            opacity: 0.9;
+          }
+          100% {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+          }
+        }
+        
+        .welcome-step-animate {
+          animation: welcomePopup 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        }
+        
+        /* Ensure animation works even inside containers */
+        .evaluation-container .welcome-step-animate {
+          animation: welcomePopup 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+          transform-origin: center;
+        }
       `}</style>
       <div className="max-h-[95vh] bg-gradient-to-br from-blue-50 to-indigo-100 p-6 overflow-y-auto">
       <div className="w-full mx-auto px-4">
@@ -609,7 +651,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
 
         {/* Step Content */}
         {currentStep === 0 ? (
-          <Card>
+          <Card key={`welcome-${welcomeAnimationKey}`} className="welcome-step-animate">
             <CardContent>
               <CurrentStepComponent
                 data={evaluationData}

@@ -3,8 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import SignaturePad from '@/components/SignaturePad';
+import { Combobox } from "@/components/ui/combobox";
 import LoadingAnimation from '@/components/LoadingAnimation';
 import { useToast } from '@/hooks/useToast';
 
@@ -265,100 +264,109 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <Label htmlFor="contact">Contact Number</Label>
             <Input
               id="contact"
+              type="tel"
               value={formData.contact || ''}
-              onChange={(e) => handleInputChange('contact', e.target.value)}
+              onChange={(e) => {
+                // Only allow numbers, spaces, hyphens, and parentheses (for formatting)
+                const value = e.target.value.replace(/[^\d\s\-()]/g, '');
+                handleInputChange('contact', value);
+              }}
+              onKeyDown={(e) => {
+                // Allow: backspace, delete, tab, escape, enter, and arrow keys
+                if ([8, 9, 27, 13, 46, 37, 38, 39, 40].indexOf(e.keyCode) !== -1 ||
+                    // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                    (e.keyCode === 65 && e.ctrlKey === true) ||
+                    (e.keyCode === 67 && e.ctrlKey === true) ||
+                    (e.keyCode === 86 && e.ctrlKey === true) ||
+                    (e.keyCode === 88 && e.ctrlKey === true) ||
+                    // Allow: home, end, left, right
+                    (e.keyCode >= 35 && e.keyCode <= 39)) {
+                  return;
+                }
+                // Ensure that it is a number and stop the keypress
+                if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105) && 
+                    e.key !== ' ' && e.key !== '-' && e.key !== '(' && e.key !== ')') {
+                  e.preventDefault();
+                }
+              }}
               className={errors.contact ? 'border-red-500' : 'bg-white'}
-              placeholder="Enter contact number"
+              placeholder="Enter contact number (numbers only)"
             />
             {errors.contact && <p className="text-sm text-red-500">{errors.contact}</p>}
           </div>
 
           {/* Position */}
-          <div className="space-y-2">
+          <div className="space-y-2 w-1/2">
             <Label htmlFor="position">Position *</Label>
-            <Select
+            <Combobox
+              options={positions.map(p => ({ value: p.id, label: p.name }))}
               value={formData.position}
-              onValueChange={(value) => handleInputChange('position', value)}
-            >
-              <SelectTrigger className={errors.position ? 'border-red-500' : 'bg-white'}>
-                <SelectValue placeholder="Select position" />
-              </SelectTrigger>
-              <SelectContent>
-                {positions.map((position) => (
-                  <SelectItem key={position.id} value={position.id}>
-                    {position.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onValueChangeAction={(value) => handleInputChange('position', value as string)}
+              placeholder="Select position"
+              searchPlaceholder="Search positions..."
+              emptyText="No positions found."
+              className={errors.position ? 'border-red-500' : 'bg-white'}
+              error={errors.position || null}
+            />
             {errors.position && <p className="text-sm text-red-500">{errors.position}</p>}
           </div>
 
           {/* Department */}
-          <div className="space-y-2">
+          <div className="space-y-2 w-1/2">
             <Label htmlFor="department">Department *</Label>
-            <Select
+            <Combobox
+              options={departments}
               value={formData.department}
-              onValueChange={(value) => handleInputChange('department', value)}
-            >
-              <SelectTrigger className={errors.department ? 'border-red-500' : 'bg-white'}>
-                <SelectValue placeholder="Select department" />
-              </SelectTrigger>
-              <SelectContent>
-                {departments.map((department) => (
-                  <SelectItem key={department} value={department}>
-                    {department}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onValueChangeAction={(value) => handleInputChange('department', value as string)}
+              placeholder="Select department"
+              searchPlaceholder="Search departments..."
+              emptyText="No departments found."
+              className={errors.department ? 'border-red-500' : 'bg-white'}
+              error={errors.department || null}
+            />
             {errors.department && <p className="text-sm text-red-500">{errors.department}</p>}
           </div>
 
           {/* Branch */}
-          <div className="space-y-2">
+          <div className="space-y-2 w-1/2">
             <Label htmlFor="branch">Branch *</Label>
-            <Select
+            <Combobox
+              options={branches}
               value={formData.branch}
-              onValueChange={(value) => handleInputChange('branch', value)}
-            >
-              <SelectTrigger className={errors.branch ? 'border-red-500' : ''}>
-                <SelectValue placeholder="Select branch" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((branch) => (
-                  <SelectItem key={branch} value={branch}>
-                    {branch}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onValueChangeAction={(value) => handleInputChange('branch', value as string)}
+              placeholder="Select branch"
+              searchPlaceholder="Search branches..."
+              emptyText="No branches found."
+              className={errors.branch ? 'border-red-500' : ''}
+              error={errors.branch || null}
+            />
             {errors.branch && <p className="text-sm text-red-500">{errors.branch}</p>}
           </div>
 
           {/* Role */}
-          <div className="space-y-2">
+          <div className="space-y-2 w-1/2">
             <Label htmlFor="role">Role *</Label>
-            <Select
+            <Combobox
+              options={[
+                { value: 'admin', label: 'Admin' },
+                { value: 'hr', label: 'HR' },
+                { value: 'manager', label: 'Manager' },
+                { value: 'evaluator', label: 'Evaluator' },
+                { value: 'employee', label: 'Employee' }
+              ]}
               value={formData.role || ''}
-              onValueChange={(value) => handleInputChange('role', value)}
-            >
-              <SelectTrigger className={errors.role ? 'border-red-500' : ''}>
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="hr">HR</SelectItem>
-                <SelectItem value="manager">Manager</SelectItem>
-                <SelectItem value="evaluator">Evaluator</SelectItem>
-                <SelectItem value="employee">Employee</SelectItem>
-              </SelectContent>
-            </Select>
+              onValueChangeAction={(value) => handleInputChange('role', value as string)}
+              placeholder="Select role"
+              searchPlaceholder="Search roles..."
+              emptyText="No roles found."
+              className={errors.role ? 'border-red-500' : ''}
+              error={errors.role || null}
+            />
             {errors.role && <p className="text-sm text-red-500">{errors.role}</p>}
           </div>
 
           {/* Hire Date */}
-          <div className="space-y-2">
+          <div className="space-y-2 w-1/2">
             <Label htmlFor="hireDate">Hire Date</Label>
             <Input
               id="hireDate"
@@ -370,38 +378,20 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           </div>
 
           {/* Active Status */}
-          <div className="space-y-2">
+          <div className="space-y-2 w-1/2">
             <Label htmlFor="isActive">Status</Label>
-            <Select
+            <Combobox
+              options={[
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' }
+              ]}
               value={formData.isActive ? 'active' : 'inactive'}
-              onValueChange={(value) => handleInputChange('isActive', value === 'active')}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Digital Signature - Full Width */}
-        <div className="w-full space-y-2 pt-4 mt-4 border-t border-gray-200">
-          <Label htmlFor="signature" className="text-base font-medium">Digital Signature</Label>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <SignaturePad
-              value={formData.signature || ''}
-              onChangeAction={(signature) => handleInputChange('signature', signature)}
-              className="w-full"
-              required={false}
-              hasError={false}
+              onValueChangeAction={(value) => handleInputChange('isActive', value === 'active')}
+              placeholder="Select status"
+              searchPlaceholder="Search status..."
+              emptyText="No status found."
             />
           </div>
-          <p className="text-sm text-gray-500">
-            Update the user's digital signature if needed. This signature will be used for official documents.
-          </p>
         </div>
 
         <DialogFooter className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
