@@ -32,18 +32,26 @@ export const clientDataService = {
     return await apiService.updateEmployee_auth(formData);
   },
 
-  getPendingRegistrations: async (): Promise<PendingRegistration[]> => {
+  getPendingRegistrations: async (): Promise<any> => {
     return await apiService.getPendingRegistrations();
   },
   
-  getActiveRegistrations: async (): Promise<PendingRegistration[]> => {
-    return await apiService.getActiveRegistrations();
+  getActiveRegistrations: async (filters : Record<  string ,string> = {}): Promise<any> => {
+    return await apiService.getActiveRegistrations(filters );
   },
 
   updateEmployee: async (formData: FormData , id: string | number): Promise<any> => {
     return await apiService.updateEmployee(formData, id );
   },
   
+  approveRegistration: async ( id: string | number): Promise<any> => {
+    return await apiService.approveRegistration(id);
+  },
+  
+  rejectRegistration: async ( id: string | number): Promise<any> => {
+    return await apiService.rejectRegistration(id);
+  },
+
   deleteUser: async (id: string | number): Promise<any> => {
     return await apiService.deleteUser(id );
   },

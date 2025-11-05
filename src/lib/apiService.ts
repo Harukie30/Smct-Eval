@@ -17,7 +17,7 @@ export const apiService = {
 
   // Registration
   createPendingRegistration: async (formData: FormData): Promise<any> => {
-  const res = await fetch(`${CONFIG.API_URL}/register`, {
+    const res = await fetch(`${CONFIG.API_URL}/register`, {
           method: "POST",
           headers: {
             "Accept": "application/json",
@@ -84,6 +84,52 @@ export const apiService = {
         return data;
   },
   
+  approveRegistration: async ( id :string | number): Promise<any> => {
+    await sanctum_csrf();
+    const res = await fetch(`${CONFIG.API_URL}/approveRegistration/${id}`, {
+          method: "POST",
+          credentials: 'include',
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw {
+            ...data,
+            status: res.status,
+          };
+        }
+
+        return data;
+  },
+
+  rejectRegistration: async ( id :string | number): Promise<any> => {
+    await sanctum_csrf();
+    const res = await fetch(`${CONFIG.API_URL}/rejectRegistration/${id}`, {
+          method: "POST",
+          credentials: 'include',
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw {
+            ...data,
+            status: res.status,
+          };
+        }
+
+        return data;
+  },
+
   deleteUser: async (id :string | number): Promise<any> => {
     await sanctum_csrf();
     const res = await fetch(`${CONFIG.API_URL}/delete_user/${id}`, {
@@ -108,7 +154,6 @@ export const apiService = {
   },
 
   getPendingRegistrations: async (): Promise<any | null> => {
-    try{
       const response = await fetch(`${CONFIG.API_URL}/getAll_Pending_users`, {
         method: 'GET',
         credentials: 'include',
@@ -120,92 +165,67 @@ export const apiService = {
 
       const data = await response.json();
       return data.users || [];
-    } catch (error) {
-      console.error("Error fetching pending registrations:", error);
-      return [];
-    }
   },
   
-  getActiveRegistrations: async (): Promise<any | null> => {
-    try{
-      const response = await fetch(`${CONFIG.API_URL}/getAll_Active_users`, {
-        method: 'GET',
-        credentials: 'include',
-      });
+  getActiveRegistrations: async (filters? : Record< string , string >): Promise<any | null> => {
+    const query = filters ? `?${ new  URLSearchParams(filters).toString() }` : '';
+    const response = await fetch(`${CONFIG.API_URL}/getAll_Active_users${query}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch active registrations');
-      }
-
-      const data = await response.json();
-      return data.users ;
-    } catch (error) {
-      console.error("Error fetching active registrations:", error);
-      return [];
+    if (!response.ok) {
+      throw new Error('Failed to fetch active registrations');
     }
+
+    const data = await response.json();
+    return data.users ;
   },
 
-  // Data
-    getDepartments: async ():  Promise<{ label: string; value: string }[]> => {
-      try {
-        const res = await fetch(`${CONFIG.API_URL}/departments`, {
+  getDepartments: async ():  Promise<{ label: string; value: string }[]> => {
+    const res = await fetch(`${CONFIG.API_URL}/departments`, {
           method: "GET",
         });
+        const response = await res.json();
         if (!res.ok) {
           throw new Error('Failed to save departments');
         }
-        const response = await res.json();
         return response.departments.map(
           (departments: any) => ({
             value: departments.id,
             label: departments.department_name,
           })
         );
-      } catch (error) {
-        console.error("Error fetching data:", error);
-         return [];
-      }
     },
 
-    getPositions: async (): Promise<{ label: string; value: string }[]> => {
-          try {
-            const res = await fetch(`${CONFIG.API_URL}/positions`, { 
-              method: "GET" 
-            });
-            
-            if (!res.ok) {
-               throw new Error('Failed to save positions');
-            }
-            const response = await res.json();
-            return response.positions.map((position: any) => ({
-              value: position.id,
-              label: position.label,
-            }));
-
-          } catch (error) {
-            console.error("Error fetching positions:", error);
-            return [];
-          }
-        },
-
-   getBranches: async ():  Promise<{ label: string; value: string }[]> => {
-     try {
-        const res = await fetch(`${CONFIG.API_URL}/branches`, {
-          method: "GET",
-        });
-        if (!res.ok) {
-               throw new Error('Failed to save positions');
-        }
-        const response = await res.json();
-        return response.branches.map((branches: any) => ({
-          value: branches.id,
-          label: branches.branch_name + " /" + branches.branch_code,
-        }));
-        } catch (error) {
-        console.error("Error fetching data:", error);
-        return [];
+  getPositions: async (): Promise<{ label: string; value: string }[]> => {
+      const res = await fetch(`${CONFIG.API_URL}/positions`, { 
+        method: "GET" 
+      });
+      const response = await res.json();
+      
+      if (!res.ok) {
+          throw new Error('Failed to get positions');
       }
-    },
+      return response.positions.map((position: any) => ({
+        value: position.id,
+        label: position.label,
+      }));
+  },
+
+  getBranches: async ():  Promise<{ label: string; value: string }[]> => {
+      const res = await fetch(`${CONFIG.API_URL}/branches`, {
+        method: "GET",
+      });
+      const response = await res.json();
+      if (!res.ok) {
+              throw new Error('Failed to save positions');
+      }
+      return response.branches.map((branches: any) => ({
+        value: branches.id,
+        label: branches.branch_name + " /" + branches.branch_code,
+      }));
+  },
 
   getAccounts: async (): Promise<any> => {
     const response = await fetch('/api/accounts');
@@ -213,11 +233,8 @@ export const apiService = {
   },
 
 
-
-uploadAvatar: async (formData : FormData): Promise<any> => {
-
+  uploadAvatar: async (formData : FormData): Promise<any> => {
     await sanctum_csrf();
-
     const response = await fetch(`${CONFIG.API_URL}/upload_avatar`, {
       method: 'POST',
       credentials: 'include',
@@ -235,4 +252,6 @@ uploadAvatar: async (formData : FormData): Promise<any> => {
     return data;
   },
 }
+
+
 export default apiService;

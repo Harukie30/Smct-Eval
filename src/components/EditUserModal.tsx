@@ -320,7 +320,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <SelectContent>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="hr">HR</SelectItem>
-                <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="evaluator">Evaluator</SelectItem>
                 <SelectItem value="employee">Employee</SelectItem>
               </SelectContent>
