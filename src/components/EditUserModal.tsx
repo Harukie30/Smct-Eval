@@ -82,7 +82,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         position_id: user.position_id || '',
         department_id: user.department_id || '',
         branch_id: user.branch_id || '',
-        roles: user?.roles?.[0]?.name || '',
+        roles: user?.roles?.[0]?.name || (typeof user.roles === 'string' ? user.roles : ''),
         username: user.username || '',
         contact: user.contact || '',
         is_active: user.is_active || '',
@@ -276,37 +276,23 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="department">Position *</Label>
+            <Label htmlFor="position">Position *</Label>
             <Combobox
               options={positions}
               value={formData.position_id}
               onValueChangeAction={(value) =>
                 setFormData({ ...formData, position_id: value })
               }
-              placeholder="Select your branch"
-              searchPlaceholder="Search branches..."
-              emptyText="No branches found."
-              className="w-full"
-              error={errors.position_id}
+              placeholder="Select position"
+              searchPlaceholder="Search positions..."
+              emptyText="No positions found."
+              className={errors.positions ? 'border-red-500' : 'bg-white'}
+              error={errors.positions || null}
             />
+            {errors.positions && <p className="text-sm text-red-500">{errors.positions}</p>}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="department">Branch *</Label>
-            <Combobox
-              options={branches}
-              value={formData.branch_id}
-              onValueChangeAction={(value) =>
-                setFormData({ ...formData, branch_id: value })
-              }
-              placeholder="Select your branch"
-              searchPlaceholder="Search branches..."
-              emptyText="No branches found."
-              className="w-full"
-              error={errors.branch_id}
-            />
-          </div>
-
+          {/* Department */}
           <div className="space-y-2">
             <Label htmlFor="department">Department</Label>
             <Combobox
@@ -315,12 +301,31 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               onValueChangeAction={(value) =>
                 setFormData({ ...formData, department_id: value })
               }
-              placeholder="Select your branch"
+              placeholder="Select department"
+              searchPlaceholder="Search departments..."
+              emptyText="No departments found."
+              className={errors.department_id ? 'border-red-500' : 'bg-white'}
+              error={errors.department_id || null}
+            />
+            {errors.department_id && <p className="text-sm text-red-500">{errors.department_id}</p>}
+          </div>
+
+          {/* Branch */}
+          <div className="space-y-2">
+            <Label htmlFor="branch">Branch *</Label>
+            <Combobox
+              options={branches}
+              value={formData.branch_id}
+              onValueChangeAction={(value) =>
+                setFormData({ ...formData, branch_id: value })
+              }
+              placeholder="Select branch"
               searchPlaceholder="Search branches..."
               emptyText="No branches found."
-              className="w-full"
-              error={errors.department_id}
+              className={errors.branches ? 'border-red-500' : 'bg-white'}
+              error={errors.branches || null}
             />
+            {errors.branches && <p className="text-sm text-red-500">{errors.branches}</p>}
           </div>
 
           {/* Role */}

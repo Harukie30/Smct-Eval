@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Eye, FileText, Pencil, Trash2, Download, X } from "lucide-react";
+import { ChevronDown, Eye, FileText, Pencil, Trash2, X } from "lucide-react";
 import SearchableDropdown from "@/components/ui/searchable-dropdown";
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 import EvaluationForm from '@/components/evaluation';
@@ -1283,129 +1283,6 @@ function HRDashboard() {
     });
   }, [recentSubmissions, recordsSearchTerm, recordsDepartmentFilter, recordsApprovalFilter, recordsQuarterFilter, recordsDateRange]);
 
-  // Export evaluation records to CSV
-  const exportEvaluationRecordsToCSV = () => {
-    try {
-      if (filteredRecords.length === 0) {
-        alert('No evaluation records to export.');
-        return;
-      }
-
-      // Prepare CSV headers
-      const headers = [
-        'Employee Name',
-        'Employee Email',
-        'Department',
-        'Position',
-        'Evaluator/HR',
-        'Type',
-        'Quarter',
-        'Date',
-        'Rating',
-        'Overall Rating',
-        'Approval Status',
-        'Employee Signature',
-        'Evaluator Signature',
-        'HR Signature'
-      ];
-
-      // Prepare CSV rows
-      const rows = filteredRecords.map((submission: any) => {
-        const quarter = getQuarterFromDate(submission.submittedAt);
-        
-        // Check signatures
-        const hasEmployeeSignature = !!(submission.employeeSignature && submission.employeeSignature.trim() && submission.employeeSignature.startsWith('data:image'));
-        const hasEvaluatorSignature = !!((submission.evaluatorSignature && submission.evaluatorSignature.trim() && submission.evaluatorSignature.startsWith('data:image')) || 
-          (submission.evaluationData?.evaluatorSignature && submission.evaluationData?.evaluatorSignature.trim() && submission.evaluationData?.evaluatorSignature.startsWith('data:image')));
-        
-        // Determine approval status
-        let approvalStatus = 'pending';
-        if (hasEmployeeSignature && hasEvaluatorSignature) {
-          approvalStatus = 'fully_approved';
-        } else if (hasEmployeeSignature) {
-          approvalStatus = 'employee_approved';
-        } else if (submission.approvalStatus && submission.approvalStatus !== 'pending') {
-          approvalStatus = submission.approvalStatus;
-        }
-
-        // Calculate rating
-        let rating = 0;
-        let overallRating = 'N/A';
-        if (submission.evaluationData) {
-          const jobKnowledgeScore = calculateScore([submission.evaluationData.jobKnowledgeScore1, submission.evaluationData.jobKnowledgeScore2, submission.evaluationData.jobKnowledgeScore3]);
-          const qualityOfWorkScore = calculateScore([submission.evaluationData.qualityOfWorkScore1, submission.evaluationData.qualityOfWorkScore2, submission.evaluationData.qualityOfWorkScore3, submission.evaluationData.qualityOfWorkScore4, submission.evaluationData.qualityOfWorkScore5]);
-          const adaptabilityScore = calculateScore([submission.evaluationData.adaptabilityScore1, submission.evaluationData.adaptabilityScore2, submission.evaluationData.adaptabilityScore3]);
-          const teamworkScore = calculateScore([submission.evaluationData.teamworkScore1, submission.evaluationData.teamworkScore2, submission.evaluationData.teamworkScore3]);
-          const reliabilityScore = calculateScore([submission.evaluationData.reliabilityScore1, submission.evaluationData.reliabilityScore2, submission.evaluationData.reliabilityScore3, submission.evaluationData.reliabilityScore4]);
-          const ethicalScore = calculateScore([submission.evaluationData.ethicalScore1, submission.evaluationData.ethicalScore2, submission.evaluationData.ethicalScore3, submission.evaluationData.ethicalScore4]);
-          const customerServiceScore = calculateScore([submission.evaluationData.customerServiceScore1, submission.evaluationData.customerServiceScore2, submission.evaluationData.customerServiceScore3, submission.evaluationData.customerServiceScore4, submission.evaluationData.customerServiceScore5]);
-
-          rating = (
-            (jobKnowledgeScore * 0.20) +
-            (qualityOfWorkScore * 0.20) +
-            (adaptabilityScore * 0.10) +
-            (teamworkScore * 0.10) +
-            (reliabilityScore * 0.05) +
-            (ethicalScore * 0.05) +
-            (customerServiceScore * 0.30)
-          );
-          overallRating = getRatingLabel(rating);
-        } else if (submission.rating) {
-          rating = submission.rating;
-          overallRating = getRatingLabel(rating);
-        }
-
-        // Determine type (HR or Evaluator)
-        const evaluatorAccount = (accountsData as any).accounts.find((acc: any) => 
-          acc.id === submission.evaluatorId || acc.employeeId === submission.evaluatorId
-        );
-        const type = evaluatorAccount?.role === 'hr' ? 'HR' : 'Evaluator';
-
-        return [
-          submission.employeeName || '',
-          submission.evaluationData?.email || '',
-          submission.evaluationData?.department || '',
-          submission.evaluationData?.position || '',
-          submission.evaluationData?.supervisor || submission.evaluator || '',
-          type,
-          quarter,
-          new Date(submission.submittedAt).toLocaleDateString(),
-          rating.toFixed(1),
-          overallRating,
-          approvalStatus === 'fully_approved' ? 'Fully Approved' :
-            approvalStatus === 'employee_approved' ? 'Employee Approved' :
-            approvalStatus === 'rejected' ? 'Rejected' : 'Pending',
-          hasEmployeeSignature ? 'Yes' : 'No',
-          hasEvaluatorSignature ? 'Yes' : 'No',
-          'N/A' // HR signature - not implemented yet
-        ];
-      });
-
-      // Combine headers and rows
-      const csvContent = [
-        headers.join(','),
-        ...rows.map((row: any[]) => row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      ].join('\n');
-
-      // Create blob and download
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', `hr_evaluation_records_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      alert(`Successfully exported ${filteredRecords.length} evaluation record(s) to CSV.`);
-    } catch (err) {
-      console.error('Error exporting evaluation records:', err);
-      alert('Failed to export evaluation records. Please try again.');
-    }
-  };
 
   const sidebarItems: SidebarItem[] = [
     { id: 'overview', label: 'Overview', icon: '📊' },
@@ -1974,7 +1851,7 @@ function HRDashboard() {
                   </div>
                 </div>
 
-                {/* Refresh and Export Buttons */}
+                {/* Refresh Button */}
                 <div className="w-full md:w-auto flex gap-2">
                   <div className="w-full md:w-32">
                     <Label className="text-sm font-medium opacity-0">Refresh</Label>
@@ -1999,20 +1876,6 @@ function HRDashboard() {
                           </svg>
                         </>
                       )}
-                    </Button>
-                  </div>
-                  <div className="w-full md:w-32">
-                    <Label className="text-sm font-medium opacity-0">Export</Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={exportEvaluationRecordsToCSV}
-                      disabled={recordsRefreshing || filteredRecords.length === 0}
-                      className="mt-1 w-full text-xs bg-green-600 hover:bg-green-700 text-white hover:text-white disabled:cursor-not-allowed disabled:bg-gray-400"
-                      title="Export evaluation records to CSV"
-                    >
-                      <Download className="h-3 w-3 mr-1" />
-                      Export CSV
                     </Button>
                   </div>
                 </div>
