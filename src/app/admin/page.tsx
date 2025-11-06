@@ -1,5 +1,5 @@
 "use client";
-
+import { toast } from 'sonner';
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
@@ -37,10 +37,10 @@ interface Employee {
   fname: string;
   lname: string;
   email: string;
-  positions: { value: string | number; label: string }[];
-  departments?: { value: string | number; department_name: string }[];
-  branches: { value: string | number; branch_name: string }[];
-  roles: {name: string }[];
+  positions: any;
+  departments?: any;
+  branches: any;
+  roles: any;
   username: string;
   password: string;
   isActive: string;
@@ -154,7 +154,7 @@ export default function AdminDashboard() {
   // Initialize active tab from URL parameter or default to 'overview'
   const tabParam = searchParams.get('tab');
   const [active, setActive] = useState(tabParam || 'overview');
-  const [values, setValues] = useState<any>({});
+  const [values, setValues] = useState('all');
 
   // Function to refresh user data (used by shared hook)
   const refreshUserData = async () => {
@@ -331,28 +331,37 @@ export default function AdminDashboard() {
     suspendedBy: 'Admin'
   });
 
-  // Function to filter out deleted employees
-  const filterDeletedEmployees = (employeeList: Employee[]) => {
-    const deletedEmployees = JSON.parse(localStorage.getItem('deletedEmployees') || '[]');
-    return employeeList.filter(emp => !deletedEmployees.includes(emp.id));
-  };
-
-
   // Function to load pending registrations
-    useEffect(() => {
-      const load_users = async () => {
+      const load_users_active = async (search : string , role :string) => {
         try {
-          const pendingRegistrations = await clientDataServiceApi.getPendingRegistrations();
-          setPendingRegistrations(pendingRegistrations);
+          const filters: Record<string, string> = {};
+          if(search) filters.search = search;
+          (role=='all')? filters.role = '': filters.role = role
 
-          const activeRegistrations = await clientDataServiceApi.getActiveRegistrations();
+          const activeRegistrations = await clientDataServiceApi.getActiveRegistrations(filters);
           setApprovedRegistrations(activeRegistrations);
         } catch (error) {
           console.error('Error loading pending registrations:', error);
         }
       };
-      load_users();
-    }, []);
+      
+      const load_users_pending = async () => {
+        try {
+          const pendingRegistrations = await clientDataServiceApi.getPendingRegistrations();
+          setPendingRegistrations(pendingRegistrations);
+        } catch (error) {
+          console.error('Error loading pending registrations:', error);
+        }
+      };
+
+    useEffect(()=>{
+      load_users_active(userSearchTerm, values);
+      load_users_pending();
+    },[])
+      
+      const handleSaveUser = async () => {
+        await  load_users_active(userSearchTerm, values);
+      };
   // Function to load evaluated reviews from client data service
   const loadEvaluatedReviews = async () => {
     try {
@@ -393,7 +402,7 @@ export default function AdminDashboard() {
   // Function to load accounts data directly (no merging needed since accounts.json is now the single source)
   const loadAccountsData = async () => {
       // Load from localStorage first (for any runtime updates)
-      const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+      // const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
 
       // If localStorage has data, use it; otherwise use the imported data
       // const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : accountsData;
@@ -450,108 +459,57 @@ export default function AdminDashboard() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveUser = async (updatedUser: any) => {
-    try {
-      // Update user using client data service
-      await clientDataService.updateEmployee(updatedUser.id, updatedUser);
-
-      // Refresh user data to get updated information
-      await refreshDashboardData(false, false);
-
-      // Show success toast
-      toastMessages.user.updated(updatedUser.name);
-    } catch (error) {
-      console.error('Error updating user:', error);
-      toastMessages.generic.error('Update Failed', 'Failed to update user information. Please try again.');
-    }
-  };
-
   // Function to handle delete employee
-  const handleDeleteEmployee = () => {
+  const handleDeleteEmployee = async () => {
     if (!employeeToDelete) return;
 
-    // Store deleted employee ID in localStorage for persistence
-    const deletedEmployees = JSON.parse(localStorage.getItem('deletedEmployees') || '[]');
-    deletedEmployees.push(employeeToDelete.id);
-    localStorage.setItem('deletedEmployees', JSON.stringify(deletedEmployees));
-
-    // Remove employee from the list
-    setEmployees(prev => prev.filter(emp => emp.id !== employeeToDelete.id));
-
+    await clientDataServiceApi.deleteUser(employeeToDelete.id);
+    await load_users_active(userSearchTerm, values);
     // Show success toast
     toastMessages.user.deleted(employeeToDelete.fname);
-
     // Close modal
     setIsDeleteModalOpen(false);
     setEmployeeToDelete(null);
   };
 
-  // Function to handle approve registration
-  const handleApproveRegistration = async (registrationId: number, registrationName: string) => {
+  //refresh users
+  const refreshLoadUser = async()=>{
     try {
-      const result = await clientDataService.approveRegistration(registrationId);
+      await load_users_active(userSearchTerm, values);
+      await load_users_pending();
+      toast.success('Users data refreshed!') 
+    } catch (error) {
+      console.error('Load Error:', error);
+    }
+  }
 
-      if (result.success) {
-        // Add to approved list
-        // const newApproved = [...approvedRegistrations, registrationId];
-        // setApprovedRegistrations(newApproved);
 
-        // Store in localStorage for persistence
-        // localStorage.setItem('approvedRegistrations', JSON.stringify(newApproved));
-
-        // Remove from rejected list if it was there
-        const newRejected = rejectedRegistrations.filter(id => id !== registrationId);
-        setRejectedRegistrations(newRejected);
-        localStorage.setItem('rejectedRegistrations', JSON.stringify(newRejected));
-
-        // Reload pending registrations to get updated data
-        // await loadPendingRegistrations();
-
-        // Refresh active users data to show the newly approved user
-        await refreshDashboardData(false, false);
-
-        // Show success toast
-        toastMessages.user.approved(registrationName);
-      } else {
-        toastMessages.generic.error('Approval Failed', result.message || 'Failed to approve registration. Please try again.');
-      }
+  // Function to handle approve registration
+  const handleApproveRegistration = async (id: string | number, registrationName: string) => {
+    try {
+      await clientDataServiceApi.approveRegistration(id);
+      await load_users_pending();
+      await refreshDashboardData(false, false);
+      toastMessages.user.approved(registrationName);
     } catch (error) {
       console.error('Error approving registration:', error);
       toastMessages.generic.error('Approval Error', 'An error occurred while approving the registration. Please try again.');
     }
   };
-
+  
   // Function to handle reject registration
-  const handleRejectRegistration = async (registrationId: number, registrationName: string) => {
+  const handleRejectRegistration = async (id: string | number, registrationName: string) => {
     try {
-      const result = await clientDataService.rejectRegistration(registrationId);
-
-      if (result.success) {
-        // Add to rejected list
-        const newRejected = [...rejectedRegistrations, registrationId];
-        setRejectedRegistrations(newRejected);
-
-        // Store in localStorage for persistence
-        localStorage.setItem('rejectedRegistrations', JSON.stringify(newRejected));
-
-        // Remove from approved list if it was there
-        // const newApproved = approvedRegistrations.filter(id => id !== registrationId);
-        // setApprovedRegistrations(newApproved);
-        // localStorage.setItem('approvedRegistrations', JSON.stringify(newApproved));
-
-        // Reload pending registrations to get updated data
-        // await loadPendingRegistrations();
-
-        // Show success toast
-        toastMessages.user.rejected(registrationName);
-      } else {
-        toastMessages.generic.error('Rejection Failed', result.message || 'Failed to reject registration. Please try again.');
-      }
+      await clientDataServiceApi.rejectRegistration(id);
+      await load_users_pending();
+      await refreshDashboardData(false, false);
+      toastMessages.user.rejected(registrationName);
     } catch (error) {
       console.error('Error rejecting registration:', error);
       toastMessages.generic.error('Rejection Error', 'An error occurred while rejecting the registration. Please try again.');
     }
   };
+
 
   // Function to handle suspend employee
   const handleSuspendEmployee = () => {
@@ -575,8 +533,6 @@ export default function AdminDashboard() {
       suspendedBy: suspendForm.suspendedBy,
       status: 'suspended'
     };
-
-   
 
     // Check if employee already exists in suspended list and update or add accordingly
     setSuspendedEmployees(prev => {
@@ -1658,9 +1614,9 @@ export default function AdminDashboard() {
                       placeholder="Search users..."
                       className="w-64"
                       value={userSearchTerm}
-                      onChange={(e) => setUserSearchTerm(e.target.value)}
+                      onChange={(e) => {setUserSearchTerm(e.target.value); load_users_active(e.target.value, values)}}
                     />
-                    <Select value={values} onValueChange={setValues}>
+                    <Select value={ values } onValueChange={(newValue) => { setValues(newValue); load_users_active(userSearchTerm, newValue); }}>
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="Filter by role" />
                       </SelectTrigger>
@@ -1676,7 +1632,7 @@ export default function AdminDashboard() {
                   <div className="flex space-x-2">
                     <Button
                       variant="outline"
-                      onClick={() => refreshDashboardData(true, false)}
+                      onClick={() => refreshLoadUser()}
                       disabled={isRefreshing}
                       className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
                     >
@@ -1706,7 +1662,7 @@ export default function AdminDashboard() {
                       onClick={() => setIsAddUserModalOpen(true)}
                       className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2"
                     >
-                      <Plus className="h-5 w-5 font-blod " />
+                      <Plus className="h-5 w-5 font-bold " />
                       Add User
                     </Button>
                   </div>
@@ -1819,9 +1775,9 @@ export default function AdminDashboard() {
                 <div className="flex space-x-2">
                   <Button
                     variant="outline"
-                    onClick={() => refreshDashboardData(true, false)}
+                    onClick={() => refreshLoadUser()}
                     disabled={isRefreshing}
-                    className="flex items-center gap-2"
+                     className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2"
                   >
                     {isRefreshing ? (
                       <>
@@ -1889,7 +1845,7 @@ export default function AdminDashboard() {
                                   variant="ghost"
                                   size="sm"
                                   className="text-white bg-green-500 hover:text-white hover:bg-green-600"
-                                  onClick={() => handleApproveRegistration(account.id, account.name)}
+                                  onClick={() => handleApproveRegistration(account.id, account.fname)}
                                 >
                                   Approve
                                 </Button>
@@ -1897,18 +1853,18 @@ export default function AdminDashboard() {
                                   variant="ghost"
                                   size="sm"
                                   className="text-white bg-red-500 hover:bg-red-600 hover:text-white"
-                                  onClick={() => handleRejectRegistration(account.id, account.name)}
+                                  onClick={() => handleRejectRegistration(account.id, account.fname)}
                                 >
                                   Reject
                                 </Button>
                               </>
                             )}
-                            {account.status === 'rejected' && (
+                            {account.is_active === 'declined' && (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="text-green-600 hover:text-green-700"
-                                onClick={() => handleApproveRegistration(account.id, account.name)}
+                                onClick={() => handleApproveRegistration(account.id, account.fname)}
                               >
                                 Approve
                               </Button>
@@ -2635,8 +2591,8 @@ export default function AdminDashboard() {
                 <div className="mt-2 space-y-1">
                   <p><span className="font-medium">Name:</span> {employeeToDelete?.fname}</p>
                   <p><span className="font-medium">Email:</span> {employeeToDelete?.email}</p>
-                  {/* <p><span className="font-medium">Position:</span> {employeeToDelete?.positions?.value}</p>
-                  <p><span className="font-medium">Department:</span> {employeeToDelete?.departments?.value}</p> */}
+                  <p><span className="font-medium">Position:</span> {employeeToDelete?.positions.label}</p>
+                  <p><span className="font-medium">Department:</span> {employeeToDelete?.departments?.department_name}</p>
                 </div>
               </div>
             </div>
@@ -2658,11 +2614,7 @@ export default function AdminDashboard() {
               <Button
                 className='bg-red-600 hover:bg-red-700 text-white'
                 onClick={() => {
-                  if (reinstatedEmployeeToDelete) {
-                    handleDeleteReinstatedEmployee();
-                  } else {
                     handleDeleteEmployee();
-                  }
                 }}
               >
                 🗑️ Delete Permanently
