@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { ComponentType, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useUser } from '@/contexts/UserContext';
+import { ComponentType, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/UserContext";
 
 interface WithAuthOptions {
   requiredRole?: string | string[];
@@ -12,10 +12,10 @@ interface WithAuthOptions {
 
 /**
  * Higher-Order Component for authentication and authorization
- * 
+ *
  * Usage:
  * export default withAuth(YourPage, { requiredRole: 'admin' });
- * 
+ *
  * @param Component - The page component to wrap
  * @param options - Authentication options
  */
@@ -25,12 +25,12 @@ export function withAuth<P extends object>(
 ) {
   const {
     requiredRole,
-    fallbackPath = '/',
-    redirectOnRoleMismatch = true
+    fallbackPath = "/",
+    redirectOnRoleMismatch = true,
   } = options;
 
   return function WithAuthComponent(props: P) {
-    const { user, isAuthenticated, isLoading } = useUser();
+    const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
     const [isCheckingAuth, setIsCheckingAuth] = useState(true);
     const [waitTimeout, setWaitTimeout] = useState(false);
@@ -48,17 +48,18 @@ export function withAuth<P extends object>(
     // Timeout fallback: if waiting too long for context sync, force redirect
     useEffect(() => {
       if (!isLoading && !isCheckingAuth && !isAuthenticated) {
-        const storedUser = typeof window !== 'undefined' 
-          ? localStorage.getItem('authenticatedUser') 
-          : null;
-        
+        const storedUser =
+          typeof window !== "undefined"
+            ? localStorage.getItem("authenticatedUser")
+            : null;
+
         if (storedUser) {
           // Give context 3 seconds to sync before forcing redirect
           const timeout = setTimeout(() => {
-            console.log('⚠️ withAuth: Context sync timeout, forcing redirect');
+            console.log("⚠️ withAuth: Context sync timeout, forcing redirect");
             setWaitTimeout(true);
           }, 3000);
-          
+
           return () => clearTimeout(timeout);
         }
       }
@@ -67,46 +68,70 @@ export function withAuth<P extends object>(
     // Handle authentication redirect
     useEffect(() => {
       if (!isLoading && !isCheckingAuth && !isAuthenticated) {
-        const storedUser = typeof window !== 'undefined' 
-          ? localStorage.getItem('authenticatedUser') 
-          : null;
-        
+        const storedUser =
+          typeof window !== "undefined"
+            ? localStorage.getItem("authenticatedUser")
+            : null;
+
         if (!storedUser || waitTimeout) {
           if (waitTimeout) {
-            console.log('⏱️ withAuth: Context sync timeout, clearing stale data');
-            localStorage.removeItem('authenticatedUser');
+            console.log(
+              "⏱️ withAuth: Context sync timeout, clearing stale data"
+            );
+            localStorage.removeItem("authenticatedUser");
           }
-          console.log('🔒 withAuth: Not authenticated, redirecting to', fallbackPath);
+          console.log(
+            "🔒 withAuth: Not authenticated, redirecting to",
+            fallbackPath
+          );
           router.push(fallbackPath);
         } else {
-          console.log('⏳ withAuth: Context says not auth, but localStorage has user. Waiting for sync...');
+          console.log(
+            "⏳ withAuth: Context says not auth, but localStorage has user?. Waiting for sync..."
+          );
         }
       }
     }, [isAuthenticated, isLoading, isCheckingAuth, router, waitTimeout]);
 
     // Handle role-based redirect
     useEffect(() => {
-      if (!isLoading && isAuthenticated && requiredRole && user && redirectOnRoleMismatch) {
-        const hasRequiredRole = Array.isArray(requiredRole) 
-          ? requiredRole.includes(user.role || '')
-          : user.role === requiredRole;
-        
+      if (
+        !isLoading &&
+        isAuthenticated &&
+        requiredRole &&
+        user &&
+        redirectOnRoleMismatch
+      ) {
+        const hasRequiredRole =
+          Array.isArray(requiredRole) &&
+          user?.roles?.some((role) => requiredRole.includes(role?.name));
+
         if (!hasRequiredRole) {
           // Redirect to appropriate dashboard based on user role
           const roleDashboards: Record<string, string> = {
-            'admin': '/admin',
-            'hr': '/hr-dashboard',
-            'evaluator': '/evaluator',
-            'employee': '/employee-dashboard',
-            'manager': '/evaluator'
+            admin: "/admin",
+            hr: "/hr-dashboard",
+            evaluator: "/evaluator",
+            employee: "/employee-dashboard",
+            manager: "/evaluator",
           };
-          
-          const dashboardPath = roleDashboards[user.role || ''] || '/dashboard';
-          console.log(`🔀 withAuth: User role "${user.role}" doesn't match required "${requiredRole}", redirecting to ${dashboardPath}`);
+
+          const dashboardPath =
+            roleDashboards[user?.roles?.[0]?.name || ""] || "/dashboard";
+          console.log(
+            `🔀 withAuth: User role "${user?.roles?.[0]?.name}" doesn't match required "${requiredRole}", redirecting to ${dashboardPath}`
+          );
           router.push(dashboardPath);
         }
       }
-    }, [isAuthenticated, isLoading, user, requiredRole, router, redirectOnRoleMismatch]);
+    }, [
+      isAuthenticated,
+      isLoading,
+      user,
+      requiredRole,
+      router,
+      redirectOnRoleMismatch,
+    ]);
 
     // Show loading screen during auth check
     if (isLoading || isCheckingAuth) {
@@ -115,7 +140,7 @@ export function withAuth<P extends object>(
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600">
-              {isLoading ? 'Loading...' : 'Verifying authentication...'}
+              {isLoading ? "Loading..." : "Verifying authentication..."}
             </p>
           </div>
         </div>
@@ -124,10 +149,11 @@ export function withAuth<P extends object>(
 
     // Check if user is authenticated
     if (!isAuthenticated) {
-      const storedUser = typeof window !== 'undefined' 
-        ? localStorage.getItem('authenticatedUser') 
-        : null;
-      
+      const storedUser =
+        typeof window !== "undefined"
+          ? localStorage.getItem("authenticatedUser")
+          : null;
+
       if (storedUser && !waitTimeout) {
         // User exists in localStorage but context hasn't synced yet
         return (
@@ -140,17 +166,17 @@ export function withAuth<P extends object>(
           </div>
         );
       }
-      
+
       // No stored user or timeout occurred - will redirect in useEffect
       return null;
     }
 
     // Check role if required
     if (requiredRole && user) {
-      const hasRequiredRole = Array.isArray(requiredRole) 
-        ? requiredRole.includes(user.role || '')
-        : user.role === requiredRole;
-      
+      const hasRequiredRole =
+        Array.isArray(requiredRole) &&
+        user?.roles?.some((role) => requiredRole.includes(role?.name));
+
       if (!hasRequiredRole && redirectOnRoleMismatch) {
         // Will redirect in useEffect - show loading
         return (
@@ -175,15 +201,18 @@ export function withAuth<P extends object>(
  */
 export function withSimpleAuth<P extends object>(
   Component: ComponentType<P>,
-  fallbackPath: string = '/'
+  fallbackPath: string = "/"
 ) {
   return function WithSimpleAuthComponent(props: P) {
-    const { isAuthenticated, isLoading } = useUser();
+    const { isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
       if (!isLoading && !isAuthenticated) {
-        console.log('🔒 withSimpleAuth: Not authenticated, redirecting to', fallbackPath);
+        console.log(
+          "🔒 withSimpleAuth: Not authenticated, redirecting to",
+          fallbackPath
+        );
         router.push(fallbackPath);
       }
     }, [isAuthenticated, isLoading, router]);
@@ -206,4 +235,3 @@ export function withSimpleAuth<P extends object>(
     return <Component {...props} />;
   };
 }
-

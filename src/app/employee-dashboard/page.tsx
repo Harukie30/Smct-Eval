@@ -24,7 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DashboardShell from "@/components/DashboardShell";
 import PageTransition from "@/components/PageTransition";
 import { useAuth } from "@/contexts/UserContext";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import {
   getQuarterFromEvaluationData,
   getQuarterColor,
@@ -869,8 +868,7 @@ export default function EmployeeDashboard() {
         id: evaluationToApprove.id,
         approvedAt: new Date().toISOString(),
         employeeSignature: employeeSignature,
-        employeeName:
-          employeeApprovalName || user.fname || user?.fname || "",
+        employeeName: employeeApprovalName || user.fname || user?.fname || "",
         employeeEmail: user.email || user?.email || "",
       };
 
@@ -3751,7 +3749,7 @@ export default function EmployeeDashboard() {
   };
 
   return (
-    <ProtectedRoute>
+    <>
       {/* Loading Screen - Shows during initial load, authentication, and auto-refresh */}
       {(loading || authLoading || !user) && (
         <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -4286,6 +4284,6 @@ export default function EmployeeDashboard() {
           )}
         </DialogContent>
       </Dialog>
-    </ProtectedRoute>
+    </>
   );
 }

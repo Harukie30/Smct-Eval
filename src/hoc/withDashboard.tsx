@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { ComponentType, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useUser } from '@/contexts/UserContext';
-import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
-import { withAuth } from './withAuth';
+import { ComponentType, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/UserContext";
+import DashboardShell, { SidebarItem } from "@/components/DashboardShell";
+import { withAuth } from "./withAuth";
 
 interface WithDashboardOptions {
   requiredRole?: string | string[];
@@ -19,14 +19,14 @@ interface WithDashboardOptions {
 /**
  * Higher-Order Component for Dashboard pages
  * Wraps component with authentication + DashboardShell
- * 
+ *
  * Usage:
  * export default withDashboard(YourDashboard, {
  *   requiredRole: 'admin',
  *   title: 'Admin Dashboard',
  *   sidebarItems: [...]
  * });
- * 
+ *
  * @param Component - The dashboard content component
  * @param options - Dashboard configuration
  */
@@ -36,16 +36,16 @@ export function withDashboard<P extends object>(
 ) {
   const {
     requiredRole,
-    fallbackPath = '/',
-    title = 'Dashboard',
+    fallbackPath = "/",
+    title = "Dashboard",
     sidebarItems = [],
-    activeTab = 'overview',
+    activeTab = "overview",
     onTabChange,
-    showShell = true
+    showShell = true,
   } = options;
 
   return function WithDashboardComponent(props: P) {
-    const { user, isAuthenticated, isLoading } = useUser();
+    const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
     const [currentTab, setCurrentTab] = useState(activeTab);
 
@@ -80,15 +80,15 @@ export function withDashboard<P extends object>(
 
     // Wrap everything with authentication using withAuth HOC
     const content = renderContent();
-    
+
     if (requiredRole) {
-      const AuthenticatedComponent = withAuth(
-        () => content,
-        { requiredRole, fallbackPath }
-      );
+      const AuthenticatedComponent = withAuth(() => content, {
+        requiredRole,
+        fallbackPath,
+      });
       return <AuthenticatedComponent />;
     }
-    
+
     return content;
   };
 }
@@ -99,14 +99,14 @@ export function withDashboard<P extends object>(
  */
 export function withSimpleDashboard<P extends object>(
   Component: ComponentType<P>,
-  options: Omit<WithDashboardOptions, 'requiredRole' | 'fallbackPath'> = {}
+  options: Omit<WithDashboardOptions, "requiredRole" | "fallbackPath"> = {}
 ) {
   const {
-    title = 'Dashboard',
+    title = "Dashboard",
     sidebarItems = [],
-    activeTab = 'overview',
+    activeTab = "overview",
     onTabChange,
-    showShell = true
+    showShell = true,
   } = options;
 
   return function WithSimpleDashboardComponent(props: P) {
@@ -136,4 +136,3 @@ export function withSimpleDashboard<P extends object>(
     );
   };
 }
-

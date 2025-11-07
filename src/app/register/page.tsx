@@ -20,7 +20,8 @@ import { CONFIG } from "../../../config/config";
 import { id } from "date-fns/locale";
 import clientDataService from "@/lib/clientDataService.api";
 import { withPublicPage } from "@/hoc";
-import { useRouter } from "next/navigation";
+import { redirect, useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/UserContext";
 
 interface FormDataType {
   fname: string;
@@ -74,6 +75,7 @@ function RegisterPage() {
     [key: string]: any;
   }>({});
   const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
 
   // Load positions from client data service.api
   useEffect(() => {
@@ -336,6 +338,19 @@ function RegisterPage() {
       setIsRegisterButtonClicked(false);
     }
   };
+
+  if (isAuthenticated || user) {
+    const roleDashboards: Record<string, string> = {
+      admin: "/admin",
+      hr: "/hr-dashboard",
+      evaluator: "/evaluator",
+      employee: "/employee-dashboard",
+      manager: "/evaluator",
+    };
+    const dashboardPath =
+      roleDashboards[user?.roles?.[0]?.name || ""] || "/dashboard";
+    return redirect(dashboardPath);
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden">

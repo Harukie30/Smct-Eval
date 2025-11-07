@@ -12,6 +12,7 @@ import { toastMessages } from "@/lib/toastMessages";
 import clientDataService from "@/lib/clientDataService"; // still used for fetching profile updates
 import RealLoadingScreen from "@/components/RealLoadingScreen";
 import { CONFIG } from "../../config/config";
+import { api } from "@/lib/api";
 export interface AuthenticatedUser {
   id?: string | number;
   fname: string;
@@ -52,14 +53,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   // Fetch current user from Laravel using Sanctum cookies
   const fetchUser = async () => {
     try {
-      const res = await fetch(`${CONFIG.API_URL}/profile`, {
-        credentials: "include",
-      });
+      const response = await api.get(`/profile`);
 
-      if (!res.ok) throw new Error("Not authenticated");
-      const data = await res.json();
-
-      setUser(data);
+      setUser(response.data);
     } catch (err) {
       setUser(null);
     } finally {
@@ -73,28 +69,27 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (username: string, password: string) => {
     setIsLoading(true);
-      await fetch(`http://localhost:8000/sanctum/csrf-cookie`, {
-        credentials: "include",
-      });
-      
-      const res = await fetch(`${CONFIG.API_URL}/login`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-      });
-      
-      if (!res.ok) {
-        setIsLoading(false);
-        return null;
-      }
-      
-      await fetchUser();
-      return user;
-   
+    await fetch(`http://localhost:8000/sanctum/csrf-cookie`, {
+      credentials: "include",
+    });
+
+    const res = await fetch(`${CONFIG.API_URL}/login`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!res.ok) {
+      setIsLoading(false);
+      return null;
+    }
+
+    await fetchUser();
+    return user;
   };
 
   const logout = async () => {

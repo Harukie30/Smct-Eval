@@ -26,10 +26,12 @@ import SuspensionModal from "@/components/SuspensionModal";
 import GoogleLoginModal from "@/components/GoogleLoginModal";
 import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 import { useAuth } from "@/contexts/UserContext";
-import { useRouter } from "next/navigation";
+import { redirect, useRouter } from "next/navigation";
 import { toastMessages } from "@/lib/toastMessages";
 import clientDataService from "@/lib/clientDataService";
 import ContactDevsModal from "@/components/ContactDevsModal";
+import Image from "next/image";
+import Logo from "../../../public/smct.png";
 
 export default function LandingLoginPage() {
   const [showContactDevsModal, setShowContactDevsModal] = useState(false);
@@ -47,7 +49,7 @@ export default function LandingLoginPage() {
     useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
-  const {  login, isLoading } = useAuth();
+  const { login, isLoading, user, isAuthenticated } = useAuth();
   const router = useRouter();
   // Force refresh accounts data on login page load (clears cache)
   useEffect(() => {
@@ -78,33 +80,28 @@ export default function LandingLoginPage() {
 
       // 🔑 Authenticate using Sanctum session
       const user = await login(username, password);
+      console.log("✅ Login successful:", user);
 
-      if (user) {
-        console.log("✅ Login successful:", user);
+      // Optional fake delays to simulate extra steps
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Session creation
+      await new Promise((resolve) => setTimeout(resolve, 800)); // Permission loading
 
-        // Optional fake delays to simulate extra steps
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // Session creation
-        await new Promise((resolve) => setTimeout(resolve, 800)); // Permission loading
+      toastMessages.login.success(username);
 
-        toastMessages.login.success(username);
+      const dashboards: Record<string, string> = {
+        admin: "/admin",
+        hr: "/hr-dashboard",
+        "hr-manager": "/hr-dashboard",
+        evaluator: "/evaluator",
+        employee: "/employee-dashboard",
+        manager: "/evaluator",
+      };
 
-        const dashboards: Record<string, string> = {
-          admin: "/admin",
-          hr: "/hr-dashboard",
-          "hr-manager": "/hr-dashboard",
-          evaluator: "/evaluator",
-          employee: "/employee-dashboard",
-          manager: "/evaluator",
-        };
+      const redirectPath =
+        (user && dashboards[user?.roles[0]?.name]) || "/employee-dashboard";
+      console.log("🚀 Redirecting to:", redirectPath);
 
-        const redirectPath = dashboards[user?.roles[0]?.name] || "/employee-dashboard";
-        console.log("🚀 Redirecting to:", redirectPath);
-
-        router.push(redirectPath);
-      } else {
-        setLoginError("Invalid username or password.");
-        toastMessages.login.error();
-      }
+      router.push(redirectPath);
     } catch (error: any) {
       console.error("Login error:", error);
       setLoginError(error.message || "Login failed.");
@@ -126,27 +123,17 @@ export default function LandingLoginPage() {
     );
   }
 
-  // Remove automatic redirect screen - show login form even if authenticated
-
-  // Show instant loading screen during login process
-  if (showLoadingScreen) {
-    return (
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          zIndex: 9999,
-        }}
-      >
-        <InstantLoadingScreen
-          message="Authenticating..."
-          onComplete={() => setShowLoadingScreen(false)}
-        />
-      </div>
-    );
+  if (isAuthenticated || user) {
+    const roleDashboards: Record<string, string> = {
+      admin: "/admin",
+      hr: "/hr-dashboard",
+      evaluator: "/evaluator",
+      employee: "/employee-dashboard",
+      manager: "/evaluator",
+    };
+    const dashboardPath =
+      roleDashboards[user?.roles?.[0]?.name || ""] || "/dashboard";
+    return redirect(dashboardPath);
   }
 
   return (
@@ -272,25 +259,6 @@ export default function LandingLoginPage() {
         </svg>
       </div>
 
-      {/* Header */}
-      <header className="relative z-10 flex justify-between items-center p-6">
-        <div className="flex items-center space-x-3">
-          <img
-            src="/smct.png"
-            alt="SMCT Group of Companies"
-            className="h-30 w-auto"
-          />
-        </div>
-        <nav className="hidden md:flex bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 space-x-6">
-          <button
-            onClick={() => setIsAboutModalOpen(true)}
-            className="text-white font-semibold hover:underline-offset-4 hover:underline hover:text-blue-100 transition-colors"
-          >
-            About
-          </button>
-        </nav>
-      </header>
-
       {/* Main Content */}
       <main className="relative z-10 container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -298,7 +266,13 @@ export default function LandingLoginPage() {
           <div className="flex flex-col justify-center space-y-8 relative group">
             {/* Subtle backdrop for better text readability */}
 
-            <div className="relative z-10 animate-fade-in-up">
+            <div className="relative z-10 animate-fade-in-up space-y-2">
+              <Image
+                src={Logo}
+                alt="SMCT Group of Companies"
+                width={240}
+                height={120}
+              />
               <h1
                 className="text-4xl md:text-5xl font-bold text-gray-800 animate-fade-in-up"
                 style={{ animationDelay: "0.1s" }}
@@ -312,98 +286,19 @@ export default function LandingLoginPage() {
                 className="text-lg text-gray-600 animate-fade-in-up"
                 style={{ animationDelay: "0.2s" }}
               >
-                Our platform helps organizations conduct meaningful performance
-                evaluations, track employee progress, and foster professional
-                growth with intuitive tools and analytics.
+                The SMCT Performance Evaluation System is a comprehensive
+                digital platform designed to streamline and enhance the
+                performance review process within organizations. Our system
+                transforms traditional paper-based evaluations into an
+                efficient, data-driven approach that benefits both employees and
+                managers.
               </p>
-
-              <div
-                className="space-y-4 animate-fade-in-up"
-                style={{ animationDelay: "0.3s" }}
-              >
-                <div className="flex items-center group/item hover:translate-x-2 transition-transform duration-300 cursor-default">
-                  <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-3 group-hover/item:bg-indigo-200 group-hover/item:scale-110 transition-all duration-300">
-                    <svg
-                      className="w-4 h-4 text-indigo-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M5 13l4 4L19 7"
-                      ></path>
-                    </svg>
-                  </div>
-                  <span className="text-gray-700 group-hover/item:text-gray-800 transition-colors duration-300">
-                    Customizable evaluation templates
-                  </span>
-                </div>
-                <div className="flex items-center group/item hover:translate-x-2 transition-transform duration-300 cursor-default">
-                  <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-3 group-hover/item:bg-indigo-200 group-hover/item:scale-110 transition-all duration-300">
-                    <svg
-                      className="w-4 h-4 text-indigo-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M5 13l4 4L19 7"
-                      ></path>
-                    </svg>
-                  </div>
-                  <span className="text-gray-700 group-hover/item:text-gray-800 transition-colors duration-300">
-                    Real-time feedback and analytics
-                  </span>
-                </div>
-                <div className="flex items-center group/item hover:translate-x-2 transition-transform duration-300 cursor-default">
-                  <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-3 group-hover/item:bg-indigo-200 group-hover/item:scale-110 transition-all duration-300">
-                    <svg
-                      className="w-4 h-4 text-indigo-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M5 13l4 4L19 7"
-                      ></path>
-                    </svg>
-                  </div>
-                  <span className="text-gray-700 group-hover/item:text-gray-800 transition-colors duration-300">
-                    Goal tracking and progress monitoring
-                  </span>
-                </div>
-              </div>
-
-              <div
-                className="bg-white/90 backdrop-blur-md p-6 rounded-lg border border-white/30 shadow-lg animate-fade-in-up hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
-                style={{ animationDelay: "0.4s" }}
-              >
-                <p className="text-gray-800 font-medium">
-                  "This platform transformed our review process, saving hours of
-                  administrative work and providing meaningful insights."
-                </p>
-                <p className="text-blue-600 mt-2 font-medium">
-                  - Sarah Johnson, HR Director
-                </p>
-              </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-end pr-8">
+          <div className="w-full pr-8">
             <PageTransition>
-              <Card className="w-full max-w-md shadow-lg hover:shadow-xl transition-shadow duration-300 backdrop-blur-sm bg-white border-gray-500/20">
+              <Card className="w-full max-w-md shadow-lg hover:shadow-xl transition-shadow duration-300 backdrop-blur-sm bg-white border-gray-500/20 float-end">
                 <CardHeader className="space-y-1">
                   <CardTitle className="text-2xl text-center text-gray-900">
                     Sign in to your account
@@ -454,7 +349,7 @@ export default function LandingLoginPage() {
                       )}
                       <Button
                         type="submit"
-                        className="w-full bg-blue-600 text-white hover:bg-green-700"
+                        className="w-full bg-blue-600 text-white hover:bg-blue-700"
                         disabled={isLoggingIn}
                       >
                         {isLoggingIn ? (
@@ -539,7 +434,24 @@ export default function LandingLoginPage() {
               <h3 className="font-semibold text-white mb-4">Resources</h3>
               <ul className="space-y-2">
                 <li>
-                  <a href="#" onClick={(e) => { e.preventDefault();  setShowContactDevsModal(true)}} className="text-white hover:text-yellow-300">Help Center</a>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowContactDevsModal(true);
+                    }}
+                    className="text-white hover:text-yellow-300"
+                  >
+                    Help Center
+                  </a>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setIsAboutModalOpen(true)}
+                    className="text-white font-semibold hover:underline-offset-4 hover:underline hover:text-blue-100 transition-colors"
+                  >
+                    About
+                  </button>
                 </li>
               </ul>
               <ContactDevsModal
@@ -550,7 +462,8 @@ export default function LandingLoginPage() {
           </div>
           <div className="border-t border-blue-500 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
             <p className="text-white text-sm">
-              © 2026 SMCT Group of Companies. All rights reserved.
+              &copy; {new Date().getFullYear()} SMCT Group of Companies. All
+              rights reserved.
             </p>
 
             <div className="flex space-x-4 mt-4 md:mt-0">
@@ -574,7 +487,7 @@ export default function LandingLoginPage() {
             onClick={() => {
               localStorage.clear();
               sessionStorage.clear();
-              window.location.reload();
+              router.push("/login");
             }}
             className="text-base text-white bg-blue-600 hover-text-white hover:bg-blue-700"
           >
