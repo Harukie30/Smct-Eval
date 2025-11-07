@@ -355,7 +355,7 @@ function RegisterPage() {
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Main Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-to-r from-white via-blue-50 to-blue-600"></div>
+      <div className="absolute inset-0 bg-gradient-to-right from-white via-blue-50 to-blue-600"></div>
 
       {/* Single Geometric Pattern Overlay - Gradient from left to right */}
       <div className="absolute inset-0">

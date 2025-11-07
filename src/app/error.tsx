@@ -34,7 +34,7 @@ export default function Error() {
             <Button
               type="button"
               onClick={() => window.location.reload()}
-              className="w-full px-4 py-6 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-medium rounded-lg text-center transition duration-200"
+              className="w-full px-4 py-6 bg-gradient-to-right from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-medium rounded-lg text-center transition duration-200"
             >
               Reload page
             </Button>
