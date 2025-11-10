@@ -20,6 +20,8 @@ import { CONFIG } from "../../../config/config";
 import { id } from "date-fns/locale";
 import clientDataService from "@/lib/clientDataService.api";
 import { withPublicPage } from "@/hoc";
+import { redirect, useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/UserContext";
 
 interface FormDataType {
   fname: string;
@@ -30,7 +32,7 @@ interface FormDataType {
   contact: string;
   position_id: number | string;
   branch_id: number | string;
-  department_id?: number | string ;
+  department_id?: number | string;
   password: string;
   password_confirmation: string;
   signature: string;
@@ -38,9 +40,15 @@ interface FormDataType {
 
 function RegisterPage() {
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
-  const [positions, setPositions] = useState<{value: string , label: string}[]>([]);
-  const [branches, setBranches] = useState<{value: string, label: string}[]>([]);
-  const [departments, setDepartments] = useState<{value: string, label: string}[]>([]);
+  const [positions, setPositions] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [branches, setBranches] = useState<{ value: string; label: string }[]>(
+    []
+  );
+  const [departments, setDepartments] = useState<
+    { value: string; label: string }[]
+  >([]);
   const [alertDialog, setAlertDialog] = useState({
     open: false,
     title: "",
@@ -66,23 +74,24 @@ function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState<{
     [key: string]: any;
   }>({});
+  const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
 
- // Load positions from client data service.api
+  // Load positions from client data service.api
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Fetch positions using client data service
-        const positionsData = await clientDataService.getPositions();
+        const [positionsData, departmentsData, branchData] = await Promise.all([
+          clientDataService.getPositions(),
+          clientDataService.getDepartments(),
+          clientDataService.getBranches(),
+        ]);
         setPositions(positionsData);
-
         // Fetch departments using client data service
-        const departmentsData = await clientDataService.getDepartments();
         setDepartments(departmentsData);
-
         // Fetch departments using client data service
-        const branchData = await clientDataService.getBranches();
         setBranches(branchData);
-        
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -90,7 +99,6 @@ function RegisterPage() {
 
     fetchData();
   }, []);
-
 
   const showAlert = (
     title: string,
@@ -282,50 +290,67 @@ function RegisterPage() {
     formDataToUpload.append("branch_id", String(formData.branch_id));
     formDataToUpload.append("department_id", String(formData.department_id));
     formDataToUpload.append("password", formData.password);
-    formDataToUpload.append("password_confirmation",formData.password_confirmation);
+    formDataToUpload.append(
+      "password_confirmation",
+      formData.password_confirmation
+    );
     formDataToUpload.append("signature", formData.signature);
 
-        try {
-          const data = await clientDataService.registerUser(formDataToUpload);
+    try {
+      const data = await clientDataService.registerUser(formDataToUpload);
 
-          showAlert(
-            "Registration Successful!",
-            "Account registration submitted successfully! Your registration is pending approval. You will be notified once approved.",
-            "success",
-            () => {
-              // Reset form
-              setFormData({
-                fname: "",
-                lname: "",
-                username: "",
-                employee_id: "",
-                email: "",
-                contact: "",
-                position_id: 0,
-                department_id: 0,
-                branch_id: 0,
-                password: "",
-                password_confirmation: "",
-                signature: "",
-              });
-              setSignatureError(false);
-              // Redirect to login page
-              window.location.href = "/";
-            })
-        }catch (error : any ) {
-          // console.error(error);
-            if (error.status === 422) {
-              setFieldErrors(error.errors);
-            }
-            if (error.status === 400) {
-              setFieldErrors({
-                signature: [error.message],
-              });
-            }
-        }finally{
-            setIsRegisterButtonClicked(false);
+      showAlert(
+        "Registration Successful!",
+        "Account registration submitted successfully! Your registration is pending approval. You will be notified once approved.",
+        "success",
+        () => {
+          // Reset form
+          setFormData({
+            fname: "",
+            lname: "",
+            username: "",
+            employee_id: "",
+            email: "",
+            contact: "",
+            position_id: 0,
+            department_id: 0,
+            branch_id: 0,
+            password: "",
+            password_confirmation: "",
+            signature: "",
+          });
+          setSignatureError(false);
+          // Redirect to login page
+          router.push("/");
         }
+      );
+    } catch (error: any) {
+      // console.error(error);
+      if (error.status === 422) {
+        setFieldErrors(error.errors);
+      }
+      if (error.status === 400) {
+        setFieldErrors({
+          signature: [error.message],
+        });
+      }
+    } finally {
+      setIsRegisterButtonClicked(false);
+    }
   };
+
+  if (isAuthenticated || user) {
+    const roleDashboards: Record<string, string> = {
+      admin: "/admin",
+      hr: "/hr-dashboard",
+      evaluator: "/evaluator",
+      employee: "/employee-dashboard",
+      manager: "/evaluator",
+    };
+    const dashboardPath =
+      roleDashboards[user?.roles?.[0]?.name || ""] || "/dashboard";
+    return redirect(dashboardPath);
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -473,7 +498,7 @@ function RegisterPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <form onSubmit={  handleRegisterSubmit}>
+                <form onSubmit={handleRegisterSubmit}>
                   <div className="space-y-4">
                     {/* Personal Information */}
                     <div className="grid grid-cols-2 gap-4">
@@ -541,7 +566,7 @@ function RegisterPage() {
                       )}
                     </div>
 
-                    <div className="space-y-2 w-1/4">
+                    <div className="space-y-2">
                       <Label htmlFor="employee_id">Employee ID</Label>
                       <Input
                         id="employee_id"
@@ -550,18 +575,18 @@ function RegisterPage() {
                         onChange={(e) => {
                           // Remove all non-numeric characters except dash
                           let value = e.target.value.replace(/[^\d-]/g, "");
-                          
+
                           // Remove all dashes first
                           value = value.replace(/-/g, "");
-                          
+
                           // Limit to 10 digits (4 + 6)
                           value = value.slice(0, 10);
-                          
+
                           // Add dash after first 4 digits
                           if (value.length > 4) {
                             value = value.slice(0, 4) + "-" + value.slice(4);
                           }
-                          
+
                           setFormData({ ...formData, employee_id: value });
                           validateField("employee_id", value);
                         }}
@@ -645,7 +670,6 @@ function RegisterPage() {
                         placeholder="Select your position"
                         searchPlaceholder="Search positions..."
                         emptyText="No positions found."
-                        className="w-1/2"
                         error={fieldErrors?.position_id}
                       />
                     </div>
@@ -661,7 +685,6 @@ function RegisterPage() {
                         placeholder="Select your branch"
                         searchPlaceholder="Search branches..."
                         emptyText="No branches found."
-                        className="w-1/2"
                         error={fieldErrors?.branch_id}
                       />
                     </div>
@@ -670,14 +693,13 @@ function RegisterPage() {
                       <Label htmlFor="department">Department</Label>
                       <Combobox
                         options={departments}
-                        value={formData.department_id}
+                        value={formData.department_id || ""}
                         onValueChangeAction={(value) =>
                           setFormData({ ...formData, department_id: value })
                         }
-                        placeholder="Select your branch"
-                        searchPlaceholder="Search branches..."
-                        emptyText="No branches found."
-                        className="w-1/2"
+                        placeholder="Select your department"
+                        searchPlaceholder="Search departments..."
+                        emptyText="No departments found."
                         error={fieldErrors?.department_id}
                       />
                     </div>
