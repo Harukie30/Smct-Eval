@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Bell, X, Trash2, MessageCircle } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ChevronLeft, ChevronRight, Bell, X, Trash2, MessageCircle, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
 import ProfileCard, { UserProfile } from "./ProfileCard";
 import ProfileModal from "./ProfileModal";
 import ContactDevsModal from "./ContactDevsModal";
@@ -52,6 +53,11 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [isNotificationDetailOpen, setIsNotificationDetailOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
+  
+  // Collapsible states for sidebar groups
+  const [isManagementOpen, setIsManagementOpen] = useState(false);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const [isLeadershipOpen, setIsLeadershipOpen] = useState(false);
 
   const {  user, logout } = useAuth();
   const router = useRouter();
@@ -59,6 +65,62 @@ export default function DashboardShell(props: DashboardShellProps) {
   // Get user role for notifications
   const userRole = user?.roles[0]?.name || 'employee';
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(userRole);
+
+  // Memoize dashboard type detection to avoid dependency issues
+  const dashboardType = useMemo(() => {
+    const hasAccountHistory = sidebarItems.some(item => item.id === 'account-history');
+    const hasFeedback = sidebarItems.some(item => item.id === 'feedback');
+    const hasEvaluationRecords = sidebarItems.some(item => item.id === 'evaluation-records');
+    const hasDashboards = sidebarItems.some(item => item.id === 'dashboards');
+    const hasUsers = sidebarItems.some(item => item.id === 'users');
+    const hasEvaluatedReviews = sidebarItems.some(item => item.id === 'evaluated-reviews');
+    
+    // Detect admin dashboard (has unique items like 'dashboards', 'users', 'evaluated-reviews')
+    if (hasDashboards || hasUsers || hasEvaluatedReviews) {
+      return 'admin';
+    }
+    
+    if (hasAccountHistory && !hasFeedback && !hasEvaluationRecords) {
+      return 'employee';
+    } else if (hasFeedback) {
+      return 'evaluator';
+    } else {
+      return 'hr';
+    }
+  }, [sidebarItems]);
+  
+  // Memoize boolean flags to ensure stable references
+  const isEmployeeDashboard = useMemo(() => dashboardType === 'employee', [dashboardType]);
+  const isEvaluatorDashboard = useMemo(() => dashboardType === 'evaluator', [dashboardType]);
+  const isAdminDashboard = useMemo(() => dashboardType === 'admin', [dashboardType]);
+
+  // Auto-open collapsible groups when their items are active
+  useEffect(() => {
+    // For admin dashboard, handle management group (departments, branches) and leadership group (branch-heads, area-managers)
+    if (isAdminDashboard) {
+      if (['departments', 'branches'].includes(activeItemId) && !isManagementOpen) {
+        setIsManagementOpen(true);
+      }
+      if (['branch-heads', 'area-managers'].includes(activeItemId) && !isLeadershipOpen) {
+        setIsLeadershipOpen(true);
+      }
+      return;
+    }
+    
+    if (['departments', 'branches'].includes(activeItemId) && !isManagementOpen) {
+      setIsManagementOpen(true);
+    }
+    
+    // For employee and evaluator dashboards, only 'history' and 'account-history' should open Analytics
+    // For HR dashboard, 'reviews', 'history', and 'account-history' should open Analytics
+    const analyticsItems = isEmployeeDashboard || isEvaluatorDashboard
+      ? ['history', 'account-history']
+      : ['reviews', 'history', 'account-history'];
+    
+    if (analyticsItems.includes(activeItemId) && !isAnalyticsOpen) {
+      setIsAnalyticsOpen(true);
+    }
+  }, [activeItemId, isManagementOpen, isAnalyticsOpen, isLeadershipOpen, isEmployeeDashboard, isEvaluatorDashboard, isAdminDashboard]);
 
   // Close notification panel when clicking outside
   useEffect(() => {
@@ -315,19 +377,250 @@ export default function DashboardShell(props: DashboardShellProps) {
 
               <h2 className="text-lg font-bold text-white mb-6">Navigation</h2>
               <nav className="space-y-2">
-                {sidebarItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => onChangeActive(item.id)}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${activeItemId === item.id
-                        ? 'bg-white/20 text-white border border-white/30'
-                        : 'text-blue-100 hover:bg-white/10'
-                      }`}
-                  >
-                    <span className="text-lg">{item.icon}</span>
-                    <span className="font-medium">{item.label}</span>
-                  </button>
-                ))}
+                {(() => {
+                  // Use the memoized dashboard type values
+                  
+                  // Define which items should be visible (main items)
+                  // For employee dashboard: overview, reviews
+                  // For evaluator dashboard: overview, employees, feedback, reviews
+                  // For HR dashboard: overview, evaluation-records, employees
+                  // For admin dashboard: all items except departments, branches, branch-heads, and area-managers (they go in collapsible groups)
+                  const visibleItems = isAdminDashboard
+                    ? sidebarItems.map(item => item.id).filter(id => !['departments', 'branches', 'branch-heads', 'area-managers'].includes(id))
+                    : isEmployeeDashboard 
+                    ? ['overview', 'reviews']
+                    : isEvaluatorDashboard
+                    ? ['overview', 'employees', 'feedback', 'reviews']
+                    : ['overview', 'evaluation-records', 'employees'];
+                  
+                  // Define collapsible groups
+                  const managementItems = ['departments', 'branches'];
+                  const leadershipItems = ['branch-heads', 'area-managers'];
+                  // Analytics items vary by dashboard type - exclude items that are already visible
+                  const analyticsItems = isEmployeeDashboard
+                    ? ['history', 'account-history']
+                    : isEvaluatorDashboard
+                    ? ['history', 'account-history'] // For evaluator, 'reviews' is visible, so exclude it
+                    : ['reviews', 'history', 'account-history']; // For HR, 'reviews' goes in Analytics
+                  
+                  return sidebarItems.map((item) => {
+                    const isVisible = visibleItems.includes(item.id);
+                    const isManagementItem = managementItems.includes(item.id);
+                    const isLeadershipItem = leadershipItems.includes(item.id);
+                    const isAnalyticsItem = analyticsItems.includes(item.id);
+                    
+                    // For admin dashboard, handle management items in collapsible group
+                    if (isAdminDashboard && isManagementItem && item.id === 'departments') {
+                      return (
+                        <Collapsible key="management" open={isManagementOpen} onOpenChange={setIsManagementOpen}>
+                          <CollapsibleTrigger asChild>
+                            <button
+                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                managementItems.includes(activeItemId)
+                                  ? 'bg-white/20 text-white border border-white/30'
+                                  : 'text-blue-100 hover:bg-white/10'
+                              }`}
+                            >
+                              <div className="flex items-center space-x-3">
+                                <span className="text-lg">⚙️</span>
+                                <span className="font-medium">Management</span>
+                              </div>
+                              <ChevronDown className={`h-4 w-4 transition-transform ${isManagementOpen ? 'transform rotate-180' : ''}`} />
+                            </button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="pl-4 mt-2 space-y-1">
+                            {sidebarItems
+                              .filter(i => managementItems.includes(i.id))
+                              .map((subItem) => (
+                                <button
+                                  key={subItem.id}
+                                  onClick={() => onChangeActive(subItem.id)}
+                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                    activeItemId === subItem.id
+                                      ? 'bg-white/20 text-white border border-white/30'
+                                      : 'text-blue-100 hover:bg-white/10'
+                                  }`}
+                                >
+                                  <span className="text-lg">{subItem.icon}</span>
+                                  <span className="font-medium text-sm">{subItem.label}</span>
+                                </button>
+                              ))}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      );
+                    }
+                    
+                    // For admin dashboard, handle leadership items in collapsible group
+                    if (isAdminDashboard && isLeadershipItem && item.id === 'branch-heads') {
+                      return (
+                        <Collapsible key="leadership" open={isLeadershipOpen} onOpenChange={setIsLeadershipOpen}>
+                          <CollapsibleTrigger asChild>
+                            <button
+                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                leadershipItems.includes(activeItemId)
+                                  ? 'bg-white/20 text-white border border-white/30'
+                                  : 'text-blue-100 hover:bg-white/10'
+                              }`}
+                            >
+                              <div className="flex items-center space-x-3">
+                                <span className="text-lg">👥</span>
+                                <span className="font-medium">Leadership</span>
+                              </div>
+                              <ChevronDown className={`h-4 w-4 transition-transform ${isLeadershipOpen ? 'transform rotate-180' : ''}`} />
+                            </button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="pl-4 mt-2 space-y-1">
+                            {sidebarItems
+                              .filter(i => leadershipItems.includes(i.id))
+                              .map((subItem) => (
+                                <button
+                                  key={subItem.id}
+                                  onClick={() => onChangeActive(subItem.id)}
+                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                    activeItemId === subItem.id
+                                      ? 'bg-white/20 text-white border border-white/30'
+                                      : 'text-blue-100 hover:bg-white/10'
+                                  }`}
+                                >
+                                  <span className="text-lg">{subItem.icon}</span>
+                                  <span className="font-medium text-sm">{subItem.label}</span>
+                                </button>
+                              ))}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      );
+                    }
+                    
+                    // For admin dashboard, skip management and leadership items (already handled above)
+                    if (isAdminDashboard && (isManagementItem || isLeadershipItem)) {
+                      return null;
+                    }
+                    
+                    // For admin dashboard, render other items as regular buttons
+                    if (isAdminDashboard) {
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => onChangeActive(item.id)}
+                          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                            activeItemId === item.id
+                              ? 'bg-white/20 text-white border border-white/30'
+                              : 'text-blue-100 hover:bg-white/10'
+                          }`}
+                        >
+                          <span className="text-lg">{item.icon}</span>
+                          <span className="font-medium">{item.label}</span>
+                        </button>
+                      );
+                    }
+                    
+                    // Render visible items as regular buttons
+                    if (isVisible) {
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => onChangeActive(item.id)}
+                          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                            activeItemId === item.id
+                              ? 'bg-white/20 text-white border border-white/30'
+                              : 'text-blue-100 hover:bg-white/10'
+                          }`}
+                        >
+                          <span className="text-lg">{item.icon}</span>
+                          <span className="font-medium">{item.label}</span>
+                        </button>
+                      );
+                    }
+                    
+                    // Render Management collapsible group
+                    if (item.id === 'departments') {
+                      return (
+                        <Collapsible key="management" open={isManagementOpen} onOpenChange={setIsManagementOpen}>
+                          <CollapsibleTrigger asChild>
+                            <button
+                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                managementItems.includes(activeItemId)
+                                  ? 'bg-white/20 text-white border border-white/30'
+                                  : 'text-blue-100 hover:bg-white/10'
+                              }`}
+                            >
+                              <div className="flex items-center space-x-3">
+                                <span className="text-lg">⚙️</span>
+                                <span className="font-medium">Management</span>
+                              </div>
+                              <ChevronDown className={`h-4 w-4 transition-transform ${isManagementOpen ? 'transform rotate-180' : ''}`} />
+                            </button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="pl-4 mt-2 space-y-1">
+                            {sidebarItems
+                              .filter(i => managementItems.includes(i.id))
+                              .map((subItem) => (
+                                <button
+                                  key={subItem.id}
+                                  onClick={() => onChangeActive(subItem.id)}
+                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                    activeItemId === subItem.id
+                                      ? 'bg-white/20 text-white border border-white/30'
+                                      : 'text-blue-100 hover:bg-white/10'
+                                  }`}
+                                >
+                                  <span className="text-lg">{subItem.icon}</span>
+                                  <span className="font-medium text-sm">{subItem.label}</span>
+                                </button>
+                              ))}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      );
+                    }
+                    
+                    // Render Analytics collapsible group
+                    // For employee and evaluator dashboards, trigger on 'history' (since 'reviews' is visible for evaluator)
+                    // For HR dashboard, trigger on 'reviews'
+                    const analyticsTriggerId = (isEmployeeDashboard || isEvaluatorDashboard) ? 'history' : 'reviews';
+                    if (item.id === analyticsTriggerId) {
+                      return (
+                        <Collapsible key="analytics" open={isAnalyticsOpen} onOpenChange={setIsAnalyticsOpen}>
+                          <CollapsibleTrigger asChild>
+                            <button
+                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                analyticsItems.includes(activeItemId)
+                                  ? 'bg-white/20 text-white border border-white/30'
+                                  : 'text-blue-100 hover:bg-white/10'
+                              }`}
+                            >
+                              <div className="flex items-center space-x-3">
+                                <span className="text-lg">📊</span>
+                                <span className="font-medium">Analytics</span>
+                              </div>
+                              <ChevronDown className={`h-4 w-4 transition-transform ${isAnalyticsOpen ? 'transform rotate-180' : ''}`} />
+                            </button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="pl-4 mt-2 space-y-1">
+                            {sidebarItems
+                              .filter(i => analyticsItems.includes(i.id))
+                              .map((subItem) => (
+                                <button
+                                  key={subItem.id}
+                                  onClick={() => onChangeActive(subItem.id)}
+                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                    activeItemId === subItem.id
+                                      ? 'bg-white/20 text-white border border-white/30'
+                                      : 'text-blue-100 hover:bg-white/10'
+                                  }`}
+                                >
+                                  <span className="text-lg">{subItem.icon}</span>
+                                  <span className="font-medium text-sm">{subItem.label}</span>
+                                </button>
+                              ))}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      );
+                    }
+                    
+                    // Skip other items (they're already handled in collapsible groups)
+                    return null;
+                  });
+                })()}
               </nav>
 
 
@@ -337,7 +630,7 @@ export default function DashboardShell(props: DashboardShellProps) {
 
         {!isSidebarOpen && (
           <div className="p-4">
-            <Button variant="outline" size="sm" onClick={() => setIsSidebarOpen(true)}>
+            <Button variant="outline" size="sm" onClick={() => setIsSidebarOpen(true)} className="bg-blue-700 text-white hover:bg-blue-300  hover:text-blue-700 border-blue-700">
               <div className="flex items-center">
                 <ChevronRight className="w-10 h-10 mr-[-6px]" />
                 <ChevronRight className="w-10 h-10" />

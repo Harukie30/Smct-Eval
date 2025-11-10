@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -111,6 +112,19 @@ interface SuspendedEmployee {
   reinstatedBy?: string;
 }
 
+interface Department {
+  id: number;
+  name: string;
+  manager: string;
+  employeeCount: number;
+  performance: number;
+}
+
+interface Branch {
+  id: string;
+  name: string;
+}
+
 // Function to get quarter from date
 const getQuarterFromDate = (dateString: string): string => {
   try {
@@ -149,6 +163,12 @@ export default function AdminDashboard() {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [suspendedEmployees, setSuspendedEmployees] = useState<SuspendedEmployee[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [departmentsRefreshing, setDepartmentsRefreshing] = useState(false);
+  const [branchesRefreshing, setBranchesRefreshing] = useState(false);
+  const [branchHeadsRefreshing, setBranchHeadsRefreshing] = useState(false);
+  const [areaManagersRefreshing, setAreaManagersRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   // Initialize active tab from URL parameter or default to 'overview'
@@ -280,6 +300,56 @@ export default function AdminDashboard() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // Load departments and branches when their tabs are active
+  useEffect(() => {
+    const loadDepartmentsAndBranches = async () => {
+      if (active === 'departments') {
+        setDepartmentsRefreshing(true);
+        try {
+          // Load departments from departmentsData
+          setDepartments(departmentsData);
+        } catch (error) {
+          console.error('Error loading departments:', error);
+        } finally {
+          setDepartmentsRefreshing(false);
+        }
+      } else if (active === 'branches') {
+        setBranchesRefreshing(true);
+        try {
+          // Load branches from API
+          const branchesData = await clientDataService.getBranches();
+          setBranches(branchesData);
+        } catch (error) {
+          console.error('Error loading branches:', error);
+        } finally {
+          setBranchesRefreshing(false);
+        }
+      } else if (active === 'branch-heads') {
+        setBranchHeadsRefreshing(true);
+        try {
+          // Data is already loaded in employees, just trigger a refresh
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } catch (error) {
+          console.error('Error loading branch heads:', error);
+        } finally {
+          setBranchHeadsRefreshing(false);
+        }
+      } else if (active === 'area-managers') {
+        setAreaManagersRefreshing(true);
+        try {
+          // Data is already loaded in employees, just trigger a refresh
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } catch (error) {
+          console.error('Error loading area managers:', error);
+        } finally {
+          setAreaManagersRefreshing(false);
+        }
+      }
+    };
+
+    loadDepartmentsAndBranches();
+  }, [active]);
+
   // Function to refresh evaluated reviews only
   const handleRefreshEvaluatedReviews = async () => {
     console.log('🔄 Starting evaluated reviews refresh...');
@@ -359,9 +429,6 @@ export default function AdminDashboard() {
       load_users_pending();
     },[])
       
-      const handleSaveUser = async () => {
-        await  load_users_active(userSearchTerm, values);
-      };
   // Function to load evaluated reviews from client data service
   const loadEvaluatedReviews = async () => {
     try {
@@ -459,6 +526,45 @@ export default function AdminDashboard() {
     setIsEditModalOpen(true);
   };
 
+  const handleSaveUser = async (updatedUser: any) => {
+    try {
+      // Update user using client data service
+      await clientDataService.updateEmployee(updatedUser.id, updatedUser);
+
+      // Also update accounts storage to persist changes
+      const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+      const accountIndex = accounts.findIndex((acc: any) => acc.id === updatedUser.id || acc.employeeId === updatedUser.id);
+      
+      if (accountIndex !== -1) {
+        // Update the account with the new user data
+        accounts[accountIndex] = {
+          ...accounts[accountIndex],
+          name: updatedUser.name,
+          email: updatedUser.email,
+          position: updatedUser.position,
+          department: updatedUser.department,
+          branch: updatedUser.branch,
+          role: updatedUser.role,
+          username: updatedUser.username || accounts[accountIndex].username,
+          password: updatedUser.password || accounts[accountIndex].password,
+          contact: updatedUser.contact || accounts[accountIndex].contact,
+          hireDate: updatedUser.hireDate || accounts[accountIndex].hireDate,
+          isActive: updatedUser.isActive !== undefined ? updatedUser.isActive : accounts[accountIndex].isActive,
+          updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem('accounts', JSON.stringify(accounts));
+      }
+
+      // Refresh user data to get updated information
+      await refreshDashboardData(false, false);
+
+      // Show success toast
+      toastMessages.user.updated(updatedUser.name);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toastMessages.generic.error('Update Failed', 'Failed to update user information. Please try again.');
+    }
+  };
   // Function to handle delete employee
   const handleDeleteEmployee = async () => {
     if (!employeeToDelete) return;
@@ -666,6 +772,56 @@ export default function AdminDashboard() {
   const getEmployeeReinstatementDate = (employeeId: number) => {
     const reinstatedEmployee = suspendedEmployees.find(emp => emp.id === employeeId && emp.status === 'reinstated');
     return reinstatedEmployee?.reinstatedDate;
+  };
+
+  // Helper functions for departments and branches
+  const getDepartmentStats = (deptName: string) => {
+    const deptEmployees = employees.filter(emp => emp.department === deptName);
+    return {
+      count: deptEmployees.length,
+      managers: deptEmployees.filter(emp => emp.role === 'Manager' || emp.role?.toLowerCase().includes('manager')).length,
+      averageTenure: 2.5 // Mock data
+    };
+  };
+
+  const getBranchStats = (branchName: string) => {
+    const branchEmployees = employees.filter(emp => emp.branch === branchName);
+    return {
+      count: branchEmployees.length,
+      managers: branchEmployees.filter(emp => emp.role === 'Manager' || emp.role?.toLowerCase().includes('manager')).length
+    };
+  };
+
+  // Helper functions to filter branch heads and area managers from accounts.json data
+  const getBranchHeads = () => {
+    return employees.filter(emp => {
+      const position = emp.position?.toLowerCase() || '';
+      const role = emp.role?.toLowerCase() || '';
+      const name = emp.name?.toLowerCase() || '';
+      
+      // Filter by position, role, or if role is manager and has branch assigned
+      return position.includes('branch head') || 
+             position.includes('branchhead') ||
+             position.includes('branch manager') ||
+             role.includes('branch head') ||
+             role.includes('branchhead') ||
+             (role === 'manager' && emp.branch && !position.includes('area'));
+    });
+  };
+
+  const getAreaManagers = () => {
+    return employees.filter(emp => {
+      const position = emp.position?.toLowerCase() || '';
+      const role = emp.role?.toLowerCase() || '';
+      
+      // Filter by position, role, or if role is manager with area-related position
+      return position.includes('area manager') || 
+             position.includes('areamanager') ||
+             position.includes('regional manager') ||
+             role.includes('area manager') ||
+             role.includes('areamanager') ||
+             (role === 'manager' && position.includes('area'));
+    });
   };
 
   // Function to update system metrics with correct active user count
@@ -1019,8 +1175,10 @@ export default function AdminDashboard() {
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'dashboards', label: 'Employee Monitoring', icon: '💻' },
     { id: 'users', label: 'User Management', icon: '👥' },
-    { id: 'evaluated-reviews', label: 'Evaluated Reviews', icon: '📋' },
-    
+    { id: 'departments', label: 'Departments', icon: '🏢' },
+    { id: 'branches', label: 'Branches', icon: '📍' },
+    { id: 'branch-heads', label: 'Branch Heads', icon: '👔' },
+    { id: 'area-managers', label: 'Area Managers', icon: '🎯' },
   ];
 
   if (loading || !systemMetrics || !dashboardStats) {
@@ -1675,19 +1833,28 @@ export default function AdminDashboard() {
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Position</TableHead>
-                        <TableHead>Branches</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Branch</TableHead>
                         <TableHead>Role</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {approvedRegistrations.map((employee) => (
+                      {approvedRegistrations.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                            No active users found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        approvedRegistrations.map((employee) => (
                         <TableRow key={employee.id}>
                           <TableCell className="font-medium">{employee.fname} {employee.lname}</TableCell>
                           <TableCell>{employee.email}</TableCell>
-                          <TableCell>{employee.positions.label}</TableCell>
-                          <TableCell>{employee.branches.branch_name}</TableCell>
+                          <TableCell>{employee.positions?.label || employee.position || 'N/A'}</TableCell>
+                          <TableCell>{employee.departments?.name || employee.department || 'N/A'}</TableCell>
+                          <TableCell>{employee.branches?.branch_name || employee.branch || 'N/A'}</TableCell>
                           <TableCell>
                             <Badge variant="outline">
                               {employee.roles?.map((role : any) => role.name).join(", ") || "No role"}
@@ -1733,7 +1900,8 @@ export default function AdminDashboard() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -2098,6 +2266,355 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {active === 'departments' && (
+        <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
+          {departmentsRefreshing ? (
+            <>
+              {/* Centered Loading Spinner with Logo */}
+              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                  <div className="relative">
+                    {/* Spinning ring */}
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                    {/* Logo in center */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 font-medium">Loading departments...</p>
+                </div>
+              </div>
+              
+              {/* Grid structure visible in background */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Card key={`skeleton-dept-${index}`} className="animate-pulse">
+                    <CardHeader>
+                      <div className="flex justify-between items-center">
+                        <div className="h-6 w-32 bg-gray-200 rounded"></div>
+                        <div className="h-5 w-20 bg-gray-200 rounded-full"></div>
+                      </div>
+                      <div className="h-4 w-40 bg-gray-200 rounded mt-2"></div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-3 bg-gray-100 rounded-lg">
+                          <div className="h-6 w-12 bg-gray-200 rounded mx-auto mb-2"></div>
+                          <div className="h-3 w-16 bg-gray-200 rounded mx-auto"></div>
+                        </div>
+                        <div className="text-center p-3 bg-gray-100 rounded-lg">
+                          <div className="h-6 w-12 bg-gray-200 rounded mx-auto mb-2"></div>
+                          <div className="h-3 w-16 bg-gray-200 rounded mx-auto"></div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {departments.map((dept) => {
+                const stats = getDepartmentStats(dept.name);
+                return (
+                  <Card key={dept.id}>
+                    <CardHeader>
+                      <CardTitle className="flex justify-between items-center">
+                        {dept.name}
+                        <Badge variant="outline">{stats.count} employees</Badge>
+                      </CardTitle>
+                      <CardDescription>Department Manager</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-3 bg-blue-50 rounded-lg">
+                          <div className="text-lg font-bold text-blue-600">{stats.count}</div>
+                          <div className="text-xs text-gray-600">Employees</div>
+                        </div>
+                        <div className="text-center p-3 bg-green-50 rounded-lg">
+                          <div className="text-lg font-bold text-green-600">{stats.managers}</div>
+                          <div className="text-xs text-gray-600">Managers</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {active === 'branches' && (
+        <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
+          {branchesRefreshing ? (
+            <>
+              {/* Centered Loading Spinner with Logo */}
+              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                  <div className="relative">
+                    {/* Spinning ring */}
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                    {/* Logo in center */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 font-medium">Loading branches...</p>
+                </div>
+              </div>
+              
+              {/* Grid structure visible in background */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Card key={`skeleton-branch-${index}`} className="animate-pulse">
+                    <CardHeader>
+                      <div className="flex justify-between items-center">
+                        <div className="h-6 w-32 bg-gray-200 rounded"></div>
+                        <div className="h-5 w-20 bg-gray-200 rounded-full"></div>
+                      </div>
+                      <div className="h-4 w-40 bg-gray-200 rounded mt-2"></div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-4 bg-gray-100 rounded-lg">
+                          <div className="h-7 w-16 bg-gray-200 rounded mx-auto mb-2"></div>
+                          <div className="h-4 w-24 bg-gray-200 rounded mx-auto"></div>
+                        </div>
+                        <div className="text-center p-4 bg-gray-100 rounded-lg">
+                          <div className="h-7 w-16 bg-gray-200 rounded mx-auto mb-2"></div>
+                          <div className="h-4 w-16 bg-gray-200 rounded mx-auto"></div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {branches.map((branch) => {
+                const stats = getBranchStats(branch.name);
+                return (
+                  <Card key={branch.id}>
+                    <CardHeader>
+                      <CardTitle className="flex justify-between items-center">
+                        {branch.name}
+                        <Badge variant="outline">{stats.count} employees</Badge>
+                      </CardTitle>
+                      <CardDescription>Branch Location</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-4 bg-blue-50 rounded-lg">
+                          <div className="text-2xl font-bold text-blue-600">{stats.count}</div>
+                          <div className="text-sm text-gray-600">Total Employees</div>
+                        </div>
+                        <div className="text-center p-4 bg-green-50 rounded-lg">
+                          <div className="text-2xl font-bold text-green-600">{stats.managers}</div>
+                          <div className="text-sm text-gray-600">Manager</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {active === 'branch-heads' && (
+        <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
+          {branchHeadsRefreshing ? (
+            <>
+              {/* Centered Loading Spinner with Logo */}
+              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                  <div className="relative">
+                    {/* Spinning ring */}
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                    {/* Logo in center */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 font-medium">Loading branch heads...</p>
+                </div>
+              </div>
+              
+              {/* Table skeleton visible in background */}
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-48" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <div key={index} className="flex items-center space-x-4">
+                        <Skeleton className="h-12 w-12 rounded-full" />
+                        <div className="space-y-2 flex-1">
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-4 w-1/2" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Branch Heads</CardTitle>
+                <CardDescription>List of all branch heads in the organization</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-[600px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Position</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Branch</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {getBranchHeads().length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                            No branch heads found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        getBranchHeads().map((head) => (
+                          <TableRow key={head.id}>
+                            <TableCell className="font-medium">{head.name}</TableCell>
+                            <TableCell>{head.email}</TableCell>
+                            <TableCell>{head.position}</TableCell>
+                            <TableCell>{head.department}</TableCell>
+                            <TableCell>{head.branch || 'N/A'}</TableCell>
+                            <TableCell>
+                              <Badge className={head.isActive === false ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
+                                {head.isActive === false ? 'Inactive' : 'Active'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button variant="ghost" size="sm">View</Button>
+                                <Button variant="ghost" size="sm">Edit</Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {active === 'area-managers' && (
+        <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
+          {areaManagersRefreshing ? (
+            <>
+              {/* Centered Loading Spinner with Logo */}
+              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                  <div className="relative">
+                    {/* Spinning ring */}
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                    {/* Logo in center */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 font-medium">Loading area managers...</p>
+                </div>
+              </div>
+              
+              {/* Table skeleton visible in background */}
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-48" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <div key={index} className="flex items-center space-x-4">
+                        <Skeleton className="h-12 w-12 rounded-full" />
+                        <div className="space-y-2 flex-1">
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-4 w-1/2" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Area Managers</CardTitle>
+                <CardDescription>List of all area managers in the organization</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-[600px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Position</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Branch</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {getAreaManagers().length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                            No area managers found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        getAreaManagers().map((manager) => (
+                          <TableRow key={manager.id}>
+                            <TableCell className="font-medium">{manager.name}</TableCell>
+                            <TableCell>{manager.email}</TableCell>
+                            <TableCell>{manager.position}</TableCell>
+                            <TableCell>{manager.department}</TableCell>
+                            <TableCell>{manager.branch || 'N/A'}</TableCell>
+                            <TableCell>{manager.contact || 'N/A'}</TableCell>
+                            <TableCell>
+                              <Badge className={manager.isActive === false ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
+                                {manager.isActive === false ? 'Inactive' : 'Active'}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+
 
       
 
