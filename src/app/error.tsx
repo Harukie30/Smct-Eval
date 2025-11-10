@@ -1,46 +1,75 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
+import { useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertCircle, RefreshCw, Home } from 'lucide-react';
 
-export default function Error() {
+interface ErrorProps {
+  error: Error & { digest?: string };
+  reset: () => void;
+}
+
+export default function Error({ error, reset }: ErrorProps) {
+  useEffect(() => {
+    // Log error to console for debugging
+    console.error('Application error:', error);
+  }, [error]);
+
   return (
-    <div className="fixed top-0 bottom-0 left-0 right-0 z-50 flex items-center justify-center bg-white">
-      <div className="max-w-md w-full rounded-xl overflow-hidden">
-        <div className="p-8">
-          <div className="text-center mb-6">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-20 w-20 mx-auto text-yellow-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <h2 className="text-xl font-semibold text-gray-800 mt-4">
-              Oops! Something went wrong to this page.
-            </h2>
-            <p className="text-gray-600 mt-2">
-              Please try again later or return to the previous page or reload
-              the page.
-            </p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <Card className="max-w-md w-full">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="rounded-full bg-red-100 p-3">
+              <AlertCircle className="h-8 w-8 text-red-600" />
+            </div>
           </div>
-          <div className="space-y-4">
+          <CardTitle className="text-2xl text-gray-900">Something went wrong!</CardTitle>
+          <CardDescription className="mt-2">
+            We encountered an unexpected error. Please try again or return to the home page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Error Details (only in development) */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="bg-gray-100 rounded-lg p-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">Error Details:</p>
+              <p className="text-xs text-gray-600 font-mono break-all">{error.message}</p>
+              {error.digest && (
+                <p className="text-xs text-gray-500 mt-2">Error ID: {error.digest}</p>
+              )}
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-2">
             <Button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="w-full px-4 py-6 bg-gradient-to-right from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-medium rounded-lg text-center transition duration-200"
+              onClick={reset}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
-              Reload page
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Try Again
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                window.location.href = '/';
+              }}
+              className="w-full"
+            >
+              <Home className="mr-2 h-4 w-4" />
+              Go to Home
             </Button>
           </div>
-        </div>
-      </div>
+
+          {/* Help Text */}
+          <p className="text-xs text-center text-gray-500 mt-4">
+            If this problem persists, please contact support.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
