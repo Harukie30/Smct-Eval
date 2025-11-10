@@ -146,18 +146,29 @@ function AdminDashboard() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isTabSwitching, setIsTabSwitching] = useState(false);
   // Initialize active tab from URL parameter or default to 'overview'
   const tabParam = searchParams.get('tab');
   const [active, setActiveState] = useState(tabParam || 'overview');
 
   // Function to update both state and URL
-  const setActive = useCallback((tab: string) => {
+  const setActive = useCallback(async (tab: string) => {
+    const previousTab = active;
+    // Only show spinner if switching to a different tab
+    if (tab !== previousTab) {
+      setIsTabSwitching(true);
+    }
     setActiveState(tab);
     // Update URL without page reload
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', tab);
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [searchParams, router, pathname]);
+    
+    // Small delay to ensure smooth transition
+    setTimeout(() => {
+      setIsTabSwitching(false);
+    }, 300);
+  }, [searchParams, router, pathname, active]);
 
   // Function to refresh user data (used by shared hook)
   const refreshUserData = async () => {
@@ -257,6 +268,34 @@ function AdminDashboard() {
   useEffect(() => {
     refreshUserDataRef.current = refreshUserData;
   }, [refreshUserData]);
+
+  // Update setActive to refresh data when switching tabs
+  const setActiveWithRefresh = useCallback(async (tab: string) => {
+    const previousTab = active;
+    // Only show spinner if switching to a different tab
+    if (tab !== previousTab) {
+      setIsTabSwitching(true);
+    }
+    setActiveState(tab);
+    // Update URL without page reload
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    
+    // Refresh data when switching tabs (except for overview which doesn't need employee data)
+    if (tab !== 'overview' && tab !== previousTab) {
+      try {
+        await refreshUserDataRef.current();
+      } catch (error) {
+        console.error('Error refreshing data on tab switch:', error);
+      }
+    }
+    
+    // Small delay to ensure smooth transition
+    setTimeout(() => {
+      setIsTabSwitching(false);
+    }, 300);
+  }, [searchParams, router, pathname, active]);
 
   // Auto-refresh functionality using shared hook
   const {
@@ -487,14 +526,14 @@ function AdminDashboard() {
         localStorage.setItem('accounts', JSON.stringify(accounts));
       }
 
-      // Refresh user data to get updated information
-      await refreshDashboardData(false, false);
-
       // Show success toast
       toastMessages.user.updated(updatedUser.name);
+      
+      // Note: Refresh will be handled by onRefresh callback in EditUserModal
     } catch (error) {
       console.error('Error updating user:', error);
       toastMessages.generic.error('Update Failed', 'Failed to update user information. Please try again.');
+      throw error; // Re-throw to let EditUserModal handle it
     }
   };
 
@@ -1106,10 +1145,26 @@ function AdminDashboard() {
       currentPeriod={new Date().toLocaleDateString()}
       sidebarItems={sidebarItems}
       activeItemId={active}
-      onChangeActive={setActive}
+      onChangeActive={setActiveWithRefresh}
       topSummary={topSummary}
       profile={{ name: 'System Administrator', roleOrPosition: 'Admin' }}
     >
+      {/* Tab Switching Spinner Overlay */}
+      {isTabSwitching && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
+          <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+            <div className="relative">
+              {/* Spinning ring */}
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+              {/* Logo in center */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 font-medium">Loading...</p>
+          </div>
+        </div>
+      )}
       {active === 'overview' && (
         <Suspense fallback={
           <div className="flex items-center justify-center h-64">
@@ -1758,6 +1813,10 @@ function AdminDashboard() {
         departments={departmentsData.map((dept: any) => dept.name)}
         branches={branchesData}
         positions={positionsData}
+        onRefresh={async () => {
+          // Directly refresh user data to update the table immediately
+          await refreshUserData();
+        }}
       />
 
     </DashboardShell>

@@ -7,15 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import clientDataService from '@/lib/clientDataService';
 import { toastMessages } from '@/lib/toastMessages';
-import accountsDataRaw from '@/data/accounts.json';
-import { useUser } from '@/contexts/UserContext';
-
-// Extract accounts array from the new structure
-const accountsData = accountsDataRaw.accounts || [];
 
 interface Employee {
   id: number;
@@ -37,7 +30,6 @@ export function BranchHeadsTab({
   employees,
   onRefresh
 }: BranchHeadsTabProps) {
-  const { user: currentUser } = useUser();
   const [branchHeadsRefreshing, setBranchHeadsRefreshing] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isListModalOpen, setIsListModalOpen] = useState(false);
@@ -56,8 +48,6 @@ export function BranchHeadsTab({
   const [editSuccessData, setEditSuccessData] = useState<{branchHead: Employee | null, branches: {id: string, name: string}[]}>({branchHead: null, branches: []});
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [branchHeadToDelete, setBranchHeadToDelete] = useState<Employee | null>(null);
-  const [deletePassword, setDeletePassword] = useState('');
-  const [deletePasswordError, setDeletePasswordError] = useState('');
 
   // Memoized branch heads (only recalculates when employees change)
   const branchHeads = useMemo(() => {
@@ -65,15 +55,11 @@ export function BranchHeadsTab({
     
     return employees.filter(emp => {
       const position = emp.position?.toLowerCase() || '';
-      const role = emp.role?.toLowerCase() || '';
       
-      // Filter by position, role, or if role is manager and has branch assigned
+      // Filter by position only - looking for branch head or branch manager positions
       return position.includes('branch head') || 
              position.includes('branchhead') ||
-             position.includes('branch manager') ||
-             role.includes('branch head') ||
-             role.includes('branchhead') ||
-             (role === 'manager' && emp.branch && !position.includes('area'));
+             position.includes('branch manager');
     });
   }, [employees]);
 
@@ -412,8 +398,6 @@ export function BranchHeadsTab({
                               onClick={() => {
                                 setBranchHeadToDelete(head);
                                 setIsDeleteModalOpen(true);
-                                setDeletePassword('');
-                                setDeletePasswordError('');
                               }}
                             >
                               Delete
@@ -432,8 +416,8 @@ export function BranchHeadsTab({
 
       {/* Branch Heads List Modal */}
       <Dialog open={isListModalOpen} onOpenChangeAction={setIsListModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-6 branch-heads-modal-container flex flex-col">
-          <DialogHeader className="pb-4">
+        <DialogContent className="max-w-xl max-h-[90vh] p-4 branch-heads-modal-container flex flex-col">
+          <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
                 <DialogTitle>Branch Heads List</DialogTitle>
@@ -463,7 +447,7 @@ export function BranchHeadsTab({
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 flex-1 overflow-y-auto min-h-0">
+          <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
             {branchHeads.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No branch heads found
@@ -471,24 +455,18 @@ export function BranchHeadsTab({
             ) : (
               <div className="border rounded-lg overflow-hidden">
                 <div className="max-h-[60vh] overflow-y-auto">
-                  <Table>
+                  <Table className="w-full">
                   <TableHeader className="bg-gray-50">
                     <TableRow>
-                      <TableHead className="w-1/4">Name</TableHead>
-                      <TableHead className="w-1/4 text-center">Email</TableHead>
-                      <TableHead className="w-1/4 text-center">Branch</TableHead>
-                      <TableHead className="w-1/4 text-center">Position</TableHead>
-                      <TableHead className="w-auto text-center">Actions</TableHead>
+                      <TableHead className="w-2/3 px-6">Name</TableHead>
+                      <TableHead className="w-1/3 text-center px-6">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {branchHeads.map((head) => (
                       <TableRow key={head.id} className="hover:bg-gray-50">
-                        <TableCell className="font-medium py-3">{head.name}</TableCell>
-                        <TableCell className="py-3 text-center">{head.email}</TableCell>
-                        <TableCell className="py-3 text-center">{head.branch || 'N/A'}</TableCell>
-                        <TableCell className="py-3 text-center">{head.position}</TableCell>
-                        <TableCell className="py-3 text-center">
+                        <TableCell className="font-medium py-3 px-6">{head.name}</TableCell>
+                        <TableCell className="py-3 text-center px-6">
                           <Button
                             className="bg-blue-600 hover:bg-blue-700 text-white"
                             size="sm"
@@ -523,8 +501,8 @@ export function BranchHeadsTab({
 
       {/* Branches List Modal */}
       <Dialog open={isBranchesModalOpen} onOpenChangeAction={setIsBranchesModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-6 branch-heads-modal-container flex flex-col">
-          <DialogHeader className="pb-4">
+        <DialogContent className="max-w-xl max-h-[90vh] p-4 branch-heads-modal-container flex flex-col">
+          <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
                 <DialogTitle>Branches List</DialogTitle>
@@ -558,7 +536,7 @@ export function BranchHeadsTab({
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 flex-1 overflow-y-auto min-h-0">
+          <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
             {/* Confirmation Indicator */}
             {showConfirmation && selectedBranches.length > 0 && selectedBranchHead && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
@@ -780,8 +758,8 @@ export function BranchHeadsTab({
 
       {/* Edit Branch Head Modal */}
       <Dialog open={isEditModalOpen} onOpenChangeAction={setIsEditModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-6 branch-heads-modal-container flex flex-col">
-          <DialogHeader className="pb-4">
+        <DialogContent className="max-w-xl max-h-[90vh] p-4 branch-heads-modal-container flex flex-col">
+          <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
                 <DialogTitle>Edit Branch Assignment</DialogTitle>
@@ -815,7 +793,7 @@ export function BranchHeadsTab({
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 flex-1 overflow-y-auto min-h-0">
+          <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
             {/* Current Assignment Display */}
             {branchHeadToEdit && (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -1026,13 +1004,11 @@ export function BranchHeadsTab({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Branch Head Dialog with Password */}
+      {/* Delete Branch Head Dialog */}
       <Dialog open={isDeleteModalOpen} onOpenChangeAction={(open) => {
         setIsDeleteModalOpen(open);
         if (!open) {
           setBranchHeadToDelete(null);
-          setDeletePassword('');
-          setDeletePasswordError('');
         }
       }}>
         <DialogContent className="max-w-md p-6 delete-dialog-container">
@@ -1046,37 +1022,6 @@ export function BranchHeadsTab({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 px-2 mt-6">
-            <div className="space-y-2">
-              <Label htmlFor="deletePassword" className="text-sm font-medium text-gray-700">
-                Enter your password to confirm <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="deletePassword"
-                type="password"
-                placeholder="Enter your password"
-                value={deletePassword}
-                onChange={(e) => {
-                  setDeletePassword(e.target.value);
-                  setDeletePasswordError('');
-                }}
-                className={deletePasswordError ? 'border-red-500' : ''}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && deletePassword) {
-                    // Trigger delete on Enter key
-                    const deleteButton = document.querySelector('[data-delete-button]') as HTMLButtonElement;
-                    if (deleteButton) {
-                      deleteButton.click();
-                    }
-                  }
-                }}
-              />
-              {deletePasswordError && (
-                <p className="text-sm text-red-600">{deletePasswordError}</p>
-              )}
-            </div>
-          </div>
-
           <DialogFooter className="pt-6 px-2">
             <div className="flex justify-end space-x-4 w-full">
               <Button
@@ -1084,48 +1029,17 @@ export function BranchHeadsTab({
                 onClick={() => {
                   setIsDeleteModalOpen(false);
                   setBranchHeadToDelete(null);
-                  setDeletePassword('');
-                  setDeletePasswordError('');
                 }}
                 className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
               >
                 Cancel
               </Button>
               <Button
-                data-delete-button
                 className='bg-red-600 hover:bg-red-700 text-white'
                 onClick={async () => {
                   if (!branchHeadToDelete) return;
-                  
-                  if (!deletePassword) {
-                    setDeletePasswordError('Password is required');
-                    return;
-                  }
 
                   try {
-                    // Get current user to verify password
-                    if (!currentUser) {
-                      setDeletePasswordError('User not found. Please refresh and try again.');
-                      return;
-                    }
-
-                    // Get the user's password from the accounts data
-                    const userAccount = (accountsData as any).find((account: any) =>
-                      account.email === currentUser.email || account.username === currentUser.email
-                    );
-
-                    if (!userAccount) {
-                      setDeletePasswordError('User account not found. Please refresh and try again.');
-                      return;
-                    }
-
-                    // Verify password
-                    if (deletePassword !== userAccount.password) {
-                      setDeletePasswordError('Incorrect password. Please try again.');
-                      return;
-                    }
-
-                    // Password verified - proceed with deletion
                     // Remove branch assignment (set branch to empty)
                     await clientDataService.updateEmployee(branchHeadToDelete.id, {
                       branch: '',
@@ -1161,11 +1075,8 @@ export function BranchHeadsTab({
                     // Close modal and reset
                     setIsDeleteModalOpen(false);
                     setBranchHeadToDelete(null);
-                    setDeletePassword('');
-                    setDeletePasswordError('');
                   } catch (error) {
                     console.error('Error deleting branch assignment:', error);
-                    setDeletePasswordError('An error occurred. Please try again.');
                     toastMessages.generic.error(
                       'Delete Failed',
                       'Failed to remove branch assignment. Please try again.'

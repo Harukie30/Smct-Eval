@@ -31,6 +31,7 @@ interface EditUserModalProps {
   departments: string[];
   branches: string[] | {id: string, name: string}[];
   positions: {id: string, name: string}[];
+  onRefresh?: () => void | Promise<void>;
 }
 
 const EditUserModal: React.FC<EditUserModalProps> = ({
@@ -40,7 +41,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   onSave,
   departments,
   branches,
-  positions
+  positions,
+  onRefresh
 }) => {
   const [formData, setFormData] = useState<User>({
     id: 0,
@@ -176,7 +178,16 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         await new Promise(resolve => setTimeout(resolve, 1000));
         console.log('Calling onSave...');
         await onSave(formData);
-        console.log('Save completed, closing modal...');
+        console.log('Save completed, refreshing table...');
+        
+        // Refresh the table if onRefresh callback is provided
+        // This ensures the table updates with the latest data
+        if (onRefresh) {
+          await onRefresh();
+          // Small delay to ensure state updates propagate
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
         success('Success! Your changes have been saved.');
         onClose();
       } catch (error) {
@@ -378,7 +389,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               options={[
                 { value: 'admin', label: 'Admin' },
                 { value: 'hr', label: 'HR' },
-                { value: 'manager', label: 'Manager' },
                 { value: 'evaluator', label: 'Evaluator' },
                 { value: 'employee', label: 'Employee' }
               ]}
