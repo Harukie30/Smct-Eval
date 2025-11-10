@@ -63,16 +63,28 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const { success } = useToast();
 
+  // Helper function to check if branch is HO, Head Office, or none
+  const isBranchHOOrNone = (branch: string): boolean => {
+    if (!branch) return false;
+    const branchLower = branch.toLowerCase().trim();
+    return branchLower === 'ho' || 
+           branchLower === 'head office' || 
+           branchLower === 'none' ||
+           branchLower === 'none ho';
+  };
+
   // Update form data when user prop changes
   useEffect(() => {
     if (user) {
+      const branchValue = (user.branch && typeof user.branch === 'string') ? user.branch : (user.branch ? String(user.branch) : '');
       setFormData({
         id: user.id,
         name: user.name || '',
         email: user.email || '',
         position: user.position || '',
-        department: user.department || '',
-        branch: (user.branch && typeof user.branch === 'string') ? user.branch : (user.branch ? String(user.branch) : ''),
+        // Clear department if branch is NOT HO/none/Head Office (i.e., regular branch)
+        department: isBranchHOOrNone(branchValue) ? (user.department || '') : '',
+        branch: branchValue,
         role: user.role || '',
         username: user.username || '',
         password: user.password || '',
@@ -102,7 +114,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       newErrors.position = 'Position is required';
     }
 
-    if (!formData.department.trim()) {
+    // Department is only required if branch IS HO/none/Head Office
+    if (isBranchHOOrNone(formData.branch) && !formData.department.trim()) {
       newErrors.department = 'Department is required';
     }
 
@@ -131,10 +144,19 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   };
 
   const handleInputChange = (field: keyof User, value: string | boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    // If branch is changed to a regular branch (not HO/none/Head Office), clear department
+    if (field === 'branch' && typeof value === 'string' && !isBranchHOOrNone(value)) {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value,
+        department: '' // Clear department when branch is a regular branch (not HO/none)
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
 
     // Clear error when user starts typing
     if (errors[field]) {
@@ -311,21 +333,23 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             {errors.position && <p className="text-sm text-red-500">{errors.position}</p>}
           </div>
 
-          {/* Department */}
-          <div className="space-y-2 w-1/2">
-            <Label htmlFor="department">Department *</Label>
-            <Combobox
-              options={departments}
-              value={formData.department}
-              onValueChangeAction={(value) => handleInputChange('department', value as string)}
-              placeholder="Select department"
-              searchPlaceholder="Search departments..."
-              emptyText="No departments found."
-              className={errors.department ? 'border-red-500' : 'bg-white'}
-              error={errors.department || null}
-            />
-            {errors.department && <p className="text-sm text-red-500">{errors.department}</p>}
-          </div>
+          {/* Department - Show only if branch is HO, Head Office, or none */}
+          {isBranchHOOrNone(formData.branch) && (
+            <div className="space-y-2 w-1/2">
+              <Label htmlFor="department">Department *</Label>
+              <Combobox
+                options={departments.map(dept => ({ value: dept, label: dept }))}
+                value={formData.department}
+                onValueChangeAction={(value) => handleInputChange('department', value as string)}
+                placeholder="Select department"
+                searchPlaceholder="Search departments..."
+                emptyText="No departments found."
+                className={errors.department ? 'border-red-500' : 'bg-white'}
+                error={errors.department || null}
+              />
+              {errors.department && <p className="text-sm text-red-500">{errors.department}</p>}
+            </div>
+          )}
 
           {/* Branch */}
           <div className="space-y-2 w-1/2">

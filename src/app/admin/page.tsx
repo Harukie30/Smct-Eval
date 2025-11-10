@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { withAuth } from '@/hoc';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,19 +15,22 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Plus, RefreshCcw } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 import EditUserModal from '@/components/EditUserModal';
 import { toastMessages } from '@/lib/toastMessages';
 import clientDataService from '@/lib/clientDataService';
-import { apiService } from '@/lib/apiService';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 
-// Import new tab components
-import { OverviewTab } from './components/OverviewTab';
-import { UserManagementTab } from './components/UserManagementTab';
-import { EmployeeManagementTab } from './components/EmployeeManagementTab';
-import { EvaluatedReviewsTab } from './components/EvaluatedReviewsTab';
+// Lazy load tab components for better performance
+const OverviewTab = lazy(() => import('./OverviewTab').then(m => ({ default: m.OverviewTab })));
+const UserManagementTab = lazy(() => import('./UserManagementTab').then(m => ({ default: m.UserManagementTab })));
+const EmployeeManagementTab = lazy(() => import('./EmployeeManagementTab').then(m => ({ default: m.EmployeeManagementTab })));
+const EvaluatedReviewsTab = lazy(() => import('./EvaluatedReviewsTab').then(m => ({ default: m.EvaluatedReviewsTab })));
+const DepartmentsTab = lazy(() => import('./DepartmentsTab').then(m => ({ default: m.DepartmentsTab })));
+const BranchHeadsTab = lazy(() => import('./BranchHeadsTab').then(m => ({ default: m.BranchHeadsTab })));
+const BranchesTab = lazy(() => import('./BranchesTab').then(m => ({ default: m.BranchesTab })));
+const AreaManagersTab = lazy(() => import('./AreaManagersTab').then(m => ({ default: m.AreaManagersTab })));
 
 // Import data
 import accountsDataRaw from '@/data/accounts.json';
@@ -128,41 +131,11 @@ interface Department {
   performance: number;
 }
 
-interface Branch {
-  id: string;
-  name: string;
-}
-
-// Function to get quarter from date
-const getQuarterFromDate = (dateString: string): string => {
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Unknown';
-
-    const month = date.getMonth() + 1; // getMonth() returns 0-11
-    const year = date.getFullYear();
-
-    if (month >= 1 && month <= 3) return `Q1 ${year}`;
-    if (month >= 4 && month <= 6) return `Q2 ${year}`;
-    if (month >= 7 && month <= 9) return `Q3 ${year}`;
-    if (month >= 10 && month <= 12) return `Q4 ${year}`;
-
-    return 'Unknown';
-  } catch (error) {
-    return 'Unknown';
-  }
-};
-
-const getQuarterColor = (quarter: string) => {
-  if (quarter.includes('Q1')) return 'bg-blue-100 text-blue-800';
-  if (quarter.includes('Q2')) return 'bg-green-100 text-green-800';
-  if (quarter.includes('Q3')) return 'bg-yellow-100 text-yellow-800';
-  if (quarter.includes('Q4')) return 'bg-purple-100 text-purple-800';
-  return 'bg-gray-100 text-gray-800';
-};
 
 function AdminDashboard() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [positionsData, setPositionsData] = useState<{id: string, name: string}[]>([]);
   const [branchesData, setBranchesData] = useState<{id: string, name: string}[]>([]);
@@ -171,16 +144,20 @@ function AdminDashboard() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [suspendedEmployees, setSuspendedEmployees] = useState<SuspendedEmployee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [departmentsRefreshing, setDepartmentsRefreshing] = useState(false);
-  const [branchesRefreshing, setBranchesRefreshing] = useState(false);
-  const [branchHeadsRefreshing, setBranchHeadsRefreshing] = useState(false);
-  const [areaManagersRefreshing, setAreaManagersRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   // Initialize active tab from URL parameter or default to 'overview'
   const tabParam = searchParams.get('tab');
-  const [active, setActive] = useState(tabParam || 'overview');
+  const [active, setActiveState] = useState(tabParam || 'overview');
+
+  // Function to update both state and URL
+  const setActive = useCallback((tab: string) => {
+    setActiveState(tab);
+    // Update URL without page reload
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [searchParams, router, pathname]);
 
   // Function to refresh user data (used by shared hook)
   const refreshUserData = async () => {
@@ -273,6 +250,14 @@ function AdminDashboard() {
     }
   };
 
+  // Ref to store refresh function to avoid dependency issues
+  const refreshUserDataRef = useRef(refreshUserData);
+  
+  // Update ref when function changes
+  useEffect(() => {
+    refreshUserDataRef.current = refreshUserData;
+  }, [refreshUserData]);
+
   // Auto-refresh functionality using shared hook
   const {
     showRefreshModal,
@@ -289,9 +274,9 @@ function AdminDashboard() {
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab && tab !== active) {
-      setActive(tab);
+      setActiveState(tab);
     }
-  }, [searchParams]);
+  }, [searchParams, active]);
 
   // Real-time data updates via localStorage events
   useEffect(() => {
@@ -307,55 +292,6 @@ function AdminDashboard() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Load departments and branches when their tabs are active
-  useEffect(() => {
-    const loadDepartmentsAndBranches = async () => {
-      if (active === 'departments') {
-        setDepartmentsRefreshing(true);
-        try {
-          // Load departments from departmentsData
-          setDepartments(departmentsData);
-        } catch (error) {
-          console.error('Error loading departments:', error);
-        } finally {
-          setDepartmentsRefreshing(false);
-        }
-      } else if (active === 'branches') {
-        setBranchesRefreshing(true);
-        try {
-          // Load branches from API
-          const branchesData = await clientDataService.getBranches();
-          setBranches(branchesData);
-        } catch (error) {
-          console.error('Error loading branches:', error);
-        } finally {
-          setBranchesRefreshing(false);
-        }
-      } else if (active === 'branch-heads') {
-        setBranchHeadsRefreshing(true);
-        try {
-          // Data is already loaded in employees, just trigger a refresh
-          await new Promise(resolve => setTimeout(resolve, 300));
-        } catch (error) {
-          console.error('Error loading branch heads:', error);
-        } finally {
-          setBranchHeadsRefreshing(false);
-        }
-      } else if (active === 'area-managers') {
-        setAreaManagersRefreshing(true);
-        try {
-          // Data is already loaded in employees, just trigger a refresh
-          await new Promise(resolve => setTimeout(resolve, 300));
-        } catch (error) {
-          console.error('Error loading area managers:', error);
-        } finally {
-          setAreaManagersRefreshing(false);
-        }
-      }
-    };
-
-    loadDepartmentsAndBranches();
-  }, [active]);
 
   // Function to refresh evaluated reviews only
   const handleRefreshEvaluatedReviews = async () => {
@@ -385,8 +321,6 @@ function AdminDashboard() {
   const [dashboardTab, setDashboardTab] = useState<'suspended' | 'reinstated'>('suspended');
   const [suspendedSearchTerm, setSuspendedSearchTerm] = useState('');
   const [reinstatedSearchTerm, setReinstatedSearchTerm] = useState('');
-  const [userSearchTerm, setUserSearchTerm] = useState('');
-  const [userManagementTab, setUserManagementTab] = useState<'active' | 'new'>('active');
   const [approvedRegistrations, setApprovedRegistrations] = useState<number[]>([]);
   const [rejectedRegistrations, setRejectedRegistrations] = useState<number[]>([]);
   const [pendingRegistrations, setPendingRegistrations] = useState<any[]>([]);
@@ -783,18 +717,20 @@ function AdminDashboard() {
     setReinstatedEmployeeToDelete(null);
   };
 
-  // Function to filter out suspended employees from User Management
-  // Only shows employees who are NOT currently suspended (includes reinstated employees)
-  const getActiveEmployees = () => {
+  // Memoized active employees (only recalculates when employees or suspendedEmployees change)
+  const activeEmployees = useMemo(() => {
     const currentlySuspendedIds = suspendedEmployees
-      .filter(emp => emp.status === 'suspended') // Only currently suspended
+      .filter(emp => emp.status === 'suspended')
       .map(emp => emp.id);
 
     return employees.filter(emp => 
       !currentlySuspendedIds.includes(emp.id) && 
-      (emp.isActive !== false) // Include employees where isActive is true or undefined
+      (emp.isActive !== false)
     );
-  };
+  }, [employees, suspendedEmployees]);
+
+  // Function to filter out suspended employees from User Management (kept for backward compatibility)
+  const getActiveEmployees = () => activeEmployees;
 
   // Function to check if an employee was previously suspended and reinstated
   const wasEmployeeReinstated = (employeeId: number) => {
@@ -817,49 +753,9 @@ function AdminDashboard() {
     };
   };
 
-  const getBranchStats = (branchName: string) => {
-    const branchEmployees = employees.filter(emp => emp.branch === branchName);
-    return {
-      count: branchEmployees.length,
-      managers: branchEmployees.filter(emp => emp.role === 'Manager' || emp.role?.toLowerCase().includes('manager')).length
-    };
-  };
-
-  // Helper functions to filter branch heads and area managers from accounts.json data
-  const getBranchHeads = () => {
-    return employees.filter(emp => {
-      const position = emp.position?.toLowerCase() || '';
-      const role = emp.role?.toLowerCase() || '';
-      const name = emp.name?.toLowerCase() || '';
-      
-      // Filter by position, role, or if role is manager and has branch assigned
-      return position.includes('branch head') || 
-             position.includes('branchhead') ||
-             position.includes('branch manager') ||
-             role.includes('branch head') ||
-             role.includes('branchhead') ||
-             (role === 'manager' && emp.branch && !position.includes('area'));
-    });
-  };
-
-  const getAreaManagers = () => {
-    return employees.filter(emp => {
-      const position = emp.position?.toLowerCase() || '';
-      const role = emp.role?.toLowerCase() || '';
-      
-      // Filter by position, role, or if role is manager with area-related position
-      return position.includes('area manager') || 
-             position.includes('areamanager') ||
-             position.includes('regional manager') ||
-             role.includes('area manager') ||
-             role.includes('areamanager') ||
-             (role === 'manager' && position.includes('area'));
-    });
-  };
 
   // Function to update system metrics with correct active user count
   const updateSystemMetrics = () => {
-    const activeEmployees = getActiveEmployees();
     const currentlySuspendedCount = suspendedEmployees.filter(emp => emp.status === 'suspended').length;
 
     setSystemMetrics(prev => prev ? {
@@ -908,15 +804,21 @@ function AdminDashboard() {
     } : null);
   };
 
-  // Function to get only active suspended employees (hide reinstated ones)
-  const getActiveSuspendedEmployees = () => {
+  // Memoized active suspended employees (only recalculates when suspendedEmployees change)
+  const activeSuspendedEmployees = useMemo(() => {
     return suspendedEmployees.filter(employee => employee.status === 'suspended');
-  };
+  }, [suspendedEmployees]);
 
-  // Function to get reinstated employees
-  const getReinstatedEmployees = () => {
+  // Function wrapper for backward compatibility
+  const getActiveSuspendedEmployees = () => activeSuspendedEmployees;
+
+  // Memoized reinstated employees (only recalculates when suspendedEmployees change)
+  const reinstatedEmployees = useMemo(() => {
     return suspendedEmployees.filter(employee => employee.status === 'reinstated');
-  };
+  }, [suspendedEmployees]);
+
+  // Function wrapper for backward compatibility
+  const getReinstatedEmployees = () => reinstatedEmployees;
 
   // Function to clean up duplicate suspended employees (keep only the latest record per employee)
   const cleanupDuplicateSuspendedEmployees = () => {
@@ -947,12 +849,11 @@ function AdminDashboard() {
     });
   };
 
-  // Search filter functions
-  const getFilteredSuspendedEmployees = () => {
-    const activeSuspended = getActiveSuspendedEmployees();
-    if (!suspendedSearchTerm) return activeSuspended;
+  // Memoized filtered suspended employees (only recalculates when activeSuspendedEmployees or suspendedSearchTerm change)
+  const filteredSuspendedEmployees = useMemo(() => {
+    if (!suspendedSearchTerm) return activeSuspendedEmployees;
 
-    return activeSuspended.filter(employee =>
+    return activeSuspendedEmployees.filter(employee =>
       employee.name.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
       employee.email.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
       employee.position.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
@@ -960,13 +861,16 @@ function AdminDashboard() {
       (employee.branch || '').toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
       employee.suspensionReason.toLowerCase().includes(suspendedSearchTerm.toLowerCase())
     );
-  };
+  }, [activeSuspendedEmployees, suspendedSearchTerm]);
 
-  const getFilteredReinstatedEmployees = () => {
-    const reinstated = getReinstatedEmployees();
-    if (!reinstatedSearchTerm) return reinstated;
+  // Function wrapper for backward compatibility
+  const getFilteredSuspendedEmployees = () => filteredSuspendedEmployees;
 
-    return reinstated.filter(employee =>
+  // Memoized filtered reinstated employees (only recalculates when reinstatedEmployees or reinstatedSearchTerm change)
+  const filteredReinstatedEmployees = useMemo(() => {
+    if (!reinstatedSearchTerm) return reinstatedEmployees;
+
+    return reinstatedEmployees.filter(employee =>
       employee.name.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
       employee.email.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
       employee.position.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
@@ -974,66 +878,12 @@ function AdminDashboard() {
       (employee.branch || '').toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
       employee.suspensionReason.toLowerCase().includes(reinstatedSearchTerm.toLowerCase())
     );
-  };
+  }, [reinstatedEmployees, reinstatedSearchTerm]);
 
-  const getFilteredActiveEmployees = () => {
-    const activeEmployees = getActiveEmployees();
-    if (!userSearchTerm) return activeEmployees;
+  // Function wrapper for backward compatibility
+  const getFilteredReinstatedEmployees = () => filteredReinstatedEmployees;
 
-    return activeEmployees.filter(employee =>
-      employee.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      employee.position.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      employee.department.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      (employee.branch || '').toLowerCase().includes(userSearchTerm.toLowerCase())
-    );
-  };
 
-  // Function to get newly registered accounts from pending registrations
-  const getNewlyRegisteredAccounts = () => {
-    return pendingRegistrations
-      .filter(registration => {
-        // Only hide registrations that are actually approved in the file (status === 'approved')
-        // Don't hide based on localStorage approvedRegistrations array
-        return registration.status !== 'approved';
-      })
-      .map(registration => {
-        let status: 'pending_verification' | 'approved' | 'rejected' = 'pending_verification';
-
-        // Check localStorage for status overrides (only if the registration is still in pending)
-        if (rejectedRegistrations.includes(registration.id)) {
-          status = 'rejected';
-        } else if (registration.status === 'rejected') {
-          status = 'rejected';
-        }
-        // Note: We don't set status to 'approved' here because approved registrations
-        // should be removed from pending-registrations.json entirely
-
-        return {
-          id: registration.id,
-          name: `${registration.firstName} ${registration.lastName}`,
-          email: registration.email,
-          position: registration.position,
-          department: registration.department,
-          branch: registration.branch,
-          registrationDate: new Date(registration.submittedAt),
-          status
-        };
-      });
-  };
-
-  const getFilteredNewAccounts = () => {
-    const newAccounts = getNewlyRegisteredAccounts();
-    if (!userSearchTerm) return newAccounts;
-
-    return newAccounts.filter(account =>
-      account.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      account.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      account.position.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      account.department.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      (account.branch || '').toLowerCase().includes(userSearchTerm.toLowerCase())
-    );
-  };
 
   useEffect(() => {
     const loadAdminData = async () => {
@@ -1202,15 +1052,16 @@ function AdminDashboard() {
     });
   };
 
-  const sidebarItems: SidebarItem[] = [
+  const sidebarItems: SidebarItem[] = useMemo(() => [
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'dashboards', label: 'Employee Monitoring', icon: '💻' },
     { id: 'users', label: 'User Management', icon: '👥' },
+    { id: 'evaluated-reviews', label: 'Evaluation Records', icon: '📋' },
     { id: 'departments', label: 'Departments', icon: '🏢' },
     { id: 'branches', label: 'Branches', icon: '📍' },
     { id: 'branch-heads', label: 'Branch Heads', icon: '👔' },
     { id: 'area-managers', label: 'Area Managers', icon: '🎯' },
-  ];
+  ], []);
 
   if (loading || !systemMetrics || !dashboardStats) {
     return (
@@ -1246,30 +1097,6 @@ function AdminDashboard() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">System Health</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-2">
-            <span className="text-3xl font-bold text-gray-900">{systemMetrics.uptime}</span>
-          </div>
-          <Badge className={`mt-2 ${getSystemHealthColor(systemMetrics.systemHealth)}`}>
-            {systemMetrics.systemHealth}
-          </Badge>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">Storage</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-gray-900">{systemMetrics.storageUsed}TB</div>
-          <p className="text-sm text-gray-500 mt-1">of {systemMetrics.storageTotal}TB used</p>
-          <Progress value={(systemMetrics.storageUsed / systemMetrics.storageTotal) * 100} className="mt-2" />
-        </CardContent>
-      </Card>
     </>
   );
 
@@ -1284,688 +1111,95 @@ function AdminDashboard() {
       profile={{ name: 'System Administrator', roleOrPosition: 'Admin' }}
     >
       {active === 'overview' && (
-        <OverviewTab
-          systemMetrics={systemMetrics}
-          dashboardStats={dashboardStats}
-          loading={loading}
-          evaluatedReviews={evaluatedReviews}
-          departments={departmentsData}
-        />
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        }>
+          <OverviewTab key={active} />
+        </Suspense>
       )}
 
       {active === 'dashboards' && (
-        <EmployeeManagementTab
-          suspendedEmployees={suspendedEmployees}
-          onReinstate={(employee) => handleReinstateEmployee(employee.id)}
-          onDeleteSuspended={(employee) => openDeleteModal(employee as any)}
-          onDeleteReinstated={openDeleteReinstatedModal}
-        />
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        }>
+          <EmployeeManagementTab
+            suspendedEmployees={suspendedEmployees}
+            onReinstate={(employee) => handleReinstateEmployee(employee.id)}
+            onDeleteSuspended={(employee) => openDeleteModal(employee as any)}
+            onDeleteReinstated={openDeleteReinstatedModal}
+          />
+        </Suspense>
       )}
 
       {active === 'users' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>User Management</CardTitle>
-            <CardDescription>Manage system users and permissions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Tab Navigation */}
-            <div className="flex space-x-1 mb-6">
-              <Button
-                variant={userManagementTab === 'active' ? 'default' : 'outline'}
-                onClick={() => setUserManagementTab('active')}
-                className="flex items-center gap-2"
-              >
-                <span>👥</span>
-                Active Users ({getFilteredActiveEmployees().length})
-              </Button>
-              <Button
-                variant={userManagementTab === 'new' ? 'default' : 'outline'}
-                onClick={() => setUserManagementTab('new')}
-                className="flex items-center gap-2"
-              >
-                <span>🆕</span>
-                New Registrations ({getFilteredNewAccounts().length})
-              </Button>
-            </div>
-
-            {/* Active Users Tab */}
-            {userManagementTab === 'active' && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex space-x-4">
-                    <Input
-                      placeholder="Search users..."
-                      className="w-64"
-                      value={userSearchTerm}
-                      onChange={(e) => setUserSearchTerm(e.target.value)}
-                    />
-                    <Select>
-                      <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Filter by role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Roles</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="hr">HR</SelectItem>
-                        <SelectItem value="evaluator">Evaluator</SelectItem>
-                        <SelectItem value="employee">Employee</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => refreshDashboardData(true, false)}
-                      disabled={isRefreshing}
-                      className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
-                    >
-                      {isRefreshing ? (
-                        <>
-                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Refreshing...
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-white"><svg
-                              className="h-5 w-5 font-bold"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg></span>
-                          Refresh
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      onClick={() => setIsAddUserModalOpen(true)}
-                      className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2"
-                    >
-                      <Plus className="h-5 w-5 font-blod " />
-                      Add User
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="max-h-[450px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Position</TableHead>
-                        <TableHead>Department</TableHead>
-                        <TableHead>Branch</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {getFilteredActiveEmployees().length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                            No active users found
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        getFilteredActiveEmployees().slice(0, 10).map((employee) => (
-                        <TableRow key={employee.id}>
-                          <TableCell className="font-medium">{employee.name}</TableCell>
-                          <TableCell>{employee.email}</TableCell>
-                          <TableCell>{employee.position}</TableCell>
-                          <TableCell>{employee.department}</TableCell>
-                          <TableCell>{employee.branch || 'N/A'}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{employee.role}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            {wasEmployeeReinstated(employee.id) ? (
-                              <Badge
-                                className="text-blue-600 bg-blue-100"
-                                title={`Reinstated on ${getEmployeeReinstatementDate(employee.id) ? new Date(getEmployeeReinstatementDate(employee.id)!).toLocaleDateString() : 'Unknown date'}`}
-                              >
-                                Reinstated
-                              </Badge>
-                            ) : (
-                              <Badge className="text-green-600 bg-green-100">Active</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-blue-600 hover:text-blue-700"
-                                onClick={() => openEditModal(employee)}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-orange-600 hover:text-orange-700"
-                                onClick={() => openSuspendModal(employee)}
-                              >
-                                Suspend
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-600 hover:text-red-700"
-                                onClick={() => openDeleteModal(employee)}
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        }>
+          <UserManagementTab
+            key={active}
+            branchesData={branchesData}
+            positionsData={positionsData}
+            suspendedEmployees={suspendedEmployees}
+            onSuspendedEmployeesChange={setSuspendedEmployees}
+            refreshDashboardData={refreshDashboardData}
+          />
+        </Suspense>
       )}
 
-      {/* New Registrations Tab Content */}
-      {active === 'users' && userManagementTab === 'new' && (
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle>New Registrations</CardTitle>
-            <CardDescription>Review and approve new user registrations</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div className="flex space-x-4">
-                  <Input
-                    placeholder="Search new registrations..."
-                    className="w-64"
-                    value={userSearchTerm}
-                    onChange={(e) => setUserSearchTerm(e.target.value)}
-                  />
-                  <Select>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="pending_verification">Pending Verification</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => refreshDashboardData(true, false)}
-                    disabled={isRefreshing}
-                    className="flex items-center gap-2"
-                  >
-                    {isRefreshing ? (
-                      <>
-                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Refreshing...
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-white"><svg
-                            className="h-5 w-5 font-bold"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg></span>
-                        Refresh
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="max-h-[450px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Position</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Registration Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {getFilteredNewAccounts().map((account) => (
-                      <TableRow key={account.id}>
-                        <TableCell className="font-medium">{account.name}</TableCell>
-                        <TableCell>{account.email}</TableCell>
-                        <TableCell>{account.position}</TableCell>
-                        <TableCell>{account.department}</TableCell>
-                        <TableCell>{account.registrationDate.toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <Badge className={
-                            account.status === 'rejected'
-                              ? 'bg-red-100 text-red-800 hover:bg-red-200'
-                              : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                          }>
-                            {account.status === 'rejected'
-                              ? 'REJECTED'
-                              : 'PENDING VERIFICATION'
-                            }
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            {account.status === 'pending_verification' && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-white bg-green-500 hover:text-white hover:bg-green-600"
-                                  onClick={() => handleApproveRegistration(account.id, account.name)}
-                                >
-                                  Approve
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-white bg-red-500 hover:bg-red-600 hover:text-white"
-                                  onClick={() => handleRejectRegistration(account.id, account.name)}
-                                >
-                                  Reject
-                                </Button>
-                              </>
-                            )}
-                            {account.status === 'rejected' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-green-600 hover:text-green-700"
-                                onClick={() => handleApproveRegistration(account.id, account.name)}
-                              >
-                                Approve
-                              </Button>
-                            )}
-                            <Button variant="ghost" size="sm">View Details</Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {getFilteredNewAccounts().length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  {userSearchTerm ? 'No new registrations match your search.' : 'No new registrations found.'}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      {active === 'evaluated-reviews' && (
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        }>
+          <EvaluatedReviewsTab key={active} />
+        </Suspense>
       )}
 
       {active === 'departments' && (
-        <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
-          {departmentsRefreshing ? (
-            <>
-              {/* Centered Loading Spinner with Logo */}
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    {/* Spinning ring */}
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    {/* Logo in center */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 font-medium">Loading departments...</p>
-                </div>
-              </div>
-              
-              {/* Grid structure visible in background */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <Card key={`skeleton-dept-${index}`} className="animate-pulse">
-                    <CardHeader>
-                      <div className="flex justify-between items-center">
-                        <div className="h-6 w-32 bg-gray-200 rounded"></div>
-                        <div className="h-5 w-20 bg-gray-200 rounded-full"></div>
-                      </div>
-                      <div className="h-4 w-40 bg-gray-200 rounded mt-2"></div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-gray-100 rounded-lg">
-                          <div className="h-6 w-12 bg-gray-200 rounded mx-auto mb-2"></div>
-                          <div className="h-3 w-16 bg-gray-200 rounded mx-auto"></div>
-                        </div>
-                        <div className="text-center p-3 bg-gray-100 rounded-lg">
-                          <div className="h-6 w-12 bg-gray-200 rounded mx-auto mb-2"></div>
-                          <div className="h-3 w-16 bg-gray-200 rounded mx-auto"></div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {departments.map((dept) => {
-                const stats = getDepartmentStats(dept.name);
-                return (
-                  <Card key={dept.id}>
-                    <CardHeader>
-                      <CardTitle className="flex justify-between items-center">
-                        {dept.name}
-                        <Badge variant="outline">{stats.count} employees</Badge>
-                      </CardTitle>
-                      <CardDescription>Department Manager</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-blue-50 rounded-lg">
-                          <div className="text-lg font-bold text-blue-600">{stats.count}</div>
-                          <div className="text-xs text-gray-600">Employees</div>
-                        </div>
-                        <div className="text-center p-3 bg-green-50 rounded-lg">
-                          <div className="text-lg font-bold text-green-600">{stats.managers}</div>
-                          <div className="text-xs text-gray-600">Managers</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        }>
+          <DepartmentsTab />
+        </Suspense>
       )}
 
       {active === 'branches' && (
-        <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
-          {branchesRefreshing ? (
-            <>
-              {/* Centered Loading Spinner with Logo */}
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    {/* Spinning ring */}
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    {/* Logo in center */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 font-medium">Loading branches...</p>
-                </div>
-              </div>
-              
-              {/* Grid structure visible in background */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <Card key={`skeleton-branch-${index}`} className="animate-pulse">
-                    <CardHeader>
-                      <div className="flex justify-between items-center">
-                        <div className="h-6 w-32 bg-gray-200 rounded"></div>
-                        <div className="h-5 w-20 bg-gray-200 rounded-full"></div>
-                      </div>
-                      <div className="h-4 w-40 bg-gray-200 rounded mt-2"></div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-4 bg-gray-100 rounded-lg">
-                          <div className="h-7 w-16 bg-gray-200 rounded mx-auto mb-2"></div>
-                          <div className="h-4 w-24 bg-gray-200 rounded mx-auto"></div>
-                        </div>
-                        <div className="text-center p-4 bg-gray-100 rounded-lg">
-                          <div className="h-7 w-16 bg-gray-200 rounded mx-auto mb-2"></div>
-                          <div className="h-4 w-16 bg-gray-200 rounded mx-auto"></div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {branches.map((branch) => {
-                const stats = getBranchStats(branch.name);
-                return (
-                  <Card key={branch.id}>
-                    <CardHeader>
-                      <CardTitle className="flex justify-between items-center">
-                        {branch.name}
-                        <Badge variant="outline">{stats.count} employees</Badge>
-                      </CardTitle>
-                      <CardDescription>Branch Location</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-4 bg-blue-50 rounded-lg">
-                          <div className="text-2xl font-bold text-blue-600">{stats.count}</div>
-                          <div className="text-sm text-gray-600">Total Employees</div>
-                        </div>
-                        <div className="text-center p-4 bg-green-50 rounded-lg">
-                          <div className="text-2xl font-bold text-green-600">{stats.managers}</div>
-                          <div className="text-sm text-gray-600">Manager</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        }>
+          <BranchesTab employees={employees} />
+        </Suspense>
       )}
 
       {active === 'branch-heads' && (
-        <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
-          {branchHeadsRefreshing ? (
-            <>
-              {/* Centered Loading Spinner with Logo */}
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    {/* Spinning ring */}
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    {/* Logo in center */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 font-medium">Loading branch heads...</p>
-                </div>
-              </div>
-              
-              {/* Table skeleton visible in background */}
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-48" />
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <div key={index} className="flex items-center space-x-4">
-                        <Skeleton className="h-12 w-12 rounded-full" />
-                        <div className="space-y-2 flex-1">
-                          <Skeleton className="h-4 w-3/4" />
-                          <Skeleton className="h-4 w-1/2" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Branch Heads</CardTitle>
-                <CardDescription>List of all branch heads in the organization</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="max-h-[600px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Position</TableHead>
-                        <TableHead>Department</TableHead>
-                        <TableHead>Branch</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {getBranchHeads().length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                            No branch heads found
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        getBranchHeads().map((head) => (
-                          <TableRow key={head.id}>
-                            <TableCell className="font-medium">{head.name}</TableCell>
-                            <TableCell>{head.email}</TableCell>
-                            <TableCell>{head.position}</TableCell>
-                            <TableCell>{head.department}</TableCell>
-                            <TableCell>{head.branch || 'N/A'}</TableCell>
-                            <TableCell>
-                              <Badge className={head.isActive === false ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
-                                {head.isActive === false ? 'Inactive' : 'Active'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex space-x-2">
-                                <Button variant="ghost" size="sm">View</Button>
-                                <Button variant="ghost" size="sm">Edit</Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        }>
+          <BranchHeadsTab employees={employees} onRefresh={refreshDashboardData} />
+        </Suspense>
       )}
 
       {active === 'area-managers' && (
-        <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
-          {areaManagersRefreshing ? (
-            <>
-              {/* Centered Loading Spinner with Logo */}
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    {/* Spinning ring */}
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    {/* Logo in center */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 font-medium">Loading area managers...</p>
-                </div>
-              </div>
-              
-              {/* Table skeleton visible in background */}
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-48" />
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <div key={index} className="flex items-center space-x-4">
-                        <Skeleton className="h-12 w-12 rounded-full" />
-                        <div className="space-y-2 flex-1">
-                          <Skeleton className="h-4 w-3/4" />
-                          <Skeleton className="h-4 w-1/2" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Area Managers</CardTitle>
-                <CardDescription>List of all area managers in the organization</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="max-h-[600px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Position</TableHead>
-                        <TableHead>Department</TableHead>
-                        <TableHead>Branch</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {getAreaManagers().length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                            No area managers found
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        getAreaManagers().map((manager) => (
-                          <TableRow key={manager.id}>
-                            <TableCell className="font-medium">{manager.name}</TableCell>
-                            <TableCell>{manager.email}</TableCell>
-                            <TableCell>{manager.position}</TableCell>
-                            <TableCell>{manager.department}</TableCell>
-                            <TableCell>{manager.branch || 'N/A'}</TableCell>
-                            <TableCell>{manager.contact || 'N/A'}</TableCell>
-                            <TableCell>
-                              <Badge className={manager.isActive === false ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
-                                {manager.isActive === false ? 'Inactive' : 'Active'}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        }>
+          <AreaManagersTab employees={employees} onRefresh={refreshDashboardData} />
+        </Suspense>
       )}
 
       
