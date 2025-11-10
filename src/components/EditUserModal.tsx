@@ -1,36 +1,26 @@
-import React, { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
-import LoadingAnimation from "@/components/LoadingAnimation";
-import { useToast } from "@/hooks/useToast";
-import { CONFIG } from "../../config/config";
-import clientDataService from "@/lib/clientDataService.api";
-
+import LoadingAnimation from '@/components/LoadingAnimation';
+import { useToast } from '@/hooks/useToast';
 
 interface User {
   id: number;
-  fname: string;
-  lname: string;
+  name: string;
   email: string;
-  position_id: string | number;
-  department_id?: string | number;
-  branch_id: string | number;
-  roles?: any;
+  position: string;
+  department: string;
+  branch: string;
+  role?: string;
   username?: string;
   password?: string;
   contact?: string;
-  is_active?: string ;
+  hireDate?: string;
+  isActive?: boolean;
+  signature?: string;
 }
 
 interface EditUserModalProps {
@@ -38,9 +28,10 @@ interface EditUserModalProps {
   onClose: () => void;
   user: User | null;
   onSave: (updatedUser: User) => void;
-  positions: { value: string | number; label: string }[];
-  departments: { value: string | number; label: string }[];
-  branches: { value: string | number; label: string }[];
+  departments: string[];
+  branches: string[] | {id: string, name: string}[];
+  positions: {id: string, name: string}[];
+  onRefresh?: () => void | Promise<void>;
 }
 
 const EditUserModal: React.FC<EditUserModalProps> = ({
@@ -51,41 +42,58 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   departments,
   branches,
   positions,
+  onRefresh
 }) => {
   const [formData, setFormData] = useState<User>({
     id: 0,
-    fname: "",
-    lname: "",
-    email: "",
-    position_id: 0,
-    department_id: "",
-    branch_id: 0,
-    roles: "",
-    username: "",
-    password: "",
-    contact: "",
-    is_active: "",
+    name: '',
+    email: '',
+    position: '',
+    department: '',
+    branch: '',
+    role: '',
+    username: '',
+    password: '',
+    contact: '',
+    hireDate: '',
+    isActive: true,
+    signature: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { success } = useToast();
+
+  // Helper function to check if branch is HO, Head Office, or none
+  const isBranchHOOrNone = (branch: string): boolean => {
+    if (!branch) return false;
+    const branchLower = branch.toLowerCase().trim();
+    return branchLower === 'ho' || 
+           branchLower === 'head office' || 
+           branchLower === 'none' ||
+           branchLower === 'none ho';
+  };
 
   // Update form data when user prop changes
   useEffect(() => {
     if (user) {
+      const branchValue = (user.branch && typeof user.branch === 'string') ? user.branch : (user.branch ? String(user.branch) : '');
       setFormData({
         id: user.id,
-        fname: user.fname || '',
-        lname: user.lname || '',
+        name: user.name || '',
         email: user.email || '',
-        position_id: user.position_id || '',
-        department_id: user.department_id || '',
-        branch_id: user.branch_id || '',
-        roles: user?.roles?.[0]?.name || (typeof user.roles === 'string' ? user.roles : ''),
+        position: user.position || '',
+        // Clear department if branch is NOT HO/none/Head Office (i.e., regular branch)
+        department: isBranchHOOrNone(branchValue) ? (user.department || '') : '',
+        branch: branchValue,
+        role: user.role || '',
         username: user.username || '',
+        password: user.password || '',
         contact: user.contact || '',
-        is_active: user.is_active || '',
+        hireDate: user.hireDate || '',
+        isActive: user.isActive !== undefined ? user.isActive : true,
+        signature: user.signature || ''
       });
       setErrors({});
     }
@@ -94,53 +102,43 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.fname.trim()) {
-      newErrors.fname = "First name is required";
-    }
-
-    if (!formData.lname.trim()) {
-      newErrors.lname = "Last name is required";
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
+      newErrors.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
+      newErrors.email = 'Please enter a valid email address';
     }
 
-    if (!formData.position_id) {
-      newErrors.positions = "Position is required";
+    if (!formData.position.trim()) {
+      newErrors.position = 'Position is required';
     }
 
-    if (!formData.branch_id) {
-      newErrors.branches = "Branch is required";
+    // Department is only required if branch IS HO/none/Head Office
+    if (isBranchHOOrNone(formData.branch) && !formData.department.trim()) {
+      newErrors.department = 'Department is required';
     }
 
-    if (!formData.roles) {
-      newErrors.role = "Role is required";
+    if (formData.branch && typeof formData.branch === 'string' && !formData.branch.trim()) {
+      newErrors.branch = 'Branch is required';
+    }
+
+    if (!formData.role?.trim()) {
+      newErrors.role = 'Role is required';
     }
 
     if (formData.username && !formData.username.trim()) {
-      newErrors.username = "Username cannot be empty if provided";
+      newErrors.username = 'Username cannot be empty if provided';
     }
 
-    if (
-      formData.contact &&
-      !/^\d{10,15}$/.test(formData.contact.replace(/\D/g, ""))
-    ) {
-      newErrors.contact = "Please enter a valid phone number";
+    if (formData.contact && !/^\d{10,15}$/.test(formData.contact.replace(/\D/g, ''))) {
+      newErrors.contact = 'Please enter a valid phone number';
     }
 
-    if(formData.password == null) {
-      delete newErrors.password;
-    }
-    else if (formData.password && formData.password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters";
-    } else if (formData.password && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password =
-        "Password must contain uppercase, lowercase, and number";
-    } else{
-      delete newErrors.password;
+    if (formData.password && formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters long';
     }
 
     setErrors(newErrors);
@@ -148,39 +146,55 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   };
 
   const handleInputChange = (field: keyof User, value: string | boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    // If branch is changed to a regular branch (not HO/none/Head Office), clear department
+    if (field === 'branch' && typeof value === 'string' && !isBranchHOOrNone(value)) {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value,
+        department: '' // Clear department when branch is a regular branch (not HO/none)
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
 
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors((prev) => ({
+      setErrors(prev => ({
         ...prev,
-        [field]: "",
+        [field]: ''
       }));
     }
   };
- 
-  
+
   const handleSave = async () => {
     if (validateForm()) {
-      console.log("Starting save process...");
+      console.log('Starting save process...');
       setIsSaving(true);
       try {
+        // Simulate a delay to show the loading animation
         await new Promise(resolve => setTimeout(resolve, 1000));
-        const data = new FormData();
-        Object.entries(formData).forEach(([key, value]) => {
-          data.append(key, value as string); 
-        });
-        const save = await clientDataService.updateEmployee(data ,formData.id);
+        console.log('Calling onSave...');
+        await onSave(formData);
+        console.log('Save completed, refreshing table...');
+        
+        // Refresh the table if onRefresh callback is provided
+        // This ensures the table updates with the latest data
+        if (onRefresh) {
+          await onRefresh();
+          // Small delay to ensure state updates propagate
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
         success('Success! Your changes have been saved.');
         onClose();
       } catch (error) {
-        console.error("Error saving user:", error);
+        console.error('Error saving user:', error);
         // You might want to show an error message here
       } finally {
-        console.log("Setting isSaving to false...");
+        console.log('Setting isSaving to false...');
         setIsSaving(false);
       }
     }
@@ -197,38 +211,21 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     <>
       <Dialog open={isOpen} onOpenChangeAction={onClose}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-6 bg-blue-100 animate-popup">
-          <DialogHeader className="pb-6">
-            <DialogTitle className="text-xl font-semibold">
-              Edit User Information
-            </DialogTitle>
-            <DialogDescription className="text-gray-600">
-              Update the user's information below. All fields marked with * are
-              required.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogHeader className="pb-6">
+          <DialogTitle className="text-xl font-semibold">Edit User Information</DialogTitle>
+          <DialogDescription className="text-gray-600">
+            Update the user's information below. All fields marked with * are required.
+          </DialogDescription>
+        </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
-            {/* Name */}
-            <div className="space-y-2">
-              <Label htmlFor="fname">First Name *</Label>
-              <Input
-                id="name"
-                value={formData.fname}
-                onChange={(e) => handleInputChange("fname", e.target.value)}
-                className={errors.name ? "border-red-500 " : "bg-white"}
-                placeholder="Enter full name"
-              />
-              {errors.name && (
-                <p className="text-sm text-red-500">{errors.name}</p>
-              )}
-            </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+          {/* Name */}
           <div className="space-y-2">
-            <Label htmlFor="lname">Last Name *</Label>
+            <Label htmlFor="name">Full Name *</Label>
             <Input
-              id="lname"
-              value={formData.lname}
-              onChange={(e) => handleInputChange('lname', e.target.value)}
+              id="name"
+              value={formData.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
               className={errors.name ? 'border-red-500 ' : 'bg-white'}
               placeholder="Enter full name"
             />
@@ -262,119 +259,177 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             {errors.username && <p className="text-sm text-red-500">{errors.username}</p>}
           </div>
 
+          {/* Password */}
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password || ''}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                className={errors.password ? 'border-red-500 pr-10' : 'pr-10 bg-white'}
+                placeholder="Enter password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+              >
+                {showPassword ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+            {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+            <p className="text-xs text-gray-500">Leave empty to keep current password</p>
+          </div>
+
           {/* Contact */}
           <div className="space-y-2">
             <Label htmlFor="contact">Contact Number</Label>
             <Input
               id="contact"
+              type="tel"
               value={formData.contact || ''}
-              onChange={(e) => handleInputChange('contact', e.target.value)}
+              onChange={(e) => {
+                // Only allow numbers, spaces, hyphens, and parentheses (for formatting)
+                const value = e.target.value.replace(/[^\d\s\-()]/g, '');
+                handleInputChange('contact', value);
+              }}
+              onKeyDown={(e) => {
+                // Allow: backspace, delete, tab, escape, enter, and arrow keys
+                if ([8, 9, 27, 13, 46, 37, 38, 39, 40].indexOf(e.keyCode) !== -1 ||
+                    // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                    (e.keyCode === 65 && e.ctrlKey === true) ||
+                    (e.keyCode === 67 && e.ctrlKey === true) ||
+                    (e.keyCode === 86 && e.ctrlKey === true) ||
+                    (e.keyCode === 88 && e.ctrlKey === true) ||
+                    // Allow: home, end, left, right
+                    (e.keyCode >= 35 && e.keyCode <= 39)) {
+                  return;
+                }
+                // Ensure that it is a number and stop the keypress
+                if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105) && 
+                    e.key !== ' ' && e.key !== '-' && e.key !== '(' && e.key !== ')') {
+                  e.preventDefault();
+                }
+              }}
               className={errors.contact ? 'border-red-500' : 'bg-white'}
-              placeholder="Enter contact number"
+              placeholder="Enter contact number (numbers only)"
             />
             {errors.contact && <p className="text-sm text-red-500">{errors.contact}</p>}
           </div>
 
-          <div className="space-y-2">
+          {/* Position */}
+          <div className="space-y-2 w-1/2">
             <Label htmlFor="position">Position *</Label>
             <Combobox
-              options={positions}
-              value={formData.position_id}
-              onValueChangeAction={(value) =>
-                setFormData({ ...formData, position_id: value })
-              }
+              options={positions.map(p => ({ value: p.id, label: p.name }))}
+              value={formData.position}
+              onValueChangeAction={(value) => handleInputChange('position', value as string)}
               placeholder="Select position"
               searchPlaceholder="Search positions..."
               emptyText="No positions found."
-              className={errors.positions ? 'border-red-500' : 'bg-white'}
-              error={errors.positions || null}
+              className={errors.position ? 'border-red-500' : 'bg-white'}
+              error={errors.position || null}
             />
-            {errors.positions && <p className="text-sm text-red-500">{errors.positions}</p>}
+            {errors.position && <p className="text-sm text-red-500">{errors.position}</p>}
           </div>
 
-          {/* Department */}
-          <div className="space-y-2">
-            <Label htmlFor="department">Department</Label>
-            <Combobox
-              options={departments}
-              value={formData.department_id}
-              onValueChangeAction={(value) =>
-                setFormData({ ...formData, department_id: value })
-              }
-              placeholder="Select department"
-              searchPlaceholder="Search departments..."
-              emptyText="No departments found."
-              className={errors.department_id ? 'border-red-500' : 'bg-white'}
-              error={errors.department_id || null}
-            />
-            {errors.department_id && <p className="text-sm text-red-500">{errors.department_id}</p>}
-          </div>
+          {/* Department - Show only if branch is HO, Head Office, or none */}
+          {isBranchHOOrNone(formData.branch) && (
+            <div className="space-y-2 w-1/2">
+              <Label htmlFor="department">Department *</Label>
+              <Combobox
+                options={departments.map(dept => ({ value: dept, label: dept }))}
+                value={formData.department}
+                onValueChangeAction={(value) => handleInputChange('department', value as string)}
+                placeholder="Select department"
+                searchPlaceholder="Search departments..."
+                emptyText="No departments found."
+                className={errors.department ? 'border-red-500' : 'bg-white'}
+                error={errors.department || null}
+              />
+              {errors.department && <p className="text-sm text-red-500">{errors.department}</p>}
+            </div>
+          )}
 
           {/* Branch */}
-          <div className="space-y-2">
+          <div className="space-y-2 w-1/2">
             <Label htmlFor="branch">Branch *</Label>
             <Combobox
-              options={branches}
-              value={formData.branch_id}
-              onValueChangeAction={(value) =>
-                setFormData({ ...formData, branch_id: value })
+              options={
+                Array.isArray(branches) && branches.length > 0 && typeof branches[0] === 'object' && !('value' in branches[0])
+                  ? (branches as {id: string, name: string}[]).map(b => ({ value: b.name, label: b.name }))
+                  : (branches as string[])
               }
+              value={formData.branch || ''}
+              onValueChangeAction={(value) => handleInputChange('branch', value as string)}
               placeholder="Select branch"
               searchPlaceholder="Search branches..."
               emptyText="No branches found."
-              className={errors.branches ? 'border-red-500' : 'bg-white'}
-              error={errors.branches || null}
+              className={errors.branch ? 'border-red-500' : ''}
+              error={errors.branch || null}
             />
-            {errors.branches && <p className="text-sm text-red-500">{errors.branches}</p>}
+            {errors.branch && <p className="text-sm text-red-500">{errors.branch}</p>}
           </div>
 
           {/* Role */}
-          <div className="space-y-2">
+          <div className="space-y-2 w-1/2">
             <Label htmlFor="role">Role *</Label>
-            <Select
-              value={formData.roles}
-              onValueChange={(value) => handleInputChange('roles', value)}
-            >
-              <SelectTrigger className={errors.role ? 'border-red-500' : ''}>
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="hr">HR</SelectItem>
-                <SelectItem value="evaluator">Evaluator</SelectItem>
-                <SelectItem value="employee">Employee</SelectItem>
-              </SelectContent>
-            </Select>
+            <Combobox
+              options={[
+                { value: 'admin', label: 'Admin' },
+                { value: 'hr', label: 'HR' },
+                { value: 'evaluator', label: 'Evaluator' },
+                { value: 'employee', label: 'Employee' }
+              ]}
+              value={formData.role || ''}
+              onValueChangeAction={(value) => handleInputChange('role', value as string)}
+              placeholder="Select role"
+              searchPlaceholder="Search roles..."
+              emptyText="No roles found."
+              className={errors.role ? 'border-red-500' : ''}
+              error={errors.role || null}
+            />
             {errors.role && <p className="text-sm text-red-500">{errors.role}</p>}
           </div>
 
-            {/* New Password */}
-          <div className="space-y-2">
-            <Label htmlFor="password">New Password</Label>
+          {/* Hire Date */}
+          <div className="space-y-2 w-1/2">
+            <Label htmlFor="hireDate">Hire Date</Label>
             <Input
-              id="password"
-              type="text"
-              onChange={(e) => handleInputChange('password', e.target.value)}
-              className={errors.password ? 'border-red-500' : 'bg-white'}
-              placeholder='Set new Password'
+              id="hireDate"
+              type="date"
+              value={formData.hireDate || ''}
+              onChange={(e) => handleInputChange('hireDate', e.target.value)}
+              placeholder="Select hire date"
             />
-            {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
           </div>
 
-            {/* Status */}
-          <div className="space-y-2">
-            <Label htmlFor="email">Status</Label>
-            <Input
-              id="isActive"
-              type="text"
-              value={formData.is_active}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              className={errors.email ? 'border-red-500' : 'bg-white'}
-              readOnly
+          {/* Active Status */}
+          <div className="space-y-2 w-1/2">
+            <Label htmlFor="isActive">Status</Label>
+            <Combobox
+              options={[
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' }
+              ]}
+              value={formData.isActive ? 'active' : 'inactive'}
+              onValueChangeAction={(value) => handleInputChange('isActive', value === 'active')}
+              placeholder="Select status"
+              searchPlaceholder="Search status..."
+              emptyText="No status found."
             />
-            {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
           </div>
-
         </div>
 
         <DialogFooter className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
@@ -400,16 +455,15 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 shadow-xl max-w-sm w-full mx-4">
             <div className="flex flex-col items-center space-y-4">
-              <LoadingAnimation
-                size="lg"
-                variant="spinner"
-                color="blue"
+              <LoadingAnimation 
+                size="lg" 
+                variant="spinner" 
+                color="blue" 
                 showText={true}
                 text="Saving user information..."
               />
               <p className="text-sm text-gray-600 text-center">
-                Please wait while we save your changes. This may take a few
-                moments.
+                Please wait while we save your changes. This may take a few moments.
               </p>
             </div>
           </div>
