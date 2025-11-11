@@ -75,19 +75,38 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
            branchLower === 'none ho';
   };
 
+  // Helper function to check if position is Branch Manager or Branch Head
+  const isBranchManager = (positionId: string): boolean => {
+    if (!positionId) return false;
+    // Find the position name from the positions array
+    const position = positions.find(p => p.id === positionId || p.name === positionId);
+    if (!position) return false;
+    const positionName = position.name.toLowerCase().trim();
+    return positionName.includes('branch manager') || 
+           positionName.includes('branch head') ||
+           positionName === 'branch manager' ||
+           positionName === 'branch head';
+  };
+
   // Update form data when user prop changes
   useEffect(() => {
     if (user) {
       const branchValue = (user.branch && typeof user.branch === 'string') ? user.branch : (user.branch ? String(user.branch) : '');
+      const userPosition = user.position || '';
+      // Find position ID if user.position is a name, otherwise use as-is
+      const positionId = positions.find(p => p.name === userPosition || p.id === userPosition)?.id || userPosition;
+      // If position is Branch Manager, role must be evaluator
+      const userRole = isBranchManager(positionId) ? 'evaluator' : (user.role || '');
+      
       setFormData({
         id: user.id,
         name: user.name || '',
         email: user.email || '',
-        position: user.position || '',
+        position: positionId,
         // Clear department if branch is NOT HO/none/Head Office (i.e., regular branch)
         department: isBranchHOOrNone(branchValue) ? (user.department || '') : '',
         branch: branchValue,
-        role: user.role || '',
+        role: userRole,
         username: user.username || '',
         password: user.password || '',
         contact: user.contact || '',
@@ -97,6 +116,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       });
       setErrors({});
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const validateForm = () => {
@@ -152,6 +172,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         ...prev,
         [field]: value,
         department: '' // Clear department when branch is a regular branch (not HO/none)
+      }));
+    } 
+    // If position is changed to Branch Manager, automatically set role to evaluator
+    else if (field === 'position' && typeof value === 'string' && isBranchManager(value)) {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value,
+        role: 'evaluator' // Auto-set role to evaluator for Branch Manager
       }));
     } else {
       setFormData(prev => ({
@@ -399,8 +427,12 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               emptyText="No roles found."
               className={errors.role ? 'border-red-500' : ''}
               error={errors.role || null}
+              disabled={isBranchManager(formData.position)}
             />
             {errors.role && <p className="text-sm text-red-500">{errors.role}</p>}
+            {isBranchManager(formData.position) && (
+              <p className="text-xs text-gray-500">Role is automatically set to "Evaluator" for Branch Manager position</p>
+            )}
           </div>
 
           {/* Hire Date */}

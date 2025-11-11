@@ -24,6 +24,7 @@ import accountsData from '@/data/accounts.json';
 import { useToast } from '@/hooks/useToast';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useDialogAnimation } from '@/hooks/useDialogAnimation';
 
 // Lazy load tab components
 const OverviewTab = lazy(() => import('./OverviewTab').then(m => ({ default: m.OverviewTab })));
@@ -79,6 +80,9 @@ function EmployeeDashboard() {
   // Date filtering states for quarterly performance
   const [dateFilter, setDateFilter] = useState<{from?: Date, to?: Date}>({});
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  
+  // Use dialog animation hook (0.4s to match EditUserModal speed)
+  const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
   // Logout confirmation states
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
@@ -1091,10 +1095,6 @@ function EmployeeDashboard() {
                 setModalOpenedFromTab('history');
                 setIsViewResultsModalOpen(true);
               }}
-              onDeleteEvaluation={(submission) => {
-                setEvaluationToDelete(submission);
-                setIsDeleteEvaluationDialogOpen(true);
-              }}
             />
           </Suspense>
         );
@@ -1204,7 +1204,7 @@ function EmployeeDashboard() {
 
       {/* Delete Evaluation Dialog */}
       <Dialog open={isDeleteEvaluationDialogOpen} onOpenChangeAction={setIsDeleteEvaluationDialogOpen}>
-        <DialogContent className="max-w-md w-[90vw] sm:w-full px-6 py-6 animate-popup">
+        <DialogContent className={`max-w-md w-[90vw] sm:w-full px-6 py-6 ${dialogAnimationClass}`}>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <svg className="w-5 h-5 text-red-600 animate-fadeInOut" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1270,7 +1270,7 @@ function EmployeeDashboard() {
 
       {/* Delete Evaluation Success Dialog */}
       <Dialog open={showDeleteEvaluationSuccessDialog} onOpenChangeAction={setShowDeleteEvaluationSuccessDialog}>
-        <DialogContent className="max-w-sm w-[90vw] sm:w-full px-6 py-6 animate-popup">
+        <DialogContent className={`max-w-sm w-[90vw] sm:w-full px-6 py-6 ${dialogAnimationClass}`}>
           <div className="space-y-4">
             <div className="flex justify-center">
               <div className="w-24 h-24 mt-4 font-bold flex items-center justify-center p-1">
@@ -1314,7 +1314,7 @@ function EmployeeDashboard() {
 
       {/* Incorrect Password Dialog */}
       <Dialog open={showIncorrectPasswordDialog} onOpenChangeAction={setShowIncorrectPasswordDialog}>
-        <DialogContent className={`max-w-sm w-[90vw] sm:w-full px-6 py-6 ${isDialogClosing ? 'animate-popdown' : 'animate-popup'}`}>
+        <DialogContent className={`max-w-sm w-[90vw] sm:w-full px-6 py-6 ${dialogAnimationClass}`}>
           <div className="space-y-4">
             <div className="flex justify-center">
               <div className="w-24 h-24 mt-4 font-bold flex items-center justify-center p-1">
@@ -1357,7 +1357,7 @@ function EmployeeDashboard() {
 
       {/* Approval Confirmation Dialog */}
       <Dialog open={isApprovalDialogOpen} onOpenChangeAction={setIsApprovalDialogOpen}>
-        <DialogContent className="max-w-md w-[90vw] bg-blue-50 sm:w-full px-6 py-6">
+        <DialogContent className={`max-w-md w-[90vw] bg-blue-50 sm:w-full px-6 py-6 ${dialogAnimationClass}`}>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
               {showApprovalSuccess ? "Evaluation Approved!" : "Approve Evaluation"}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Eye, Trash, Calendar, X } from 'lucide-react';
+import { Eye, Calendar, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,10 +20,9 @@ import clientDataService from '@/lib/clientDataService';
 interface EvaluationHistoryTabProps {
   isActive?: boolean;
   onViewEvaluation: (submission: any) => void;
-  onDeleteEvaluation: (submission: any) => void;
 }
 
-export function EvaluationHistoryTab({ isActive = false, onViewEvaluation, onDeleteEvaluation }: EvaluationHistoryTabProps) {
+export function EvaluationHistoryTab({ isActive = false, onViewEvaluation }: EvaluationHistoryTabProps) {
   const { profile } = useUser();
   const { success } = useToast();
   const [submissions, setSubmissions] = useState<any[]>([]);
@@ -873,14 +872,6 @@ export function EvaluationHistoryTab({ isActive = false, onViewEvaluation, onDel
                                           >
                                             <Eye className="w-4 h-4" />
                                             View
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            onClick={() => onDeleteEvaluation(submission)}
-                                            className="text-white bg-red-500 hover:bg-red-600 hover:text-white border-red-200 hover:border-red-300"
-                                          >
-                                            <Trash className="w-4 h-4" />
-                                            Delete
                                           </Button>
                                         </div>
                                       </TableCell>

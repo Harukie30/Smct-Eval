@@ -8,6 +8,7 @@ import { Card, CardContent,  CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
@@ -17,6 +18,8 @@ import clientDataService from '@/lib/clientDataService';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { useUser } from '@/contexts/UserContext';
 import EditUserModal from '@/components/EditUserModal';
+import AddEmployeeModal from '@/components/AddEmployeeModal';
+import { useDialogAnimation } from '@/hooks/useDialogAnimation';
 
 // Import data
 import accountsData from '@/data/accounts.json';
@@ -208,6 +211,7 @@ function HRDashboard() {
   // Note: Employees tab state is now managed inside EmployeesTab component
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isPerformanceModalOpen, setIsPerformanceModalOpen] = useState(false);
   const [selectedPerformanceLevel, setSelectedPerformanceLevel] = useState<string>('');
@@ -241,6 +245,9 @@ function HRDashboard() {
 
   // Get current user (HR)
   const { user: currentUser } = useUser();
+  
+  // Use dialog animation hook (0.4s to match EditUserModal speed)
+  const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
   // Tab loading hook
   const { isTabLoading, handleTabChange: handleTabChangeWithLoading } = useTabLoading();
@@ -428,182 +435,9 @@ function HRDashboard() {
     }
   }, [searchParams]);
 
-  // Add custom CSS for container popup animation (same as evaluator dashboard)
-  useEffect(() => {
-    const styleId = 'hr-dashboard-animations';
-    // Remove existing style if present
-    const existingStyle = document.getElementById(styleId);
-    if (existingStyle) {
-      existingStyle.remove();
-    }
-    
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = `
-      @keyframes containerPopup {
-        0% {
-          transform: scale(0.8) translateY(20px);
-          opacity: 0;
-        }
-        50% {
-          transform: scale(1.05) translateY(-5px);
-          opacity: 0.8;
-        }
-        100% {
-          transform: scale(1) translateY(0);
-          opacity: 1;
-        }
-      }
-      .evaluation-container {
-        animation: containerPopup 0.4s ease-out !important;
-      }
-      
-      @keyframes deleteDialogPopup {
-        0% {
-          transform: scale(0.9) translateY(20px);
-          opacity: 0;
-        }
-        50% {
-          transform: scale(1.02) translateY(-5px);
-          opacity: 0.9;
-        }
-        100% {
-          transform: scale(1) translateY(0);
-          opacity: 1;
-        }
-      }
-      
-      /* Override default Tailwind animations and apply custom popup */
-      /* Target with highest specificity to override Tailwind defaults */
-      div.delete-employee-dialog,
-      .delete-employee-dialog {
-        animation: deleteDialogPopup 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-        transform-origin: center !important;
-        will-change: transform, opacity;
-      }
-      
-      /* Override ALL Tailwind animation utilities - use very specific selectors */
-      div.delete-employee-dialog.animate-in,
-      div.delete-employee-dialog.fade-in-0,
-      div.delete-employee-dialog.zoom-in-95,
-      div.delete-employee-dialog.animate-in.fade-in-0,
-      div.delete-employee-dialog.animate-in.zoom-in-95,
-      div.delete-employee-dialog.fade-in-0.zoom-in-95,
-      div.delete-employee-dialog.animate-in.fade-in-0.zoom-in-95,
-      .delete-employee-dialog.animate-in,
-      .delete-employee-dialog.fade-in-0,
-      .delete-employee-dialog.zoom-in-95,
-      .delete-employee-dialog.animate-in.fade-in-0,
-      .delete-employee-dialog.animate-in.zoom-in-95,
-      .delete-employee-dialog.fade-in-0.zoom-in-95,
-      .delete-employee-dialog.animate-in.fade-in-0.zoom-in-95 {
-        animation: deleteDialogPopup 2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-        animation-duration: 2s !important;
-        animation-fill-mode: both !important;
-      }
-      
-      /* Override !animate-none if present */
-      .delete-employee-dialog.animate-none {
-        animation: deleteDialogPopup 2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-      }
-      
-      @keyframes employeeDetailsPopup {
-        0% {
-          transform: scale(0.9) translateY(20px);
-          opacity: 0;
-        }
-        50% {
-          transform: scale(1.02) translateY(-5px);
-          opacity: 0.9;
-        }
-        100% {
-          transform: scale(1) translateY(0);
-          opacity: 1;
-        }
-      }
-      
-      /* Override default Tailwind animations and apply custom popup */
-      div.employee-details-dialog,
-      .employee-details-dialog {
-        animation: employeeDetailsPopup 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-        transform-origin: center !important;
-        will-change: transform, opacity;
-      }
-      
-      /* Override ALL Tailwind animation utilities - use very specific selectors */
-      div.employee-details-dialog.animate-in,
-      div.employee-details-dialog.fade-in-0,
-      div.employee-details-dialog.zoom-in-95,
-      div.employee-details-dialog.animate-in.fade-in-0,
-      div.employee-details-dialog.animate-in.zoom-in-95,
-      div.employee-details-dialog.fade-in-0.zoom-in-95,
-      div.employee-details-dialog.animate-in.fade-in-0.zoom-in-95,
-      .employee-details-dialog.animate-in,
-      .employee-details-dialog.fade-in-0,
-      .employee-details-dialog.zoom-in-95,
-      .employee-details-dialog.animate-in.fade-in-0,
-      .employee-details-dialog.animate-in.zoom-in-95,
-      .employee-details-dialog.fade-in-0.zoom-in-95,
-      .employee-details-dialog.animate-in.fade-in-0.zoom-in-95 {
-        animation: employeeDetailsPopup 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-        animation-duration: 0.5s !important;
-        animation-fill-mode: both !important;
-      }
-      
-      /* Override !animate-none if present */
-      .employee-details-dialog.animate-none {
-        animation: employeeDetailsPopup 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      if (document.head.contains(style)) {
-        document.head.removeChild(style);
-      }
-    };
-  }, []);
+  // Note: Container animations are now handled by useDialogAnimation hook
 
-  // Force animation trigger when delete dialog opens
-  useEffect(() => {
-    if (isDeleteModalOpen) {
-      // Small delay to ensure DOM is rendered
-      const timer = setTimeout(() => {
-        const dialogElement = document.querySelector('.delete-employee-dialog') as HTMLElement;
-        if (dialogElement) {
-          // Remove default Tailwind animation classes
-          dialogElement.classList.remove('animate-in', 'fade-in-0', 'zoom-in-95');
-          // Force reflow to trigger animation
-          dialogElement.style.animation = 'none';
-          void dialogElement.offsetWidth; // Trigger reflow
-          // Apply custom animation
-          dialogElement.style.animation = 'deleteDialogPopup 2s cubic-bezier(0.34, 1.56, 0.64, 1)';
-          dialogElement.style.transformOrigin = 'center';
-        }
-      }, 50); // Increased delay to ensure DOM is ready
-      return () => clearTimeout(timer);
-    }
-  }, [isDeleteModalOpen]);
 
-  // Force animation trigger when employee details dialog opens
-  useEffect(() => {
-    if (isEmployeeModalOpen) {
-      // Small delay to ensure DOM is rendered
-      const timer = setTimeout(() => {
-        const dialogElement = document.querySelector('.employee-details-dialog') as HTMLElement;
-        if (dialogElement) {
-          // Remove default Tailwind animation classes
-          dialogElement.classList.remove('animate-in', 'fade-in-0', 'zoom-in-95');
-          // Force reflow to trigger animation
-          dialogElement.style.animation = 'none';
-          void dialogElement.offsetWidth; // Trigger reflow
-          // Apply custom animation
-          dialogElement.style.animation = 'employeeDetailsPopup 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
-          dialogElement.style.transformOrigin = 'center';
-        }
-      }, 50); // Increased delay to ensure DOM is ready
-      return () => clearTimeout(timer);
-    }
-  }, [isEmployeeModalOpen]);
 
   // Real-time data updates via localStorage events
   useEffect(() => {
@@ -719,25 +553,36 @@ function HRDashboard() {
     setIsEditModalOpen(true);
   };
 
+  const handleAddEmployee = async (newUser: any) => {
+    try {
+      // Generate new ID and add to storage
+      const currentEmployees = await clientDataService.getEmployees();
+      const newId = currentEmployees.length > 0 
+        ? Math.max(...currentEmployees.map(emp => emp.id), 0) + 1
+        : 1;
+      newUser.id = newId;
+      
+      // Add to employees array and save to storage
+      const newEmployees = [...currentEmployees, newUser];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('employees', JSON.stringify(newEmployees));
+      }
+
+      // Refresh dashboard data to get updated information
+      await refreshDashboardData(false, false);
+      
+      // Close modal
+      setIsAddEmployeeModalOpen(false);
+    } catch (error) {
+      console.error('Error adding employee:', error);
+      throw error;
+    }
+  };
+
   const handleSaveEmployee = async (updatedUser: any) => {
     try {
-      if (updatedUser.id === 0) {
-        // Adding new employee - generate new ID and add to storage
-        const currentEmployees = await clientDataService.getEmployees();
-        const newId = currentEmployees.length > 0 
-          ? Math.max(...currentEmployees.map(emp => emp.id), 0) + 1
-          : 1;
-        updatedUser.id = newId;
-        
-        // Add to employees array and save to storage
-        const newEmployees = [...currentEmployees, updatedUser];
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('employees', JSON.stringify(newEmployees));
-        }
-      } else {
-        // Update existing employee using client data service
-        await clientDataService.updateEmployee(updatedUser.id, updatedUser);
-      }
+      // Update existing employee using client data service
+      await clientDataService.updateEmployee(updatedUser.id, updatedUser);
 
       // Refresh dashboard data to get updated information
       await refreshDashboardData(false, false);
@@ -1124,8 +969,7 @@ function HRDashboard() {
             onEvaluateEmployee={handleEvaluateEmployee}
             onViewPerformanceEmployees={handleViewPerformanceEmployees}
             onAddEmployee={() => {
-              setSelectedEmployee(null);
-              setIsEditModalOpen(true);
+              setIsAddEmployeeModalOpen(true);
             }}
             isActive={active === 'employees'}
           />
@@ -1248,7 +1092,7 @@ function HRDashboard() {
 
       {/* Employee Details Modal */}
       <Dialog open={isEmployeeModalOpen} onOpenChangeAction={setIsEmployeeModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto employee-details-dialog" key={isEmployeeModalOpen ? 'open' : 'closed'}>
+        <DialogContent className={`max-w-4xl max-h-[95vh] overflow-y-auto ${dialogAnimationClass}`} key={isEmployeeModalOpen ? 'open' : 'closed'}>
           {selectedEmployee && (
             <>
               <DialogHeader className="pb-6">
@@ -1366,97 +1210,103 @@ function HRDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit User Modal */}
-      <EditUserModal
-        isOpen={isEditModalOpen}
+      {/* Add Employee Modal */}
+      <AddEmployeeModal
+        isOpen={isAddEmployeeModalOpen}
         onClose={() => {
-          setIsEditModalOpen(false);
-          setSelectedEmployee(null);
+          setIsAddEmployeeModalOpen(false);
         }}
-        user={selectedEmployee ? {
-          ...selectedEmployee,
-          username: (selectedEmployee as any).username || '',
-          password: (selectedEmployee as any).password || '',
-          contact: (selectedEmployee as any).contact || '',
-          hireDate: selectedEmployee.hireDate || '',
-          isActive: (selectedEmployee as any).isActive !== undefined ? (selectedEmployee as any).isActive : true,
-          signature: (selectedEmployee as any).signature || ''
-        } : {
-          id: 0,
-          name: '',
-          email: '',
-          position: '',
-          department: '',
-          branch: '',
-          role: '',
-          username: '',
-          password: '',
-          contact: '',
-          hireDate: '',
-          isActive: true,
-          signature: ''
-        }}
-        onSave={handleSaveEmployee}
+        onSave={handleAddEmployee}
         departments={departments.map(dept => dept.name)}
-        branches={branches.map(branch => branch.name)}
+        branches={branches}
         positions={positionsData}
+        onRefresh={refreshDashboardData}
       />
 
-       {/* Performance Employees Modal */}
-       <Dialog open={isPerformanceModalOpen} onOpenChangeAction={setIsPerformanceModalOpen}>
-         <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
-           <DialogHeader className="pb-6">
-             <DialogTitle className="text-2xl font-bold text-gray-900">
+      {/* Edit User Modal */}
+      {selectedEmployee && (
+        <EditUserModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedEmployee(null);
+          }}
+          user={{
+            ...selectedEmployee,
+            username: (selectedEmployee as any).username || '',
+            password: (selectedEmployee as any).password || '',
+            contact: (selectedEmployee as any).contact || '',
+            hireDate: selectedEmployee.hireDate || '',
+            isActive: (selectedEmployee as any).isActive !== undefined ? (selectedEmployee as any).isActive : true,
+            signature: (selectedEmployee as any).signature || ''
+          }}
+          onSave={handleSaveEmployee}
+          departments={departments.map(dept => dept.name)}
+          branches={branches}
+          positions={positionsData}
+          onRefresh={refreshDashboardData}
+        />
+      )}
+
+       {/* Performance Employees Drawer */}
+       <Drawer open={isPerformanceModalOpen} onOpenChange={setIsPerformanceModalOpen}>
+         <DrawerContent className="max-h-[95vh] h-[95vh] w-1/2 mx-auto">
+           <DrawerHeader className="pb-4 border-b">
+             <DrawerTitle className="text-2xl font-bold text-gray-900">
                {selectedPerformanceLevel.charAt(0).toUpperCase() + selectedPerformanceLevel.slice(1)} Performers
-             </DialogTitle>
-             <DialogDescription className="text-base text-gray-600 mt-2">
+             </DrawerTitle>
+             <DrawerDescription className="text-base text-gray-600 mt-2">
                Employees with {selectedPerformanceLevel} performance rating
-             </DialogDescription>
-           </DialogHeader>
+             </DrawerDescription>
+           </DrawerHeader>
            
-           <div className="space-y-4">
-             {getPerformanceEmployees(selectedPerformanceLevel).map((employee) => (
-               <div key={employee.id} className="bg-gray-50 rounded-lg p-4">
-                 <div className="flex items-center justify-between">
-                   <div className="flex items-center space-x-4">
-                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                       <span className="text-blue-600 font-semibold text-sm">
-                         {employee.name.split(' ').map(n => n[0]).join('')}
-                       </span>
-                     </div>
-                     <div>
-                       <h4 className="font-semibold text-gray-900">{employee.name}</h4>
-                       <p className="text-sm text-gray-600">{employee.position}</p>
-                     </div>
-                   </div>
-                   <div className="text-right">
-                     <Badge variant="outline" className="mb-1">{employee.department}</Badge>
-                     <p className="text-xs text-gray-500">{employee.branch}</p>
-                   </div>
-                 </div>
-                 <div className="mt-3 flex items-center justify-between text-sm">
-                   <span className="text-gray-600">Employee ID: #{employee.id}</span>
-                   <span className="text-gray-600">
-                     Hired: {new Date(employee.hireDate).toLocaleDateString()}
-                   </span>
-                 </div>
+           <div className="overflow-y-auto px-4 py-4 space-y-4">
+             {getPerformanceEmployees(selectedPerformanceLevel).length === 0 ? (
+               <div className="text-center py-12 text-gray-500">
+                 <p>No employees found for this performance level.</p>
                </div>
-             ))}
+             ) : (
+               getPerformanceEmployees(selectedPerformanceLevel).map((employee) => (
+                 <div key={employee.id} className="bg-gray-50 rounded-lg p-4">
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center space-x-4">
+                       <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                         <span className="text-blue-600 font-semibold text-sm">
+                           {employee.name.split(' ').map(n => n[0]).join('')}
+                         </span>
+                       </div>
+                       <div>
+                         <h4 className="font-semibold text-gray-900">{employee.name}</h4>
+                         <p className="text-sm text-gray-600">{employee.position}</p>
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <Badge variant="outline" className="mb-1">{employee.department}</Badge>
+                       <p className="text-xs text-gray-500">{employee.branch}</p>
+                     </div>
+                   </div>
+                   <div className="mt-3 flex items-center justify-between text-sm">
+                     <span className="text-gray-600">Employee ID: #{employee.id}</span>
+                     <span className="text-gray-600">
+                       Hired: {new Date(employee.hireDate).toLocaleDateString()}
+                     </span>
+                   </div>
+                 </div>
+               ))
+             )}
            </div>
 
-           <DialogFooter className="pt-3 border-t border-gray-200 mt-3">
-             <div className="flex justify-end space-x-4 w-full">
-               <Button 
-                 variant="outline" 
-                 onClick={() => setIsPerformanceModalOpen(false)}
-                 className="px-6 py-2"
-               >
-                 Close
-               </Button>
-             </div>
-           </DialogFooter>
-         </DialogContent>
-               </Dialog>
+           <DrawerFooter className="border-t">
+             <Button 
+               variant="outline" 
+               onClick={() => setIsPerformanceModalOpen(false)}
+               className="w-1/2 mx-auto bg-blue-600 hover:bg-blue-700 hover:text-white text-white"
+             >
+               Close
+             </Button>
+           </DrawerFooter>
+         </DrawerContent>
+       </Drawer>
 
         {/* View Results Modal */}
         <ViewResultsModal
@@ -1469,7 +1319,7 @@ function HRDashboard() {
         <Dialog open={isDeleteModalOpen} onOpenChangeAction={setIsDeleteModalOpen}>
           <DialogContent 
             key={`delete-dialog-${isDeleteModalOpen}-${employeeToDelete?.id || ''}`}
-            className="sm:max-w-md delete-employee-dialog"
+            className={`sm:max-w-md ${dialogAnimationClass}`}
           >
             <div className="space-y-6 p-2">
               <div className="text-center">
@@ -1540,7 +1390,7 @@ function HRDashboard() {
         {/* Employee Evaluation Modal */}
         {isEvaluationModalOpen && employeeToEvaluate && currentUser && (
           <Dialog open={isEvaluationModalOpen} onOpenChangeAction={setIsEvaluationModalOpen}>
-            <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden p-0 evaluation-container">
+            <DialogContent className={`max-w-6xl max-h-[95vh] overflow-hidden p-0 ${dialogAnimationClass}`}>
               <EvaluationForm
                 key={`hr-eval-${employeeToEvaluate.id}-${isEvaluationModalOpen}`}
                 employee={{
@@ -1581,7 +1431,7 @@ function HRDashboard() {
 
         {/* Delete Evaluation Record Confirmation Modal */}
         <Dialog open={isDeleteRecordModalOpen} onOpenChangeAction={setIsDeleteRecordModalOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className={`sm:max-w-md ${dialogAnimationClass}`}>
             <div className="space-y-6 p-2">
               <div className="text-center">
                 <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4 animate-pulse">

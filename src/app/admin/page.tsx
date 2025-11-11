@@ -272,29 +272,29 @@ function AdminDashboard() {
   // Update setActive to refresh data when switching tabs
   const setActiveWithRefresh = useCallback(async (tab: string) => {
     const previousTab = active;
-    // Only show spinner if switching to a different tab
-    if (tab !== previousTab) {
-      setIsTabSwitching(true);
-    }
     setActiveState(tab);
     // Update URL without page reload
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', tab);
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
     
-    // Refresh data when switching tabs (except for overview which doesn't need employee data)
+    // Only refresh data for tabs that need employee data (not overview)
+    // Don't show spinner for overview tab
     if (tab !== 'overview' && tab !== previousTab) {
+      setIsTabSwitching(true);
       try {
         await refreshUserDataRef.current();
+        // Keep spinner visible for at least 800ms for better UX
+        await new Promise(resolve => setTimeout(resolve, 800));
       } catch (error) {
         console.error('Error refreshing data on tab switch:', error);
+        // Even on error, show spinner for minimum duration
+        await new Promise(resolve => setTimeout(resolve, 800));
+      } finally {
+        // Hide spinner after refresh completes
+        setIsTabSwitching(false);
       }
     }
-    
-    // Small delay to ensure smooth transition
-    setTimeout(() => {
-      setIsTabSwitching(false);
-    }, 300);
   }, [searchParams, router, pathname, active]);
 
   // Auto-refresh functionality using shared hook
@@ -1149,23 +1149,24 @@ function AdminDashboard() {
       topSummary={topSummary}
       profile={{ name: 'System Administrator', roleOrPosition: 'Admin' }}
     >
-      {/* Tab Switching Spinner Overlay */}
-      {isTabSwitching && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
-          <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-            <div className="relative">
-              {/* Spinning ring */}
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-              {/* Logo in center */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+      <div className="relative min-h-[400px]">
+        {/* Tab Switching Spinner Overlay - Only shows for content area, not full page */}
+        {isTabSwitching && (
+          <div className="absolute inset-0 flex items-center justify-center z-40 pointer-events-none bg-white/60 rounded-lg">
+            <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+              <div className="relative">
+                {/* Spinning ring */}
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+                {/* Logo in center */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <img src="/smct.png" alt="SMCT Logo" className="h-8 w-8 object-contain" />
+                </div>
               </div>
+              <p className="text-xs text-gray-600 font-medium">Refreshing...</p>
             </div>
-            <p className="text-sm text-gray-600 font-medium">Loading...</p>
           </div>
-        </div>
-      )}
-      {active === 'overview' && (
+        )}
+        {active === 'overview' && (
         <Suspense fallback={
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -1818,7 +1819,7 @@ function AdminDashboard() {
           await refreshUserData();
         }}
       />
-
+      </div>
     </DashboardShell>
   );
 }

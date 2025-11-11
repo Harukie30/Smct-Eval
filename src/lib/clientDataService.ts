@@ -227,34 +227,57 @@ initializeData();
 
 // API replacement functions
 export const clientDataService = {
-  // Departments - calls external backend
+  // Departments - calls external backend, merges with localStorage departments
+  // Returns {id, name} format where id is sent to backend, name is displayed in UI
   getDepartments: async (): Promise<{id: string, name: string}[]> => {
+    let apiDepartments: {id: string, name: string}[] = [];
+    
     try {
       const res = await fetch(`${CONFIG.API_URL}/departments`, {
         method: "GET",
       });
       if (res.ok) {
         const response = await res.json();
-        return response.departments.map(
-          (departments: any) => ({
-            value: departments.id,
-            label: departments.department_name,
+        apiDepartments = response.departments.map(
+          (dept: any) => ({
+            id: dept.id.toString(),
+            name: dept.department_name,
           })
         );
       }
-      // Fallback to local data if API fails
-      return departmentsData.map(dept => ({
-        id: dept.id.toString(),
-        name: dept.name
-      }));
     } catch (error) {
-      console.error('Error fetching departments:', error);
-      // Fallback to local data if API fails
-      return departmentsData.map(dept => ({
-        id: dept.id.toString(),
-        name: dept.name
-      }));
+      console.error('Error fetching departments from API:', error);
     }
+
+    // Get departments from localStorage (added via admin panel) - already in {id, name} format
+    const savedDepartments: {id: number, name: string}[] = JSON.parse(localStorage.getItem('departments') || '[]');
+    
+    // Convert to {id: string, name: string} format
+    const localStorageDepartments = savedDepartments.map((dept) => ({
+      id: dept.id.toString(),
+      name: dept.name
+    }));
+
+    // Merge API departments with localStorage departments (avoid duplicates)
+    const allDepartments = [...apiDepartments];
+    localStorageDepartments.forEach((localDept) => {
+      // Check if department already exists (by id)
+      const exists = allDepartments.some(d => d.id === localDept.id);
+      if (!exists) {
+        allDepartments.push(localDept);
+      }
+    });
+
+    // If we have departments (from API or localStorage), return them
+    if (allDepartments.length > 0) {
+      return allDepartments;
+    }
+
+    // Fallback to local data if API fails
+    return departmentsData.map(dept => ({
+      id: dept.id.toString(),
+      name: dept.name
+    }));
   },
 
   // Positions - calls external backend
@@ -285,46 +308,56 @@ export const clientDataService = {
     }
   },
 
-  // Branches - calls external backend
+  // Branches - calls external backend, merges with localStorage branches
+  // Returns {id, name} format where id is sent to backend, name is displayed in UI
   getBranches: async (): Promise<{id: string, name: string}[]> => {
+    let apiBranches: {id: string, name: string}[] = [];
+    
     try {
       const res = await fetch(`${CONFIG.API_URL}/branches`, {
         method: "GET",
       });
       if (res.ok) {
         const response = await res.json();
-        return response.branches.map((branches: any) => ({
-          value: branches.id,
-          label: branches.branch_name + " /" + branches.branch_code,
+        apiBranches = response.branches.map((branch: any) => ({
+          id: branch.id,
+          name: branch.branch_name + " /" + branch.branch_code,
         }));
       }
-      // Fallback to hardcoded branches
-      return [
-        { id: 'HO', name: 'Head Office' },
-        { id: 'CEB', name: 'Cebu Branch' },
-        { id: 'DAV', name: 'Davao Branch' },
-        { id: 'BAC', name: 'Bacolod Branch' },
-        { id: 'ILO', name: 'Iloilo Branch' },
-        { id: 'CDO', name: 'Cagayan de Oro Branch' },
-        { id: 'BAG', name: 'Baguio Branch' },
-        { id: 'ZAM', name: 'Zamboanga Branch' },
-        { id: 'GSC', name: 'General Santos Branch' }
-      ];
     } catch (error) {
-      console.error('Error fetching branches:', error);
-      // Fallback to hardcoded branches
-      return [
-        { id: 'HO', name: 'Head Office' },
-        { id: 'CEB', name: 'Cebu Branch' },
-        { id: 'DAV', name: 'Davao Branch' },
-        { id: 'BAC', name: 'Bacolod Branch' },
-        { id: 'ILO', name: 'Iloilo Branch' },
-        { id: 'CDO', name: 'Cagayan de Oro Branch' },
-        { id: 'BAG', name: 'Baguio Branch' },
-        { id: 'ZAM', name: 'Zamboanga Branch' },
-        { id: 'GSC', name: 'General Santos Branch' }
-      ];
+      console.error('Error fetching branches from API:', error);
     }
+
+    // Get branches from localStorage (added via admin panel) - already in {id, name} format
+    const savedBranches: {id: string, name: string}[] = JSON.parse(localStorage.getItem('branches') || '[]');
+
+    // Merge API branches with localStorage branches (avoid duplicates)
+    const allBranches = [...apiBranches];
+    savedBranches.forEach((localBranch) => {
+      // Check if branch already exists (by id)
+      const exists = allBranches.some(b => b.id === localBranch.id);
+      if (!exists) {
+        allBranches.push(localBranch);
+      }
+    });
+
+    // If we have branches (from API or localStorage), return them
+    if (allBranches.length > 0) {
+      return allBranches;
+    }
+
+    // Fallback to hardcoded branches
+    return [
+      { id: 'HO', name: 'Head Office' },
+      { id: 'CEB', name: 'Cebu Branch' },
+      { id: 'DAV', name: 'Davao Branch' },
+      { id: 'BAC', name: 'Bacolod Branch' },
+      { id: 'ILO', name: 'Iloilo Branch' },
+      { id: 'CDO', name: 'Cagayan de Oro Branch' },
+      { id: 'BAG', name: 'Baguio Branch' },
+      { id: 'ZAM', name: 'Zamboanga Branch' },
+      { id: 'GSC', name: 'General Santos Branch' }
+    ];
   },
 
   // Branch Codes - returns local data (no API)
