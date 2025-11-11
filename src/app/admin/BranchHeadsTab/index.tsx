@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import clientDataService from '@/lib/clientDataService';
 import { toastMessages } from '@/lib/toastMessages';
+import { useDialogAnimation } from '@/hooks/useDialogAnimation';
 
 interface Employee {
   id: number;
@@ -48,6 +49,9 @@ export function BranchHeadsTab({
   const [editSuccessData, setEditSuccessData] = useState<{branchHead: Employee | null, branches: {id: string, name: string}[]}>({branchHead: null, branches: []});
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [branchHeadToDelete, setBranchHeadToDelete] = useState<Employee | null>(null);
+  
+  // Use dialog animation hook (0.4s to match EditUserModal speed)
+  const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
   // Memoized branch heads (only recalculates when employees change)
   const branchHeads = useMemo(() => {
@@ -132,53 +136,19 @@ export function BranchHeadsTab({
     }
   }, [showEditSuccessDialog]);
 
-  // Add custom CSS for modal pop-up animation (only affects modal container, not contents)
+  // Add custom CSS for success dialog content animations (checkmark, ripple, etc.)
+  // Note: Container animations are now handled by useDialogAnimation hook
   useEffect(() => {
-    const styleId = 'branch-heads-modal-animation';
+    const styleId = 'branch-heads-success-animations';
     const existingStyle = document.getElementById(styleId);
     if (existingStyle) {
-      existingStyle.remove();
+      return; // Styles already injected
     }
     
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
-      @keyframes modalPopup {
-        0% {
-          transform: scale(0.8) translateY(20px);
-          opacity: 0;
-        }
-        50% {
-          transform: scale(1.05) translateY(-5px);
-          opacity: 0.9;
-        }
-        100% {
-          transform: scale(1) translateY(0);
-          opacity: 1;
-        }
-      }
-      
-      /* Apply animation only to the modal container */
-      .branch-heads-modal-container {
-        animation: modalPopup 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-        transform-origin: center !important;
-        will-change: transform, opacity;
-        transition: opacity 0.2s ease-in-out;
-      }
-      
-      /* Override default Tailwind animations */
-      .branch-heads-modal-container.animate-in,
-      .branch-heads-modal-container.fade-in-0,
-      .branch-heads-modal-container.zoom-in-95 {
-        animation: modalPopup 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-      }
-      
-      /* Prevent flicker during modal transition */
-      [role="dialog"] {
-        transition: opacity 0.15s ease-in-out;
-      }
-      
-      /* Success Dialog Animations */
+      /* Success Dialog Content Animations */
       @keyframes successScale {
         0% {
           transform: scale(0);
@@ -214,10 +184,6 @@ export function BranchHeadsTab({
         }
       }
       
-      .success-dialog-container {
-        animation: modalPopup 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-      }
-      
       .animate-success-scale {
         animation: successScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
       }
@@ -233,49 +199,8 @@ export function BranchHeadsTab({
       .animate-draw-checkmark {
         animation: drawCheckmark 0.5s ease-out 0.3s forwards;
       }
-      
-      /* Delete Dialog Animation - only affects container, not contents */
-      @keyframes deleteDialogPopup {
-        0% {
-          transform: scale(0.85) translateY(20px);
-          opacity: 0;
-        }
-        50% {
-          transform: scale(1.05) translateY(-5px);
-          opacity: 0.9;
-        }
-        100% {
-          transform: scale(1) translateY(0);
-          opacity: 1;
-        }
-      }
-      
-      .delete-dialog-container {
-        animation: deleteDialogPopup 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-        transform-origin: center !important;
-        will-change: transform, opacity;
-      }
-      
-      /* Override default Tailwind animations for delete dialog */
-      .delete-dialog-container.animate-in,
-      .delete-dialog-container.fade-in-0,
-      .delete-dialog-container.zoom-in-95 {
-        animation: deleteDialogPopup 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-      }
-      
-      /* Ensure contents inside don't animate */
-      .delete-dialog-container > * {
-        animation: none !important;
-      }
     `;
     document.head.appendChild(style);
-    
-    return () => {
-      const styleToRemove = document.getElementById(styleId);
-      if (styleToRemove) {
-        styleToRemove.remove();
-      }
-    };
   }, []);
 
   return (
@@ -416,7 +341,7 @@ export function BranchHeadsTab({
 
       {/* Branch Heads List Modal */}
       <Dialog open={isListModalOpen} onOpenChangeAction={setIsListModalOpen}>
-        <DialogContent className="max-w-xl max-h-[90vh] p-4 branch-heads-modal-container flex flex-col">
+        <DialogContent className={`max-w-xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}>
           <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
@@ -501,7 +426,7 @@ export function BranchHeadsTab({
 
       {/* Branches List Modal */}
       <Dialog open={isBranchesModalOpen} onOpenChangeAction={setIsBranchesModalOpen}>
-        <DialogContent className="max-w-xl max-h-[90vh] p-4 branch-heads-modal-container flex flex-col">
+        <DialogContent className={`max-w-xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}>
           <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
@@ -712,7 +637,7 @@ export function BranchHeadsTab({
 
       {/* Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChangeAction={setShowSuccessDialog}>
-        <DialogContent className="max-w-md p-6 success-dialog-container">
+        <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
           <div className="flex flex-col items-center justify-center py-6 space-y-4">
             {/* Success Animation */}
             <div className="relative">
@@ -758,7 +683,7 @@ export function BranchHeadsTab({
 
       {/* Edit Branch Head Modal */}
       <Dialog open={isEditModalOpen} onOpenChangeAction={setIsEditModalOpen}>
-        <DialogContent className="max-w-xl max-h-[90vh] p-4 branch-heads-modal-container flex flex-col">
+        <DialogContent className={`max-w-xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}>
           <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
@@ -960,7 +885,7 @@ export function BranchHeadsTab({
 
       {/* Edit Success Dialog */}
       <Dialog open={showEditSuccessDialog} onOpenChangeAction={setShowEditSuccessDialog}>
-        <DialogContent className="max-w-md p-6 success-dialog-container">
+        <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
           <div className="flex flex-col items-center justify-center py-6 space-y-4">
             {/* Success Animation */}
             <div className="relative">
@@ -1011,7 +936,7 @@ export function BranchHeadsTab({
           setBranchHeadToDelete(null);
         }
       }}>
-        <DialogContent className="max-w-md p-6 delete-dialog-container">
+        <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
           <DialogHeader className="pb-4 bg-red-50 rounded-lg">
             <DialogTitle className='text-red-800 flex items-center gap-2'>
               <span className="text-xl">⚠️</span>

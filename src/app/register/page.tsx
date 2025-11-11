@@ -73,15 +73,27 @@ function RegisterPage() {
       try {
         // Fetch positions using client data service
         const positionsData = await clientDataService.getPositions();
-        setPositions(positionsData);
+        // Convert {id, name} to {value, label} for Combobox
+        setPositions(positionsData.map((pos: any) => ({
+          value: pos.id || pos.value,
+          label: pos.name || pos.label
+        })));
 
         // Fetch departments using client data service
         const departmentsData = await clientDataService.getDepartments();
-        setDepartments(departmentsData);
+        // Convert {id, name} to {value, label} for Combobox
+        setDepartments(departmentsData.map((dept: any) => ({
+          value: dept.id || dept.value,
+          label: dept.name || dept.label
+        })));
 
-        // Fetch departments using client data service
+        // Fetch branches using client data service
         const branchData = await clientDataService.getBranches();
-        setBranches(branchData);
+        // Convert {id, name} to {value, label} for Combobox
+        setBranches(branchData.map((branch: any) => ({
+          value: branch.id || branch.value,
+          label: branch.name || branch.label
+        })));
         
       } catch (error) {
         console.error("Error fetching data:", error);
