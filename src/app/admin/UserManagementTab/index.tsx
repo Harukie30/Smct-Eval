@@ -13,11 +13,13 @@ import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Plus, ChevronDown } from "lucide-react";
 import EditUserModal from '@/components/EditUserModal';
+import AddEmployeeModal from '@/components/AddEmployeeModal';
 import { toastMessages } from '@/lib/toastMessages';
 import clientDataService from '@/lib/clientDataService';
 import accountsDataRaw from '@/data/accounts.json';
 import departmentsData from '@/data/departments.json';
 import branchCodesData from '@/data/branch-code.json';
+import { useDialogAnimation } from '@/hooks/useDialogAnimation';
 
 // Extract accounts array from the new structure
 const accountsData = accountsDataRaw.accounts || [];
@@ -89,6 +91,9 @@ export function UserManagementTab({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  
+  // Use dialog animation hook (0.4s to match EditUserModal speed)
+  const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [userToEdit, setUserToEdit] = useState<any>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -96,17 +101,6 @@ export function UserManagementTab({
     reason: '',
     duration: '',
     suspendedBy: 'Admin'
-  });
-  const [newUser, setNewUser] = useState({
-    name: '',
-    email: '',
-    position: '',
-    department: '',
-    branchCode: '',
-    branch: '',
-    role: '',
-    password: '',
-    confirmPassword: ''
   });
 
   // Function to filter out deleted employees
@@ -154,8 +148,6 @@ export function UserManagementTab({
     console.log('🔄 Starting user data refresh...');
     if (showLoading) {
       setUsersRefreshing(true);
-      // Add a small delay to ensure spinner is visible
-      await new Promise(resolve => setTimeout(resolve, 300));
     }
     setIsRefreshing(true);
 
@@ -166,9 +158,14 @@ export function UserManagementTab({
 
       await loadPendingRegistrations();
       console.log('✅ User data refresh completed successfully');
+      
+      // Keep spinner visible for at least 800ms for better UX (same as tab switching)
+      await new Promise(resolve => setTimeout(resolve, 800));
     } catch (error) {
       console.error('❌ Error refreshing user data:', error);
       toastMessages.generic.error('Refresh Failed', 'Failed to refresh user data. Please try again.');
+      // Even on error, show spinner for minimum duration
+      await new Promise(resolve => setTimeout(resolve, 800));
     } finally {
       setIsRefreshing(false);
       if (showLoading) {
@@ -434,17 +431,7 @@ export function UserManagementTab({
     }
   };
 
-  const handleAddUser = async () => {
-    if (!newUser.name || !newUser.email || !newUser.password || !newUser.confirmPassword) {
-      toastMessages.generic.error('Validation Error', 'Please fill in all required fields.');
-      return;
-    }
-
-    if (newUser.password !== newUser.confirmPassword) {
-      toastMessages.generic.error('Validation Error', 'Passwords do not match.');
-      return;
-    }
-
+  const handleAddUser = async (newUser: any) => {
     try {
       const newAccount = {
         name: newUser.name,
@@ -454,7 +441,7 @@ export function UserManagementTab({
         branch: newUser.branch,
         role: newUser.role,
         password: newUser.password,
-        isActive: true,
+        isActive: newUser.isActive !== undefined ? newUser.isActive : true,
         employeeId: Date.now() // Temporary ID
       };
 
@@ -467,20 +454,10 @@ export function UserManagementTab({
       
       toastMessages.user.created(newUser.name);
       setIsAddUserModalOpen(false);
-      setNewUser({
-        name: '',
-        email: '',
-        position: '',
-        department: '',
-        branchCode: '',
-        branch: '',
-        role: '',
-        password: '',
-        confirmPassword: ''
-      });
     } catch (error) {
       console.error('Error adding user:', error);
       toastMessages.generic.error('Add Failed', 'Failed to add user. Please try again.');
+      throw error;
     }
   };
 
@@ -554,7 +531,8 @@ export function UserManagementTab({
 
   return (
     <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
-      {usersRefreshing && (
+      {/* Only show top-level spinner during initial load, not during refresh */}
+      {usersRefreshing && loading && (
         <>
           {/* Centered Loading Spinner with Logo */}
           <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
@@ -575,7 +553,7 @@ export function UserManagementTab({
         </>
       )}
       
-      {!usersRefreshing && (
+      {(!usersRefreshing || !loading) && (
         <Card>
           <CardHeader>
             <CardTitle>User Management</CardTitle>
@@ -662,17 +640,17 @@ export function UserManagementTab({
 
                 <div className="relative max-h-[450px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   {isRefreshing && (
-                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none bg-white/60 rounded-lg">
                       <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
                         <div className="relative">
                           {/* Spinning ring */}
-                          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
                           {/* Logo in center */}
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                            <img src="/smct.png" alt="SMCT Logo" className="h-8 w-8 object-contain" />
                           </div>
                         </div>
-                        <p className="text-sm text-gray-600 font-medium">Refreshing...</p>
+                        <p className="text-xs text-gray-600 font-medium">Refreshing...</p>
                       </div>
                     </div>
                   )}
@@ -690,26 +668,7 @@ export function UserManagementTab({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {isRefreshing ? (
-                        Array.from({ length: 5 }).map((_, index) => (
-                          <TableRow key={`skeleton-${index}`}>
-                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                            <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                            <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                            <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                            <TableCell>
-                              <div className="flex space-x-2">
-                                <Skeleton className="h-8 w-16" />
-                                <Skeleton className="h-8 w-16" />
-                                <Skeleton className="h-8 w-16" />
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : getFilteredActiveEmployees().length === 0 ? (
+                      {getFilteredActiveEmployees().length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                             No active users found
@@ -722,7 +681,13 @@ export function UserManagementTab({
                             <TableCell>{employee.email}</TableCell>
                             <TableCell>{employee.position}</TableCell>
                             <TableCell>{employee.department}</TableCell>
-                            <TableCell>{employee.branch || 'N/A'}</TableCell>
+                            <TableCell>
+                              {employee.branch 
+                                ? (employee.branch.includes(',') 
+                                    ? employee.branch.split(',')[0].trim() 
+                                    : employee.branch)
+                                : 'N/A'}
+                            </TableCell>
                             <TableCell>
                               <Badge variant="outline">{employee.role}</Badge>
                             </TableCell>
@@ -837,17 +802,17 @@ export function UserManagementTab({
 
                 <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   {isRefreshing && (
-                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none bg-white/60 rounded-lg">
                       <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
                         <div className="relative">
                           {/* Spinning ring */}
-                          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
                           {/* Logo in center */}
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                            <img src="/smct.png" alt="SMCT Logo" className="h-8 w-8 object-contain" />
                           </div>
                         </div>
-                        <p className="text-sm text-gray-600 font-medium">Refreshing...</p>
+                        <p className="text-xs text-gray-600 font-medium">Refreshing...</p>
                       </div>
                     </div>
                   )}
@@ -864,24 +829,7 @@ export function UserManagementTab({
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-gray-200">
-                      {isRefreshing ? (
-                        Array.from({ length: 5 }).map((_, index) => (
-                          <TableRow key={`skeleton-${index}`}>
-                            <TableCell className="px-6 py-3"><Skeleton className="h-4 w-24" /></TableCell>
-                            <TableCell className="px-6 py-3"><Skeleton className="h-4 w-32" /></TableCell>
-                            <TableCell className="px-6 py-3"><Skeleton className="h-4 w-20" /></TableCell>
-                            <TableCell className="px-6 py-3"><Skeleton className="h-4 w-24" /></TableCell>
-                            <TableCell className="px-6 py-3"><Skeleton className="h-4 w-28" /></TableCell>
-                            <TableCell className="px-6 py-3"><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
-                            <TableCell className="px-6 py-3">
-                              <div className="flex space-x-2">
-                                <Skeleton className="h-8 w-20" />
-                                <Skeleton className="h-8 w-20" />
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : getFilteredNewAccounts().length === 0 ? (
+                      {getFilteredNewAccounts().length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                             {userSearchTerm ? 'No new registrations match your search.' : 'No new registrations found.'}
@@ -967,7 +915,7 @@ export function UserManagementTab({
 
       {/* Suspend Employee Modal */}
       <Dialog open={isSuspendModalOpen} onOpenChangeAction={setIsSuspendModalOpen}>
-        <DialogContent className="max-w-md p-6">
+        <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
           <DialogHeader className="pb-4 bg-yellow-200/70 rounded-lg">
             <DialogTitle className='text-black'>Suspend Employee</DialogTitle>
             <DialogDescription className='text-black'>
@@ -1083,8 +1031,8 @@ export function UserManagementTab({
           setEmployeeToDelete(null);
         }
       }}>
-        <DialogContent className="max-w-md p-6">
-          <DialogHeader className="pb-4 bg-red-50 rounded-lg">
+        <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
+          <DialogHeader className="pb-4 bg-red-50 rounded-lg ">
             <DialogTitle className='text-red-800 flex items-center gap-2'>
               <span className="text-xl">⚠️</span>
               Delete Employee
@@ -1143,204 +1091,28 @@ export function UserManagementTab({
                 className='bg-red-600 hover:bg-red-700 text-white'
                 onClick={handleDeleteEmployee}
               >
-                🗑️ Delete Permanently
+                ❌ Delete Permanently
               </Button>
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Add User Modal */}
-      <Dialog open={isAddUserModalOpen} onOpenChangeAction={setIsAddUserModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6">
-          <DialogHeader className="pb-4">
-            <DialogTitle>Add New User</DialogTitle>
-            <DialogDescription>Create a new user account with appropriate permissions</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6 px-2">
-            {/* Personal Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-medium">
-                    Full Name <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="name"
-                    placeholder="Enter full name"
-                    value={newUser.name}
-                    onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">
-                    Email Address <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter email address"
-                    value={newUser.email}
-                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Job Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Job Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="position" className="text-sm font-medium">Position</Label>
-                  <Select value={newUser.position} onValueChange={(value) => setNewUser({ ...newUser, position: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select position" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {positionsData.map((position) => (
-                        <SelectItem key={position.id} value={position.id}>
-                          {position.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role" className="text-sm font-medium">Role</Label>
-                  <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="hr">HR Manager</SelectItem>
-                      <SelectItem value="evaluator">Evaluator</SelectItem>
-                      <SelectItem value="employee">Employee</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            {/* Organization Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Organization</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="department" className="text-sm font-medium">Department</Label>
-                  <Select value={newUser.department} onValueChange={(value) => setNewUser({ ...newUser, department: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {departmentsData.map(dept => (
-                        <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="branchCode" className="text-sm font-medium">Branch Code</Label>
-                  <Select value={newUser.branchCode} onValueChange={(value) => setNewUser({ ...newUser, branchCode: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select branch code" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branchCodesData.map((code) => (
-                        <SelectItem key={code} value={code}>
-                          {code}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="branch" className="text-sm font-medium">Branch</Label>
-                  <Select value={newUser.branch} onValueChange={(value) => setNewUser({ ...newUser, branch: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branchesData.map(branch => (
-                        <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            {/* Security Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Security</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">
-                    Password <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter password"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-sm font-medium">
-                    Confirm Password <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Confirm password"
-                    value={newUser.confirmPassword}
-                    onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
-                  />
-                </div>
-              </div>
-              {newUser.password && newUser.confirmPassword && newUser.password !== newUser.confirmPassword && (
-                <p className="text-sm text-red-600">Passwords do not match</p>
-              )}
-            </div>
-          </div>
-
-          <DialogFooter className="pt-6 px-2">
-            <div className="flex justify-end space-x-4 w-full">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setNewUser({
-                    name: '',
-                    email: '',
-                    position: '',
-                    department: '',
-                    branchCode: '',
-                    branch: '',
-                    role: '',
-                    password: '',
-                    confirmPassword: ''
-                  });
-                  setIsAddUserModalOpen(false);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAddUser}
-                className="bg-green-500 text-white hover:bg-green-600 hover:text-white"
-              >
-                Add User
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Add Employee Modal */}
+      <AddEmployeeModal
+        isOpen={isAddUserModalOpen}
+        onClose={() => {
+          setIsAddUserModalOpen(false);
+        }}
+        onSave={handleAddUser}
+        departments={departmentsData.map(dept => dept.name)}
+        branches={branchesData}
+        positions={positionsData}
+        onRefresh={async () => {
+          await refreshUserData();
+          await refreshDashboardData(false, false);
+        }}
+      />
     </div>
   );
 }
