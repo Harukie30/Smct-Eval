@@ -56,7 +56,7 @@ interface EvaluationFormProps {
   onCancelAction?: () => void;
 }
 
-export default function EvaluationForm({ employee, currentUser, onCloseAction, onCancelAction }: EvaluationFormProps) {
+export default function ManagerEvaluationForm({ employee, currentUser, onCloseAction, onCancelAction }: EvaluationFormProps) {
   console.log('EvaluationForm received employee:', employee); // Debug log
   
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-8 = actual steps

@@ -312,16 +312,16 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       // Update user data as well
       if (user) {
         // Map UserProfile fields to AuthenticatedUser fields
-        const userUpdates: Partial<AuthenticatedUser> = {
-          name: updates.name,
-          email: updates.email,
-          position: updates.roleOrPosition || user.position,
-          department: updates.department,
-          branch: updates.branch,
-          avatar: updates.avatar,
-          bio: updates.bio,
-          signature: updates.signature,
-        };
+        // Only include fields that are actually provided in updates to avoid overwriting with undefined
+        const userUpdates: Partial<AuthenticatedUser> = {};
+        if (updates.name !== undefined) userUpdates.name = updates.name;
+        if (updates.email !== undefined) userUpdates.email = updates.email;
+        if (updates.roleOrPosition !== undefined) userUpdates.position = updates.roleOrPosition;
+        if (updates.department !== undefined) userUpdates.department = updates.department;
+        if (updates.branch !== undefined) userUpdates.branch = updates.branch;
+        if (updates.avatar !== undefined) userUpdates.avatar = updates.avatar;
+        if (updates.bio !== undefined) userUpdates.bio = updates.bio;
+        if (updates.signature !== undefined) userUpdates.signature = updates.signature;
         
         const updatedUser: AuthenticatedUser = { 
           ...user, 

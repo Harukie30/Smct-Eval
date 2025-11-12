@@ -18,6 +18,8 @@ import { useRouter } from 'next/navigation';
 import { toastMessages } from '@/lib/toastMessages';
 import clientDataService from '@/lib/clientDataService';
 import ContactDevsModal from '@/components/ContactDevsModal';
+import { HowItWorksModal } from '@/components/HowItWorksModal';
+import { LoginRegistrationGuideModal } from '@/components/LoginRegistrationGuideModal';
 import { withPublicPage } from '@/hoc';
 
 function LandingLoginPage() {
@@ -34,6 +36,8 @@ function LandingLoginPage() {
   const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showContactDevsModal, setShowContactDevsModal] = useState(false);
+  const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
+  const [showLoginGuideModal, setShowLoginGuideModal] = useState(false);
 
   const { login, isLoading, user } = useUser();
   const router = useRouter();
@@ -269,7 +273,12 @@ function LandingLoginPage() {
           >
             About
           </button>
-
+          <button
+            onClick={() => setShowLoginGuideModal(true)}
+            className="text-white font-semibold hover:underline-offset-4 hover:underline hover:text-blue-100 transition-colors"
+          >
+            Get Started
+          </button>
         </nav>
       </header>
 
@@ -336,6 +345,15 @@ function LandingLoginPage() {
                   <CardDescription className="text-center">
                     Enter your credentials to access your performance evaluation dashboard
                   </CardDescription>
+                  <div className="text-center mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginGuideModal(true)}
+                      className="text-sm text-blue-600 hover:underline font-medium"
+                    >
+                      New here? Get Started 
+                    </button>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <form onSubmit={handleLogin}>
@@ -457,6 +475,7 @@ function LandingLoginPage() {
             <div>
               <h3 className="font-semibold text-white mb-4">Resources</h3>
               <ul className="space-y-2">
+                <li><a href="#" onClick={() => setShowLoginGuideModal(true)} className="text-white hover:text-yellow-300">Getting Started Guide</a></li>
                 <li><a href="#" onClick={() => setShowContactDevsModal(true)} className="text-white hover:text-yellow-300">Help Center</a></li>
               </ul>
             </div>
@@ -784,6 +803,18 @@ function LandingLoginPage() {
       <ContactDevsModal
         isOpen={showContactDevsModal}
         onCloseAction={() => setShowContactDevsModal(false)}
+      />
+
+      {/* How It Works Modal */}
+      <HowItWorksModal
+        isOpen={showHowItWorksModal}
+        onCloseAction={() => setShowHowItWorksModal(false)}
+      />
+
+      {/* Login & Registration Guide Modal */}
+      <LoginRegistrationGuideModal
+        isOpen={showLoginGuideModal}
+        onCloseAction={() => setShowLoginGuideModal(false)}
       />
 
       {/* Incorrect Password Dialog */}
