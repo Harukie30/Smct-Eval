@@ -25,6 +25,8 @@ import { useToast } from '@/hooks/useToast';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDialogAnimation } from '@/hooks/useDialogAnimation';
+import { EmployeeDashboardGuideModal } from '@/components/EmployeeDashboardGuideModal';
+import { HelpCircle } from 'lucide-react';
 
 // Lazy load tab components
 const OverviewTab = lazy(() => import('./OverviewTab').then(m => ({ default: m.OverviewTab })));
@@ -61,6 +63,9 @@ function EmployeeDashboard() {
   // Refreshing dialog state
   const [showRefreshingDialog, setShowRefreshingDialog] = useState(false);
   const [refreshingMessage, setRefreshingMessage] = useState('');
+  
+  // Guide modal state
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
 
 
   const [submissions, setSubmissions] = useState<any[]>([]);
@@ -878,6 +883,23 @@ function EmployeeDashboard() {
 
   const topSummary = (
     <>
+      <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setIsGuideModalOpen(true)}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+            <HelpCircle className="w-4 h-4 text-blue-600" />
+            Dashboard Guide
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">Learn how to use your dashboard</p>
+            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+              View Guide
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-gray-600">Overall Rating</CardTitle>
@@ -1143,6 +1165,12 @@ function EmployeeDashboard() {
           {renderContent()}
         </DashboardShell>
       </PageTransition>
+
+      {/* Employee Dashboard Guide Modal */}
+      <EmployeeDashboardGuideModal
+        isOpen={isGuideModalOpen}
+        onCloseAction={() => setIsGuideModalOpen(false)}
+      />
 
       {/* View Results Modal */}
       <ViewResultsModal

@@ -12,7 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 import EvaluationForm from '@/components/evaluation';
+import ManagerEvaluationForm from '@/components/evaluation-2';
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
+import EvaluationTypeModal from '@/components/EvaluationTypeModal';
 import mockData from '@/data/dashboard.json';
 import accountsData from '@/data/accounts.json';
 import { UserProfile } from '@/components/ProfileCard';
@@ -498,6 +500,19 @@ function EvaluatorDashboard() {
   // Note: employeeSearch, selectedDepartment, and employeeSort are now managed inside EmployeesTab component
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [isEvaluationTypeModalOpen, setIsEvaluationTypeModalOpen] = useState(false);
+  const [evaluationType, setEvaluationType] = useState<'employee' | 'manager' | null>(null);
+
+  // Debug: Log when evaluation modal opens
+  useEffect(() => {
+    if (isEvaluationModalOpen) {
+      console.log('Evaluation modal opened', { 
+        selectedEmployee: selectedEmployee?.name, 
+        evaluationType,
+        employeeId: selectedEmployee?.id 
+      });
+    }
+  }, [isEvaluationModalOpen, selectedEmployee, evaluationType]);
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
   const [isViewSubmissionModalOpen, setIsViewSubmissionModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
@@ -676,9 +691,13 @@ function EvaluatorDashboard() {
           item.employeeName
         );
 
-        // Filter to show only evaluations created by this evaluator
+        // Filter to show:
+        // 1. Evaluations created by this evaluator (evaluatorId === user.id)
+        // 2. Evaluations where this user is the employee (employeeId === user.id) - for branch managers being evaluated
         const evaluatorFiltered = validData.filter((item: any) => 
-          item.evaluatorId === user?.id
+          item.evaluatorId === user?.id ||
+          item.employeeId === user?.id ||
+          item.evaluationData?.employeeId === user?.id?.toString()
         );
 
         // Remove duplicates based on ID
@@ -1754,7 +1773,11 @@ function EvaluatorDashboard() {
 
   // Calculate statistics from actual submission data
   const stats = useMemo(() => {
-    const evaluatorSubmissions = recentSubmissions.filter(sub => sub.evaluatorId === user?.id);
+    const evaluatorSubmissions = recentSubmissions.filter(sub => 
+      sub.evaluatorId === user?.id || 
+      sub.employeeId === user?.id ||
+      sub.evaluationData?.employeeId === user?.id?.toString()
+    );
     
     // Calculate average rating
     const ratings = evaluatorSubmissions
@@ -1951,10 +1974,11 @@ function EvaluatorDashboard() {
               }}
               onEvaluateEmployee={(employee) => {
                 setSelectedEmployee(employee);
-                setIsEvaluationModalOpen(true);
+                setIsEvaluationTypeModalOpen(true);
               }}
               getUpdatedAvatar={getUpdatedAvatar}
               hasAvatarUpdate={hasAvatarUpdate}
+              currentUser={user}
               isActive={active === 'employees'}
             />
           </Suspense>
@@ -2096,20 +2120,101 @@ function EvaluatorDashboard() {
           {renderContent()}
         </DashboardShell>
 
+        {/* Evaluation Type Selection Modal */}
+        <EvaluationTypeModal
+          isOpen={isEvaluationTypeModalOpen}
+          onCloseAction={() => {
+            setIsEvaluationTypeModalOpen(false);
+            if (!evaluationType) {
+              setSelectedEmployee(null);
+            }
+          }}
+          onSelectEmployeeAction={() => {
+            const employee = selectedEmployee;
+            console.log('Selecting employee evaluation', employee);
+            if (!employee) {
+              console.error('No employee selected!');
+              return;
+            }
+            setEvaluationType('employee');
+            setIsEvaluationTypeModalOpen(false);
+            // Use setTimeout to ensure state is set before opening modal
+            setTimeout(() => {
+              console.log('Opening employee evaluation modal', employee, 'employee');
+              // Ensure employee is still set
+              if (employee) {
+                setSelectedEmployee(employee);
+              }
+              setIsEvaluationModalOpen(true);
+            }, 50);
+          }}
+          onSelectManagerAction={() => {
+            const employee = selectedEmployee;
+            console.log('Selecting manager evaluation', employee);
+            if (!employee) {
+              console.error('No employee selected!');
+              return;
+            }
+            setEvaluationType('manager');
+            setIsEvaluationTypeModalOpen(false);
+            // Use setTimeout to ensure state is set before opening modal
+            setTimeout(() => {
+              console.log('Opening manager evaluation modal', employee, 'manager');
+              // Ensure employee is still set
+              if (employee) {
+                setSelectedEmployee(employee);
+              }
+              setIsEvaluationModalOpen(true);
+            }, 50);
+          }}
+          employeeName={selectedEmployee?.name}
+        />
+
         {/* Evaluation Modal */}
-        <Dialog open={isEvaluationModalOpen} onOpenChangeAction={setIsEvaluationModalOpen}>
+        <Dialog open={isEvaluationModalOpen} onOpenChangeAction={(open) => {
+          console.log('Evaluation modal onOpenChangeAction', open, 'selectedEmployee:', selectedEmployee, 'evaluationType:', evaluationType);
+          if (!open) {
+            setIsEvaluationModalOpen(false);
+            setSelectedEmployee(null);
+            setEvaluationType(null);
+          }
+        }}>
           <DialogContent 
-            className="max-w-7xl max-h-[101vh] overflow-hidden p-2 evaluation-container"
+            className="max-w-7xl max-h-[101vh] overflow-hidden p-0 evaluation-container"
           >
-            {selectedEmployee && (
+            {selectedEmployee && evaluationType === 'employee' && (
               <EvaluationForm
+                key={`employee-eval-${selectedEmployee.id}-${evaluationType}`}
                 employee={selectedEmployee}
                 currentUser={getCurrentUserData()}
                 onCloseAction={() => {
                   setIsEvaluationModalOpen(false);
                   setSelectedEmployee(null);
+                  setEvaluationType(null);
                 }}
               />
+            )}
+            {selectedEmployee && evaluationType === 'manager' && (
+              <ManagerEvaluationForm
+                key={`manager-eval-${selectedEmployee.id}-${evaluationType}`}
+                employee={selectedEmployee}
+                currentUser={getCurrentUserData()}
+                onCloseAction={() => {
+                  setIsEvaluationModalOpen(false);
+                  setSelectedEmployee(null);
+                  setEvaluationType(null);
+                }}
+              />
+            )}
+            {selectedEmployee && !evaluationType && (
+              <div className="p-8 text-center">
+                <p className="text-gray-500">Please select an evaluation type... (Debug: employee={selectedEmployee?.name}, type={evaluationType})</p>
+              </div>
+            )}
+            {!selectedEmployee && (
+              <div className="p-8 text-center">
+                <p className="text-gray-500">No employee selected (Debug: evaluationType={evaluationType})</p>
+              </div>
             )}
           </DialogContent>
         </Dialog>
@@ -2263,7 +2368,7 @@ function EvaluatorDashboard() {
           onStartEvaluationAction={(employee: Employee) => {
             setIsViewEmployeeModalOpen(false);
             setSelectedEmployee(employee);
-            setIsEvaluationModalOpen(true);
+            setIsEvaluationTypeModalOpen(true);
           }}
           onViewSubmissionAction={(submission: any) => {
             setSelectedSubmission(submission);

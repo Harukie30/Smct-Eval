@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 import EvaluationForm from '@/components/evaluation';
+import ManagerEvaluationForm from '@/components/evaluation-2';
+import EvaluationTypeModal from '@/components/EvaluationTypeModal';
 import { useTabLoading } from '@/hooks/useTabLoading';
 import clientDataService from '@/lib/clientDataService';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
@@ -225,6 +227,8 @@ function HRDashboard() {
   const [deleteEmployeePasswordError, setDeleteEmployeePasswordError] = useState('');
   // Note: employeeViewMode, searchTerm, selectedDepartment, selectedBranch are now managed inside EmployeesTab component
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
+  const [isEvaluationTypeModalOpen, setIsEvaluationTypeModalOpen] = useState(false);
+  const [evaluationType, setEvaluationType] = useState<'employee' | 'manager' | null>(null);
   const [employeeToEvaluate, setEmployeeToEvaluate] = useState<Employee | null>(null);
 
   // Note: Evaluation Records tab state is now managed inside EvaluationRecordsTab component
@@ -612,7 +616,7 @@ function HRDashboard() {
 
   const handleEvaluateEmployee = (employee: Employee) => {
     setEmployeeToEvaluate(employee);
-    setIsEvaluationModalOpen(true);
+    setIsEvaluationTypeModalOpen(true);
   };
 
   const confirmDeleteEmployee = async () => {
@@ -1387,11 +1391,53 @@ function HRDashboard() {
           </DialogContent>
         </Dialog>
 
+        {/* Evaluation Type Selection Modal */}
+        <EvaluationTypeModal
+          isOpen={isEvaluationTypeModalOpen}
+          onCloseAction={() => {
+            setIsEvaluationTypeModalOpen(false);
+            if (!evaluationType) {
+              setEmployeeToEvaluate(null);
+            }
+          }}
+          onSelectEmployeeAction={() => {
+            console.log('Selecting employee evaluation', employeeToEvaluate);
+            setEvaluationType('employee');
+            setIsEvaluationTypeModalOpen(false);
+            setTimeout(() => {
+              console.log('Opening employee evaluation modal', employeeToEvaluate, 'employee');
+              setIsEvaluationModalOpen(true);
+            }, 50);
+          }}
+          onSelectManagerAction={() => {
+            console.log('Selecting manager evaluation', employeeToEvaluate);
+            setEvaluationType('manager');
+            setIsEvaluationTypeModalOpen(false);
+            setTimeout(() => {
+              console.log('Opening manager evaluation modal', employeeToEvaluate, 'manager');
+              setIsEvaluationModalOpen(true);
+            }, 50);
+          }}
+          employeeName={employeeToEvaluate?.name}
+        />
+
         {/* Employee Evaluation Modal */}
         {isEvaluationModalOpen && employeeToEvaluate && currentUser && (
-          <Dialog open={isEvaluationModalOpen} onOpenChangeAction={setIsEvaluationModalOpen}>
+          <Dialog open={isEvaluationModalOpen} onOpenChangeAction={(open) => {
+            if (!open) {
+              setIsEvaluationModalOpen(false);
+              setEmployeeToEvaluate(null);
+              setEvaluationType(null);
+            }
+          }}>
             <DialogContent className={`max-w-6xl max-h-[95vh] overflow-hidden p-0 ${dialogAnimationClass}`}>
-              <EvaluationForm
+              {!evaluationType && employeeToEvaluate && (
+                <div className="p-8 text-center">
+                  <p className="text-gray-500">Loading evaluation...</p>
+                </div>
+              )}
+              {evaluationType === 'employee' && (
+                <EvaluationForm
                 key={`hr-eval-${employeeToEvaluate.id}-${isEvaluationModalOpen}`}
                 employee={{
                   id: employeeToEvaluate.id,
@@ -1415,6 +1461,7 @@ function HRDashboard() {
                 onCloseAction={async () => {
                   setIsEvaluationModalOpen(false);
                   setEmployeeToEvaluate(null);
+                  setEvaluationType(null);
                   // Small delay to ensure data is saved before refreshing
                   await new Promise(resolve => setTimeout(resolve, 500));
                   // Refresh submissions to show new evaluation
@@ -1423,8 +1470,48 @@ function HRDashboard() {
                 onCancelAction={() => {
                   setIsEvaluationModalOpen(false);
                   setEmployeeToEvaluate(null);
+                  setEvaluationType(null);
                 }}
               />
+              )}
+              {evaluationType === 'manager' && (
+                <ManagerEvaluationForm
+                  key={`hr-manager-eval-${employeeToEvaluate.id}-${isEvaluationModalOpen}`}
+                  employee={{
+                    id: employeeToEvaluate.id,
+                    name: employeeToEvaluate.name,
+                    email: employeeToEvaluate.email,
+                    position: employeeToEvaluate.position,
+                    department: employeeToEvaluate.department,
+                    branch: employeeToEvaluate.branch,
+                    role: employeeToEvaluate.role,
+                    hireDate: employeeToEvaluate.hireDate,
+                  }}
+                  currentUser={{
+                    id: currentUser.id,
+                    name: currentUser.name,
+                    email: currentUser.email,
+                    position: currentUser.position || 'HR Manager',
+                    department: currentUser.department || 'Human Resources',
+                    role: currentUser.role,
+                    signature: currentUser.signature,
+                  }}
+                  onCloseAction={async () => {
+                    setIsEvaluationModalOpen(false);
+                    setEmployeeToEvaluate(null);
+                    setEvaluationType(null);
+                    // Small delay to ensure data is saved before refreshing
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    // Refresh submissions to show new evaluation
+                    await fetchRecentSubmissions();
+                  }}
+                  onCancelAction={() => {
+                    setIsEvaluationModalOpen(false);
+                    setEmployeeToEvaluate(null);
+                    setEvaluationType(null);
+                  }}
+                />
+              )}
             </DialogContent>
           </Dialog>
         )}
