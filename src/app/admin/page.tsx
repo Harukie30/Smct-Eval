@@ -25,7 +25,6 @@ import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 // Lazy load tab components for better performance
 const OverviewTab = lazy(() => import('./OverviewTab').then(m => ({ default: m.OverviewTab })));
 const UserManagementTab = lazy(() => import('./UserManagementTab').then(m => ({ default: m.UserManagementTab })));
-const EmployeeManagementTab = lazy(() => import('./EmployeeManagementTab').then(m => ({ default: m.EmployeeManagementTab })));
 const EvaluatedReviewsTab = lazy(() => import('./EvaluatedReviewsTab').then(m => ({ default: m.EvaluatedReviewsTab })));
 const DepartmentsTab = lazy(() => import('./DepartmentsTab').then(m => ({ default: m.DepartmentsTab })));
 const BranchHeadsTab = lazy(() => import('./BranchHeadsTab').then(m => ({ default: m.BranchHeadsTab })));
@@ -107,21 +106,6 @@ interface Review {
   completedCriteria: number;
 }
 
-interface SuspendedEmployee {
-  id: number;
-  name: string;
-  email: string;
-  position: string;
-  department: string;
-  branch: string;
-  suspensionDate: string;
-  suspensionReason: string;
-  suspensionDuration: string;
-  suspendedBy: string;
-  status: 'suspended' | 'pending_review' | 'reinstated';
-  reinstatedDate?: string;
-  reinstatedBy?: string;
-}
 
 interface Department {
   id: number;
@@ -142,7 +126,6 @@ function AdminDashboard() {
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [suspendedEmployees, setSuspendedEmployees] = useState<SuspendedEmployee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -348,18 +331,11 @@ function AdminDashboard() {
     }
   };
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
-  const [isViewDetailsModalOpen, setIsViewDetailsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [selectedSuspendedEmployee, setSelectedSuspendedEmployee] = useState<SuspendedEmployee | null>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
-  const [reinstatedEmployeeToDelete, setReinstatedEmployeeToDelete] = useState<SuspendedEmployee | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<any>(null);
-  const [dashboardTab, setDashboardTab] = useState<'suspended' | 'reinstated'>('suspended');
-  const [suspendedSearchTerm, setSuspendedSearchTerm] = useState('');
-  const [reinstatedSearchTerm, setReinstatedSearchTerm] = useState('');
   const [approvedRegistrations, setApprovedRegistrations] = useState<number[]>([]);
   const [rejectedRegistrations, setRejectedRegistrations] = useState<number[]>([]);
   const [pendingRegistrations, setPendingRegistrations] = useState<any[]>([]);
@@ -374,11 +350,6 @@ function AdminDashboard() {
     role: '',
     password: '',
     confirmPassword: ''
-  });
-  const [suspendForm, setSuspendForm] = useState({
-    reason: '',
-    duration: '',
-    suspendedBy: 'Admin'
   });
 
   // Function to filter out deleted employees
@@ -474,17 +445,6 @@ function AdminDashboard() {
     }
   };
 
-  // Function to open suspend modal
-  const openSuspendModal = (employee: Employee) => {
-    setSelectedEmployee(employee);
-    setIsSuspendModalOpen(true);
-  };
-
-  // Function to open view details modal
-  const openViewDetailsModal = (suspendedEmployee: SuspendedEmployee) => {
-    setSelectedSuspendedEmployee(suspendedEmployee);
-    setIsViewDetailsModalOpen(true);
-  };
 
   // Function to open delete modal
   const openDeleteModal = (employee: Employee) => {
@@ -624,163 +584,15 @@ function AdminDashboard() {
     }
   };
 
-  // Function to handle suspend employee
-  const handleSuspendEmployee = () => {
-    if (!selectedEmployee || !suspendForm.reason || !suspendForm.duration) {
-      toastMessages.generic.error('Validation Error', 'Please fill in all required fields.');
-      return;
-    }
 
-    // Create new suspended employee
-    const newSuspendedEmployee: SuspendedEmployee = {
-      id: selectedEmployee.id,
-      name: selectedEmployee.name,
-      email: selectedEmployee.email,
-      position: selectedEmployee.position,
-      department: selectedEmployee.department,
-      branch: selectedEmployee.branch || '',
-      suspensionDate: new Date().toISOString().split('T')[0],
-      suspensionReason: suspendForm.reason,
-      suspensionDuration: suspendForm.duration,
-      suspendedBy: suspendForm.suspendedBy,
-      status: 'suspended'
-    };
-
-    // Check if employee already exists in suspended list and update or add accordingly
-    setSuspendedEmployees(prev => {
-      const existingIndex = prev.findIndex(emp => emp.id === selectedEmployee.id);
-      let updated;
-
-      if (existingIndex !== -1) {
-        // Employee already exists, update the existing record
-        console.log(`Updating existing suspended employee: ${selectedEmployee.name} (ID: ${selectedEmployee.id})`);
-        updated = [...prev];
-        updated[existingIndex] = newSuspendedEmployee;
-      } else {
-        // Employee doesn't exist, add new record
-        console.log(`Adding new suspended employee: ${selectedEmployee.name} (ID: ${selectedEmployee.id})`);
-        updated = [...prev, newSuspendedEmployee];
-      }
-
-      // Save to localStorage for login system integration
-      localStorage.setItem('suspendedEmployees', JSON.stringify(updated));
-      return updated;
-    });
-
-    // Show success toast
-    toastMessages.user.suspended(selectedEmployee.name);
-
-    // Update system metrics to reflect the suspension
-    updateSystemMetrics();
-
-    // Close modal and reset form
-    setIsSuspendModalOpen(false);
-    setSuspendForm({ reason: '', duration: '', suspendedBy: 'Admin' });
-    setSelectedEmployee(null);
-  };
-
-  // Function to reset suspend form
-  const resetSuspendForm = () => {
-    setSuspendForm({
-      reason: '',
-      duration: '',
-      suspendedBy: 'Admin'
-    });
-    setSelectedEmployee(null);
-  };
-
-  // Function to reinstate employee
-  const handleReinstateEmployee = (employeeId: number) => {
-    // Find the employee to get their name
-    const employee = suspendedEmployees.find(emp => emp.id === employeeId);
-
-    setSuspendedEmployees(prev => {
-      const updated = prev.map(emp =>
-        emp.id === employeeId
-          ? {
-            ...emp,
-            status: 'reinstated' as const,
-            reinstatedDate: new Date().toISOString().split('T')[0],
-            reinstatedBy: 'Admin'
-          }
-          : emp
-      );
-      // Update localStorage
-      localStorage.setItem('suspendedEmployees', JSON.stringify(updated));
-      return updated;
-    });
-
-    // Show success toast
-    if (employee) {
-      toastMessages.user.reinstated(employee.name);
-    }
-
-    // Update system metrics to reflect the reinstatement
-    updateSystemMetrics();
-  };
-
-  // Function to open delete modal for reinstated employee
-  const openDeleteReinstatedModal = (employee: SuspendedEmployee) => {
-    setReinstatedEmployeeToDelete(employee);
-    setIsDeleteModalOpen(true);
-  };
-
-  // Function to delete reinstated employee permanently
-  const handleDeleteReinstatedEmployee = () => {
-    if (!reinstatedEmployeeToDelete) return;
-
-    // Remove from suspended employees list (this will also remove from reinstated)
-    setSuspendedEmployees(prev => {
-      const updated = prev.filter(emp => emp.id !== reinstatedEmployeeToDelete.id);
-      // Update localStorage
-      localStorage.setItem('suspendedEmployees', JSON.stringify(updated));
-      return updated;
-    });
-
-    // Also remove from main employees list
-    setEmployees(prev => prev.filter(emp => emp.id !== reinstatedEmployeeToDelete.id));
-
-    // Store deleted employee ID in localStorage for persistence
-    const deletedEmployees = JSON.parse(localStorage.getItem('deletedEmployees') || '[]');
-    deletedEmployees.push(reinstatedEmployeeToDelete.id);
-    localStorage.setItem('deletedEmployees', JSON.stringify(deletedEmployees));
-
-    // Show success toast
-    toastMessages.user.deleted(reinstatedEmployeeToDelete.name);
-
-    // Update system metrics to reflect the deletion
-    updateSystemMetrics();
-
-    // Close modal
-    setIsDeleteModalOpen(false);
-    setReinstatedEmployeeToDelete(null);
-  };
-
-  // Memoized active employees (only recalculates when employees or suspendedEmployees change)
+  // Memoized active employees
   const activeEmployees = useMemo(() => {
-    const currentlySuspendedIds = suspendedEmployees
-      .filter(emp => emp.status === 'suspended')
-      .map(emp => emp.id);
+    return employees.filter(emp => (emp.isActive !== false));
+  }, [employees]);
 
-    return employees.filter(emp => 
-      !currentlySuspendedIds.includes(emp.id) && 
-      (emp.isActive !== false)
-    );
-  }, [employees, suspendedEmployees]);
-
-  // Function to filter out suspended employees from User Management (kept for backward compatibility)
+  // Function to get active employees
   const getActiveEmployees = () => activeEmployees;
 
-  // Function to check if an employee was previously suspended and reinstated
-  const wasEmployeeReinstated = (employeeId: number) => {
-    return suspendedEmployees.some(emp => emp.id === employeeId && emp.status === 'reinstated');
-  };
-
-  // Function to get reinstatement date for an employee
-  const getEmployeeReinstatementDate = (employeeId: number) => {
-    const reinstatedEmployee = suspendedEmployees.find(emp => emp.id === employeeId && emp.status === 'reinstated');
-    return reinstatedEmployee?.reinstatedDate;
-  };
 
   // Helper functions for departments and branches
   const getDepartmentStats = (deptName: string) => {
@@ -795,13 +607,10 @@ function AdminDashboard() {
 
   // Function to update system metrics with correct active user count
   const updateSystemMetrics = () => {
-    const currentlySuspendedCount = suspendedEmployees.filter(emp => emp.status === 'suspended').length;
-
     setSystemMetrics(prev => prev ? {
       ...prev,
       totalUsers: employees.length, // Total users in system
-      activeUsers: activeEmployees.length, // Active users (includes reinstated)
-      suspendedUsers: currentlySuspendedCount // Currently suspended users
+      activeUsers: activeEmployees.length, // Active users
     } : null);
 
     // Update dashboard stats with correct active user counts
@@ -843,84 +652,6 @@ function AdminDashboard() {
     } : null);
   };
 
-  // Memoized active suspended employees (only recalculates when suspendedEmployees change)
-  const activeSuspendedEmployees = useMemo(() => {
-    return suspendedEmployees.filter(employee => employee.status === 'suspended');
-  }, [suspendedEmployees]);
-
-  // Function wrapper for backward compatibility
-  const getActiveSuspendedEmployees = () => activeSuspendedEmployees;
-
-  // Memoized reinstated employees (only recalculates when suspendedEmployees change)
-  const reinstatedEmployees = useMemo(() => {
-    return suspendedEmployees.filter(employee => employee.status === 'reinstated');
-  }, [suspendedEmployees]);
-
-  // Function wrapper for backward compatibility
-  const getReinstatedEmployees = () => reinstatedEmployees;
-
-  // Function to clean up duplicate suspended employees (keep only the latest record per employee)
-  const cleanupDuplicateSuspendedEmployees = () => {
-    setSuspendedEmployees(prev => {
-      const uniqueEmployees = new Map();
-      const originalCount = prev.length;
-
-      // Process employees in reverse order to keep the latest record
-      prev.reverse().forEach(emp => {
-        if (!uniqueEmployees.has(emp.id)) {
-          uniqueEmployees.set(emp.id, emp);
-        }
-      });
-
-      const cleaned = Array.from(uniqueEmployees.values()).reverse();
-      const removedCount = originalCount - cleaned.length;
-
-      localStorage.setItem('suspendedEmployees', JSON.stringify(cleaned));
-
-      // Show success toast
-      if (removedCount > 0) {
-        toastMessages.generic.success('Cleanup Complete', `Removed ${removedCount} duplicate record(s).`);
-      } else {
-        toastMessages.generic.info('No Duplicates Found', 'All records are already unique.');
-      }
-
-      return cleaned;
-    });
-  };
-
-  // Memoized filtered suspended employees (only recalculates when activeSuspendedEmployees or suspendedSearchTerm change)
-  const filteredSuspendedEmployees = useMemo(() => {
-    if (!suspendedSearchTerm) return activeSuspendedEmployees;
-
-    return activeSuspendedEmployees.filter(employee =>
-      employee.name.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
-      employee.position.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
-      employee.department.toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
-      (employee.branch || '').toLowerCase().includes(suspendedSearchTerm.toLowerCase()) ||
-      employee.suspensionReason.toLowerCase().includes(suspendedSearchTerm.toLowerCase())
-    );
-  }, [activeSuspendedEmployees, suspendedSearchTerm]);
-
-  // Function wrapper for backward compatibility
-  const getFilteredSuspendedEmployees = () => filteredSuspendedEmployees;
-
-  // Memoized filtered reinstated employees (only recalculates when reinstatedEmployees or reinstatedSearchTerm change)
-  const filteredReinstatedEmployees = useMemo(() => {
-    if (!reinstatedSearchTerm) return reinstatedEmployees;
-
-    return reinstatedEmployees.filter(employee =>
-      employee.name.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
-      employee.position.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
-      employee.department.toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
-      (employee.branch || '').toLowerCase().includes(reinstatedSearchTerm.toLowerCase()) ||
-      employee.suspensionReason.toLowerCase().includes(reinstatedSearchTerm.toLowerCase())
-    );
-  }, [reinstatedEmployees, reinstatedSearchTerm]);
-
-  // Function wrapper for backward compatibility
-  const getFilteredReinstatedEmployees = () => filteredReinstatedEmployees;
 
 
 
@@ -984,9 +715,6 @@ function AdminDashboard() {
         setDashboardStats(stats);
         setReviews(reviewsData);
 
-        // Load suspended employees from localStorage
-        const savedSuspendedEmployees = JSON.parse(localStorage.getItem('suspendedEmployees') || '[]');
-        setSuspendedEmployees(savedSuspendedEmployees);
 
         // Load pending registrations
         await loadPendingRegistrations();
@@ -1019,14 +747,6 @@ function AdminDashboard() {
   };
 
 
-  const getSuspensionStatusColor = (status: string) => {
-    switch (status) {
-      case 'suspended': return 'text-red-600 bg-red-100';
-      case 'pending_review': return 'text-yellow-600 bg-yellow-100';
-      case 'reinstated': return 'text-green-600 bg-green-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
 
   const getReviewStatusColor = (status: string) => {
     switch (status) {
@@ -1093,7 +813,6 @@ function AdminDashboard() {
 
   const sidebarItems: SidebarItem[] = useMemo(() => [
     { id: 'overview', label: 'Overview', icon: '📊' },
-    { id: 'dashboards', label: 'Employee Monitoring', icon: '💻' },
     { id: 'users', label: 'User Management', icon: '👥' },
     { id: 'evaluated-reviews', label: 'Evaluation Records', icon: '📋' },
     { id: 'departments', label: 'Departments', icon: '🏢' },
@@ -1176,21 +895,6 @@ function AdminDashboard() {
         </Suspense>
       )}
 
-      {active === 'dashboards' && (
-        <Suspense fallback={
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        }>
-          <EmployeeManagementTab
-            suspendedEmployees={suspendedEmployees}
-            onReinstate={(employee) => handleReinstateEmployee(employee.id)}
-            onDeleteSuspended={(employee) => openDeleteModal(employee as any)}
-            onDeleteReinstated={openDeleteReinstatedModal}
-          />
-        </Suspense>
-      )}
-
       {active === 'users' && (
         <Suspense fallback={
           <div className="flex items-center justify-center h-64">
@@ -1201,8 +905,6 @@ function AdminDashboard() {
             key={active}
             branchesData={branchesData}
             positionsData={positionsData}
-            suspendedEmployees={suspendedEmployees}
-            onSuspendedEmployeesChange={setSuspendedEmployees}
             refreshDashboardData={refreshDashboardData}
           />
         </Suspense>
@@ -1483,251 +1185,12 @@ function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Suspend Employee Modal */}
-      <Dialog open={isSuspendModalOpen} onOpenChangeAction={setIsSuspendModalOpen}>
-        <DialogContent className="max-w-md p-6">
-          <DialogHeader className="pb-4 bg-yellow-200/70 rounded-lg">
-            <DialogTitle className='text-black'>Suspend Employee</DialogTitle>
-            <DialogDescription className='text-black'>
-              Suspend {selectedEmployee?.name} from the system
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 px-2">
-            <div className="space-y-2">
-              <Label htmlFor="reason" className="text-sm font-medium mt-5">
-                Suspension Reason <span className="text-red-500">*</span>
-              </Label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
-                    {suspendForm.reason || "Select suspension reason"}
-                    <ChevronDown className="h-4 w-4 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-full">
-                  <DropdownMenuItem
-                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Policy violation - unauthorized access" })}
-                    className={suspendForm.reason === "Policy violation - unauthorized access" ? "bg-accent" : ""}
-                  >
-                    Policy violation - unauthorized access
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Performance issues - missed deadlines" })}
-                    className={suspendForm.reason === "Performance issues - missed deadlines" ? "bg-accent" : ""}
-                  >
-                    Performance issues - missed deadlines
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Security breach - shared credentials" })}
-                    className={suspendForm.reason === "Security breach - shared credentials" ? "bg-accent" : ""}
-                  >
-                    Security breach - shared credentials
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Inappropriate behavior" })}
-                    className={suspendForm.reason === "Inappropriate behavior" ? "bg-accent" : ""}
-                  >
-                    Inappropriate behavior
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Attendance violations" })}
-                    className={suspendForm.reason === "Attendance violations" ? "bg-accent" : ""}
-                  >
-                    Attendance violations
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Data misuse" })}
-                    className={suspendForm.reason === "Data misuse" ? "bg-accent" : ""}
-                  >
-                    Data misuse
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Confidentiality breach" })}
-                    className={suspendForm.reason === "Confidentiality breach" ? "bg-accent" : ""}
-                  >
-                    Confidentiality breach
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Workplace harassment" })}
-                    className={suspendForm.reason === "Workplace harassment" ? "bg-accent" : ""}
-                  >
-                    Workplace harassment
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Substance abuse" })}
-                    className={suspendForm.reason === "Substance abuse" ? "bg-accent" : ""}
-                  >
-                    Substance abuse
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setSuspendForm({ ...suspendForm, reason: "Other - please specify" })}
-                    className={suspendForm.reason === "Other - please specify" ? "bg-accent" : ""}
-                  >
-                    Other - please specify
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="duration" className="text-sm font-medium">
-                Suspension Duration <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={suspendForm.duration}
-                onValueChange={(value) => setSuspendForm({ ...suspendForm, duration: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select duration" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1 day">1 Day</SelectItem>
-                  <SelectItem value="3 days">3 Days</SelectItem>
-                  <SelectItem value="7 days">7 Days</SelectItem>
-                  <SelectItem value="14 days">14 Days</SelectItem>
-                  <SelectItem value="30 days">30 Days</SelectItem>
-                  <SelectItem value="60 days">60 Days</SelectItem>
-                  <SelectItem value="90 days">90 Days</SelectItem>
-                  <SelectItem value="Indefinite">Indefinite</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="suspendedBy" className="text-sm font-medium">
-                Suspended By
-              </Label>
-              <Select
-                value={suspendForm.suspendedBy}
-                onValueChange={(value) => setSuspendForm({ ...suspendForm, suspendedBy: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select who suspended" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Admin">Admin</SelectItem>
-                  <SelectItem value="HR Manager">HR Manager</SelectItem>
-                  <SelectItem value="Department Manager">Department Manager</SelectItem>
-                  <SelectItem value="IT Manager">IT Manager</SelectItem>
-                  <SelectItem value="Supervisor">Supervisor</SelectItem>
-                  <SelectItem value="System">System</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <DialogFooter className="pt-6 px-2">
-            <div className="flex justify-end space-x-4 w-full">
-              <Button className='bg-blue-400/90 text-white'
-                variant="outline"
-                onClick={() => {
-                  resetSuspendForm();
-                  setIsSuspendModalOpen(false);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                className='bg-red-400/100 text-white'
-                onClick={handleSuspendEmployee}
-              >
-                ❌ Suspend Employee
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Details Modal */}
-      <Dialog open={isViewDetailsModalOpen} onOpenChangeAction={setIsViewDetailsModalOpen}>
-        <DialogContent className="max-w-lg p-4">
-          <DialogHeader className="pb-3">
-            <DialogTitle className="flex items-center gap-2">
-              <span className="text-xl">📋</span>
-              Suspension Details
-            </DialogTitle>
-            <DialogDescription>
-              {selectedSuspendedEmployee?.name}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 px-2">
-            {/* Key Information */}
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="font-medium text-gray-600">Date:</span>
-                <div>{selectedSuspendedEmployee?.suspensionDate ? new Date(selectedSuspendedEmployee.suspensionDate).toLocaleDateString() : 'N/A'}</div>
-              </div>
-              <div>
-                <span className="font-medium text-gray-600">Duration:</span>
-                <div>{selectedSuspendedEmployee?.suspensionDuration}</div>
-              </div>
-              <div>
-                <span className="font-medium text-gray-600">Suspended By:</span>
-                <div>{selectedSuspendedEmployee?.suspendedBy}</div>
-              </div>
-              {selectedSuspendedEmployee?.status === 'reinstated' && (
-                <>
-                  <div>
-                    <span className="font-medium text-gray-600">Reinstated Date:</span>
-                    <div>{selectedSuspendedEmployee?.reinstatedDate ? new Date(selectedSuspendedEmployee.reinstatedDate).toLocaleDateString() : 'N/A'}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-600">Reinstated By:</span>
-                    <div>{selectedSuspendedEmployee?.reinstatedBy || 'N/A'}</div>
-                  </div>
-                </>
-              )}
-              <div>
-                <span className="font-medium text-gray-600">Status:</span>
-                <Badge className={getSuspensionStatusColor(selectedSuspendedEmployee?.status || '')}>
-                  {selectedSuspendedEmployee?.status?.replace('_', ' ').toUpperCase()}
-                </Badge>
-              </div>
-            </div>
-
-            {/* Violation Reason */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-600">Reason for Suspension</Label>
-              <div className="p-3 bg-gray-50 rounded-lg border text-sm">
-                {selectedSuspendedEmployee?.suspensionReason}
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="pt-4 px-2">
-            <div className="flex justify-end space-x-3 w-full">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsViewDetailsModalOpen(false)}
-              >
-                Close
-              </Button>
-              {selectedSuspendedEmployee?.status === 'suspended' && (
-                <Button
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => {
-                    handleReinstateEmployee(selectedSuspendedEmployee.id);
-                    setIsViewDetailsModalOpen(false);
-                  }}
-                >
-                  Reinstate
-                </Button>
-              )}
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Modal */}
       <Dialog open={isDeleteModalOpen} onOpenChangeAction={(open) => {
         setIsDeleteModalOpen(open);
         if (!open) {
           setEmployeeToDelete(null);
-          setReinstatedEmployeeToDelete(null);
         }
       }}>
         <DialogContent className="max-w-md p-6">
@@ -1737,7 +1200,7 @@ function AdminDashboard() {
               Delete Employee
             </DialogTitle>
             <DialogDescription className='text-red-700'>
-              This action cannot be undone. Are you sure you want to permanently delete {employeeToDelete?.name || reinstatedEmployeeToDelete?.name}?
+              This action cannot be undone. Are you sure you want to permanently delete {employeeToDelete?.name}?
             </DialogDescription>
           </DialogHeader>
 
@@ -1781,7 +1244,6 @@ function AdminDashboard() {
                 onClick={() => {
                   setIsDeleteModalOpen(false);
                   setEmployeeToDelete(null);
-                  setReinstatedEmployeeToDelete(null);
                 }}
                 className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
               >
@@ -1789,13 +1251,7 @@ function AdminDashboard() {
               </Button>
               <Button
                 className='bg-red-600 hover:bg-red-700 text-white'
-                onClick={() => {
-                  if (reinstatedEmployeeToDelete) {
-                    handleDeleteReinstatedEmployee();
-                  } else {
-                    handleDeleteEmployee();
-                  }
-                }}
+                onClick={handleDeleteEmployee}
               >
                 🗑️ Delete Permanently
               </Button>

@@ -10,7 +10,6 @@ import Link from 'next/link';
 import PageTransition from '@/components/PageTransition';
 import RealLoadingScreen from '@/components/RealLoadingScreen';
 import InstantLoadingScreen from '@/components/InstantLoadingScreen';
-import SuspensionModal from '@/components/SuspensionModal';
 import GoogleLoginModal from '@/components/GoogleLoginModal';
 import ForgotPasswordModal from '@/components/ForgotPasswordModal';
 import { useUser } from '@/contexts/UserContext';
@@ -30,8 +29,6 @@ function LandingLoginPage() {
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn,] = useState(false);
   const [showLoadingScreen, setShowLoadingScreen] = useState(false);
-  const [showSuspensionModal, setShowSuspensionModal] = useState(false);
-  const [suspensionData, setSuspensionData] = useState<any>(null);
   const [showGoogleLoginModal, setShowGoogleLoginModal] = useState(false);
   const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
@@ -139,13 +136,6 @@ function LandingLoginPage() {
           setShowLoadingScreen(false);
           setLoginError('Session error. Please try logging in again.');
         }
-      } else if (result && typeof result === 'object' && result.suspended) {
-        // Account is suspended
-        console.log('Account suspended result:', result);
-        console.log('Suspension data:', result.data);
-        setSuspensionData(result.data);
-        setShowSuspensionModal(true);
-        setShowLoadingScreen(false);
       } else {
         // Login failed
         throw new Error('Invalid username or password');
@@ -770,17 +760,6 @@ function LandingLoginPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Suspension Modal */}
-      {suspensionData && (
-        <SuspensionModal
-          isOpen={showSuspensionModal}
-          onClose={() => {
-            setShowSuspensionModal(false);
-            setSuspensionData(null);
-          }}
-          suspensionData={suspensionData}
-        />
-      )}
 
       {/* Google Login Modal */}
       <GoogleLoginModal
