@@ -58,9 +58,15 @@ export function EvaluationHistoryTab({
     setDateFilter({});
   };
 
-  // Filter submissions to show only evaluations created by this evaluator
+  // Filter submissions to show:
+  // 1. Evaluations created by this evaluator (evaluatorId === user.id)
+  // 2. Evaluations where this user is the employee (employeeId === user.id) - for branch managers being evaluated
   const filteredHistorySubmissions = recentSubmissions
-    .filter(submission => submission.evaluatorId === user?.id)
+    .filter(submission => 
+      submission.evaluatorId === user?.id || 
+      submission.employeeId === user?.id ||
+      submission.evaluationData?.employeeId === user?.id?.toString()
+    )
     .filter(submission => {
       if (!historySearchTerm) return true;
 
@@ -348,7 +354,11 @@ export function EvaluationHistoryTab({
                           <TableBody>
                             {(() => {
                               // Filter submissions by evaluator first
-                              const evaluatorSubmissions = recentSubmissions.filter(submission => submission.evaluatorId === user?.id);
+                              const evaluatorSubmissions = recentSubmissions.filter(submission => 
+                                submission.evaluatorId === user?.id || 
+                                submission.employeeId === user?.id ||
+                                submission.evaluationData?.employeeId === user?.id?.toString()
+                              );
                               
                               // Group submissions by quarter
                               const quarterlyData = evaluatorSubmissions.reduce((acc, submission) => {
@@ -584,7 +594,11 @@ export function EvaluationHistoryTab({
                       </div>
                       {historySearchTerm && (
                         <div className="mt-2 text-sm text-gray-600">
-                          Showing {filteredHistorySubmissions.length} of {recentSubmissions.filter(submission => submission.evaluatorId === user?.id).length} evaluations
+                          Showing {filteredHistorySubmissions.length} of {recentSubmissions.filter(submission => 
+                            submission.evaluatorId === user?.id || 
+                            submission.employeeId === user?.id ||
+                            submission.evaluationData?.employeeId === user?.id?.toString()
+                          ).length} evaluations
                         </div>
                       )}
                     </div>

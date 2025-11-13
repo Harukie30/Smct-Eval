@@ -25,14 +25,14 @@ interface Employee {
 interface BranchHeadsTabProps {
   employees: Employee[];
   onRefresh?: (showModal?: boolean, isAutoRefresh?: boolean) => Promise<void>;
+  isLoading?: boolean;
 }
 
 export function BranchHeadsTab({
   employees,
-  onRefresh
+  onRefresh,
+  isLoading = false
 }: BranchHeadsTabProps) {
-  const [branchHeadsRefreshing, setBranchHeadsRefreshing] = useState(false);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [isBranchesModalOpen, setIsBranchesModalOpen] = useState(false);
   const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
@@ -67,17 +67,6 @@ export function BranchHeadsTab({
     });
   }, [employees]);
 
-  // Only show spinner on initial mount, not on employees prop changes
-  useEffect(() => {
-    if (isInitialLoad) {
-      setBranchHeadsRefreshing(true);
-      const timer = setTimeout(() => {
-        setBranchHeadsRefreshing(false);
-        setIsInitialLoad(false);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [isInitialLoad]);
 
   // Load branches data
   const loadBranches = async (): Promise<{id: string, name: string}[]> => {
@@ -222,21 +211,6 @@ export function BranchHeadsTab({
         </CardHeader>
         <CardContent>
           <div className="relative max-h-[600px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-            {branchHeadsRefreshing && (
-              <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    {/* Spinning ring */}
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    {/* Logo in center */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 font-medium">Refreshing...</p>
-                </div>
-              </div>
-            )}
             <Table>
               <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                 <TableRow>
@@ -246,14 +220,17 @@ export function BranchHeadsTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {branchHeadsRefreshing && branchHeads.length === 0 ? (
+                {(isLoading || !employees || employees.length === 0) ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
                       <TableCell className="py-4">
-                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-5 w-40" />
                       </TableCell>
                       <TableCell className="py-4 text-center">
-                        <Skeleton className="h-4 w-20 mx-auto" />
+                        <div className="flex flex-wrap justify-center gap-2">
+                          <Skeleton className="h-6 w-24" />
+                          <Skeleton className="h-6 w-24" />
+                        </div>
                       </TableCell>
                       <TableCell className="py-4">
                         <div className="flex justify-end space-x-2">

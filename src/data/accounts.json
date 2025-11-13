@@ -125,6 +125,40 @@
       "avatar": null,
       "bio": null,
       "updatedAt": "2025-09-10T03:02:22.026Z"
+    },
+    {
+      "id": 8,
+      "username": "areamanager",
+      "password": "areamanager123",
+      "name": "Area Manager",
+      "email": "areamanager@smct.com",
+      "role": "manager",
+      "position": "Area Manager",
+      "department": "Operations",
+      "branch": "head-office, cebu-branch",
+      "isActive": true,
+      "contact": "+1-555-0100",
+      "hireDate": "2023-01-15",
+      "avatar": null,
+      "bio": "Area Manager responsible for overseeing multiple branches and conducting employee evaluations.",
+      "updatedAt": "2025-01-15T10:30:00.000Z"
+    },
+    {
+      "id": 9,
+      "username": "branchmanager",
+      "password": "branchmanager123",
+      "name": "Branch Manager",
+      "email": "branchmanager@smct.com",
+      "role": "manager",
+      "position": "Branch Manager",
+      "department": "Operations",
+      "branch": "cebu-branch",
+      "isActive": true,
+      "contact": "+1-555-0200",
+      "hireDate": "2023-02-01",
+      "avatar": null,
+      "bio": "Branch Manager responsible for managing branch operations and conducting employee evaluations.",
+      "updatedAt": "2025-01-15T10:30:00.000Z"
     }
   ],
   "roles": {

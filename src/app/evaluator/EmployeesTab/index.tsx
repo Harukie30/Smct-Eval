@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import SearchableDropdown from "@/components/ui/searchable-dropdown";
 import accountsData from '@/data/accounts.json';
 import departments from '@/data/departments.json';
+import { useEmployeeFiltering } from '@/hooks/useEmployeeFiltering';
 
 interface Employee {
   id: number;
@@ -33,6 +34,7 @@ interface EmployeesTabProps {
   onEvaluateEmployee: (employee: any) => void;
   getUpdatedAvatar: (employeeId: number, currentAvatar?: string) => string | undefined;
   hasAvatarUpdate: (employeeId: number) => boolean;
+  currentUser?: any; // Add currentUser prop for filtering
   isActive?: boolean;
 }
 
@@ -45,6 +47,7 @@ export function EmployeesTab({
   onEvaluateEmployee,
   getUpdatedAvatar,
   hasAvatarUpdate,
+  currentUser,
   isActive = false
 }: EmployeesTabProps) {
   const [employeeSearch, setEmployeeSearch] = useState('');
@@ -52,7 +55,6 @@ export function EmployeesTab({
   const [employeeSort, setEmployeeSort] = useState<{ key: keyof Employee; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
 
   const refreshKey = `employees-${employeeDataRefresh}`;
-  const normalizedQuery = employeeSearch.trim().toLowerCase();
 
   // Get updated profile data from localStorage with auto-update support
   const getUpdatedEmployeeData = (employee: any) => {
@@ -126,25 +128,32 @@ export function EmployeesTab({
     }
   };
 
+  // Get all employees from accounts data
+  const allEmployees = useMemo(() => {
+    return (accountsData as any).accounts.map((e: any) => ({
+      id: e.employeeId || e.id,
+      name: e.name,
+      email: e.email,
+      position: e.position,
+      department: e.department,
+      branch: e.branch,
+      role: e.role,
+      isActive: e.isActive,
+      hireDate: e.hireDate,
+      avatar: e.avatar,
+    }));
+  }, []);
+
+  // Use the custom hook for filtering
+  const filteredEmployees = useEmployeeFiltering({
+    currentUser,
+    employees: allEmployees,
+    searchQuery: employeeSearch,
+    selectedDepartment,
+  });
+
   const filtered: Employee[] = useMemo(() => {
-    return (accountsData as any).accounts.filter((e: any) => {
-      // Only show active employees
-      if (!e.isActive) return false;
-
-      // Only show employees (not admins, managers, etc.)
-      if (e.role !== 'employee') return false;
-
-      const matchesSearch = !normalizedQuery ||
-        e.name.toLowerCase().includes(normalizedQuery) ||
-        e.email.toLowerCase().includes(normalizedQuery) ||
-        e.position.toLowerCase().includes(normalizedQuery) ||
-        e.department.toLowerCase().includes(normalizedQuery) ||
-        e.role.toLowerCase().includes(normalizedQuery);
-
-      const matchesDepartment = !selectedDepartment || e.department === selectedDepartment;
-
-      return matchesSearch && matchesDepartment;
-    }).map((e: any) => {
+    return filteredEmployees.map((e: any) => {
       const updatedEmployee = getUpdatedEmployeeData(e);
       
       return {
@@ -155,10 +164,11 @@ export function EmployeesTab({
         department: updatedEmployee.department,
         role: updatedEmployee.role,
         hireDate: updatedEmployee.hireDate,
-        avatar: updatedEmployee.avatar
+        avatar: updatedEmployee.avatar,
+        branch: updatedEmployee.branch
       };
     });
-  }, [normalizedQuery, selectedDepartment, employeeDataRefresh, getUpdatedAvatar, hasAvatarUpdate]);
+  }, [filteredEmployees]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {

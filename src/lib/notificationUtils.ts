@@ -2,7 +2,7 @@ import clientDataService from './clientDataService';
 
 // Utility functions for creating notifications based on user actions
 
-export const createEvaluationNotification = async (employeeName: string, evaluatorName: string) => {
+export const createEvaluationNotification = async (employeeName: string, evaluatorName: string, employeeId?: number, employeeEmail?: string) => {
   // Notify evaluators and HR
   await clientDataService.createNotification({
     message: `New evaluation submitted for ${employeeName}`,
@@ -11,13 +11,16 @@ export const createEvaluationNotification = async (employeeName: string, evaluat
     actionUrl: '/evaluator?tab=feedback' // Navigate to evaluator feedback tab
   });
 
-  // Notify the employee
+  // Notify the employee (for regular employees with role 'employee')
   await clientDataService.createNotification({
     message: `Your evaluation has been completed by ${evaluatorName} and is awaiting approval`,
     type: 'success',
     roles: ['employee'],
     actionUrl: '/employee-dashboard?tab=overview' // Navigate to employee overview tab
   });
+
+  // Note: Managers (branch managers, area managers, etc.) don't need notifications
+  // because they can see their evaluations in the Performance Reviews and Evaluation History tabs
 };
 
 export const createApprovalNotification = async (employeeName: string, approverName: string, approverType: 'employee' | 'evaluator') => {

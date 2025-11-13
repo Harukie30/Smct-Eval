@@ -34,10 +34,16 @@ export function PerformanceReviewsTab({
   onViewEvaluation,
   isActive = false
 }: PerformanceReviewsTabProps) {
-  // Filter submissions to show only evaluations created by this evaluator
+  // Filter submissions to show:
+  // 1. Evaluations created by this evaluator (evaluatorId === user.id)
+  // 2. Evaluations where this user is the employee (employeeId === user.id) - for branch managers being evaluated
   const filteredReviews = useMemo(() => {
     return recentSubmissions
-      .filter(submission => submission.evaluatorId === user?.id)
+      .filter(submission => 
+        submission.evaluatorId === user?.id || 
+        submission.employeeId === user?.id ||
+        submission.evaluationData?.employeeId === user?.id?.toString()
+      )
       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
   }, [recentSubmissions, user?.id]);
 
