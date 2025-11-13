@@ -25,7 +25,7 @@ import InstantLoadingScreen from "@/components/InstantLoadingScreen";
 import SuspensionModal from "@/components/SuspensionModal";
 import GoogleLoginModal from "@/components/GoogleLoginModal";
 import ForgotPasswordModal from "@/components/ForgotPasswordModal";
-import { useAuth } from "@/contexts/UserContext";
+import { useUser } from "@/contexts/UserContext";
 import { redirect, useRouter } from "next/navigation";
 import { toastMessages } from "@/lib/toastMessages";
 import clientDataService from "@/lib/clientDataService";
@@ -49,7 +49,7 @@ export default function LandingLoginPage() {
     useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
-  const { login, isLoading, user, isAuthenticated } = useAuth();
+  const { login, isLoading, user, isAuthenticated } = useUser();
   const router = useRouter();
   // Force refresh accounts data on login page load (clears cache)
   useEffect(() => {
