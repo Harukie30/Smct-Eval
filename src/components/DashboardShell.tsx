@@ -68,7 +68,6 @@ export default function DashboardShell(props: DashboardShellProps) {
 
   // Memoize dashboard type detection to avoid dependency issues
   const dashboardType = useMemo(() => {
-    const hasAccountHistory = sidebarItems.some(item => item.id === 'account-history');
     const hasFeedback = sidebarItems.some(item => item.id === 'feedback');
     const hasEvaluationRecords = sidebarItems.some(item => item.id === 'evaluation-records');
     const hasDashboards = sidebarItems.some(item => item.id === 'dashboards');
@@ -80,7 +79,7 @@ export default function DashboardShell(props: DashboardShellProps) {
       return 'admin';
     }
     
-    if (hasAccountHistory && !hasFeedback && !hasEvaluationRecords) {
+    if (!hasFeedback && !hasEvaluationRecords) {
       return 'employee';
     } else if (hasFeedback) {
       return 'evaluator';
@@ -111,11 +110,11 @@ export default function DashboardShell(props: DashboardShellProps) {
       setIsManagementOpen(true);
     }
     
-    // For employee and evaluator dashboards, only 'history' and 'account-history' should open Analytics
-    // For HR dashboard, 'reviews', 'history', and 'account-history' should open Analytics
+    // For employee and evaluator dashboards, only 'history' should open Analytics
+    // For HR dashboard, 'reviews' and 'history' should open Analytics
     const analyticsItems = isEmployeeDashboard || isEvaluatorDashboard
-      ? ['history', 'account-history']
-      : ['reviews', 'history', 'account-history'];
+      ? ['history']
+      : ['reviews', 'history'];
     
     if (analyticsItems.includes(activeItemId) && !isAnalyticsOpen) {
       setIsAnalyticsOpen(true);
@@ -398,10 +397,10 @@ export default function DashboardShell(props: DashboardShellProps) {
                   const leadershipItems = ['branch-heads', 'area-managers'];
                   // Analytics items vary by dashboard type - exclude items that are already visible
                   const analyticsItems = isEmployeeDashboard
-                    ? ['history', 'account-history']
+                    ? ['history']
                     : isEvaluatorDashboard
-                    ? ['history', 'account-history'] // For evaluator, 'reviews' is visible, so exclude it
-                    : ['reviews', 'history', 'account-history']; // For HR, 'reviews' goes in Analytics
+                    ? ['history'] // For evaluator, 'reviews' is visible, so exclude it
+                    : ['reviews', 'history']; // For HR, 'reviews' goes in Analytics
                   
                   return sidebarItems.map((item) => {
                     const isVisible = visibleItems.includes(item.id);
@@ -735,7 +734,6 @@ export default function DashboardShell(props: DashboardShellProps) {
                             // Match employee dashboard sidebar tabs
                             if (url.includes('tab=overview') || url.includes('overview')) return 'Overview';
                             if (url.includes('tab=reviews') || url.includes('reviews')) return 'Performance Reviews';
-                            if (url.includes('tab=account-history') || url.includes('account-history')) return 'Account History';
                             if (url.includes('tab=history') || url.includes('history')) return 'Evaluation History';
                             // Fallback
                             return 'Dashboard';

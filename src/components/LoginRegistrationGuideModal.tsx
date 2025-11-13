@@ -12,6 +12,7 @@ import {
   CarouselItem,
   type CarouselApi,
 } from "@/components/ui/carousel";
+import { LazyGif } from '@/components/LazyGif';
 
 interface LoginRegistrationGuideModalProps {
   isOpen: boolean;
@@ -91,15 +92,12 @@ export function LoginRegistrationGuideModal({ isOpen, onCloseAction }: LoginRegi
                             <h3 className="text-lg font-semibold text-gray-900">Login to Your Account</h3>
                           </div>
                         </div>
-                        <div className="mb-4 rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm">
-                          <img 
+                        <div className="mb-4 rounded-lg overflow-hidden bg-blue-100">
+                          <LazyGif 
                             src="/login.gif" 
                             alt="Login Process" 
-                            className="w-full h-auto"
-                            onError={(e) => {
-                              // Fallback if GIF doesn't exist
-                              e.currentTarget.style.display = 'none';
-                            }}
+                            shouldLoad={isOpen}
+                            delay={100}
                           />
                         </div>
                       </div>
@@ -169,15 +167,12 @@ export function LoginRegistrationGuideModal({ isOpen, onCloseAction }: LoginRegi
                             <h3 className="text-lg font-semibold text-gray-900">New User Registration</h3>
                           </div>
                         </div>
-                        <div className="mb-4 rounded-lg overflow-hidden border border-green-200 bg-white shadow-sm">
-                          <img 
+                        <div className="mb-4 rounded-lg overflow-hidden bg-green-100">
+                          <LazyGif 
                             src="/reg.gif" 
                             alt="Registration Process" 
-                            className="w-full h-auto"
-                            onError={(e) => {
-                              // Fallback if GIF doesn't exist
-                              e.currentTarget.style.display = 'none';
-                            }}
+                            shouldLoad={isOpen}
+                            delay={100}
                           />
                         </div>
                       </div>
@@ -241,17 +236,14 @@ export function LoginRegistrationGuideModal({ isOpen, onCloseAction }: LoginRegi
                       <Shield className="w-5 h-5 text-blue-600" />
                       User Roles & Dashboards
                     </h3>
-                    <div className="rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm mb-4">
-                      <img 
-                        src="/user-roles-dashboards.gif" 
-                        alt="User Roles & Dashboards" 
-                        className="w-full h-auto"
-                        onError={(e) => {
-                          // Fallback if GIF doesn't exist
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
+                      <div className="rounded-lg overflow-hidden mb-4 bg-blue-100">
+                        <LazyGif 
+                          src="/user-roles-dashboards.gif" 
+                          alt="User Roles & Dashboards" 
+                          shouldLoad={isOpen}
+                          delay={100}
+                        />
+                      </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Card className="border border-gray-200 hover:border-blue-300 transition-colors">
@@ -324,15 +316,12 @@ export function LoginRegistrationGuideModal({ isOpen, onCloseAction }: LoginRegi
                         <CheckCircle2 className="w-5 h-5 text-blue-600" />
                         Quick Tips & Help
                       </h4>
-                      <div className="rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm mb-4">
-                        <img 
+                      <div className="rounded-lg overflow-hidden mb-4 bg-blue-100">
+                        <LazyGif 
                           src="/quick-tips-help.gif" 
                           alt="Quick Tips & Help" 
-                          className="w-full h-auto"
-                          onError={(e) => {
-                            // Fallback if GIF doesn't exist
-                            e.currentTarget.style.display = 'none';
-                          }}
+                          shouldLoad={isOpen}
+                          delay={100}
                         />
                       </div>
                     </div>
@@ -355,7 +344,7 @@ export function LoginRegistrationGuideModal({ isOpen, onCloseAction }: LoginRegi
                         <CheckCircle2 className="w-4 h-4 text-purple-600 mt-0.5 flex-shrink-0" />
                         <div>
                           <p className="font-medium text-gray-900">Account Issues?</p>
-                          <p className="text-gray-600">If your account is suspended or locked, you'll see a notification with details.</p>
+                          <p className="text-gray-600">If your account has issues, contact the development team for assistance.</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200">
@@ -383,20 +372,20 @@ export function LoginRegistrationGuideModal({ isOpen, onCloseAction }: LoginRegi
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              size="icon"
+              size="sm"
               onClick={() => api?.scrollPrev()}
               disabled={!canScrollPrev}
-              className="h-8 w-8 border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
             >
               <ChevronLeft className="h-4 w-4" />
               <span className="sr-only">Previous slide</span>
             </Button>
             <Button
               variant="outline"
-              size="icon"
+              size="sm"
               onClick={() => api?.scrollNext()}
               disabled={!canScrollNext}
-              className="h-8 w-8 border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
             >
               <ChevronRight className="h-4 w-4" />
               <span className="sr-only">Next slide</span>

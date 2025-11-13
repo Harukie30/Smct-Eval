@@ -34,7 +34,7 @@ interface UserContextType {
   profile: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<boolean | { suspended: true; data: any; requiresRoleSelection?: boolean; pending?: boolean; pendingData?: any }>;
+  login: (username: string, password: string) => Promise<boolean | { requiresRoleSelection?: boolean; pending?: boolean; pendingData?: any }>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   refreshUserData: () => Promise<void>;
@@ -199,7 +199,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean | { suspended: true; data: any; requiresRoleSelection?: boolean }> => {
+  const login = async (username: string, password: string): Promise<boolean | { requiresRoleSelection?: boolean; pending?: boolean; pendingData?: any }> => {
     try {
       setIsLoading(true);
       
@@ -247,18 +247,14 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         
         // Return true with requiresRoleSelection flag if user has multiple roles
         if (hasMultipleRoles) {
-          return { suspended: false, data: null, requiresRoleSelection: true } as any;
+          return { requiresRoleSelection: true };
         }
         
         return true;
-      } else if (loginResult.message === 'Account suspended' && loginResult.suspensionData) {
-        // Account is suspended, return suspension data
-        console.log('UserContext: Account suspended, returning suspension data:', loginResult.suspensionData);
-        return { suspended: true, data: loginResult.suspensionData };
       } else if (loginResult.message === 'Account pending approval' && loginResult.pendingData) {
         // Account is pending approval, return pending data
         console.log('UserContext: Account pending approval, returning pending data:', loginResult.pendingData);
-        return { suspended: false, data: null, pending: true, pendingData: loginResult.pendingData } as any;
+        return { pending: true, pendingData: loginResult.pendingData };
       }
       
       return false;

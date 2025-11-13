@@ -128,33 +128,35 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: 'notifications',
 } as const;
 
-// Helper functions for localStorage
+// Import storage cache for optimized localStorage reads
+import { storageCache } from './storageCache';
+
+// Helper functions for localStorage with caching
 const getFromStorage = <T>(key: string, defaultValue: T): T => {
   if (typeof window === 'undefined') return defaultValue;
-  try {
-    const stored = localStorage.getItem(key);
-    if (!stored) return defaultValue;
-    
-    const parsed = JSON.parse(stored);
-    
-    // If we expect an array but got an object, return default
-    if (Array.isArray(defaultValue) && !Array.isArray(parsed)) {
-      console.warn(`Expected array for key "${key}" but got object, returning default`);
-      return defaultValue;
-    }
-    
-    return parsed;
-  } catch {
+  
+  // Use cache for faster repeated reads
+  const cached = storageCache.get(key, defaultValue);
+  
+  // Validate cached data matches expected type
+  if (Array.isArray(defaultValue) && !Array.isArray(cached)) {
+    console.warn(`Expected array for key "${key}" but got object, returning default`);
     return defaultValue;
   }
+  
+  return cached;
 };
 
 const saveToStorage = <T>(key: string, data: T): void => {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(key, JSON.stringify(data));
+    // Update cache immediately after write to keep it in sync
+    storageCache.set(key, data);
   } catch (error) {
     console.error('Failed to save to localStorage:', error);
+    // Invalidate cache on error to prevent stale data
+    storageCache.invalidate(key);
   }
 };
 
@@ -219,6 +221,8 @@ const forceReinitializeAccounts = () => {
   if (typeof window === 'undefined') return;
   
   localStorage.removeItem(STORAGE_KEYS.ACCOUNTS);
+  // Invalidate cache when removing from localStorage
+  storageCache.invalidate(STORAGE_KEYS.ACCOUNTS);
   saveToStorage(STORAGE_KEYS.ACCOUNTS, accountsData.accounts || []);
 };
 
@@ -250,7 +254,8 @@ export const clientDataService = {
     }
 
     // Get departments from localStorage (added via admin panel) - already in {id, name} format
-    const savedDepartments: {id: number, name: string}[] = JSON.parse(localStorage.getItem('departments') || '[]');
+    // Use cache for faster reads
+    const savedDepartments: {id: number, name: string}[] = storageCache.get('departments', []);
     
     // Convert to {id: string, name: string} format
     const localStorageDepartments = savedDepartments.map((dept) => ({
@@ -329,7 +334,8 @@ export const clientDataService = {
     }
 
     // Get branches from localStorage (added via admin panel) - already in {id, name} format
-    const savedBranches: {id: string, name: string}[] = JSON.parse(localStorage.getItem('branches') || '[]');
+    // Use cache for faster reads
+    const savedBranches: {id: string, name: string}[] = storageCache.get('branches', []);
 
     // Merge API branches with localStorage branches (avoid duplicates)
     const allBranches = [...apiBranches];
@@ -811,40 +817,6 @@ export const clientDataService = {
       return { success: false, message: 'Invalid credentials' };
     }
 
-    // Check if account is suspended in accounts.json
-    if (account.isSuspended) {
-      const suspensionData = {
-        reason: account.suspensionReason || 'No reason provided',
-        suspendedAt: account.suspendedAt || new Date().toISOString(),
-        suspendedBy: account.suspendedBy || 'System Administrator',
-        accountName: account.name || account.username || account.email
-      };
-      return { 
-        success: false, 
-        message: 'Account suspended',
-        suspensionData: suspensionData
-      };
-    }
-
-    // Check if account is suspended in admin suspension system
-    const suspendedEmployees = getFromStorage('suspendedEmployees', []) as any[];
-    const suspendedEmployee = suspendedEmployees.find((emp: any) => 
-      emp.email === email && emp.status === 'suspended'
-    );
-    
-    if (suspendedEmployee) {
-      const suspensionData = {
-        reason: suspendedEmployee.suspensionReason || 'No reason provided',
-        suspendedAt: suspendedEmployee.suspensionDate || new Date().toISOString(),
-        suspendedBy: suspendedEmployee.suspendedBy || 'System Administrator',
-        accountName: suspendedEmployee.name || account.name || account.username || account.email
-      };
-      return { 
-        success: false, 
-        message: 'Account suspended',
-        suspensionData: suspensionData
-      };
-    }
 
     // For accounts without employeeId (like admin), use account data directly
     if (!account.employeeId) {
@@ -996,7 +968,12 @@ export const clientDataService = {
     
     Object.values(STORAGE_KEYS).forEach(key => {
       localStorage.removeItem(key);
+      // Invalidate cache for each key
+      storageCache.invalidate(key);
     });
+    
+    // Clear all cache entries
+    storageCache.clear();
     
     // Reinitialize data
     initializeData();
@@ -1151,6 +1128,8 @@ export const clientDataService = {
     
     console.log('🔄 Force refreshing accounts data...');
     localStorage.removeItem(STORAGE_KEYS.ACCOUNTS);
+    // Invalidate cache when removing from localStorage
+    storageCache.invalidate(STORAGE_KEYS.ACCOUNTS);
     saveToStorage(STORAGE_KEYS.ACCOUNTS, accountsData.accounts || []);
     console.log('✅ Accounts data refreshed from source');
   },
@@ -1348,78 +1327,6 @@ export const clientDataService = {
     }
   },
 
-  // Get Suspended Employees
-  getSuspendedEmployees: async (): Promise<any[]> => {
-    try {
-      // Try backend first
-      const res = await fetch(`${CONFIG.API_URL}/employees/suspended`, {
-        method: 'GET',
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
-        // Cache for offline fallback
-        saveToStorage('suspendedEmployees', data);
-        return data;
-      }
-      
-      // Fallback to localStorage
-      return getFromStorage('suspendedEmployees', []);
-      
-    } catch (error) {
-      console.error('Error fetching suspended employees:', error);
-      // Fallback to localStorage
-      return getFromStorage('suspendedEmployees', []);
-    }
-  },
-
-  // Get Employee Violations by Email
-  getEmployeeViolations: async (email: string): Promise<any[]> => {
-    try {
-      // Try backend first
-      const res = await fetch(`${CONFIG.API_URL}/employees/${email}/violations`, {
-        method: 'GET',
-      });
-      
-      if (res.ok) {
-        return await res.json();
-      }
-      
-      // Fallback to localStorage
-      const suspendedEmployees = getFromStorage('suspendedEmployees', []) as any[];
-      return suspendedEmployees.filter((emp: any) => emp.email === email);
-      
-    } catch (error) {
-      console.error('Error fetching employee violations:', error);
-      // Fallback to localStorage
-      const suspendedEmployees = getFromStorage('suspendedEmployees', []) as any[];
-      return suspendedEmployees.filter((emp: any) => emp.email === email);
-    }
-  },
-
-  // Get Account History for a user
-  getAccountHistory: async (email: string): Promise<any[]> => {
-    try {
-      // Try backend first
-      const res = await fetch(`${CONFIG.API_URL}/employees/${email}/history`, {
-        method: 'GET',
-      });
-      
-      if (res.ok) {
-        return await res.json();
-      }
-      
-      // Fallback to localStorage
-      const suspendedEmployees = getFromStorage('suspendedEmployees', []) as any[];
-      return suspendedEmployees.filter((emp: any) => emp.email === email);
-      
-    } catch (error) {
-      console.error('Error fetching account history:', error);
-      // Fallback to localStorage
-      const suspendedEmployees = getFromStorage('suspendedEmployees', []) as any[];
-      return suspendedEmployees.filter((emp: any) => emp.email === email);
-    }
-  },
 
   // Bulk approve submissions (for evaluator)
   bulkApproveSubmissions: async (submissionIds: number[]): Promise<{ success: boolean; message: string }> => {
