@@ -28,6 +28,7 @@ import { useToast } from '@/hooks/useToast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createApprovalNotification, createFullyApprovedNotification } from '@/lib/notificationUtils';
 import { useProfilePictureUpdates } from '@/hooks/useProfileUpdates';
+import { EvaluatorDashboardGuideModal } from '@/components/EvaluatorDashboardGuideModal';
 
 // Lazy load tab components for better performance
 const OverviewTab = lazy(() => import('./OverviewTab').then(m => ({ default: m.OverviewTab })));
@@ -35,7 +36,6 @@ const EmployeesTab = lazy(() => import('./EmployeesTab').then(m => ({ default: m
 const EvaluationRecordsTab = lazy(() => import('./EvaluationRecordsTab').then(m => ({ default: m.EvaluationRecordsTab })));
 const PerformanceReviewsTab = lazy(() => import('./PerformanceReviewsTab').then(m => ({ default: m.PerformanceReviewsTab })));
 const EvaluationHistoryTab = lazy(() => import('./EvaluationHistoryTab').then(m => ({ default: m.EvaluationHistoryTab })));
-const AccountHistoryTab = lazy(() => import('./AccountHistoryTab').then(m => ({ default: m.AccountHistoryTab })));
 
 type Feedback = {
   id: number;
@@ -399,9 +399,6 @@ function EvaluatorDashboard() {
           setIsEmployeesRefreshing(false);
         });
       }, 1000); // 1-second delay to see skeleton properly
-    } else if (tabId === 'account-history') {
-      // Account history refresh is handled by AccountHistoryTab component
-      // No action needed here
     } else if (tabId === 'overview') {
       // Refresh overview data when switching to overview tab
       setIsRefreshing(true);
@@ -497,6 +494,7 @@ function EvaluatorDashboard() {
   const [currentPeriod, setCurrentPeriod] = useState('');
   const [data, setData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   // Note: employeeSearch, selectedDepartment, and employeeSort are now managed inside EmployeesTab component
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -1746,9 +1744,6 @@ function EvaluatorDashboard() {
           setRecentSubmissions([]);
         }
 
-        // Account history is now loaded by AccountHistoryTab component
-
-
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -1766,7 +1761,6 @@ function EvaluatorDashboard() {
     { id: 'feedback', label: 'Evaluation Records', icon: '🗂️' },
     { id: 'reviews', label: 'Performance Reviews', icon: '📝' },
     { id: 'history', label: 'Evaluation History', icon: '📈' },
-    { id: 'account-history', label: 'Account History', icon: '📋' },
   ];
 
   // Loading state is now handled in the main return statement
@@ -2067,28 +2061,6 @@ function EvaluatorDashboard() {
             />
           </Suspense>
         );
-      case 'account-history':
-        return (
-          <Suspense fallback={
-            <div className="relative min-h-[500px]">
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 font-medium">Loading account history...</p>
-                </div>
-              </div>
-            </div>
-          }>
-            <AccountHistoryTab
-              isActive={active === 'account-history'}
-            />
-          </Suspense>
-        );
       default:
         return null;
     }
@@ -2374,6 +2346,25 @@ function EvaluatorDashboard() {
             setSelectedSubmission(submission);
             setIsViewSubmissionModalOpen(true);
           }}
+        />
+
+        {/* Floating Help Button */}
+        <Button
+          onClick={() => setIsGuideModalOpen(true)}
+          className="fixed bottom-8 right-8 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0"
+          title="Dashboard Guide"
+        >
+          <img 
+            src="/faq.png" 
+            alt="Help" 
+            className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
+          />
+        </Button>
+
+        {/* Evaluator Dashboard Guide Modal */}
+        <EvaluatorDashboardGuideModal
+          isOpen={isGuideModalOpen}
+          onCloseAction={() => setIsGuideModalOpen(false)}
         />
 
       </PageTransition>

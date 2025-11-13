@@ -5,13 +5,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDialogAnimation } from '@/hooks/useDialogAnimation';
-import { BarChart3, FileText, History, ClipboardList, CheckCircle2, Eye, TrendingUp, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BarChart3, FileText, History, CheckCircle2, Eye, TrendingUp, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
   type CarouselApi,
 } from "@/components/ui/carousel";
+import { LazyGif } from '@/components/LazyGif';
 
 interface EmployeeDashboardGuideModalProps {
   isOpen: boolean;
@@ -89,14 +90,12 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
                             <h3 className="text-lg font-semibold text-gray-900">Overview Tab</h3>
                           </div>
                         </div>
-                        <div className="mb-4 rounded-lg overflow-hidden border border-blue-200 bg-white shadow-sm">
-                          <img 
-                            src="/overview-tab.gif" 
+                        <div className="mb-4 rounded-lg overflow-hidden bg-blue-100">
+                          <LazyGif 
+                            src="/comic.gif" 
                             alt="Overview Tab" 
-                            className="w-full h-auto"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
+                            shouldLoad={isOpen}
+                            delay={100}
                           />
                         </div>
                       </div>
@@ -148,26 +147,24 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
             {/* Slide 2: Performance Reviews Tab */}
             <CarouselItem>
               <div className="p-2">
-                <Card className="border-2 border-purple-100 bg-gradient-to-br from-purple-50 to-pink-50">
+                <Card className="border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50">
                   <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row items-start gap-4">
                       <div className="w-full md:w-1/2">
                         <div className="mb-4">
                           <div className="flex items-center gap-3 mb-3">
-                            <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
+                            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
                               <FileText className="w-6 h-6 text-white" />
                             </div>
                             <h3 className="text-lg font-semibold text-gray-900">Performance Reviews</h3>
                           </div>
                         </div>
-                        <div className="mb-4 rounded-lg overflow-hidden border border-purple-200 bg-white shadow-sm">
-                          <img 
-                            src="/performance-reviews.gif" 
+                        <div className="mb-4 rounded-lg overflow-hidden bg-blue-100">
+                          <LazyGif 
+                            src="/docs.gif" 
                             alt="Performance Reviews" 
-                            className="w-full h-auto"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
+                            shouldLoad={isOpen}
+                            delay={100}
                           />
                         </div>
                       </div>
@@ -177,7 +174,7 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
                         </p>
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                               <span className="text-white font-bold text-sm">1</span>
                             </div>
                             <div>
@@ -186,7 +183,7 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                               <span className="text-white font-bold text-sm">2</span>
                             </div>
                             <div>
@@ -195,7 +192,7 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                               <span className="text-white font-bold text-sm">3</span>
                             </div>
                             <div>
@@ -204,8 +201,8 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
                             </div>
                           </div>
                         </div>
-                        <div className="mt-4 p-3 bg-purple-100 rounded-lg">
-                          <p className="text-sm text-purple-800">
+                        <div className="mt-4 p-3 bg-blue-100 rounded-lg">
+                          <p className="text-sm text-blue-800">
                             <strong>Note:</strong> Reviews are organized by date and evaluator for easy navigation.
                           </p>
                         </div>
@@ -219,26 +216,24 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
             {/* Slide 3: Evaluation History Tab */}
             <CarouselItem>
               <div className="p-2">
-                <Card className="border-2 border-green-100 bg-gradient-to-br from-green-50 to-emerald-50">
+                <Card className="border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50">
                   <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row items-start gap-4">
                       <div className="w-full md:w-1/2">
                         <div className="mb-4">
                           <div className="flex items-center gap-3 mb-3">
-                            <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
+                            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
                               <History className="w-6 h-6 text-white" />
                             </div>
                             <h3 className="text-lg font-semibold text-gray-900">Evaluation History</h3>
                           </div>
                         </div>
-                        <div className="mb-4 rounded-lg overflow-hidden border border-green-200 bg-white shadow-sm">
-                          <img 
-                            src="/evaluation-history.gif" 
+                        <div className="mb-4 rounded-lg overflow-hidden bg-blue-100">
+                          <LazyGif 
+                            src="/his.gif" 
                             alt="Evaluation History" 
-                            className="w-full h-auto"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
+                            shouldLoad={isOpen}
+                            delay={100}
                           />
                         </div>
                       </div>
@@ -248,7 +243,7 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
                         </p>
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                               <Calendar className="w-4 h-4 text-white" />
                             </div>
                             <div>
@@ -257,7 +252,7 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                               <BarChart3 className="w-4 h-4 text-white" />
                             </div>
                             <div>
@@ -266,7 +261,7 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                               <TrendingUp className="w-4 h-4 text-white" />
                             </div>
                             <div>
@@ -275,8 +270,8 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
                             </div>
                           </div>
                         </div>
-                        <div className="mt-4 p-3 bg-green-100 rounded-lg">
-                          <p className="text-sm text-green-800">
+                          <div className="mt-4 p-3 bg-blue-100 rounded-lg">
+                          <p className="text-sm text-blue-800">
                             <strong>Tip:</strong> Use the search and filter options to find specific evaluations quickly.
                           </p>
                         </div>
@@ -287,78 +282,7 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
               </div>
             </CarouselItem>
 
-            {/* Slide 4: Account History Tab */}
-            <CarouselItem>
-              <div className="p-2">
-                <Card className="border-2 border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col md:flex-row items-start gap-4">
-                      <div className="w-full md:w-1/2">
-                        <div className="mb-4">
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center">
-                              <ClipboardList className="w-6 h-6 text-white" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-900">Account History</h3>
-                          </div>
-                        </div>
-                        <div className="mb-4 rounded-lg overflow-hidden border border-orange-200 bg-white shadow-sm">
-                          <img 
-                            src="/account-history.gif" 
-                            alt="Account History" 
-                            className="w-full h-auto"
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-gray-700 mb-4">
-                          Monitor your account activity, violations, and important account-related events.
-                        </p>
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center flex-shrink-0">
-                              <span className="text-white font-bold text-sm">1</span>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">View Account Events</p>
-                              <p className="text-sm text-gray-600">See all important account-related activities</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center flex-shrink-0">
-                              <span className="text-white font-bold text-sm">2</span>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">Track Violations</p>
-                              <p className="text-sm text-gray-600">Monitor any policy violations or suspensions</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center flex-shrink-0">
-                              <span className="text-white font-bold text-sm">3</span>
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">Status Updates</p>
-                              <p className="text-sm text-gray-600">Stay informed about account status changes</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-4 p-3 bg-orange-100 rounded-lg">
-                          <p className="text-sm text-orange-800">
-                            <strong>Note:</strong> All account events are logged with timestamps and action details.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </CarouselItem>
-
-            {/* Slide 5: Quick Tips */}
+            {/* Slide 4: Quick Tips */}
             <CarouselItem>
               <div className="p-2">
                 <Card className="bg-gradient-to-br from-gray-50 to-blue-50 border border-gray-200">
@@ -368,14 +292,12 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
                         <CheckCircle2 className="w-5 h-5 text-blue-600" />
                         Quick Tips & Best Practices
                       </h3>
-                      <div className="rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm mb-4">
-                        <img 
+                      <div className="rounded-lg overflow-hidden mb-4 bg-blue-100">
+                        <LazyGif 
                           src="/employee-dashboard-tips.gif" 
                           alt="Employee Dashboard Tips" 
-                          className="w-full h-auto"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
+                          shouldLoad={isOpen}
+                          delay={100}
                         />
                       </div>
                     </div>
@@ -432,20 +354,20 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              size="icon"
+              size="sm"
               onClick={() => api?.scrollPrev()}
               disabled={!canScrollPrev}
-              className="h-8 w-8 border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
             >
               <ChevronLeft className="h-4 w-4" />
               <span className="sr-only">Previous slide</span>
             </Button>
             <Button
               variant="outline"
-              size="icon"
+              size="sm"
               onClick={() => api?.scrollNext()}
               disabled={!canScrollNext}
-              className="h-8 w-8 border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
             >
               <ChevronRight className="h-4 w-4" />
               <span className="sr-only">Next slide</span>

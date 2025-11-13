@@ -32,7 +32,6 @@ import { HelpCircle } from 'lucide-react';
 const OverviewTab = lazy(() => import('./OverviewTab').then(m => ({ default: m.OverviewTab })));
 const PerformanceReviewsTab = lazy(() => import('./PerformanceReviewsTab').then(m => ({ default: m.PerformanceReviewsTab })));
 const EvaluationHistoryTab = lazy(() => import('./EvaluationHistoryTab').then(m => ({ default: m.EvaluationHistoryTab })));
-const AccountHistoryTab = lazy(() => import('./AccountHistoryTab').then(m => ({ default: m.AccountHistoryTab })));
 
 function EmployeeDashboard() {
   const { profile, user, isLoading: authLoading, logout } = useUser();
@@ -56,7 +55,6 @@ function EmployeeDashboard() {
   // Individual loading states for each tab content
   const [isRefreshingReviews, setIsRefreshingReviews] = useState(false);
   const [, setIsRefreshingHistory] = useState(false);
-  const [, setIsRefreshingAccountHistory] = useState(false);
   const [, setIsRefreshingQuarterly] = useState(false);
   const [isRefreshingOverview, setIsRefreshingOverview] = useState(false);
 
@@ -77,8 +75,6 @@ function EmployeeDashboard() {
   const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [quarterlySearchTerm, setQuarterlySearchTerm] = useState('');
   const [selectedQuarter, setSelectedQuarter] = useState<string>('');
-  const [accountHistory, setAccountHistory] = useState<any[]>([]);
-  const [accountHistorySearchTerm, setAccountHistorySearchTerm] = useState('');
   const [overviewSearchTerm, setOverviewSearchTerm] = useState('');
   // Comments & feedback functionality removed
   
@@ -123,7 +119,6 @@ function EmployeeDashboard() {
     { id: 'overview', label: 'Overview', icon: '📊' },
     { id: 'reviews', label: 'Performance Reviews', icon: '📝' },
     { id: 'history', label: 'Evaluation History', icon: '📈' },
-    { id: 'account-history', label: 'Account History', icon: '📋' },
   ], []);
 
   // Function to get time ago display
@@ -198,45 +193,6 @@ function EmployeeDashboard() {
     return highlight.priority === 'new' || highlight.priority === 'recent';
   };
 
-  // Function to load account history (suspension records only)
-  const loadAccountHistory = (email: string) => {
-    try {
-      // Load only suspended employees data (violations/suspensions)
-      const suspendedEmployees = JSON.parse(localStorage.getItem('suspendedEmployees') || '[]');
-      const employeeViolations = suspendedEmployees.filter((emp: any) => emp.email === email);
-
-      // Format only suspension/violation records
-      const history = employeeViolations.map((violation: any) => ({
-        id: `violation-${violation.id}`,
-        type: 'violation',
-        title: 'Policy Violation',
-        description: violation.suspensionReason,
-        date: violation.suspensionDate,
-        status: violation.status,
-        severity: 'high',
-        actionBy: violation.suspendedBy,
-        details: {
-          duration: violation.suspensionDuration,
-          reinstatedDate: violation.reinstatedDate,
-          reinstatedBy: violation.reinstatedBy
-        }
-      }));
-
-      // Sort by date (newest first)
-      return history.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    } catch (error) {
-      console.error('Error loading account history:', error);
-      return [];
-    }
-  };
-
-  // Function to determine highlighting for account history items
-  const getAccountHistoryHighlight = (item: any) => {
-    if (item.type === 'violation') {
-      return 'bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100';
-    }
-    return 'hover:bg-gray-50'; // Default or no highlight
-  };
 
   // Comments & feedback functionality removed
 
@@ -357,44 +313,7 @@ function EmployeeDashboard() {
     }
   };
 
-  // Helper functions for account history
-  const getFilteredAccountHistory = () => {
-    if (!accountHistorySearchTerm) return accountHistory;
 
-    return accountHistory.filter(item =>
-      item.title.toLowerCase().includes(accountHistorySearchTerm.toLowerCase()) ||
-      item.description.toLowerCase().includes(accountHistorySearchTerm.toLowerCase()) ||
-      item.actionBy.toLowerCase().includes(accountHistorySearchTerm.toLowerCase()) ||
-      item.type.toLowerCase().includes(accountHistorySearchTerm.toLowerCase())
-    );
-  };
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'high': return 'bg-red-100 text-red-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'violation': return '⚠️';
-      case 'feedback': return '💬';
-      default: return '📝';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'suspended': return 'bg-red-100 text-red-800';
-      case 'reinstated': return 'bg-green-100 text-green-800';
-      case 'completed': return 'bg-blue-100 text-blue-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   useEffect(() => {
     const loadEmployeeData = async () => {
@@ -480,10 +399,6 @@ function EmployeeDashboard() {
         const results = getEmployeeResults(profile.email);
         setEvaluationResults(results);
 
-        // Refresh account history
-        const history = loadAccountHistory(profile.email);
-        setAccountHistory(history);
-
         // Comments functionality removed
 
 
@@ -525,34 +440,6 @@ function EmployeeDashboard() {
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
-
-  // Refresh function for Account History table only
-  const handleRefreshAccountHistory = async () => {
-    setIsRefreshing(true);
-    setIsRefreshingAccountHistory(true);
-    setRefreshingMessage('Refreshing account history...');
-    setShowRefreshingDialog(true);
-    try {
-      if (profile?.email) {
-        // Add a small delay to simulate loading
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        // Load only account history data
-        const history = loadAccountHistory(profile.email);
-        setAccountHistory(history);
-
-
-        // Show success toast
-        success('Account history refreshed successfully', 'All account records have been updated');
-      }
-    } catch (error) {
-      console.error('Error refreshing account history:', error);
-    } finally {
-      setIsRefreshing(false);
-      setIsRefreshingAccountHistory(false);
-      setShowRefreshingDialog(false);
-    }
-  };
 
 
   // Comments refresh functionality removed
@@ -883,23 +770,6 @@ function EmployeeDashboard() {
 
   const topSummary = (
     <>
-      <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setIsGuideModalOpen(true)}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-            <HelpCircle className="w-4 h-4 text-blue-600" />
-            Dashboard Guide
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">Learn how to use your dashboard</p>
-            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
-              View Guide
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-gray-600">Overall Rating</CardTitle>
@@ -1121,17 +991,6 @@ function EmployeeDashboard() {
           </Suspense>
         );
 
-      case 'account-history':
-        return (
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-          }>
-            <AccountHistoryTab isActive={activeTab === 'account-history'} />
-          </Suspense>
-        );
-
       default:
         return null;
     }
@@ -1165,6 +1024,21 @@ function EmployeeDashboard() {
           {renderContent()}
         </DashboardShell>
       </PageTransition>
+
+      {/* Floating Help Button */}
+      <Button
+        onClick={() => setIsGuideModalOpen(true)}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 text-white shadow-lg hover:shadow-xl transition-all duration-300 z-50 flex items-center justify-center p-0 hover:scale-110 hover:rotate-12 active:scale-95"
+        title="Dashboard Guide"
+      >
+        {/* Replace "/help-icon.png" with your custom icon path (PNG, SVG, etc.) */}
+        {/* If you don't have a custom icon, change the src back to use HelpCircle component */}
+        <img 
+          src="/faq.png" 
+          alt="Help" 
+          className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
+        />
+      </Button>
 
       {/* Employee Dashboard Guide Modal */}
       <EmployeeDashboardGuideModal

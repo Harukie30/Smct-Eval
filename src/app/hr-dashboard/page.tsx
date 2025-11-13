@@ -22,6 +22,7 @@ import { useUser } from '@/contexts/UserContext';
 import EditUserModal from '@/components/EditUserModal';
 import AddEmployeeModal from '@/components/AddEmployeeModal';
 import { useDialogAnimation } from '@/hooks/useDialogAnimation';
+import { HRDashboardGuideModal } from '@/components/HRDashboardGuideModal';
 
 // Import data
 import accountsData from '@/data/accounts.json';
@@ -206,6 +207,7 @@ function HRDashboard() {
   const [positionsData, setPositionsData] = useState<{id: string, name: string}[]>([]);
   const [hrMetrics, setHrMetrics] = useState<HRMetrics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   
   // Initialize active tab from URL parameter or default to 'overview'
   const tabParam = searchParams.get('tab');
@@ -1578,6 +1580,25 @@ function HRDashboard() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Floating Help Button */}
+        <Button
+          onClick={() => setIsGuideModalOpen(true)}
+          className="fixed bottom-8 right-8 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0"
+          title="Dashboard Guide"
+        >
+          <img 
+            src="/faq.png" 
+            alt="Help" 
+            className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
+          />
+        </Button>
+
+        {/* HR Dashboard Guide Modal */}
+        <HRDashboardGuideModal
+          isOpen={isGuideModalOpen}
+          onCloseAction={() => setIsGuideModalOpen(false)}
+        />
       </DashboardShell>
     </>
   );
