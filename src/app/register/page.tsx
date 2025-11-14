@@ -20,6 +20,10 @@ import { CONFIG } from "../../../config/config";
 import { id } from "date-fns/locale";
 import clientDataService from "@/lib/clientDataService.api";
 import { withPublicPage } from "@/hoc";
+// Mock data for testing
+import branchCodes from "@/data/branch-code.json";
+import positionsData from "@/data/positions.json";
+import departmentsData from "@/data/departments.json";
 
 interface FormDataType {
   fname: string;
@@ -37,6 +41,9 @@ interface FormDataType {
 }
 
 function RegisterPage() {
+  // Set to true to force mock data for testing
+  const FORCE_MOCK_DATA = false; // Change to true to always use mock data
+  
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
   const [positions, setPositions] = useState<{value: string , label: string}[]>([]);
   const [branches, setBranches] = useState<{value: string, label: string}[]>([]);
@@ -67,36 +74,106 @@ function RegisterPage() {
     [key: string]: any;
   }>({});
 
+  // Helper function to check if branch is HO, Head Office, or none
+  const isBranchHOOrNone = (branchId: string | number): boolean => {
+    if (!branchId) return false;
+    
+    // Find the branch from branches array
+    const branch = branches.find(b => {
+      const branchValue = String(b.value || '').toLowerCase().trim();
+      const branchLabel = String(b.label || '').toLowerCase().trim();
+      const branchIdStr = String(branchId).toLowerCase().trim();
+      return branchValue === branchIdStr || branchLabel === branchIdStr;
+    });
+    
+    if (!branch) return false;
+    
+    const branchName = branch.label.toLowerCase().trim();
+    return branchName === 'ho' || 
+           branchName === 'head office' || 
+           branchName === 'none' ||
+           branchName === 'none ho' ||
+           branchName.startsWith('ho');
+  };
+
+  // Helper function to load mock data
+  const loadMockData = () => {
+    // Mock positions - positionsData is an array of strings, convert to {value, label} format
+    const mockPositions: {value: string, label: string}[] = positionsData.map((pos: string, index: number) => ({
+      value: String(index + 1),
+      label: pos
+    }));
+    setPositions(mockPositions);
+    
+    // Mock departments - departmentsData is an array of {id, name, ...}, convert to {value, label} format
+    const mockDepartments: {value: string, label: string}[] = departmentsData.map((dept: any) => ({
+      value: String(dept.id),
+      label: dept.name
+    }));
+    setDepartments(mockDepartments);
+    
+    // Mock branches - branchCodes is an array of strings like ["HO", "HO-MNL", "CEB", ...]
+    // Use branch code as both value and label for easier testing and matching
+    const mockBranches: {value: string, label: string}[] = branchCodes.map((branch: string) => ({
+      value: branch, // Use branch code as value for easier testing
+      label: branch   // Use branch code as label
+    }));
+    setBranches(mockBranches);
+  };
+
  // Load positions from client data service.api
   useEffect(() => {
+    // If force mock data is enabled, load mock data immediately
+    if (FORCE_MOCK_DATA) {
+      console.log("Force mock data enabled, loading mock data");
+      loadMockData();
+      return;
+    }
+
     const fetchData = async () => {
       try {
         // Fetch positions using client data service
-        const positionsData = await clientDataService.getPositions();
+        const positionsDataFromAPI = await clientDataService.getPositions();
         // Convert {id, name} to {value, label} for Combobox
-        setPositions(positionsData.map((pos: any) => ({
-          value: pos.id || pos.value,
-          label: pos.name || pos.label
-        })));
-
+        const formattedPositions = positionsDataFromAPI?.map((pos: any) => ({
+          value: pos.id || pos.value || String(pos),
+          label: pos.name || pos.label || String(pos)
+        })) || [];
+        
         // Fetch departments using client data service
-        const departmentsData = await clientDataService.getDepartments();
+        const departmentsDataFromAPI = await clientDataService.getDepartments();
         // Convert {id, name} to {value, label} for Combobox
-        setDepartments(departmentsData.map((dept: any) => ({
-          value: dept.id || dept.value,
-          label: dept.name || dept.label
-        })));
-
+        const formattedDepartments = departmentsDataFromAPI?.map((dept: any) => ({
+          value: dept.id || dept.value || String(dept),
+          label: dept.name || dept.label || String(dept)
+        })) || [];
+        
         // Fetch branches using client data service
-        const branchData = await clientDataService.getBranches();
+        const branchDataFromAPI = await clientDataService.getBranches();
         // Convert {id, name} to {value, label} for Combobox
-        setBranches(branchData.map((branch: any) => ({
-          value: branch.id || branch.value,
-          label: branch.name || branch.label
-        })));
+        const formattedBranches = branchDataFromAPI?.map((branch: any) => ({
+          value: branch.id || branch.value || String(branch),
+          label: branch.name || branch.label || String(branch)
+        })) || [];
+        
+        // Check if API returned valid data, otherwise use mock data
+        if (formattedPositions.length > 0 && formattedDepartments.length > 0 && formattedBranches.length > 0) {
+          console.log("Using API data:", { 
+            positions: formattedPositions.length, 
+            departments: formattedDepartments.length, 
+            branches: formattedBranches.length 
+          });
+          setPositions(formattedPositions);
+          setDepartments(formattedDepartments);
+          setBranches(formattedBranches);
+        } else {
+          console.log("API returned empty data, using mock data");
+          loadMockData();
+        }
         
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching data, using mock data:", error);
+        loadMockData();
       }
     };
 
@@ -234,6 +311,12 @@ function RegisterPage() {
 
     if (!formData.branch_id) {
       showAlert("Missing Information", "Please select your branch!", "error");
+      return;
+    }
+
+    // Department is only required if branch IS HO/Head Office
+    if (isBranchHOOrNone(formData.branch_id) && !formData.department_id) {
+      showAlert("Missing Information", "Department is required for Head Office branches!", "error");
       return;
     }
 
@@ -667,9 +750,14 @@ function RegisterPage() {
                       <Combobox
                         options={branches}
                         value={formData.branch_id}
-                        onValueChangeAction={(value) =>
-                          setFormData({ ...formData, branch_id: value })
-                        }
+                        onValueChangeAction={(value) => {
+                          // Clear department if branch is NOT HO/Head Office
+                          const newFormData = { ...formData, branch_id: value };
+                          if (!isBranchHOOrNone(value)) {
+                            newFormData.department_id = '';
+                          }
+                          setFormData(newFormData);
+                        }}
                         placeholder="Select your branch"
                         searchPlaceholder="Search branches..."
                         emptyText="No branches found."
@@ -678,21 +766,24 @@ function RegisterPage() {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="department">Department</Label>
-                      <Combobox
-                        options={departments}
-                        value={String(formData.department_id)}
-                        onValueChangeAction={(value) =>
-                          setFormData({ ...formData, department_id: value })
-                        }
-                        placeholder="Select your branch"
-                        searchPlaceholder="Search branches..."
-                        emptyText="No branches found."
-                        className="w-1/2"
-                        error={fieldErrors?.department_id}
-                      />
-                    </div>
+                    {/* Department - Show only if branch is HO, Head Office, or none */}
+                    {isBranchHOOrNone(formData.branch_id) && (
+                      <div className="space-y-2">
+                        <Label htmlFor="department">Department</Label>
+                        <Combobox
+                          options={departments}
+                          value={String(formData.department_id)}
+                          onValueChangeAction={(value) =>
+                            setFormData({ ...formData, department_id: value })
+                          }
+                          placeholder="Select your department"
+                          searchPlaceholder="Search departments..."
+                          emptyText="No departments found."
+                          className="w-1/2"
+                          error={fieldErrors?.department_id}
+                        />
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <Label htmlFor="registerPassword">Password</Label>

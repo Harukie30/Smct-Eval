@@ -75,17 +75,15 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
            branchLower === 'none ho';
   };
 
-  // Helper function to check if position is Branch Manager or Branch Head
-  const isBranchManager = (positionId: string): boolean => {
+  // Helper function to check if position contains "manager" (case-insensitive)
+  const isManagerPosition = (positionId: string): boolean => {
     if (!positionId) return false;
     // Find the position name from the positions array
     const position = positions.find(p => p.id === positionId || p.name === positionId);
     if (!position) return false;
     const positionName = position.name.toLowerCase().trim();
-    return positionName.includes('branch manager') || 
-           positionName.includes('branch head') ||
-           positionName === 'branch manager' ||
-           positionName === 'branch head';
+    // Check if position name contains "manager"
+    return positionName.includes('manager');
   };
 
   // Update form data when user prop changes
@@ -95,8 +93,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       const userPosition = user.position || '';
       // Find position ID if user.position is a name, otherwise use as-is
       const positionId = positions.find(p => p.name === userPosition || p.id === userPosition)?.id || userPosition;
-      // If position is Branch Manager, role must be evaluator
-      const userRole = isBranchManager(positionId) ? 'evaluator' : (user.role || '');
+      // If position contains "manager", role must be evaluator
+      const userRole = isManagerPosition(positionId) ? 'evaluator' : (user.role || '');
       
       setFormData({
         id: user.id,
@@ -174,12 +172,12 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         department: '' // Clear department when branch is a regular branch (not HO/none)
       }));
     } 
-    // If position is changed to Branch Manager, automatically set role to evaluator
-    else if (field === 'position' && typeof value === 'string' && isBranchManager(value)) {
+    // If position is changed to any position with "manager" in the name, automatically set role to evaluator
+    else if (field === 'position' && typeof value === 'string' && isManagerPosition(value)) {
       setFormData(prev => ({
         ...prev,
         [field]: value,
-        role: 'evaluator' // Auto-set role to evaluator for Branch Manager
+        role: 'evaluator' // Auto-set role to evaluator for manager positions
       }));
     } else {
       setFormData(prev => ({
@@ -427,11 +425,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               emptyText="No roles found."
               className={errors.role ? 'border-red-500' : ''}
               error={errors.role || null}
-              disabled={isBranchManager(formData.position)}
+              disabled={isManagerPosition(formData.position)}
             />
             {errors.role && <p className="text-sm text-red-500">{errors.role}</p>}
-            {isBranchManager(formData.position) && (
-              <p className="text-xs text-gray-500">Role is automatically set to "Evaluator" for Branch Manager position</p>
+            {isManagerPosition(formData.position) && (
+              <p className="text-xs text-gray-500">Role is automatically set to "Evaluator" for manager positions</p>
             )}
           </div>
 

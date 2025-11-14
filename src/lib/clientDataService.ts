@@ -8,6 +8,7 @@ import profilesData from '@/data/profiles.json';
 import accountsData from '@/data/accounts.json';
 import branchCodesData from '@/data/branch-code.json';
 import { CONFIG } from '../../config/config';
+import axiosInstance from './axiosInstance';
 
 // Types
 export interface Notification {
@@ -237,15 +238,12 @@ export const clientDataService = {
     let apiDepartments: {id: string, name: string}[] = [];
     
     try {
-      const res = await fetch(`${CONFIG.API_URL}/departments`, {
-        method: "GET",
-      });
-      if (res.ok) {
-        const response = await res.json();
-        apiDepartments = response.departments.map(
+      const response = await axiosInstance.get('/departments');
+      if (response.data) {
+        apiDepartments = (response.data.departments || response.data).map(
           (dept: any) => ({
             id: dept.id.toString(),
-            name: dept.department_name,
+            name: dept.department_name || dept.name,
           })
         );
       }
@@ -288,29 +286,22 @@ export const clientDataService = {
   // Positions - calls external backend
   getPositions: async (): Promise<{id: string, name: string}[]> => {
     try {
-      const res = await fetch(`${CONFIG.API_URL}/positions`, { method: "GET" });
-
-      if (res.ok) {
-        const response = await res.json();
-        return response.positions.map((position: any) => ({
+      const response = await axiosInstance.get('/positions');
+      if (response.data) {
+        return (response.data.positions || response.data).map((position: any) => ({
           value: position.id,
-          label: position.label,
+          label: position.label || position.name,
         }));
       }
-
-      // Fallback to local data if API fails
-      return positionsData.map(position => ({
-        id: position,
-        name: position
-      }));
     } catch (error) {
       console.error('Error fetching positions:', error);
-      // Fallback to local data if API fails
-      return positionsData.map(position => ({
-        id: position,
-        name: position
-      }));
     }
+    
+    // Fallback to local data if API fails
+    return positionsData.map(position => ({
+      id: position,
+      name: position
+    }));
   },
 
   // Branches - calls external backend, merges with localStorage branches
@@ -319,12 +310,9 @@ export const clientDataService = {
     let apiBranches: {id: string, name: string}[] = [];
     
     try {
-      const res = await fetch(`${CONFIG.API_URL}/branches`, {
-        method: "GET",
-      });
-      if (res.ok) {
-        const response = await res.json();
-        apiBranches = response.branches.map((branch: any) => ({
+      const response = await axiosInstance.get('/branches');
+      if (response.data) {
+        apiBranches = (response.data.branches || response.data).map((branch: any) => ({
           id: branch.id,
           name: branch.branch_name + " /" + branch.branch_code,
         }));
@@ -458,22 +446,17 @@ export const clientDataService = {
   getPendingRegistrations: async (): Promise<PendingRegistration[]> => {
     try {
       // Try backend API first
-      const res = await fetch('/api/registrations', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await axiosInstance.get('/api/register');
+      const data = response.data;
       
-      if (res.ok) {
-        const data = await res.json();
-        // Cache the data for offline fallback
-        if (data.success && data.registrations) {
-          saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, data.registrations);
-          return data.registrations;
-        }
+      // Cache the data for offline fallback
+      if (data.success && data.registrations) {
+        saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, data.registrations);
+        return data.registrations;
       }
       
-      // Fallback to localStorage
-      console.warn('Backend API failed, using localStorage fallback');
+      // If response doesn't have expected structure, fallback to localStorage
+      console.warn('Backend API response format unexpected, using localStorage fallback');
       return getFromStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, []);
       
     } catch (error) {
@@ -486,25 +469,19 @@ export const clientDataService = {
   createPendingRegistration: async (registration: Omit<PendingRegistration, 'id' | 'status' | 'submittedAt'>): Promise<PendingRegistration> => {
     try {
       // Try backend API first
-      const res = await fetch('/api/registrations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(registration),
-      });
+      const response = await axiosInstance.post('/api/register', registration);
+      const data = response.data;
       
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.registration) {
-          // Cache the new registration for offline fallback
-          const pending = await clientDataService.getPendingRegistrations();
-          pending.push(data.registration);
-          saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, pending);
-          return data.registration;
-        }
+      if (data.success && data.registration) {
+        // Cache the new registration for offline fallback
+        const pending = await clientDataService.getPendingRegistrations();
+        pending.push(data.registration);
+        saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, pending);
+        return data.registration;
       }
       
-      // Fallback to localStorage
-      console.warn('Backend API failed, using localStorage fallback');
+      // If response doesn't have expected structure, fallback to localStorage
+      console.warn('Backend API response format unexpected, using localStorage fallback');
       const pending = await clientDataService.getPendingRegistrations();
       const newRegistration: PendingRegistration = {
         ...registration,
@@ -539,61 +516,56 @@ export const clientDataService = {
   approveRegistration: async (id: number): Promise<{ success: boolean; message: string }> => {
     try {
       // Try backend API first
-      const res = await fetch(`/api/registrations/${id}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await axiosInstance.post(`/api/registrations/${id}/approve`);
+      const data = response.data;
       
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          // Now handle the localStorage logic (until backend has full database)
-          const pending = await clientDataService.getPendingRegistrations();
-          const registration = pending.find(reg => reg.id === id);
+      if (data.success) {
+        // Now handle the localStorage logic (until backend has full database)
+        const pending = await clientDataService.getPendingRegistrations();
+        const registration = pending.find(reg => reg.id === id);
+        
+        if (registration) {
+          // Move to accounts
+          const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as any[];
+          const existingIds = accounts.map(acc => acc.id);
+          const existingEmployeeIds = accounts.map(acc => acc.employeeId).filter(id => id !== undefined);
+          const maxId = Math.max(...existingIds, 0);
+          const maxEmployeeId = Math.max(...existingEmployeeIds, 1000);
           
-          if (registration) {
-            // Move to accounts
-            const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as any[];
-            const existingIds = accounts.map(acc => acc.id);
-            const existingEmployeeIds = accounts.map(acc => acc.employeeId).filter(id => id !== undefined);
-            const maxId = Math.max(...existingIds, 0);
-            const maxEmployeeId = Math.max(...existingEmployeeIds, 1000);
-            
-            const newAccount = {
-              id: maxId + 1,
-              employeeId: maxEmployeeId + 1,
-              name: registration.name,
-              email: registration.email,
-              position: registration.position,
-              department: registration.department,
-              branch: registration.branch,
-              role: registration.role,
-              hireDate: registration.hireDate,
-              avatar: null,
-              bio: null,
-              contact: registration.contact || '',
-              updatedAt: new Date().toISOString(),
-              username: registration.username,
-              password: registration.password,
-              signature: registration.signature,
-              isActive: true,
-              approvedDate: new Date().toISOString(),
-            };
+          const newAccount = {
+            id: maxId + 1,
+            employeeId: maxEmployeeId + 1,
+            name: registration.name,
+            email: registration.email,
+            position: registration.position,
+            department: registration.department,
+            branch: registration.branch,
+            role: registration.role,
+            hireDate: registration.hireDate,
+            avatar: null,
+            bio: null,
+            contact: registration.contact || '',
+            updatedAt: new Date().toISOString(),
+            username: registration.username,
+            password: registration.password,
+            signature: registration.signature,
+            isActive: true,
+            approvedDate: new Date().toISOString(),
+          };
 
-            accounts.push(newAccount);
-            saveToStorage(STORAGE_KEYS.ACCOUNTS, accounts);
+          accounts.push(newAccount);
+          saveToStorage(STORAGE_KEYS.ACCOUNTS, accounts);
 
-            // Remove from pending
-            const updatedPending = pending.filter(reg => reg.id !== id);
-            saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
-          }
-          
-          return { success: true, message: data.message || 'Registration approved successfully' };
+          // Remove from pending
+          const updatedPending = pending.filter(reg => reg.id !== id);
+          saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
         }
+        
+        return { success: true, message: data.message || 'Registration approved successfully' };
       }
       
-      // Fallback to localStorage only
-      console.warn('Backend API failed, using localStorage fallback');
+      // If response doesn't have expected structure, fallback to localStorage
+      console.warn('Backend API response format unexpected, using localStorage fallback');
       const pending = await clientDataService.getPendingRegistrations();
       const registration = pending.find(reg => reg.id === id);
       
@@ -686,25 +658,20 @@ export const clientDataService = {
   rejectRegistration: async (id: number): Promise<{ success: boolean; message: string }> => {
     try {
       // Try backend API first
-      const res = await fetch(`/api/registrations/${id}/reject`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await axiosInstance.delete(`/api/registrations/${id}/reject`);
+      const data = response.data;
       
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          // Remove from localStorage
-          const pending = await clientDataService.getPendingRegistrations();
-          const updatedPending = pending.filter(reg => reg.id !== id);
-          saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
-          
-          return { success: true, message: data.message || 'Registration rejected successfully' };
-        }
+      if (data.success) {
+        // Remove from localStorage
+        const pending = await clientDataService.getPendingRegistrations();
+        const updatedPending = pending.filter(reg => reg.id !== id);
+        saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
+        
+        return { success: true, message: data.message || 'Registration rejected successfully' };
       }
       
-      // Fallback to localStorage
-      console.warn('Backend API failed, using localStorage fallback');
+      // If response doesn't have expected structure, fallback to localStorage
+      console.warn('Backend API response format unexpected, using localStorage fallback');
       const pending = await clientDataService.getPendingRegistrations();
       const updatedPending = pending.filter(reg => reg.id !== id);
       saveToStorage(STORAGE_KEYS.PENDING_REGISTRATIONS, updatedPending);
@@ -1147,18 +1114,8 @@ export const clientDataService = {
   getSubmissionById: async (id: number): Promise<Submission | null> => {
     try {
       // Try backend first
-      const res = await fetch(`${CONFIG.API_URL}/submissions/${id}`, {
-        method: 'GET',
-      });
-      
-      if (res.ok) {
-        return await res.json();
-      }
-      
-      // Fallback to localStorage
-      const submissions = await clientDataService.getSubmissions();
-      return submissions.find(sub => sub.id === id) || null;
-      
+      const response = await axiosInstance.get(`/submissions/${id}`);
+      return response.data;
     } catch (error) {
       console.error('Error fetching submission by ID:', error);
       // Fallback to localStorage
@@ -1174,43 +1131,23 @@ export const clientDataService = {
   ): Promise<Submission | null> => {
     try {
       // Try backend first
-      const res = await fetch(`${CONFIG.API_URL}/submissions/${submissionId}/employee-approve`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+      const response = await axiosInstance.patch(
+        `/submissions/${submissionId}/employee-approve`,
+        {
           employeeSignature,
           employeeApprovedAt: new Date().toISOString(),
           approvalStatus: 'employee_approved'
-        })
-      });
-      
-      if (res.ok) {
-        const updated = await res.json();
-        // Update localStorage cache
-        const submissions = await clientDataService.getSubmissions();
-        const updatedSubmissions = submissions.map(sub => 
-          sub.id === submissionId ? { ...sub, ...updated } : sub
-        );
-        saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
-        return updated;
-      }
-      
-      // Fallback to localStorage
-      const submissions = await clientDataService.getSubmissions();
-      const updatedSubmissions = submissions.map(sub => {
-        if (sub.id === submissionId) {
-          return {
-            ...sub,
-            employeeSignature,
-            employeeApprovedAt: new Date().toISOString(),
-            approvalStatus: 'employee_approved'
-          };
         }
-        return sub;
-      });
-      saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
-      return updatedSubmissions.find(sub => sub.id === submissionId) || null;
+      );
       
+      const updated = response.data;
+      // Update localStorage cache
+      const submissions = await clientDataService.getSubmissions();
+      const updatedSubmissions = submissions.map(sub => 
+        sub.id === submissionId ? { ...sub, ...updated } : sub
+      );
+      saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+      return updated;
     } catch (error) {
       console.error('Error updating employee signature:', error);
       // Fallback to localStorage
@@ -1238,43 +1175,23 @@ export const clientDataService = {
   ): Promise<Submission | null> => {
     try {
       // Try backend first
-      const res = await fetch(`${CONFIG.API_URL}/submissions/${submissionId}/evaluator-approve`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+      const response = await axiosInstance.patch(
+        `/submissions/${submissionId}/evaluator-approve`,
+        {
           evaluatorSignature,
           evaluatorApprovedAt: new Date().toISOString(),
           approvalStatus: 'fully_approved'
-        })
-      });
-      
-      if (res.ok) {
-        const updated = await res.json();
-        // Update localStorage cache
-        const submissions = await clientDataService.getSubmissions();
-        const updatedSubmissions = submissions.map(sub => 
-          sub.id === submissionId ? { ...sub, ...updated } : sub
-        );
-        saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
-        return updated;
-      }
-      
-      // Fallback to localStorage
-      const submissions = await clientDataService.getSubmissions();
-      const updatedSubmissions = submissions.map(sub => {
-        if (sub.id === submissionId) {
-          return {
-            ...sub,
-            evaluatorSignature,
-            evaluatorApprovedAt: new Date().toISOString(),
-            approvalStatus: 'fully_approved'
-          };
         }
-        return sub;
-      });
-      saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
-      return updatedSubmissions.find(sub => sub.id === submissionId) || null;
+      );
       
+      const updated = response.data;
+      // Update localStorage cache
+      const submissions = await clientDataService.getSubmissions();
+      const updatedSubmissions = submissions.map(sub => 
+        sub.id === submissionId ? { ...sub, ...updated } : sub
+      );
+      saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+      return updated;
     } catch (error) {
       console.error('Error updating evaluator signature:', error);
       // Fallback to localStorage
@@ -1299,24 +1216,12 @@ export const clientDataService = {
   deleteSubmission: async (id: number): Promise<{ success: boolean; message: string }> => {
     try {
       // Try backend first
-      const res = await fetch(`${CONFIG.API_URL}/submissions/${id}`, {
-        method: 'DELETE',
-      });
-      
-      if (res.ok) {
-        // Update localStorage cache
-        const submissions = await clientDataService.getSubmissions();
-        const updatedSubmissions = submissions.filter(sub => sub.id !== id);
-        saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
-        return { success: true, message: 'Submission deleted successfully' };
-      }
-      
-      // Fallback to localStorage
+      await axiosInstance.delete(`/submissions/${id}`);
+      // Update localStorage cache
       const submissions = await clientDataService.getSubmissions();
       const updatedSubmissions = submissions.filter(sub => sub.id !== id);
       saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
-      return { success: true, message: 'Submission deleted successfully (offline)' };
-      
+      return { success: true, message: 'Submission deleted successfully' };
     } catch (error) {
       console.error('Error deleting submission:', error);
       // Fallback to localStorage
@@ -1332,18 +1237,8 @@ export const clientDataService = {
   bulkApproveSubmissions: async (submissionIds: number[]): Promise<{ success: boolean; message: string }> => {
     try {
       // Try backend first
-      const res = await fetch(`${CONFIG.API_URL}/submissions/bulk-approve`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissionIds })
-      });
-      
-      if (res.ok) {
-        return { success: true, message: 'Submissions approved successfully' };
-      }
-      
-      return { success: false, message: 'Failed to approve submissions' };
-      
+      await axiosInstance.patch('/submissions/bulk-approve', { submissionIds });
+      return { success: true, message: 'Submissions approved successfully' };
     } catch (error) {
       console.error('Error bulk approving submissions:', error);
       return { success: false, message: 'Failed to approve submissions' };
@@ -1358,41 +1253,22 @@ export const clientDataService = {
   ): Promise<Submission | null> => {
     try {
       // Try backend first
-      const res = await fetch(`${CONFIG.API_URL}/submissions/${submissionId}/approval-status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+      const response = await axiosInstance.patch(
+        `/submissions/${submissionId}/approval-status`,
+        {
           approvalStatus,
           ...additionalData
-        })
-      });
-      
-      if (res.ok) {
-        const updated = await res.json();
-        // Update localStorage cache
-        const submissions = await clientDataService.getSubmissions();
-        const updatedSubmissions = submissions.map(sub => 
-          sub.id === submissionId ? { ...sub, ...updated } : sub
-        );
-        saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
-        return updated;
-      }
-      
-      // Fallback to localStorage
-      const submissions = await clientDataService.getSubmissions();
-      const updatedSubmissions = submissions.map(sub => {
-        if (sub.id === submissionId) {
-          return {
-            ...sub,
-            approvalStatus,
-            ...additionalData
-          };
         }
-        return sub;
-      });
-      saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
-      return updatedSubmissions.find(sub => sub.id === submissionId) || null;
+      );
       
+      const updated = response.data;
+      // Update localStorage cache
+      const submissions = await clientDataService.getSubmissions();
+      const updatedSubmissions = submissions.map(sub => 
+        sub.id === submissionId ? { ...sub, ...updated } : sub
+      );
+      saveToStorage(STORAGE_KEYS.SUBMISSIONS, updatedSubmissions);
+      return updated;
     } catch (error) {
       console.error('Error updating approval status:', error);
       // Fallback to localStorage
