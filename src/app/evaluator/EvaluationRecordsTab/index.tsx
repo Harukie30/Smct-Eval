@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import SearchableDropdown from "@/components/ui/searchable-dropdown";
-import departments from '@/data/departments.json';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getQuarterFromEvaluationData } from '@/lib/quarterUtils';
 
 interface EvaluationRecordsTabProps {
@@ -170,12 +170,23 @@ export function EvaluationRecordsTab({
       document.head.removeChild(style);
     };
   }, []);
-  const [feedbackDepartmentFilter, setFeedbackDepartmentFilter] = useState('');
   const [feedbackDateFilter, setFeedbackDateFilter] = useState('');
-  const [feedbackDateRange, setFeedbackDateRange] = useState({ from: '', to: '' });
+  const [feedbackYearFilter, setFeedbackYearFilter] = useState<string>('all');
   const [feedbackQuarterFilter, setFeedbackQuarterFilter] = useState('');
   const [feedbackApprovalStatusFilter, setFeedbackApprovalStatusFilter] = useState('');
   const [feedbackSort, setFeedbackSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
+
+  // Get available years from submissions
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    recentSubmissions.forEach((submission) => {
+      if (submission.submittedAt) {
+        const year = new Date(submission.submittedAt).getFullYear();
+        years.add(year);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a); // Sort descending (newest first)
+  }, [recentSubmissions]);
 
   // Computed feedback data
   const filteredFeedbackData = useMemo(() => {
@@ -250,11 +261,6 @@ export function EvaluationRecordsTab({
       );
     }
 
-    // Apply department filter
-    if (feedbackDepartmentFilter) {
-      data = data.filter(item => item.department === feedbackDepartmentFilter);
-    }
-
     // Apply date filter (preset ranges)
     if (feedbackDateFilter) {
       const daysAgo = parseInt(feedbackDateFilter);
@@ -263,21 +269,12 @@ export function EvaluationRecordsTab({
       data = data.filter(item => new Date(item.date) >= cutoffDate);
     }
 
-    // Apply custom date range filter
-    if (feedbackDateRange.from || feedbackDateRange.to) {
+    // Apply year filter
+    if (feedbackYearFilter && feedbackYearFilter !== 'all') {
+      const year = parseInt(feedbackYearFilter);
       data = data.filter(item => {
-        const itemDate = new Date(item.date);
-        const fromDate = feedbackDateRange.from ? new Date(feedbackDateRange.from) : null;
-        const toDate = feedbackDateRange.to ? new Date(feedbackDateRange.to) : null;
-
-        if (fromDate && toDate) {
-          return itemDate >= fromDate && itemDate <= toDate;
-        } else if (fromDate) {
-          return itemDate >= fromDate;
-        } else if (toDate) {
-          return itemDate <= toDate;
-        }
-        return true;
+        const itemYear = new Date(item.date).getFullYear();
+        return itemYear === year;
       });
     }
 
@@ -285,7 +282,8 @@ export function EvaluationRecordsTab({
     if (feedbackQuarterFilter) {
       data = data.filter(item => {
         const itemQuarter = getQuarterFromEvaluationData(item);
-        return itemQuarter === feedbackQuarterFilter;
+        // Match quarter regardless of year (e.g., "Q1" matches "Q1 2024", "Q1 2025", etc.)
+        return itemQuarter.startsWith(feedbackQuarterFilter);
       });
     }
 
@@ -326,7 +324,7 @@ export function EvaluationRecordsTab({
     }));
 
     return finalData;
-  }, [recentSubmissions, feedbackSearch, feedbackDepartmentFilter, feedbackDateFilter, feedbackDateRange, feedbackQuarterFilter, feedbackApprovalStatusFilter, feedbackSort]);
+  }, [recentSubmissions, feedbackSearch, feedbackDateFilter, feedbackYearFilter, feedbackQuarterFilter, feedbackApprovalStatusFilter, feedbackSort]);
 
   const sortFeedback = (key: string) => {
     setFeedbackSort(prev => ({
@@ -378,13 +376,12 @@ export function EvaluationRecordsTab({
                     onChange={(e) => setFeedbackSearch(e.target.value)}
                   />
 
-                  {(feedbackSearch || feedbackDepartmentFilter || feedbackDateFilter || feedbackDateRange.from || feedbackDateRange.to || feedbackQuarterFilter || feedbackApprovalStatusFilter) && (
+                  {(feedbackSearch || feedbackDateFilter || feedbackYearFilter !== 'all' || feedbackQuarterFilter || feedbackApprovalStatusFilter) && (
                     <button
                       onClick={() => {
                         setFeedbackSearch('');
-                        setFeedbackDepartmentFilter('');
                         setFeedbackDateFilter('');
-                        setFeedbackDateRange({ from: '', to: '' });
+                        setFeedbackYearFilter('all');
                         setFeedbackQuarterFilter('');
                         setFeedbackApprovalStatusFilter('');
                       }}
@@ -396,18 +393,6 @@ export function EvaluationRecordsTab({
                   )}
                 </div>
               </div>
-            </div>
-
-            {/* Department Filter */}
-            <div className="w-full md:w-48">
-              <Label htmlFor="feedback-department" className="text-sm font-medium">Department</Label>
-              <SearchableDropdown
-                options={['All Departments', ...departments.map(dept => dept.name)]}
-                value={feedbackDepartmentFilter || 'All Departments'}
-                onValueChangeAction={(value) => setFeedbackDepartmentFilter(value === 'All Departments' ? '' : value)}
-                placeholder="All Departments"
-                className="mt-1"
-              />
             </div>
 
             {/* Approval Status Filter */}
@@ -442,21 +427,17 @@ export function EvaluationRecordsTab({
               <SearchableDropdown
                 options={[
                   'All Quarters',
-                  'Q1 2024',
-                  'Q2 2024',
-                  'Q3 2024',
-                  'Q4 2024',
-                  'Q1 2025',
-                  'Q2 2025',
-                  'Q3 2025',
-                  'Q4 2025'
+                  'Q1',
+                  'Q2',
+                  'Q3',
+                  'Q4'
                 ]}
                 value={feedbackQuarterFilter || 'All Quarters'}
                 onValueChangeAction={(value) => {
                   setFeedbackQuarterFilter(value === 'All Quarters' ? '' : value);
                   if (value !== 'All Quarters') {
                     setFeedbackDateFilter('');
-                    setFeedbackDateRange({ from: '', to: '' });
+                    setFeedbackYearFilter('all');
                   }
                 }}
                 placeholder="All Quarters"
@@ -464,37 +445,22 @@ export function EvaluationRecordsTab({
               />
             </div>
 
-            {/* Custom Date Range */}
-            <div className="w-full md:w-64">
-              <Label className="text-sm font-medium">Custom Date Range</Label>
-              <div className="mt-1 flex gap-2">
-                <Input
-                  type="date"
-                  placeholder="From"
-                  value={feedbackDateRange.from}
-                  onChange={(e) => {
-                    setFeedbackDateRange(prev => ({ ...prev, from: e.target.value }));
-                    if (e.target.value) {
-                      setFeedbackDateFilter('');
-                      setFeedbackQuarterFilter('');
-                    }
-                  }}
-                  className="text-sm"
-                />
-                <Input
-                  type="date"
-                  placeholder="To"
-                  value={feedbackDateRange.to}
-                  onChange={(e) => {
-                    setFeedbackDateRange(prev => ({ ...prev, to: e.target.value }));
-                    if (e.target.value) {
-                      setFeedbackDateFilter('');
-                      setFeedbackQuarterFilter('');
-                    }
-                  }}
-                  className="text-sm"
-                />
-              </div>
+            {/* Year Filter */}
+            <div className="w-full md:w-48">
+              <Label htmlFor="feedback-year" className="text-sm font-medium">Year</Label>
+              <Select value={feedbackYearFilter} onValueChange={setFeedbackYearFilter}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select a year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {availableYears.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Refresh Button */}

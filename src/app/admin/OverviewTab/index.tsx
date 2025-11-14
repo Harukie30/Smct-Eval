@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import clientDataService from '@/lib/clientDataService';
 import accountsDataRaw from '@/data/accounts.json';
+import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 
 const accountsData = accountsDataRaw.accounts || [];
 
@@ -62,6 +63,8 @@ export function OverviewTab() {
   const [evaluatedReviews, setEvaluatedReviews] = useState<Review[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
 
   // Shared data loading function
   const loadData = async () => {
@@ -338,13 +341,62 @@ export function OverviewTab() {
     }
   };
 
+  // Handle viewing evaluation details
+  const handleViewEvaluation = async (review: Review) => {
+    try {
+      // Fetch the full submission data using the review ID
+      const submission = await clientDataService.getSubmissionById(review.id);
+      
+      if (submission) {
+        // Convert overallRating string to number for rating field
+        const ratingValue = submission.overallRating 
+          ? parseFloat(submission.overallRating) 
+          : (review.overallScore / 20); // Convert percentage back to 5-point scale
+        
+        // Transform the submission to match ViewResultsModal's expected format
+        const submissionForModal = {
+          id: submission.id,
+          employeeName: submission.employeeName || review.employeeName,
+          category: 'Performance Review',
+          rating: ratingValue,
+          submittedAt: submission.submittedAt || review.evaluationDate,
+          status: submission.status || review.status,
+          evaluator: submission.evaluator || submission.evaluatorName || review.evaluatorName,
+          evaluationData: submission.evaluationData || {
+            department: review.department,
+            position: review.position,
+          },
+          employeeId: submission.employeeId,
+          employeeEmail: submission.employeeEmail,
+          evaluatorId: submission.evaluatorId,
+          evaluatorName: submission.evaluator || submission.evaluatorName || review.evaluatorName,
+          period: submission.period,
+          overallRating: submission.overallRating || ratingValue.toString(),
+          approvalStatus: submission.approvalStatus,
+          employeeSignature: submission.employeeSignature,
+          employeeApprovedAt: submission.employeeApprovedAt,
+          evaluatorSignature: submission.evaluatorSignature,
+          evaluatorApprovedAt: submission.evaluatorApprovedAt,
+        };
+        
+        setSelectedSubmission(submissionForModal);
+        setIsViewResultsModalOpen(true);
+      } else {
+        console.error('Submission not found for review ID:', review.id);
+      }
+    } catch (error) {
+      console.error('Error fetching submission details:', error);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Submitted Reviews Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Recent Evaluation Records
+      {/* Main Container Div (replacing Card) */}
+      <div className="bg-white border rounded-lg p-6">
+        {/* Table Header Section */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-gray-900">Recent Evaluation Records</h2>
             {(() => {
               const now = new Date();
               const newCount = filteredReviews.filter(review => {
@@ -360,10 +412,9 @@ export function OverviewTab() {
             <Badge variant="outline" className="text-xs font-normal">
               📅 Sorted: Newest First
             </Badge>
-          </CardTitle>
-          <CardDescription>Latest performance evaluations and reviews (most recent at the top)</CardDescription>
+          </div>
           {/* Search Bar and Refresh Button */}
-          <div className="mt-4 flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <div className="relative flex-1 max-w-md">
               <Input
                 placeholder="Search by employee, department, position, evaluator, or status..."
@@ -412,43 +463,49 @@ export function OverviewTab() {
               )}
             </Button>
           </div>
-          {/* Indicator Legend */}
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex flex-wrap gap-4 text-xs">
-              <span className="text-sm font-medium text-gray-700 mr-2">Indicators:</span>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
-                <Badge className="bg-yellow-200 text-yellow-800 text-xs">New</Badge>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
-                <Badge className="bg-blue-300 text-blue-800 text-xs">Recent</Badge>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
-                <Badge className="bg-green-500 text-white text-xs">Completed</Badge>
-              </div>
+        </div>
+        
+        {/* Indicator Legend */}
+        <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+          <div className="flex flex-wrap gap-4 text-xs">
+            <span className="text-sm font-medium text-gray-700 mr-2">Indicators:</span>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
+              <Badge className="bg-yellow-200 text-yellow-800 text-xs">New</Badge>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+              <Badge className="bg-blue-300 text-blue-800 text-xs">Recent</Badge>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+              <Badge className="bg-green-500 text-white text-xs">Completed</Badge>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-            {refreshing && (
-              <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    {/* Spinning ring */}
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    {/* Logo in center */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                    </div>
+        </div>
+
+        {/* Table Section */}
+        <div className="border rounded-lg overflow-hidden">
+        <div className="relative max-h-[600px] overflow-y-auto overflow-x-auto" style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#cbd5e1 #f1f5f9'
+        }}>
+          {refreshing && (
+            <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
+              <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                <div className="relative">
+                  {/* Spinning ring */}
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                  {/* Logo in center */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
                   </div>
-                  <p className="text-sm text-gray-600 font-medium">Refreshing...</p>
                 </div>
+                <p className="text-sm text-gray-600 font-medium">Refreshing...</p>
               </div>
-            )}
-            <Table className="min-w-full">
+            </div>
+          )}
+          <Table className="min-w-full">
               <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                 <TableRow>
                   <TableHead className="px-6 py-3">Employee Name</TableHead>
@@ -589,6 +646,7 @@ export function OverviewTab() {
                             variant="outline"
                             size="sm"
                             className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => handleViewEvaluation(review)}
                           >
                             View
                           </Button>
@@ -600,8 +658,20 @@ export function OverviewTab() {
               </TableBody>
             </Table>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      {/* View Results Modal */}
+      <ViewResultsModal
+        isOpen={isViewResultsModalOpen}
+        onCloseAction={() => {
+          setIsViewResultsModalOpen(false);
+          setSelectedSubmission(null);
+        }}
+        submission={selectedSubmission}
+        showApprovalButton={false}
+        isEvaluatorView={false}
+      />
     </div>
   );
 }

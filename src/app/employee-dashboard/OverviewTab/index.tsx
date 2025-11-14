@@ -352,42 +352,42 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
                   <p className="text-sm text-gray-600 font-medium">Loading performance reviews...</p>
                 </div>
               </div>
-              <Table>
+              <Table className="table-fixed w-full">
                 <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
                   <TableRow>
-                    <TableHead>Immediate Supervisor</TableHead>
-                    <TableHead className="text-right">Rating</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Quarter</TableHead>
-                    <TableHead>Acknowledgement</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="w-1/6">Immediate Supervisor</TableHead>
+                    <TableHead className="w-1/6 text-right pr-25">Rating</TableHead>
+                    <TableHead className="w-1/6 pl-6">Date</TableHead>
+                    <TableHead className="w-1/6">Quarter</TableHead>
+                    <TableHead className="w-1/6">Acknowledgement</TableHead>
+                    <TableHead className="w-1/6 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell>
+                      <TableCell className="w-1/6">
                         <div className="flex items-center gap-2">
                           <Skeleton className="h-4 w-24" />
                           <Skeleton className="h-5 w-12 rounded-full" />
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="w-1/6 text-right pr-25">
                         <Skeleton className="h-4 w-12" />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="w-1/6 pl-6">
                         <div className="flex flex-col gap-1">
                           <Skeleton className="h-4 w-20" />
                           <Skeleton className="h-3 w-16" />
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="w-1/6">
                         <Skeleton className="h-5 w-16 rounded-full" />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="w-1/6">
                         <Skeleton className="h-5 w-20 rounded-full" />
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="w-1/6 text-right">
                         <Skeleton className="h-8 w-16" />
                       </TableCell>
                     </TableRow>
@@ -445,15 +445,15 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
               </div>
 
               <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table mx-4">
-                <Table>
+                <Table className="table-fixed w-full">
                   <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
                     <TableRow>
-                      <TableHead>Immediate Supervisor</TableHead>
-                      <TableHead className="text-right">Rating</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Quarter</TableHead>
-                      <TableHead>Acknowledgement</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="w-1/6">Immediate Supervisor</TableHead>
+                      <TableHead className="w-1/6 text-right pr-25">Rating</TableHead>
+                      <TableHead className="w-1/6 pl-6">Date</TableHead>
+                      <TableHead className="w-1/6">Quarter</TableHead>
+                      <TableHead className="w-1/6">Acknowledgement</TableHead>
+                      <TableHead className="w-1/6 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -467,7 +467,7 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
                         );
                         return (
                           <TableRow key={submission.id} className={highlight.className}>
-                            <TableCell className="font-medium">
+                            <TableCell className="w-1/6 font-medium">
                               <div className="flex items-center gap-2">
                                 {submission.evaluationData?.supervisor || 'Not specified'}
                                 {highlight.badge && (
@@ -477,13 +477,13 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell className="text-right font-semibold">
+                            <TableCell className="w-1/6 text-right font-semibold pr-25">
                               {submission.evaluationData
                                 ? calculateOverallRating(submission.evaluationData)
                                 : submission.rating}
                               /5
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="w-1/6 pl-6">
                               <div className="flex flex-col">
                                 <span className="font-medium">
                                   {new Date(submission.submittedAt).toLocaleDateString()}
@@ -491,7 +491,7 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
                                 <span className="text-xs text-gray-500">{getTimeAgo(submission.submittedAt)}</span>
                               </div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="w-1/6">
                               <Badge
                                 className={getQuarterColor(
                                   getQuarterFromEvaluationData(submission.evaluationData || submission)
@@ -500,40 +500,14 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
                                 {getQuarterFromEvaluationData(submission.evaluationData || submission)}
                               </Badge>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="w-1/6">
                               {isEvaluationApproved(submission.id) ? (
-                                <div className="flex items-center space-x-3">
-                                  <Badge className="bg-green-100 text-green-800">✓ Approved</Badge>
-                                  {(() => {
-                                    const approvalData = getApprovalData(submission.id);
-                                    return approvalData?.employeeSignature ? (
-                                      <div className="flex items-center space-x-2">
-                                        <span className="text-xs text-gray-500">Signature:</span>
-                                        <div className="text-center">
-                                          <div className="h-6 border-b border-gray-300 flex items-center justify-center">
-                                            <img
-                                              src={approvalData.employeeSignature}
-                                              alt="Employee Signature"
-                                              className="h-4 max-w-full object-contain"
-                                            />
-                                          </div>
-                                          <p className="text-xs font-medium text-gray-900 mt-1">
-                                            {approvalData.employeeName || 'Employee'}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div className="text-xs text-gray-400">
-                                        {approvalData ? 'No signature' : 'No approval data'}
-                                      </div>
-                                    );
-                                  })()}
-                                </div>
+                                <Badge className="bg-green-100 text-green-800">✓ Approved</Badge>
                               ) : (
                                 <Badge className="text-white bg-orange-500 border-orange-300">Pending</Badge>
                               )}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="w-1/6 text-right">
                               <Button
                                 className="bg-blue-500 text-white hover:bg-green-700 hover:text-white"
                                 size="sm"

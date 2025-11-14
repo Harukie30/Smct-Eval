@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import SearchableDropdown from "@/components/ui/searchable-dropdown";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getQuarterFromDate, getQuarterColor } from '@/lib/quarterUtils';
 import accountsData from '@/data/accounts.json';
 
@@ -37,12 +38,23 @@ export function EvaluationRecordsTab({
   isActive = false
 }: EvaluationRecordsTabProps) {
   const [recordsSearchTerm, setRecordsSearchTerm] = useState('');
-  const [recordsDepartmentFilter, setRecordsDepartmentFilter] = useState('');
   const [recordsApprovalFilter, setRecordsApprovalFilter] = useState('');
   const [recordsQuarterFilter, setRecordsQuarterFilter] = useState('');
-  const [recordsDateRange, setRecordsDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' });
+  const [recordsYearFilter, setRecordsYearFilter] = useState<string>('all');
   const [recordsRefreshing, setRecordsRefreshing] = useState(false);
   const [recordsSort, setRecordsSort] = useState<{ field: string; direction: 'asc' | 'desc' }>({ field: 'date', direction: 'desc' });
+
+  // Get available years from submissions
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    recentSubmissions.forEach((submission) => {
+      if (submission.submittedAt) {
+        const year = new Date(submission.submittedAt).getFullYear();
+        years.add(year);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a); // Sort descending (newest first)
+  }, [recentSubmissions]);
   
   // Refresh when component mounts (tab clicked - due to key prop remounting)
   useEffect(() => {
@@ -74,10 +86,51 @@ export function EvaluationRecordsTab({
   // Helper function to get rating label
   const getRatingLabel = (score: number): string => {
     if (score >= 4.5) return 'Outstanding';
-    if (score >= 3.5) return 'Exceeds Expectations';
-    if (score >= 2.5) return 'Meets Expectations';
-    if (score >= 1.5) return 'Needs Improvement';
+    if (score >= 4.0) return 'Exceeds Expectations';
+    if (score >= 3.5) return 'Meets Expectations';
+    if (score >= 2.5) return 'Needs Improvement';
     return 'Unsatisfactory';
+  };
+
+  // Helper function to get rating color
+  const getRatingColor = (rating: number) => {
+    if (rating >= 4.5) return 'text-green-600 bg-green-100';
+    if (rating >= 4.0) return 'text-blue-600 bg-blue-100';
+    if (rating >= 3.5) return 'text-yellow-600 bg-yellow-100';
+    return 'text-red-600 bg-red-100';
+  };
+
+  // Helper function to calculate overall rating from submission
+  const calculateOverallRating = (submission: any): number => {
+    if (submission.rating) {
+      return typeof submission.rating === 'string' ? parseFloat(submission.rating) : submission.rating;
+    }
+
+    if (submission.evaluationData) {
+      const evalData = submission.evaluationData;
+
+      // Calculate weighted average from all scores
+      const jobKnowledgeScore = calculateScore([evalData.jobKnowledgeScore1, evalData.jobKnowledgeScore2, evalData.jobKnowledgeScore3]);
+      const qualityOfWorkScore = calculateScore([evalData.qualityOfWorkScore1, evalData.qualityOfWorkScore2, evalData.qualityOfWorkScore3, evalData.qualityOfWorkScore4, evalData.qualityOfWorkScore5]);
+      const adaptabilityScore = calculateScore([evalData.adaptabilityScore1, evalData.adaptabilityScore2, evalData.adaptabilityScore3]);
+      const teamworkScore = calculateScore([evalData.teamworkScore1, evalData.teamworkScore2, evalData.teamworkScore3]);
+      const reliabilityScore = calculateScore([evalData.reliabilityScore1, evalData.reliabilityScore2, evalData.reliabilityScore3, evalData.reliabilityScore4]);
+      const ethicalScore = calculateScore([evalData.ethicalScore1, evalData.ethicalScore2, evalData.ethicalScore3, evalData.ethicalScore4]);
+      const customerServiceScore = calculateScore([evalData.customerServiceScore1, evalData.customerServiceScore2, evalData.customerServiceScore3, evalData.customerServiceScore4, evalData.customerServiceScore5]);
+
+      // Calculate weighted overall score
+      return Math.round((
+        (jobKnowledgeScore * 0.20) +
+        (qualityOfWorkScore * 0.20) +
+        (adaptabilityScore * 0.10) +
+        (teamworkScore * 0.10) +
+        (reliabilityScore * 0.05) +
+        (ethicalScore * 0.05) +
+        (customerServiceScore * 0.30)
+      ) * 10) / 10; // Round to 1 decimal place
+    }
+
+    return 0;
   };
 
   // Print evaluation record
@@ -274,7 +327,6 @@ export function EvaluationRecordsTab({
           (sub.evaluationData?.supervisor || sub.evaluator || '').toLowerCase().includes(searchLower);
         if (!matches) return false;
       }
-      if (recordsDepartmentFilter && sub.evaluationData?.department !== recordsDepartmentFilter) return false;
       if (recordsApprovalFilter) {
         const hasEmpSig = !!(sub.employeeSignature && sub.employeeSignature.trim());
         const hasEvalSig = !!((sub.evaluatorSignature && sub.evaluatorSignature.trim()) || 
@@ -289,9 +341,16 @@ export function EvaluationRecordsTab({
         }
         if (status !== recordsApprovalFilter) return false;
       }
-      if (recordsQuarterFilter && getQuarterFromDate(sub.submittedAt) !== recordsQuarterFilter) return false;
-      if (recordsDateRange.from && new Date(sub.submittedAt) < new Date(recordsDateRange.from)) return false;
-      if (recordsDateRange.to && new Date(sub.submittedAt) > new Date(recordsDateRange.to)) return false;
+      if (recordsQuarterFilter) {
+        const itemQuarter = getQuarterFromDate(sub.submittedAt);
+        // Match quarter regardless of year (e.g., "Q1" matches "Q1 2024", "Q1 2025", etc.)
+        if (!itemQuarter.startsWith(recordsQuarterFilter)) return false;
+      }
+      if (recordsYearFilter && recordsYearFilter !== 'all') {
+        const year = parseInt(recordsYearFilter);
+        const itemYear = new Date(sub.submittedAt).getFullYear();
+        if (itemYear !== year) return false;
+      }
       return true;
     });
 
@@ -309,6 +368,10 @@ export function EvaluationRecordsTab({
           aVal = new Date(a.submittedAt).getTime();
           bVal = new Date(b.submittedAt).getTime();
           break;
+        case 'rating':
+          aVal = calculateOverallRating(a);
+          bVal = calculateOverallRating(b);
+          break;
         default:
           return 0;
       }
@@ -319,7 +382,7 @@ export function EvaluationRecordsTab({
     });
 
     return sorted;
-  }, [recentSubmissions, recordsSearchTerm, recordsDepartmentFilter, recordsApprovalFilter, recordsQuarterFilter, recordsDateRange, recordsSort]);
+  }, [recentSubmissions, recordsSearchTerm, recordsApprovalFilter, recordsQuarterFilter, recordsYearFilter, recordsSort]);
 
   // Add visible scrollbar styling
   useEffect(() => {
@@ -390,14 +453,13 @@ export function EvaluationRecordsTab({
                     value={recordsSearchTerm}
                     onChange={(e) => setRecordsSearchTerm(e.target.value)}
                   />
-                  {(recordsSearchTerm || recordsDepartmentFilter || recordsApprovalFilter || recordsQuarterFilter || recordsDateRange.from || recordsDateRange.to) && (
+                  {(recordsSearchTerm || recordsApprovalFilter || recordsQuarterFilter || recordsYearFilter !== 'all') && (
                     <button
                       onClick={() => {
                         setRecordsSearchTerm('');
-                        setRecordsDepartmentFilter('');
                         setRecordsApprovalFilter('');
                         setRecordsQuarterFilter('');
-                        setRecordsDateRange({ from: '', to: '' });
+                        setRecordsYearFilter('all');
                       }}
                       className="absolute right-2 top-1/2 -translate-y-1/2 text-red-600 hover:text-red-700"
                       title="Clear all filters"
@@ -409,20 +471,6 @@ export function EvaluationRecordsTab({
                   )}
                 </div>
               </div>
-            </div>
-
-            {/* Department Filter */}
-            <div className="w-full md:w-48">
-              <Label htmlFor="records-department" className="text-sm font-medium">Department</Label>
-              <SearchableDropdown
-                options={['All Departments', ...departments.map((dept) => dept.name)]}
-                value={recordsDepartmentFilter || 'All Departments'}
-                onValueChangeAction={(value: string) => {
-                  setRecordsDepartmentFilter(value === 'All Departments' ? '' : value);
-                }}
-                placeholder="All Departments"
-                className="mt-1"
-              />
             </div>
 
             {/* Approval Status Filter */}
@@ -449,13 +497,13 @@ export function EvaluationRecordsTab({
             <div className="w-full md:w-48">
               <Label htmlFor="records-quarter" className="text-sm font-medium">Quarter</Label>
               <SearchableDropdown
-                options={['All Quarters', 'Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024', 'Q1 2025', 'Q2 2025', 'Q3 2025', 'Q4 2025']}
+                options={['All Quarters', 'Q1', 'Q2', 'Q3', 'Q4']}
                 value={recordsQuarterFilter || 'All Quarters'}
                 onValueChangeAction={(value: string) => {
                   const quarter = value === 'All Quarters' ? '' : value;
                   setRecordsQuarterFilter(quarter);
                   if (quarter) {
-                    setRecordsDateRange({ from: '', to: '' });
+                    setRecordsYearFilter('all');
                   }
                 }}
                 placeholder="All Quarters"
@@ -463,31 +511,22 @@ export function EvaluationRecordsTab({
               />
             </div>
 
-            {/* Custom Date Range */}
-            <div className="w-full md:w-64">
-              <Label className="text-sm font-medium">Custom Date Range</Label>
-              <div className="mt-1 flex gap-2">
-                <Input
-                  type="date"
-                  placeholder="From"
-                  value={recordsDateRange.from}
-                  onChange={(e) => {
-                    setRecordsDateRange(prev => ({ ...prev, from: e.target.value }));
-                    if (e.target.value) setRecordsQuarterFilter('');
-                  }}
-                  className="text-sm"
-                />
-                <Input
-                  type="date"
-                  placeholder="To"
-                  value={recordsDateRange.to}
-                  onChange={(e) => {
-                    setRecordsDateRange(prev => ({ ...prev, to: e.target.value }));
-                    if (e.target.value) setRecordsQuarterFilter('');
-                  }}
-                  className="text-sm"
-                />
-              </div>
+            {/* Year Filter */}
+            <div className="w-full md:w-48">
+              <Label htmlFor="records-year" className="text-sm font-medium">Year</Label>
+              <Select value={recordsYearFilter} onValueChange={setRecordsYearFilter}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select a year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {availableYears.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Refresh Button */}
@@ -581,6 +620,9 @@ export function EvaluationRecordsTab({
                     <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('date')}>
                       Date{getSortIcon('date')}
                     </TableHead>
+                    <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('rating')}>
+                      Rating{getSortIcon('rating')}
+                    </TableHead>
                     <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('status')}>
                       Status{getSortIcon('status')}
                     </TableHead>
@@ -614,6 +656,9 @@ export function EvaluationRecordsTab({
                       </TableCell>
                       <TableCell className="px-6 py-3">
                         <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-5 w-18 rounded-full bg-gray-200 animate-pulse"></div>
                       </TableCell>
                       <TableCell className="px-6 py-3">
                         <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse"></div>
@@ -654,6 +699,9 @@ export function EvaluationRecordsTab({
                     <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('date')}>
                       Date{getSortIcon('date')}
                     </TableHead>
+                    <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('rating')}>
+                      Rating{getSortIcon('rating')}
+                    </TableHead>
                     <TableHead className="px-6 py-3">Status</TableHead>
                     <TableHead className="px-6 py-3">Employee Sign</TableHead>
                     <TableHead className="px-6 py-3">Evaluator Sign</TableHead>
@@ -664,7 +712,7 @@ export function EvaluationRecordsTab({
                 <TableBody className="divide-y divide-gray-200">
                   {filteredAndSortedSubmissions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center py-12 text-gray-500">
+                      <TableCell colSpan={12} className="text-center py-12 text-gray-500">
                         No evaluation records found
                       </TableCell>
                     </TableRow>
@@ -739,6 +787,21 @@ export function EvaluationRecordsTab({
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
                             {new Date(submission.submittedAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            {(() => {
+                              const rating = calculateOverallRating(submission);
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <Badge className={`text-xs ${getRatingColor(rating)}`}>
+                                    {rating.toFixed(1)}/5
+                                  </Badge>
+                                  <span className="text-xs text-gray-500">
+                                    {getRatingLabel(rating)}
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="px-6 py-3">
                             <Badge className={
