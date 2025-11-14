@@ -567,7 +567,6 @@ export function UserManagementTab({
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Position</TableHead>
-                        <TableHead>Department</TableHead>
                         <TableHead>Branch</TableHead>
                         <TableHead>Role</TableHead>
                         <TableHead>Status</TableHead>
@@ -577,7 +576,7 @@ export function UserManagementTab({
                     <TableBody>
                       {getFilteredActiveEmployees().length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                             No active users found
                           </TableCell>
                         </TableRow>
@@ -587,7 +586,6 @@ export function UserManagementTab({
                             <TableCell className="font-medium">{employee.name}</TableCell>
                             <TableCell>{employee.email}</TableCell>
                             <TableCell>{employee.position}</TableCell>
-                            <TableCell>{employee.department}</TableCell>
                             <TableCell>
                               {employee.branch 
                                 ? (employee.branch.includes(',') 
@@ -712,7 +710,6 @@ export function UserManagementTab({
                         <TableHead className="px-6 py-3">Name</TableHead>
                         <TableHead className="px-6 py-3">Email</TableHead>
                         <TableHead className="px-6 py-3">Position</TableHead>
-                        <TableHead className="px-6 py-3">Department</TableHead>
                         <TableHead className="px-6 py-3">Registration Date</TableHead>
                         <TableHead className="px-6 py-3">Status</TableHead>
                         <TableHead className="px-6 py-3">Actions</TableHead>
@@ -721,7 +718,7 @@ export function UserManagementTab({
                     <TableBody className="divide-y divide-gray-200">
                       {getFilteredNewAccounts().length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                          <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                             {userSearchTerm ? 'No new registrations match your search.' : 'No new registrations found.'}
                           </TableCell>
                         </TableRow>
@@ -731,7 +728,6 @@ export function UserManagementTab({
                             <TableCell className="px-6 py-3 font-medium">{account.name}</TableCell>
                             <TableCell className="px-6 py-3">{account.email}</TableCell>
                             <TableCell className="px-6 py-3">{account.position}</TableCell>
-                            <TableCell className="px-6 py-3">{account.department}</TableCell>
                             <TableCell className="px-6 py-3">{account.registrationDate.toLocaleDateString()}</TableCell>
                             <TableCell className="px-6 py-3">
                               <Badge className={

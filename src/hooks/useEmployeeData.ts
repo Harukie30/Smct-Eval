@@ -1,18 +1,10 @@
 // src/hooks/useEmployeeData.ts
 
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  getAllEmployees, 
-  getEmployeeById, 
-  getEmployeeByEmail, 
-  searchEmployees,
-  getEmployeesByDepartment,
-  getEmployeesByRole,
-  updateEmployee,
-  getEmployeeStats,
+import clientDataService, {
   Employee,
   EmployeeSearchResult
-} from '@/lib/employeeService';
+} from '@/lib/clientDataService';
 
 // Hook for getting all employees
 export const useEmployees = () => {
@@ -24,7 +16,7 @@ export const useEmployees = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getAllEmployees();
+      const data = await clientDataService.getEmployees();
       setEmployees(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employees');
@@ -51,7 +43,7 @@ export const useEmployee = (id: number | null) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getEmployeeById(employeeId);
+      const data = await clientDataService.getEmployee(employeeId);
       setEmployee(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employee');
@@ -87,7 +79,7 @@ export const useEmployeeSearch = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await searchEmployees(query);
+      const data = await clientDataService.searchEmployees(query);
       setResults(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to search employees');
@@ -114,7 +106,7 @@ export const useEmployeesByDepartment = (department: string | null) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getEmployeesByDepartment(dept);
+      const data = await clientDataService.getEmployeesByDepartment(dept);
       setEmployees(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employees by department');
@@ -145,7 +137,7 @@ export const useEmployeesByRole = (role: string | null) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getEmployeesByRole(employeeRole);
+      const data = await clientDataService.getEmployeesByRole(employeeRole);
       setEmployees(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employees by role');
@@ -176,7 +168,7 @@ export const useEmployeeStats = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getEmployeeStats();
+      const data = await clientDataService.getEmployeeStats();
       setStats(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employee statistics');
@@ -202,7 +194,7 @@ export const useUpdateEmployee = () => {
     try {
       setLoading(true);
       setError(null);
-      const updatedEmployee = await updateEmployee(id, updates);
+      const updatedEmployee = await clientDataService.updateEmployee(id, updates);
       return updatedEmployee;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update employee';
@@ -233,7 +225,7 @@ export const useEmployeeByEmail = (email: string | null) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getEmployeeByEmail(employeeEmail);
+      const data = await clientDataService.getEmployeeByEmail(employeeEmail);
       setEmployee(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employee by email');

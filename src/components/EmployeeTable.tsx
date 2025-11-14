@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEmployees, useEmployeeSearch, useEmployeeStats } from '@/hooks/useEmployeeData';
-import { Employee } from '@/lib/employeeService';
+import { Employee } from '@/lib/clientDataService';
 import { Search, RefreshCw, Users, Building, UserCheck } from 'lucide-react';
 
 interface EmployeeTableProps {

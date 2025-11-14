@@ -77,46 +77,110 @@
 
 No more `fetch()` calls remaining in `clientDataService.ts`!
 
+**Total API Calls with Axios**: 30 (was 24)
+
 ---
 
 ## 📦 **LOCALSTORAGE ONLY (No API Calls)**
 
 ### 👥 **Employees**
-- `getEmployees()` - Line 366
-- `getEmployee(id)` - Line 370
-- `updateEmployee(id, updates)` - Line 388
-- **Status**: ❌ No API calls - localStorage only
-- **TODO**: Add API calls if backend has employee endpoints
+14. **`getEmployees()`** - Line 366
+    - Endpoint: `GET /api/employees`
+    - Status: ✅ Implemented
+    - Falls back to localStorage
+
+15. **`getEmployee(id)`** - Line 404
+    - Endpoint: `GET /api/employees/${id}`
+    - Status: ✅ Implemented
+    - Falls back to localStorage
+
+16. **`updateEmployee(id, updates)`** - Line 484
+    - Endpoint: `PUT /api/employees/${id}`
+    - Status: ✅ Implemented
+    - Updates localStorage cache after API call
 
 ### 📄 **Submissions (Basic CRUD)**
-- `getSubmissions()` - Line 413
-- `createSubmission(submission)` - Line 417
-- `updateSubmission(id, updates)` - Line 431
-- **Status**: ❌ No API calls - localStorage only
-- **Note**: Advanced submission functions (lines 1134+) use API
+17. **`getSubmissions()`** - Line 562
+    - Endpoint: `GET /submissions`
+    - Status: ✅ Implemented
+    - Falls back to localStorage
+
+18. **`createSubmission(submission)`** - Line 600
+    - Endpoint: `POST /submissions`
+    - Status: ✅ Implemented
+    - Updates localStorage cache after API call
+
+19. **`updateSubmission(id, updates)`** - Line 649
+    - Endpoint: `PUT /submissions/${id}`
+    - Status: ✅ Implemented
+    - Updates localStorage cache after API call
+
+**Note**: Advanced submission functions (lines 1263+) also use API
 
 ### 👤 **Profiles**
-- `getProfiles()` - Line 714
-- `getProfile(id)` - Line 718
-- `updateProfile(id, updates)` - Line 723
-- **Status**: ❌ No API calls - localStorage only
-- **TODO**: Add API calls if backend has profile endpoints
+20. **`getProfiles()`** - Line 1034
+    - Endpoint: `GET /api/profiles`
+    - Status: ✅ Implemented
+    - Falls back to localStorage
+
+21. **`getProfile(id)`** - Line 1072
+    - Endpoint: `GET /api/profiles/${id}`
+    - Status: ✅ Implemented
+    - Falls back to localStorage
+
+22. **`updateProfile(id, updates)`** - Line 1116
+    - Endpoint: `PUT /api/profiles/${id}`
+    - Status: ✅ Implemented
+    - Updates localStorage cache after API call
+    - Also syncs signature to accounts and employees
 
 ### 🔐 **Authentication**
-- `login(email, password)` - Line 791
-- `getUserById(userId)` - Line 852
-- **Status**: ❌ No API calls - localStorage only
-- **Note**: Authentication uses `apiService.ts` (fetch-based)
+23. **`login(email, password)`** - Line 1249
+    - Endpoint: `POST /api/login`
+    - Status: ✅ Implemented
+    - Handles suspension and pending approval cases
+    - Falls back to localStorage
+
+24. **`getUserById(userId)`** - Line 1362
+    - Endpoint: `GET /api/users/${userId}`
+    - Status: ✅ Implemented
+    - Falls back to localStorage
 
 ### 🔔 **Notifications**
-- `getNotifications(userRole)` - Line 976
-- `createNotification(notification)` - Line 984
-- `markNotificationAsRead(notificationId)` - Line 1021
-- `markAllNotificationsAsRead(userRole)` - Line 1039
-- `getUnreadNotificationCount(userRole)` - Line 1061
-- `deleteNotification(notificationId)` - Line 1066
-- **Status**: ❌ No API calls - localStorage only
-- **TODO**: Add API calls if backend has notification endpoints
+25. **`getNotifications(userRole)`** - Line 1510
+    - Endpoint: `GET /api/notifications?role=${userRole}`
+    - Status: ✅ Implemented
+    - Merges API data with localStorage cache
+    - Falls back to localStorage
+
+26. **`createNotification(notification)`** - Line 1570
+    - Endpoint: `POST /api/notifications`
+    - Status: ✅ Implemented
+    - Updates localStorage cache after API call
+    - Triggers storage events for real-time updates
+
+27. **`markNotificationAsRead(notificationId)`** - Line 1656
+    - Endpoint: `PUT /api/notifications/${notificationId}/read`
+    - Status: ✅ Implemented
+    - Updates localStorage cache after API call
+    - Triggers storage events for real-time updates
+
+28. **`markAllNotificationsAsRead(userRole)`** - Line 1702
+    - Endpoint: `PUT /api/notifications/read-all?role=${userRole}`
+    - Status: ✅ Implemented
+    - Updates localStorage cache after API call
+    - Triggers storage events for real-time updates
+
+29. **`getUnreadNotificationCount(userRole)`** - Line 1758
+    - Endpoint: `GET /api/notifications/unread-count?role=${userRole}`
+    - Status: ✅ Implemented
+    - Falls back to localStorage calculation
+
+30. **`deleteNotification(notificationId)`** - Line 1788
+    - Endpoint: `DELETE /api/notifications/${notificationId}`
+    - Status: ✅ Implemented
+    - Updates localStorage cache after API call
+    - Triggers storage events for real-time updates
 
 ### 📊 **Dashboard & Metrics**
 - `getDashboardData()` - Line 922
@@ -136,22 +200,21 @@ No more `fetch()` calls remaining in `clientDataService.ts`!
 
 ## 📊 **Summary**
 
-### ✅ **Completed (13 API calls with axios)**
+### ✅ **Completed (30 API calls with axios)**
 - Departments: 1
 - Positions: 1
 - Branches: 1
-- Submissions: 6
+- Submissions: 9 (6 advanced + 3 basic CRUD)
 - Pending Registrations: 4
+- Employees: 3
+- Profiles: 3
+- Authentication: 2
+- Notifications: 6
 
 ### ✅ **All fetch() calls converted!**
 - No remaining fetch calls in `clientDataService.ts`
 
 ### ❌ **No API Calls Yet (localStorage only)**
-- Employees: 3 functions
-- Submissions (basic): 3 functions
-- Profiles: 3 functions
-- Authentication: 2 functions
-- Notifications: 6 functions
 - Dashboard/Metrics: 3 functions
 - Accounts: 1 function
 - Branch Codes: 1 function
@@ -183,8 +246,8 @@ All functions in `clientDataService.ts` that needed API calls have been converte
 
 ---
 
-**Last Updated**: After converting `rejectRegistration()` to axios
-**Total API Calls with Axios**: 13
+**Last Updated**: After converting Notification functions (`getNotifications`, `createNotification`, `markNotificationAsRead`, `markAllNotificationsAsRead`, `getUnreadNotificationCount`, `deleteNotification`) to axios
+**Total API Calls with Axios**: 30
 **Total Functions Using Fetch**: 0 ✅
-**Total Functions (localStorage only)**: ~22
+**Total Functions (localStorage only)**: ~5
 

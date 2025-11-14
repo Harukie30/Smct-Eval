@@ -67,7 +67,7 @@ export const useDialogAnimation = (options: UseDialogAnimationOptions = {}) => {
           transform: scale(1.02) translateY(0);
           opacity: 1;
         }
-        100% {
+        100% {  
           transform: scale(1) translateY(0);
           opacity: 1;
         }
