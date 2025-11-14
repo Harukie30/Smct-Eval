@@ -767,7 +767,7 @@ function RegisterPage() {
                     </div>
 
                     {/* Department - Show only if branch is HO, Head Office, or none */}
-                    {isBranchHOOrNone(formData.branch_id) && (
+                    {(isBranchHOOrNone(formData.branch_id) || formData.branch_id === 126 ) && (
                       <div className="space-y-2">
                         <Label htmlFor="department">Department</Label>
                         <Combobox
