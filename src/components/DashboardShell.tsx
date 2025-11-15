@@ -785,6 +785,17 @@ export default function DashboardShell(props: DashboardShellProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Floating Contact Developers Button - Bottom Right */}
+      <Button
+        variant="ghost"
+        size="lg"
+        onClick={() => setIsContactDevsModalOpen(true)}
+        className="fixed bottom-24 right-6 z-50 p-4 hover:bg-blue-700 bg-blue-500 border rounded-full shadow-lg transition-all hover:scale-110"
+        title="Contact Developers"
+      >
+        <MessageCircle className="h-6 w-6 text-white" />
+      </Button>
     </div>
   );
 }
