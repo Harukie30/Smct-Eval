@@ -35,6 +35,8 @@ const EvaluationRecordsTab = lazy(() => import('./EvaluationRecordsTab').then(m 
 const EmployeesTab = lazy(() => import('./EmployeesTab').then(m => ({ default: m.EmployeesTab })));
 const DepartmentsTab = lazy(() => import('./DepartmentsTab').then(m => ({ default: m.DepartmentsTab })));
 const BranchesTab = lazy(() => import('./BranchesTab').then(m => ({ default: m.BranchesTab })));
+const BranchHeadsTab = lazy(() => import('../admin/BranchHeadsTab').then(m => ({ default: m.BranchHeadsTab })));
+const AreaManagersTab = lazy(() => import('../admin/AreaManagersTab').then(m => ({ default: m.AreaManagersTab })));
 const PerformanceReviewsTab = lazy(() => import('./PerformanceReviewsTab').then(m => ({ default: m.PerformanceReviewsTab })));
 const EvaluationHistoryTab = lazy(() => import('./EvaluationHistoryTab').then(m => ({ default: m.EvaluationHistoryTab })));
 
@@ -289,6 +291,9 @@ function HRDashboard() {
         const branchesData = await clientDataService.getBranches();
         setBranches(branchesData);
         setBranchesRefreshing(false);
+      } else if (tabId === 'branch-heads' || tabId === 'area-managers') {
+        // Refresh employee data for branch heads and area managers
+        await refreshEmployeeData();
       } else if (tabId === 'reviews') {
         setReviewsRefreshing(true);
         // Add a 1-second delay to make skeleton visible
@@ -802,6 +807,8 @@ function HRDashboard() {
     { id: 'employees', label: 'Employees', icon: '👥' },
     { id: 'departments', label: 'Departments', icon: '🏢' },
     { id: 'branches', label: 'Branches', icon: '📍' },
+    { id: 'branch-heads', label: 'Branch Heads', icon: '👔' },
+    { id: 'area-managers', label: 'Area Managers', icon: '🎯' },
     { id: 'reviews', label: 'Performance Reviews', icon: '📝' },
     { id: 'history', label: 'Evaluation History', icon: '📈' },
   ];
@@ -1028,6 +1035,57 @@ function HRDashboard() {
             employees={employees}
             branchesRefreshing={branchesRefreshing}
             isActive={active === 'branches'}
+          />
+        </Suspense>
+      )}
+
+      {active === 'branch-heads' && (
+        <Suspense fallback={
+          <div className="relative min-h-[500px]">
+              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                  <div className="relative">
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 font-medium">Loading branch heads...</p>
+                </div>
+              </div>
+                      </div>
+        }>
+          <BranchHeadsTab
+            employees={employees}
+            onRefresh={async () => {
+              await refreshEmployeeData();
+            }}
+            isLoading={employeesRefreshing}
+          />
+        </Suspense>
+      )}
+
+      {active === 'area-managers' && (
+        <Suspense fallback={
+          <div className="relative min-h-[500px]">
+              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                  <div className="relative">
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 font-medium">Loading area managers...</p>
+                </div>
+              </div>
+                      </div>
+        }>
+          <AreaManagersTab
+            employees={employees}
+            onRefresh={async () => {
+              await refreshEmployeeData();
+            }}
           />
         </Suspense>
       )}

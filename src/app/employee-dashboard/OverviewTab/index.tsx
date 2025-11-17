@@ -355,18 +355,18 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
               <Table className="table-fixed w-full">
                 <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
                   <TableRow>
-                    <TableHead className="w-1/6">Immediate Supervisor</TableHead>
+                    <TableHead className="w-1/6 pl-4">Immediate Supervisor</TableHead>
                     <TableHead className="w-1/6 text-right pr-25">Rating</TableHead>
                     <TableHead className="w-1/6 pl-6">Date</TableHead>
-                    <TableHead className="w-1/6">Quarter</TableHead>
-                    <TableHead className="w-1/6">Acknowledgement</TableHead>
-                    <TableHead className="w-1/6 text-right">Actions</TableHead>
+                    <TableHead className="w-1/6 px-4 pr-23 text-center">Quarter</TableHead>
+                    <TableHead className="w-1/6 text-center">Acknowledgement</TableHead>
+                    <TableHead className="w-1/6 text-right pl-1 pr-4">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell className="w-1/6">
+                      <TableCell className="w-1/6 pl-4">
                         <div className="flex items-center gap-2">
                           <Skeleton className="h-4 w-24" />
                           <Skeleton className="h-5 w-12 rounded-full" />
@@ -381,13 +381,13 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
                           <Skeleton className="h-3 w-16" />
                         </div>
                       </TableCell>
-                      <TableCell className="w-1/6">
-                        <Skeleton className="h-5 w-16 rounded-full" />
+                      <TableCell className="w-1/6 px-4 pr-23">
+                        <Skeleton className="h-5 w-16 rounded-full mx-auto" />
                       </TableCell>
-                      <TableCell className="w-1/6">
-                        <Skeleton className="h-5 w-20 rounded-full" />
+                      <TableCell className="w-1/6 text-center">
+                        <Skeleton className="h-5 w-20 rounded-full mx-auto" />
                       </TableCell>
-                      <TableCell className="w-1/6 text-right">
+                      <TableCell className="w-1/6 text-right pl-1 pr-4">
                         <Skeleton className="h-8 w-16" />
                       </TableCell>
                     </TableRow>
@@ -448,12 +448,12 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
                 <Table className="table-fixed w-full">
                   <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
                     <TableRow>
-                      <TableHead className="w-1/6">Immediate Supervisor</TableHead>
+                      <TableHead className="w-1/6 pl-4">Immediate Supervisor</TableHead>
                       <TableHead className="w-1/6 text-right pr-25">Rating</TableHead>
                       <TableHead className="w-1/6 pl-6">Date</TableHead>
-                      <TableHead className="w-1/6">Quarter</TableHead>
-                      <TableHead className="w-1/6">Acknowledgement</TableHead>
-                      <TableHead className="w-1/6 text-right">Actions</TableHead>
+                      <TableHead className="w-1/6 px-4 pr-23 text-center">Quarter</TableHead>
+                      <TableHead className="w-1/6 text-center">Acknowledgement</TableHead>
+                      <TableHead className="w-1/6 text-right pl-1 pr-4">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -467,7 +467,7 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
                         );
                         return (
                           <TableRow key={submission.id} className={highlight.className}>
-                            <TableCell className="w-1/6 font-medium">
+                            <TableCell className="w-1/6 font-medium pl-4">
                               <div className="flex items-center gap-2">
                                 {submission.evaluationData?.supervisor || 'Not specified'}
                                 {highlight.badge && (
@@ -491,23 +491,27 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
                                 <span className="text-xs text-gray-500">{getTimeAgo(submission.submittedAt)}</span>
                               </div>
                             </TableCell>
+                            <TableCell className="w-1/6 px-4 pr-23">
+                              <div className="flex justify-center">
+                                <Badge
+                                  className={getQuarterColor(
+                                    getQuarterFromEvaluationData(submission.evaluationData || submission)
+                                  )}
+                                >
+                                  {getQuarterFromEvaluationData(submission.evaluationData || submission)}
+                                </Badge>
+                              </div>
+                            </TableCell>
                             <TableCell className="w-1/6">
-                              <Badge
-                                className={getQuarterColor(
-                                  getQuarterFromEvaluationData(submission.evaluationData || submission)
+                              <div className="flex justify-center">
+                                {isEvaluationApproved(submission.id) ? (
+                                  <Badge className="bg-green-100 text-green-800">✓ Approved</Badge>
+                                ) : (
+                                  <Badge className="text-white bg-orange-500 border-orange-300">Pending</Badge>
                                 )}
-                              >
-                                {getQuarterFromEvaluationData(submission.evaluationData || submission)}
-                              </Badge>
+                              </div>
                             </TableCell>
-                            <TableCell className="w-1/6">
-                              {isEvaluationApproved(submission.id) ? (
-                                <Badge className="bg-green-100 text-green-800">✓ Approved</Badge>
-                              ) : (
-                                <Badge className="text-white bg-orange-500 border-orange-300">Pending</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="w-1/6 text-right">
+                            <TableCell className="w-1/6 text-right pl-1 pr-4">
                               <Button
                                 className="bg-blue-500 text-white hover:bg-green-700 hover:text-white"
                                 size="sm"
