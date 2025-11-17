@@ -607,9 +607,6 @@ export function EvaluationRecordsTab({
                     <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('employeeName')}>
                       Employee{getSortIcon('employeeName')}
                     </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('department')}>
-                      Department{getSortIcon('department')}
-                    </TableHead>
                     <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('evaluator')}>
                       Evaluator/HR{getSortIcon('evaluator')}
                     </TableHead>
@@ -641,9 +638,6 @@ export function EvaluationRecordsTab({
                           <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
                           <div className="h-2.5 w-20 bg-gray-200 rounded animate-pulse"></div>
                         </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
                       </TableCell>
                       <TableCell className="px-6 py-3">
                         <div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div>
@@ -692,7 +686,6 @@ export function EvaluationRecordsTab({
                     <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('employeeName')}>
                       Employee{getSortIcon('employeeName')}
                     </TableHead>
-                    <TableHead className="px-6 py-3">Department</TableHead>
                     <TableHead className="px-6 py-3">Evaluator/HR</TableHead>
                     <TableHead className="px-6 py-3">Type</TableHead>
                     <TableHead className="px-6 py-3">Quarter</TableHead>
@@ -712,7 +705,7 @@ export function EvaluationRecordsTab({
                 <TableBody className="divide-y divide-gray-200">
                   {filteredAndSortedSubmissions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center py-12 text-gray-500">
+                      <TableCell colSpan={11} className="text-center py-12 text-gray-500">
                         No evaluation records found
                       </TableCell>
                     </TableRow>
@@ -766,11 +759,6 @@ export function EvaluationRecordsTab({
                               <div className="font-medium text-gray-900">{submission.employeeName}</div>
                               <div className="text-sm text-gray-500">{submission.evaluationData?.position || 'N/A'}</div>
                             </div>
-                          </TableCell>
-                          <TableCell className="px-6 py-3">
-                            <Badge variant="outline" className="text-xs">
-                              {submission.evaluationData?.department || 'N/A'}
-                            </Badge>
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm">
                             {submission.evaluationData?.supervisor || submission.evaluator || 'N/A'}

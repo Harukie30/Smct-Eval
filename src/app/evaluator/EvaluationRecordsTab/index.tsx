@@ -536,7 +536,6 @@ export function EvaluationRecordsTab({
                 <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                   <TableRow key="feedback-header">
                     <TableHead className="px-6 py-3">Employee Name</TableHead>
-                    <TableHead className="px-6 py-3">Department</TableHead>
                     <TableHead className="px-6 py-3">Position</TableHead>
                     <TableHead className="px-6 py-3">Reviewer</TableHead>
                     <TableHead className="px-6 py-3">Rating</TableHead>
@@ -555,9 +554,6 @@ export function EvaluationRecordsTab({
                           <Skeleton className="h-3 w-20" />
                           <Skeleton className="h-2.5 w-24" />
                         </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-5 w-12 rounded-full" />
                       </TableCell>
                       <TableCell className="px-6 py-3">
                         <Skeleton className="h-3 w-16" />
@@ -601,9 +597,6 @@ export function EvaluationRecordsTab({
                   <TableRow key="feedback-header">
                     <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('employeeName')}>
                       Employee Name {getSortIcon('employeeName')}
-                    </TableHead>
-                    <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortFeedback('department')}>
-                      Department {getSortIcon('department')}
                     </TableHead>
                     <TableHead className="px-6 py-3">Position</TableHead>
                     <TableHead className="px-6 py-3">Reviewer</TableHead>
@@ -678,11 +671,6 @@ export function EvaluationRecordsTab({
                               <div className="text-sm text-gray-500">{feedback.employeeEmail}</div>
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Badge variant="outline" className="text-xs">
-                            {feedback.department}
-                          </Badge>
                         </TableCell>
                         <TableCell className="px-6 py-3 text-sm text-gray-600">
                           {feedback.position}

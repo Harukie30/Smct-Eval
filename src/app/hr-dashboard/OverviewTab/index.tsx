@@ -25,6 +25,47 @@ export function OverviewTab({
 }: OverviewTabProps) {
   const [overviewSearchTerm, setOverviewSearchTerm] = useState('');
 
+  // Helper function to calculate overall rating
+  const calculateOverallRating = (evaluationData: any) => {
+    if (!evaluationData) return 0;
+
+    const calculateScore = (scores: (string | number | null | undefined)[]) => {
+      const validScores = scores
+        .filter(score => score !== null && score !== undefined && score !== '')
+        .map(score => typeof score === 'string' ? parseFloat(score) : score)
+        .filter(score => !isNaN(score as number)) as number[];
+      if (validScores.length === 0) return 0;
+      return validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+    };
+
+    const jobKnowledgeScore = calculateScore([evaluationData.jobKnowledgeScore1, evaluationData.jobKnowledgeScore2, evaluationData.jobKnowledgeScore3]);
+    const qualityOfWorkScore = calculateScore([evaluationData.qualityOfWorkScore1, evaluationData.qualityOfWorkScore2, evaluationData.qualityOfWorkScore3, evaluationData.qualityOfWorkScore4, evaluationData.qualityOfWorkScore5]);
+    const adaptabilityScore = calculateScore([evaluationData.adaptabilityScore1, evaluationData.adaptabilityScore2, evaluationData.adaptabilityScore3]);
+    const teamworkScore = calculateScore([evaluationData.teamworkScore1, evaluationData.teamworkScore2, evaluationData.teamworkScore3]);
+    const reliabilityScore = calculateScore([evaluationData.reliabilityScore1, evaluationData.reliabilityScore2, evaluationData.reliabilityScore3, evaluationData.reliabilityScore4]);
+    const ethicalScore = calculateScore([evaluationData.ethicalScore1, evaluationData.ethicalScore2, evaluationData.ethicalScore3, evaluationData.ethicalScore4]);
+    const customerServiceScore = calculateScore([evaluationData.customerServiceScore1, evaluationData.customerServiceScore2, evaluationData.customerServiceScore3, evaluationData.customerServiceScore4, evaluationData.customerServiceScore5]);
+
+    const overallWeightedScore =
+      jobKnowledgeScore * 0.2 +
+      qualityOfWorkScore * 0.2 +
+      adaptabilityScore * 0.1 +
+      teamworkScore * 0.1 +
+      reliabilityScore * 0.05 +
+      ethicalScore * 0.05 +
+      customerServiceScore * 0.3;
+
+    return Math.round(overallWeightedScore * 10) / 10;
+  };
+
+  // Helper function to get rating color
+  const getRatingColor = (rating: number) => {
+    if (rating >= 4.5) return 'bg-green-100 text-green-800';
+    if (rating >= 4.0) return 'bg-blue-100 text-blue-800';
+    if (rating >= 3.5) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
+  };
+
   // Filter submissions for overview table
   const filteredSubmissions = useMemo(() => {
     return recentSubmissions
@@ -184,9 +225,7 @@ export function OverviewTab({
               <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                 <TableRow>
                   <TableHead className="px-6 py-3">Employee Name</TableHead>
-                  <TableHead className="px-6 py-3">Department</TableHead>
-                  <TableHead className="px-6 py-3">Position</TableHead>
-                  <TableHead className="px-6 py-3">HR</TableHead>
+                  <TableHead className="px-6 py-3 text-left pl-0">Rating</TableHead>
                   <TableHead className="px-6 py-3">Quarter</TableHead>
                   <TableHead className="px-6 py-3">Date</TableHead>
                   <TableHead className="px-6 py-3">Approval Status</TableHead>
@@ -203,16 +242,8 @@ export function OverviewTab({
                           <div className="h-2.5 w-24 bg-gray-200 rounded animate-pulse"></div>
                         </div>
                       </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-12 bg-gray-200 rounded-full animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="space-y-1">
-                          <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
-                        </div>
+                      <TableCell className="px-6 py-3 text-left pl-0">
+                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
                       </TableCell>
                       <TableCell className="px-6 py-3">
                         <div className="h-5 w-12 bg-gray-200 rounded-full animate-pulse"></div>
@@ -230,7 +261,7 @@ export function OverviewTab({
                   ))
                 ) : filteredSubmissions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12">
+                    <TableCell colSpan={6} className="text-center py-12">
                       <div className="text-gray-500">
                         {overviewSearchTerm ? (
                           <>
@@ -309,18 +340,17 @@ export function OverviewTab({
                             <div className="text-sm text-gray-500">{submission.evaluationData?.email || ''}</div>
                           </div>
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Badge variant="outline" className="text-xs">
-                            {submission.evaluationData?.department || 'N/A'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="px-6 py-3 text-sm text-gray-600">
-                          {submission.evaluationData?.position || 'N/A'}
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <div className="font-medium text-gray-900">
-                            {submission.evaluationData?.supervisor || submission.evaluator || 'N/A'}
-                          </div>
+                        <TableCell className="px-6 py-3 text-left pl-0">
+                          {(() => {
+                            const rating = submission.evaluationData
+                              ? calculateOverallRating(submission.evaluationData)
+                              : submission.rating || 0;
+                            return (
+                              <Badge className={`text-xs font-semibold ${getRatingColor(rating)}`}>
+                                {rating > 0 ? `${rating}/5` : 'N/A'}
+                              </Badge>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="px-6 py-3">
                           <Badge className={getQuarterColor(quarter)}>

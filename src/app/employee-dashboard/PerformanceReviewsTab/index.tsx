@@ -628,14 +628,14 @@ export function PerformanceReviewsTab({ isActive = false, onViewEvaluation }: Pe
             <CardContent className="p-0">
               {submissions.length > 0 ? (
                 <div className="max-h-[500px] overflow-y-auto overflow-x-hidden rounded-lg border mx-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                  <Table>
+                  <Table className="table-fixed w-full">
                     <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
                       <TableRow>
-                        <TableHead className="px-6 py-4">Immediate Supervisor</TableHead>
-                        <TableHead className="px-6 py-4 text-right">Rating</TableHead>
-                        <TableHead className="px-6 py-4">Date</TableHead>
-                        <TableHead className="px-6 py-4">Quarter</TableHead>
-                        <TableHead className="px-6 py-4 text-right">Actions</TableHead>
+                        <TableHead className="w-1/5 pl-4">Immediate Supervisor</TableHead>
+                        <TableHead className="w-1/5 text-right pr-25">Rating</TableHead>
+                        <TableHead className="w-1/5 text-center">Date</TableHead>
+                        <TableHead className="w-1/5 px-4 pr-23 text-center">Quarter</TableHead>
+                        <TableHead className="w-1/5 text-right pl-1 pr-4">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -660,7 +660,7 @@ export function PerformanceReviewsTab({ isActive = false, onViewEvaluation }: Pe
                                   : ''
                               }`}
                             >
-                              <TableCell className="px-6 py-4 font-medium">
+                              <TableCell className="w-1/5 font-medium pl-4">
                                 <div className="flex items-center gap-2">
                                   {submission.evaluationData?.supervisor || 'Not specified'}
                                   {highlight.badge && (
@@ -670,7 +670,7 @@ export function PerformanceReviewsTab({ isActive = false, onViewEvaluation }: Pe
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="px-6 py-4 text-right font-semibold">
+                              <TableCell className="w-1/5 text-right font-semibold pr-25">
                                 <div
                                   className={`flex items-center justify-end gap-2 ${
                                     isPoorPerformance
@@ -706,24 +706,26 @@ export function PerformanceReviewsTab({ isActive = false, onViewEvaluation }: Pe
                                   <span className="font-bold">{rating}/5</span>
                                 </div>
                               </TableCell>
-                              <TableCell className="px-6 py-4">
-                                <div className="flex flex-col">
+                              <TableCell className="w-1/5">
+                                <div className="flex flex-col items-center">
                                   <span className="font-medium">
                                     {new Date(submission.submittedAt).toLocaleDateString()}
                                   </span>
                                   <span className="text-xs text-gray-500">{getTimeAgo(submission.submittedAt)}</span>
                                 </div>
                               </TableCell>
-                              <TableCell className="px-6 py-4">
-                                <Badge
-                                  className={getQuarterColor(
-                                    getQuarterFromEvaluationData(submission.evaluationData || submission)
-                                  )}
-                                >
-                                  {getQuarterFromEvaluationData(submission.evaluationData || submission)}
-                                </Badge>
+                              <TableCell className="w-1/5 px-4 pr-23">
+                                <div className="flex justify-center">
+                                  <Badge
+                                    className={getQuarterColor(
+                                      getQuarterFromEvaluationData(submission.evaluationData || submission)
+                                    )}
+                                  >
+                                    {getQuarterFromEvaluationData(submission.evaluationData || submission)}
+                                  </Badge>
+                                </div>
                               </TableCell>
-                              <TableCell className="px-6 py-4 text-right">
+                              <TableCell className="w-1/5 text-right pl-1 pr-4">
                                 <Button
                                   variant="ghost"
                                   size="sm"
