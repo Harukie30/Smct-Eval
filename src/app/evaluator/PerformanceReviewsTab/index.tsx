@@ -467,14 +467,14 @@ export function PerformanceReviewsTab({
             <CardContent className="p-0">
               {filteredReviews.length > 0 ? (
                 <div className="max-h-[500px] overflow-y-auto overflow-x-hidden rounded-lg border mx-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                  <Table>
+                  <Table className="table-fixed w-full">
                     <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
                       <TableRow>
-                        <TableHead className="px-6 py-4">Employee</TableHead>
-                        <TableHead className="px-6 py-4 text-right">Rating</TableHead>
-                        <TableHead className="px-6 py-4">Date</TableHead>
-                        <TableHead className="px-6 py-4">Quarter</TableHead>
-                        <TableHead className="px-6 py-4 text-right">Actions</TableHead>
+                        <TableHead className="w-1/5 pl-4">Employee</TableHead>
+                        <TableHead className="w-1/5 text-center pl-4">Rating</TableHead>
+                        <TableHead className="w-1/5 text-center">Date</TableHead>
+                        <TableHead className="w-1/5 text-right pr-6">Quarter</TableHead>
+                        <TableHead className="w-1/5 text-right pl-1 pr-4">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -495,7 +495,7 @@ export function PerformanceReviewsTab({
                                     ''
                               }`}
                             >
-                              <TableCell className="px-6 py-4 font-medium">
+                              <TableCell className="w-1/5 font-medium pl-4">
                                 <div className="flex items-center gap-2">
                                   {submission.employeeName || 'Unknown'}
                                   {highlight.badge && (
@@ -505,14 +505,14 @@ export function PerformanceReviewsTab({
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="px-6 py-4 text-right font-semibold">
+                              <TableCell className="w-1/5 pl-4">
                                 {(() => {
                                   const rating = submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating || 0;
                                   const isLowPerformance = rating < 3.0;
                                   const isPoorPerformance = rating < 2.5;
 
                                   return (
-                                    <div className={`flex items-center justify-end gap-2 ${
+                                    <div className={`flex items-center justify-center gap-2 ${
                                       isPoorPerformance ? 'text-red-700' :
                                         isLowPerformance ? 'text-orange-600' :
                                           'text-gray-900'
@@ -536,18 +536,18 @@ export function PerformanceReviewsTab({
                                   );
                                 })()}
                               </TableCell>
-                              <TableCell className="px-6 py-4">
-                                <div className="flex flex-col">
+                              <TableCell className="w-1/5">
+                                <div className="flex flex-col items-center">
                                   <span className="font-medium">{new Date(submission.submittedAt).toLocaleDateString()}</span>
                                   <span className="text-xs text-gray-500">{getTimeAgo(submission.submittedAt)}</span>
                                 </div>
                               </TableCell>
-                              <TableCell className="px-6 py-4">
+                              <TableCell className="w-1/5 text-right pr-6">
                                 <Badge className={getQuarterColor(getQuarterFromEvaluationData(submission.evaluationData || submission))}>
                                   {getQuarterFromEvaluationData(submission.evaluationData || submission)}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="px-6 py-4 text-right">
+                              <TableCell className="w-1/5 text-right pl-1 pr-4">
                                 <Button
                                   variant="ghost"
                                   size="sm"

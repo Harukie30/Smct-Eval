@@ -162,20 +162,20 @@ export function OverviewTab({
               </div>
               
               {/* Table structure visible in background */}
-              <Table className="min-w-full">
+              <Table className="table-fixed w-full">
                 <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                   <TableRow key="overview-header">
-                    <TableHead className="px-6 py-3">Employee</TableHead>
-                    <TableHead className="px-6 py-3 text-right">Rating</TableHead>
-                    <TableHead className="px-6 py-3">Date</TableHead>
-                    <TableHead className="px-6 py-3">Quarter</TableHead>
-                    <TableHead className="px-6 py-3 text-right">Actions</TableHead>
+                    <TableHead className="w-1/5 pl-4">Employee</TableHead>
+                    <TableHead className="w-1/5 text-center pl-4">Rating</TableHead>
+                    <TableHead className="w-1/5 text-center">Date</TableHead>
+                    <TableHead className="w-1/5 text-right pr-6">Quarter</TableHead>
+                    <TableHead className="w-1/5 text-right pl-1 pr-4">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {Array.from({ length: 6 }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
-                      <TableCell className="px-6 py-3">
+                      <TableCell className="w-1/5 pl-4">
                         <div className="flex items-center space-x-3">
                           <Skeleton className="h-8 w-8 rounded-full" />
                           <div className="space-y-2">
@@ -184,23 +184,20 @@ export function OverviewTab({
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-6 w-20 rounded-full" />
+                      <TableCell className="w-1/5 pl-4">
+                        <Skeleton className="h-6 w-20 rounded-full mx-auto" />
                       </TableCell>
-                      <TableCell className="px-6 py-3 text-right">
-                        <Skeleton className="h-4 w-12" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="space-y-2">
+                      <TableCell className="w-1/5">
+                        <div className="flex flex-col items-center space-y-2">
                           <Skeleton className="h-4 w-20" />
                           <Skeleton className="h-3 w-16" />
                         </div>
                       </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-6 w-16 rounded-full" />
+                      <TableCell className="w-1/5 text-right pr-6">
+                        <Skeleton className="h-6 w-16 rounded-full ml-auto" />
                       </TableCell>
-                      <TableCell className="px-6 py-4 flex justify-end">
-                        <Skeleton className="h-8 w-16" />
+                      <TableCell className="w-1/5 text-right pl-1 pr-4">
+                        <Skeleton className="h-8 w-16 ml-auto" />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -230,14 +227,14 @@ export function OverviewTab({
               
               {/* Scrollable Table */}
               <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table overview-table">
-                <Table className="min-w-full">
+                <Table className="table-fixed w-full">
                   <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                     <TableRow key="overview-header">
-                      <TableHead className="px-6 py-3">Employee</TableHead>
-                      <TableHead className="px-6 py-3 text-right">Rating</TableHead>
-                      <TableHead className="px-6 py-3">Date</TableHead>
-                      <TableHead className="px-6 py-3">Quarter</TableHead>
-                      <TableHead className="px-6 py-3 text-right">Actions</TableHead>
+                      <TableHead className="w-1/5 pl-4">Employee</TableHead>
+                      <TableHead className="w-1/5 text-center pl-4">Rating</TableHead>
+                      <TableHead className="w-1/5 text-center">Date</TableHead>
+                      <TableHead className="w-1/5 text-right pr-6">Quarter</TableHead>
+                      <TableHead className="w-1/5 text-right pl-1 pr-4">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -281,7 +278,7 @@ export function OverviewTab({
                               className={highlight.className}
                               onClick={() => onMarkAsSeen(submission.id)}
                             >
-                              <TableCell className="px-6 py-3 font-medium">
+                              <TableCell className="w-1/5 font-medium pl-4">
                                 <div className="flex items-center gap-2">
                                   {submission.employeeName}
                                   {highlight.badge && (
@@ -296,44 +293,46 @@ export function OverviewTab({
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="px-6 py-3 text-right font-semibold">
-                                {(() => {
-                                  if (submission.evaluationData) {
-                                    const calculatedRating = calculateOverallRating(submission.evaluationData);
-                                    if (calculatedRating > 0 && calculatedRating <= 5) {
-                                      return `${calculatedRating}/5`;
-                                    }
-                                  }
-                                  return `${submission.rating || 'N/A'}/5`;
-                                })()}
+                              <TableCell className="w-1/5 pl-4">
+                                <div className="flex justify-center">
+                                  <span className="font-semibold">
+                                    {(() => {
+                                      if (submission.evaluationData) {
+                                        const calculatedRating = calculateOverallRating(submission.evaluationData);
+                                        if (calculatedRating > 0 && calculatedRating <= 5) {
+                                          return `${calculatedRating}/5`;
+                                        }
+                                      }
+                                      return `${submission.rating || 'N/A'}/5`;
+                                    })()}
+                                  </span>
+                                </div>
                               </TableCell>
-                              <TableCell className="px-6 py-3">
-                                <div className="flex flex-col">
+                              <TableCell className="w-1/5">
+                                <div className="flex flex-col items-center">
                                   <span className="font-medium">{new Date(submission.submittedAt).toLocaleDateString()}</span>
                                   <span className="text-xs text-gray-500">{getTimeAgo(submission.submittedAt)}</span>
                                 </div>
                               </TableCell>
-                              <TableCell className="px-6 py-3">
+                              <TableCell className="w-1/5 text-right pr-6">
                                 <Badge className={getQuarterColor(getQuarterFromEvaluationData(submission.evaluationData || submission))}>
                                   {getQuarterFromEvaluationData(submission.evaluationData || submission)}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="px-6 py-4 flex justify-end text-right">
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onMarkAsSeen(submission.id);
-                                      onViewEvaluation(submission);
-                                    }}
-                                    className="bg-blue-500 hover:bg-blue-200 text-white border-blue-200"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                    View
-                                  </Button>
-                                </div>
+                              <TableCell className="w-1/5 text-right pl-1 pr-4">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onMarkAsSeen(submission.id);
+                                    onViewEvaluation(submission);
+                                  }}
+                                  className="bg-blue-500 hover:bg-blue-200 text-white border-blue-200"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                  View
+                                </Button>
                               </TableCell>
                             </TableRow>
                           );

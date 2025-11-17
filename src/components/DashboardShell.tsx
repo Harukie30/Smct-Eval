@@ -92,6 +92,7 @@ export default function DashboardShell(props: DashboardShellProps) {
   const isEmployeeDashboard = useMemo(() => dashboardType === 'employee', [dashboardType]);
   const isEvaluatorDashboard = useMemo(() => dashboardType === 'evaluator', [dashboardType]);
   const isAdminDashboard = useMemo(() => dashboardType === 'admin', [dashboardType]);
+  const isHRDashboard = useMemo(() => dashboardType === 'hr', [dashboardType]);
 
   // Auto-open collapsible groups when their items are active
   useEffect(() => {
@@ -102,6 +103,13 @@ export default function DashboardShell(props: DashboardShellProps) {
       }
       if (['branch-heads', 'area-managers'].includes(activeItemId) && !isLeadershipOpen) {
         setIsLeadershipOpen(true);
+      }
+      return;
+    }
+    
+    if (isHRDashboard) {
+      if (['departments', 'branches', 'branch-heads', 'area-managers'].includes(activeItemId) && !isManagementOpen) {
+        setIsManagementOpen(true);
       }
       return;
     }
@@ -382,24 +390,30 @@ export default function DashboardShell(props: DashboardShellProps) {
                   // Define which items should be visible (main items)
                   // For employee dashboard: overview, reviews
                   // For evaluator dashboard: overview, employees, feedback, reviews
-                  // For HR dashboard: overview, evaluation-records, employees
+                  // For HR dashboard: overview, evaluation-records, employees (management items go in collapsible group)
                   // For admin dashboard: all items except departments, branches, branch-heads, and area-managers (they go in collapsible groups)
                   const visibleItems = isAdminDashboard
                     ? sidebarItems.map(item => item.id).filter(id => !['departments', 'branches', 'branch-heads', 'area-managers'].includes(id))
+                    : isHRDashboard
+                    ? sidebarItems.map(item => item.id).filter(id => !['departments', 'branches', 'branch-heads', 'area-managers'].includes(id))
                     : isEmployeeDashboard 
-                    ? ['overview', 'reviews']
+                    ? ['overview', 'reviews', 'history']
                     : isEvaluatorDashboard
-                    ? ['overview', 'employees', 'feedback', 'reviews']
+                    ? ['overview', 'employees', 'feedback', 'reviews', 'history']
                     : ['overview', 'evaluation-records', 'employees'];
                   
                   // Define collapsible groups
-                  const managementItems = ['departments', 'branches'];
+                  // For HR dashboard, management includes departments, branches, branch-heads, and area-managers
+                  // For admin dashboard, management includes departments and branches, leadership includes branch-heads and area-managers
+                  const managementItems = isHRDashboard 
+                    ? ['departments', 'branches', 'branch-heads', 'area-managers']
+                    : ['departments', 'branches'];
                   const leadershipItems = ['branch-heads', 'area-managers'];
                   // Analytics items vary by dashboard type - exclude items that are already visible
                   const analyticsItems = isEmployeeDashboard
-                    ? ['history']
+                    ? [] // No analytics items for employee dashboard - history is now visible
                     : isEvaluatorDashboard
-                    ? ['history'] // For evaluator, 'reviews' is visible, so exclude it
+                    ? [] // No analytics items for evaluator dashboard - history is now visible
                     : ['reviews', 'history']; // For HR, 'reviews' goes in Analytics
                   
                   return sidebarItems.map((item) => {
@@ -408,8 +422,8 @@ export default function DashboardShell(props: DashboardShellProps) {
                     const isLeadershipItem = leadershipItems.includes(item.id);
                     const isAnalyticsItem = analyticsItems.includes(item.id);
                     
-                    // For admin dashboard, handle management items in collapsible group
-                    if (isAdminDashboard && isManagementItem && item.id === 'departments') {
+                    // For admin and HR dashboards, handle management items in collapsible group
+                    if ((isAdminDashboard || isHRDashboard) && isManagementItem && item.id === 'departments') {
                       return (
                         <Collapsible key="management" open={isManagementOpen} onOpenChange={setIsManagementOpen}>
                           <CollapsibleTrigger asChild>
@@ -449,7 +463,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                       );
                     }
                     
-                    // For admin dashboard, handle leadership items in collapsible group
+                    // For admin dashboard only, handle leadership items in collapsible group (HR uses management group)
                     if (isAdminDashboard && isLeadershipItem && item.id === 'branch-heads') {
                       return (
                         <Collapsible key="leadership" open={isLeadershipOpen} onOpenChange={setIsLeadershipOpen}>
@@ -573,10 +587,10 @@ export default function DashboardShell(props: DashboardShellProps) {
                     }
                     
                     // Render Analytics collapsible group
-                    // For employee and evaluator dashboards, trigger on 'history' (since 'reviews' is visible for evaluator)
+                    // For employee and evaluator dashboards, skip Analytics (history is now visible)
                     // For HR dashboard, trigger on 'reviews'
-                    const analyticsTriggerId = (isEmployeeDashboard || isEvaluatorDashboard) ? 'history' : 'reviews';
-                    if (item.id === analyticsTriggerId) {
+                    const analyticsTriggerId = (isEmployeeDashboard || isEvaluatorDashboard) ? null : 'reviews';
+                    if (analyticsTriggerId && item.id === analyticsTriggerId) {
                       return (
                         <Collapsible key="analytics" open={isAnalyticsOpen} onOpenChange={setIsAnalyticsOpen}>
                           <CollapsibleTrigger asChild>
