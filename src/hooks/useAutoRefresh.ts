@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/useToast';
 
 interface UseAutoRefreshOptions {
@@ -31,7 +31,7 @@ export const useAutoRefresh = ({
   gifPath = "/search-file.gif",
   duration = 2000
 }: UseAutoRefreshOptions): UseAutoRefreshReturn => {
-  const { profile, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { profile, isAuthenticated, isLoading: authLoading } = useUser();
   const { success } = useToast();
   const hasAutoRefreshed = useRef(false);
   const [showRefreshModal, setShowRefreshModal] = useState(false);
