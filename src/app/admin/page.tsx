@@ -6,16 +6,10 @@ import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { withAuth } from '@/hoc';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
 
 import EditUserModal from '@/components/EditUserModal';
 import { toastMessages } from '@/lib/toastMessages';
@@ -866,7 +860,6 @@ function AdminDashboard() {
       activeItemId={active}
       onChangeActive={setActiveWithRefresh}
       topSummary={topSummary}
-      profile={{ name: 'System Administrator', roleOrPosition: 'Admin' }}
     >
       <div className="relative min-h-[400px]">
         {/* Tab Switching Spinner Overlay - Only shows for content area, not full page */}

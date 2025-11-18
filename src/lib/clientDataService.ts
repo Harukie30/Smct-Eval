@@ -1384,8 +1384,20 @@ export const clientDataService = {
       console.warn('Backend API did not return user, using localStorage fallback');
       throw new Error('API response format unexpected');
       
-    } catch (error) {
-      console.error('Error getting user by ID via API, using localStorage fallback:', error);
+    } catch (error: any) {
+      // Check if it's a 404 error (endpoint doesn't exist) - this is expected
+      const is404 = error?.response?.status === 404 || error?.code === 'ERR_BAD_REQUEST';
+      
+      if (is404) {
+        // Silently fallback to localStorage for 404 errors (endpoint not implemented yet)
+        // Only log in development mode
+        if (process.env.NODE_ENV === 'development') {
+          console.debug(`API endpoint /api/users/${userId} not found, using localStorage fallback`);
+        }
+      } else {
+        // For other errors, log as warning (not error) since fallback is working
+        console.warn('Error getting user by ID via API, using localStorage fallback:', error?.message || error);
+      }
       
       // Fallback to localStorage
       const accounts = getFromStorage(STORAGE_KEYS.ACCOUNTS, []) as Account[];
