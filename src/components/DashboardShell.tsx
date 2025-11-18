@@ -59,11 +59,11 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [isLeadershipOpen, setIsLeadershipOpen] = useState(false);
 
-  const { profile: userProfile, updateProfile, logout } = useUser();
+  const { user, profile: userProfile, updateProfile, logout } = useUser();
   const router = useRouter();
   
   // Get user role for notifications
-  const userRole = userProfile?.roleOrPosition || 'employee';
+  const userRole = user?.role || 'employee';
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(userRole);
 
   // Memoize dashboard type detection to avoid dependency issues
