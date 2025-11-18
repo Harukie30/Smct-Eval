@@ -143,7 +143,7 @@ export function EvaluationHistoryTab({
               </CardHeader>
               <CardContent>
                     {/* Search Bar */}
-                    <div className="mb-6 w-1/2">
+                    <div className="mb-6 w-1/4">
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -290,7 +290,7 @@ export function EvaluationHistoryTab({
                             <TableRow>
                               <TableHead>Quarter</TableHead>
                               <TableHead>Dates</TableHead>
-                              <TableHead>Total Evaluations</TableHead>
+                              <TableHead className="text-center">Total Evaluations</TableHead>
                               <TableHead>Average Rating</TableHead>
                               <TableHead>Latest Rating</TableHead>
                               <TableHead>Status</TableHead>
@@ -411,8 +411,10 @@ export function EvaluationHistoryTab({
                                         {quarterData.dateRange || 'No dates available'}
                                       </div>
                                     </TableCell>
-                                    <TableCell className="font-medium">
-                                      {quarterData.totalEvaluations}
+                                    <TableCell className="text-center">
+                                      <div className="flex justify-center">
+                                        <span className="font-medium">{quarterData.totalEvaluations}</span>
+                                      </div>
                                     </TableCell>
                                     <TableCell>
                                       <div className="flex items-center space-x-1">

@@ -23,6 +23,7 @@ interface Employee {
 interface Branch {
   id: string;
   name: string;
+  branchCode?: string;
 }
 
 interface BranchesTabProps {
@@ -35,6 +36,7 @@ export function BranchesTab({ employees }: BranchesTabProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newBranchName, setNewBranchName] = useState('');
+  const [newBranchCode, setNewBranchCode] = useState<string>('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
   
@@ -126,6 +128,7 @@ export function BranchesTab({ employees }: BranchesTabProps) {
       const newBranch: Branch = {
         id: String(maxId + 1),
         name: newBranchName.trim(),
+        branchCode: newBranchCode.trim() || undefined,
       };
 
       // Add to state
@@ -140,6 +143,7 @@ export function BranchesTab({ employees }: BranchesTabProps) {
 
       // Reset form and close modal
       setNewBranchName('');
+      setNewBranchCode('');
       setIsAddModalOpen(false);
     } catch (error) {
       console.error('Error adding branch:', error);
@@ -361,6 +365,18 @@ export function BranchesTab({ employees }: BranchesTabProps) {
                 autoFocus
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="branchCode" className="text-sm font-medium">
+                Branch Code
+              </Label>
+              <Input
+                id="branchCode"
+                placeholder="Enter branch code (optional)"
+                value={newBranchCode}
+                onChange={(e) => setNewBranchCode(e.target.value.toUpperCase())}
+                style={{ textTransform: 'uppercase' }}
+              />
+            </div>
           </div>
 
           <DialogFooter className="pt-6 px-2">
@@ -369,6 +385,7 @@ export function BranchesTab({ employees }: BranchesTabProps) {
                 variant="outline"
                 onClick={() => {
                   setNewBranchName('');
+                  setNewBranchCode('');
                   setIsAddModalOpen(false);
                 }}
               >

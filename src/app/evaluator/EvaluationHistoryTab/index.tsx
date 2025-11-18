@@ -137,7 +137,7 @@ export function EvaluationHistoryTab({
               </CardHeader>
               <CardContent>
                     {/* Search Bar */}
-                    <div className="mb-6 w-1/2">
+                    <div className="mb-6 w-1/4">
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

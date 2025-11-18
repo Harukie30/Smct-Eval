@@ -59,11 +59,11 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [isLeadershipOpen, setIsLeadershipOpen] = useState(false);
 
-  const { profile: userProfile, updateProfile, logout } = useUser();
+  const { user, profile: userProfile, updateProfile, logout } = useUser();
   const router = useRouter();
   
   // Get user role for notifications
-  const userRole = userProfile?.roleOrPosition || 'employee';
+  const userRole = user?.role || 'employee';
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(userRole);
 
   // Memoize dashboard type detection to avoid dependency issues
@@ -238,17 +238,6 @@ export default function DashboardShell(props: DashboardShellProps) {
                 {currentPeriod}
               </Badge>
             ) : null}
-
-            {/* Contact Developers Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsContactDevsModalOpen(true)}
-              className="relative p-3  hover:bg-blue-700 bg-blue-500 border rounded-lg  transition-all hover:scale-110"
-              title="Contact Developers"
-            >
-              <MessageCircle className="h-10 w-10 text-white " />
-            </Button>
 
             {/* Notification Bell */}
             <div className="relative" ref={notificationRef}>
