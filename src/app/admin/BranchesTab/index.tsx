@@ -467,4 +467,3 @@ export function BranchesTab({ employees }: BranchesTabProps) {
     </div>
   );
 }
-

@@ -765,4 +765,3 @@ export function PerformanceReviewsTab({ isActive = false, onViewEvaluation }: Pe
     </div>
   );
 }
-

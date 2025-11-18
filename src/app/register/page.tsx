@@ -425,7 +425,7 @@ function RegisterPage() {
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Main Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-to-right from-white via-blue-50 to-blue-600"></div>
+      <div className="absolute inset-0 bg-gradient-to-r from-white via-blue-50 to-blue-600"></div>
 
       {/* Single Geometric Pattern Overlay - Gradient from left to right */}
       <div className="absolute inset-0">
@@ -767,7 +767,7 @@ function RegisterPage() {
                     </div>
 
                     {/* Department - Show only if branch is HO, Head Office, or none */}
-                    {(isBranchHOOrNone(formData.branch_id) || formData.branch_id === 126 ) && (
+                    {isBranchHOOrNone(formData.branch_id) && (
                       <div className="space-y-2">
                         <Label htmlFor="department">Department</Label>
                         <Combobox

@@ -631,4 +631,3 @@ export function EvaluationHistoryTab({ isActive = false, onViewEvaluation }: Eva
     </div>
   );
 }
-

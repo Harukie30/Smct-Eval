@@ -995,4 +995,3 @@ export function BranchHeadsTab({
     </div>
   );
 }
-

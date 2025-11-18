@@ -873,4 +873,3 @@ export function EvaluationRecordsTab({
     </div>
   );
 }
-

@@ -23,7 +23,7 @@ import { withAuth } from '@/hoc';
 import PageTransition from '@/components/PageTransition';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
-import { useAuth } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/UserContext';
 import { useToast } from '@/hooks/useToast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createApprovalNotification, createFullyApprovedNotification } from '@/lib/notificationUtils';
@@ -152,7 +152,7 @@ const calculateScore = (scores: string[]) => {
 
 
 function EvaluatorDashboard() {
-  const { profile, user } = useAuth();
+  const { profile, user } = useUser();
   const { success, error } = useToast();
   const { getUpdatedAvatar, hasAvatarUpdate } = useProfilePictureUpdates();
 
@@ -2374,5 +2374,4 @@ function EvaluatorDashboard() {
 
 // Wrap with HOC for authentication (evaluator or manager role)
 export default withAuth(EvaluatorDashboard, { requiredRole: ['evaluator', 'manager'] });
-
 

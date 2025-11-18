@@ -1,16 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { X, RefreshCw, Eye, Calendar } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { X, RefreshCw, Eye } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getQuarterFromEvaluationData, getQuarterColor } from '@/lib/quarterUtils';
 
 interface EvaluationHistoryTabProps {
@@ -46,44 +43,27 @@ export function EvaluationHistoryTab({
   isNewSubmission,
   isActive = false
 }: EvaluationHistoryTabProps) {
-  const [historySearchTerm, setHistorySearchTerm] = useState('');
   const [quarterlySearchTerm, setQuarterlySearchTerm] = useState('');
   const [selectedQuarter, setSelectedQuarter] = useState<string>('');
-  const [dateFilter, setDateFilter] = useState<{from?: Date, to?: Date}>({});
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [showRefreshingDialog, setShowRefreshingDialog] = useState(false);
-  const [refreshingMessage, setRefreshingMessage] = useState('');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
 
-  const clearDateFilter = () => {
-    setDateFilter({});
-  };
-
-  // Filter submissions to show:
-  // 1. Evaluations created by this evaluator (evaluatorId === user.id)
-  // 2. Evaluations where this user is the employee (employeeId === user.id) - for branch managers being evaluated
-  const filteredHistorySubmissions = recentSubmissions
-    .filter(submission => 
-      submission.evaluatorId === user?.id || 
-      submission.employeeId === user?.id ||
-      submission.evaluationData?.employeeId === user?.id?.toString()
-    )
-    .filter(submission => {
-      if (!historySearchTerm) return true;
-
-      const searchLower = historySearchTerm.toLowerCase();
-      return (
-        submission.employeeName?.toLowerCase().includes(searchLower) ||
-        submission.evaluatorName?.toLowerCase().includes(searchLower) ||
-        submission.evaluator?.toLowerCase().includes(searchLower) ||
-        submission.evaluationData?.supervisor?.toLowerCase().includes(searchLower) ||
-        (submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating || 0).toString().includes(searchLower) ||
-        getQuarterFromEvaluationData(submission.evaluationData || submission)?.toLowerCase().includes(searchLower)
-      );
+  // Get available years from submissions
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    recentSubmissions.forEach((submission) => {
+      const year = new Date(submission.submittedAt).getFullYear();
+      years.add(year);
     });
+    return Array.from(years).sort((a, b) => b - a); // Sort descending (newest first)
+  }, [recentSubmissions]);
+
+  const clearYearFilter = () => {
+    setSelectedYear('all');
+  };
 
   return (
     <div className="relative">
-      {isHistoryRefreshing || loading ? (
+      {loading ? (
         <div className="relative min-h-[500px]">
           {/* Centered Loading Spinner with Logo */}
           <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
@@ -136,35 +116,26 @@ export function EvaluationHistoryTab({
             <CardDescription>Complete timeline of evaluations you've conducted</CardDescription>
           </CardHeader>
           <CardContent>
-
-            {/* Tabbed Interface for Tables */}
-            <Tabs defaultValue="quarterly" className="w-full">
-              <TabsList className="grid w-1/2 bg-gray-200 grid-cols-2">
-                <TabsTrigger value="quarterly">📊 Quarterly Performance</TabsTrigger>
-                <TabsTrigger value="history">📈 Evaluation History</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="quarterly" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>Quarterly Performance Summary</CardTitle>
-                        <CardDescription>Performance overview grouped by quarter</CardDescription>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onRefreshQuarterly}
-                        disabled={isQuarterlyRefreshing}
-                        className="flex items-center bg-blue-500 text-white hover:bg-green-700 hover:text-white space-x-2"
-                      >
-                        <RefreshCw className={`h-4 w-4 ${isQuarterlyRefreshing ? 'animate-spin' : ''}`} />
-                        <span>Refresh</span>
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Quarterly Performance Summary</CardTitle>
+                    <CardDescription>Performance overview grouped by quarter</CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onRefreshQuarterly}
+                    disabled={isQuarterlyRefreshing}
+                    className="flex items-center bg-blue-500 text-white hover:bg-green-700 hover:text-white space-x-2"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isQuarterlyRefreshing ? 'animate-spin' : ''}`} />
+                    <span>Refresh</span>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
                     {/* Search Bar */}
                     <div className="mb-6 w-1/2">
                       <div className="relative">
@@ -196,61 +167,30 @@ export function EvaluationHistoryTab({
                       )}
                     </div>
 
-                    {/* Date Range Filter */}
+                    {/* Year Filter */}
                     <div className="mb-6">
                       <div className="flex items-center gap-4">
-                        <span className="text-sm font-medium text-gray-700">Filter by Date Range:</span>
-                        <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-[280px] justify-start text-left font-normal",
-                                !dateFilter.from && "text-muted-foreground"
-                              )}
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              {dateFilter.from ? (
-                                dateFilter.to ? (
-                                  <>
-                                    {dateFilter.from.toLocaleDateString()} - {dateFilter.to.toLocaleDateString()}
-                                  </>
-                                ) : (
-                                  dateFilter.from.toLocaleDateString()
-                                )
-                              ) : (
-                                "Pick a date range"
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              initialFocus
-                              mode="range"
-                              defaultMonth={dateFilter.from}
-                              selected={dateFilter.from ? { from: dateFilter.from, to: dateFilter.to } : undefined}
-                              onSelect={(range) => setDateFilter(range || {})}
-                              numberOfMonths={1}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        {(dateFilter.from || dateFilter.to) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={clearDateFilter}
-                            className="text-red-600 hover:text-red-700"
-                          >
+                        <span className="text-sm font-medium text-gray-700">Filter by Year:</span>
+                        <Select value={selectedYear} onValueChange={setSelectedYear}>
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select a year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Years</SelectItem>
+                            {availableYears.map((year) => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {selectedYear && selectedYear !== 'all' && (
+                          <Button variant="outline" size="sm" onClick={clearYearFilter} className="text-red-600 hover:text-red-700">
                             <X className="h-4 w-4 mr-1" />
                             Clear
                           </Button>
                         )}
                       </div>
-                      {(dateFilter.from || dateFilter.to) && (
-                        <div className="mt-2 text-sm text-gray-600">
-                          Filtering by date range: {dateFilter.from?.toLocaleDateString()} - {dateFilter.to?.toLocaleDateString()}
-                        </div>
-                      )}
                     </div>
 
                     {/* Quarter Filter Buttons */}
@@ -409,25 +349,26 @@ export function EvaluationHistoryTab({
                                 return (quarterOrder[aQuarter] || 0) - (quarterOrder[bQuarter] || 0);
                               });
 
-                              // Filter quarters based on selected quarter and date range
+                              // Filter quarters based on selected quarter and year
                               let filteredQuarters = selectedQuarter
                                 ? sortedQuarters.filter((q: any) => q.quarter.startsWith(selectedQuarter))
                                 : sortedQuarters;
 
-                              // Apply date range filter
-                              if (dateFilter.from || dateFilter.to) {
+                              // Apply year filter - match both quarter year and submission year
+                              if (selectedYear && selectedYear !== 'all') {
                                 filteredQuarters = filteredQuarters.filter((quarterData: any) => {
-                                  return quarterData.submissions.some((submission: any) => {
+                                  // Extract year from quarter string (e.g., "Q1 2024" -> "2024")
+                                  const quarterYear = quarterData.quarter.split(' ')[1];
+                                  const quarterYearMatches = quarterYear === selectedYear;
+                                  
+                                  // Also check if any submission in this quarter matches the year
+                                  const submissionYearMatches = quarterData.submissions.some((submission: any) => {
                                     const submissionDate = new Date(submission.submittedAt);
-                                    const submissionDateOnly = new Date(submissionDate.getFullYear(), submissionDate.getMonth(), submissionDate.getDate());
-                                    const fromDateOnly = dateFilter.from ? new Date(dateFilter.from.getFullYear(), dateFilter.from.getMonth(), dateFilter.from.getDate()) : null;
-                                    const toDateOnly = dateFilter.to ? new Date(dateFilter.to.getFullYear(), dateFilter.to.getMonth(), dateFilter.to.getDate()) : null;
-                                    
-                                    const isAfterFrom = !fromDateOnly || submissionDateOnly >= fromDateOnly;
-                                    const isBeforeTo = !toDateOnly || submissionDateOnly <= toDateOnly;
-                                    
-                                    return isAfterFrom && isBeforeTo;
+                                    return submissionDate.getFullYear().toString() === selectedYear;
                                   });
+                                  
+                                  // Match if either the quarter year or submission year matches
+                                  return quarterYearMatches || submissionYearMatches;
                                 });
                               }
 
@@ -530,213 +471,11 @@ export function EvaluationHistoryTab({
                         </Table>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="history" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>Evaluation History</CardTitle>
-                        <CardDescription>Complete timeline of evaluations you've conducted</CardDescription>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onRefreshHistory}
-                        disabled={isHistoryRefreshing}
-                        className="flex items-center bg-blue-500 text-white hover:bg-green-700 hover:text-white space-x-2"
-                      >
-                        <RefreshCw className={`h-4 w-4 ${isHistoryRefreshing ? 'animate-spin' : ''}`} />
-                        <span>Refresh</span>
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Refreshing Dialog for History Table */}
-                    {showRefreshingDialog && (
-                      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                          <div>
-                            <h4 className="text-sm font-medium text-blue-900">Refreshing table...</h4>
-                            <p className="text-xs text-blue-700">{refreshingMessage}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Search Bar */}
-                    <div className="mb-6 w-1/2">
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                          </svg>
-                        </div>
-                        <input
-                          type="text"
-                          placeholder="Search by employee, evaluator, supervisor..."
-                          value={historySearchTerm}
-                          onChange={(e) => setHistorySearchTerm(e.target.value)}
-                          className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        />
-                        {historySearchTerm && (
-                          <button
-                            onClick={() => setHistorySearchTerm('')}
-                            className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                          >
-                            <X className="h-5 w-5 text-red-400 hover:text-red-600" />
-                          </button>
-                        )}
-                      </div>
-                      {historySearchTerm && (
-                        <div className="mt-2 text-sm text-gray-600">
-                          Showing {filteredHistorySubmissions.length} of {recentSubmissions.filter(submission => 
-                            submission.evaluatorId === user?.id || 
-                            submission.employeeId === user?.id ||
-                            submission.evaluationData?.employeeId === user?.id?.toString()
-                          ).length} evaluations
-                        </div>
-                      )}
-                    </div>
-                    <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table">
-                      {isHistoryRefreshing || loading ? (
-                        <div className="space-y-2 p-4">
-                          {/* Table Header Skeleton */}
-                          <div className="flex space-x-3 py-2 border-b">
-                            <Skeleton className="h-3 w-12" />
-                            <Skeleton className="h-3 w-14" />
-                            <Skeleton className="h-3 w-12" />
-                            <Skeleton className="h-3 w-12" />
-                            <Skeleton className="h-3 w-10" />
-                            <Skeleton className="h-3 w-18" />
-                            <Skeleton className="h-3 w-12" />
-                          </div>
-
-                          {/* Table Rows Skeleton */}
-                          {Array.from({ length: 4 }).map((_, i) => (
-                            <div key={i} className="flex items-center space-x-3 py-2 border-b">
-                              <Skeleton className="h-3 w-14" />
-                              <Skeleton className="h-3 w-16" />
-                              <Skeleton className="h-3 w-12" />
-                              <Skeleton className="h-3 w-8" />
-                              <Skeleton className="h-3 w-10" />
-                              <Skeleton className="h-3 w-14" />
-                              <Skeleton className="h-6 w-12" />
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <Table>
-                          <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
-                            <TableRow>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Employee</TableHead>
-                              <TableHead className="text-right">Rating</TableHead>
-                              <TableHead>Quarter</TableHead>
-                              <TableHead>Immediate Supervisor</TableHead>
-                              <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {filteredHistorySubmissions.length > 0 ? filteredHistorySubmissions
-                              .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-                              .map((submission) => {
-                                const actualApprovalStatus = getCorrectApprovalStatus(submission);
-                                const highlight = getSubmissionHighlight(submission.submittedAt, submission.id, actualApprovalStatus);
-                                return (
-                                  <TableRow 
-                                    key={submission.id}
-                                    className={highlight.className}
-                                  >
-                                    <TableCell>
-                                      <div className="flex flex-col">
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-medium">
-                                            {new Date(submission.submittedAt).toLocaleDateString()}
-                                          </span>
-                                          {highlight.badge && (
-                                            <Badge variant="secondary" className={`${highlight.badge.className} text-xs`}>
-                                              {highlight.badge.text}
-                                            </Badge>
-                                          )}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xs text-gray-500">
-                                            {new Date(submission.submittedAt).toLocaleTimeString()}
-                                          </span>
-                                          <span className="text-xs text-blue-600 font-medium">
-                                            {getTimeAgo(submission.submittedAt)}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="font-medium">{submission.employeeName}</TableCell>
-                                    <TableCell className="text-right">
-                                      <div className="flex items-center justify-end space-x-1">
-                                        <span className="font-semibold">
-                                          {submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating || 0}
-                                        </span>
-                                        <span className="text-gray-500">/5</span>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge className={getQuarterColor(getQuarterFromEvaluationData(submission.evaluationData || submission))}>
-                                        {getQuarterFromEvaluationData(submission.evaluationData || submission)}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-sm text-gray-600">
-                                      {submission.evaluationData?.supervisor || 'Not specified'}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                      <div className="flex items-center justify-end space-x-2">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => {
-                                            onViewEvaluation(submission);
-                                          }}
-                                          className="text-white bg-blue-500 hover:text-blue-800 border-blue-200 hover:border-blue-300"
-                                        >
-                                          <Eye className="w-4 h-4" />
-                                          View
-                                        </Button>
-                                      </div>
-                                    </TableCell>
-                                  </TableRow>
-                                );
-                              }) : (
-                                <TableRow>
-                                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                                    {historySearchTerm ? (
-                                      <>
-                                        <p>No evaluations found matching "{historySearchTerm}"</p>
-                                        <p className="text-sm">Try adjusting your search terms</p>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <p>No evaluation history found</p>
-                                        <p className="text-sm">Completed evaluations will appear here</p>
-                                      </>
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              )}
-                          </TableBody>
-                        </Table>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+              </CardContent>
+            </Card>
           </CardContent>
         </Card>
       )}
     </div>
   );
 }
-

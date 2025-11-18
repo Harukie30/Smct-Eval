@@ -479,4 +479,3 @@ export function EmployeesTab({
     </div>
   );
 }
-

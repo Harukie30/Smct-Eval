@@ -542,4 +542,3 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
     </>
   );
 }
-

@@ -1,19 +1,10 @@
-"use client";
+'use client';
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
-import { UserProfile } from "@/components/ProfileCard";
-import { toastMessages } from "@/lib/toastMessages";
-// Use localStorage version with accounts.json (until backend is ready)
-import clientDataService from "@/lib/clientDataService";
-// import clientDataService from '@/lib/clientDataService.api'; // Switch to this when backend is ready
-import { apiService } from "@/lib/apiService";
-import RealLoadingScreen from "@/components/RealLoadingScreen";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { UserProfile } from '@/components/ProfileCard';
+import { toastMessages } from '@/lib/toastMessages';
+import clientDataService from '@/lib/clientDataService';
+import RealLoadingScreen from '@/components/RealLoadingScreen';
 
 export interface AuthenticatedUser {
   id: number;
@@ -32,7 +23,6 @@ export interface AuthenticatedUser {
   lastLogin?: string;
   availableRoles?: string[]; // For users with multiple roles (e.g., HR + Employee)
   activeRole?: string; // Currently active role
-  roleSelectionPending?: boolean; // True when user needs to select from multiple roles
 }
 
 interface UserContextType {
@@ -40,14 +30,8 @@ interface UserContextType {
   profile: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (
-    username: string,
-    password: string
-  ) => Promise<
-    | boolean
-    | { requiresRoleSelection?: boolean; pending?: boolean; pendingData?: any }
-  >;
-  logout: () => Promise<void>;
+  login: (username: string, password: string) => Promise<boolean | { suspended: true; data: any; requiresRoleSelection?: boolean; pending?: boolean; pendingData?: any }>;
+  logout: () => void;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   refreshUserData: () => Promise<void>;
   switchRole: (role: string) => void; // New function for switching between roles
@@ -59,7 +43,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const useUser = () => {
   const context = useContext(UserContext);
   if (context === undefined) {
-    throw new Error("useUser must be used within a UserProvider");
+    throw new Error('useUser must be used within a UserProvider');
   }
   return context;
 };
@@ -76,16 +60,13 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
   // Helper function to save user data without large binary fields (avatar, signature)
   const saveUserToLocalStorage = (userData: AuthenticatedUser) => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== 'undefined') {
       try {
         // Create a lightweight copy without large binary data
         const { avatar, signature, ...essentialData } = userData;
-        localStorage.setItem(
-          "authenticatedUser",
-          JSON.stringify(essentialData)
-        );
+        localStorage.setItem('authenticatedUser', JSON.stringify(essentialData));
       } catch (error) {
-        console.error("Failed to save user to localStorage:", error);
+        console.error('Failed to save user to localStorage:', error);
         // Fallback: try to save without any optional fields
         try {
           const minimalData = {
@@ -99,12 +80,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
             hireDate: userData.hireDate,
             isActive: userData.isActive,
           };
-          localStorage.setItem(
-            "authenticatedUser",
-            JSON.stringify(minimalData)
-          );
+          localStorage.setItem('authenticatedUser', JSON.stringify(minimalData));
         } catch (fallbackError) {
-          console.error("Failed to save minimal user data:", fallbackError);
+          console.error('Failed to save minimal user data:', fallbackError);
         }
       }
     }
@@ -115,28 +93,27 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     const checkAuthStatus = async () => {
       try {
         // Check if we're in the browser environment
-        if (typeof window === "undefined") {
+        if (typeof window === 'undefined') {
           // Server-side: just set loading to false
           setIsLoading(false);
           return;
         }
 
         // Check if user explicitly wants to stay logged in
-        const keepLoggedInValue = localStorage.getItem("keepLoggedIn");
-        const shouldRestoreSession = keepLoggedInValue === "true";
-        const storedUser = localStorage.getItem("authenticatedUser");
-
+        const keepLoggedInValue = localStorage.getItem('keepLoggedIn');
+        const shouldRestoreSession = keepLoggedInValue === 'true';
+        const storedUser = localStorage.getItem('authenticatedUser');
+        
+        
         // If we have a stored user, restore the session (regardless of keepLoggedIn flag)
         // This handles cases where keepLoggedIn might be corrupted or missing
         if (storedUser) {
           try {
             const parsedUser = JSON.parse(storedUser);
-
+            
             // Fetch full user data including avatar and signature from data source
             try {
-              const fullUserData = await clientDataService.getUserById(
-                parsedUser.id
-              );
+              const fullUserData = await clientDataService.getUserById(parsedUser.id);
               if (fullUserData) {
                 // Merge stored data with fresh avatar/signature from data source
                 const completeUser = {
@@ -146,7 +123,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
                   bio: fullUserData.bio,
                 };
                 setUser(completeUser);
-
+                
                 // Convert to UserProfile format
                 const userProfile: UserProfile = {
                   id: completeUser.id,
@@ -175,7 +152,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
                 setProfile(userProfile);
               }
             } catch (fetchError) {
-              console.error("Error fetching full user data:", fetchError);
+              console.error('Error fetching full user data:', fetchError);
               // Use stored data as fallback
               setUser(parsedUser);
               const userProfile: UserProfile = {
@@ -190,25 +167,25 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
               };
               setProfile(userProfile);
             }
-
+            
             // Ensure keepLoggedIn is set to true for future sessions
-            localStorage.setItem("keepLoggedIn", "true");
+            localStorage.setItem('keepLoggedIn', 'true');
           } catch (error) {
-            console.error("Error parsing stored user:", error);
+            console.error('Error parsing stored user:', error);
             // Clear corrupted data
-            localStorage.removeItem("authenticatedUser");
-            localStorage.removeItem("keepLoggedIn");
+            localStorage.removeItem('authenticatedUser');
+            localStorage.removeItem('keepLoggedIn');
           }
         } else {
           // No stored user, clear any remaining data
-          localStorage.removeItem("authenticatedUser");
-          localStorage.removeItem("keepLoggedIn");
+          localStorage.removeItem('authenticatedUser');
+          localStorage.removeItem('keepLoggedIn');
         }
       } catch (error) {
-        console.error("Error checking auth status:", error);
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("authenticatedUser");
-          localStorage.removeItem("keepLoggedIn");
+        console.error('Error checking auth status:', error);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('authenticatedUser');
+          localStorage.removeItem('keepLoggedIn');
         }
       } finally {
         setIsLoading(false);
@@ -218,44 +195,32 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  const login = async (
-    username: string,
-    password: string
-  ): Promise<
-    | boolean
-    | { requiresRoleSelection?: boolean; pending?: boolean; pendingData?: any }
-  > => {
+  const login = async (username: string, password: string): Promise<boolean | { suspended: true; data: any; requiresRoleSelection?: boolean }> => {
     try {
       setIsLoading(true);
-
+      
       // Authenticate user using client data service
       const loginResult = await clientDataService.login(username, password);
-
+      
       if (loginResult.success && loginResult.user) {
         const authenticatedUser = loginResult.user;
-
-        // Check if user has multiple roles (requires role selection)
-        const hasMultipleRoles =
-          authenticatedUser.availableRoles &&
-          authenticatedUser.availableRoles.length > 1;
-
+        
         // Ensure ID is a number
         const userWithNumberId: AuthenticatedUser = {
           ...authenticatedUser,
-          id:
-            typeof authenticatedUser.id === "string"
-              ? parseInt(authenticatedUser.id)
-              : authenticatedUser.id,
+          id: typeof authenticatedUser.id === 'string' ? parseInt(authenticatedUser.id) : authenticatedUser.id,
           username: authenticatedUser.email, // Use email as username
           isActive: true,
           lastLogin: new Date().toISOString(),
           availableRoles: authenticatedUser.availableRoles, // Include available roles
           activeRole: authenticatedUser.role, // Set initial active role
-          roleSelectionPending: hasMultipleRoles, // Flag to indicate role selection is needed
         };
-
+        
+        // Check if user has multiple roles (requires role selection)
+        const hasMultipleRoles = userWithNumberId.availableRoles && userWithNumberId.availableRoles.length > 1;
+        
         setUser(userWithNumberId);
-
+        
         // Convert to UserProfile format
         const userProfile: UserProfile = {
           id: userWithNumberId.id,
@@ -271,67 +236,52 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
         // Store in localStorage (without large binary data)
         saveUserToLocalStorage(userWithNumberId);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("keepLoggedIn", "true");
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('keepLoggedIn', 'true');
         }
-
+        
         // Return true with requiresRoleSelection flag if user has multiple roles
         if (hasMultipleRoles) {
-          return { requiresRoleSelection: true };
+          return { suspended: false, data: null, requiresRoleSelection: true } as any;
         }
-
+        
         return true;
-      } else if (
-        loginResult.message === "Account pending approval" &&
-        loginResult.pendingData
-      ) {
+      } else if (loginResult.message === 'Account suspended' && loginResult.suspensionData) {
+        // Account is suspended, return suspension data
+        console.log('UserContext: Account suspended, returning suspension data:', loginResult.suspensionData);
+        return { suspended: true, data: loginResult.suspensionData };
+      } else if (loginResult.message === 'Account pending approval' && loginResult.pendingData) {
         // Account is pending approval, return pending data
-        console.log(
-          "UserContext: Account pending approval, returning pending data:",
-          loginResult.pendingData
-        );
-        return { pending: true, pendingData: loginResult.pendingData };
+        console.log('UserContext: Account pending approval, returning pending data:', loginResult.pendingData);
+        return { suspended: false, data: null, pending: true, pendingData: loginResult.pendingData } as any;
       }
-
+      
       return false;
     } catch (error) {
-      console.error("Login error:", error);
+      console.error('Login error:', error);
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = async () => {
+  const logout = () => {
     // Show logout toast
-    toastMessages.generic.info("Logging out...", "See you next time!");
-
+    toastMessages.generic.info('Logging out...', 'See you next time!');
+    
     // Show logout loading screen
     setShowLogoutLoading(true);
-
-    try {
-      // ✅ Notify backend of logout
-      console.log("🔄 Calling backend logout API...");
-      await apiService.logout();
-      console.log("✅ Backend logout successful");
-    } catch (error) {
-      console.error("❌ Backend logout failed:", error);
-      // Continue with local logout even if backend call fails
-      // This ensures user can still log out from frontend
-    }
-
+    
     // Clear user data after a short delay
     setTimeout(() => {
       setUser(null);
       setProfile(null);
-
+      
       // Clear storage only if in browser
-      // Note: Laravel Sanctum cookies are cleared by the backend
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("authenticatedUser");
-        localStorage.removeItem("keepLoggedIn");
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('authenticatedUser');
+        localStorage.removeItem('keepLoggedIn');
         sessionStorage.clear();
-        console.log("✅ Local storage cleared (cookies cleared by backend)");
       }
     }, 200);
   };
@@ -340,75 +290,56 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     if (profile) {
       const updatedProfile = { ...profile, ...updates };
       setProfile(updatedProfile);
-
+      
       // Update user data as well
       if (user) {
         // Map UserProfile fields to AuthenticatedUser fields
-        // Only include fields that are actually provided in updates to avoid overwriting with undefined
-        const userUpdates: Partial<AuthenticatedUser> = {};
-        if (updates.name !== undefined) userUpdates.name = updates.name;
-        if (updates.email !== undefined) userUpdates.email = updates.email;
-        if (updates.roleOrPosition !== undefined)
-          userUpdates.position = updates.roleOrPosition;
-        if (updates.department !== undefined)
-          userUpdates.department = updates.department;
-        if (updates.branch !== undefined) userUpdates.branch = updates.branch;
-        if (updates.avatar !== undefined) userUpdates.avatar = updates.avatar;
-        if (updates.bio !== undefined) userUpdates.bio = updates.bio;
-        if (updates.signature !== undefined)
-          userUpdates.signature = updates.signature;
-
-        const updatedUser: AuthenticatedUser = {
-          ...user,
+        const userUpdates: Partial<AuthenticatedUser> = {
+          name: updates.name,
+          email: updates.email,
+          position: updates.roleOrPosition || user.position,
+          department: updates.department,
+          branch: updates.branch,
+          avatar: updates.avatar,
+          bio: updates.bio,
+          signature: updates.signature,
+        };
+        
+        const updatedUser: AuthenticatedUser = { 
+          ...user, 
           ...userUpdates,
-          id: user.id, // Ensure ID remains a number
+          id: user.id // Ensure ID remains a number
         };
         setUser(updatedUser);
-
+        
         // Store updated user without large binary data
         saveUserToLocalStorage(updatedUser);
-
-        if (typeof window !== "undefined") {
+        
+        if (typeof window !== 'undefined') {
           // Use clientDataService to update all storage locations (accounts, employees, profiles)
           try {
             // Update via clientDataService which syncs signature across all storage
             // Convert UserProfile updates to compatible format (remove id and map roleOrPosition)
-            const {
-              id: _id,
-              roleOrPosition: _role,
-              ...profileUpdates
-            } = updates;
+            const { id: _id, roleOrPosition: _role, ...profileUpdates } = updates;
             const mappedUpdates = {
               ...profileUpdates,
-              position: updates.roleOrPosition || undefined,
+              position: updates.roleOrPosition || undefined
             };
             await clientDataService.updateProfile(user.id, mappedUpdates);
             await clientDataService.updateEmployee(user.id, mappedUpdates);
           } catch (error) {
-            console.error(
-              "Error updating profile via clientDataService:",
-              error
-            );
+            console.error('Error updating profile via clientDataService:', error);
             // Fallback to manual update if service fails
-            const accounts = JSON.parse(
-              localStorage.getItem("accounts") || "[]"
-            );
-            const accountIndex = accounts.findIndex(
-              (acc: any) => acc.id === user.id || acc.employeeId === user.id
-            );
+            const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+            const accountIndex = accounts.findIndex((acc: any) => acc.id === user.id || acc.employeeId === user.id);
             if (accountIndex !== -1) {
-              accounts[accountIndex] = {
-                ...accounts[accountIndex],
-                ...userUpdates,
-              };
-              localStorage.setItem("accounts", JSON.stringify(accounts));
+              accounts[accountIndex] = { ...accounts[accountIndex], ...userUpdates };
+              localStorage.setItem('accounts', JSON.stringify(accounts));
             }
           }
 
           // Store profile updates in employeeProfiles for other users to see
-          const employeeProfiles = JSON.parse(
-            localStorage.getItem("employeeProfiles") || "{}"
-          );
+          const employeeProfiles = JSON.parse(localStorage.getItem('employeeProfiles') || '{}');
           employeeProfiles[user.id] = {
             ...employeeProfiles[user.id],
             ...userUpdates,
@@ -417,12 +348,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
             email: updatedUser.email,
             position: updatedUser.position,
             department: updatedUser.department,
-            signature: updatedUser.signature,
+            signature: updatedUser.signature
           };
-          localStorage.setItem(
-            "employeeProfiles",
-            JSON.stringify(employeeProfiles)
-          );
+          localStorage.setItem('employeeProfiles', JSON.stringify(employeeProfiles));
         }
       }
     }
@@ -443,9 +371,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
             isActive: user.isActive, // Preserve isActive
             lastLogin: user.lastLogin, // Preserve lastLogin
           };
-
+          
           setUser(updatedUser);
-
+          
           const updatedProfile: UserProfile = {
             id: updatedUser.id,
             name: updatedUser.name,
@@ -457,12 +385,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
             signature: updatedUser.signature,
           };
           setProfile(updatedProfile);
-
+          
           // Store updated user without large binary data
           saveUserToLocalStorage(updatedUser);
         }
       } catch (error) {
-        console.error("Error refreshing user data:", error);
+        console.error('Error refreshing user data:', error);
       }
     }
   };
@@ -474,10 +402,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         ...user,
         activeRole: role,
         role: role, // Also update the primary role field
-        roleSelectionPending: false, // Clear the pending flag
       };
       setUser(updatedUser);
-
+      
       // Store updated user without large binary data
       saveUserToLocalStorage(updatedUser);
     }
@@ -492,16 +419,13 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         role: newRole, // Also update the primary role field
       };
       setUser(updatedUser);
-
+      
       // Store updated user without large binary data
       saveUserToLocalStorage(updatedUser);
-
+      
       // Show toast notification
-      const roleName = newRole === "hr" ? "HR Manager" : "Employee";
-      toastMessages.generic.success(
-        "Role Switched",
-        `You are now viewing as ${roleName}`
-      );
+      const roleName = newRole === 'hr' ? 'HR Manager' : 'Employee';
+      toastMessages.generic.success('Role Switched', `You are now viewing as ${roleName}`);
     }
   };
 
@@ -521,15 +445,15 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   // Handle logout loading screen completion
   const handleLogoutComplete = () => {
     setShowLogoutLoading(false);
-    if (typeof window !== "undefined") {
-      window.location.href = "/";
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
     }
   };
 
   return (
     <UserContext.Provider value={value}>
       {children}
-
+      
       {/* Logout Loading Screen */}
       {showLogoutLoading && (
         <RealLoadingScreen
@@ -539,13 +463,4 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       )}
     </UserContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const ctx = useContext(UserContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used within a UserProvider");
-  }
-
-  return ctx;
 };

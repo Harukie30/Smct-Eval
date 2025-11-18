@@ -150,7 +150,7 @@ export function withPublicPage<P extends object>(
       return withPage(Component, {
         usePageTransition: true,
         customWrapper: ({ children }) => {
-          const { isAuthenticated, user, isLoading } = require('@/contexts/UserContext').useAuth();
+          const { isAuthenticated, user, isLoading } = require('@/contexts/UserContext').useUser();
           const router = require('next/navigation').useRouter();
           
           // Redirect logged-in users to their dashboard
@@ -202,4 +202,3 @@ export function withPublicPage<P extends object>(
     })(props);
   };
 }
-

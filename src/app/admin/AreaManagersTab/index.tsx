@@ -991,4 +991,3 @@ export function AreaManagersTab({ employees, onRefresh }: AreaManagersTabProps) 
     </div>
   );
 }
-
