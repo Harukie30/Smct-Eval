@@ -239,17 +239,6 @@ export default function DashboardShell(props: DashboardShellProps) {
               </Badge>
             ) : null}
 
-            {/* Contact Developers Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsContactDevsModalOpen(true)}
-              className="relative p-3  hover:bg-blue-700 bg-blue-500 border rounded-lg  transition-all hover:scale-110"
-              title="Contact Developers"
-            >
-              <MessageCircle className="h-10 w-10 text-white " />
-            </Button>
-
             {/* Notification Bell */}
             <div className="relative" ref={notificationRef}>
               <Button
