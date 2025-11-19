@@ -355,7 +355,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           </div>
 
           {/* Position */}
-          <div className="space-y-2 w-1/2">
+          <div className="space-y-2 w-2/3">
             <Label htmlFor="position">Position *</Label>
             <Combobox
               options={positions.map(p => ({ value: p.id, label: p.name }))}

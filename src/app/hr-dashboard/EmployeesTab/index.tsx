@@ -293,7 +293,6 @@ export function EmployeesTab({
                             <TableHead className="w-auto">Name</TableHead>
                             <TableHead className="w-auto">Email</TableHead>
                             <TableHead className="w-auto">Position</TableHead>
-                            <TableHead className="w-auto">Department</TableHead>
                             <TableHead className="w-auto">Branch</TableHead>
                             <TableHead className="w-auto">Hire Date</TableHead>
                             <TableHead className="w-auto text-right">Actions</TableHead>
@@ -314,9 +313,6 @@ export function EmployeesTab({
                               </TableCell>
                               <TableCell className="px-6 py-3">
                                 <div className="h-4 w-28 bg-gray-200 rounded animate-pulse"></div>
-                              </TableCell>
-                              <TableCell className="px-6 py-3">
-                                <div className="h-6 w-20 bg-gray-200 rounded-full animate-pulse"></div>
                               </TableCell>
                               <TableCell className="px-6 py-3">
                                 <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
@@ -344,7 +340,6 @@ export function EmployeesTab({
                           <TableHead className="w-auto">Name</TableHead>
                           <TableHead className="w-auto">Email</TableHead>
                           <TableHead className="w-auto">Position</TableHead>
-                          <TableHead className="w-auto">Department</TableHead>
                           <TableHead className="w-auto">Branch</TableHead>
                           <TableHead className="w-auto">Hire Date</TableHead>
                           <TableHead className="w-auto text-right">Actions</TableHead>
@@ -353,7 +348,7 @@ export function EmployeesTab({
                       <TableBody>
                         {filteredEmployees.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={7} className="text-center py-12 text-gray-500">
+                            <TableCell colSpan={6} className="text-center py-12 text-gray-500">
                               No employees found matching your criteria
                             </TableCell>
                           </TableRow>
@@ -363,9 +358,6 @@ export function EmployeesTab({
                               <TableCell className="font-medium">{employee.name}</TableCell>
                               <TableCell className="text-sm text-gray-600">{employee.email}</TableCell>
                               <TableCell>{employee.position}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline">{employee.department}</Badge>
-                              </TableCell>
                               <TableCell>{employee.branch}</TableCell>
                               <TableCell>
                                 {new Date(employee.hireDate).toLocaleDateString()}

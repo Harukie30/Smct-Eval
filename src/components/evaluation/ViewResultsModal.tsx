@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Printer, X } from 'lucide-react';
 import { approveEvaluation } from '@/lib/approvalService';
 import { useEmployeeSignatureByEvaluation } from '@/hooks/useEmployeeSignature';
 
@@ -111,15 +112,125 @@ const getQuarterColor = (quarter: string) => {
   return 'bg-gray-100 text-gray-800';
 };
 
-export default function ViewResultsModal({ isOpen, onCloseAction, submission, onApprove, isApproved = false, approvalData = null, currentUserName, currentUserSignature, showApprovalButton = false, isEvaluatorView = false }: ViewResultsModalProps) {
+export default function ViewResultsModal({ isOpen, onCloseAction, submission, onApprove, 
+  isApproved = false, approvalData = null, currentUserName, currentUserSignature, 
+  showApprovalButton = false, isEvaluatorView = false }: ViewResultsModalProps) {
   const [isApproving, setIsApproving] = useState(false);
   const [approvalError, setApprovalError] = useState('');
+  const printContentRef = useRef<HTMLDivElement>(null);
 
   // Fetch employee signature for this evaluation
   const { signature: employeeSignature, loading: signatureLoading, error: signatureError } = useEmployeeSignatureByEvaluation(submission?.id || null);
 
-  if (!submission) return null;
+  // Handle print functionality - prints the entire modal content
+  const handlePrint = () => {
+    if (!printContentRef.current) {
+      console.warn('Print content not available');
+      return;
+    }
 
+    // Clone the content without no-print elements
+    const clonedContent = printContentRef.current.cloneNode(true) as HTMLElement;
+    const noPrintElements = clonedContent.querySelectorAll('.no-print');
+    noPrintElements.forEach(el => el.remove());
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      // Get all styles from the current document
+      const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+        .map(el => {
+          if (el.tagName === 'STYLE') {
+            return `<style>${el.innerHTML}</style>`;
+          } else if (el.tagName === 'LINK') {
+            return `<link rel="stylesheet" href="${(el as HTMLLinkElement).href}">`;
+          }
+          return '';
+        })
+        .join('\n');
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${submission ? `Evaluation Details - ${submission.employeeName}` : 'Evaluation Details'}</title>
+            ${styles}
+            <style>
+              @page { 
+                size: A4; 
+                margin: 1.5cm; 
+              }
+              @media print {
+                * {
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+                body { 
+                  font-family: Arial, sans-serif; 
+                  font-size: 12px; 
+                  line-height: 1.5;
+                  color: #000;
+                  padding: 0;
+                  margin: 0;
+                }
+                .no-print { display: none !important; }
+                .shadow-md { box-shadow: none !important; border: 1px solid #e5e7eb !important; }
+                /* Reduce card padding for better space utilization */
+                [class*="CardContent"] {
+                  padding: 1rem !important;
+                }
+                [class*="CardHeader"] {
+                  padding: 0.75rem 1rem !important;
+                }
+                table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
+                tr { page-break-inside: avoid; }
+                thead { display: table-header-group; }
+                img { max-width: 100%; height: auto; page-break-inside: avoid; }
+                .space-y-8 > * {
+                  page-break-inside: avoid;
+                  margin-bottom: 3.1rem !important;
+                }
+                /* Better spacing for first page sections */
+                .space-y-8 > *:first-child {
+                  margin-top: 0 !important;
+                }
+                .space-y-8 > *:last-child {
+                  margin-bottom: 0 !important;
+                }
+                /* Force Basic Information to always use 3 columns in print */
+                .print-basic-info {
+                  display: grid !important;
+                  grid-template-columns: repeat(3, 1fr) !important;
+                  gap: 1.5rem !important;
+                }
+                /* Force Review Type to always use 3 columns in print */
+                .print-review-type {
+                  display: grid !important;
+                  grid-template-columns: repeat(3, 1fr) !important;
+                  gap: 1.5rem !important;
+                }
+                /* Force Acknowledgement to always use 2 columns in print */
+                .print-acknowledgement {
+                  display: grid !important;
+                  grid-template-columns: repeat(2, 1fr) !important;
+                  gap: 1.5rem !important;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            ${clonedContent.innerHTML}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+  };
+
+
+  if (!submission) return null;
 
   // Handle approval API call
   const handleApproveEvaluation = async () => {
@@ -181,17 +292,26 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-6 animate-popup">
-        <div className="space-y-8">
-          <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-            <h2 className="text-3xl font-bold text-gray-900">Evaluation Details</h2>
-            <Button
-              onClick={onCloseAction}
-              className="px-4 py-2 bg-blue-500 text-white hover:bg-red-600 hover:text-white"
-            >
-             🗙 Close
-            </Button>
-          </div>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-6 animate-popup">
+          <div ref={printContentRef} className="space-y-8">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-4 no-print">
+              <h2 className="text-3xl font-bold text-gray-900">Evaluation Details</h2>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handlePrint}
+                  className="px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 flex items-center gap-2"
+                >
+                  <Printer className="h-4 w-4" />
+                  Print
+                </Button>
+                <Button
+                  onClick={onCloseAction}
+                  className="px-4 py-2 bg-blue-500 text-white hover:bg-red-600 hover:text-white"
+                >
+                 🗙 Close
+                </Button>
+              </div>
+            </div>
 
           <div className="space-y-8">
             {/* Header Information */}
@@ -200,32 +320,32 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                 <CardTitle className="text-xl font-semibold text-gray-900">Basic Information</CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6 print-basic-info">
                   <div>
-                    <Label className="text-sm font-medium text-gray-600">Employee Name</Label>
-                    <p className="text-lg font-semibold">{submission.employeeName}</p>
+                    <Label className="text-sm font-medium text-gray-600 block mb-1">Employee Name</Label>
+                    <p className="text-lg font-semibold text-gray-900">{submission.employeeName}</p>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Category</Label>
+                  <div className="print-center-middle">
+                    <Label className="text-sm font-medium text-gray-600 block mb-1">Category</Label>
                     <Badge className="bg-blue-100 text-blue-800">{submission.category || 'Performance Review'}</Badge>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-600">Submitted Date</Label>
-                    <p className="text-lg">{new Date(submission.submittedAt).toLocaleDateString()}</p>
+                    <Label className="text-sm font-medium text-gray-600 block mb-1">Submitted Date</Label>
+                    <p className="text-lg text-gray-900">{new Date(submission.submittedAt).toLocaleDateString()}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-600">Quarter</Label>
+                    <Label className="text-sm font-medium text-gray-600 block mb-1">Quarter</Label>
                     <Badge className={getQuarterColor(getQuarterFromDate(submission.submittedAt))}>
                       {getQuarterFromDate(submission.submittedAt)}
                     </Badge>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Immediate Supervisor</Label>
-                    <p className="text-lg">{submission.evaluationData?.supervisor || 'Not specified'}</p>
+                  <div className="print-center-middle">
+                    <Label className="text-sm font-medium text-gray-600 block mb-1">Immediate Supervisor</Label>
+                    <p className="text-lg text-gray-900">{submission.evaluationData?.supervisor || 'Not specified'}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-600">Overall Rating</Label>
-                    <p className="text-lg font-semibold">
+                    <Label className="text-sm font-medium text-gray-600 block mb-1">Overall Rating</Label>
+                    <p className="text-lg font-semibold text-gray-900">
                       {submission.evaluationData ? (
                         (() => {
                           const jobKnowledgeScore = calculateScore([submission.evaluationData.jobKnowledgeScore1, submission.evaluationData.jobKnowledgeScore2, submission.evaluationData.jobKnowledgeScore3]);
@@ -266,7 +386,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                 </CardHeader>
                 <CardContent className="p-6">
                             
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print-review-type">
                     {/* For Probationary */}
                     <div className="space-y-3">
                       <h5 className="font-medium text-gray-800">For Probationary</h5>
@@ -1484,7 +1604,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                     I hereby acknowledge that the Evaluator has explained to me, to the best of their ability, 
                     and in a manner I fully understand, my performance and respective rating on this performance evaluation.
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print-acknowledgement">
                     {/* Employee Section */}
                     <div className="space-y-4">
                       {/* Signature area */}
@@ -1518,7 +1638,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                       
                       {/* Action Section - Only show if showApprovalButton is true */}
                       {showApprovalButton && (
-                        <div className="mt-6 space-y-4">
+                        <div className="mt-6 space-y-4 no-print">
                           {/* Approve Button - Only show if not approved */}
                           {!isApproved && (
                             <div className="space-y-3">
@@ -1569,11 +1689,8 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                         </div>
                       )}
                       
-                      {/* Employee Name and Date */}
+                      {/* Employee Date */}
                       <div className="text-center">
-                        <p className="text-sm font-medium text-gray-900">
-                          {submission.employeeName || 'Employee Name'}
-                        </p>
                         <p className="text-xs text-gray-500 mt-1">
                           {submission.employeeApprovedAt ? new Date(submission.employeeApprovedAt).toLocaleDateString('en-US', {
                             year: 'numeric',
@@ -1610,11 +1727,8 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                         </div>
                       </div>
                       
-                      {/* Evaluator Name and Date */}
+                      {/* Evaluator Date */}
                       <div className="text-center">
-                        <p className="text-sm font-medium text-gray-900">
-                          {submission.evaluator || submission.evaluationData?.evaluatorSignature || submission.evaluationData?.evaluatorName || 'Evaluator Name'}
-                        </p>
                         <p className="text-xs text-gray-500 mt-1">
                           {submission.evaluatorApprovedAt || submission.evaluationData?.evaluatorSignatureDate ? new Date(submission.evaluatorApprovedAt || submission.evaluationData?.evaluatorSignatureDate).toLocaleDateString('en-US', {
                             year: 'numeric',
