@@ -274,7 +274,13 @@ export function UserManagementTab({
         localStorage.setItem('accounts', JSON.stringify(accounts));
       }
 
+      // Refresh user data to update the table immediately
+      await refreshUserData(false);
+      
+      // Refresh dashboard data to get updated information
       await refreshDashboardData(false, false);
+      
+      // Show success toast
       toastMessages.user.updated(updatedUser.name);
     } catch (error) {
       console.error('Error updating user:', error);

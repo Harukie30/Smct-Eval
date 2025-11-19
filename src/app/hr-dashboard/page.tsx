@@ -19,6 +19,7 @@ import { useTabLoading } from '@/hooks/useTabLoading';
 import clientDataService from '@/lib/clientDataService';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { useUser } from '@/contexts/UserContext';
+import { toastMessages } from '@/lib/toastMessages';
 import EditUserModal from '@/components/EditUserModal';
 import AddEmployeeModal from '@/components/AddEmployeeModal';
 import { useDialogAnimation } from '@/hooks/useDialogAnimation';
@@ -359,9 +360,12 @@ function HRDashboard() {
     try {
       setLoading(true);
       
-      // Load data
+      // Load from localStorage first, fallback to static JSON (same as admin dashboard)
+      const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+      const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : (accountsData.accounts || []);
+      
       // Convert accounts data to employees format (filter out admin accounts)
-      const employeeAccounts = (accountsData.accounts || []).filter((account: any) => account.role !== 'admin');
+      const employeeAccounts = accounts.filter((account: any) => account.role !== 'admin');
       const employeesList = employeeAccounts.map((account: any) => ({
         id: account.employeeId || account.id,
         name: account.name,
@@ -481,9 +485,12 @@ function HRDashboard() {
   useEffect(() => {
     const loadHRData = async () => {
       try {
-        // Load data
+        // Load from localStorage first, fallback to static JSON (same as admin dashboard)
+        const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+        const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : (accountsData.accounts || []);
+        
         // Convert accounts data to employees format (filter out admin accounts)
-        const employeeAccounts = (accountsData.accounts || []).filter((account: any) => account.role !== 'admin');
+        const employeeAccounts = accounts.filter((account: any) => account.role !== 'admin');
         const employeesList = employeeAccounts.map((account: any) => ({
           id: account.employeeId || account.id,
           name: account.name,
@@ -595,14 +602,44 @@ function HRDashboard() {
       // Update existing employee using client data service
       await clientDataService.updateEmployee(updatedUser.id, updatedUser);
 
+      // Also update accounts storage to persist changes (same as admin dashboard)
+      const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+      const accountIndex = accounts.findIndex((acc: any) => acc.id === updatedUser.id || acc.employeeId === updatedUser.id);
+      
+      if (accountIndex !== -1) {
+        accounts[accountIndex] = {
+          ...accounts[accountIndex],
+          name: updatedUser.name,
+          email: updatedUser.email,
+          position: updatedUser.position,
+          department: updatedUser.department,
+          branch: updatedUser.branch,
+          role: updatedUser.role,
+          username: updatedUser.username || accounts[accountIndex].username,
+          password: updatedUser.password || accounts[accountIndex].password,
+          contact: updatedUser.contact || accounts[accountIndex].contact,
+          hireDate: updatedUser.hireDate || accounts[accountIndex].hireDate,
+          isActive: updatedUser.isActive !== undefined ? updatedUser.isActive : accounts[accountIndex].isActive,
+          updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem('accounts', JSON.stringify(accounts));
+      }
+
+      // Refresh employee data to update the table immediately
+      await refreshEmployeeData();
+      
       // Refresh dashboard data to get updated information
       await refreshDashboardData(false, false);
+      
+      // Show success toast
+      toastMessages.user.updated(updatedUser.name);
       
       // Close modal and reset
       setIsEditModalOpen(false);
       setSelectedEmployee(null);
     } catch (error) {
       console.error('Error saving employee:', error);
+      toastMessages.generic.error('Update Failed', 'Failed to update user information. Please try again.');
     }
   };
 
@@ -740,8 +777,12 @@ function HRDashboard() {
       // Add a small delay to ensure spinner is visible
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Reload data from accounts.json
-      const employeeAccounts = (accountsData.accounts || []).filter((account: any) => account.role !== 'admin');
+      // Load from localStorage first, fallback to static JSON (same as admin dashboard)
+      const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+      const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : (accountsData.accounts || []);
+      
+      // Reload data from accounts (localStorage or JSON)
+      const employeeAccounts = accounts.filter((account: any) => account.role !== 'admin');
       const employeesList = employeeAccounts.map((account: any) => ({
         id: account.employeeId || account.id,
         name: account.name,
