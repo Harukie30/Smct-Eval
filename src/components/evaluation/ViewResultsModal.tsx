@@ -201,12 +201,34 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   display: grid !important;
                   grid-template-columns: repeat(3, 1fr) !important;
                   gap: 1.5rem !important;
+                  justify-items: center !important;
+                  text-align: center !important;
+                  padding: 0 1rem !important;
+                }
+                /* Center align labels and content in Basic Information */
+                .print-basic-info > div {
+                  text-align: center !important;
+                  padding: 0 0.5rem !important;
+                }
+                .print-basic-info > div > * {
+                  text-align: center !important;
                 }
                 /* Force Review Type to always use 3 columns in print */
                 .print-review-type {
                   display: grid !important;
                   grid-template-columns: repeat(3, 1fr) !important;
                   gap: 1.5rem !important;
+                  justify-items: center !important;
+                  text-align: center !important;
+                  padding: 0 1rem !important;
+                }
+                /* Center align content in Review Type */
+                .print-review-type > div {
+                  text-align: center !important;
+                  padding: 0 0.5rem !important;
+                }
+                .print-review-type > div > * {
+                  text-align: center !important;
                 }
                 /* Force Acknowledgement to always use 2 columns in print */
                 .print-acknowledgement {

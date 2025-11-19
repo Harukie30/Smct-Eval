@@ -837,14 +837,6 @@ export function EvaluationRecordsTab({
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => printFeedback(submission)}
-                                className="text-xs px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white"
-                              >
-                                ⎙ Print
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
                                 onClick={() => onDeleteClick(submission)}
                                 className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200"
                                 title="Delete this evaluation record"

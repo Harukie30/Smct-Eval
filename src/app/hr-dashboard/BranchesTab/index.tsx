@@ -267,40 +267,34 @@ export function BranchesTab({
               <Label htmlFor="branchName" className="text-sm font-medium">
                 Branch Name <span className="text-red-500">*</span>
               </Label>
-              <Select value={newBranchName || undefined} onValueChange={(value) => setNewBranchName(value || '')}>
-                <SelectTrigger id="branchName">
-                  <SelectValue placeholder="Select branch name" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Head Office">Head Office</SelectItem>
-                  <SelectItem value="Cebu Branch">Cebu Branch</SelectItem>
-                  <SelectItem value="Davao Branch">Davao Branch</SelectItem>
-                  <SelectItem value="Bacolod Branch">Bacolod Branch</SelectItem>
-                  <SelectItem value="Iloilo Branch">Iloilo Branch</SelectItem>
-                  <SelectItem value="Cagayan de Oro Branch">Cagayan de Oro Branch</SelectItem>
-                  <SelectItem value="Baguio Branch">Baguio Branch</SelectItem>
-                  <SelectItem value="Zamboanga Branch">Zamboanga Branch</SelectItem>
-                  <SelectItem value="General Santos Branch">General Santos Branch</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="branchName"
+                placeholder="Enter branch name"
+                value={newBranchName}
+                onChange={(e) => setNewBranchName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddBranch();
+                  }
+                }}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="branchCode" className="text-sm font-medium">
                 Branch Code
               </Label>
-              <Select value={newBranchCode || undefined} onValueChange={(value) => setNewBranchCode(value || '')}>
-                <SelectTrigger id="branchCode">
-                  <SelectValue placeholder="Select branch code (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {branchCodesData.map((code) => (
-                    <SelectItem key={code} value={code}>
-                      {code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                id="branchCode"
+                placeholder="Enter branch code (optional)"
+                value={newBranchCode}
+                onChange={(e) => setNewBranchCode(e.target.value.toUpperCase())}
+                style={{ textTransform: 'uppercase' }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddBranch();
+                  }
+                }}
+              />
             </div>
           </div>
 
