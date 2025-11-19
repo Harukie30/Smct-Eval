@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import clientDataService from '@/lib/clientDataService';
 import { toastMessages } from '@/lib/toastMessages';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
@@ -50,6 +52,7 @@ export function AreaManagersTab({ employees, onRefresh }: AreaManagersTabProps) 
   const [editSuccessData, setEditSuccessData] = useState<{areaManager: Employee | null, branches: {id: string, name: string}[]}>({areaManager: null, branches: []});
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [areaManagerToDelete, setAreaManagerToDelete] = useState<Employee | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -67,6 +70,18 @@ export function AreaManagersTab({ employees, onRefresh }: AreaManagersTabProps) 
              position.includes('regional manager');
     });
   }, [employees]);
+
+  // Filter area managers based on search term
+  const filteredAreaManagers = useMemo(() => {
+    if (!searchTerm) return areaManagers;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return areaManagers.filter(manager => {
+      const nameMatch = manager.name?.toLowerCase().includes(searchLower);
+      const branchMatch = manager.branch?.toLowerCase().includes(searchLower);
+      return nameMatch || branchMatch;
+    });
+  }, [areaManagers, searchTerm]);
 
 
   // Load branches data
@@ -202,20 +217,40 @@ export function AreaManagersTab({ employees, onRefresh }: AreaManagersTabProps) 
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Area Managers</CardTitle>
-              <CardDescription>List of all area managers in the organization</CardDescription>
-            </div>
-            <Button 
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() => setIsListModalOpen(true)}
-            >
-              Add New
-            </Button>
+          <div>
+            <CardTitle>Area Managers</CardTitle>
+            <CardDescription>List of all area managers in the organization</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
+          {/* Search Bar */}
+          <div className="mb-6">
+            <div className="relative w-full md:w-1/3">
+              <Label htmlFor="area-managers-search" className="text-sm font-medium mb-2 block">Search</Label>
+              <div className="relative">
+                <Input
+                  id="area-managers-search"
+                  placeholder="Search by name or branch..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pr-10"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Clear search"
+                    aria-label="Clear search"
+                    type="button"
+                  >
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
           <div className="relative max-h-[600px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
             <Table>
               <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
@@ -240,14 +275,14 @@ export function AreaManagersTab({ employees, onRefresh }: AreaManagersTabProps) 
                       </TableCell>
                     </TableRow>
                   ))
-                ) : areaManagers.length === 0 ? (
+                ) : filteredAreaManagers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center py-8 text-gray-500">
-                      No area managers found
+                      {searchTerm ? `No area managers found matching "${searchTerm}"` : 'No area managers found'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  areaManagers.map((manager) => {
+                  filteredAreaManagers.map((manager) => {
                     // Parse branches - handle both comma-separated string and single branch
                     const branchList = manager.branch 
                       ? manager.branch.split(', ').filter(b => b.trim())
