@@ -166,75 +166,391 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                 }
                 body { 
                   font-family: Arial, sans-serif; 
-                  font-size: 12px; 
-                  line-height: 1.5;
+                  font-size: 13px; 
+                  line-height: 1.4;
                   color: #000;
                   padding: 0;
-                  margin: 0;
+                  margin: 40px;
                 }
                 .no-print { display: none !important; }
-                .shadow-md { box-shadow: none !important; border: 1px solid #e5e7eb !important; }
-                /* Reduce card padding for better space utilization */
+                /* Form container with border - only outer border */
+                .space-y-8 {
+                  border: 2px solid #000 !important;
+                  padding: 25px !important;
+                  background: white !important;
+                }
+                /* Remove all shadow and border classes in print */
+                .shadow-md,
+                .shadow-sm {
+                  box-shadow: none !important;
+                  border: none !important;
+                  background: transparent !important;
+                }
+                /* Remove all container backgrounds and borders except form container */
+                div:not(.space-y-8) {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                }
+                /* Only allow borders on tables, input lines, and form container */
+                div:not(.space-y-8):not([class*="print-signature"]):not([class*="print-date"]):not([class*="print-priority"]):not([class*="print-remarks"]) {
+                  border: none !important;
+                }
+                /* Title styling */
+                h1, h2, h3 {
+                  text-align: center !important;
+                  margin: 5px 0 !important;
+                }
+                h1 {
+                  font-size: 16px !important;
+                  font-weight: bold !important;
+                }
+                h3 {
+                  font-size: 14px !important;
+                  font-weight: bold !important;
+                  margin-top: 10px !important;
+                }
+                /* Completely remove all card styling in print - no borders, no backgrounds, no containers */
+                [class*="Card"],
+                [class*="Card"] * {
+                  border: none !important;
+                  box-shadow: none !important;
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  border-radius: 0 !important;
+                }
                 [class*="CardContent"] {
-                  padding: 1rem !important;
+                  padding: 0 !important;
+                  border: none !important;
+                  background: transparent !important;
+                  background-color: transparent !important;
                 }
                 [class*="CardHeader"] {
-                  padding: 0.75rem 1rem !important;
+                  display: none !important;
+                  border: none !important;
+                  background: transparent !important;
                 }
-                table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
+                /* Remove any gray backgrounds */
+                .bg-gray-50,
+                .bg-gray-100,
+                .bg-gray-200,
+                .bg-yellow-50 {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                }
+                /* Remove all borders from cards */
+                .border,
+                .border-b,
+                .border-2,
+                .border-gray-200,
+                .border-gray-300 {
+                  border: none !important;
+                }
+                /* Review Type - checkbox group style */
+                .print-review-type {
+                  display: flex !important;
+                  justify-content: space-between !important;
+                  margin-top: 10px !important;
+                  font-size: 13px !important;
+                }
+                .print-review-type > div {
+                  text-align: left !important;
+                  padding: 0 !important;
+                }
+                .print-review-type h5 {
+                  font-weight: normal !important;
+                  margin-bottom: 5px !important;
+                }
+                .print-review-type .space-y-2,
+                .print-review-type .space-y-3 {
+                  margin: 0 !important;
+                }
+                .print-review-type .space-y-2 > *,
+                .print-review-type .space-y-3 > * {
+                  margin: 2px 0 !important;
+                }
+                /* Basic Information - two column layout with horizontal alignment */
+                .print-basic-info {
+                  display: grid !important;
+                  grid-template-columns: 1fr 1fr !important;
+                  gap: 0 !important;
+                  margin-top: 10px !important;
+                  column-gap: 30px !important;
+                  row-gap: 5px !important;
+                }
+                .print-basic-info > div {
+                  display: flex !important;
+                  justify-content: flex-start !important;
+                  align-items: baseline !important;
+                  gap: 4px !important;
+                  margin: 0 !important;
+                  font-size: 13px !important;
+                  text-align: left !important;
+                  padding: 0 !important;
+                }
+                /* Row 1: Employee Name (left) | Date Hired (right) */
+                .print-basic-info > div:nth-child(1) {
+                  grid-column: 1 !important;
+                  grid-row: 1 !important;
+                }
+                .print-basic-info > div:nth-child(5) {
+                  grid-column: 2 !important;
+                  grid-row: 1 !important;
+                }
+                /* Row 2: Employee Number (left) | Immediate Supervisor (right) */
+                .print-basic-info > div:nth-child(2) {
+                  grid-column: 1 !important;
+                  grid-row: 2 !important;
+                }
+                .print-basic-info > div:nth-child(6) {
+                  grid-column: 2 !important;
+                  grid-row: 2 !important;
+                }
+                /* Row 3: Position (left) | Performance Coverage (right) */
+                .print-basic-info > div:nth-child(3) {
+                  grid-column: 1 !important;
+                  grid-row: 3 !important;
+                }
+                .print-basic-info > div:nth-child(7) {
+                  grid-column: 2 !important;
+                  grid-row: 3 !important;
+                }
+                /* Row 4: Department/Branch (left only) */
+                .print-basic-info > div:nth-child(4) {
+                  grid-column: 1 !important;
+                  grid-row: 4 !important;
+                }
+                .print-basic-info > div > label {
+                  font-weight: bold !important;
+                  width: auto !important;
+                  flex-shrink: 0 !important;
+                  margin-right: 0 !important;
+                }
+                .print-basic-info > div > p {
+                  border-bottom: 1px solid #000 !important;
+                  flex: 1 !important;
+                  min-width: 0 !important;
+                  height: auto !important;
+                  line-height: 1 !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  padding-bottom: 1px !important;
+                  text-align: left !important;
+                }
+                /* Remove block display from label in print */
+                .print-basic-info .print-label {
+                  display: inline !important;
+                  margin-bottom: 0 !important;
+                }
+                .print-basic-info .print-value {
+                  display: inline !important;
+                }
+                /* Table styling */
+                table {
+                  width: 100% !important;
+                  border-collapse: collapse !important;
+                  margin-top: 10px !important;
+                }
+                table, td, th {
+                  border: 1px solid #000 !important;
+                  padding: 5px !important;
+                  font-size: 13px !important;
+                }
+                th {
+                  background-color: #d9d9d9 !important;
+                  font-weight: bold !important;
+                }
                 tr { page-break-inside: avoid; }
                 thead { display: table-header-group; }
                 img { max-width: 100%; height: auto; page-break-inside: avoid; }
-                .space-y-8 > * {
-                  page-break-inside: avoid;
-                  margin-bottom: 3.1rem !important;
+                /* Section titles */
+                h4 {
+                  font-weight: bold !important;
+                  margin-top: 8px !important;
+                  border-bottom: 2px solid #000 !important;
+                  padding-bottom: 2px !important;
+                  font-size: 12px !important;
+                  text-transform: uppercase !important;
+                  margin-bottom: 3px !important;
                 }
-                /* Better spacing for first page sections */
-                .space-y-8 > *:first-child {
-                  margin-top: 0 !important;
+                /* Priority Areas and Remarks - large box style */
+                .print-priority-box,
+                .print-remarks-box {
+                  width: 100% !important;
+                  height: 60px !important;
+                  border: 1px solid #000 !important;
+                  margin-top: 3px !important;
+                  padding: 2px !important;
+                  background: white !important;
+                  background-color: white !important;
                 }
-                .space-y-8 > *:last-child {
-                  margin-bottom: 0 !important;
+                /* Remove gray backgrounds from priority area items in print */
+                .print-priority-box .bg-yellow-50,
+                .print-remarks-box .bg-yellow-50 {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  border: none !important;
+                  padding: 1px 2px !important;
+                  margin: 1px 0 !important;
                 }
-                /* Force Basic Information to always use 3 columns in print */
-                .print-basic-info {
-                  display: grid !important;
-                  grid-template-columns: repeat(3, 1fr) !important;
-                  gap: 1.5rem !important;
-                  justify-items: center !important;
-                  text-align: center !important;
-                  padding: 0 1rem !important;
+                /* Reduce font size in Priority Areas */
+                .print-priority-box span,
+                .print-priority-box .text-sm {
+                  font-size: 9px !important;
+                  line-height: 1.2 !important;
                 }
-                /* Center align labels and content in Basic Information */
-                .print-basic-info > div {
-                  text-align: center !important;
-                  padding: 0 0.5rem !important;
+                /* Reduce spacing between Priority Area items */
+                .print-priority-box.space-y-3 > * {
+                  margin-top: 1px !important;
+                  margin-bottom: 1px !important;
                 }
-                .print-basic-info > div > * {
-                  text-align: center !important;
-                }
-                /* Force Review Type to always use 3 columns in print */
-                .print-review-type {
-                  display: grid !important;
-                  grid-template-columns: repeat(3, 1fr) !important;
-                  gap: 1.5rem !important;
-                  justify-items: center !important;
-                  text-align: center !important;
-                  padding: 0 1rem !important;
-                }
-                /* Center align content in Review Type */
-                .print-review-type > div {
-                  text-align: center !important;
-                  padding: 0 0.5rem !important;
-                }
-                .print-review-type > div > * {
-                  text-align: center !important;
-                }
-                /* Force Acknowledgement to always use 2 columns in print */
+                /* Acknowledgement section */
                 .print-acknowledgement {
-                  display: grid !important;
-                  grid-template-columns: repeat(2, 1fr) !important;
-                  gap: 1.5rem !important;
+                  display: flex !important;
+                  justify-content: space-between !important;
+                  margin-top: 10px !important;
+                }
+                .print-acknowledgement > div {
+                  width: 45% !important;
+                  text-align: center !important;
+                }
+                /* Signature boxes - print format - remove all containers */
+                .print-acknowledgement .h-20,
+                .print-acknowledgement [class*="border-dashed"],
+                .print-acknowledgement [class*="rounded"] {
+                  border: none !important;
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  height: auto !important;
+                  padding: 0 !important;
+                  border-radius: 0 !important;
+                }
+                .print-acknowledgement .h-20 > span:not(.print-signature-line) {
+                  display: none !important;
+                }
+                .print-signature-line {
+                  border-bottom: 1px solid #000 !important;
+                  width: 100% !important;
+                  height: 15px !important;
+                  margin-bottom: 2px !important;
+                  display: block !important;
+                  background: transparent !important;
+                }
+                .print-acknowledgement img {
+                  display: none !important;
+                }
+                /* Remove all rounded corners and borders from signature containers */
+                .print-acknowledgement [class*="rounded-lg"],
+                .print-acknowledgement [class*="border-2"] {
+                  border: none !important;
+                  border-radius: 0 !important;
+                  background: transparent !important;
+                }
+                /* Date box */
+                .print-date-box {
+                  border-bottom: 1px solid #000 !important;
+                  width: 150px !important;
+                  height: 18px !important;
+                  display: inline-block !important;
+                  padding: 0 5px !important;
+                }
+                .print-date-section {
+                  margin-top: 8px !important;
+                  font-size: 11px !important;
+                }
+                /* Acknowledgement text */
+                .print-acknowledgement p {
+                  font-size: 11px !important;
+                  margin-bottom: 8px !important;
+                  line-height: 1.3 !important;
+                }
+                /* Hide signature images and complex styling in print */
+                .print-acknowledgement .h-20 {
+                  position: relative !important;
+                }
+                .print-acknowledgement .h-20 > span:not(.print-signature-line) {
+                  display: none !important;
+                }
+                .print-acknowledgement .h-20 img {
+                  display: none !important;
+                }
+                .print-signature-line {
+                  position: absolute !important;
+                  top: 50% !important;
+                  left: 0 !important;
+                  right: 0 !important;
+                  transform: translateY(-50%) !important;
+                }
+                /* Hide detailed step sections in print */
+                .hide-in-print {
+                  display: none !important;
+                }
+                /* Overall Assessment table */
+                .print-overall-assessment-wrapper [class*="Card"] {
+                  border: none !important;
+                  box-shadow: none !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                  background: transparent !important;
+                }
+                .print-overall-assessment-wrapper [class*="CardContent"] {
+                  padding: 0 !important;
+                  border: none !important;
+                  background: transparent !important;
+                }
+                .print-overall-assessment-wrapper h3 {
+                  font-size: 12px !important;
+                  margin-bottom: 2px !important;
+                  margin-top: 5px !important;
+                }
+                .print-overall-assessment-table {
+                  border: none !important;
+                  width: 100% !important;
+                  border-collapse: collapse !important;
+                  margin-top: 3px !important;
+                  margin-bottom: 5px !important;
+                }
+                .print-overall-assessment-table th,
+                .print-overall-assessment-table td {
+                  border: 1px solid #000 !important;
+                  padding: 2px 4px !important;
+                  font-size: 10px !important;
+                  text-align: center !important;
+                  line-height: 1.2 !important;
+                }
+                .print-overall-assessment-table th {
+                  background-color: #d9d9d9 !important;
+                  font-weight: bold !important;
+                  padding: 3px 4px !important;
+                }
+                .print-overall-assessment-table td:first-child {
+                  text-align: left !important;
+                }
+                .print-overall-assessment-table tbody tr:last-child {
+                  background-color: #e8e8e8 !important;
+                  font-weight: bold !important;
+                }
+                .print-overall-assessment-table tbody tr:last-child td:first-child {
+                  text-align: right !important;
+                }
+                /* Hide rating badges in print */
+                .print-overall-assessment-table .px-2,
+                .print-overall-assessment-table span[class*="px-2"],
+                .print-overall-assessment-table .rounded {
+                  background: transparent !important;
+                  padding: 0 !important;
+                  border-radius: 0 !important;
+                  color: #000 !important;
+                  border: none !important;
+                }
+                /* Hide Performance Score section in print */
+                .print-performance-score-wrapper {
+                  display: none !important;
+                }
+                /* Remove spacing between sections */
+                .space-y-8 > * {
+                  margin-bottom: 0 !important;
                 }
               }
             </style>
@@ -314,10 +630,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-6 animate-popup">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-6 animate-popup">
           <div ref={printContentRef} className="space-y-8">
             <div className="flex items-center justify-between border-b border-gray-200 pb-4 no-print">
-              <h2 className="text-3xl font-bold text-gray-900">Evaluation Details</h2>
+            <h2 className="text-3xl font-bold text-gray-900">Evaluation Details</h2>
               <div className="flex items-center gap-2">
                 <Button
                   onClick={handlePrint}
@@ -326,86 +642,24 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   <Printer className="h-4 w-4" />
                   Print
                 </Button>
-                <Button
-                  onClick={onCloseAction}
-                  className="px-4 py-2 bg-blue-500 text-white hover:bg-red-600 hover:text-white"
-                >
-                 🗙 Close
-                </Button>
+            <Button
+              onClick={onCloseAction}
+              className="px-4 py-2 bg-blue-500 text-white hover:bg-red-600 hover:text-white"
+            >
+             🗙 Close
+            </Button>
               </div>
-            </div>
+          </div>
 
           <div className="space-y-8">
-            {/* Header Information */}
-            <Card className="shadow-md">
-              <CardHeader className="bg-gray-50 border-b border-gray-200">
-                <CardTitle className="text-xl font-semibold text-gray-900">Basic Information</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6 print-basic-info">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600 block mb-1">Employee Name</Label>
-                    <p className="text-lg font-semibold text-gray-900">{submission.employeeName}</p>
+            {/* Title */}
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold text-gray-900">Performance Review Form (HEAD OFFICE) Rank and File I & II</h1>
                   </div>
-                  <div className="print-center-middle">
-                    <Label className="text-sm font-medium text-gray-600 block mb-1">Category</Label>
-                    <Badge className="bg-blue-100 text-blue-800">{submission.category || 'Performance Review'}</Badge>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600 block mb-1">Submitted Date</Label>
-                    <p className="text-lg text-gray-900">{new Date(submission.submittedAt).toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600 block mb-1">Quarter</Label>
-                    <Badge className={getQuarterColor(getQuarterFromDate(submission.submittedAt))}>
-                      {getQuarterFromDate(submission.submittedAt)}
-                    </Badge>
-                  </div>
-                  <div className="print-center-middle">
-                    <Label className="text-sm font-medium text-gray-600 block mb-1">Immediate Supervisor</Label>
-                    <p className="text-lg text-gray-900">{submission.evaluationData?.supervisor || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600 block mb-1">Overall Rating</Label>
-                    <p className="text-lg font-semibold text-gray-900">
-                      {submission.evaluationData ? (
-                        (() => {
-                          const jobKnowledgeScore = calculateScore([submission.evaluationData.jobKnowledgeScore1, submission.evaluationData.jobKnowledgeScore2, submission.evaluationData.jobKnowledgeScore3]);
-                          const qualityOfWorkScore = calculateScore([submission.evaluationData.qualityOfWorkScore1, submission.evaluationData.qualityOfWorkScore2, submission.evaluationData.qualityOfWorkScore3, submission.evaluationData.qualityOfWorkScore4, submission.evaluationData.qualityOfWorkScore5]);
-                          const adaptabilityScore = calculateScore([submission.evaluationData.adaptabilityScore1, submission.evaluationData.adaptabilityScore2, submission.evaluationData.adaptabilityScore3]);
-                          const teamworkScore = calculateScore([submission.evaluationData.teamworkScore1, submission.evaluationData.teamworkScore2, submission.evaluationData.teamworkScore3]);
-                          const reliabilityScore = calculateScore([submission.evaluationData.reliabilityScore1, submission.evaluationData.reliabilityScore2, submission.evaluationData.reliabilityScore3, submission.evaluationData.reliabilityScore4]);
-                          const ethicalScore = calculateScore([submission.evaluationData.ethicalScore1, submission.evaluationData.ethicalScore2, submission.evaluationData.ethicalScore3, submission.evaluationData.ethicalScore4]);
-                          const customerServiceScore = calculateScore([submission.evaluationData.customerServiceScore1, submission.evaluationData.customerServiceScore2, submission.evaluationData.customerServiceScore3, submission.evaluationData.customerServiceScore4, submission.evaluationData.customerServiceScore5]);
-
-                          const overallWeightedScore = (
-                            (jobKnowledgeScore * 0.20) +
-                            (qualityOfWorkScore * 0.20) +
-                            (adaptabilityScore * 0.10) +
-                            (teamworkScore * 0.10) +
-                            (reliabilityScore * 0.05) +
-                            (ethicalScore * 0.05) +
-                            (customerServiceScore * 0.30)
-                          );
-
-                          return `${Math.round(overallWeightedScore * 10) / 10}/5`;
-                        })()
-                      ) : (
-                        `${submission.rating || 0}/5`
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
 
             {/* Review Type Section */}
             {submission.evaluationData && (
               <Card className="shadow-md">
-                <CardHeader className="bg-gray-50 border-b border-gray-200">
-                  <CardTitle className="text-xl font-semibold text-gray-900">Review Type</CardTitle>
-                </CardHeader>
                 <CardContent className="p-6">
                             
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print-review-type">
@@ -505,9 +759,53 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
               </Card>
             )}
 
+            {/* Header Information */}
+            <Card className="shadow-md">
+              <CardContent className="p-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6 print-basic-info">
+                  <div className="print-info-row">
+                    <Label className="text-sm font-medium text-gray-600 block mb-1 print-label">Employee Name:</Label>
+                    <p className="text-lg font-semibold text-gray-900 print-value">{submission.employeeName}</p>
+                  </div>
+                  <div className="print-info-row">
+                    <Label className="text-sm font-medium text-gray-600 block mb-1 print-label">Employee Number:</Label>
+                    <p className="text-lg text-gray-900 print-value">{submission.evaluationData?.employeeId || submission.employeeId || 'N/A'}</p>
+                  </div>
+                  <div className="print-info-row">
+                    <Label className="text-sm font-medium text-gray-600 block mb-1 print-label">Position:</Label>
+                    <p className="text-lg text-gray-900 print-value">{submission.evaluationData?.position || 'Not specified'}</p>
+                  </div>
+                  <div className="print-info-row">
+                    <Label className="text-sm font-medium text-gray-600 block mb-1 print-label">Department/Branch:</Label>
+                    <p className="text-lg text-gray-900 print-value">{submission.evaluationData?.department || 'Not specified'}{submission.evaluationData?.branch ? ` / ${submission.evaluationData.branch}` : ''}</p>
+                  </div>
+                  <div className="print-info-row">
+                    <Label className="text-sm font-medium text-gray-600 block mb-1 print-label">Date Hired:</Label>
+                    <p className="text-lg text-gray-900 print-value">
+                      {submission.evaluationData?.hireDate 
+                        ? new Date(submission.evaluationData.hireDate).toLocaleDateString() 
+                        : 'Not specified'}
+                    </p>
+                  </div>
+                  <div className="print-info-row">
+                    <Label className="text-sm font-medium text-gray-600 block mb-1 print-label">Immediate Supervisor:</Label>
+                    <p className="text-lg text-gray-900 print-value">{submission.evaluationData?.supervisor || 'Not specified'}</p>
+                  </div>
+                  <div className="print-info-row">
+                    <Label className="text-sm font-medium text-gray-600 block mb-1 print-label">Performance Coverage:</Label>
+                    <p className="text-lg text-gray-900 print-value">
+                      {submission.evaluationData?.coverageFrom && submission.evaluationData?.coverageTo
+                        ? `${new Date(submission.evaluationData.coverageFrom).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} - ${new Date(submission.evaluationData.coverageTo).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`
+                        : 'Not specified'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Step 1: Job Knowledge */}
             {submission.evaluationData && (
-              <Card className="shadow-md">
+              <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-blue-50 border-b border-blue-200">
                   <CardTitle className="text-xl font-semibold text-blue-900">I. JOB KNOWLEDGE</CardTitle>
                 </CardHeader>
@@ -599,7 +897,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
             {/* Step 2: Quality of Work */}
             {submission.evaluationData && (
-              <Card className="shadow-md">
+              <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-green-50 border-b border-green-200">
                   <CardTitle className="text-xl font-semibold text-green-900">II. QUALITY OF WORK</CardTitle>
                 </CardHeader>
@@ -733,7 +1031,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
             {/* Step 3: Adaptability */}
             {submission.evaluationData && (
-              <Card className="shadow-md">
+              <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-yellow-50 border-b border-yellow-200">
                   <CardTitle className="text-xl font-semibold text-yellow-900">III. ADAPTABILITY</CardTitle>
                 </CardHeader>
@@ -825,7 +1123,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
             {/* Step 4: Teamwork */}
             {submission.evaluationData && (
-              <Card className="shadow-md">
+              <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-purple-50 border-b border-purple-200">
                   <CardTitle className="text-xl font-semibold text-purple-900">IV. TEAMWORK</CardTitle>
                 </CardHeader>
@@ -917,7 +1215,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
             {/* Step 5: Reliability */}
             {submission.evaluationData && (
-              <Card className="shadow-md">
+              <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-indigo-50 border-b border-indigo-200">
                   <CardTitle className="text-xl font-semibold text-indigo-900">V. RELIABILITY</CardTitle>
                 </CardHeader>
@@ -1030,7 +1328,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
             {/* Step 6: Ethical & Professional Behavior */}
             {submission.evaluationData && (
-              <Card className="shadow-md">
+              <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-red-50 border-b border-red-200">
                   <CardTitle className="text-xl font-semibold text-red-900">VI. ETHICAL & PROFESSIONAL BEHAVIOR</CardTitle>
                 </CardHeader>
@@ -1143,7 +1441,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
             {/* Step 7: Customer Service */}
             {submission.evaluationData && (
-              <Card className="shadow-md">
+              <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-teal-50 border-b border-teal-200">
                   <CardTitle className="text-xl font-semibold text-teal-900">VII. CUSTOMER SERVICE</CardTitle>
                 </CardHeader>
@@ -1277,29 +1575,28 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
             
             {/* Performance Assessment Table */}
             {submission.evaluationData && (
+              <div className="print-overall-assessment-wrapper">
               <Card className="shadow-md">
-                <CardHeader className="bg-gray-50 border-b border-gray-200">
-                  <CardTitle className="text-xl font-semibold text-gray-900">Performance Assessment Summary</CardTitle>
-                </CardHeader>
                 <CardContent className="p-6">
                   <div className="space-y-6">
+                      <h3 className="text-base font-semibold text-gray-900 mb-4">Overall Assessment</h3>
                     <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border-2 border-gray-400">
+                        <table className="w-full border-collapse border-2 border-gray-400 print-overall-assessment-table">
                         <thead>
                           <tr className="bg-gray-200">
-                            <th className="border-2 border-gray-400 px-4 py-3 text-left font-bold text-gray-900 text-base">
+                            <th className="border-2 border-gray-400 px-4 py-3 text-left font-bold text-gray-900 text-base print-criteria-col">
                               Performance Criteria
                             </th>
-                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-32">
+                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-32 print-rating-col">
                               Rating
                             </th>
-                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-24">
+                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-24 print-score-col">
                               Score
                             </th>
-                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-24">
+                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-24 print-weight-col">
                               Weight (%)
                             </th>
-                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-32">
+                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-32 print-weighted-col">
                               Weighted Score
                             </th>
                           </tr>
@@ -1500,7 +1797,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                     </div>
 
                     {/* Final Results */}
-                    <div className="mt-6 flex justify-center items-center space-x-8">
+                      <div className="mt-6 flex justify-center items-center space-x-8 print-performance-score-wrapper">
                       <div className="text-center">
                         <div className="text-4xl font-bold text-gray-700">
                           {(() => {
@@ -1574,6 +1871,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   </div>
                 </CardContent>
               </Card>
+              </div>
             )}
 
             {/* Priority Areas for Improvement */}
@@ -1581,7 +1879,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
               <Card>
                 <CardContent className="pt-6 pb-4">
                   <h4 className="font-semibold text-lg text-gray-900 mb-4">Priority Areas for Improvement</h4>
-                  <div className="space-y-3">
+                  <div className="space-y-3 print-priority-box">
                     {submission.evaluationData.priorityArea1 && (
                       <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md">
                         <span className="font-medium text-sm">1. </span>
@@ -1610,7 +1908,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
               <Card>
                 <CardContent className="pt-6 pb-4">
                   <h4 className="font-semibold text-lg text-gray-900 mb-4">Remarks</h4>
-                  <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md">
+                  <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-remarks-box">
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">{submission.evaluationData.remarks}</p>
                   </div>
                 </CardContent>
@@ -1632,6 +1930,8 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                       {/* Signature area */}
                       <div className="text-center">
                         <div className="h-20 border-2 border-dashed border-white rounded-lg flex items-center justify-center bg-gray-50 relative">
+                          {/* Print signature line */}
+                          <div className="print-signature-line"></div>
                           {/* Name as background text - always show */}
                           <span className="text-md text-gray-900 font-bold">
                             {submission.employeeName || 'Employee Name'}
@@ -1656,6 +1956,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             />
                           )}
                         </div>
+                        <div className="text-xs text-gray-500 mt-1">Employee's Name & Signature</div>
                       </div>
                       
                       {/* Action Section - Only show if showApprovalButton is true */}
@@ -1713,7 +2014,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                       
                       {/* Employee Date */}
                       <div className="text-center">
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 mt-1 print-date-value">
                           {submission.employeeApprovedAt ? new Date(submission.employeeApprovedAt).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'long',
@@ -1729,6 +2030,8 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                       {/* Signature area */}
                       <div className="text-center">
                         <div className="h-20 border-2 border-dashed border-white rounded-lg flex items-center justify-center bg-gray-50 relative">
+                          {/* Print signature line */}
+                          <div className="print-signature-line"></div>
                           {/* Name as background text - always show */}
                           <span className="text-md text-gray-900 font-bold">
                             {submission.evaluator || submission.evaluationData?.evaluatorSignature || submission.evaluationData?.evaluatorName || 'Evaluator Name'}
@@ -1747,6 +2050,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             <span className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-gray-400 text-sm">No signature</span>
                           )}
                         </div>
+                        <div className="text-xs text-gray-500 mt-1">Evaluator's Name & Signature</div>
                       </div>
                       
                       {/* Evaluator Date */}
@@ -1760,6 +2064,23 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                         </p>
                       </div>
                     </div>
+                  </div>
+                  {/* Date section */}
+                  <div className="mt-5 print-date-section">
+                    <span>Date: </span>
+                    <span className="print-date-box">
+                      {(submission.employeeApprovedAt || submission.evaluatorApprovedAt || submission.submittedAt)
+                        ? new Date(submission.employeeApprovedAt || submission.evaluatorApprovedAt || submission.submittedAt).toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          })
+                        : new Date().toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          })}
+                    </span>
                   </div>
                 </CardContent>
               </Card>

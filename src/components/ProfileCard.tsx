@@ -16,6 +16,7 @@ export type UserProfile = {
   positions: { value: number | string; label: string }  ;
   bio?: string;
   signature?: string;
+  employeeId?: number;
 };
 
 interface ProfileCardProps {

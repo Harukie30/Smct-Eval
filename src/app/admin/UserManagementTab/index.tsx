@@ -65,6 +65,9 @@ export function UserManagementTab({
   const [usersRefreshing, setUsersRefreshing] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeUsersPage, setActiveUsersPage] = useState(1);
+  const [newRegistrationsPage, setNewRegistrationsPage] = useState(1);
+  const itemsPerPage = 8;
 
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -386,11 +389,34 @@ export function UserManagementTab({
   // Handle tab change with refresh
   const handleTabChange = async (tab: 'active' | 'new') => {
     setUserManagementTab(tab);
+    // Reset to first page when switching tabs
+    setActiveUsersPage(1);
+    setNewRegistrationsPage(1);
     
     // Refresh data when switching tabs
     console.log(`🔄 ${tab === 'new' ? 'New Registrations' : 'Active Users'} tab clicked, refreshing user data...`);
     await refreshUserData(true);
   };
+
+  // Pagination calculations for active users
+  const activeUsersTotal = getFilteredActiveEmployees().length;
+  const activeUsersTotalPages = Math.ceil(activeUsersTotal / itemsPerPage);
+  const activeUsersStartIndex = (activeUsersPage - 1) * itemsPerPage;
+  const activeUsersEndIndex = activeUsersStartIndex + itemsPerPage;
+  const activeUsersPaginated = getFilteredActiveEmployees().slice(activeUsersStartIndex, activeUsersEndIndex);
+
+  // Pagination calculations for new registrations
+  const newRegistrationsTotal = getFilteredNewAccounts().length;
+  const newRegistrationsTotalPages = Math.ceil(newRegistrationsTotal / itemsPerPage);
+  const newRegistrationsStartIndex = (newRegistrationsPage - 1) * itemsPerPage;
+  const newRegistrationsEndIndex = newRegistrationsStartIndex + itemsPerPage;
+  const newRegistrationsPaginated = getFilteredNewAccounts().slice(newRegistrationsStartIndex, newRegistrationsEndIndex);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setActiveUsersPage(1);
+    setNewRegistrationsPage(1);
+  }, [userSearchTerm]);
 
   // Show loading skeleton on initial load
   if (loading) {
@@ -580,14 +606,14 @@ export function UserManagementTab({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {getFilteredActiveEmployees().length === 0 ? (
+                      {activeUsersPaginated.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                             No active users found
                           </TableCell>
                         </TableRow>
                       ) : (
-                        getFilteredActiveEmployees().slice(0, 10).map((employee) => (
+                        activeUsersPaginated.map((employee) => (
                           <TableRow key={employee.id}>
                             <TableCell className="font-medium">{employee.name}</TableCell>
                             <TableCell>{employee.email}</TableCell>
@@ -631,6 +657,59 @@ export function UserManagementTab({
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* Pagination Controls for Active Users */}
+                {activeUsersTotal > itemsPerPage && (
+                  <div className="flex items-center justify-between mt-4 px-2">
+                    <div className="text-sm text-gray-600">
+                      Showing {activeUsersStartIndex + 1} to {Math.min(activeUsersEndIndex, activeUsersTotal)} of {activeUsersTotal} users
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActiveUsersPage(prev => Math.max(1, prev - 1))}
+                        disabled={activeUsersPage === 1}
+                        className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      >
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: activeUsersTotalPages }, (_, i) => i + 1).map((page) => {
+                          if (
+                            page === 1 ||
+                            page === activeUsersTotalPages ||
+                            (page >= activeUsersPage - 1 && page <= activeUsersPage + 1)
+                          ) {
+                            return (
+                              <Button
+                                key={page}
+                                variant={activeUsersPage === page ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setActiveUsersPage(page)}
+                                className="text-xs w-8 h-8 p-0 bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                              >
+                                {page}
+                              </Button>
+                            );
+                          } else if (page === activeUsersPage - 2 || page === activeUsersPage + 2) {
+                            return <span key={page} className="text-gray-400">...</span>;
+                          }
+                          return null;
+                        })}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setActiveUsersPage(prev => Math.min(activeUsersTotalPages, prev + 1))}
+                        disabled={activeUsersPage === activeUsersTotalPages}
+                        className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -722,14 +801,14 @@ export function UserManagementTab({
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-gray-200">
-                      {getFilteredNewAccounts().length === 0 ? (
+                      {newRegistrationsPaginated.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                             {userSearchTerm ? 'No new registrations match your search.' : 'No new registrations found.'}
                           </TableCell>
                         </TableRow>
                       ) : (
-                        getFilteredNewAccounts().map((account) => (
+                        newRegistrationsPaginated.map((account) => (
                           <TableRow key={account.id} className="hover:bg-gray-50">
                             <TableCell className="px-6 py-3 font-medium">{account.name}</TableCell>
                             <TableCell className="px-6 py-3">{account.email}</TableCell>
@@ -788,6 +867,59 @@ export function UserManagementTab({
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* Pagination Controls for New Registrations */}
+                {newRegistrationsTotal > itemsPerPage && (
+                  <div className="flex items-center justify-between mt-4 px-2">
+                    <div className="text-sm text-gray-600">
+                      Showing {newRegistrationsStartIndex + 1} to {Math.min(newRegistrationsEndIndex, newRegistrationsTotal)} of {newRegistrationsTotal} registrations
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setNewRegistrationsPage(prev => Math.max(1, prev - 1))}
+                        disabled={newRegistrationsPage === 1}
+                        className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      >
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: newRegistrationsTotalPages }, (_, i) => i + 1).map((page) => {
+                          if (
+                            page === 1 ||
+                            page === newRegistrationsTotalPages ||
+                            (page >= newRegistrationsPage - 1 && page <= newRegistrationsPage + 1)
+                          ) {
+                            return (
+                              <Button
+                                key={page}
+                                variant={newRegistrationsPage === page ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setNewRegistrationsPage(page)}
+                                className="text-xs w-8 h-8 p-0 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                              >
+                                {page}
+                              </Button>
+                            );
+                          } else if (page === newRegistrationsPage - 2 || page === newRegistrationsPage + 2) {
+                            return <span key={page} className="text-gray-400">...</span>;
+                          }
+                          return null;
+                        })}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setNewRegistrationsPage(prev => Math.min(newRegistrationsTotalPages, prev + 1))}
+                        disabled={newRegistrationsPage === newRegistrationsTotalPages}
+                        className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

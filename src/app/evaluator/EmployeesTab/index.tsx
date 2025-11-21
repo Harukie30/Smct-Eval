@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { X, Eye, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import SearchableDropdown from "@/components/ui/searchable-dropdown";
-import accountsData from '@/data/accounts.json';
-import departments from '@/data/departments.json';
+import { Combobox } from "@/components/ui/combobox";
 import { useEmployeeFiltering } from '@/hooks/useEmployeeFiltering';
+import accountsData from '@/data/accounts.json';
+import positionsData from '@/data/positions.json';
 
 interface Employee {
   id: number;
@@ -52,7 +52,9 @@ export function EmployeesTab({
 }: EmployeesTabProps) {
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
-  const [employeeSort, setEmployeeSort] = useState<{ key: keyof Employee; direction: 'asc' | 'desc' }>({ key: 'name', direction: 'asc' });
+  const [selectedPosition, setSelectedPosition] = useState<string>('');
+  const [employeesPage, setEmployeesPage] = useState(1);
+  const itemsPerPage = 8;
 
   const refreshKey = `employees-${employeeDataRefresh}`;
 
@@ -153,145 +155,141 @@ export function EmployeesTab({
   });
 
   const filtered: Employee[] = useMemo(() => {
-    return filteredEmployees.map((e: any) => {
-      const updatedEmployee = getUpdatedEmployeeData(e);
-      
-      return {
-        id: updatedEmployee.employeeId || updatedEmployee.id,
-        name: updatedEmployee.name,
-        email: updatedEmployee.email,
-        position: updatedEmployee.position,
-        department: updatedEmployee.department,
-        role: updatedEmployee.role,
-        hireDate: updatedEmployee.hireDate,
-        avatar: updatedEmployee.avatar,
-        branch: updatedEmployee.branch
-      };
-    });
-  }, [filteredEmployees]);
+    return filteredEmployees
+      .filter((e: any) => {
+        // Filter by position if selected
+        if (selectedPosition && e.position !== selectedPosition) {
+          return false;
+        }
+        return true;
+      })
+      .map((e: any) => {
+        const updatedEmployee = getUpdatedEmployeeData(e);
+        
+        return {
+          id: updatedEmployee.employeeId || updatedEmployee.id,
+          name: updatedEmployee.name,
+          email: updatedEmployee.email,
+          position: updatedEmployee.position,
+          department: updatedEmployee.department,
+          role: updatedEmployee.role,
+          hireDate: updatedEmployee.hireDate,
+          avatar: updatedEmployee.avatar,
+          branch: updatedEmployee.branch || 'N/A'
+        };
+      });
+  }, [filteredEmployees, selectedPosition, getUpdatedEmployeeData]);
 
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      const { key, direction } = employeeSort;
-      const av = a[key] ?? '';
-      const bv = b[key] ?? '';
-      const res = key === 'hireDate'
-        ? new Date(av as string).getTime() - new Date(bv as string).getTime()
-        : String(av).localeCompare(String(bv));
-      return direction === 'asc' ? res : -res;
-    });
-  }, [filtered, employeeSort]);
+  // Pagination calculations
+  const employeesTotal = filtered.length;
+  const employeesTotalPages = Math.ceil(employeesTotal / itemsPerPage);
+  const employeesStartIndex = (employeesPage - 1) * itemsPerPage;
+  const employeesEndIndex = employeesStartIndex + itemsPerPage;
+  const employeesPaginated = filtered.slice(employeesStartIndex, employeesEndIndex);
 
-  const toggleSort = (key: keyof Employee) => {
-    setEmployeeSort((prev) =>
-      prev.key === key ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' }
-    );
-  };
+  // Reset to page 1 when filters/search change
+  useEffect(() => {
+    setEmployeesPage(1);
+  }, [employeeSearch, selectedDepartment, selectedPosition]);
 
-  const sortIcon = (key: keyof Employee) => {
-    if (employeeSort.key !== key) return '↕';
-    return employeeSort.direction === 'asc' ? '↑' : '↓';
-  };
+  // Calculate new hires this month
+  const newHiresThisMonth = (() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    return filtered.filter((emp: any) => {
+      const hireDate = new Date(emp.hireDate);
+      return hireDate.getMonth() === currentMonth && hireDate.getFullYear() === currentYear;
+    }).length;
+  })();
 
   return (
     <Card key={refreshKey}>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Employees</CardTitle>
-            <CardDescription>Directory of employees (includes profile updates)</CardDescription>
+          <div className="flex items-center gap-3">
+            <div>
+              <CardTitle>Employee Directory</CardTitle>
+              <CardDescription>Search and manage employees</CardDescription>
+            </div>
+            {/* Badge-style employee counts */}
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="px-3 py-1 text-sm font-semibold bg-blue-50 text-blue-700 border-blue-200">
+                Total: {filtered.length}
+              </Badge>
+              <Badge variant="outline" className="px-3 py-1 text-sm font-semibold bg-green-50 text-green-700 border-green-200">
+                New Hires: {newHiresThisMonth}
+              </Badge>
+            </div>
           </div>
           <Button
-            variant="outline"
-            size="sm"
             onClick={onRefresh}
-            className="flex items-center bg-blue-500 text-white hover:bg-green-600 hover:text-white"
-            title="Refresh employee data (including profile updates)"
+            disabled={isEmployeesRefreshing}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+            title="Refresh employee data"
           >
-            <span>Refresh</span>
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
+            {isEmployeesRefreshing ? (
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Refreshing...</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <span>🔄</span>
+                <span>Refresh</span>
+              </div>
+            )}
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="p-0">
-        {/* Quick Stats Summary */}
-        <div className="px-6 py-4 border-b bg-gray-50">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{sorted.length}</div>
-              <div className="text-sm text-gray-600">Total Employees</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {sorted.filter(e => {
-                  const employeeEvaluations = filteredSubmissions.filter(sub => sub.employeeId === e.id);
-                  const latestEvaluation = employeeEvaluations.sort((a, b) => 
-                    new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-                  )[0];
-                  const hasRecentEvaluation = latestEvaluation && 
-                    (new Date().getTime() - new Date(latestEvaluation.submittedAt).getTime()) < (90 * 24 * 60 * 60 * 1000);
-                  return hasRecentEvaluation;
-                }).length}
-              </div>
-              <div className="text-sm text-gray-600">Up to Date</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">
-                {sorted.filter(e => {
-                  const employeeEvaluations = filteredSubmissions.filter(sub => sub.employeeId === e.id);
-                  const latestEvaluation = employeeEvaluations.sort((a, b) => 
-                    new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-                  )[0];
-                  const hasRecentEvaluation = latestEvaluation && 
-                    (new Date().getTime() - new Date(latestEvaluation.submittedAt).getTime()) < (90 * 24 * 60 * 60 * 1000);
-                  return !hasRecentEvaluation;
-                }).length}
-              </div>
-              <div className="text-sm text-gray-600">Need Review</div>
-            </div>
+      <CardContent>
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6 w-1/3">
+          <div className="relative flex-1">
+            <Input
+              placeholder="Search employees..."
+              value={employeeSearch}
+              onChange={(e) => setEmployeeSearch(e.target.value)}
+              className="flex-1 pr-10"
+            />
+            {employeeSearch && (
+              <button
+                onClick={() => setEmployeeSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-600"
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
-        </div>
-        <div className="px-6 py-4 space-y-4">
-          <div className="flex gap-4 w-1/2">
-            <div className="flex items-center gap-2 w-full">
-              {/* Search input with clear button inside */}
-              <div className="relative flex-1 w-1/2">
-                <Input
-                  placeholder="Search employees by name, email, position, department, role"
-                  value={employeeSearch}
-                  onChange={(e) => setEmployeeSearch(e.target.value)}
-                  className=" pr-10"
-                />
-                {employeeSearch && (
-                  <button
-                    onClick={() => setEmployeeSearch('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500 font hover:text-red-700"
-                    title="Clear search"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-
-              {/* Department dropdown */}
-              <SearchableDropdown
-                options={['All Departments', ...departments.map((dept) => dept.name)]}
-                value={selectedDepartment || 'All Departments'}
-                onValueChangeAction={(value) =>
-                  setSelectedDepartment(value === 'All Departments' ? '' : value)
-                }
-                placeholder="All Departments"
-                className="w-[200px]" 
-              />
-            </div>
-          </div>
+          <Combobox
+            options={[
+              { value: 'all', label: 'All Positions' },
+              ...positionsData.map((pos) => ({ value: pos, label: pos }))
+            ]}
+            value={selectedPosition || 'all'}
+            onValueChangeAction={(value) => {
+              const selectedValue = typeof value === 'string' ? value : String(value);
+              setSelectedPosition(selectedValue === 'all' ? '' : selectedValue);
+            }}
+            placeholder="All Positions"
+            searchPlaceholder="Search positions..."
+            emptyText="No positions found."
+            className="w-[180px]"
+          />
+          {(employeeSearch || selectedPosition) && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEmployeeSearch('');
+                setSelectedPosition('');
+              }}
+              className="px-4 py-2 text-sm"
+              title="Clear all filters"
+            >
+              Clear
+            </Button>
+          )}
         </div>
         {isEmployeesRefreshing ? (
           <div className="relative max-h-[500px] overflow-y-auto">
@@ -311,177 +309,161 @@ export function EmployeesTab({
             </div>
             
             {/* Table structure visible in background */}
-            <Table className="min-w-full">
-              <TableHeader className="sticky top-0 bg-white z-10 border-b">
-                <TableRow key="employees-header">
-                  <TableHead className="px-6 py-3">Employee</TableHead>
-                  <TableHead className="px-6 py-3">Position & Department</TableHead>
-                  <TableHead className="px-6 py-3">Role</TableHead>
-                  <TableHead className="px-6 py-3 text-center">Status</TableHead>
-                  <TableHead className="px-6 py-3 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Array.from({ length: 8 }).map((_, index) => (
-                  <TableRow key={`skeleton-employee-${index}`}>
-                    <TableCell className="px-6 py-3">
-                      <div className="flex items-center space-x-3">
-                        <Skeleton className="h-10 w-10 rounded-full" />
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-24" />
-                          <Skeleton className="h-3 w-32" />
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-3">
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-5 w-16 rounded-full" />
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-3">
-                      <Skeleton className="h-6 w-16 rounded-full" />
-                    </TableCell>
-                    <TableCell className="px-6 py-3 text-center">
-                      <Skeleton className="h-6 w-16 rounded-full mx-auto" />
-                    </TableCell>
-                    <TableCell className="px-6 py-3 flex justify-end">
-                      <div className="flex gap-2">
-                        <Skeleton className="h-8 w-16" />
-                        <Skeleton className="h-8 w-20" />
-                      </div>
-                    </TableCell>
+            <div className="relative max-h-[450px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              <Table className="w-full">
+                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                  <TableRow>
+                    <TableHead className="w-auto">Name</TableHead>
+                    <TableHead className="w-auto">Email</TableHead>
+                    <TableHead className="w-auto">Position</TableHead>
+                    <TableHead className="w-auto">Branch</TableHead>
+                    <TableHead className="w-auto">Hire Date</TableHead>
+                    <TableHead className="w-auto text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {/* Skeleton loading rows */}
+                  {Array.from({ length: 8 }).map((_, index) => (
+                    <TableRow key={`skeleton-employee-${index}`}>
+                      <TableCell className="px-6 py-3">
+                        <div className="space-y-1">
+                          <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-4 w-40 bg-gray-200 rounded animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-4 w-28 bg-gray-200 rounded animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3 text-right">
+                        <div className="flex justify-end gap-2">
+                          <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         ) : (
-          <div className="max-h-[500px] overflow-y-auto">
-            <Table className="min-w-full">
-              <TableHeader className="sticky top-0 bg-white z-10 border-b">
-                <TableRow key="employees-header">
-                  <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('name')}>
-                    Employee <span className="ml-1 text-xs text-gray-500">{sortIcon('name')}</span>
-                  </TableHead>
-                  <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('position')}>
-                    Position & Department <span className="ml-1 text-xs text-gray-500">{sortIcon('position')}</span>
-                  </TableHead>
-                  <TableHead className="px-6 py-3 cursor-pointer select-none" onClick={() => toggleSort('role')}>
-                    Role <span className="ml-1 text-xs text-gray-500">{sortIcon('role')}</span>
-                  </TableHead>
-                  <TableHead className="px-6 py-3 text-center">Status</TableHead>
-                  <TableHead className="px-6 py-3 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sorted.map((e) => {
-                  // Get employee's latest evaluation to determine status
-                  const employeeEvaluations = filteredSubmissions.filter(sub => sub.employeeId === e.id);
-                  const latestEvaluation = employeeEvaluations.sort((a, b) => 
-                    new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-                  )[0];
-                  
-                  // Determine status
-                  const now = new Date();
-                  const hasRecentEvaluation = latestEvaluation && 
-                    (now.getTime() - new Date(latestEvaluation.submittedAt).getTime()) < (90 * 24 * 60 * 60 * 1000); // 90 days
-                  const status = hasRecentEvaluation ? 'Up to Date' : 'Needs Review';
-                  
-                  return (
-                  <TableRow key={e.id} className="hover:bg-gray-50">
-                    <TableCell className="px-6 py-3">
-                      <div className="flex items-center space-x-3">
-                        <div className="relative h-10 w-10 rounded-full overflow-hidden flex items-center justify-center">
-                          {e.avatar ? (
-                            <img 
-                              src={e.avatar} 
-                              alt={e.name} 
-                              className="h-10 w-10 rounded-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
-                                if (nextElement) {
-                                  nextElement.style.display = 'flex';
-                                }
-                              }}
-                            />
-                          ) : null}
-                          <div 
-                            className={`h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm ${e.avatar ? 'hidden' : 'flex'}`}
-                          >
-                            {e.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                          </div>
-                          {/* Auto-update indicator */}
-                          {hasAvatarUpdate(e.id) && (
-                            <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                              <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900 flex items-center gap-2">
-                            {e.name}
-                            {hasAvatarUpdate(e.id) && (
-                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                                Updated
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-500">{e.email}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-3">
-                      <div>
-                        <div className="font-medium text-gray-900">{e.position}</div>
-                        <Badge className="bg-blue-100 text-blue-800 text-xs">{e.department}</Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-3">
-                      <Badge className={
-                        e.role === 'admin' ? 'bg-red-100 text-red-800' :
-                        e.role === 'hr' ? 'bg-green-100 text-green-800' :
-                        e.role === 'evaluator' ? 'bg-purple-100 text-purple-800' :
-                        'bg-gray-100 text-gray-800'
-                      }>
-                        {e.role.charAt(0).toUpperCase() + e.role.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="px-6 py-3 text-center">
-                      <Badge className={
-                        status === 'Up to Date' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
-                      }>
-                        {status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="px-6 py-3 text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700"
-                          onClick={() => onViewEmployee(e)}
-                          title="View employee details"
-                        >
-                          <Eye className="h-4 w-4 text-white" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700"
-                          onClick={() => onEvaluateEmployee(e)}
-                          title="Evaluate employee performance"
-                        >
-                          <FileText className="h-4 w-4 text-white" />
-                        </Button>
-                      </div>
-                    </TableCell>
+          <>
+            <div className="relative max-h-[450px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              <Table className="w-full">
+                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                  <TableRow>
+                    <TableHead className="w-auto">Name</TableHead>
+                    <TableHead className="w-auto">Email</TableHead>
+                    <TableHead className="w-auto">Position</TableHead>
+                    <TableHead className="w-auto">Branch</TableHead>
+                    <TableHead className="w-auto">Hire Date</TableHead>
+                    <TableHead className="w-auto text-right">Actions</TableHead>
                   </TableRow>
-                  );
+                </TableHeader>
+                <TableBody>
+                  {employeesPaginated.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-12 text-gray-500">
+                        No employees found matching your criteria
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    employeesPaginated.map((employee: any) => (
+                      <TableRow key={employee.id}>
+                        <TableCell className="font-medium">{employee.name}</TableCell>
+                        <TableCell className="text-sm text-gray-600">{employee.email}</TableCell>
+                        <TableCell>{employee.position}</TableCell>
+                        <TableCell>{employee.branch}</TableCell>
+                        <TableCell>
+                          {new Date(employee.hireDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700"
+                              onClick={() => onViewEmployee(employee)}
+                              title="View employee details"
+                            >
+                              <Eye className="h-4 w-4 text-white" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700"
+                              onClick={() => onEvaluateEmployee(employee)}
+                              title="Evaluate employee performance"
+                            >
+                              <FileText className="h-4 w-4 text-white" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
+
+        {/* Pagination Controls - Outside Card, bottom right aligned */}
+        {employeesTotal > itemsPerPage && (
+          <div className="flex items-center justify-end mt-4 px-2">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEmployeesPage(prev => Math.max(1, prev - 1))}
+                disabled={employeesPage === 1}
+                className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+              >
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: employeesTotalPages }, (_, i) => i + 1).map((page) => {
+                  if (
+                    page === 1 ||
+                    page === employeesTotalPages ||
+                    (page >= employeesPage - 1 && page <= employeesPage + 1)
+                  ) {
+                    return (
+                      <Button
+                        key={page}
+                        variant={employeesPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setEmployeesPage(page)}
+                        className="text-xs w-8 h-8 p-0 bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                      >
+                        {page}
+                      </Button>
+                    );
+                  } else if (page === employeesPage - 2 || page === employeesPage + 2) {
+                    return <span key={page} className="text-gray-400">...</span>;
+                  }
+                  return null;
                 })}
-              </TableBody>
-            </Table>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEmployeesPage(prev => Math.min(employeesTotalPages, prev + 1))}
+                disabled={employeesPage === employeesTotalPages}
+                className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+              >
+                Next
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>

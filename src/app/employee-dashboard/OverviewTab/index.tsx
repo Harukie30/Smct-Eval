@@ -25,6 +25,8 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
   const [loading, setLoading] = useState(true);
   const [isRefreshingOverview, setIsRefreshingOverview] = useState(false);
   const [overviewSearchTerm, setOverviewSearchTerm] = useState('');
+  const [overviewPage, setOverviewPage] = useState(1);
+  const itemsPerPage = 4;
   const [approvedEvaluations, setApprovedEvaluations] = useState<Set<string>>(new Set());
   const isFirstMount = useRef(true);
 
@@ -271,6 +273,19 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
     });
   }, [submissions, overviewSearchTerm, approvedEvaluations]);
 
+  // Pagination calculations
+  const overviewTotalPages = Math.ceil(filteredSubmissions.length / itemsPerPage);
+  const overviewStartIndex = (overviewPage - 1) * itemsPerPage;
+  const overviewEndIndex = overviewStartIndex + itemsPerPage;
+  const overviewPaginated = filteredSubmissions
+    .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+    .slice(overviewStartIndex, overviewEndIndex);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setOverviewPage(1);
+  }, [overviewSearchTerm]);
+
   return (
     <>
       <Card>
@@ -457,9 +472,7 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredSubmissions
-                      .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-                      .map((submission) => {
+                    {overviewPaginated.map((submission) => {
                         const highlight = getSubmissionHighlight(
                           submission.submittedAt,
                           submissions,
@@ -535,6 +548,63 @@ export function OverviewTab({ onViewEvaluation, isActive = false }: OverviewTabP
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Pagination Controls - Show when more than 4 items */}
+              {filteredSubmissions.length > 4 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-0 mt-3 md:mt-4 px-4">
+                  <div className="text-xs md:text-sm text-gray-600 order-2 sm:order-1">
+                    Showing {overviewStartIndex + 1} to {Math.min(overviewEndIndex, filteredSubmissions.length)} of {filteredSubmissions.length} records
+                  </div>
+                  <div className="flex items-center gap-1.5 md:gap-2 order-1 sm:order-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setOverviewPage(prev => Math.max(1, prev - 1))}
+                      disabled={overviewPage === 1}
+                      className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                    >
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-0.5 md:gap-1">
+                      {Array.from({ length: overviewTotalPages }, (_, i) => i + 1).map((page) => {
+                        if (
+                          page === 1 ||
+                          page === overviewTotalPages ||
+                          (page >= overviewPage - 1 && page <= overviewPage + 1)
+                        ) {
+                          return (
+                            <Button
+                              key={page}
+                              variant={overviewPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setOverviewPage(page)}
+                              className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
+                                overviewPage === page
+                                  ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                                  : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                              }`}
+                            >
+                              {page}
+                            </Button>
+                          );
+                        } else if (page === overviewPage - 2 || page === overviewPage + 2) {
+                          return <span key={page} className="text-gray-400 text-xs md:text-sm">...</span>;
+                        }
+                        return null;
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setOverviewPage(prev => Math.min(overviewTotalPages, prev + 1))}
+                      disabled={overviewPage === overviewTotalPages}
+                      className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </CardContent>

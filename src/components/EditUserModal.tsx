@@ -6,6 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
 import LoadingAnimation from '@/components/LoadingAnimation';
 import { useToast } from '@/hooks/useToast';
+import clientDataService from '@/lib/clientDataService';
+import { useUser } from '@/contexts/UserContext';
+import { LazyGif } from '@/components/LazyGif';
 
 interface User {
   id: number;
@@ -21,6 +24,7 @@ interface User {
   hireDate?: string;
   isActive?: boolean;
   signature?: string;
+  employeeId?: number;
 }
 
 interface EditUserModalProps {
@@ -57,13 +61,234 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     contact: '',
     hireDate: '',
     isActive: true,
-    signature: ''
+    signature: '',
+    employeeId: undefined
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const { success } = useToast();
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
+  const [isEmployeeIdEditable, setIsEmployeeIdEditable] = useState(false);
+  const [employeeIdInput, setEmployeeIdInput] = useState('');
+  const { success, error: errorToast } = useToast();
+  const { user: currentUser } = useUser();
+  
+  const isAdmin = currentUser?.role === 'admin';
+
+  // Lockout management functions
+  const getLockoutKey = () => {
+    return `admin_password_lockout_${currentUser?.id || 'unknown'}`;
+  };
+
+  const getAttemptsKey = () => {
+    return `admin_password_attempts_${currentUser?.id || 'unknown'}`;
+  };
+
+  const checkLockoutStatus = (): { isLockedOut: boolean; lockoutUntil?: Date; remainingAttempts?: number } => {
+    if (!currentUser?.id) return { isLockedOut: false };
+    
+    const lockoutKey = getLockoutKey();
+    const attemptsKey = getAttemptsKey();
+    
+    if (typeof window === 'undefined') return { isLockedOut: false };
+    
+    // Check if locked out
+    const lockoutData = localStorage.getItem(lockoutKey);
+    if (lockoutData) {
+      const { lockoutUntil } = JSON.parse(lockoutData);
+      const lockoutDate = new Date(lockoutUntil);
+      const now = new Date();
+      
+      if (now < lockoutDate) {
+        // Still locked out
+        const hoursRemaining = Math.ceil((lockoutDate.getTime() - now.getTime()) / (1000 * 60 * 60));
+        return { isLockedOut: true, lockoutUntil: lockoutDate };
+      } else {
+        // Lockout expired, clear it
+        localStorage.removeItem(lockoutKey);
+        localStorage.removeItem(attemptsKey);
+      }
+    }
+    
+    // Get current attempts
+    const attemptsData = localStorage.getItem(attemptsKey);
+    const attempts = attemptsData ? JSON.parse(attemptsData).count : 0;
+    
+    return { isLockedOut: false, remainingAttempts: 3 - attempts };
+  };
+
+  const incrementFailedAttempts = () => {
+    if (!currentUser?.id || typeof window === 'undefined') return;
+    
+    const attemptsKey = getAttemptsKey();
+    const attemptsData = localStorage.getItem(attemptsKey);
+    const attempts = attemptsData ? JSON.parse(attemptsData).count : 0;
+    const newAttempts = attempts + 1;
+    
+    if (newAttempts >= 3) {
+      // Lock out for 1 day (24 hours)
+      const lockoutUntil = new Date();
+      lockoutUntil.setHours(lockoutUntil.getHours() + 24);
+      
+      const lockoutKey = getLockoutKey();
+      localStorage.setItem(lockoutKey, JSON.stringify({ lockoutUntil: lockoutUntil.toISOString() }));
+      localStorage.removeItem(attemptsKey);
+    } else {
+      localStorage.setItem(attemptsKey, JSON.stringify({ count: newAttempts }));
+    }
+  };
+
+  const resetFailedAttempts = () => {
+    if (!currentUser?.id || typeof window === 'undefined') return;
+    
+    const attemptsKey = getAttemptsKey();
+    localStorage.removeItem(attemptsKey);
+  };
+
+  // Format employee ID as 10-digit number with dash (e.g., 1234-567890)
+  const formatEmployeeId = (employeeId: number | undefined): string => {
+    if (!employeeId) return '';
+    // Convert to string and pad to 10 digits if needed
+    const idString = employeeId.toString().padStart(10, '0');
+    // Format as 1234-567890 (4 digits, dash, 6 digits)
+    if (idString.length >= 10) {
+      return `${idString.slice(0, 4)}-${idString.slice(4, 10)}`;
+    }
+    return idString;
+  };
+
+  // Parse formatted employee ID back to number (e.g., "1234-567890" -> 1234567890)
+  const parseEmployeeId = (formattedId: string): number | undefined => {
+    if (!formattedId) return undefined;
+    // Remove dashes and convert to number
+    const numericString = formattedId.replace(/-/g, '');
+    const parsed = parseInt(numericString, 10);
+    return isNaN(parsed) ? undefined : parsed;
+  };
+
+  // Verify admin password
+  const verifyAdminPassword = async (): Promise<boolean> => {
+    if (!currentUser || !isAdmin) return false;
+    
+    try {
+      const accounts = await clientDataService.getAccounts();
+      const adminAccount = accounts.find((acc: any) => 
+        acc.id === currentUser.id && acc.role === 'admin'
+      );
+      
+      if (!adminAccount) {
+        return false;
+      }
+      
+      return adminAccount.password === adminPassword;
+    } catch (err) {
+      console.error('Error verifying admin password:', err);
+      return false;
+    }
+  };
+
+  // Handle employee ID field click/focus (for admins)
+  const handleEmployeeIdFocus = () => {
+    if (isAdmin && !isEmployeeIdEditable) {
+      // Check lockout status before opening modal
+      const lockoutStatus = checkLockoutStatus();
+      if (lockoutStatus.isLockedOut && lockoutStatus.lockoutUntil) {
+        const hoursRemaining = Math.ceil((lockoutStatus.lockoutUntil.getTime() - new Date().getTime()) / (1000 * 60 * 60));
+        errorToast(`Account locked. Try again in ${hoursRemaining} hour(s).`);
+        return;
+      }
+      
+      setIsPasswordModalOpen(true);
+      setAdminPassword('');
+      setPasswordError('');
+    }
+  };
+
+  // Handle password verification
+  const handleVerifyPassword = async () => {
+    if (!adminPassword.trim()) {
+      setPasswordError('Password is required');
+      return;
+    }
+
+    // Check lockout status first
+    const lockoutStatus = checkLockoutStatus();
+    if (lockoutStatus.isLockedOut && lockoutStatus.lockoutUntil) {
+      const hoursRemaining = Math.ceil((lockoutStatus.lockoutUntil.getTime() - new Date().getTime()) / (1000 * 60 * 60));
+      setPasswordError(`Account locked due to multiple failed attempts. Please try again in ${hoursRemaining} hour(s).`);
+      errorToast('Account locked');
+      return;
+    }
+
+    setIsVerifyingPassword(true);
+    setPasswordError('');
+
+    try {
+      const isValid = await verifyAdminPassword();
+      
+      if (isValid) {
+        // Reset failed attempts on successful verification
+        resetFailedAttempts();
+        setIsEmployeeIdEditable(true);
+        setIsPasswordModalOpen(false);
+        setAdminPassword('');
+        setEmployeeIdInput(formatEmployeeId(formData.employeeId));
+        success('Admin password verified. You can now edit the Employee ID.');
+      } else {
+        // Increment failed attempts
+        incrementFailedAttempts();
+        const lockoutStatus = checkLockoutStatus();
+        
+        if (lockoutStatus.isLockedOut) {
+          const hoursRemaining = 24;
+          setPasswordError(`Account locked for 24 hours due to multiple failed attempts. Please try again later.`);
+          errorToast('Account locked for 24 hours');
+        } else {
+          const remaining = lockoutStatus.remainingAttempts || 0;
+          setPasswordError(`Invalid admin password. ${remaining} attempt(s) remaining before lockout.`);
+          errorToast(`Invalid password. ${remaining} attempt(s) remaining`);
+        }
+      }
+    } catch (err) {
+      setPasswordError('Error verifying password. Please try again.');
+      errorToast('Verification failed');
+    } finally {
+      setIsVerifyingPassword(false);
+    }
+  };
+
+  // Handle employee ID input change
+  const handleEmployeeIdChange = (value: string) => {
+    // Remove all non-numeric characters except dash
+    let cleaned = value.replace(/[^\d-]/g, '');
+    
+    // Remove all dashes first
+    cleaned = cleaned.replace(/-/g, '');
+    
+    // Limit to 10 digits
+    cleaned = cleaned.slice(0, 10);
+    
+    // Add dash after first 4 digits
+    if (cleaned.length > 4) {
+      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+    }
+    
+    setEmployeeIdInput(cleaned);
+  };
+
+  // Update formData when employee ID is changed (after verification)
+  useEffect(() => {
+    if (isEmployeeIdEditable && employeeIdInput) {
+      const parsedId = parseEmployeeId(employeeIdInput);
+      if (parsedId !== undefined) {
+        setFormData(prev => ({ ...prev, employeeId: parsedId }));
+      }
+    }
+  }, [employeeIdInput, isEmployeeIdEditable]);
 
   // Helper function to check if branch is HO, Head Office, or none
   const isBranchHOOrNone = (branch: string): boolean => {
@@ -96,6 +321,25 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       // If position contains "manager", role must be evaluator
       const userRole = isManagerPosition(positionId) ? 'evaluator' : (user.role || '');
       
+      // Fetch employeeId from account data if not already in user object
+      const fetchEmployeeId = async () => {
+        if (!user.employeeId) {
+          try {
+            const accounts = await clientDataService.getAccounts();
+            const account = accounts.find((acc: any) => acc.id === user.id || acc.employeeId === user.id);
+            if (account?.employeeId) {
+              setFormData(prev => ({
+                ...prev,
+                employeeId: account.employeeId
+              }));
+              return;
+            }
+          } catch (error) {
+            console.error('Error fetching employeeId:', error);
+          }
+        }
+      };
+
       setFormData({
         id: user.id,
         name: user.name || '',
@@ -110,9 +354,21 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         contact: user.contact || '',
         hireDate: user.hireDate || '',
         isActive: user.isActive !== undefined ? user.isActive : true,
-        signature: user.signature || ''
+        signature: user.signature || '',
+        employeeId: user.employeeId
       });
       setErrors({});
+      
+      // Reset employee ID edit state when user changes
+      setIsEmployeeIdEditable(false);
+      setEmployeeIdInput('');
+      
+      // Fetch employeeId if not present
+      if (!user.employeeId) {
+        fetchEmployeeId();
+      } else {
+        setEmployeeIdInput(formatEmployeeId(user.employeeId));
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
@@ -157,6 +413,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
     if (formData.password && formData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters long';
+    }
+
+    // Validate Employee ID format if it was edited (should be 10 digits)
+    if (formData.employeeId) {
+      const employeeIdString = formData.employeeId.toString();
+      if (employeeIdString.length !== 10) {
+        newErrors.employeeId = 'Employee ID must be exactly 10 digits';
+      }
     }
 
     setErrors(newErrors);
@@ -228,6 +492,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
   const handleCancel = () => {
     setErrors({});
+    setIsEmployeeIdEditable(false);
+    setEmployeeIdInput('');
+    setAdminPassword('');
+    setPasswordError('');
     onClose();
   };
 
@@ -245,6 +513,44 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+          {/* Employee ID - Editable for Admins with Password Verification */}
+          {formData.employeeId && (
+            <div className="space-y-2">
+              <Label htmlFor="employeeId">Employee ID</Label>
+              {isAdmin && isEmployeeIdEditable ? (
+                <Input
+                  id="employeeId"
+                  value={employeeIdInput}
+                  onChange={(e) => handleEmployeeIdChange(e.target.value)}
+                  placeholder="1234-567890"
+                  maxLength={11}
+                  className="bg-white"
+                />
+              ) : (
+                <Input
+                  id="employeeId"
+                  value={formatEmployeeId(formData.employeeId)}
+                  disabled={!isAdmin}
+                  readOnly={!isAdmin || !isEmployeeIdEditable}
+                  onFocus={handleEmployeeIdFocus}
+                  className={isAdmin ? "bg-gray-100 cursor-pointer hover:bg-gray-200" : "bg-gray-100 cursor-not-allowed"}
+                  title={isAdmin ? "Click to edit (requires admin password)" : "Employee ID assigned during registration"}
+                />
+              )}
+              <p className="text-xs text-gray-500">
+                {isAdmin 
+                  ? isEmployeeIdEditable 
+                    ? "Editing enabled. Enter 10-digit Employee ID (format: 1234-567890)"
+                    : "Click to edit (requires admin password verification)"
+                  : "Employee ID assigned during registration"
+                }
+              </p>
+              {errors.employeeId && (
+                <p className="text-sm text-red-500">{errors.employeeId}</p>
+              )}
+            </div>
+          )}
+
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="name">Full Name *</Label>
@@ -477,6 +783,136 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             )}
           </Button>
         </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Password Verification Modal */}
+      <Dialog open={isPasswordModalOpen} onOpenChangeAction={(open) => {
+        if (!open) {
+          setIsPasswordModalOpen(false);
+          setAdminPassword('');
+          setPasswordError('');
+        }
+      }}>
+        <DialogContent className="max-w-lg w-full mx-4 p-6">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-xl font-semibold">Admin Password Verification</DialogTitle>
+            <DialogDescription className="text-gray-600 pt-2">
+              Please enter your admin password to edit the Employee ID.
+            </DialogDescription>
+          </DialogHeader>
+          {(() => {
+            const lockoutStatus = checkLockoutStatus();
+            if (lockoutStatus.isLockedOut && lockoutStatus.lockoutUntil) {
+              const hoursRemaining = Math.ceil((lockoutStatus.lockoutUntil.getTime() - new Date().getTime()) / (1000 * 60 * 60));
+              return (
+                <div className="space-y-6 py-4">
+                  {/* Lockout GIF */}
+                  <div className="flex justify-center">
+                    <LazyGif
+                      src="/sec.gif"
+                      alt="Account locked animation"
+                      className="w-40 h-40 object-contain"
+                      containerClassName="flex justify-center"
+                      shouldLoad={isPasswordModalOpen}
+                    />
+                  </div>
+                  
+                  {/* Lockout Message */}
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-medium text-red-800">Account Locked</h3>
+                        <p className="text-sm text-red-700 mt-1">
+                          Your account has been temporarily locked due to multiple failed password attempts.
+                          this is for the security of the user. if you are not the admin, please log out immediately.
+                        </p>
+                        <p className="text-sm text-red-700 mt-2 font-semibold">
+                          Please try again in {hoursRemaining} hour(s).
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div className="space-y-6 py-4">
+                <div className="space-y-3">
+                  <Label htmlFor="adminPassword" className="text-sm font-medium">
+                    Admin Password
+                  </Label>
+                  <Input
+                    id="adminPassword"
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => {
+                      setAdminPassword(e.target.value);
+                      setPasswordError('');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !isVerifyingPassword) {
+                        handleVerifyPassword();
+                      }
+                    }}
+                    placeholder="Enter admin password"
+                    className={`w-full h-11 px-4 ${passwordError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} bg-white`}
+                    disabled={isVerifyingPassword}
+                    autoFocus
+                  />
+                  {passwordError && (
+                    <p className="text-sm text-red-500 mt-1">{passwordError}</p>
+                  )}
+                  {(() => {
+                    const status = checkLockoutStatus();
+                    if (!status.isLockedOut && status.remainingAttempts !== undefined && status.remainingAttempts < 3) {
+                      return (
+                        <p className="text-xs text-amber-600 mt-1">
+                          ⚠️ {status.remainingAttempts} attempt(s) remaining before 24-hour lockout
+                        </p>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter className="flex justify-end space-x-3 pt-4 mt-4 border-t border-gray-200">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsPasswordModalOpen(false);
+                setAdminPassword('');
+                setPasswordError('');
+              }}
+              disabled={isVerifyingPassword}
+              className="px-6 min-w-[100px]"
+            >
+              {checkLockoutStatus().isLockedOut ? 'Close' : 'Cancel'}
+            </Button>
+            {!checkLockoutStatus().isLockedOut && (
+              <Button
+                onClick={handleVerifyPassword}
+                disabled={isVerifyingPassword || !adminPassword.trim()}
+                className="bg-blue-600 hover:bg-blue-700 px-6 min-w-[100px]"
+              >
+                {isVerifyingPassword ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <LoadingAnimation size="sm" variant="spinner" color="white" />
+                    <span>Verifying...</span>
+                  </div>
+                ) : (
+                  'Verify'
+                )}
+              </Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
