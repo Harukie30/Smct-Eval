@@ -65,6 +65,8 @@ export function OverviewTab() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [overviewPage, setOverviewPage] = useState(1);
+  const itemsPerPage = 8;
 
   // Shared data loading function
   const loadData = async () => {
@@ -308,6 +310,18 @@ export function OverviewTab() {
     });
   }, [evaluatedReviews, searchTerm]);
 
+  // Pagination calculations
+  const overviewTotal = filteredReviews.length;
+  const overviewTotalPages = Math.ceil(overviewTotal / itemsPerPage);
+  const overviewStartIndex = (overviewPage - 1) * itemsPerPage;
+  const overviewEndIndex = overviewStartIndex + itemsPerPage;
+  const overviewPaginated = filteredReviews.slice(overviewStartIndex, overviewEndIndex);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setOverviewPage(1);
+  }, [searchTerm]);
+
   if (!systemMetrics || !dashboardStats) {
     return <div>No data available</div>;
   }
@@ -548,7 +562,7 @@ export function OverviewTab() {
                       </TableCell>
                     </TableRow>
                   ))
-                ) : filteredReviews.length === 0 ? (
+                ) : overviewPaginated.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-12">
                       <div className="text-gray-500">
@@ -567,7 +581,7 @@ export function OverviewTab() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredReviews.map((review) => {
+                  overviewPaginated.map((review) => {
                     const submittedDate = new Date(review.evaluationDate);
                     const now = new Date();
                     const hoursDiff = (now.getTime() - submittedDate.getTime()) / (1000 * 60 * 60);
@@ -659,6 +673,63 @@ export function OverviewTab() {
             </Table>
           </div>
         </div>
+
+        {/* Pagination Controls */}
+        {overviewTotal > itemsPerPage && (
+          <div className="flex items-center justify-between mt-4 px-2">
+            <div className="text-sm text-gray-600">
+              Showing {overviewStartIndex + 1} to {Math.min(overviewEndIndex, overviewTotal)} of {overviewTotal} records
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setOverviewPage(prev => Math.max(1, prev - 1))}
+                disabled={overviewPage === 1}
+                className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+              >
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: overviewTotalPages }, (_, i) => i + 1).map((page) => {
+                  if (
+                    page === 1 ||
+                    page === overviewTotalPages ||
+                    (page >= overviewPage - 1 && page <= overviewPage + 1)
+                  ) {
+                    return (
+                      <Button
+                        key={page}
+                        variant={overviewPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setOverviewPage(page)}
+                        className={`text-xs w-8 h-8 p-0 ${
+                          overviewPage === page
+                            ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                            : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                        }`}
+                      >
+                        {page}
+                      </Button>
+                    );
+                  } else if (page === overviewPage - 2 || page === overviewPage + 2) {
+                    return <span key={page} className="text-gray-400">...</span>;
+                  }
+                  return null;
+                })}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setOverviewPage(prev => Math.min(overviewTotalPages, prev + 1))}
+                disabled={overviewPage === overviewTotalPages}
+                className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* View Results Modal */}

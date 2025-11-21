@@ -52,6 +52,8 @@ export function BranchHeadsTab({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [branchHeadToDelete, setBranchHeadToDelete] = useState<Employee | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [branchHeadsPage, setBranchHeadsPage] = useState(1);
+  const itemsPerPage = 8;
   
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -81,6 +83,18 @@ export function BranchHeadsTab({
       return nameMatch || branchMatch;
     });
   }, [branchHeads, searchTerm]);
+
+  // Pagination calculations
+  const branchHeadsTotal = filteredBranchHeads.length;
+  const branchHeadsTotalPages = Math.ceil(branchHeadsTotal / itemsPerPage);
+  const branchHeadsStartIndex = (branchHeadsPage - 1) * itemsPerPage;
+  const branchHeadsEndIndex = branchHeadsStartIndex + itemsPerPage;
+  const branchHeadsPaginated = filteredBranchHeads.slice(branchHeadsStartIndex, branchHeadsEndIndex);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setBranchHeadsPage(1);
+  }, [searchTerm]);
 
 
   // Load branches data
@@ -275,14 +289,14 @@ export function BranchHeadsTab({
                       </TableCell>
                     </TableRow>
                   ))
-                ) : filteredBranchHeads.length === 0 ? (
+                ) : branchHeadsPaginated.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center py-8 text-gray-500">
                       {searchTerm ? `No branch heads found matching "${searchTerm}"` : 'No branch heads found'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredBranchHeads.map((head) => {
+                  branchHeadsPaginated.map((head) => {
                     // Parse branches from comma-separated string
                     const branchList = head.branch ? head.branch.split(', ').filter(b => b.trim()) : [];
                     
@@ -348,6 +362,63 @@ export function BranchHeadsTab({
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination Controls */}
+          {branchHeadsTotal > itemsPerPage && (
+            <div className="flex items-center justify-between mt-4 px-2">
+              <div className="text-sm text-gray-600">
+                Showing {branchHeadsStartIndex + 1} to {Math.min(branchHeadsEndIndex, branchHeadsTotal)} of {branchHeadsTotal} branch heads
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBranchHeadsPage(prev => Math.max(1, prev - 1))}
+                  disabled={branchHeadsPage === 1}
+                  className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: branchHeadsTotalPages }, (_, i) => i + 1).map((page) => {
+                    if (
+                      page === 1 ||
+                      page === branchHeadsTotalPages ||
+                      (page >= branchHeadsPage - 1 && page <= branchHeadsPage + 1)
+                    ) {
+                      return (
+                        <Button
+                          key={page}
+                          variant={branchHeadsPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setBranchHeadsPage(page)}
+                          className={`text-xs w-8 h-8 p-0 ${
+                            branchHeadsPage === page
+                              ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                              : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          }`}
+                        >
+                          {page}
+                        </Button>
+                      );
+                    } else if (page === branchHeadsPage - 2 || page === branchHeadsPage + 2) {
+                      return <span key={page} className="text-gray-400">...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setBranchHeadsPage(prev => Math.min(branchHeadsTotalPages, prev + 1))}
+                  disabled={branchHeadsPage === branchHeadsTotalPages}
+                  className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

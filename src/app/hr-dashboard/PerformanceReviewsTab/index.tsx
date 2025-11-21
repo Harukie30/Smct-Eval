@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,9 @@ export function PerformanceReviewsTab({
   onViewSubmission,
   isActive = false
 }: PerformanceReviewsTabProps) {
+  const [performancePage, setPerformancePage] = useState(1);
+  const itemsPerPage = 8;
+
   return (
     <div className="relative h-[calc(100vh-200px)] overflow-y-auto">
       {reviewsRefreshing || loading ? (
@@ -463,20 +467,28 @@ export function PerformanceReviewsTab({
                 const filteredReviews = recentSubmissions
                   .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
                 
+                // Pagination calculations
+                const performanceTotal = filteredReviews.length;
+                const performanceTotalPages = Math.ceil(performanceTotal / itemsPerPage);
+                const performanceStartIndex = (performancePage - 1) * itemsPerPage;
+                const performanceEndIndex = performanceStartIndex + itemsPerPage;
+                const performancePaginated = filteredReviews.slice(performanceStartIndex, performanceEndIndex);
+                
                 return filteredReviews.length > 0 ? (
-                  <div className="max-h-[500px] overflow-y-auto overflow-x-hidden rounded-lg border mx-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                    <Table>
-                      <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
-                        <TableRow>
-                          <TableHead className="px-6 py-4 text-left">Employee</TableHead>
-                          <TableHead className="px-6 py-4 text-left pr-19">Rating</TableHead>
-                          <TableHead className="px-6 py-4 text-left">Date</TableHead>
-                          <TableHead className="px-6 py-4 text-left">Quarter</TableHead>
-                          <TableHead className="px-6 py-4 text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredReviews.map((submission) => {
+                  <>
+                    <div className="max-h-[500px] overflow-y-auto overflow-x-hidden rounded-lg border mx-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                      <Table>
+                        <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                          <TableRow>
+                            <TableHead className="px-6 py-4 text-left">Employee</TableHead>
+                            <TableHead className="px-6 py-4 text-left pr-19">Rating</TableHead>
+                            <TableHead className="px-6 py-4 text-left">Date</TableHead>
+                            <TableHead className="px-6 py-4 text-left">Quarter</TableHead>
+                            <TableHead className="px-6 py-4 text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {performancePaginated.map((submission) => {
                           const highlight = getSubmissionHighlight(submission.submittedAt, submission.id, submission.approvalStatus);
                           const rating = submission.evaluationData ? calculateOverallRating(submission.evaluationData) : submission.rating || 0;
                           const isLowPerformance = rating < 3.0;
@@ -558,10 +570,68 @@ export function PerformanceReviewsTab({
                               </TableCell>
                             </TableRow>
                           );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {performanceTotal > itemsPerPage && (
+                      <div className="flex items-center justify-between mt-4 mx-4 px-2">
+                        <div className="text-sm text-gray-600">
+                          Showing {performanceStartIndex + 1} to {Math.min(performanceEndIndex, performanceTotal)} of {performanceTotal} reviews
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPerformancePage(prev => Math.max(1, prev - 1))}
+                            disabled={performancePage === 1}
+                            className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          >
+                            Previous
+                          </Button>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: performanceTotalPages }, (_, i) => i + 1).map((page) => {
+                              if (
+                                page === 1 ||
+                                page === performanceTotalPages ||
+                                (page >= performancePage - 1 && page <= performancePage + 1)
+                              ) {
+                                return (
+                                  <Button
+                                    key={page}
+                                    variant={performancePage === page ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setPerformancePage(page)}
+                                    className={`text-xs w-8 h-8 p-0 ${
+                                      performancePage === page
+                                        ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                                        : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                                    }`}
+                                  >
+                                    {page}
+                                  </Button>
+                                );
+                              } else if (page === performancePage - 2 || page === performancePage + 2) {
+                                return <span key={page} className="text-gray-400">...</span>;
+                              }
+                              return null;
+                            })}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPerformancePage(prev => Math.min(performanceTotalPages, prev + 1))}
+                            disabled={performancePage === performanceTotalPages}
+                            className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="text-center py-12 px-6">
                     <div className="text-gray-500 text-lg mb-2">No performance reviews yet</div>

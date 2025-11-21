@@ -366,20 +366,14 @@ function EvaluatorDashboard() {
   const handleTabChange = (tabId: string) => {
     setActive(tabId);
 
-    // Auto-refresh data when switching to specific tabs (no modals)
+    // Auto-refresh data when switching to specific tabs (only refresh submissions, not whole page)
     if (tabId === 'feedback') {
       // Refresh evaluation records data
       setIsFeedbackRefreshing(true);
       
       // Add a 1-second delay to make skeleton visible
       setTimeout(() => {
-        refreshEvaluatorData().then(() => {
-          // Show success toast for feedback refresh
-          success(
-            'Evaluation Records Refreshed',
-            'Feedback data has been updated'
-          );
-        }).finally(() => {
+        refreshSubmissionsOnly().finally(() => {
           setIsFeedbackRefreshing(false);
         });
       }, 1000); // 1-second delay to see skeleton properly
@@ -389,13 +383,7 @@ function EvaluatorDashboard() {
       
       // Add a 1-second delay to make skeleton visible
       setTimeout(() => {
-        refreshEvaluatorData().then(() => {
-          // Show success toast for employees refresh
-          success(
-            'Employees Refreshed',
-            'Employee data has been updated'
-          );
-        }).finally(() => {
+        refreshSubmissionsOnly().finally(() => {
           setIsEmployeesRefreshing(false);
         });
       }, 1000); // 1-second delay to see skeleton properly
@@ -403,48 +391,32 @@ function EvaluatorDashboard() {
       // Refresh overview data when switching to overview tab
       setIsRefreshing(true);
       
-      // Add a 2-second delay to make skeleton visible
+      // Add a 1-second delay to make skeleton visible
       setTimeout(() => {
-        refreshEvaluatorData().then(() => {
-          // Show success toast for overview refresh
-          success(
-            'Overview Refreshed',
-            'Recent submissions data has been updated'
-          );
-        }).finally(() => {
+        refreshSubmissionsOnly().finally(() => {
           setIsRefreshing(false);
         });
-      }, 1000); // 2-second delay to see skeleton properly
+      }, 1000); // 1-second delay to see skeleton properly
     } else if (tabId === 'reviews') {
       // Refresh reviews data when switching to reviews tab
       setIsReviewsRefreshing(true);
       
       // Add a 1-second delay to make skeleton visible
       setTimeout(() => {
-        refreshEvaluatorData().then(() => {
-          // Show success toast for reviews refresh
-          success(
-            'Performance Reviews Refreshed',
-            'Reviews data has been updated'
-          );
-        }).finally(() => {
+        refreshSubmissionsOnly().finally(() => {
           setIsReviewsRefreshing(false);
         });
       }, 1000); // 1-second delay to see skeleton properly
     } else if (tabId === 'history') {
       setIsHistoryRefreshing(true);
-      // Add a 1-second delay to make skeleton visible
+      setIsQuarterlyRefreshing(true);
+      // Add a 2-second delay to make skeleton visible
       setTimeout(() => {
-        refreshEvaluatorData().then(() => {
-          // Show success toast for history refresh
-          success(
-            'Evaluation History Refreshed',
-            'History data has been updated'
-          );
-        }).finally(() => {
+        refreshSubmissionsOnly().finally(() => {
           setIsHistoryRefreshing(false);
+          setIsQuarterlyRefreshing(false);
         });
-      }, 1000); // 1-second delay to see skeleton properly
+      }, 2000); // 2-second delay to see skeleton properly
     }
   };
   
@@ -463,8 +435,8 @@ function EvaluatorDashboard() {
     try {
       // Add a small delay to simulate loading
       await new Promise(resolve => setTimeout(resolve, 1500));
-      // Refresh data
-      await refreshEvaluatorData();
+      // Refresh data (only submissions, not whole page)
+      await refreshSubmissionsOnly();
       // Show success toast
       success('Quarterly performance refreshed successfully', 'All quarterly data has been updated');
     } catch (error) {
@@ -480,8 +452,8 @@ function EvaluatorDashboard() {
     try {
       // Add a small delay to simulate loading
       await new Promise(resolve => setTimeout(resolve, 1500));
-      // Refresh data
-      await refreshEvaluatorData();
+      // Refresh data (only submissions, not whole page)
+      await refreshSubmissionsOnly();
       // Show success toast
       success('Evaluation history refreshed successfully', 'All evaluation records have been updated');
     } catch (error) {
@@ -532,6 +504,41 @@ function EvaluatorDashboard() {
   // Profile is now managed by UserContext
 
   // Function to refresh dashboard data (used by shared hook)
+  // Lightweight refresh function that only updates submissions (for tab-specific refreshes)
+  const refreshSubmissionsOnly = async () => {
+    try {
+      // Fetch recent submissions from client data service
+      const submissions = await clientDataService.getSubmissions();
+
+      if (Array.isArray(submissions)) {
+        // Ensure data is valid and has unique IDs
+        const validData = submissions.filter((item: any) =>
+          item &&
+          typeof item === 'object' &&
+          item.id !== undefined &&
+          item.employeeName
+        );
+
+        // Filter to show only evaluations created by this evaluator
+        const evaluatorFiltered = validData.filter((item: any) => 
+          item.evaluatorId === user?.id
+        );
+
+        // Remove duplicates based on ID
+        const uniqueData = evaluatorFiltered.filter((item: any, index: number, self: any[]) =>
+          index === self.findIndex(t => t.id === item.id)
+        );
+
+        setRecentSubmissions(uniqueData);
+      } else {
+        console.warn('Invalid data structure received from API');
+        setRecentSubmissions([]);
+      }
+    } catch (error) {
+      console.error('Error refreshing submissions:', error);
+    }
+  };
+
   const refreshEvaluatorData = async () => {
     try {
       setLoading(true);
@@ -677,7 +684,7 @@ function EvaluatorDashboard() {
 
   const refreshSubmissions = async () => {
     try {
-      setIsRefreshing(true);
+      // Don't set isRefreshing here - let the calling function handle it
       const submissions = await clientDataService.getSubmissions();
 
       if (Array.isArray(submissions)) {
@@ -724,15 +731,12 @@ function EvaluatorDashboard() {
         'Refresh Failed',
         'Failed to refresh evaluation records. Please try again.'
       );
-    } finally {
-      setIsRefreshing(false);
     }
   };
 
   // Function to handle refresh with modal
   const handleEvaluationRecordsRefresh = async () => {
     try {
-      setIsRefreshing(true);
       setIsFeedbackRefreshing(true);
       
       // Add a 1-second delay to make skeleton visible
@@ -742,12 +746,10 @@ function EvaluatorDashboard() {
           'Evaluation Records Refreshed',
           'Feedback data has been updated'
         );
-        setIsRefreshing(false);
         setIsFeedbackRefreshing(false);
       }, 1000); // 1-second delay to see skeleton properly
     } catch (error) {
       console.error('Error during evaluation records refresh:', error);
-      setIsRefreshing(false);
       setIsFeedbackRefreshing(false);
     }
   };

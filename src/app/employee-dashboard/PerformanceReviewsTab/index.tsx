@@ -25,6 +25,8 @@ export function PerformanceReviewsTab({ isActive = false, onViewEvaluation }: Pe
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshingReviews, setIsRefreshingReviews] = useState(false);
+  const [reviewsPage, setReviewsPage] = useState(1);
+  const itemsPerPage = 4;
   const [approvedEvaluations, setApprovedEvaluations] = useState<Set<string>>(new Set());
   const isFirstMount = useRef(true);
 
@@ -259,6 +261,21 @@ export function PerformanceReviewsTab({ isActive = false, onViewEvaluation }: Pe
 
     return { ratings, averageRating, latestRating, trend };
   }, [submissions]);
+
+  // Pagination calculations
+  const sortedSubmissionsForPagination = useMemo(() => {
+    return [...submissions].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+  }, [submissions]);
+
+  const reviewsTotalPages = Math.ceil(sortedSubmissionsForPagination.length / itemsPerPage);
+  const reviewsStartIndex = (reviewsPage - 1) * itemsPerPage;
+  const reviewsEndIndex = reviewsStartIndex + itemsPerPage;
+  const reviewsPaginated = sortedSubmissionsForPagination.slice(reviewsStartIndex, reviewsEndIndex);
+
+  // Reset to page 1 when submissions change
+  useEffect(() => {
+    setReviewsPage(1);
+  }, [submissions.length]);
 
   // Performance insights
   const insights = useMemo(() => {
@@ -627,6 +644,7 @@ export function PerformanceReviewsTab({ isActive = false, onViewEvaluation }: Pe
             </CardHeader>
             <CardContent className="p-0">
               {submissions.length > 0 ? (
+                <>
                 <div className="max-h-[500px] overflow-y-auto overflow-x-hidden rounded-lg border mx-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   <Table className="table-fixed w-full">
                     <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
@@ -639,9 +657,7 @@ export function PerformanceReviewsTab({ isActive = false, onViewEvaluation }: Pe
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {submissions
-                        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-                        .map((submission) => {
+                      {reviewsPaginated.map((submission) => {
                           const highlight = getSubmissionHighlight(submission.submittedAt, submissions, submission.id);
                           const rating = submission.evaluationData
                             ? calculateOverallRating(submission.evaluationData)
@@ -750,6 +766,64 @@ export function PerformanceReviewsTab({ isActive = false, onViewEvaluation }: Pe
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* Pagination Controls - Show when more than 4 items */}
+                {sortedSubmissionsForPagination.length > 4 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-0 mt-3 md:mt-4 px-4">
+                    <div className="text-xs md:text-sm text-gray-600 order-2 sm:order-1">
+                      Showing {reviewsStartIndex + 1} to {Math.min(reviewsEndIndex, sortedSubmissionsForPagination.length)} of {sortedSubmissionsForPagination.length} records
+                    </div>
+                    <div className="flex items-center gap-1.5 md:gap-2 order-1 sm:order-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setReviewsPage(prev => Math.max(1, prev - 1))}
+                        disabled={reviewsPage === 1}
+                        className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      >
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-0.5 md:gap-1">
+                        {Array.from({ length: reviewsTotalPages }, (_, i) => i + 1).map((page) => {
+                          if (
+                            page === 1 ||
+                            page === reviewsTotalPages ||
+                            (page >= reviewsPage - 1 && page <= reviewsPage + 1)
+                          ) {
+                            return (
+                              <Button
+                                key={page}
+                                variant={reviewsPage === page ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setReviewsPage(page)}
+                                className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
+                                  reviewsPage === page
+                                    ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                                    : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                                }`}
+                              >
+                                {page}
+                              </Button>
+                            );
+                          } else if (page === reviewsPage - 2 || page === reviewsPage + 2) {
+                            return <span key={page} className="text-gray-400 text-xs md:text-sm">...</span>;
+                          }
+                          return null;
+                        })}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setReviewsPage(prev => Math.min(reviewsTotalPages, prev + 1))}
+                        disabled={reviewsPage === reviewsTotalPages}
+                        className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                </>
               ) : (
                 <div className="text-center py-12 px-6">
                   <div className="text-gray-500 text-lg mb-2">No performance reviews yet</div>

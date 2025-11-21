@@ -118,6 +118,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
             // Fetch full user data including avatar and signature from data source
             try {
               const fullUserData = await clientDataService.getUserById(parsedUser.id);
+              
+              // Get account data to access employeeId
+              const accounts = await clientDataService.getAccounts();
+              const account = accounts.find((acc: any) => acc.id === parsedUser.id);
+              const employeeId = account?.employeeId;
+              
               if (fullUserData) {
                 // Merge stored data with fresh avatar/signature from data source
                 const completeUser = {
@@ -138,6 +144,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
                   avatar: completeUser.avatar,
                   bio: completeUser.bio,
                   signature: completeUser.signature,
+                  employeeId: employeeId,
                 };
                 setProfile(userProfile);
               } else {
@@ -152,24 +159,47 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
                   avatar: parsedUser.avatar,
                   bio: parsedUser.bio,
                   signature: parsedUser.signature,
+                  employeeId: employeeId,
                 };
                 setProfile(userProfile);
               }
             } catch (fetchError) {
               console.error('Error fetching full user data:', fetchError);
               // Use stored data as fallback
-              setUser(parsedUser);
-              const userProfile: UserProfile = {
-                id: parsedUser.id,
-                name: parsedUser.name,
-                email: parsedUser.email,
-                roleOrPosition: parsedUser.position,
-                department: parsedUser.department,
-                avatar: parsedUser.avatar,
-                bio: parsedUser.bio,
-                signature: parsedUser.signature,
-              };
-              setProfile(userProfile);
+              // Get account data to access employeeId
+              try {
+                const accounts = await clientDataService.getAccounts();
+                const account = accounts.find((acc: any) => acc.id === parsedUser.id);
+                const employeeId = account?.employeeId;
+                
+                setUser(parsedUser);
+                const userProfile: UserProfile = {
+                  id: parsedUser.id,
+                  name: parsedUser.name,
+                  email: parsedUser.email,
+                  roleOrPosition: parsedUser.position,
+                  department: parsedUser.department,
+                  avatar: parsedUser.avatar,
+                  bio: parsedUser.bio,
+                  signature: parsedUser.signature,
+                  employeeId: employeeId,
+                };
+                setProfile(userProfile);
+              } catch (accountError) {
+                console.error('Error fetching account data:', accountError);
+                setUser(parsedUser);
+                const userProfile: UserProfile = {
+                  id: parsedUser.id,
+                  name: parsedUser.name,
+                  email: parsedUser.email,
+                  roleOrPosition: parsedUser.position,
+                  department: parsedUser.department,
+                  avatar: parsedUser.avatar,
+                  bio: parsedUser.bio,
+                  signature: parsedUser.signature,
+                };
+                setProfile(userProfile);
+              }
             }
             
             // Ensure keepLoggedIn is set to true for future sessions
@@ -212,6 +242,16 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         // Check if user has multiple roles (requires role selection)
         const hasMultipleRoles = authenticatedUser.availableRoles && authenticatedUser.availableRoles.length > 1;
         
+        // Get account data to access employeeId
+        let employeeId: number | undefined;
+        try {
+          const accounts = await clientDataService.getAccounts();
+          const account = accounts.find((acc: any) => acc.id === authenticatedUser.id || acc.email === authenticatedUser.email);
+          employeeId = account?.employeeId;
+        } catch (error) {
+          console.error('Error fetching account data for employeeId:', error);
+        }
+        
         // Ensure ID is a number
         const userWithNumberId: AuthenticatedUser = {
           ...authenticatedUser,
@@ -236,6 +276,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           avatar: userWithNumberId.avatar,
           bio: userWithNumberId.bio,
           signature: userWithNumberId.signature,
+          employeeId: employeeId,
         };
         setProfile(userProfile);
 

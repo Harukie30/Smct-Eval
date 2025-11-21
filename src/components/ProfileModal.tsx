@@ -34,6 +34,18 @@ export default function ProfileModal({
   const [positions, setPositions] = useState<{id: string, name: string}[]>([]);
   const { success } = useToast();
 
+  // Format employee ID as 10-digit number with dash (e.g., 1234-567890)
+  const formatEmployeeId = (employeeId: number | undefined): string => {
+    if (!employeeId) return '';
+    // Convert to string and pad to 10 digits if needed
+    const idString = employeeId.toString().padStart(10, '0');
+    // Format as 1234-567890 (4 digits, dash, 6 digits)
+    if (idString.length >= 10) {
+      return `${idString.slice(0, 4)}-${idString.slice(4, 10)}`;
+    }
+    return idString;
+  };
+
   // Reset form data when profile changes
   useEffect(() => {
     setFormData(profile);
@@ -193,6 +205,25 @@ export default function ProfileModal({
 
           {/* Form Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-10">
+            {/* Employee ID - Read Only */}
+            {formData.employeeId && (
+              <div className="space-y-1.5">
+                <Label htmlFor="employeeId" className="text-sm font-medium">
+                  Employee ID
+                </Label>
+                <Input
+                  id="employeeId"
+                  value={formatEmployeeId(formData.employeeId)}
+                  disabled
+                  readOnly
+                  className="bg-gray-100 cursor-not-allowed"
+                />
+                <p className="text-xs text-gray-500">
+                  Your employee ID assigned during registration
+                </p>
+              </div>
+            )}
+
             {/* Name */}
             <div className="space-y-1.5">
               <Label htmlFor="name" className="text-sm font-medium">

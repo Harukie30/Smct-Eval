@@ -53,6 +53,8 @@ export function AreaManagersTab({ employees, onRefresh }: AreaManagersTabProps) 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [areaManagerToDelete, setAreaManagerToDelete] = useState<Employee | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [areaManagersPage, setAreaManagersPage] = useState(1);
+  const itemsPerPage = 8;
   
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -82,6 +84,18 @@ export function AreaManagersTab({ employees, onRefresh }: AreaManagersTabProps) 
       return nameMatch || branchMatch;
     });
   }, [areaManagers, searchTerm]);
+
+  // Pagination calculations
+  const areaManagersTotal = filteredAreaManagers.length;
+  const areaManagersTotalPages = Math.ceil(areaManagersTotal / itemsPerPage);
+  const areaManagersStartIndex = (areaManagersPage - 1) * itemsPerPage;
+  const areaManagersEndIndex = areaManagersStartIndex + itemsPerPage;
+  const areaManagersPaginated = filteredAreaManagers.slice(areaManagersStartIndex, areaManagersEndIndex);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setAreaManagersPage(1);
+  }, [searchTerm]);
 
 
   // Load branches data
@@ -275,14 +289,14 @@ export function AreaManagersTab({ employees, onRefresh }: AreaManagersTabProps) 
                       </TableCell>
                     </TableRow>
                   ))
-                ) : filteredAreaManagers.length === 0 ? (
+                ) : areaManagersPaginated.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center py-8 text-gray-500">
                       {searchTerm ? `No area managers found matching "${searchTerm}"` : 'No area managers found'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAreaManagers.map((manager) => {
+                  areaManagersPaginated.map((manager) => {
                     // Parse branches - handle both comma-separated string and single branch
                     const branchList = manager.branch 
                       ? manager.branch.split(', ').filter(b => b.trim())
@@ -350,6 +364,63 @@ export function AreaManagersTab({ employees, onRefresh }: AreaManagersTabProps) 
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination Controls */}
+          {areaManagersTotal > itemsPerPage && (
+            <div className="flex items-center justify-between mt-4 px-2">
+              <div className="text-sm text-gray-600">
+                Showing {areaManagersStartIndex + 1} to {Math.min(areaManagersEndIndex, areaManagersTotal)} of {areaManagersTotal} area managers
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAreaManagersPage(prev => Math.max(1, prev - 1))}
+                  disabled={areaManagersPage === 1}
+                  className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: areaManagersTotalPages }, (_, i) => i + 1).map((page) => {
+                    if (
+                      page === 1 ||
+                      page === areaManagersTotalPages ||
+                      (page >= areaManagersPage - 1 && page <= areaManagersPage + 1)
+                    ) {
+                      return (
+                        <Button
+                          key={page}
+                          variant={areaManagersPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setAreaManagersPage(page)}
+                          className={`text-xs w-8 h-8 p-0 ${
+                            areaManagersPage === page
+                              ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                              : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          }`}
+                        >
+                          {page}
+                        </Button>
+                      );
+                    } else if (page === areaManagersPage - 2 || page === areaManagersPage + 2) {
+                      return <span key={page} className="text-gray-400">...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAreaManagersPage(prev => Math.min(areaManagersTotalPages, prev + 1))}
+                  disabled={areaManagersPage === areaManagersTotalPages}
+                  className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

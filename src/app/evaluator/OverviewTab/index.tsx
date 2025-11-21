@@ -38,6 +38,8 @@ export function OverviewTab({
   isActive = false
 }: OverviewTabProps) {
   const [overviewSearch, setOverviewSearch] = useState('');
+  const [overviewPage, setOverviewPage] = useState(1);
+  const itemsPerPage = 4;
 
   // Ensure scrollbar is always visible
   useEffect(() => {
@@ -88,6 +90,21 @@ export function OverviewTab({
       );
     });
   }, [recentSubmissions, overviewSearch]);
+
+  // Pagination calculations
+  const sortedFilteredSubmissions = useMemo(() => {
+    return [...filteredSubmissions].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+  }, [filteredSubmissions]);
+
+  const overviewTotalPages = Math.ceil(sortedFilteredSubmissions.length / itemsPerPage);
+  const overviewStartIndex = (overviewPage - 1) * itemsPerPage;
+  const overviewEndIndex = overviewStartIndex + itemsPerPage;
+  const overviewPaginated = sortedFilteredSubmissions.slice(overviewStartIndex, overviewEndIndex);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setOverviewPage(1);
+  }, [overviewSearch]);
 
   return (
     <div className="grid grid-cols-1 gap-6">
@@ -238,16 +255,14 @@ export function OverviewTab({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredSubmissions.length === 0 ? (
+                    {sortedFilteredSubmissions.length === 0 ? (
                       <TableRow key="no-submissions">
                         <TableCell colSpan={5} className="px-6 py-3 text-center text-gray-500">
                           {overviewSearch.trim() ? 'No submissions found matching your search' : 'No recent submissions'}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredSubmissions
-                        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-                        .map((submission) => {
+                      overviewPaginated.map((submission) => {
                           // Check if both parties have signed - must be actual signature images (base64 data URLs)
                           const hasEmployeeSignature = !!(
                             (submission.employeeSignature && submission.employeeSignature.trim() && submission.employeeSignature.startsWith('data:image')) ||
@@ -341,6 +356,63 @@ export function OverviewTab({
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Pagination Controls - Show when more than 4 items */}
+              {sortedFilteredSubmissions.length > 4 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-0 mt-3 md:mt-4 px-4">
+                  <div className="text-xs md:text-sm text-gray-600 order-2 sm:order-1">
+                    Showing {overviewStartIndex + 1} to {Math.min(overviewEndIndex, sortedFilteredSubmissions.length)} of {sortedFilteredSubmissions.length} records
+                  </div>
+                  <div className="flex items-center gap-1.5 md:gap-2 order-1 sm:order-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setOverviewPage(prev => Math.max(1, prev - 1))}
+                      disabled={overviewPage === 1}
+                      className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                    >
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-0.5 md:gap-1">
+                      {Array.from({ length: overviewTotalPages }, (_, i) => i + 1).map((page) => {
+                        if (
+                          page === 1 ||
+                          page === overviewTotalPages ||
+                          (page >= overviewPage - 1 && page <= overviewPage + 1)
+                        ) {
+                          return (
+                            <Button
+                              key={page}
+                              variant={overviewPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setOverviewPage(page)}
+                              className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
+                                overviewPage === page
+                                  ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                                  : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                              }`}
+                            >
+                              {page}
+                            </Button>
+                          );
+                        } else if (page === overviewPage - 2 || page === overviewPage + 2) {
+                          return <span key={page} className="text-gray-400 text-xs md:text-sm">...</span>;
+                        }
+                        return null;
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setOverviewPage(prev => Math.min(overviewTotalPages, prev + 1))}
+                      disabled={overviewPage === overviewTotalPages}
+                      className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </CardContent>
