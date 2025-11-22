@@ -116,6 +116,7 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
     q4: false
   });
   const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
+  const [coverageError, setCoverageError] = useState('');
 
   // Check if all Job Knowledge scores are complete
   const isJobKnowledgeComplete = () => {
@@ -206,6 +207,22 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
       hireDate: data.hireDate,
     });
   }, [data.employeeName, data.employeeId, data.position, data.department, data.branch, data.hireDate]);
+
+  // Validate coverage dates whenever they change
+  useEffect(() => {
+    if (data.coverageFrom && data.coverageTo) {
+      const fromDate = new Date(data.coverageFrom);
+      const toDate = new Date(data.coverageTo);
+      
+      if (fromDate >= toDate) {
+        setCoverageError('Start date must be earlier than end date');
+      } else {
+        setCoverageError('');
+      }
+    } else {
+      setCoverageError('');
+    }
+  }, [data.coverageFrom, data.coverageTo]);
 
   // Calculate average score for Job Knowledge
   const calculateAverageScore = () => {
@@ -677,7 +694,7 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
                   <PopoverTrigger 
                     className={`w-full justify-start text-left font-normal bg-yellow-100 border-yellow-300 hover:bg-yellow-200 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground ${
                       data.coverageFrom ? 'text-gray-900' : 'text-muted-foreground'
-                    }`}
+                    } ${coverageError && !data.coverageFrom ? 'border-red-500' : ''}`}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {data.coverageFrom ? (
@@ -692,8 +709,25 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
                       selected={data.coverageFrom ? new Date(data.coverageFrom) : undefined}
                       onSelect={(date) => {
                         if (date) {
+                          const fromDate = date;
+                          const toDate = data.coverageTo ? new Date(data.coverageTo) : null;
+                          
+                          // Validate: From date should be earlier than To date
+                          if (toDate && fromDate >= toDate) {
+                            setCoverageError('Start date must be earlier than end date');
+                            return;
+                          }
+                          
+                          setCoverageError('');
                           updateDataAction({ coverageFrom: date.toISOString() });
                         }
+                      }}
+                      disabled={(date) => {
+                        // Disable dates that are after the "To" date (if selected)
+                        if (data.coverageTo) {
+                          return date >= new Date(data.coverageTo);
+                        }
+                        return false;
                       }}
                       initialFocus
                       className="bg-white"
@@ -709,7 +743,7 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
                   <PopoverTrigger 
                     className={`w-full justify-start text-left font-normal bg-yellow-100 border-yellow-300 hover:bg-yellow-200 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground ${
                       data.coverageTo ? 'text-gray-900' : 'text-muted-foreground'
-                    }`}
+                    } ${coverageError && !data.coverageTo ? 'border-red-500' : ''}`}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {data.coverageTo ? (
@@ -724,8 +758,25 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
                       selected={data.coverageTo ? new Date(data.coverageTo) : undefined}
                       onSelect={(date) => {
                         if (date) {
+                          const toDate = date;
+                          const fromDate = data.coverageFrom ? new Date(data.coverageFrom) : null;
+                          
+                          // Validate: To date should be later than From date
+                          if (fromDate && toDate <= fromDate) {
+                            setCoverageError('End date must be later than start date');
+                            return;
+                          }
+                          
+                          setCoverageError('');
                           updateDataAction({ coverageTo: date.toISOString() });
                         }
+                      }}
+                      disabled={(date) => {
+                        // Disable dates that are before or equal to the "From" date (if selected)
+                        if (data.coverageFrom) {
+                          return date <= new Date(data.coverageFrom);
+                        }
+                        return false;
                       }}
                       initialFocus
                       className="bg-white"
@@ -735,8 +786,17 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
               </div>
             </div>
             
+            {/* Error Message */}
+            {coverageError && (
+              <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                <span className="text-sm text-red-800 font-medium">
+                  {coverageError}
+                </span>
+              </div>
+            )}
+            
             {/* Display the selected range */}
-            {data.coverageFrom && data.coverageTo && (
+            {data.coverageFrom && data.coverageTo && !coverageError && (
               <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
                 <span className="text-sm text-blue-800 font-medium">
                   Performance Period: {format(new Date(data.coverageFrom), 'MMM dd, yyyy')} - {format(new Date(data.coverageTo), 'MMM dd, yyyy')}
