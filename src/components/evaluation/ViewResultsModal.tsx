@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Printer, X } from 'lucide-react';
 import { approveEvaluation } from '@/lib/approvalService';
 import { useEmployeeSignatureByEvaluation } from '@/hooks/useEmployeeSignature';
+import { useUser } from '@/contexts/UserContext';
 
 type Submission = {
   id: number;
@@ -115,12 +116,82 @@ const getQuarterColor = (quarter: string) => {
 export default function ViewResultsModal({ isOpen, onCloseAction, submission, onApprove, 
   isApproved = false, approvalData = null, currentUserName, currentUserSignature, 
   showApprovalButton = false, isEvaluatorView = false }: ViewResultsModalProps) {
+  const { profile } = useUser();
   const [isApproving, setIsApproving] = useState(false);
   const [approvalError, setApprovalError] = useState('');
+  const [currentApprovalData, setCurrentApprovalData] = useState<ApprovalData | null>(approvalData);
   const printContentRef = useRef<HTMLDivElement>(null);
+  const lastApprovalDataRef = useRef<string>('');
 
   // Fetch employee signature for this evaluation
   const { signature: employeeSignature, loading: signatureLoading, error: signatureError } = useEmployeeSignatureByEvaluation(submission?.id || null);
+
+  // Update currentApprovalData when approvalData prop changes
+  useEffect(() => {
+    setCurrentApprovalData(approvalData);
+    if (approvalData) {
+      lastApprovalDataRef.current = JSON.stringify(approvalData);
+    }
+  }, [approvalData]);
+
+  // Compute isApproved status based on current approval data
+  const computedIsApproved = isApproved || !!currentApprovalData?.employeeSignature || !!submission?.employeeSignature;
+
+  // Automatic refresh when approval changes are detected in localStorage
+  useEffect(() => {
+    if (!isOpen || !submission?.id || !profile?.email) return;
+
+    const checkForApprovalChanges = () => {
+      try {
+        const approvalDataKey = `approvalData_${profile.email}`;
+        const storedApprovals = JSON.parse(
+          localStorage.getItem(approvalDataKey) || '{}'
+        );
+        const submissionId = submission.id.toString();
+        const storedApproval = storedApprovals[submissionId];
+
+        if (storedApproval) {
+          const storedApprovalStr = JSON.stringify(storedApproval);
+          
+          // Check if approval data has changed
+          if (storedApprovalStr !== lastApprovalDataRef.current) {
+            lastApprovalDataRef.current = storedApprovalStr;
+            
+            // Update the approval data state
+            setCurrentApprovalData({
+              id: storedApproval.id || submissionId,
+              approvedAt: storedApproval.approvedAt,
+              employeeSignature: storedApproval.employeeSignature,
+              employeeName: storedApproval.employeeName,
+              employeeEmail: storedApproval.employeeEmail || profile.email
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error checking for approval changes:', error);
+      }
+    };
+
+    // Check immediately
+    checkForApprovalChanges();
+
+    // Set up polling to check every 2 seconds
+    const intervalId = setInterval(checkForApprovalChanges, 2000);
+
+    // Listen for storage events (for cross-tab synchronization)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === `approvalData_${profile.email}` || e.key === `approvedEvaluations_${profile.email}`) {
+        checkForApprovalChanges();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [isOpen, submission?.id, profile?.email]);
 
   // Handle print functionality - prints the entire modal content
   const handlePrint = () => {
@@ -261,6 +332,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                 .print-review-type h5 {
                   font-weight: normal !important;
                   margin-bottom: 5px !important;
+                  font-size: 12px !important;
                 }
                 .print-review-type .space-y-2,
                 .print-review-type .space-y-3 {
@@ -269,6 +341,31 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                 .print-review-type .space-y-2 > *,
                 .print-review-type .space-y-3 > * {
                   margin: 2px 0 !important;
+                }
+                /* Make checkboxes more visible in print */
+                .print-review-type .w-4 {
+                  width: 12px !important;
+                  height: 12px !important;
+                  border: 1px solid #000 !important;
+                  min-width: 12px !important;
+                  min-height: 12px !important;
+                }
+                .print-review-type .bg-green-500 {
+                  background-color: #22c55e !important;
+                  border: 1px solid #000 !important;
+                }
+                .print-review-type .bg-gray-300 {
+                  background-color: #d1d5db !important;
+                  border: 1px solid #000 !important;
+                }
+                .print-review-type .w-2 {
+                  width: 6px !important;
+                  height: 6px !important;
+                  background-color: #fff !important;
+                }
+                .print-review-type span {
+                  font-size: 11px !important;
+                  color: #000 !important;
                 }
                 /* Basic Information - two column layout with horizontal alignment */
                 .print-basic-info {
@@ -374,8 +471,42 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   text-transform: uppercase !important;
                   margin-bottom: 3px !important;
                 }
-                /* Priority Areas and Remarks - large box style */
-                .print-priority-box,
+                /* Priority Areas - underline style like basic info */
+                .print-priority-item {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  border: none !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                }
+                .print-priority-row {
+                  display: flex !important;
+                  justify-content: flex-start !important;
+                  align-items: baseline !important;
+                  gap: 4px !important;
+                  margin: 0 !important;
+                  font-size: 13px !important;
+                  text-align: left !important;
+                  padding: 0 !important;
+                }
+                .print-priority-label {
+                  font-weight: bold !important;
+                  width: auto !important;
+                  flex-shrink: 0 !important;
+                  margin-right: 0 !important;
+                }
+                .print-priority-value {
+                  border-bottom: 1px solid #000 !important;
+                  flex: 1 !important;
+                  min-width: 0 !important;
+                  height: auto !important;
+                  line-height: 1 !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  padding-bottom: 1px !important;
+                  text-align: left !important;
+                }
+                /* Remarks - large box style */
                 .print-remarks-box {
                   width: 100% !important;
                   height: 60px !important;
@@ -385,8 +516,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   background: white !important;
                   background-color: white !important;
                 }
-                /* Remove gray backgrounds from priority area items in print */
-                .print-priority-box .bg-yellow-50,
+                /* Remove gray backgrounds from remarks in print */
                 .print-remarks-box .bg-yellow-50 {
                   background: transparent !important;
                   background-color: transparent !important;
@@ -394,26 +524,18 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   padding: 1px 2px !important;
                   margin: 1px 0 !important;
                 }
-                /* Reduce font size in Priority Areas */
-                .print-priority-box span,
-                .print-priority-box .text-sm {
-                  font-size: 9px !important;
-                  line-height: 1.2 !important;
-                }
-                /* Reduce spacing between Priority Area items */
-                .print-priority-box.space-y-3 > * {
-                  margin-top: 1px !important;
-                  margin-bottom: 1px !important;
-                }
                 /* Acknowledgement section */
                 .print-acknowledgement {
                   display: flex !important;
                   justify-content: space-between !important;
-                  margin-top: 10px !important;
+                  margin-top: 5px !important;
+                  margin-bottom: 0 !important;
                 }
                 .print-acknowledgement > div {
                   width: 45% !important;
                   text-align: center !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
                 }
                 /* Signature boxes - print format - remove all containers */
                 .print-acknowledgement .h-20,
@@ -426,19 +548,31 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   padding: 0 !important;
                   border-radius: 0 !important;
                 }
+                /* Show name text in print */
                 .print-acknowledgement .h-20 > span:not(.print-signature-line) {
-                  display: none !important;
+                  display: block !important;
+                  font-size: 11px !important;
+                  font-weight: bold !important;
+                  margin-bottom: 5px !important;
+                  position: relative !important;
+                  z-index: 1 !important;
                 }
                 .print-signature-line {
                   border-bottom: 1px solid #000 !important;
                   width: 100% !important;
-                  height: 15px !important;
-                  margin-bottom: 2px !important;
+                  height: 1px !important;
+                  margin-top: 5px !important;
                   display: block !important;
                   background: transparent !important;
+                  position: relative !important;
                 }
+                /* Show signature images in print */
                 .print-acknowledgement img {
-                  display: none !important;
+                  display: block !important;
+                  max-height: 40px !important;
+                  max-width: 100% !important;
+                  object-fit: contain !important;
+                  margin: 0 auto !important;
                 }
                 /* Remove all rounded corners and borders from signature containers */
                 .print-acknowledgement [class*="rounded-lg"],
@@ -461,26 +595,96 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                 }
                 /* Acknowledgement text */
                 .print-acknowledgement p {
-                  font-size: 11px !important;
-                  margin-bottom: 8px !important;
-                  line-height: 1.3 !important;
+                  font-size: 9px !important;
+                  margin-bottom: 3px !important;
+                  line-height: 1.2 !important;
                 }
-                /* Hide signature images and complex styling in print */
+                /* Signature container styling in print */
                 .print-acknowledgement .h-20 {
                   position: relative !important;
+                  min-height: 45px !important;
+                  display: flex !important;
+                  flex-direction: column !important;
+                  align-items: center !important;
+                  justify-content: flex-start !important;
+                  padding: 3px 0 2px 0 !important;
+                  margin: 0 !important;
                 }
+                /* Show name text in print - at the top */
                 .print-acknowledgement .h-20 > span:not(.print-signature-line) {
-                  display: none !important;
+                  display: block !important;
+                  font-size: 9px !important;
+                  font-weight: bold !important;
+                  margin-bottom: 1px !important;
+                  position: relative !important;
+                  order: 1 !important;
+                  z-index: 1 !important;
+                  line-height: 1 !important;
                 }
+                /* Show signature images in print - overlapping the name */
                 .print-acknowledgement .h-20 img {
-                  display: none !important;
-                }
-                .print-signature-line {
+                  display: block !important;
+                  max-height: 40px !important;
+                  max-width: 100% !important;
+                  object-fit: contain !important;
                   position: absolute !important;
-                  top: 50% !important;
-                  left: 0 !important;
+                  top: 3px !important;
                   right: 0 !important;
-                  transform: translateY(-50%) !important;
+                  margin: 0 !important;
+                  order: 2 !important;
+                  z-index: 2 !important;
+                  transform: none !important;
+                }
+                /* Signature line - at the bottom */
+                .print-signature-line {
+                  position: relative !important;
+                  width: 100% !important;
+                  border-bottom: 1px solid #000 !important;
+                  height: 1px !important;
+                  margin-top: 0 !important;
+                  margin-bottom: 1px !important;
+                  order: 3 !important;
+                  flex-shrink: 0 !important;
+                }
+                /* Label and date under the underline - print only */
+                .print-acknowledgement > div > div:last-child,
+                .print-acknowledgement > div > div:nth-last-child(2) {
+                  margin-top: 2px !important;
+                }
+                .print-acknowledgement > div > div:last-child > div,
+                .print-acknowledgement > div > div:nth-last-child(2) > div {
+                  margin-top: 0 !important;
+                  margin-bottom: 0 !important;
+                }
+                .print-acknowledgement > div > div:last-child > div > div,
+                .print-acknowledgement > div > div:nth-last-child(2) > div > div {
+                  margin-top: 0 !important;
+                }
+                /* Reduce spacing for signature label and date in print */
+                .print-acknowledgement .text-xs.text-gray-500 {
+                  margin-top: 0 !important;
+                  margin-bottom: 0 !important;
+                  font-size: 8px !important;
+                  line-height: 1 !important;
+                }
+                .print-acknowledgement .text-center {
+                  margin-top: 0 !important;
+                  margin-bottom: 0 !important;
+                  padding: 0 !important;
+                }
+                .print-acknowledgement .text-center p {
+                  margin-top: 0 !important;
+                  margin-bottom: 0 !important;
+                  font-size: 8px !important;
+                  line-height: 1 !important;
+                }
+                .print-acknowledgement .space-y-4 {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                }
+                .print-acknowledgement .space-y-4 > * {
+                  margin-top: 0 !important;
+                  margin-bottom: 0 !important;
                 }
                 /* Hide detailed step sections in print */
                 .hide-in-print {
@@ -544,9 +748,54 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   color: #000 !important;
                   border: none !important;
                 }
-                /* Hide Performance Score section in print */
+                /* Performance Score section - minimal in print */
                 .print-performance-score-wrapper {
-                  display: none !important;
+                  display: flex !important;
+                  justify-content: flex-end !important;
+                  align-items: center !important;
+                  gap: 3px !important;
+                  margin-top: 5px !important;
+                  margin-bottom: 5px !important;
+                  border: 1px solid #000 !important;
+                  padding: 4px 8px !important;
+                  width: fit-content !important;
+                  margin-left: auto !important;
+                  background: white !important;
+                  box-sizing: border-box !important;
+                }
+                .print-performance-score-wrapper > div:first-child {
+                  text-align: right !important;
+                  margin-right: 8px !important;
+                }
+                .print-performance-score-wrapper > div:first-child > div:first-child {
+                  font-size: 10px !important;
+                  font-weight: bold !important;
+                  line-height: 1 !important;
+                  margin: 0 !important;
+                }
+                .print-performance-score-wrapper > div:first-child > div:last-child {
+                  font-size: 7px !important;
+                  color: #000 !important;
+                  margin-top: 1px !important;
+                  line-height: 1 !important;
+                }
+                .print-performance-score-wrapper > div:last-child {
+                  padding: 2px 6px !important;
+                  border-radius: 2px !important;
+                  font-size: 8px !important;
+                  font-weight: bold !important;
+                  line-height: 1.2 !important;
+                  color: white !important;
+                  display: block !important;
+                }
+                /* Ensure PASS/FAIL badge colors show in print */
+                .print-performance-score-wrapper > div:last-child.bg-green-600 {
+                  background-color: #16a34a !important;
+                  color: white !important;
+                }
+                .print-performance-score-wrapper > div:last-child.bg-red-600 {
+                  background-color: #dc2626 !important;
+                  color: white !important;
                 }
                 /* Remove spacing between sections */
                 .space-y-8 > * {
@@ -1879,23 +2128,29 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
               <Card>
                 <CardContent className="pt-6 pb-4">
                   <h4 className="font-semibold text-lg text-gray-900 mb-4">Priority Areas for Improvement</h4>
-                  <div className="space-y-3 print-priority-box">
+                  <div className="space-y-3">
                     {submission.evaluationData.priorityArea1 && (
-                      <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md">
-                        <span className="font-medium text-sm">1. </span>
-                        <span className="text-sm text-gray-700">{submission.evaluationData.priorityArea1}</span>
+                      <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-priority-item">
+                        <div className="print-priority-row">
+                          <span className="font-medium text-sm print-priority-label">1. </span>
+                          <p className="text-sm text-gray-700 print-priority-value">{submission.evaluationData.priorityArea1}</p>
+                        </div>
                       </div>
                     )}
                     {submission.evaluationData.priorityArea2 && (
-                      <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md">
-                        <span className="font-medium text-sm">2. </span>
-                        <span className="text-sm text-gray-700">{submission.evaluationData.priorityArea2}</span>
+                      <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-priority-item">
+                        <div className="print-priority-row">
+                          <span className="font-medium text-sm print-priority-label">2. </span>
+                          <p className="text-sm text-gray-700 print-priority-value">{submission.evaluationData.priorityArea2}</p>
+                        </div>
                       </div>
                     )}
                     {submission.evaluationData.priorityArea3 && (
-                      <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md">
-                        <span className="font-medium text-sm">3. </span>
-                        <span className="text-sm text-gray-700">{submission.evaluationData.priorityArea3}</span>
+                      <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-priority-item">
+                        <div className="print-priority-row">
+                          <span className="font-medium text-sm print-priority-label">3. </span>
+                          <p className="text-sm text-gray-700 print-priority-value">{submission.evaluationData.priorityArea3}</p>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1945,9 +2200,9 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             <div className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-red-500">
                               Error loading signature
                             </div>
-                          ) : ((isApproved || approvalData?.employeeSignature || submission.employeeSignature) && (employeeSignature?.signature || approvalData?.employeeSignature || submission.employeeSignature)) && (
+                          ) : ((computedIsApproved) && (employeeSignature?.signature || currentApprovalData?.employeeSignature || submission.employeeSignature)) && (
                             <img 
-                              src={employeeSignature?.signature || approvalData?.employeeSignature || submission.employeeSignature || ''} 
+                              src={employeeSignature?.signature || currentApprovalData?.employeeSignature || submission.employeeSignature || ''} 
                               alt="Employee Signature" 
                               className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-16 max-w-full object-contain"
                               onError={(e) => {
@@ -1963,7 +2218,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                       {showApprovalButton && (
                         <div className="mt-6 space-y-4 no-print">
                           {/* Approve Button - Only show if not approved */}
-                          {!isApproved && (
+                          {!computedIsApproved && (
                             <div className="space-y-3">
                               <div className="flex justify-center">
                                 <Button
@@ -1993,7 +2248,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                           )}
                           
                           {/* Approved Status - Only show if approved */}
-                          {isApproved && (
+                          {computedIsApproved && (
                             <div className="space-y-3 px-4 md:px-0">
                               <div className="flex items-center justify-center space-x-2">
                                 <Badge className="bg-green-100 text-green-800 px-4 py-2 text-sm font-medium">
@@ -2001,7 +2256,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                                 </Badge>
                               </div>
                               <p className="text-xs text-gray-500 text-center">
-                                Approved on {approvalData?.approvedAt ? new Date(approvalData.approvedAt).toLocaleDateString('en-US', {
+                                Approved on {currentApprovalData?.approvedAt ? new Date(currentApprovalData.approvedAt).toLocaleDateString('en-US', {
                                   year: 'numeric',
                                   month: 'long',
                                   day: 'numeric'
@@ -2015,7 +2270,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                       {/* Employee Date */}
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mt-1 print-date-value">
-                          {submission.employeeApprovedAt ? new Date(submission.employeeApprovedAt).toLocaleDateString('en-US', {
+                          {(submission.employeeApprovedAt || currentApprovalData?.approvedAt) ? new Date(submission.employeeApprovedAt || currentApprovalData?.approvedAt || '').toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric'
@@ -2066,7 +2321,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                     </div>
                   </div>
                   {/* Date section */}
-                  <div className="mt-5 print-date-section">
+                  <div className="mt-5 print-date-section no-print">
                     <span>Date: </span>
                     <span className="print-date-box">
                       {(submission.employeeApprovedAt || submission.evaluatorApprovedAt || submission.submittedAt)

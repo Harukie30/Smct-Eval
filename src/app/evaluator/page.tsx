@@ -1,41 +1,66 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
-import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';  
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import ViewEmployeeModal from '@/components/ViewEmployeeModal';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useEffect, useState, useMemo, lazy, Suspense } from "react";
+import DashboardShell, { SidebarItem } from "@/components/DashboardShell";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import ViewEmployeeModal from "@/components/ViewEmployeeModal";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-import EvaluationForm from '@/components/evaluation';
-import ManagerEvaluationForm from '@/components/evaluation-2';
-import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
-import EvaluationTypeModal from '@/components/EvaluationTypeModal';
-import mockData from '@/data/dashboard.json';
-import accountsData from '@/data/accounts.json';
-import { UserProfile } from '@/components/ProfileCard';
-import clientDataService from '@/lib/clientDataService';
-import { withAuth } from '@/hoc';
-import PageTransition from '@/components/PageTransition';
-import { AlertDialog } from '@/components/ui/alert-dialog';
-import { useAutoRefresh } from '@/hooks/useAutoRefresh';
-import { useUser } from '@/contexts/UserContext';
-import { useToast } from '@/hooks/useToast';
-import { Skeleton } from '@/components/ui/skeleton';
-import { createApprovalNotification, createFullyApprovedNotification } from '@/lib/notificationUtils';
-import { useProfilePictureUpdates } from '@/hooks/useProfileUpdates';
-import { EvaluatorDashboardGuideModal } from '@/components/EvaluatorDashboardGuideModal';
+import EvaluationForm from "@/components/evaluation";
+import ManagerEvaluationForm from "@/components/evaluation-2";
+import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import EvaluationTypeModal from "@/components/EvaluationTypeModal";
+import mockData from "@/data/dashboard.json";
+import accountsData from "@/data/accounts.json";
+import { UserProfile } from "@/components/ProfileCard";
+import clientDataService from "@/lib/clientDataService";
+import { withAuth } from "@/hoc";
+import PageTransition from "@/components/PageTransition";
+import { AlertDialog } from "@/components/ui/alert-dialog";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { useUser } from "@/contexts/UserContext";
+import { useToast } from "@/hooks/useToast";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  createApprovalNotification,
+  createFullyApprovedNotification,
+} from "@/lib/notificationUtils";
+import { useProfilePictureUpdates } from "@/hooks/useProfileUpdates";
+import { EvaluatorDashboardGuideModal } from "@/components/EvaluatorDashboardGuideModal";
 
 // Lazy load tab components for better performance
-const OverviewTab = lazy(() => import('./OverviewTab').then(m => ({ default: m.OverviewTab })));
-const EmployeesTab = lazy(() => import('./EmployeesTab').then(m => ({ default: m.EmployeesTab })));
-const EvaluationRecordsTab = lazy(() => import('./EvaluationRecordsTab').then(m => ({ default: m.EvaluationRecordsTab })));
-const PerformanceReviewsTab = lazy(() => import('./PerformanceReviewsTab').then(m => ({ default: m.PerformanceReviewsTab })));
-const EvaluationHistoryTab = lazy(() => import('./EvaluationHistoryTab').then(m => ({ default: m.EvaluationHistoryTab })));
+const OverviewTab = lazy(() =>
+  import("./OverviewTab").then((m) => ({ default: m.OverviewTab }))
+);
+const EmployeesTab = lazy(() =>
+  import("./EmployeesTab").then((m) => ({ default: m.EmployeesTab }))
+);
+const EvaluationRecordsTab = lazy(() =>
+  import("./EvaluationRecordsTab").then((m) => ({
+    default: m.EvaluationRecordsTab,
+  }))
+);
+const PerformanceReviewsTab = lazy(() =>
+  import("./PerformanceReviewsTab").then((m) => ({
+    default: m.PerformanceReviewsTab,
+  }))
+);
+const EvaluationHistoryTab = lazy(() =>
+  import("./EvaluationHistoryTab").then((m) => ({
+    default: m.EvaluationHistoryTab,
+  }))
+);
 
 type Feedback = {
   id: number;
@@ -56,7 +81,7 @@ type Submission = {
   submittedAt: string;
   status: string;
   evaluator?: string;
-  evaluationData?: any;// Full evaluation data from the form
+  evaluationData?: any; // Full evaluation data from the form
   employeeId?: number;
   employeeEmail?: string;
   evaluatorId?: number;
@@ -96,10 +121,10 @@ type Employee = {
 };
 
 function getRatingColor(rating: number) {
-  if (rating >= 4.5) return 'text-green-600 bg-green-100';
-  if (rating >= 4.0) return 'text-blue-600 bg-blue-100';
-  if (rating >= 3.5) return 'text-yellow-600 bg-yellow-100';
-  return 'text-red-600 bg-red-100';
+  if (rating >= 4.5) return "text-green-600 bg-green-100";
+  if (rating >= 4.0) return "text-blue-600 bg-blue-100";
+  if (rating >= 3.5) return "text-yellow-600 bg-yellow-100";
+  return "text-red-600 bg-red-100";
 }
 
 // Calculate overall rating using the same formula as employee dashboard
@@ -107,28 +132,65 @@ const calculateOverallRating = (evaluationData: any) => {
   if (!evaluationData) return 0;
 
   const calculateScore = (scores: number[]) => {
-    const validScores = scores.filter(score => score !== null && score !== undefined && !isNaN(score));
+    const validScores = scores.filter(
+      (score) => score !== null && score !== undefined && !isNaN(score)
+    );
     if (validScores.length === 0) return 0;
-    return validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+    return (
+      validScores.reduce((sum, score) => sum + score, 0) / validScores.length
+    );
   };
 
-  const jobKnowledgeScore = calculateScore([evaluationData.jobKnowledgeScore1, evaluationData.jobKnowledgeScore2, evaluationData.jobKnowledgeScore3]);
-  const qualityOfWorkScore = calculateScore([evaluationData.qualityOfWorkScore1, evaluationData.qualityOfWorkScore2, evaluationData.qualityOfWorkScore3, evaluationData.qualityOfWorkScore4, evaluationData.qualityOfWorkScore5]);
-  const adaptabilityScore = calculateScore([evaluationData.adaptabilityScore1, evaluationData.adaptabilityScore2, evaluationData.adaptabilityScore3]);
-  const teamworkScore = calculateScore([evaluationData.teamworkScore1, evaluationData.teamworkScore2, evaluationData.teamworkScore3]);
-  const reliabilityScore = calculateScore([evaluationData.reliabilityScore1, evaluationData.reliabilityScore2, evaluationData.reliabilityScore3, evaluationData.reliabilityScore4]);
-  const ethicalScore = calculateScore([evaluationData.ethicalScore1, evaluationData.ethicalScore2, evaluationData.ethicalScore3, evaluationData.ethicalScore4]);
-  const customerServiceScore = calculateScore([evaluationData.customerServiceScore1, evaluationData.customerServiceScore2, evaluationData.customerServiceScore3, evaluationData.customerServiceScore4, evaluationData.customerServiceScore5]);
+  const jobKnowledgeScore = calculateScore([
+    evaluationData.jobKnowledgeScore1,
+    evaluationData.jobKnowledgeScore2,
+    evaluationData.jobKnowledgeScore3,
+  ]);
+  const qualityOfWorkScore = calculateScore([
+    evaluationData.qualityOfWorkScore1,
+    evaluationData.qualityOfWorkScore2,
+    evaluationData.qualityOfWorkScore3,
+    evaluationData.qualityOfWorkScore4,
+    evaluationData.qualityOfWorkScore5,
+  ]);
+  const adaptabilityScore = calculateScore([
+    evaluationData.adaptabilityScore1,
+    evaluationData.adaptabilityScore2,
+    evaluationData.adaptabilityScore3,
+  ]);
+  const teamworkScore = calculateScore([
+    evaluationData.teamworkScore1,
+    evaluationData.teamworkScore2,
+    evaluationData.teamworkScore3,
+  ]);
+  const reliabilityScore = calculateScore([
+    evaluationData.reliabilityScore1,
+    evaluationData.reliabilityScore2,
+    evaluationData.reliabilityScore3,
+    evaluationData.reliabilityScore4,
+  ]);
+  const ethicalScore = calculateScore([
+    evaluationData.ethicalScore1,
+    evaluationData.ethicalScore2,
+    evaluationData.ethicalScore3,
+    evaluationData.ethicalScore4,
+  ]);
+  const customerServiceScore = calculateScore([
+    evaluationData.customerServiceScore1,
+    evaluationData.customerServiceScore2,
+    evaluationData.customerServiceScore3,
+    evaluationData.customerServiceScore4,
+    evaluationData.customerServiceScore5,
+  ]);
 
-  const overallWeightedScore = (
-    (jobKnowledgeScore * 0.20) +
-    (qualityOfWorkScore * 0.20) +
-    (adaptabilityScore * 0.10) +
-    (teamworkScore * 0.10) +
-    (reliabilityScore * 0.05) +
-    (ethicalScore * 0.05) +
-    (customerServiceScore * 0.30)
-  );
+  const overallWeightedScore =
+    jobKnowledgeScore * 0.2 +
+    qualityOfWorkScore * 0.2 +
+    adaptabilityScore * 0.1 +
+    teamworkScore * 0.1 +
+    reliabilityScore * 0.05 +
+    ethicalScore * 0.05 +
+    customerServiceScore * 0.3;
 
   // Ensure the score is between 0 and 5
   const normalizedScore = Math.max(0, Math.min(5, overallWeightedScore));
@@ -137,19 +199,22 @@ const calculateOverallRating = (evaluationData: any) => {
 
 // Helper functions for rating calculations
 const getRatingLabel = (score: number) => {
-  if (score >= 4.5) return 'Outstanding';
-  if (score >= 4.0) return 'Exceeds Expectations';
-  if (score >= 3.5) return 'Meets Expectations';
-  if (score >= 2.5) return 'Needs Improvement';
-  return 'Unsatisfactory';
+  if (score >= 4.5) return "Outstanding";
+  if (score >= 4.0) return "Exceeds Expectations";
+  if (score >= 3.5) return "Meets Expectations";
+  if (score >= 2.5) return "Needs Improvement";
+  return "Unsatisfactory";
 };
 
 const calculateScore = (scores: string[]) => {
-  const validScores = scores.filter(score => score && score !== '').map(score => parseFloat(score));
+  const validScores = scores
+    .filter((score) => score && score !== "")
+    .map((score) => parseFloat(score));
   if (validScores.length === 0) return 0;
-  return validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+  return (
+    validScores.reduce((sum, score) => sum + score, 0) / validScores.length
+  );
 };
-
 
 function EvaluatorDashboard() {
   const { profile, user } = useUser();
@@ -161,13 +226,13 @@ function EvaluatorDashboard() {
     const submissionDate = new Date(submittedAt);
     const now = new Date();
     const diffInMs = now.getTime() - submissionDate.getTime();
-    
+
     const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
     const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
     const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-    
+
     if (diffInMinutes < 1) {
-      return 'Just now';
+      return "Just now";
     } else if (diffInMinutes < 60) {
       return `${diffInMinutes}m ago`;
     } else if (diffInHours < 24) {
@@ -181,8 +246,8 @@ function EvaluatorDashboard() {
 
   // Track seen submissions in localStorage
   const [seenSubmissions, setSeenSubmissions] = useState<Set<number>>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('seenEvaluationSubmissions');
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("seenEvaluationSubmissions");
       return stored ? new Set(JSON.parse(stored)) : new Set();
     }
     return new Set();
@@ -190,14 +255,17 @@ function EvaluatorDashboard() {
 
   // Save seen submissions when they change
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('seenEvaluationSubmissions', JSON.stringify(Array.from(seenSubmissions)));
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        "seenEvaluationSubmissions",
+        JSON.stringify(Array.from(seenSubmissions))
+      );
     }
   }, [seenSubmissions]);
 
   // Mark submission as seen
   const markSubmissionAsSeen = (submissionId: number) => {
-    setSeenSubmissions(prev => {
+    setSeenSubmissions((prev) => {
       const newSet = new Set(prev);
       newSet.add(submissionId);
       return newSet;
@@ -205,76 +273,94 @@ function EvaluatorDashboard() {
   };
 
   // Enhanced time-based highlighting system with seen tracking and approval status
-  const getSubmissionHighlight = (submittedAt: string, submissionId: number, approvalStatus?: string) => {
+  const getSubmissionHighlight = (
+    submittedAt: string,
+    submissionId: number,
+    approvalStatus?: string
+  ) => {
     const submissionTime = new Date(submittedAt).getTime();
     const now = new Date().getTime();
     const hoursDiff = (now - submissionTime) / (1000 * 60 * 60);
     const isSeen = seenSubmissions.has(submissionId);
-    const isPending = !approvalStatus || approvalStatus === 'pending' || approvalStatus === 'employee_approved';
-    
+    const isPending =
+      !approvalStatus ||
+      approvalStatus === "pending" ||
+      approvalStatus === "employee_approved";
+
     // Priority 1: Fully approved - ALWAYS GREEN (highest priority)
-    if (approvalStatus === 'fully_approved') {
+    if (approvalStatus === "fully_approved") {
       // Show additional badge if it's new/recent
       if (hoursDiff <= 24 && !isSeen) {
         return {
-          className: 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100',
-          badge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
-          secondaryBadge: { text: 'New', className: 'bg-yellow-500 text-white' },
-          priority: 'approved-new'
+          className:
+            "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100",
+          badge: { text: "✓ Approved", className: "bg-green-500 text-white" },
+          secondaryBadge: {
+            text: "New",
+            className: "bg-yellow-500 text-white",
+          },
+          priority: "approved-new",
         };
       } else if (hoursDiff <= 48 && !isSeen) {
         return {
-          className: 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100',
-          badge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
-          secondaryBadge: { text: 'Recent', className: 'bg-blue-500 text-white' },
-          priority: 'approved-recent'
+          className:
+            "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100",
+          badge: { text: "✓ Approved", className: "bg-green-500 text-white" },
+          secondaryBadge: {
+            text: "Recent",
+            className: "bg-blue-500 text-white",
+          },
+          priority: "approved-recent",
         };
       }
       return {
-        className: 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100',
-        badge: { text: '✓ Approved', className: 'bg-green-500 text-white' },
-        priority: 'approved'
+        className:
+          "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100",
+        badge: { text: "✓ Approved", className: "bg-green-500 text-white" },
+        priority: "approved",
       };
     }
-    
+
     // Priority 2: New (within 24 hours) AND Pending - YELLOW "New" highlight
     if (isPending && hoursDiff <= 24 && !isSeen) {
       return {
-        className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
-        badge: { text: 'New', className: 'bg-yellow-500 text-white' },
-        priority: 'new-pending'
+        className:
+          "bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200",
+        badge: { text: "New", className: "bg-yellow-500 text-white" },
+        priority: "new-pending",
       };
     }
-    
+
     // Priority 3: Pending and within 24 hours (even if seen) - still show yellow
     if (isPending && hoursDiff <= 24) {
       return {
-        className: 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200',
-        badge: { text: 'Pending', className: 'bg-yellow-500 text-white' },
-        priority: 'pending-new'
+        className:
+          "bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200",
+        badge: { text: "Pending", className: "bg-yellow-500 text-white" },
+        priority: "pending-new",
       };
     }
-    
+
     // Priority 3: Within 48 hours and not seen - BLUE "Recent"
     if (hoursDiff <= 48 && !isSeen) {
       return {
-        className: 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100',
-        badge: { text: 'Recent', className: 'bg-blue-500 text-white' },
-        priority: 'recent'
+        className: "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100",
+        badge: { text: "Recent", className: "bg-blue-500 text-white" },
+        priority: "recent",
       };
     }
-    
+
     // Default: Older or already seen - No special highlighting
     return {
-      className: 'hover:bg-gray-50',
+      className: "hover:bg-gray-50",
       badge: null,
-      priority: 'old'
+      priority: "old",
     };
   };
 
   // Add custom CSS for container popup animation
   useEffect(() => {
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = `
       @keyframes containerPopup {
         0% {
@@ -302,8 +388,6 @@ function EvaluatorDashboard() {
     };
   }, []);
 
-
-
   // Helper function to map user data to currentUser format
   const getCurrentUserData = () => {
     if (user) {
@@ -315,18 +399,21 @@ function EvaluatorDashboard() {
         position: user.position,
         department: user.department,
         role: user.role,
-        signature: user.signature // Include signature from user
+        signature: user.signature, // Include signature from user
       };
     } else if (profile) {
       // UserProfile type
       return {
-        id: typeof profile.id === 'string' ? parseInt(profile.id) || 0 : profile.id || 0,
+        id:
+          typeof profile.id === "string"
+            ? parseInt(profile.id) || 0
+            : profile.id || 0,
         name: profile.name,
-        email: profile.email || '',
-        position: profile.roleOrPosition || '',
-        department: profile.department || '',
-        role: profile.roleOrPosition || '',
-        signature: profile.signature // Include signature from profile
+        email: profile.email || "",
+        position: profile.roleOrPosition || "",
+        department: profile.department || "",
+        role: profile.roleOrPosition || "",
+        signature: profile.signature, // Include signature from profile
       };
     }
     return undefined;
@@ -334,7 +421,7 @@ function EvaluatorDashboard() {
 
   // Add custom styles for better table scrolling
   useEffect(() => {
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = `
       .scrollable-table::-webkit-scrollbar {
         width: 8px;
@@ -360,54 +447,54 @@ function EvaluatorDashboard() {
     };
   }, []);
 
-  const [active, setActive] = useState('overview');
+  const [active, setActive] = useState("overview");
 
   // Custom tab change handler with auto-refresh functionality
   const handleTabChange = (tabId: string) => {
     setActive(tabId);
 
     // Auto-refresh data when switching to specific tabs (only refresh submissions, not whole page)
-    if (tabId === 'feedback') {
+    if (tabId === "feedback") {
       // Refresh evaluation records data
       setIsFeedbackRefreshing(true);
-      
+
       // Add a 1-second delay to make skeleton visible
       setTimeout(() => {
         refreshSubmissionsOnly().finally(() => {
           setIsFeedbackRefreshing(false);
         });
       }, 1000); // 1-second delay to see skeleton properly
-    } else if (tabId === 'employees') {
+    } else if (tabId === "employees") {
       // Refresh employees data
       setIsEmployeesRefreshing(true);
-      
+
       // Add a 1-second delay to make skeleton visible
       setTimeout(() => {
         refreshSubmissionsOnly().finally(() => {
           setIsEmployeesRefreshing(false);
         });
       }, 1000); // 1-second delay to see skeleton properly
-    } else if (tabId === 'overview') {
+    } else if (tabId === "overview") {
       // Refresh overview data when switching to overview tab
       setIsRefreshing(true);
-      
+
       // Add a 1-second delay to make skeleton visible
       setTimeout(() => {
         refreshSubmissionsOnly().finally(() => {
           setIsRefreshing(false);
         });
       }, 1000); // 1-second delay to see skeleton properly
-    } else if (tabId === 'reviews') {
+    } else if (tabId === "reviews") {
       // Refresh reviews data when switching to reviews tab
       setIsReviewsRefreshing(true);
-      
+
       // Add a 1-second delay to make skeleton visible
       setTimeout(() => {
         refreshSubmissionsOnly().finally(() => {
           setIsReviewsRefreshing(false);
         });
       }, 1000); // 1-second delay to see skeleton properly
-    } else if (tabId === 'history') {
+    } else if (tabId === "history") {
       setIsHistoryRefreshing(true);
       setIsQuarterlyRefreshing(true);
       // Add a 2-second delay to make skeleton visible
@@ -419,7 +506,7 @@ function EvaluatorDashboard() {
       }, 2000); // 2-second delay to see skeleton properly
     }
   };
-  
+
   // Helper function for Evaluation History
   const isNewSubmission = (submittedAt: string) => {
     const submissionTime = new Date(submittedAt).getTime();
@@ -427,75 +514,89 @@ function EvaluatorDashboard() {
     const hoursDiff = (now - submissionTime) / (1000 * 60 * 60);
     return hoursDiff <= 24;
   };
-  
-  
+
   // Refresh function for Quarterly Performance table
   const handleRefreshQuarterly = async () => {
     setIsQuarterlyRefreshing(true);
     try {
       // Add a small delay to simulate loading
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
       // Refresh data (only submissions, not whole page)
       await refreshSubmissionsOnly();
       // Show success toast
-      success('Quarterly performance refreshed successfully', 'All quarterly data has been updated');
+      success(
+        "Quarterly performance refreshed successfully",
+        "All quarterly data has been updated"
+      );
     } catch (error) {
-      console.error('Error refreshing quarterly performance:', error);
+      console.error("Error refreshing quarterly performance:", error);
     } finally {
       setIsQuarterlyRefreshing(false);
     }
   };
-  
+
   // Refresh function for Evaluation History table
   const handleRefreshHistory = async () => {
     setIsHistoryRefreshing(true);
     try {
       // Add a small delay to simulate loading
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
       // Refresh data (only submissions, not whole page)
       await refreshSubmissionsOnly();
       // Show success toast
-      success('Evaluation history refreshed successfully', 'All evaluation records have been updated');
+      success(
+        "Evaluation history refreshed successfully",
+        "All evaluation records have been updated"
+      );
     } catch (error) {
-      console.error('Error refreshing evaluation history:', error);
+      console.error("Error refreshing evaluation history:", error);
     } finally {
       setIsHistoryRefreshing(false);
     }
   };
-  
-  const [currentPeriod, setCurrentPeriod] = useState('');
+
+  const [currentPeriod, setCurrentPeriod] = useState("");
   const [data, setData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   // Note: employeeSearch, selectedDepartment, and employeeSort are now managed inside EmployeesTab component
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [isEvaluationTypeModalOpen, setIsEvaluationTypeModalOpen] = useState(false);
-  const [evaluationType, setEvaluationType] = useState<'employee' | 'manager' | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
+    null
+  );
+  const [isEvaluationTypeModalOpen, setIsEvaluationTypeModalOpen] =
+    useState(false);
+  const [evaluationType, setEvaluationType] = useState<
+    "employee" | "manager" | null
+  >(null);
 
   // Debug: Log when evaluation modal opens
   useEffect(() => {
     if (isEvaluationModalOpen) {
-      console.log('Evaluation modal opened', { 
-        selectedEmployee: selectedEmployee?.name, 
+      console.log("Evaluation modal opened", {
+        selectedEmployee: selectedEmployee?.name,
         evaluationType,
-        employeeId: selectedEmployee?.id 
+        employeeId: selectedEmployee?.id,
       });
     }
   }, [isEvaluationModalOpen, selectedEmployee, evaluationType]);
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
-  const [isViewSubmissionModalOpen, setIsViewSubmissionModalOpen] = useState(false);
-  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [selectedEmployeeForView, setSelectedEmployeeForView] = useState<Employee | null>(null);
+  const [isViewSubmissionModalOpen, setIsViewSubmissionModalOpen] =
+    useState(false);
+  const [selectedSubmission, setSelectedSubmission] =
+    useState<Submission | null>(null);
+  const [selectedEmployeeForView, setSelectedEmployeeForView] =
+    useState<Employee | null>(null);
   const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
 
   // ViewResultsModal state
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
-  const [selectedEvaluationSubmission, setSelectedEvaluationSubmission] = useState<Submission | null>(null);
+  const [selectedEvaluationSubmission, setSelectedEvaluationSubmission] =
+    useState<Submission | null>(null);
 
   // Print Preview Modal state
   const [isPrintPreviewModalOpen, setIsPrintPreviewModalOpen] = useState(false);
-  const [printPreviewContent, setPrintPreviewContent] = useState<string>('');
+  const [printPreviewContent, setPrintPreviewContent] = useState<string>("");
   const [printPreviewData, setPrintPreviewData] = useState<any>(null);
 
   // Cancel Evaluation Alert Dialog state
@@ -512,30 +613,32 @@ function EvaluatorDashboard() {
 
       if (Array.isArray(submissions)) {
         // Ensure data is valid and has unique IDs
-        const validData = submissions.filter((item: any) =>
-          item &&
-          typeof item === 'object' &&
-          item.id !== undefined &&
-          item.employeeName
+        const validData = submissions.filter(
+          (item: any) =>
+            item &&
+            typeof item === "object" &&
+            item.id !== undefined &&
+            item.employeeName
         );
 
         // Filter to show only evaluations created by this evaluator
-        const evaluatorFiltered = validData.filter((item: any) => 
-          item.evaluatorId === user?.id
+        const evaluatorFiltered = validData.filter(
+          (item: any) => item.evaluatorId === user?.id
         );
 
         // Remove duplicates based on ID
-        const uniqueData = evaluatorFiltered.filter((item: any, index: number, self: any[]) =>
-          index === self.findIndex(t => t.id === item.id)
+        const uniqueData = evaluatorFiltered.filter(
+          (item: any, index: number, self: any[]) =>
+            index === self.findIndex((t) => t.id === item.id)
         );
 
         setRecentSubmissions(uniqueData);
       } else {
-        console.warn('Invalid data structure received from API');
+        console.warn("Invalid data structure received from API");
         setRecentSubmissions([]);
       }
     } catch (error) {
-      console.error('Error refreshing submissions:', error);
+      console.error("Error refreshing submissions:", error);
     }
   };
 
@@ -552,30 +655,32 @@ function EvaluatorDashboard() {
 
       if (Array.isArray(submissions)) {
         // Ensure data is valid and has unique IDs
-        const validData = submissions.filter((item: any) =>
-          item &&
-          typeof item === 'object' &&
-          item.id !== undefined &&
-          item.employeeName
+        const validData = submissions.filter(
+          (item: any) =>
+            item &&
+            typeof item === "object" &&
+            item.id !== undefined &&
+            item.employeeName
         );
 
         // Filter to show only evaluations created by this evaluator
-        const evaluatorFiltered = validData.filter((item: any) => 
-          item.evaluatorId === user?.id
+        const evaluatorFiltered = validData.filter(
+          (item: any) => item.evaluatorId === user?.id
         );
 
         // Remove duplicates based on ID
-        const uniqueData = evaluatorFiltered.filter((item: any, index: number, self: any[]) =>
-          index === self.findIndex(t => t.id === item.id)
+        const uniqueData = evaluatorFiltered.filter(
+          (item: any, index: number, self: any[]) =>
+            index === self.findIndex((t) => t.id === item.id)
         );
 
         setRecentSubmissions(uniqueData);
       } else {
-        console.warn('Invalid data structure received from API');
+        console.warn("Invalid data structure received from API");
         setRecentSubmissions([]);
       }
     } catch (error) {
-      console.error('Error refreshing evaluator data:', error);
+      console.error("Error refreshing evaluator data:", error);
     } finally {
       setLoading(false);
     }
@@ -586,30 +691,30 @@ function EvaluatorDashboard() {
     showRefreshModal,
     refreshModalMessage,
     handleRefreshModalComplete,
-    refreshDashboardData
+    refreshDashboardData,
   } = useAutoRefresh({
     refreshFunction: refreshEvaluatorData,
-    dashboardName: 'Evaluator Dashboard',
-    customMessage: 'Welcome back! Refreshing your evaluator dashboard data...'
+    dashboardName: "Evaluator Dashboard",
+    customMessage: "Welcome back! Refreshing your evaluator dashboard data...",
   });
 
   // Real-time data updates via localStorage events
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       // Only refresh if the change is from another tab/window
-      if (e.key === 'submissions' && e.newValue !== e.oldValue) {
+      if (e.key === "submissions" && e.newValue !== e.oldValue) {
         refreshSubmissions();
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   // Note: overviewSearch is now managed inside OverviewTab component
 
-  // Note: feedbackSearch, feedbackDepartmentFilter, feedbackDateFilter, feedbackDateRange, 
-  // feedbackQuarterFilter, feedbackApprovalStatusFilter, and feedbackSort are now managed 
+  // Note: feedbackSearch, feedbackDepartmentFilter, feedbackDateFilter, feedbackDateRange,
+  // feedbackQuarterFilter, feedbackApprovalStatusFilter, and feedbackSort are now managed
   // inside EvaluationRecordsTab component
 
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -623,59 +728,61 @@ function EvaluatorDashboard() {
   // Delete confirmation modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<any>(null);
-  const [deletePassword, setDeletePassword] = useState('');
-  const [deletePasswordError, setDeletePasswordError] = useState('');
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deletePasswordError, setDeletePasswordError] = useState("");
   const [showDeleteSuccessDialog, setShowDeleteSuccessDialog] = useState(false);
-  const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] = useState(false);
+  const [showIncorrectPasswordDialog, setShowIncorrectPasswordDialog] =
+    useState(false);
   const [isDialogClosing, setIsDialogClosing] = useState(false);
   const [isSuccessDialogClosing, setIsSuccessDialogClosing] = useState(false);
   const [isDeleteDialogClosing, setIsDeleteDialogClosing] = useState(false);
-
 
   // Function to refresh employee data
   const refreshEmployeeData = async () => {
     try {
       setIsRefreshing(true);
-      
+
       // Fetch fresh employee data from clientDataService
       const employees = await clientDataService.getEmployees();
-      
+
       if (Array.isArray(employees)) {
         // Ensure data is valid and has unique IDs
-        const validData = employees.filter((item: any) =>
-          item &&
-          typeof item === 'object' &&
-          item.id !== undefined &&
-          item.name &&
-          item.email
+        const validData = employees.filter(
+          (item: any) =>
+            item &&
+            typeof item === "object" &&
+            item.id !== undefined &&
+            item.name &&
+            item.email
         );
 
         // Remove duplicates based on ID
-        const uniqueData = validData.filter((item: any, index: number, self: any[]) =>
-          index === self.findIndex(t => t.id === item.id)
+        const uniqueData = validData.filter(
+          (item: any, index: number, self: any[]) =>
+            index === self.findIndex((t) => t.id === item.id)
         );
 
         // Force re-render by updating the refresh counter
-        setEmployeeDataRefresh(prev => prev + 1);
-        
+        setEmployeeDataRefresh((prev) => prev + 1);
+
         // Show success feedback
         success(
-          'Employee Data Refreshed',
+          "Employee Data Refreshed",
           `Successfully loaded ${uniqueData.length} employee records`
         );
       } else {
-        setEmployeeDataRefresh(prev => prev + 1);
+        setEmployeeDataRefresh((prev) => prev + 1);
         error(
-          'Invalid Data',
-          'Received invalid employee data structure from the server'
+          "Invalid Data",
+          "Received invalid employee data structure from the server"
         );
       }
     } catch (err) {
-      console.error('Error refreshing employee data:', err);
-      setEmployeeDataRefresh(prev => prev + 1);
+      console.error("Error refreshing employee data:", err);
+      setEmployeeDataRefresh((prev) => prev + 1);
       error(
-        'Refresh Failed',
-        'Failed to refresh employee data. Please try again.'
+        "Refresh Failed",
+        "Failed to refresh employee data. Please try again."
       );
     } finally {
       setIsRefreshing(false);
@@ -689,47 +796,50 @@ function EvaluatorDashboard() {
 
       if (Array.isArray(submissions)) {
         // Ensure data is valid and has unique IDs
-        const validData = submissions.filter((item: any) =>
-          item &&
-          typeof item === 'object' &&
-          item.id !== undefined &&
-          item.employeeName
+        const validData = submissions.filter(
+          (item: any) =>
+            item &&
+            typeof item === "object" &&
+            item.id !== undefined &&
+            item.employeeName
         );
 
         // Filter to show:
         // 1. Evaluations created by this evaluator (evaluatorId === user.id)
         // 2. Evaluations where this user is the employee (employeeId === user.id) - for branch managers being evaluated
-        const evaluatorFiltered = validData.filter((item: any) => 
-          item.evaluatorId === user?.id ||
-          item.employeeId === user?.id ||
-          item.evaluationData?.employeeId === user?.id?.toString()
+        const evaluatorFiltered = validData.filter(
+          (item: any) =>
+            item.evaluatorId === user?.id ||
+            item.employeeId === user?.id ||
+            item.evaluationData?.employeeId === user?.id?.toString()
         );
 
         // Remove duplicates based on ID
-        const uniqueData = evaluatorFiltered.filter((item: any, index: number, self: any[]) =>
-          index === self.findIndex(t => t.id === item.id)
+        const uniqueData = evaluatorFiltered.filter(
+          (item: any, index: number, self: any[]) =>
+            index === self.findIndex((t) => t.id === item.id)
         );
 
         setRecentSubmissions(uniqueData);
 
         // Show success feedback
         success(
-          'Evaluation Records Refreshed',
+          "Evaluation Records Refreshed",
           `Successfully loaded ${uniqueData.length} evaluation records`
         );
       } else {
         setRecentSubmissions([]);
         error(
-          'Invalid Data',
-          'Received invalid data structure from the server'
+          "Invalid Data",
+          "Received invalid data structure from the server"
         );
       }
     } catch (err) {
-      console.error('Error fetching submissions:', err);
+      console.error("Error fetching submissions:", err);
       setRecentSubmissions([]);
       error(
-        'Refresh Failed',
-        'Failed to refresh evaluation records. Please try again.'
+        "Refresh Failed",
+        "Failed to refresh evaluation records. Please try again."
       );
     }
   };
@@ -738,18 +848,18 @@ function EvaluatorDashboard() {
   const handleEvaluationRecordsRefresh = async () => {
     try {
       setIsFeedbackRefreshing(true);
-      
+
       // Add a 1-second delay to make skeleton visible
       setTimeout(async () => {
         await refreshSubmissions();
         success(
-          'Evaluation Records Refreshed',
-          'Feedback data has been updated'
+          "Evaluation Records Refreshed",
+          "Feedback data has been updated"
         );
         setIsFeedbackRefreshing(false);
       }, 1000); // 1-second delay to see skeleton properly
     } catch (error) {
-      console.error('Error during evaluation records refresh:', error);
+      console.error("Error during evaluation records refresh:", error);
       setIsFeedbackRefreshing(false);
     }
   };
@@ -761,23 +871,18 @@ function EvaluatorDashboard() {
 
   // Function to load account history (all employees' violations/suspensions)
 
-
-
-
-
-
   // Function to handle employees refresh with modal
   const handleEmployeesRefresh = async () => {
     try {
       setIsEmployeesRefreshing(true);
-      
+
       // Add a 1-second delay to make skeleton visible
       setTimeout(async () => {
         await refreshEmployeeData();
         setIsEmployeesRefreshing(false);
       }, 1000); // 1-second delay to see skeleton properly
     } catch (error) {
-      console.error('Error during employees refresh:', error);
+      console.error("Error during employees refresh:", error);
       setIsEmployeesRefreshing(false);
     }
   };
@@ -799,45 +904,49 @@ function EvaluatorDashboard() {
 
     // Validate password
     if (!deletePassword.trim()) {
-      setDeletePasswordError('Password is required to delete records');
+      setDeletePasswordError("Password is required to delete records");
       return;
     }
 
     // Get current user data to verify password
     const currentUser = getCurrentUserData();
     if (!currentUser) {
-      setDeletePasswordError('User not found. Please refresh and try again.');
+      setDeletePasswordError("User not found. Please refresh and try again.");
       return;
     }
 
     // Password verification using the current user's password from accounts.json
     // Get the user's password from the accounts data
-    const userAccount = (accountsData as any).accounts.find((account: any) =>
-      account.email === currentUser.email || account.username === currentUser.email
+    const userAccount = (accountsData as any).accounts.find(
+      (account: any) =>
+        account.email === currentUser.email ||
+        account.username === currentUser.email
     );
 
     if (!userAccount) {
-      setDeletePasswordError('User account not found. Please refresh and try again.');
+      setDeletePasswordError(
+        "User account not found. Please refresh and try again."
+      );
       return;
     }
 
     // Compare the entered password with the user's actual password
     if (deletePassword !== userAccount.password) {
-      setDeletePasswordError('Incorrect password. Please try again.');
+      setDeletePasswordError("Incorrect password. Please try again.");
       setShowIncorrectPasswordDialog(true);
-      
+
       // Start pop-down animation after 1 second, then close after 1.3 seconds
       setTimeout(() => {
         setIsDialogClosing(true);
       }, 1000);
-      
+
       setTimeout(() => {
         setShowIncorrectPasswordDialog(false);
-        setDeletePassword('');
-        setDeletePasswordError('');
+        setDeletePassword("");
+        setDeletePasswordError("");
         setIsDialogClosing(false);
       }, 1300);
-      
+
       return;
     }
 
@@ -846,50 +955,53 @@ function EvaluatorDashboard() {
       const allSubmissions = await clientDataService.getSubmissions();
 
       // Filter out the record to delete
-      const updatedSubmissions = allSubmissions.filter((sub: any) => sub.id !== recordToDelete.id);
+      const updatedSubmissions = allSubmissions.filter(
+        (sub: any) => sub.id !== recordToDelete.id
+      );
 
       // Update localStorage
-      localStorage.setItem('submissions', JSON.stringify(updatedSubmissions));
+      localStorage.setItem("submissions", JSON.stringify(updatedSubmissions));
 
       // Update the state to reflect the deletion
-      setRecentSubmissions(prev => prev.filter(sub => sub.id !== recordToDelete.id));
+      setRecentSubmissions((prev) =>
+        prev.filter((sub) => sub.id !== recordToDelete.id)
+      );
 
       // Show success message
       success(
-        'Record Deleted',
+        "Record Deleted",
         `Evaluation record for ${recordToDelete.employeeName} has been deleted successfully`
       );
 
       // Trigger pop-down animation before closing
       setIsDeleteDialogClosing(true);
-      
+
       // Close modal and reset state after animation
       setTimeout(() => {
         setIsDeleteModalOpen(false);
         setRecordToDelete(null);
-        setDeletePassword('');
-        setDeletePasswordError('');
+        setDeletePassword("");
+        setDeletePasswordError("");
         setIsDeleteDialogClosing(false);
-        
+
         // Show success dialog with animated check
         setShowDeleteSuccessDialog(true);
-        
+
         // Start pop-down animation after 1 second, then close after 1.3 seconds
         setTimeout(() => {
           setIsSuccessDialogClosing(true);
         }, 1000);
-        
+
         setTimeout(() => {
           setShowDeleteSuccessDialog(false);
           setIsSuccessDialogClosing(false);
         }, 1300);
       }, 300); // Match animation duration
-
     } catch (err) {
-      console.error('Error deleting record:', err);
+      console.error("Error deleting record:", err);
       error(
-        'Delete Failed',
-        'Failed to delete the evaluation record. Please try again.'
+        "Delete Failed",
+        "Failed to delete the evaluation record. Please try again."
       );
     }
   };
@@ -898,13 +1010,13 @@ function EvaluatorDashboard() {
   const handleCancelDelete = () => {
     // Trigger pop-down animation
     setIsDeleteDialogClosing(true);
-    
+
     // Wait for animation to complete before closing
     setTimeout(() => {
       setIsDeleteModalOpen(false);
       setRecordToDelete(null);
-      setDeletePassword('');
-      setDeletePasswordError('');
+      setDeletePassword("");
+      setDeletePasswordError("");
       setIsDeleteDialogClosing(false);
     }, 300); // Match animation duration
   };
@@ -914,14 +1026,13 @@ function EvaluatorDashboard() {
     // Optionally refresh data or show success message
   };
 
-
   // Note: sortFeedback and getSortIcon are now managed inside EvaluationRecordsTab component
-
-
 
   const viewEvaluationForm = (feedback: any) => {
     // Find the original submission data for this feedback
-    const originalSubmission = recentSubmissions.find(submission => submission.id === feedback.id);
+    const originalSubmission = recentSubmissions.find(
+      (submission) => submission.id === feedback.id
+    );
 
     if (originalSubmission) {
       setSelectedEvaluationSubmission(originalSubmission);
@@ -934,14 +1045,14 @@ function EvaluatorDashboard() {
         category: feedback.category,
         rating: feedback.rating,
         submittedAt: feedback.date,
-        status: 'completed',
+        status: "completed",
         evaluator: feedback.reviewer,
         evaluationData: {
           overallComments: feedback.comment,
           employeeEmail: feedback.employeeEmail,
           department: feedback.department,
-          position: feedback.position
-        }
+          position: feedback.position,
+        },
       };
       setSelectedEvaluationSubmission(submissionData);
       setIsViewResultsModalOpen(true);
@@ -950,32 +1061,68 @@ function EvaluatorDashboard() {
 
   const printFeedback = (feedback: any) => {
     // Find the original submission data for this feedback
-    const originalSubmission = recentSubmissions.find(submission => submission.id === feedback.id);
+    const originalSubmission = recentSubmissions.find(
+      (submission) => submission.id === feedback.id
+    );
 
     if (!originalSubmission || !originalSubmission.evaluationData) {
-      alert('No evaluation data available for printing');
+      alert("No evaluation data available for printing");
       return;
     }
 
     const data = originalSubmission.evaluationData;
 
     // Calculate scores from individual evaluations
-    const jobKnowledgeScore = calculateScore([data.jobKnowledgeScore1, data.jobKnowledgeScore2, data.jobKnowledgeScore3]);
-    const qualityOfWorkScore = calculateScore([data.qualityOfWorkScore1, data.qualityOfWorkScore2, data.qualityOfWorkScore3, data.qualityOfWorkScore4, data.qualityOfWorkScore5]);
-    const adaptabilityScore = calculateScore([data.adaptabilityScore1, data.adaptabilityScore2, data.adaptabilityScore3]);
-    const teamworkScore = calculateScore([data.teamworkScore1, data.teamworkScore2, data.teamworkScore3]);
-    const reliabilityScore = calculateScore([data.reliabilityScore1, data.reliabilityScore2, data.reliabilityScore3, data.reliabilityScore4]);
-    const ethicalScore = calculateScore([data.ethicalScore1, data.ethicalScore2, data.ethicalScore3, data.ethicalScore4]);
-    const customerServiceScore = calculateScore([data.customerServiceScore1, data.customerServiceScore2, data.customerServiceScore3, data.customerServiceScore4, data.customerServiceScore5]);
+    const jobKnowledgeScore = calculateScore([
+      data.jobKnowledgeScore1,
+      data.jobKnowledgeScore2,
+      data.jobKnowledgeScore3,
+    ]);
+    const qualityOfWorkScore = calculateScore([
+      data.qualityOfWorkScore1,
+      data.qualityOfWorkScore2,
+      data.qualityOfWorkScore3,
+      data.qualityOfWorkScore4,
+      data.qualityOfWorkScore5,
+    ]);
+    const adaptabilityScore = calculateScore([
+      data.adaptabilityScore1,
+      data.adaptabilityScore2,
+      data.adaptabilityScore3,
+    ]);
+    const teamworkScore = calculateScore([
+      data.teamworkScore1,
+      data.teamworkScore2,
+      data.teamworkScore3,
+    ]);
+    const reliabilityScore = calculateScore([
+      data.reliabilityScore1,
+      data.reliabilityScore2,
+      data.reliabilityScore3,
+      data.reliabilityScore4,
+    ]);
+    const ethicalScore = calculateScore([
+      data.ethicalScore1,
+      data.ethicalScore2,
+      data.ethicalScore3,
+      data.ethicalScore4,
+    ]);
+    const customerServiceScore = calculateScore([
+      data.customerServiceScore1,
+      data.customerServiceScore2,
+      data.customerServiceScore3,
+      data.customerServiceScore4,
+      data.customerServiceScore5,
+    ]);
 
     // Calculate weighted scores
-    const jobKnowledgeWeighted = (jobKnowledgeScore * 0.20).toFixed(2);
-    const qualityOfWorkWeighted = (qualityOfWorkScore * 0.20).toFixed(2);
-    const adaptabilityWeighted = (adaptabilityScore * 0.10).toFixed(2);
-    const teamworkWeighted = (teamworkScore * 0.10).toFixed(2);
+    const jobKnowledgeWeighted = (jobKnowledgeScore * 0.2).toFixed(2);
+    const qualityOfWorkWeighted = (qualityOfWorkScore * 0.2).toFixed(2);
+    const adaptabilityWeighted = (adaptabilityScore * 0.1).toFixed(2);
+    const teamworkWeighted = (teamworkScore * 0.1).toFixed(2);
     const reliabilityWeighted = (reliabilityScore * 0.05).toFixed(2);
     const ethicalWeighted = (ethicalScore * 0.05).toFixed(2);
-    const customerServiceWeighted = (customerServiceScore * 0.30).toFixed(2);
+    const customerServiceWeighted = (customerServiceScore * 0.3).toFixed(2);
 
     // Calculate overall weighted score
     const overallWeightedScore = (
@@ -988,10 +1135,13 @@ function EvaluatorDashboard() {
       parseFloat(customerServiceWeighted)
     ).toFixed(2);
 
-    const overallPercentage = (parseFloat(overallWeightedScore) / 5 * 100).toFixed(2);
+    const overallPercentage = (
+      (parseFloat(overallWeightedScore) / 5) *
+      100
+    ).toFixed(2);
     const isPass = parseFloat(overallWeightedScore) >= 3.0;
 
-    const printContent = document.createElement('div');
+    const printContent = document.createElement("div");
     printContent.innerHTML = `
       <style>
         @media print {
@@ -1041,28 +1191,50 @@ function EvaluatorDashboard() {
           <div class="print-field">
             <div class="print-label">Review Type:</div>
             <div class="print-value">
-              ${data.reviewTypeProbationary3 ? '✓ 3m' : '☐ 3m'} | ${data.reviewTypeProbationary5 ? '✓ 5m' : '☐ 5m'} | 
-              ${data.reviewTypeRegularQ1 ? '✓ Q1' : '☐ Q1'} | ${data.reviewTypeRegularQ2 ? '✓ Q2' : '☐ Q2'} | 
-              ${data.reviewTypeRegularQ3 ? '✓ Q3' : '☐ Q3'} | ${data.reviewTypeRegularQ4 ? '✓ Q4' : '☐ Q4'}
-              ${data.reviewTypeOthersImprovement ? ' | ✓ PI' : ''}
-              ${data.reviewTypeOthersCustom ? ` | ${data.reviewTypeOthersCustom}` : ''}
+              ${data.reviewTypeProbationary3 ? "✓ 3m" : "☐ 3m"} | ${
+      data.reviewTypeProbationary5 ? "✓ 5m" : "☐ 5m"
+    } | 
+              ${data.reviewTypeRegularQ1 ? "✓ Q1" : "☐ Q1"} | ${
+      data.reviewTypeRegularQ2 ? "✓ Q2" : "☐ Q2"
+    } | 
+              ${data.reviewTypeRegularQ3 ? "✓ Q3" : "☐ Q3"} | ${
+      data.reviewTypeRegularQ4 ? "✓ Q4" : "☐ Q4"
+    }
+              ${data.reviewTypeOthersImprovement ? " | ✓ PI" : ""}
+              ${
+                data.reviewTypeOthersCustom
+                  ? ` | ${data.reviewTypeOthersCustom}`
+                  : ""
+              }
             </div>
           </div>
           <div class="print-field">
             <div class="print-label">Employee:</div>
-            <div class="print-value">${data.employeeName || 'Not specified'} (${data.employeeId || 'ID: N/A'})</div>
+            <div class="print-value">${data.employeeName || "Not specified"} (${
+      data.employeeId || "ID: N/A"
+    })</div>
           </div>
           <div class="print-field">
             <div class="print-label">Position:</div>
-            <div class="print-value">${data.position || 'Not specified'} - ${data.department || 'Dept: N/A'}</div>
+            <div class="print-value">${data.position || "Not specified"} - ${
+      data.department || "Dept: N/A"
+    }</div>
           </div>
           <div class="print-field">
             <div class="print-label">Branch & Supervisor:</div>
-            <div class="print-value">${data.branch || 'Branch: N/A'} | ${data.supervisor || 'Sup: N/A'}</div>
+            <div class="print-value">${data.branch || "Branch: N/A"} | ${
+      data.supervisor || "Sup: N/A"
+    }</div>
           </div>
           <div class="print-field">
             <div class="print-label">Hire Date & Coverage:</div>
-            <div class="print-value">${data.hireDate || 'Hire: N/A'} | ${data.coverageFrom && data.coverageTo ? `${new Date(data.coverageFrom).toLocaleDateString()} - ${new Date(data.coverageTo).toLocaleDateString()}` : 'Coverage: N/A'}</div>
+            <div class="print-value">${data.hireDate || "Hire: N/A"} | ${
+      data.coverageFrom && data.coverageTo
+        ? `${new Date(data.coverageFrom).toLocaleDateString()} - ${new Date(
+            data.coverageTo
+          ).toLocaleDateString()}`
+        : "Coverage: N/A"
+    }</div>
           </div>
         </div>
       </div>
@@ -1085,28 +1257,42 @@ function EvaluatorDashboard() {
             <tr>
               <td>Mastery in Core Competencies (L.E.A.D.E.R.)</td>
               <td>Demonstrates comprehensive understanding of job requirements</td>
-              <td>${data.jobKnowledgeScore1 || ''}</td>
-              <td>${data.jobKnowledgeScore1 ? getRatingLabel(parseFloat(data.jobKnowledgeScore1)) : 'N/A'}</td>
-              <td>${data.jobKnowledgeComments1 || ''}</td>
+              <td>${data.jobKnowledgeScore1 || ""}</td>
+              <td>${
+                data.jobKnowledgeScore1
+                  ? getRatingLabel(parseFloat(data.jobKnowledgeScore1))
+                  : "N/A"
+              }</td>
+              <td>${data.jobKnowledgeComments1 || ""}</td>
             </tr>
             <tr>
               <td>Keeps Documentation Updated</td>
               <td>Maintains current and accurate documentation</td>
-              <td>${data.jobKnowledgeScore2 || ''}</td>
-              <td>${data.jobKnowledgeScore2 ? getRatingLabel(parseFloat(data.jobKnowledgeScore2)) : 'N/A'}</td>
-              <td>${data.jobKnowledgeComments2 || ''}</td>
+              <td>${data.jobKnowledgeScore2 || ""}</td>
+              <td>${
+                data.jobKnowledgeScore2
+                  ? getRatingLabel(parseFloat(data.jobKnowledgeScore2))
+                  : "N/A"
+              }</td>
+              <td>${data.jobKnowledgeComments2 || ""}</td>
             </tr>
             <tr>
               <td>Problem Solving</td>
               <td>Effectively identifies and resolves work challenges</td>
-              <td>${data.jobKnowledgeScore3 || ''}</td>
-              <td>${data.jobKnowledgeScore3 ? getRatingLabel(parseFloat(data.jobKnowledgeScore3)) : 'N/A'}</td>
-              <td>${data.jobKnowledgeComments3 || ''}</td>
+              <td>${data.jobKnowledgeScore3 || ""}</td>
+              <td>${
+                data.jobKnowledgeScore3
+                  ? getRatingLabel(parseFloat(data.jobKnowledgeScore3))
+                  : "N/A"
+              }</td>
+              <td>${data.jobKnowledgeComments3 || ""}</td>
             </tr>
           </tbody>
         </table>
         <div class="print-results">
-          <strong>Avg: ${jobKnowledgeScore.toFixed(2)} | ${getRatingLabel(jobKnowledgeScore)}</strong>
+          <strong>Avg: ${jobKnowledgeScore.toFixed(2)} | ${getRatingLabel(
+      jobKnowledgeScore
+    )}</strong>
         </div>
       </div>
 
@@ -1128,42 +1314,64 @@ function EvaluatorDashboard() {
             <tr>
               <td>Meets Standards and Requirements</td>
               <td>Consistently delivers work that meets standards</td>
-              <td>${data.qualityOfWorkScore1 || ''}</td>
-              <td>${data.qualityOfWorkScore1 ? getRatingLabel(parseFloat(data.qualityOfWorkScore1)) : 'N/A'}</td>
-              <td>${data.qualityOfWorkComments1 || ''}</td>
+              <td>${data.qualityOfWorkScore1 || ""}</td>
+              <td>${
+                data.qualityOfWorkScore1
+                  ? getRatingLabel(parseFloat(data.qualityOfWorkScore1))
+                  : "N/A"
+              }</td>
+              <td>${data.qualityOfWorkComments1 || ""}</td>
             </tr>
             <tr>
               <td>Timeliness (L.E.A.D.E.R.)</td>
               <td>Completes tasks within established deadlines</td>
-              <td>${data.qualityOfWorkScore2 || ''}</td>
-              <td>${data.qualityOfWorkScore2 ? getRatingLabel(parseFloat(data.qualityOfWorkScore2)) : 'N/A'}</td>
-              <td>${data.qualityOfWorkComments2 || ''}</td>
+              <td>${data.qualityOfWorkScore2 || ""}</td>
+              <td>${
+                data.qualityOfWorkScore2
+                  ? getRatingLabel(parseFloat(data.qualityOfWorkScore2))
+                  : "N/A"
+              }</td>
+              <td>${data.qualityOfWorkComments2 || ""}</td>
             </tr>
             <tr>
               <td>Work Output Volume (L.E.A.D.E.R.)</td>
               <td>Produces appropriate volume of work output</td>
-              <td>${data.qualityOfWorkScore3 || ''}</td>
-              <td>${data.qualityOfWorkScore3 ? getRatingLabel(parseFloat(data.qualityOfWorkScore3)) : 'N/A'}</td>
-              <td>${data.qualityOfWorkComments3 || ''}</td>
+              <td>${data.qualityOfWorkScore3 || ""}</td>
+              <td>${
+                data.qualityOfWorkScore3
+                  ? getRatingLabel(parseFloat(data.qualityOfWorkScore3))
+                  : "N/A"
+              }</td>
+              <td>${data.qualityOfWorkComments3 || ""}</td>
             </tr>
             <tr>
               <td>Consistency in Performance (L.E.A.D.E.R.)</td>
               <td>Maintains consistent quality standards</td>
-              <td>${data.qualityOfWorkScore4 || ''}</td>
-              <td>${data.qualityOfWorkScore4 ? getRatingLabel(parseFloat(data.qualityOfWorkScore4)) : 'N/A'}</td>
-              <td>${data.qualityOfWorkComments4 || ''}</td>
+              <td>${data.qualityOfWorkScore4 || ""}</td>
+              <td>${
+                data.qualityOfWorkScore4
+                  ? getRatingLabel(parseFloat(data.qualityOfWorkScore4))
+                  : "N/A"
+              }</td>
+              <td>${data.qualityOfWorkComments4 || ""}</td>
             </tr>
             <tr>
               <td>Attention to Detail</td>
               <td>Demonstrates thoroughness and accuracy</td>
-              <td>${data.qualityOfWorkScore5 || ''}</td>
-              <td>${data.qualityOfWorkScore5 ? getRatingLabel(parseFloat(data.qualityOfWorkScore5)) : 'N/A'}</td>
-              <td>${data.qualityOfWorkComments5 || ''}</td>
+              <td>${data.qualityOfWorkScore5 || ""}</td>
+              <td>${
+                data.qualityOfWorkScore5
+                  ? getRatingLabel(parseFloat(data.qualityOfWorkScore5))
+                  : "N/A"
+              }</td>
+              <td>${data.qualityOfWorkComments5 || ""}</td>
             </tr>
           </tbody>
         </table>
         <div class="print-results">
-          <strong>Avg: ${qualityOfWorkScore.toFixed(2)} | ${getRatingLabel(qualityOfWorkScore)}</strong>
+          <strong>Avg: ${qualityOfWorkScore.toFixed(2)} | ${getRatingLabel(
+      qualityOfWorkScore
+    )}</strong>
         </div>
       </div>
 
@@ -1187,28 +1395,42 @@ function EvaluatorDashboard() {
             <tr>
               <td>Openness to Change (attitude towards change)</td>
               <td>Demonstrates a positive attitude and openness to new ideas and major changes at work</td>
-              <td>${data.adaptabilityScore1 || ''}</td>
-              <td>${data.adaptabilityScore1 ? getRatingLabel(parseFloat(data.adaptabilityScore1)) : 'Not Rated'}</td>
-              <td>${data.adaptabilityComments1 || ''}</td>
+              <td>${data.adaptabilityScore1 || ""}</td>
+              <td>${
+                data.adaptabilityScore1
+                  ? getRatingLabel(parseFloat(data.adaptabilityScore1))
+                  : "Not Rated"
+              }</td>
+              <td>${data.adaptabilityComments1 || ""}</td>
             </tr>
             <tr>
               <td>Flexibility in Job Role (ability to adapt to changes)</td>
               <td>Adapts to changes in job responsibilities and willingly takes on new tasks</td>
-              <td>${data.adaptabilityScore2 || ''}</td>
-              <td>${data.adaptabilityScore2 ? getRatingLabel(parseFloat(data.adaptabilityScore2)) : 'Not Rated'}</td>
-              <td>${data.adaptabilityComments2 || ''}</td>
+              <td>${data.adaptabilityScore2 || ""}</td>
+              <td>${
+                data.adaptabilityScore2
+                  ? getRatingLabel(parseFloat(data.adaptabilityScore2))
+                  : "Not Rated"
+              }</td>
+              <td>${data.adaptabilityComments2 || ""}</td>
             </tr>
             <tr>
               <td>Resilience in the Face of Challenges</td>
               <td>Maintains a positive attitude and performance under challenging or difficult conditions</td>
-              <td>${data.adaptabilityScore3 || ''}</td>
-              <td>${data.adaptabilityScore3 ? getRatingLabel(parseFloat(data.adaptabilityScore3)) : 'Not Rated'}</td>
-              <td>${data.adaptabilityComments3 || ''}</td>
+              <td>${data.adaptabilityScore3 || ""}</td>
+              <td>${
+                data.adaptabilityScore3
+                  ? getRatingLabel(parseFloat(data.adaptabilityScore3))
+                  : "Not Rated"
+              }</td>
+              <td>${data.adaptabilityComments3 || ""}</td>
             </tr>
           </tbody>
         </table>
         <div class="print-results">
-          <strong>Average: ${adaptabilityScore.toFixed(2)} | Rating: ${getRatingLabel(adaptabilityScore)}</strong>
+          <strong>Average: ${adaptabilityScore.toFixed(
+            2
+          )} | Rating: ${getRatingLabel(adaptabilityScore)}</strong>
         </div>
       </div>
 
@@ -1232,28 +1454,42 @@ function EvaluatorDashboard() {
             <tr>
               <td>Active Participation in Team Activities</td>
               <td>Actively participates in team meetings and projects. Contributes ideas and feedback during discussions.</td>
-              <td>${data.teamworkScore1 || ''}</td>
-              <td>${data.teamworkScore1 ? getRatingLabel(parseFloat(data.teamworkScore1)) : 'Not Rated'}</td>
-              <td>${data.teamworkComments1 || ''}</td>
+              <td>${data.teamworkScore1 || ""}</td>
+              <td>${
+                data.teamworkScore1
+                  ? getRatingLabel(parseFloat(data.teamworkScore1))
+                  : "Not Rated"
+              }</td>
+              <td>${data.teamworkComments1 || ""}</td>
             </tr>
             <tr>
               <td>Promotion of a Positive Team Culture</td>
               <td>Interacts positively with coworkers. Fosters inclusive team culture. Provides support and constructive feedback.</td>
-              <td>${data.teamworkScore2 || ''}</td>
-              <td>${data.teamworkScore2 ? getRatingLabel(parseFloat(data.teamworkScore2)) : 'Not Rated'}</td>
-              <td>${data.teamworkComments2 || ''}</td>
+              <td>${data.teamworkScore2 || ""}</td>
+              <td>${
+                data.teamworkScore2
+                  ? getRatingLabel(parseFloat(data.teamworkScore2))
+                  : "Not Rated"
+              }</td>
+              <td>${data.teamworkComments2 || ""}</td>
             </tr>
             <tr>
               <td>Effective Communication</td>
               <td>Communicates openly and clearly with team members. Shares information and updates in a timely manner.</td>
-              <td>${data.teamworkScore3 || ''}</td>
-              <td>${data.teamworkScore3 ? getRatingLabel(parseFloat(data.teamworkScore3)) : 'Not Rated'}</td>
-              <td>${data.teamworkComments3 || ''}</td>
+              <td>${data.teamworkScore3 || ""}</td>
+              <td>${
+                data.teamworkScore3
+                  ? getRatingLabel(parseFloat(data.teamworkScore3))
+                  : "Not Rated"
+              }</td>
+              <td>${data.teamworkComments3 || ""}</td>
             </tr>
           </tbody>
         </table>
         <div class="print-results">
-          <strong>Average: ${teamworkScore.toFixed(2)} | Rating: ${getRatingLabel(teamworkScore)}</strong>
+          <strong>Average: ${teamworkScore.toFixed(
+            2
+          )} | Rating: ${getRatingLabel(teamworkScore)}</strong>
         </div>
       </div>
 
@@ -1277,35 +1513,53 @@ function EvaluatorDashboard() {
             <tr>
               <td>Consistent Attendance</td>
               <td>Demonstrates regular attendance by being present at work as scheduled</td>
-              <td>${data.reliabilityScore1 || ''}</td>
-              <td>${data.reliabilityScore1 ? getRatingLabel(parseFloat(data.reliabilityScore1)) : 'Not Rated'}</td>
-              <td>${data.reliabilityComments1 || ''}</td>
+              <td>${data.reliabilityScore1 || ""}</td>
+              <td>${
+                data.reliabilityScore1
+                  ? getRatingLabel(parseFloat(data.reliabilityScore1))
+                  : "Not Rated"
+              }</td>
+              <td>${data.reliabilityComments1 || ""}</td>
             </tr>
             <tr>
               <td>Punctuality</td>
               <td>Arrives at work and meetings on time or before the scheduled time</td>
-              <td>${data.reliabilityScore2 || ''}</td>
-              <td>${data.reliabilityScore2 ? getRatingLabel(parseFloat(data.reliabilityScore2)) : 'Not Rated'}</td>
-              <td>${data.reliabilityComments2 || ''}</td>
+              <td>${data.reliabilityScore2 || ""}</td>
+              <td>${
+                data.reliabilityScore2
+                  ? getRatingLabel(parseFloat(data.reliabilityScore2))
+                  : "Not Rated"
+              }</td>
+              <td>${data.reliabilityComments2 || ""}</td>
             </tr>
             <tr>
               <td>Follows Through on Commitments</td>
               <td>Follows through on assignments from and commitments made to coworkers or superiors</td>
-              <td>${data.reliabilityScore3 || ''}</td>
-              <td>${data.reliabilityScore3 ? getRatingLabel(parseFloat(data.reliabilityScore3)) : 'Not Rated'}</td>
-              <td>${data.reliabilityComments3 || ''}</td>
+              <td>${data.reliabilityScore3 || ""}</td>
+              <td>${
+                data.reliabilityScore3
+                  ? getRatingLabel(parseFloat(data.reliabilityScore3))
+                  : "Not Rated"
+              }</td>
+              <td>${data.reliabilityComments3 || ""}</td>
             </tr>
             <tr>
               <td>Reliable Handling of Routine Tasks</td>
               <td>Demonstrates reliability in completing routine tasks without oversight</td>
-              <td>${data.reliabilityScore4 || ''}</td>
-              <td>${data.reliabilityScore4 ? getRatingLabel(parseFloat(data.reliabilityScore4)) : 'Not Rated'}</td>
-              <td>${data.reliabilityComments4 || ''}</td>
+              <td>${data.reliabilityScore4 || ""}</td>
+              <td>${
+                data.reliabilityScore4
+                  ? getRatingLabel(parseFloat(data.reliabilityScore4))
+                  : "Not Rated"
+              }</td>
+              <td>${data.reliabilityComments4 || ""}</td>
             </tr>
           </tbody>
         </table>
         <div class="print-results">
-          <strong>Average: ${reliabilityScore.toFixed(2)} | Rating: ${getRatingLabel(reliabilityScore)}</strong>
+          <strong>Average: ${reliabilityScore.toFixed(
+            2
+          )} | Rating: ${getRatingLabel(reliabilityScore)}</strong>
         </div>
       </div>
 
@@ -1329,35 +1583,53 @@ function EvaluatorDashboard() {
             <tr>
               <td>Follows Company Policies</td>
               <td>Complies with company rules, regulations, and memorandums</td>
-              <td>${data.ethicalScore1 || ''}</td>
-              <td>${data.ethicalScore1 ? getRatingLabel(parseFloat(data.ethicalScore1)) : 'Not Rated'}</td>
-              <td>${data.ethicalExplanation1 || ''}</td>
+              <td>${data.ethicalScore1 || ""}</td>
+              <td>${
+                data.ethicalScore1
+                  ? getRatingLabel(parseFloat(data.ethicalScore1))
+                  : "Not Rated"
+              }</td>
+              <td>${data.ethicalExplanation1 || ""}</td>
             </tr>
             <tr>
               <td>Professionalism (L.E.A.D.E.R.)</td>
               <td>Maintains a high level of professionalism in all work interactions</td>
-              <td>${data.ethicalScore2 || ''}</td>
-              <td>${data.ethicalScore2 ? getRatingLabel(parseFloat(data.ethicalScore2)) : 'Not Rated'}</td>
-              <td>${data.ethicalExplanation2 || ''}</td>
+              <td>${data.ethicalScore2 || ""}</td>
+              <td>${
+                data.ethicalScore2
+                  ? getRatingLabel(parseFloat(data.ethicalScore2))
+                  : "Not Rated"
+              }</td>
+              <td>${data.ethicalExplanation2 || ""}</td>
             </tr>
             <tr>
               <td>Accountability for Mistakes (L.E.A.D.E.R.)</td>
               <td>Takes responsibility for errors and actively works to correct mistakes</td>
-              <td>${data.ethicalScore3 || ''}</td>
-              <td>${data.ethicalScore3 ? getRatingLabel(parseFloat(data.ethicalScore3)) : 'Not Rated'}</td>
-              <td>${data.ethicalExplanation3 || ''}</td>
+              <td>${data.ethicalScore3 || ""}</td>
+              <td>${
+                data.ethicalScore3
+                  ? getRatingLabel(parseFloat(data.ethicalScore3))
+                  : "Not Rated"
+              }</td>
+              <td>${data.ethicalExplanation3 || ""}</td>
             </tr>
             <tr>
               <td>Respect for Others (L.E.A.D.E.R.)</td>
               <td>Treats all individuals fairly and with respect, regardless of background or position</td>
-              <td>${data.ethicalScore4 || ''}</td>
-              <td>${data.ethicalScore4 ? getRatingLabel(parseFloat(data.ethicalScore4)) : 'Not Rated'}</td>
-              <td>${data.ethicalExplanation4 || ''}</td>
+              <td>${data.ethicalScore4 || ""}</td>
+              <td>${
+                data.ethicalScore4
+                  ? getRatingLabel(parseFloat(data.ethicalScore4))
+                  : "Not Rated"
+              }</td>
+              <td>${data.ethicalExplanation4 || ""}</td>
             </tr>
           </tbody>
         </table>
         <div class="print-results">
-          <strong>Average: ${ethicalScore.toFixed(2)} | Rating: ${getRatingLabel(ethicalScore)}</strong>
+          <strong>Average: ${ethicalScore.toFixed(
+            2
+          )} | Rating: ${getRatingLabel(ethicalScore)}</strong>
         </div>
       </div>
 
@@ -1381,42 +1653,64 @@ function EvaluatorDashboard() {
             <tr>
               <td>Listening & Understanding</td>
               <td>Listens to customers and displays understanding of customer needs and concerns</td>
-              <td>${data.customerServiceScore1 || ''}</td>
-              <td>${data.customerServiceScore1 ? getRatingLabel(parseFloat(data.customerServiceScore1)) : 'Not Rated'}</td>
-              <td>${data.customerServiceExplanation1 || ''}</td>
+              <td>${data.customerServiceScore1 || ""}</td>
+              <td>${
+                data.customerServiceScore1
+                  ? getRatingLabel(parseFloat(data.customerServiceScore1))
+                  : "Not Rated"
+              }</td>
+              <td>${data.customerServiceExplanation1 || ""}</td>
             </tr>
             <tr>
               <td>Problem-Solving for Customer Satisfaction</td>
               <td>Proactively identifies and solves customer problems to ensure satisfaction</td>
-              <td>${data.customerServiceScore2 || ''}</td>
-              <td>${data.customerServiceScore2 ? getRatingLabel(parseFloat(data.customerServiceScore2)) : 'Not Rated'}</td>
-              <td>${data.customerServiceExplanation2 || ''}</td>
+              <td>${data.customerServiceScore2 || ""}</td>
+              <td>${
+                data.customerServiceScore2
+                  ? getRatingLabel(parseFloat(data.customerServiceScore2))
+                  : "Not Rated"
+              }</td>
+              <td>${data.customerServiceExplanation2 || ""}</td>
             </tr>
             <tr>
               <td>Product Knowledge for Customer Support (L.E.A.D.E.R.)</td>
               <td>Possesses comprehensive product knowledge to assist customers effectively</td>
-              <td>${data.customerServiceScore3 || ''}</td>
-              <td>${data.customerServiceScore3 ? getRatingLabel(parseFloat(data.customerServiceScore3)) : 'Not Rated'}</td>
-              <td>${data.customerServiceExplanation3 || ''}</td>
+              <td>${data.customerServiceScore3 || ""}</td>
+              <td>${
+                data.customerServiceScore3
+                  ? getRatingLabel(parseFloat(data.customerServiceScore3))
+                  : "Not Rated"
+              }</td>
+              <td>${data.customerServiceExplanation3 || ""}</td>
             </tr>
             <tr>
               <td>Positive and Professional Attitude (L.E.A.D.E.R.)</td>
               <td>Maintains a positive and professional demeanor, particularly during customer interactions</td>
-              <td>${data.customerServiceScore4 || ''}</td>
-              <td>${data.customerServiceScore4 ? getRatingLabel(parseFloat(data.customerServiceScore4)) : 'Not Rated'}</td>
-              <td>${data.customerServiceExplanation4 || ''}</td>
+              <td>${data.customerServiceScore4 || ""}</td>
+              <td>${
+                data.customerServiceScore4
+                  ? getRatingLabel(parseFloat(data.customerServiceScore4))
+                  : "Not Rated"
+              }</td>
+              <td>${data.customerServiceExplanation4 || ""}</td>
             </tr>
             <tr>
               <td>Timely Resolution of Customer Issues (L.E.A.D.E.R.)</td>
               <td>Resolves customer issues promptly and efficiently</td>
-              <td>${data.customerServiceScore5 || ''}</td>
-              <td>${data.customerServiceScore5 ? getRatingLabel(parseFloat(data.customerServiceScore5)) : 'Not Rated'}</td>
-              <td>${data.customerServiceExplanation5 || ''}</td>
+              <td>${data.customerServiceScore5 || ""}</td>
+              <td>${
+                data.customerServiceScore5
+                  ? getRatingLabel(parseFloat(data.customerServiceScore5))
+                  : "Not Rated"
+              }</td>
+              <td>${data.customerServiceExplanation5 || ""}</td>
             </tr>
           </tbody>
         </table>
         <div class="print-results">
-          <strong>Average: ${customerServiceScore.toFixed(2)} | Rating: ${getRatingLabel(customerServiceScore)}</strong>
+          <strong>Average: ${customerServiceScore.toFixed(
+            2
+          )} | Rating: ${getRatingLabel(customerServiceScore)}</strong>
         </div>
       </div>
 
@@ -1426,38 +1720,54 @@ function EvaluatorDashboard() {
         <div class="print-grid">
           <div class="print-field">
             <div class="print-label">Job Knowledge:</div>
-            <div class="print-value">${jobKnowledgeScore.toFixed(2)} (${getRatingLabel(jobKnowledgeScore)}) - 20%</div>
+            <div class="print-value">${jobKnowledgeScore.toFixed(
+              2
+            )} (${getRatingLabel(jobKnowledgeScore)}) - 20%</div>
           </div>
           <div class="print-field">
             <div class="print-label">Quality of Work:</div>
-            <div class="print-value">${qualityOfWorkScore.toFixed(2)} (${getRatingLabel(qualityOfWorkScore)}) - 20%</div>
+            <div class="print-value">${qualityOfWorkScore.toFixed(
+              2
+            )} (${getRatingLabel(qualityOfWorkScore)}) - 20%</div>
           </div>
           <div class="print-field">
             <div class="print-label">Adaptability:</div>
-            <div class="print-value">${adaptabilityScore.toFixed(2)} (${getRatingLabel(adaptabilityScore)}) - 10%</div>
+            <div class="print-value">${adaptabilityScore.toFixed(
+              2
+            )} (${getRatingLabel(adaptabilityScore)}) - 10%</div>
           </div>
           <div class="print-field">
             <div class="print-label">Teamwork:</div>
-            <div class="print-value">${teamworkScore.toFixed(2)} (${getRatingLabel(teamworkScore)}) - 10%</div>
+            <div class="print-value">${teamworkScore.toFixed(
+              2
+            )} (${getRatingLabel(teamworkScore)}) - 10%</div>
           </div>
           <div class="print-field">
             <div class="print-label">Reliability:</div>
-            <div class="print-value">${reliabilityScore.toFixed(2)} (${getRatingLabel(reliabilityScore)}) - 5%</div>
+            <div class="print-value">${reliabilityScore.toFixed(
+              2
+            )} (${getRatingLabel(reliabilityScore)}) - 5%</div>
           </div>
           <div class="print-field">
             <div class="print-label">Ethical Behavior:</div>
-            <div class="print-value">${ethicalScore.toFixed(2)} (${getRatingLabel(ethicalScore)}) - 5%</div>
+            <div class="print-value">${ethicalScore.toFixed(
+              2
+            )} (${getRatingLabel(ethicalScore)}) - 5%</div>
           </div>
           <div class="print-field">
             <div class="print-label">Customer Service:</div>
-            <div class="print-value">${customerServiceScore.toFixed(2)} (${getRatingLabel(customerServiceScore)}) - 30%</div>
+            <div class="print-value">${customerServiceScore.toFixed(
+              2
+            )} (${getRatingLabel(customerServiceScore)}) - 30%</div>
           </div>
         </div>
         
         <div class="print-results">
           <div class="print-percentage">${overallPercentage}%</div>
           <div style="margin-bottom: 8px;">Performance Score</div>
-          <div class="print-status ${isPass ? 'pass' : 'fail'}">${isPass ? 'PASS' : 'FAIL'}</div>
+          <div class="print-status ${isPass ? "pass" : "fail"}">${
+      isPass ? "PASS" : "FAIL"
+    }</div>
         </div>
       </div>
 
@@ -1465,20 +1775,28 @@ function EvaluatorDashboard() {
       <div class="print-section">
         <div class="print-section-title">PRIORITY AREAS, REMARKS & ACKNOWLEDGEMENT</div>
         
-        ${data.priorityArea1 || data.priorityArea2 || data.priorityArea3 ? `
+        ${
+          data.priorityArea1 || data.priorityArea2 || data.priorityArea3
+            ? `
         <div style="margin-bottom: 8px;">
           <strong>Priority Areas:</strong><br>
-          ${data.priorityArea1 ? `1. ${data.priorityArea1}<br>` : ''}
-          ${data.priorityArea2 ? `2. ${data.priorityArea2}<br>` : ''}
-          ${data.priorityArea3 ? `3. ${data.priorityArea3}` : ''}
+          ${data.priorityArea1 ? `1. ${data.priorityArea1}<br>` : ""}
+          ${data.priorityArea2 ? `2. ${data.priorityArea2}<br>` : ""}
+          ${data.priorityArea3 ? `3. ${data.priorityArea3}` : ""}
         </div>
-        ` : ''}
+        `
+            : ""
+        }
         
-        ${data.remarks ? `
+        ${
+          data.remarks
+            ? `
         <div style="margin-bottom: 8px;">
           <strong>Remarks:</strong> ${data.remarks}
         </div>
-        ` : ''}
+        `
+            : ""
+        }
         
         <div style="margin-bottom: 8px;">
           <strong>Acknowledgement:</strong> I hereby acknowledge that the Evaluator has explained to me, to the best of their ability, 
@@ -1487,24 +1805,32 @@ function EvaluatorDashboard() {
         
         <div class="print-signature-grid">
           <div>
-            <div class="print-signature">${data.employeeSignature || 'Employee signature not provided'}</div>
+            <div class="print-signature">${
+              data.employeeSignature || "Employee signature not provided"
+            }</div>
             <div class="print-signature-label">Employee's Name & Signature</div>
             <div style="margin-top: 5px; font-size: 8px;">
-              <strong>Date:</strong> ${data.employeeSignatureDate || 'Not specified'}
+              <strong>Date:</strong> ${
+                data.employeeSignatureDate || "Not specified"
+              }
             </div>
           </div>
           <div>
-            <div class="print-signature">${data.evaluatorSignature || 'Evaluator signature not provided'}</div>
+            <div class="print-signature">${
+              data.evaluatorSignature || "Evaluator signature not provided"
+            }</div>
             <div class="print-signature-label">Evaluator's Name & Signature</div>
             <div style="margin-top: 5px; font-size: 8px;">
-              <strong>Date:</strong> ${data.evaluatorSignatureDate || 'Not specified'}
+              <strong>Date:</strong> ${
+                data.evaluatorSignatureDate || "Not specified"
+              }
             </div>
           </div>
         </div>
       </div>
     `;
 
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open("", "_blank");
     if (printWindow) {
       printWindow.document.write(printContent.innerHTML);
       printWindow.document.close();
@@ -1512,35 +1838,37 @@ function EvaluatorDashboard() {
       printWindow.print();
       printWindow.close();
     } else {
-      alert('Please allow popups to print the evaluation.');
+      alert("Please allow popups to print the evaluation.");
     }
   };
-
-
-
-
-
-
 
   // Evaluator approval function
   const handleEvaluatorApproval = async (feedback: any) => {
     const currentUser = getCurrentUserData();
 
     if (!currentUser?.signature) {
-      alert('Please add a signature to your profile before approving evaluations.');
+      alert(
+        "Please add a signature to your profile before approving evaluations."
+      );
       return;
     }
 
-    if (!confirm(`Are you sure you want to approve this evaluation for ${feedback.employeeName}?`)) {
+    if (
+      !confirm(
+        `Are you sure you want to approve this evaluation for ${feedback.employeeName}?`
+      )
+    ) {
       return;
     }
 
     try {
       // Find the original submission
-      const originalSubmission = recentSubmissions.find(submission => submission.id === feedback.id);
+      const originalSubmission = recentSubmissions.find(
+        (submission) => submission.id === feedback.id
+      );
 
       if (!originalSubmission) {
-        alert('Evaluation not found');
+        alert("Evaluation not found");
         return;
       }
 
@@ -1548,13 +1876,15 @@ function EvaluatorDashboard() {
       const updatedSubmission = {
         ...originalSubmission,
         evaluatorSignature: currentUser.signature,
-        evaluatorApprovedAt: new Date().toISOString()
+        evaluatorApprovedAt: new Date().toISOString(),
         // Don't set approvalStatus here - let getCorrectApprovalStatus determine it
       };
 
       // Update the submissions array
-      setRecentSubmissions(prev => {
-        const updated = prev.map(sub => sub.id === feedback.id ? updatedSubmission : sub);
+      setRecentSubmissions((prev) => {
+        const updated = prev.map((sub) =>
+          sub.id === feedback.id ? updatedSubmission : sub
+        );
         return updated;
       });
 
@@ -1565,27 +1895,31 @@ function EvaluatorDashboard() {
       );
 
       // Update localStorage using the same key as the service
-      localStorage.setItem('submissions', JSON.stringify(updatedSubmissions));
+      localStorage.setItem("submissions", JSON.stringify(updatedSubmissions));
 
       // Refresh the submissions data to ensure UI updates
       await refreshSubmissions();
 
-      alert(`Evaluation for ${feedback.employeeName} has been approved successfully!`);
+      alert(
+        `Evaluation for ${feedback.employeeName} has been approved successfully!`
+      );
 
       // Create notification for evaluator approval
       try {
         await createApprovalNotification(
           feedback.employeeName,
-          currentUser?.name || 'Evaluator',
-          'evaluator'
+          currentUser?.name || "Evaluator",
+          "evaluator"
         );
       } catch (notificationError) {
-        console.warn('Failed to create approval notification:', notificationError);
+        console.warn(
+          "Failed to create approval notification:",
+          notificationError
+        );
       }
-
     } catch (error) {
-      console.error('Error approving evaluation:', error);
-      alert('Failed to approve evaluation. Please try again.');
+      console.error("Error approving evaluation:", error);
+      alert("Failed to approve evaluation. Please try again.");
     }
   };
 
@@ -1597,39 +1931,52 @@ function EvaluatorDashboard() {
     // Check if both parties have signed (handle empty strings too)
     // Employee signature should be an actual signature image (base64 data URL)
     const hasEmployeeSignature = !!(
-      (submission.employeeSignature && submission.employeeSignature.trim() && submission.employeeSignature.startsWith('data:image')) ||
-      (submission.evaluationData?.employeeSignature && submission.evaluationData.employeeSignature.trim() && submission.evaluationData.employeeSignature.startsWith('data:image'))
+      (submission.employeeSignature &&
+        submission.employeeSignature.trim() &&
+        submission.employeeSignature.startsWith("data:image")) ||
+      (submission.evaluationData?.employeeSignature &&
+        submission.evaluationData.employeeSignature.trim() &&
+        submission.evaluationData.employeeSignature.startsWith("data:image"))
     );
-    
+
     // Evaluator signature - check for actual signature image, not just the name
     const hasEvaluatorSignature = !!(
-      (submission.evaluatorSignatureImage && submission.evaluatorSignatureImage.trim() && submission.evaluatorSignatureImage.startsWith('data:image')) ||
-      (submission.evaluationData?.evaluatorSignatureImage && submission.evaluationData.evaluatorSignatureImage.trim() && submission.evaluationData.evaluatorSignatureImage.startsWith('data:image'))
+      (submission.evaluatorSignatureImage &&
+        submission.evaluatorSignatureImage.trim() &&
+        submission.evaluatorSignatureImage.startsWith("data:image")) ||
+      (submission.evaluationData?.evaluatorSignatureImage &&
+        submission.evaluationData.evaluatorSignatureImage.trim() &&
+        submission.evaluationData.evaluatorSignatureImage.startsWith(
+          "data:image"
+        ))
     );
-    
+
     // Determine approval status - SIGNATURES HAVE PRIORITY over stored status
     if (hasEmployeeSignature && hasEvaluatorSignature) {
       // Both signed = fully approved (regardless of stored status)
-      return 'fully_approved';
+      return "fully_approved";
     } else if (hasEmployeeSignature) {
       // Only employee signed
-      return 'employee_approved';
-    } else if (submission.approvalStatus && submission.approvalStatus !== 'pending') {
+      return "employee_approved";
+    } else if (
+      submission.approvalStatus &&
+      submission.approvalStatus !== "pending"
+    ) {
       // No signatures detected, use stored status
       return submission.approvalStatus;
     } else {
-      return 'pending';
+      return "pending";
     }
   };
 
   // Monitor for fully approved evaluations and send notifications
   // Only check when there's a recent change, not on initial load
   const [hasCheckedNotifications, setHasCheckedNotifications] = useState(false);
-  
+
   useEffect(() => {
     const checkForFullyApproved = async () => {
       if (!recentSubmissions || recentSubmissions.length === 0) return;
-      
+
       // Only check notifications after initial load
       if (!hasCheckedNotifications) {
         setHasCheckedNotifications(true);
@@ -1638,25 +1985,29 @@ function EvaluatorDashboard() {
 
       for (const submission of recentSubmissions) {
         const status = getCorrectApprovalStatus(submission);
-        
+
         // Check if this submission is fully approved and we haven't notified yet
-        if (status === 'fully_approved' && !submission.fullyApprovedNotified) {
+        if (status === "fully_approved" && !submission.fullyApprovedNotified) {
           try {
             await createFullyApprovedNotification(submission.employeeName);
-            
+
             // Mark as notified to prevent duplicate notifications
-            const updatedSubmissions = recentSubmissions.map(sub => 
-              sub.id === submission.id 
+            const updatedSubmissions = recentSubmissions.map((sub) =>
+              sub.id === submission.id
                 ? { ...sub, fullyApprovedNotified: true }
                 : sub
             );
             setRecentSubmissions(updatedSubmissions);
-            
+
             // Also update in localStorage
-            await clientDataService.updateSubmission(submission.id, { fullyApprovedNotified: true });
-            
+            await clientDataService.updateSubmission(submission.id, {
+              fullyApprovedNotified: true,
+            });
           } catch (error) {
-            console.warn('Failed to create fully approved notification:', error);
+            console.warn(
+              "Failed to create fully approved notification:",
+              error
+            );
           }
         }
       }
@@ -1667,7 +2018,7 @@ function EvaluatorDashboard() {
 
   // Function to merge employee approval data from localStorage
   const mergeEmployeeApprovalData = (submissions: any[]) => {
-    return submissions.map(submission => {
+    return submissions.map((submission) => {
       // Try to get employee approval data from localStorage
       // We need to check all possible employee emails that might have approved this evaluation
       let employeeApprovalData = null;
@@ -1675,7 +2026,9 @@ function EvaluatorDashboard() {
       // Check if submission has employee email
       if (submission.employeeEmail) {
         const approvalKey = `approvalData_${submission.employeeEmail}`;
-        const approvalData = JSON.parse(localStorage.getItem(approvalKey) || '{}');
+        const approvalData = JSON.parse(
+          localStorage.getItem(approvalKey) || "{}"
+        );
         employeeApprovalData = approvalData[submission.id?.toString()] || null;
       }
 
@@ -1683,8 +2036,8 @@ function EvaluatorDashboard() {
       if (!employeeApprovalData) {
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
-          if (key && key.startsWith('approvalData_')) {
-            const approvalData = JSON.parse(localStorage.getItem(key) || '{}');
+          if (key && key.startsWith("approvalData_")) {
+            const approvalData = JSON.parse(localStorage.getItem(key) || "{}");
             const foundApproval = approvalData[submission.id?.toString()];
             if (foundApproval) {
               employeeApprovalData = foundApproval;
@@ -1700,8 +2053,10 @@ function EvaluatorDashboard() {
           ...submission,
           employeeSignature: employeeApprovalData.employeeSignature,
           employeeApprovedAt: employeeApprovalData.approvedAt,
-          employeeName: employeeApprovalData.employeeName || submission.employeeName,
-          employeeEmail: employeeApprovalData.employeeEmail || submission.employeeEmail
+          employeeName:
+            employeeApprovalData.employeeName || submission.employeeName,
+          employeeEmail:
+            employeeApprovalData.employeeEmail || submission.employeeEmail,
         };
       }
 
@@ -1711,43 +2066,45 @@ function EvaluatorDashboard() {
 
   // Note: filteredFeedbackData is now computed inside EvaluationRecordsTab component
 
-
   useEffect(() => {
     const fetchData = async () => {
       try {
         setCurrentPeriod(mockData.dashboard.currentPeriod);
-        setData(mockData.dashboard.performanceData as unknown as PerformanceData);
+        setData(
+          mockData.dashboard.performanceData as unknown as PerformanceData
+        );
 
         // Fetch recent submissions from client data service
         const submissions = await clientDataService.getSubmissions();
 
         if (Array.isArray(submissions)) {
           // Ensure data is valid and has unique IDs
-          const validData = submissions.filter((item: any) =>
-            item &&
-            typeof item === 'object' &&
-            item.id !== undefined &&
-            item.employeeName
+          const validData = submissions.filter(
+            (item: any) =>
+              item &&
+              typeof item === "object" &&
+              item.id !== undefined &&
+              item.employeeName
           );
 
           // Filter to show only evaluations created by this evaluator
-          const evaluatorFiltered = validData.filter((item: any) => 
-            item.evaluatorId === user?.id
+          const evaluatorFiltered = validData.filter(
+            (item: any) => item.evaluatorId === user?.id
           );
 
           // Remove duplicates based on ID
-          const uniqueData = evaluatorFiltered.filter((item: any, index: number, self: any[]) =>
-            index === self.findIndex(t => t.id === item.id)
+          const uniqueData = evaluatorFiltered.filter(
+            (item: any, index: number, self: any[]) =>
+              index === self.findIndex((t) => t.id === item.id)
           );
 
           setRecentSubmissions(uniqueData);
         } else {
-          console.warn('Invalid data structure received from API');
+          console.warn("Invalid data structure received from API");
           setRecentSubmissions([]);
         }
-
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
@@ -1756,56 +2113,57 @@ function EvaluatorDashboard() {
     fetchData();
   }, []);
 
-
   const sidebarItems: SidebarItem[] = [
-    { id: 'overview', label: 'Overview', icon: '📊' },
-    { id: 'employees', label: 'Employees', icon: '👥' },
-    { id: 'feedback', label: 'Evaluation Records', icon: '🗂️' },
-    { id: 'reviews', label: 'Performance Reviews', icon: '📝' },
-    { id: 'history', label: 'Evaluation History', icon: '📈' },
+    { id: "overview", label: "Overview", icon: "📊" },
+    { id: "employees", label: "Employees", icon: "👥" },
+    { id: "feedback", label: "Evaluation Records", icon: "🗂️" },
+    { id: "reviews", label: "Performance Reviews", icon: "📝" },
+    { id: "history", label: "Evaluation History", icon: "📈" },
   ];
 
   // Loading state is now handled in the main return statement
 
   // Calculate statistics from actual submission data
   const stats = useMemo(() => {
-    const evaluatorSubmissions = recentSubmissions.filter(sub => 
-      sub.evaluatorId === user?.id || 
-      sub.employeeId === user?.id ||
-      sub.evaluationData?.employeeId === user?.id?.toString()
+    const evaluatorSubmissions = recentSubmissions.filter(
+      (sub) =>
+        sub.evaluatorId === user?.id ||
+        sub.employeeId === user?.id ||
+        sub.evaluationData?.employeeId === user?.id?.toString()
     );
-    
+
     // Calculate average rating
     const ratings = evaluatorSubmissions
-      .map(sub => {
+      .map((sub) => {
         if (sub.evaluationData) {
           return calculateOverallRating(sub.evaluationData);
         }
         return sub.rating || 0;
       })
-      .filter(r => r > 0);
-    
-    const averageRating = ratings.length > 0 
-      ? (ratings.reduce((sum, r) => sum + r, 0) / ratings.length).toFixed(1)
-      : '0.0';
+      .filter((r) => r > 0);
+
+    const averageRating =
+      ratings.length > 0
+        ? (ratings.reduce((sum, r) => sum + r, 0) / ratings.length).toFixed(1)
+        : "0.0";
 
     // Count pending approvals (not fully approved)
-    const pendingCount = evaluatorSubmissions.filter(sub => {
+    const pendingCount = evaluatorSubmissions.filter((sub) => {
       const status = getCorrectApprovalStatus(sub);
-      return status !== 'fully_approved';
+      return status !== "fully_approved";
     }).length;
 
     // Count fully approved
-    const approvedCount = evaluatorSubmissions.filter(sub => {
+    const approvedCount = evaluatorSubmissions.filter((sub) => {
       const status = getCorrectApprovalStatus(sub);
-      return status === 'fully_approved';
+      return status === "fully_approved";
     }).length;
 
     return {
       totalEvaluations: evaluatorSubmissions.length,
       averageRating,
       pendingApprovals: pendingCount,
-      completedApprovals: approvedCount
+      completedApprovals: approvedCount,
     };
   }, [recentSubmissions, user?.id]);
 
@@ -1863,11 +2221,15 @@ function EvaluatorDashboard() {
         <>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Evaluations</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Total Evaluations
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-2">
-                <span className="text-3xl font-bold text-gray-900">{stats.totalEvaluations}</span>
+                <span className="text-3xl font-bold text-gray-900">
+                  {stats.totalEvaluations}
+                </span>
               </div>
               <p className="text-sm text-gray-500 mt-1">Conducted by you</p>
             </CardContent>
@@ -1875,39 +2237,65 @@ function EvaluatorDashboard() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Average Rating</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Average Rating
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-2">
-                <span className="text-3xl font-bold text-gray-900">{stats.averageRating}</span>
+                <span className="text-3xl font-bold text-gray-900">
+                  {stats.averageRating}
+                </span>
                 <span className="text-sm text-gray-500">/ 5.0</span>
               </div>
-              <Badge className={`mt-2 ${getRatingColor(parseFloat(stats.averageRating))}`}>
-                {parseFloat(stats.averageRating) >= 4.5 ? 'Excellent' : parseFloat(stats.averageRating) >= 4.0 ? 'Good' : parseFloat(stats.averageRating) >= 3.5 ? 'Average' : 'Needs Improvement'}
+              <Badge
+                className={`mt-2 ${getRatingColor(
+                  parseFloat(stats.averageRating)
+                )}`}
+              >
+                {parseFloat(stats.averageRating) >= 4.5
+                  ? "Excellent"
+                  : parseFloat(stats.averageRating) >= 4.0
+                  ? "Good"
+                  : parseFloat(stats.averageRating) >= 3.5
+                  ? "Average"
+                  : "Needs Improvement"}
               </Badge>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Pending Approvals</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Pending Approvals
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-yellow-600">{stats.pendingApprovals}</div>
+              <div className="text-3xl font-bold text-yellow-600">
+                {stats.pendingApprovals}
+              </div>
               <p className="text-sm text-gray-500 mt-1">Awaiting approval</p>
-              <Progress 
-                value={stats.totalEvaluations > 0 ? (stats.pendingApprovals / stats.totalEvaluations) * 100 : 0} 
-                className="mt-2" 
+              <Progress
+                value={
+                  stats.totalEvaluations > 0
+                    ? (stats.pendingApprovals / stats.totalEvaluations) * 100
+                    : 0
+                }
+                className="mt-2"
               />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Fully Approved</CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Fully Approved
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-600">{stats.completedApprovals}</div>
+              <div className="text-3xl font-bold text-green-600">
+                {stats.completedApprovals}
+              </div>
               <p className="text-sm text-gray-500 mt-1">Completed & signed</p>
             </CardContent>
           </Card>
@@ -1927,13 +2315,15 @@ function EvaluatorDashboard() {
 
   const renderContent = () => {
     switch (active) {
-      case 'overview':
+      case "overview":
         return (
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-          }>
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              </div>
+            }
+          >
             <OverviewTab
               recentSubmissions={recentSubmissions}
               seenSubmissions={seenSubmissions}
@@ -1948,17 +2338,19 @@ function EvaluatorDashboard() {
               getSubmissionHighlight={getSubmissionHighlight}
               getTimeAgo={getTimeAgo}
               calculateOverallRating={calculateOverallRating}
-              isActive={active === 'overview'}
+              isActive={active === "overview"}
             />
           </Suspense>
         );
-      case 'employees':
+      case "employees":
         return (
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-          }>
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              </div>
+            }
+          >
             <EmployeesTab
               filteredSubmissions={filteredSubmissions}
               isEmployeesRefreshing={isEmployeesRefreshing}
@@ -1975,17 +2367,19 @@ function EvaluatorDashboard() {
               getUpdatedAvatar={getUpdatedAvatar}
               hasAvatarUpdate={hasAvatarUpdate}
               currentUser={user}
-              isActive={active === 'employees'}
+              isActive={active === "employees"}
             />
           </Suspense>
         );
-      case 'feedback':
+      case "feedback":
         return (
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-          }>
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              </div>
+            }
+          >
             <EvaluationRecordsTab
               recentSubmissions={recentSubmissions}
               seenSubmissions={seenSubmissions}
@@ -2002,17 +2396,19 @@ function EvaluatorDashboard() {
               }}
               onMarkAsSeen={markSubmissionAsSeen}
               getSubmissionHighlight={getSubmissionHighlight}
-              isActive={active === 'feedback'}
+              isActive={active === "feedback"}
             />
           </Suspense>
         );
-      case 'reviews':
+      case "reviews":
         return (
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-          }>
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              </div>
+            }
+          >
             <PerformanceReviewsTab
               recentSubmissions={recentSubmissions}
               user={user}
@@ -2024,27 +2420,35 @@ function EvaluatorDashboard() {
               onViewEvaluation={(submission) => {
                 viewEvaluationForm(submission);
               }}
-              isActive={active === 'reviews'}
+              isActive={active === "reviews"}
             />
           </Suspense>
         );
-      case 'history':
+      case "history":
         return (
-          <Suspense fallback={
-            <div className="relative min-h-[500px]">
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+          <Suspense
+            fallback={
+              <div className="relative min-h-[500px]">
+                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                    <div className="relative">
+                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <img
+                          src="/smct.png"
+                          alt="SMCT Logo"
+                          className="h-10 w-10 object-contain"
+                        />
+                      </div>
                     </div>
+                    <p className="text-sm text-gray-600 font-medium">
+                      Loading evaluation history...
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-600 font-medium">Loading evaluation history...</p>
                 </div>
               </div>
-            </div>
-          }>
+            }
+          >
             <EvaluationHistoryTab
               recentSubmissions={recentSubmissions}
               user={user}
@@ -2059,7 +2463,7 @@ function EvaluatorDashboard() {
               getTimeAgo={getTimeAgo}
               getCorrectApprovalStatus={getCorrectApprovalStatus}
               isNewSubmission={isNewSubmission}
-              isActive={active === 'history'}
+              isActive={active === "history"}
             />
           </Suspense>
         );
@@ -2075,11 +2479,12 @@ function EvaluatorDashboard() {
         <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-lg font-medium text-gray-800">Loading Dashboard...</p>
+            <p className="text-lg font-medium text-gray-800">
+              Loading Dashboard...
+            </p>
           </div>
         </div>
       )}
-
 
       <PageTransition>
         <DashboardShell
@@ -2105,16 +2510,20 @@ function EvaluatorDashboard() {
           }}
           onSelectEmployeeAction={() => {
             const employee = selectedEmployee;
-            console.log('Selecting employee evaluation', employee);
+            console.log("Selecting employee evaluation", employee);
             if (!employee) {
-              console.error('No employee selected!');
+              console.error("No employee selected!");
               return;
             }
-            setEvaluationType('employee');
+            setEvaluationType("employee");
             setIsEvaluationTypeModalOpen(false);
             // Use setTimeout to ensure state is set before opening modal
             setTimeout(() => {
-              console.log('Opening employee evaluation modal', employee, 'employee');
+              console.log(
+                "Opening employee evaluation modal",
+                employee,
+                "employee"
+              );
               // Ensure employee is still set
               if (employee) {
                 setSelectedEmployee(employee);
@@ -2124,16 +2533,20 @@ function EvaluatorDashboard() {
           }}
           onSelectManagerAction={() => {
             const employee = selectedEmployee;
-            console.log('Selecting manager evaluation', employee);
+            console.log("Selecting manager evaluation", employee);
             if (!employee) {
-              console.error('No employee selected!');
+              console.error("No employee selected!");
               return;
             }
-            setEvaluationType('manager');
+            setEvaluationType("manager");
             setIsEvaluationTypeModalOpen(false);
             // Use setTimeout to ensure state is set before opening modal
             setTimeout(() => {
-              console.log('Opening manager evaluation modal', employee, 'manager');
+              console.log(
+                "Opening manager evaluation modal",
+                employee,
+                "manager"
+              );
               // Ensure employee is still set
               if (employee) {
                 setSelectedEmployee(employee);
@@ -2145,18 +2558,26 @@ function EvaluatorDashboard() {
         />
 
         {/* Evaluation Modal */}
-        <Dialog open={isEvaluationModalOpen} onOpenChangeAction={(open) => {
-          console.log('Evaluation modal onOpenChangeAction', open, 'selectedEmployee:', selectedEmployee, 'evaluationType:', evaluationType);
-          if (!open) {
-            setIsEvaluationModalOpen(false);
-            setSelectedEmployee(null);
-            setEvaluationType(null);
-          }
-        }}>
-          <DialogContent 
-            className="max-w-7xl max-h-[101vh] overflow-hidden p-0 evaluation-container"
-          >
-            {selectedEmployee && evaluationType === 'employee' && (
+        <Dialog
+          open={isEvaluationModalOpen}
+          onOpenChangeAction={(open) => {
+            console.log(
+              "Evaluation modal onOpenChangeAction",
+              open,
+              "selectedEmployee:",
+              selectedEmployee,
+              "evaluationType:",
+              evaluationType
+            );
+            if (!open) {
+              setIsEvaluationModalOpen(false);
+              setSelectedEmployee(null);
+              setEvaluationType(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-7xl max-h-[101vh] overflow-hidden p-0 evaluation-container">
+            {selectedEmployee && evaluationType === "employee" && (
               <EvaluationForm
                 key={`employee-eval-${selectedEmployee.id}-${evaluationType}`}
                 employee={selectedEmployee}
@@ -2168,7 +2589,7 @@ function EvaluatorDashboard() {
                 }}
               />
             )}
-            {selectedEmployee && evaluationType === 'manager' && (
+            {selectedEmployee && evaluationType === "manager" && (
               <ManagerEvaluationForm
                 key={`manager-eval-${selectedEmployee.id}-${evaluationType}`}
                 employee={selectedEmployee}
@@ -2182,71 +2603,208 @@ function EvaluatorDashboard() {
             )}
             {selectedEmployee && !evaluationType && (
               <div className="p-8 text-center">
-                <p className="text-gray-500">Please select an evaluation type... (Debug: employee={selectedEmployee?.name}, type={evaluationType})</p>
+                <p className="text-gray-500">
+                  Please select an evaluation type... (Debug: employee=
+                  {selectedEmployee?.name}, type={evaluationType})
+                </p>
               </div>
             )}
             {!selectedEmployee && (
               <div className="p-8 text-center">
-                <p className="text-gray-500">No employee selected (Debug: evaluationType={evaluationType})</p>
+                <p className="text-gray-500">
+                  No employee selected (Debug: evaluationType={evaluationType})
+                </p>
               </div>
             )}
           </DialogContent>
         </Dialog>
 
-    {/* Delete Success Dialog */}
-    <Dialog open={showDeleteSuccessDialog} onOpenChangeAction={setShowDeleteSuccessDialog}>
-      <DialogContent className={`max-w-sm w-[90vw] sm:w-full px-6 py-6 ${isSuccessDialogClosing ? 'animate-popdown' : 'animate-popup'}`}>
-        <div className="space-y-4 fade-in-scale">
-          <div className="flex justify-center mt-2">
-            <div className="w-16 h-16 flex items-center justify-center p-1">
-              <svg viewBox="0 0 52 52" className="w-12 h-12 overflow-visible">
-                <circle className="check-circle" cx="26" cy="26" r="24" fill="none" />
-                <path className="check-path" fill="none" d="M14 27 l8 8 l16 -16" />
-              </svg>
+        {/* Delete Success Dialog */}
+        <Dialog
+          open={showDeleteSuccessDialog}
+          onOpenChangeAction={setShowDeleteSuccessDialog}
+        >
+          <DialogContent
+            className={`max-w-sm w-[90vw] sm:w-full px-6 py-6 ${
+              isSuccessDialogClosing ? "animate-popdown" : "animate-popup"
+            }`}
+          >
+            <div className="space-y-4 fade-in-scale">
+              <div className="flex justify-center mt-2">
+                <div className="w-16 h-16 flex items-center justify-center p-1">
+                  <svg
+                    viewBox="0 0 52 52"
+                    className="w-12 h-12 overflow-visible"
+                  >
+                    <circle
+                      className="check-circle"
+                      cx="26"
+                      cy="26"
+                      r="24"
+                      fill="none"
+                    />
+                    <path
+                      className="check-path"
+                      fill="none"
+                      d="M14 27 l8 8 l16 -16"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <style jsx>{`
+                .check-circle {
+                  stroke: #22c55e;
+                  stroke-width: 3;
+                  stroke-linecap: round;
+                  stroke-dasharray: 160;
+                  stroke-dashoffset: 160;
+                  animation: draw-circle 0.6s ease-out forwards;
+                }
+                .check-path {
+                  stroke: #16a34a;
+                  stroke-width: 4;
+                  stroke-linecap: round;
+                  stroke-linejoin: round;
+                  stroke-dasharray: 50;
+                  stroke-dashoffset: 50;
+                  animation: draw-check 0.4s ease-out 0.4s forwards;
+                }
+                @keyframes draw-circle {
+                  to {
+                    stroke-dashoffset: 0;
+                  }
+                }
+                @keyframes draw-check {
+                  to {
+                    stroke-dashoffset: 0;
+                  }
+                }
+                .fade-in-scale {
+                  animation: fadeInScale 220ms ease-out both;
+                }
+                @keyframes fadeInScale {
+                  from {
+                    opacity: 0;
+                    transform: scale(0.98);
+                  }
+                  to {
+                    opacity: 1;
+                    transform: scale(1);
+                  }
+                }
+              `}</style>
+              <p className="text-lg font-medium text-gray-900 text-center">
+                Record Deleted
+              </p>
+              <p className="text-sm text-gray-600 text-center">
+                The evaluation record has been removed.
+              </p>
             </div>
-          </div>
-          <style jsx>{`
-            .check-circle { stroke: #22c55e; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 160; stroke-dashoffset: 160; animation: draw-circle 0.6s ease-out forwards; }
-            .check-path { stroke: #16a34a; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 50; stroke-dashoffset: 50; animation: draw-check 0.4s ease-out 0.4s forwards; }
-            @keyframes draw-circle { to { stroke-dashoffset: 0; } }
-            @keyframes draw-check { to { stroke-dashoffset: 0; } }
-            .fade-in-scale { animation: fadeInScale 220ms ease-out both; }
-            @keyframes fadeInScale { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-          `}</style>
-          <p className="text-lg font-medium text-gray-900 text-center">Record Deleted</p>
-          <p className="text-sm text-gray-600 text-center">The evaluation record has been removed.</p>
-        </div>
-      </DialogContent>
-    </Dialog>
+          </DialogContent>
+        </Dialog>
 
-    {/* Incorrect Password Dialog */}
-    <Dialog open={showIncorrectPasswordDialog} onOpenChangeAction={setShowIncorrectPasswordDialog}>
-      <DialogContent className={`max-w-sm w-[90vw] sm:w-full px-6 py-6 ${isDialogClosing ? 'animate-popdown' : 'animate-popup'}`}>
-        <div className="space-y-3 fade-in-scale">
-          <div className="flex justify-center mt-1">
-            <div className="w-16 h-16 flex items-center justify-center p-1">
-              <svg viewBox="0 0 52 52" className="w-12 h-12 overflow-visible">
-                <circle className="error-circle" cx="26" cy="26" r="24" fill="none" />
-                <path className="error-x-line1" fill="none" d="M16 16 l20 20" />
-                <path className="error-x-line2" fill="none" d="M36 16 l-20 20" />
-              </svg>
+        {/* Incorrect Password Dialog */}
+        <Dialog
+          open={showIncorrectPasswordDialog}
+          onOpenChangeAction={setShowIncorrectPasswordDialog}
+        >
+          <DialogContent
+            className={`max-w-sm w-[90vw] sm:w-full px-6 py-6 ${
+              isDialogClosing ? "animate-popdown" : "animate-popup"
+            }`}
+          >
+            <div className="space-y-3 fade-in-scale">
+              <div className="flex justify-center mt-1">
+                <div className="w-16 h-16 flex items-center justify-center p-1">
+                  <svg
+                    viewBox="0 0 52 52"
+                    className="w-12 h-12 overflow-visible"
+                  >
+                    <circle
+                      className="error-circle"
+                      cx="26"
+                      cy="26"
+                      r="24"
+                      fill="none"
+                    />
+                    <path
+                      className="error-x-line1"
+                      fill="none"
+                      d="M16 16 l20 20"
+                    />
+                    <path
+                      className="error-x-line2"
+                      fill="none"
+                      d="M36 16 l-20 20"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <style jsx>{`
+                .fade-in-scale {
+                  animation: fadeInScale 200ms ease-out both;
+                }
+                @keyframes fadeInScale {
+                  from {
+                    opacity: 0;
+                    transform: scale(0.98);
+                  }
+                  to {
+                    opacity: 1;
+                    transform: scale(1);
+                  }
+                }
+                .error-circle {
+                  stroke: #dc2626;
+                  stroke-width: 3;
+                  stroke-linecap: round;
+                  stroke-dasharray: 160;
+                  stroke-dashoffset: 160;
+                  animation: draw-error-circle 0.6s ease-out forwards;
+                }
+                .error-x-line1 {
+                  stroke: #dc2626;
+                  stroke-width: 4;
+                  stroke-linecap: round;
+                  stroke-linejoin: round;
+                  stroke-dasharray: 30;
+                  stroke-dashoffset: 30;
+                  animation: draw-x-line1 0.4s ease-out 0.3s forwards;
+                }
+                .error-x-line2 {
+                  stroke: #dc2626;
+                  stroke-width: 4;
+                  stroke-linecap: round;
+                  stroke-linejoin: round;
+                  stroke-dasharray: 30;
+                  stroke-dashoffset: 30;
+                  animation: draw-x-line2 0.4s ease-out 0.5s forwards;
+                }
+                @keyframes draw-error-circle {
+                  to {
+                    stroke-dashoffset: 0;
+                  }
+                }
+                @keyframes draw-x-line1 {
+                  to {
+                    stroke-dashoffset: 0;
+                  }
+                }
+                @keyframes draw-x-line2 {
+                  to {
+                    stroke-dashoffset: 0;
+                  }
+                }
+              `}</style>
+              <p className="text-lg font-medium text-gray-900 text-center">
+                Incorrect Password
+              </p>
+              <p className="text-sm text-gray-600 text-center">
+                Please try again with the correct password.
+              </p>
             </div>
-          </div>
-          <style jsx>{`
-            .fade-in-scale { animation: fadeInScale 200ms ease-out both; }
-            @keyframes fadeInScale { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-            .error-circle { stroke: #dc2626; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 160; stroke-dashoffset: 160; animation: draw-error-circle 0.6s ease-out forwards; }
-            .error-x-line1 { stroke: #dc2626; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw-x-line1 0.4s ease-out 0.3s forwards; }
-            .error-x-line2 { stroke: #dc2626; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw-x-line2 0.4s ease-out 0.5s forwards; }
-            @keyframes draw-error-circle { to { stroke-dashoffset: 0; } }
-            @keyframes draw-x-line1 { to { stroke-dashoffset: 0; } }
-            @keyframes draw-x-line2 { to { stroke-dashoffset: 0; } }
-          `}</style>
-          <p className="text-lg font-medium text-gray-900 text-center">Incorrect Password</p>
-          <p className="text-sm text-gray-600 text-center">Please try again with the correct password.</p>
-        </div>
-      </DialogContent>
-    </Dialog>
+          </DialogContent>
+        </Dialog>
         {/* View Results Modal */}
         <ViewResultsModal
           isOpen={isViewResultsModalOpen}
@@ -2276,25 +2834,48 @@ function EvaluatorDashboard() {
         />
 
         {/* Delete Confirmation Modal with Password */}
-        <Dialog open={isDeleteModalOpen} onOpenChangeAction={setIsDeleteModalOpen}>
-          <DialogContent className={`sm:max-w-md mx-4 my-8 bg-white ${isDeleteDialogClosing ? 'animate-popdown' : 'animate-popup'}`}>
+        <Dialog
+          open={isDeleteModalOpen}
+          onOpenChangeAction={setIsDeleteModalOpen}
+        >
+          <DialogContent
+            className={`sm:max-w-md mx-4 my-8 bg-white ${
+              isDeleteDialogClosing ? "animate-popdown" : "animate-popup"
+            }`}
+          >
             <div className="space-y-6 p-2">
               <div className="text-center">
                 <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4 animate-pulse">
-                  <svg className="h-6 w-6 text-red-600 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  <svg
+                    className="h-6 w-6 text-red-600 animate-bounce"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                    />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900">Delete Evaluation Record</h3>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Delete Evaluation Record
+                </h3>
                 <p className="text-sm text-gray-500 mt-2">
-                  Are you sure you want to delete the evaluation record for <strong>{recordToDelete?.employeeName}</strong>?
-                  This action cannot be undone and all data will be permanently removed.
+                  Are you sure you want to delete the evaluation record for{" "}
+                  <strong>{recordToDelete?.employeeName}</strong>? This action
+                  cannot be undone and all data will be permanently removed.
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="delete-password" className="text-sm font-medium text-gray-700">
+                  <Label
+                    htmlFor="delete-password"
+                    className="text-sm font-medium text-gray-700"
+                  >
                     Enter your account password to confirm deletion:
                   </Label>
                   <Input
@@ -2303,13 +2884,19 @@ function EvaluatorDashboard() {
                     value={deletePassword}
                     onChange={(e) => {
                       setDeletePassword(e.target.value);
-                      setDeletePasswordError('');
+                      setDeletePasswordError("");
                     }}
                     placeholder="Enter your account password"
-                    className={`mt-2 ${deletePasswordError ? 'border-red-500 bg-gray-50 focus:border-red-500 focus:ring-red-500' : 'bg-white'}`}
+                    className={`mt-2 ${
+                      deletePasswordError
+                        ? "border-red-500 bg-gray-50 focus:border-red-500 focus:ring-red-500"
+                        : "bg-white"
+                    }`}
                   />
                   {deletePasswordError && (
-                    <p className="text-sm text-red-600 mt-2">{deletePasswordError}</p>
+                    <p className="text-sm text-red-600 mt-2">
+                      {deletePasswordError}
+                    </p>
                   )}
                 </div>
               </div>
@@ -2356,9 +2943,9 @@ function EvaluatorDashboard() {
           className="fixed bottom-8 right-8 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0"
           title="Dashboard Guide"
         >
-          <img 
-            src="/faq.png" 
-            alt="Help" 
+          <img
+            src="/faq.png"
+            alt="Help"
             className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
           />
         </Button>
@@ -2368,13 +2955,12 @@ function EvaluatorDashboard() {
           isOpen={isGuideModalOpen}
           onCloseAction={() => setIsGuideModalOpen(false)}
         />
-
       </PageTransition>
     </>
   );
 }
 
 // Wrap with HOC for authentication (evaluator or manager role)
-export default withAuth(EvaluatorDashboard, { requiredRole: ['evaluator', 'manager'] });
-
-
+export default withAuth(EvaluatorDashboard, {
+  requiredRole: ["evaluator", "manager"],
+});
