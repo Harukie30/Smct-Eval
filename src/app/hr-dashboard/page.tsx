@@ -51,6 +51,7 @@ interface Employee {
   branch: string;
   hireDate: string;
   role: string;
+  employeeId?: string; // Formatted employee ID from registration (e.g., "1234-567890")
 }
 
 interface Department {
@@ -642,6 +643,7 @@ function HRDashboard() {
           contact: updatedUser.contact || accounts[accountIndex].contact,
           hireDate: updatedUser.hireDate || accounts[accountIndex].hireDate,
           isActive: updatedUser.isActive !== undefined ? updatedUser.isActive : accounts[accountIndex].isActive,
+          employeeId: updatedUser.employeeId !== undefined ? updatedUser.employeeId : accounts[accountIndex].employeeId,
           updatedAt: new Date().toISOString()
         };
         localStorage.setItem('accounts', JSON.stringify(accounts));
@@ -680,8 +682,27 @@ function HRDashboard() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleEvaluateEmployee = (employee: Employee) => {
-    setEmployeeToEvaluate(employee);
+  const handleEvaluateEmployee = async (employee: Employee) => {
+    // Fetch formatted employee ID from accounts
+    try {
+      const accounts = await clientDataService.getAccounts();
+      const account = accounts.find((acc: any) => 
+        acc.employeeId === employee.id || 
+        acc.id === employee.id ||
+        acc.email === employee.email
+      );
+      
+      // Get formatted employee_id from account (stored as employee_id in registration)
+      const formattedEmployeeId = (account as any)?.employee_id || account?.employeeId;
+      
+      setEmployeeToEvaluate({
+        ...employee,
+        employeeId: formattedEmployeeId ? String(formattedEmployeeId) : undefined,
+      });
+    } catch (error) {
+      console.error('Error fetching employee ID:', error);
+      setEmployeeToEvaluate(employee);
+    }
     setIsEvaluationTypeModalOpen(true);
   };
 
@@ -926,6 +947,19 @@ function HRDashboard() {
             }).length}
           </div>
           <p className="text-sm text-gray-500 mt-1">Completed reviews</p>
+        </CardContent>
+      </Card>
+
+      {/* Total Employees */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-gray-600">👥 Total Employees</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold text-blue-600">
+            {hrMetrics?.totalEmployees || employees.length}
+          </div>
+          <p className="text-sm text-gray-500 mt-1">All registered employees</p>
         </CardContent>
       </Card>
     </>
@@ -1359,13 +1393,20 @@ function HRDashboard() {
             setSelectedEmployee(null);
           }}
           user={{
-            ...selectedEmployee,
+            id: selectedEmployee.id,
+            name: selectedEmployee.name,
+            email: selectedEmployee.email,
+            position: selectedEmployee.position,
+            department: selectedEmployee.department,
+            branch: selectedEmployee.branch,
+            role: selectedEmployee.role,
             username: (selectedEmployee as any).username || '',
             password: (selectedEmployee as any).password || '',
             contact: (selectedEmployee as any).contact || '',
             hireDate: selectedEmployee.hireDate || '',
             isActive: (selectedEmployee as any).isActive !== undefined ? (selectedEmployee as any).isActive : true,
             signature: (selectedEmployee as any).signature || ''
+            // Note: employeeId is fetched by EditUserModal from accounts, not passed here
           }}
           onSave={handleSaveEmployee}
           departments={departments.map(dept => dept.name)}
@@ -1586,6 +1627,7 @@ function HRDashboard() {
                   branch: employeeToEvaluate.branch,
                   role: employeeToEvaluate.role,
                   hireDate: employeeToEvaluate.hireDate,
+                  employeeId: employeeToEvaluate.employeeId || undefined,
                 }}
                 currentUser={{
                   id: currentUser.id,
@@ -1624,6 +1666,7 @@ function HRDashboard() {
                   branch: employeeToEvaluate.branch,
                   role: employeeToEvaluate.role,
                   hireDate: employeeToEvaluate.hireDate,
+                  employeeId: employeeToEvaluate.employeeId || undefined,
                 }}
                 currentUser={{
                   id: currentUser.id,

@@ -348,6 +348,7 @@ export function UserManagementTab({
             updatedUser.isActive !== undefined
               ? updatedUser.isActive
               : accounts[accountIndex].isActive,
+          employeeId: updatedUser.employeeId !== undefined ? updatedUser.employeeId : accounts[accountIndex].employeeId,
           updatedAt: new Date().toISOString(),
         };
         localStorage.setItem("accounts", JSON.stringify(accounts));

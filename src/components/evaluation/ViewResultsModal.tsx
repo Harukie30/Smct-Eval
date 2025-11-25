@@ -227,7 +227,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
             ${styles}
             <style>
               @page { 
-                size: A4; 
+                size: 8.5in 13in; 
                 margin: 1.5cm; 
               }
               @media print {
@@ -236,18 +236,22 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   print-color-adjust: exact !important;
                 }
                 body { 
-                  font-family: Arial, sans-serif; 
-                  font-size: 13px; 
+                  font-family: Calibri, sans-serif; 
+                  font-size: 9px; 
                   line-height: 1.4;
                   color: #000;
                   padding: 0;
                   margin: 40px;
                 }
+                * {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 9px !important;
+                }
                 .no-print { display: none !important; }
-                /* Form container with border - only outer border */
+                /* Form container - no border, no padding */
                 .space-y-8 {
-                  border: 2px solid #000 !important;
-                  padding: 25px !important;
+                  border: none !important;
+                  padding: 0 !important;
                   background: white !important;
                 }
                 /* Remove all shadow and border classes in print */
@@ -321,26 +325,67 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                 /* Review Type - checkbox group style */
                 .print-review-type {
                   display: flex !important;
-                  justify-content: space-between !important;
-                  margin-top: 10px !important;
-                  font-size: 13px !important;
+                  flex-direction: column !important;
+                  gap: 1px !important;
+                  margin-top: 2px !important;
+                  margin-bottom: 2px !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                }
+                /* Increase padding for card containing review type */
+                [class*="CardContent"]:has(.print-review-type) {
+                  padding: 15px !important;
                 }
                 .print-review-type > div {
+                  display: flex !important;
+                  align-items: flex-start !important;
+                  gap: 8px !important;
                   text-align: left !important;
-                  padding: 0 !important;
+                  padding: 2px 0 !important;
+                  margin: 0 !important;
+                  line-height: 1.2 !important;
                 }
                 .print-review-type h5 {
                   font-weight: normal !important;
-                  margin-bottom: 5px !important;
+                  margin-bottom: 0 !important;
+                  font-family: Calibri, sans-serif !important;
                   font-size: 12px !important;
+                  min-width: 120px !important;
+                  flex-shrink: 0 !important;
+                  line-height: 1.4 !important;
+                  padding: 0 !important;
                 }
                 .print-review-type .space-y-2,
-                .print-review-type .space-y-3 {
+                .print-review-type .space-y-3,
+                .print-review-type .space-y-6 {
                   margin: 0 !important;
                 }
                 .print-review-type .space-y-2 > *,
-                .print-review-type .space-y-3 > * {
-                  margin: 2px 0 !important;
+                .print-review-type .space-y-3 > *,
+                .print-review-type .space-y-6 > * {
+                  margin: 0px 0 !important;
+                }
+                /* Horizontal rows for radio buttons */
+                .print-review-type .flex-row {
+                  display: flex !important;
+                  flex-direction: row !important;
+                  gap: 15px !important;
+                  flex-wrap: wrap !important;
+                }
+                .print-review-type .flex-col {
+                  display: flex !important;
+                  flex-direction: column !important;
+                  gap: 5px !important;
+                }
+                .print-review-type .flex {
+                  display: flex !important;
+                  align-items: center !important;
+                  gap: 8px !important;
+                }
+                .print-review-type span {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  line-height: 1.2 !important;
                 }
                 /* Make checkboxes more visible in print */
                 .print-review-type .w-4 {
@@ -349,6 +394,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   border: 1px solid #000 !important;
                   min-width: 12px !important;
                   min-height: 12px !important;
+                }
+                .print-review-type .w-2 {
+                  width: 5px !important;
+                  height: 5px !important;
                 }
                 .print-review-type .bg-green-500 {
                   background-color: #22c55e !important;
@@ -364,17 +413,35 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   background-color: #fff !important;
                 }
                 .print-review-type span {
-                  font-size: 11px !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
                   color: #000 !important;
+                }
+                /* Grid layout for For Regular section (2x2) */
+                .print-review-type .grid {
+                  display: grid !important;
+                }
+                .print-review-type .grid-cols-2 {
+                  grid-template-columns: 1fr 1fr !important;
+                }
+                .print-review-type .flex {
+                  display: flex !important;
+                  align-items: center !important;
+                  gap: 8px !important;
+                }
+                .print-review-type .flex-row {
+                  display: flex !important;
+                  flex-direction: row !important;
+                  gap: 16px !important;
                 }
                 /* Basic Information - two column layout with horizontal alignment */
                 .print-basic-info {
                   display: grid !important;
                   grid-template-columns: 1fr 1fr !important;
                   gap: 0 !important;
-                  margin-top: 10px !important;
+                  margin-top: 5px !important;
                   column-gap: 30px !important;
-                  row-gap: 5px !important;
+                  row-gap: 2px !important;
                 }
                 .print-basic-info > div {
                   display: flex !important;
@@ -382,9 +449,11 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   align-items: baseline !important;
                   gap: 4px !important;
                   margin: 0 !important;
-                  font-size: 13px !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
                   text-align: left !important;
                   padding: 0 !important;
+                  line-height: 1.2 !important;
                 }
                 /* Row 1: Employee Name (left) | Date Hired (right) */
                 .print-basic-info > div:nth-child(1) {
@@ -419,10 +488,13 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   grid-row: 4 !important;
                 }
                 .print-basic-info > div > label {
-                  font-weight: bold !important;
+                  font-weight: normal !important;
                   width: auto !important;
                   flex-shrink: 0 !important;
                   margin-right: 0 !important;
+                  color: #000 !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
                 }
                 .print-basic-info > div > p {
                   border-bottom: 1px solid #000 !important;
@@ -434,14 +506,31 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   padding: 0 !important;
                   padding-bottom: 1px !important;
                   text-align: left !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  font-weight: bold !important;
                 }
                 /* Remove block display from label in print */
                 .print-basic-info .print-label {
                   display: inline !important;
                   margin-bottom: 0 !important;
+                  color: #000 !important;
                 }
                 .print-basic-info .print-value {
                   display: inline !important;
+                }
+                /* Hide screen date, show print date in print */
+                .screen-date {
+                  display: none !important;
+                }
+                .print-date {
+                  display: inline !important;
+                }
+                /* Make Performance Coverage date bigger */
+                .print-basic-info .print-date {
+                  font-size: 14px !important;
+                  font-weight: bold !important;
+                  font-family: Calibri, sans-serif !important;
                 }
                 /* Table styling */
                 table {
@@ -467,9 +556,53 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   margin-top: 8px !important;
                   border-bottom: 2px solid #000 !important;
                   padding-bottom: 2px !important;
+                  font-family: Calibri, sans-serif !important;
                   font-size: 12px !important;
                   text-transform: uppercase !important;
                   margin-bottom: 3px !important;
+                }
+                /* Priority Areas - remove underline from header */
+                .print-priority-header {
+                  border-bottom: none !important;
+                  padding-bottom: 0 !important;
+                  margin-bottom: 4px !important;
+                }
+                /* Reduce spacing between Performance Score and Priority Areas */
+                [class*="Card"]:has(.print-priority-header) {
+                  margin-top: 2px !important;
+                  margin-bottom: 2px !important;
+                }
+                [class*="CardContent"]:has(.print-priority-header) {
+                  padding-top: 8px !important;
+                  padding-bottom: 8px !important;
+                }
+                /* Reduce spacing between Priority Areas and Remarks */
+                [class*="Card"]:has(.print-remarks-header) {
+                  margin-top: 2px !important;
+                  margin-bottom: 2px !important;
+                }
+                [class*="CardContent"]:has(.print-remarks-header) {
+                  padding-top: 8px !important;
+                  padding-bottom: 8px !important;
+                }
+                /* Reduce spacing between Remarks and Acknowledgement */
+                [class*="Card"]:has(.print-acknowledgement-header) {
+                  margin-top: 2px !important;
+                }
+                [class*="CardContent"]:has(.print-acknowledgement-header) {
+                  padding-top: 8px !important;
+                }
+                /* Remarks - remove underline from header */
+                .print-remarks-header {
+                  border-bottom: none !important;
+                  padding-bottom: 0 !important;
+                  margin-bottom: 4px !important;
+                }
+                /* Acknowledgement - remove underline from header */
+                .print-acknowledgement-header {
+                  border-bottom: none !important;
+                  padding-bottom: 0 !important;
+                  margin-bottom: 4px !important;
                 }
                 /* Priority Areas - underline style like basic info */
                 .print-priority-item {
@@ -485,7 +618,8 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   align-items: baseline !important;
                   gap: 4px !important;
                   margin: 0 !important;
-                  font-size: 13px !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
                   text-align: left !important;
                   padding: 0 !important;
                 }
@@ -494,6 +628,8 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   width: auto !important;
                   flex-shrink: 0 !important;
                   margin-right: 0 !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
                 }
                 .print-priority-value {
                   border-bottom: 1px solid #000 !important;
@@ -505,6 +641,14 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   padding: 0 !important;
                   padding-bottom: 1px !important;
                   text-align: left !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                }
+                /* Priority Areas description text */
+                .print-priority-description {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  color: #000 !important;
                 }
                 /* Remarks - large box style */
                 .print-remarks-box {
@@ -515,6 +659,15 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   padding: 2px !important;
                   background: white !important;
                   background-color: white !important;
+                }
+                .print-remarks-box p {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                }
+                /* Remarks description text */
+                [class*="CardContent"]:has(.print-remarks-box) p:not(.print-remarks-box p) {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
                 }
                 /* Remove gray backgrounds from remarks in print */
                 .print-remarks-box .bg-yellow-50 {
@@ -551,7 +704,8 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                 /* Show name text in print */
                 .print-acknowledgement .h-20 > span:not(.print-signature-line) {
                   display: block !important;
-                  font-size: 11px !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
                   font-weight: bold !important;
                   margin-bottom: 5px !important;
                   position: relative !important;
@@ -591,11 +745,19 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                 }
                 .print-date-section {
                   margin-top: 8px !important;
-                  font-size: 11px !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                }
+                /* Acknowledgement description text */
+                .print-acknowledgement-description {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  color: #000 !important;
                 }
                 /* Acknowledgement text */
                 .print-acknowledgement p {
-                  font-size: 9px !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
                   margin-bottom: 3px !important;
                   line-height: 1.2 !important;
                 }
@@ -606,34 +768,58 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   display: flex !important;
                   flex-direction: column !important;
                   align-items: center !important;
-                  justify-content: flex-start !important;
-                  padding: 3px 0 2px 0 !important;
+                  justify-content: flex-end !important;
+                  padding: 3px 0 0 0 !important;
                   margin: 0 !important;
+                  margin-bottom: 0 !important;
                 }
-                /* Show name text in print - at the top */
+                /* Show name text in print - at the lower part */
                 .print-acknowledgement .h-20 > span:not(.print-signature-line) {
                   display: block !important;
-                  font-size: 9px !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
                   font-weight: bold !important;
                   margin-bottom: 1px !important;
-                  position: relative !important;
+                  position: absolute !important;
+                  bottom: 2px !important;
+                  top: auto !important;
+                  left: 50% !important;
+                  transform: translateX(-50%) !important;
                   order: 1 !important;
                   z-index: 1 !important;
                   line-height: 1 !important;
                 }
-                /* Show signature images in print - overlapping the name */
-                .print-acknowledgement .h-20 img {
+                /* Show signature images in print - at the lower part, positioned to the right */
+                .print-acknowledgement .h-20 img,
+                .print-acknowledgement .h-20 img[class*="top-7"],
+                .print-acknowledgement .h-20 img[class*="top-"],
+                .print-acknowledgement .h-20 img[class*="transform"],
+                .print-acknowledgement .h-20 img[class*="translate"],
+                .print-acknowledgement .h-20 img[class*="left-1/2"] {
                   display: block !important;
                   max-height: 40px !important;
                   max-width: 100% !important;
                   object-fit: contain !important;
                   position: absolute !important;
-                  top: 3px !important;
-                  right: 0 !important;
+                  bottom: -25px !important;
+                  top: auto !important;
+                  right: -50px !important;
+                  left: auto !important;
+                  transform: none !important;
+                  -webkit-transform: none !important;
                   margin: 0 !important;
                   order: 2 !important;
-                  z-index: 2 !important;
-                  transform: none !important;
+                  z-index: 10 !important;
+                }
+                /* Force override any inline styles or Tailwind utilities */
+                @media print {
+                  .print-acknowledgement .h-20 img {
+                    bottom: -25px !important;
+                    top: auto !important;
+                    right: -50px !important;
+                    left: auto !important;
+                    transform: none !important;
+                  }
                 }
                 /* Signature line - at the bottom */
                 .print-signature-line {
@@ -642,14 +828,15 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   border-bottom: 1px solid #000 !important;
                   height: 1px !important;
                   margin-top: 0 !important;
-                  margin-bottom: 1px !important;
+                  margin-bottom: 0 !important;
+                  padding: 0 !important;
                   order: 3 !important;
                   flex-shrink: 0 !important;
                 }
                 /* Label and date under the underline - print only */
                 .print-acknowledgement > div > div:last-child,
                 .print-acknowledgement > div > div:nth-last-child(2) {
-                  margin-top: 2px !important;
+                  margin-top: 0 !important;
                 }
                 .print-acknowledgement > div > div:last-child > div,
                 .print-acknowledgement > div > div:nth-last-child(2) > div {
@@ -664,27 +851,92 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                 .print-acknowledgement .text-xs.text-gray-500 {
                   margin-top: 0 !important;
                   margin-bottom: 0 !important;
-                  font-size: 8px !important;
+                  padding-top: 0 !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
                   line-height: 1 !important;
+                  color: #000 !important;
+                }
+                /* Remove all spacing between signature line and labels */
+                .print-acknowledgement .h-20 + div {
+                  margin-top: 0 !important;
+                  padding-top: 0 !important;
+                }
+                /* Override mt-1 class in print - remove all margin */
+                .print-acknowledgement .mt-1 {
+                  margin-top: 0 !important;
+                  padding-top: 0 !important;
+                }
+                /* Target label divs directly after signature container */
+                .print-acknowledgement .text-center > .h-20 + div.text-xs {
+                  margin-top: 0 !important;
+                  padding-top: 0 !important;
                 }
                 .print-acknowledgement .text-center {
                   margin-top: 0 !important;
                   margin-bottom: 0 !important;
                   padding: 0 !important;
+                  display: flex !important;
+                  flex-direction: column !important;
+                  justify-content: flex-end !important;
+                }
+                /* Move signature area lower to be closer to labels */
+                .print-acknowledgement .text-center > .h-20 {
+                  margin-bottom: 0 !important;
                 }
                 .print-acknowledgement .text-center p {
                   margin-top: 0 !important;
                   margin-bottom: 0 !important;
-                  font-size: 8px !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
                   line-height: 1 !important;
+                  color: #000 !important;
+                }
+                /* Make all text in acknowledgement section black in print */
+                .print-acknowledgement .text-gray-500 {
+                  color: #000 !important;
+                }
+                .print-acknowledgement .print-date-value {
+                  color: #000 !important;
                 }
                 .print-acknowledgement .space-y-4 {
                   margin: 0 !important;
                   padding: 0 !important;
+                  gap: 0 !important;
                 }
                 .print-acknowledgement .space-y-4 > * {
                   margin-top: 0 !important;
                   margin-bottom: 0 !important;
+                }
+                /* Remove spacing between signature area and date (row 2) */
+                .print-acknowledgement .space-y-4 > div:not(:first-child) {
+                  margin-top: 0 !important;
+                }
+                /* Specifically target date sections */
+                .print-acknowledgement .space-y-4 > div.text-center:last-child {
+                  margin-top: 0 !important;
+                }
+                /* Confidentiality Notice */
+                .print-confidentiality-notice {
+                  margin-top: 12px !important;
+                  margin-bottom: 8px !important;
+                  padding: 8px 0 !important;
+                  border-top: 1px solid #000 !important;
+                  border-bottom: 1px solid #000 !important;
+                }
+                .print-confidentiality-notice p {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 10px !important;
+                  color: #000 !important;
+                  line-height: 1.4 !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  text-align: justify !important;
+                }
+                .print-confidentiality-notice strong {
+                  font-weight: bold !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
                 }
                 /* Hide detailed step sections in print */
                 .hide-in-print {
@@ -704,32 +956,83 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   background: transparent !important;
                 }
                 .print-overall-assessment-wrapper h3 {
-                  font-size: 12px !important;
+                  font-size: 11px !important;
                   margin-bottom: 2px !important;
-                  margin-top: 5px !important;
+                  margin-top: 4px !important;
+                  text-align: left !important;
+                  font-family: Calibri, sans-serif !important;
                 }
                 .print-overall-assessment-table {
                   border: none !important;
                   width: 100% !important;
                   border-collapse: collapse !important;
-                  margin-top: 3px !important;
-                  margin-bottom: 5px !important;
+                  margin-top: 2px !important;
+                  margin-bottom: 4px !important;
+                  font-size: 12px !important;
+                  font-family: Calibri, sans-serif !important;
                 }
                 .print-overall-assessment-table th,
                 .print-overall-assessment-table td {
                   border: 1px solid #000 !important;
-                  padding: 2px 4px !important;
-                  font-size: 10px !important;
+                  padding: 1px 2px !important;
+                  font-size: 12px !important;
                   text-align: center !important;
-                  line-height: 1.2 !important;
+                  line-height: 1.1 !important;
+                  font-family: Calibri, sans-serif !important;
                 }
                 .print-overall-assessment-table th {
                   background-color: #d9d9d9 !important;
                   font-weight: bold !important;
-                  padding: 3px 4px !important;
+                  padding: 2px 2px !important;
+                  font-size: 12px !important;
+                  font-family: Calibri, sans-serif !important;
                 }
                 .print-overall-assessment-table td:first-child {
                   text-align: left !important;
+                }
+                /* Override Tailwind font-size classes in print */
+                .print-overall-assessment-table th.text-base,
+                .print-overall-assessment-table td.text-base,
+                .print-overall-assessment-table td.text-sm,
+                .print-overall-assessment-table td.text-lg {
+                  font-size: 12px !important;
+                }
+                .print-overall-assessment-table .text-sm {
+                  font-size: 12px !important;
+                }
+                .print-overall-assessment-table .text-base {
+                  font-size: 12px !important;
+                }
+                .print-overall-assessment-table .text-lg {
+                  font-size: 12px !important;
+                }
+                /* Adjust Performance Criteria column (1st column) width - smaller */
+                .print-overall-assessment-table th:first-child,
+                .print-overall-assessment-table td:first-child {
+                  width: 60px !important;
+                  min-width: 50px !important;
+                  max-width: 80px !important;
+                  padding: 1px 2px !important;
+                  line-height: 1 !important;
+                }
+                /* Make Score column (3rd column) narrower */
+                .print-overall-assessment-table th:nth-child(3),
+                .print-overall-assessment-table td:nth-child(3) {
+                  width: 18px !important;
+                  min-width: 18px !important;
+                  max-width: 18px !important;
+                  padding: 1px 1px !important;
+                  overflow: hidden !important;
+                  text-overflow: ellipsis !important;
+                  white-space: nowrap !important;
+                }
+                /* Rating column (2nd column) - smaller */
+                .print-overall-assessment-table th:nth-child(2),
+                .print-overall-assessment-table td:nth-child(2) {
+                  width: 50px !important;
+                  min-width: 50px !important;
+                  max-width: 50px !important;
+                  padding: 1px 2px !important;
                 }
                 .print-overall-assessment-table tbody tr:last-child {
                   background-color: #e8e8e8 !important;
@@ -738,55 +1041,84 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                 .print-overall-assessment-table tbody tr:last-child td:first-child {
                   text-align: right !important;
                 }
-                /* Hide rating badges in print */
-                .print-overall-assessment-table .px-2,
-                .print-overall-assessment-table span[class*="px-2"],
-                .print-overall-assessment-table .rounded {
-                  background: transparent !important;
-                  padding: 0 !important;
-                  border-radius: 0 !important;
-                  color: #000 !important;
-                  border: none !important;
+                /* Hide rating badges in print - show only text */
+                .screen-rating-badge {
+                  display: inline;
                 }
-                /* Performance Score section - minimal in print */
+                .print-rating-text {
+                  display: none;
+                }
+                @media print {
+                  .screen-rating-badge {
+                    display: none !important;
+                  }
+                  .print-rating-text {
+                    display: inline !important;
+                    background: transparent !important;
+                    background-color: transparent !important;
+                    padding: 0 !important;
+                    border-radius: 0 !important;
+                    color: #000 !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    font-weight: normal !important;
+                  }
+                  .print-overall-assessment-table td div {
+                    display: inline !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                  }
+                  .print-overall-assessment-table td div.flex {
+                    display: inline !important;
+                    justify-content: center !important;
+                    align-items: center !important;
+                    gap: 0 !important;
+                    space-x: 0 !important;
+                  }
+                }
+                /* Performance Score section - boxed in print */
                 .print-performance-score-wrapper {
                   display: flex !important;
                   justify-content: flex-end !important;
                   align-items: center !important;
-                  gap: 3px !important;
+                  gap: 8px !important;
                   margin-top: 5px !important;
-                  margin-bottom: 5px !important;
-                  border: 1px solid #000 !important;
-                  padding: 4px 8px !important;
+                  margin-bottom: 2px !important;
+                  border: 2px solid #000 !important;
+                  padding: 8px 15px !important;
                   width: fit-content !important;
                   margin-left: auto !important;
                   background: white !important;
                   box-sizing: border-box !important;
+                  font-family: Calibri, sans-serif !important;
                 }
                 .print-performance-score-wrapper > div:first-child {
                   text-align: right !important;
-                  margin-right: 8px !important;
+                  margin-right: 12px !important;
                 }
                 .print-performance-score-wrapper > div:first-child > div:first-child {
-                  font-size: 10px !important;
-                  font-weight: bold !important;
-                  line-height: 1 !important;
-                  margin: 0 !important;
-                }
-                .print-performance-score-wrapper > div:first-child > div:last-child {
-                  font-size: 7px !important;
-                  color: #000 !important;
-                  margin-top: 1px !important;
-                  line-height: 1 !important;
-                }
-                .print-performance-score-wrapper > div:last-child {
-                  padding: 2px 6px !important;
-                  border-radius: 2px !important;
-                  font-size: 8px !important;
+                  font-size: 16px !important;
                   font-weight: bold !important;
                   line-height: 1.2 !important;
+                  margin: 0 !important;
+                  font-family: Calibri, sans-serif !important;
+                }
+                .print-performance-score-wrapper > div:first-child > div:last-child {
+                  font-size: 11px !important;
+                  color: #000 !important;
+                  margin-top: 2px !important;
+                  line-height: 1.2 !important;
+                  font-family: Calibri, sans-serif !important;
+                }
+                .print-performance-score-wrapper > div:last-child {
+                  padding: 4px 10px !important;
+                  border-radius: 2px !important;
+                  font-size: 12px !important;
+                  font-weight: bold !important;
+                  line-height: 1.3 !important;
                   color: white !important;
                   display: block !important;
+                  font-family: Calibri, sans-serif !important;
                 }
                 /* Ensure PASS/FAIL badge colors show in print */
                 .print-performance-score-wrapper > div:last-child.bg-green-600 {
@@ -800,6 +1132,32 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                 /* Remove spacing between sections */
                 .space-y-8 > * {
                   margin-bottom: 0 !important;
+                }
+                /* Print Footer */
+                .print-footer {
+                  display: block !important;
+                  position: fixed !important;
+                  bottom: 0 !important;
+                  left: 0 !important;
+                  right: 0 !important;
+                  width: 100% !important;
+                  padding: 8px 1.5cm !important;
+                  margin: 0 !important;
+                  border-top: 1px solid #000 !important;
+                  background: white !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 10px !important;
+                  line-height: 1.4 !important;
+                  text-align: center !important;
+                  color: #000 !important;
+                }
+                .print-footer p {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 10px !important;
+                  line-height: 1.4 !important;
+                  color: #000 !important;
                 }
               }
             </style>
@@ -880,6 +1238,23 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-6 animate-popup">
+          <style>{`
+            .screen-date {
+              display: inline;
+            }
+            .print-date {
+              display: none;
+            }
+            .screen-rating-badge {
+              display: inline;
+            }
+            .print-rating-text {
+              display: none;
+            }
+            .print-footer {
+              display: none;
+            }
+          `}</style>
           <div ref={printContentRef} className="space-y-8">
             <div className="flex items-center justify-between border-b border-gray-200 pb-4 no-print">
             <h2 className="text-3xl font-bold text-gray-900">Evaluation Details</h2>
@@ -903,20 +1278,23 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
           <div className="space-y-8">
             {/* Title */}
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">Performance Review Form (HEAD OFFICE) Rank and File I & II</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Performance Review Form (HEAD OFFICE)<br />
+                Rank and File I & II
+              </h1>
                   </div>
 
             {/* Review Type Section */}
             {submission.evaluationData && (
               <Card className="shadow-md">
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                             
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print-review-type">
-                    {/* For Probationary */}
-                    <div className="space-y-3">
-                      <h5 className="font-medium text-gray-800">For Probationary</h5>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
+                  <div className="space-y-2 print-review-type">
+                    {/* Row 1: For Probationary */}
+                    <div className="flex items-start gap-3">
+                      <h5 className="font-medium text-gray-800 min-w-[120px] text-sm">For Probationary</h5>
+                      <div className="flex flex-row gap-2">
+                        <div className="flex items-center gap-1.5">
                           <div className={`w-4 h-4 rounded-full flex items-center justify-center ${submission.evaluationData.reviewTypeProbationary3 ? 'bg-green-500' : 'bg-gray-300'}`}>
                             {submission.evaluationData.reviewTypeProbationary3 && (
                               <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -935,11 +1313,11 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                       </div>
                     </div>
 
-                    {/* For Regular */}
-                    <div className="space-y-3">
-                      <h5 className="font-medium text-gray-800">For Regular</h5>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
+                    {/* Row 2: For Regular */}
+                    <div className="flex items-start gap-3">
+                      <h5 className="font-medium text-gray-800 min-w-[120px] text-sm">For Regular</h5>
+                      <div className="flex flex-row gap-2">
+                        <div className="flex items-center gap-1.5">
                           <div className={`w-4 h-4 rounded-full flex items-center justify-center ${submission.evaluationData.reviewTypeRegularQ1 ? 'bg-green-500' : 'bg-gray-300'}`}>
                             {submission.evaluationData.reviewTypeRegularQ1 && (
                               <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -974,11 +1352,11 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                       </div>
                     </div>
 
-                    {/* Others */}
-                    <div className="space-y-3">
-                      <h5 className="font-medium text-gray-800">Others</h5>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
+                    {/* Row 3: Others */}
+                    <div className="flex items-start gap-3">
+                      <h5 className="font-medium text-gray-800 min-w-[120px] text-sm">Others</h5>
+                      <div className="flex flex-row gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5">
                           <div className={`w-4 h-4 rounded-full flex items-center justify-center ${submission.evaluationData.reviewTypeOthersImprovement ? 'bg-green-500' : 'bg-gray-300'}`}>
                             {submission.evaluationData.reviewTypeOthersImprovement && (
                               <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -986,21 +1364,19 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                           </div>
                           <span className="text-sm text-gray-700">Performance Improvement</span>
                         </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-4 h-4 rounded-full flex items-center justify-center ${submission.evaluationData.reviewTypeOthersCustom ? 'bg-green-500' : 'bg-gray-300'}`}>
-                              {submission.evaluationData.reviewTypeOthersCustom && (
-                                <div className="w-2 h-2 bg-white rounded-full"></div>
-                              )}
-                            </div>
-                            <span className="text-sm text-gray-700">Others:</span>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center ${submission.evaluationData.reviewTypeOthersCustom ? 'bg-green-500' : 'bg-gray-300'}`}>
+                            {submission.evaluationData.reviewTypeOthersCustom && (
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            )}
                           </div>
-                          {submission.evaluationData.reviewTypeOthersCustom && (
-                            <div className="ml-6 p-2 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700">
-                              {submission.evaluationData.reviewTypeOthersCustom}
-                            </div>
-                          )}
+                          <span className="text-sm text-gray-700">Others:</span>
                         </div>
+                        {submission.evaluationData.reviewTypeOthersCustom && (
+                          <div className="ml-2 p-2 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700">
+                            {submission.evaluationData.reviewTypeOthersCustom}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1013,39 +1389,46 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
               <CardContent className="p-6">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6 print-basic-info">
                   <div className="print-info-row">
-                    <Label className="text-sm font-medium text-gray-600 block mb-1 print-label">Employee Name:</Label>
-                    <p className="text-lg font-semibold text-gray-900 print-value">{submission.employeeName}</p>
+                    <Label className="font-medium text-black block mb-1 print-label" style={{ fontSize: '11px' }}>Employee Name:</Label>
+                    <p className="font-semibold text-gray-900 print-value" style={{ fontSize: '11px' }}>{submission.employeeName}</p>
                   </div>
                   <div className="print-info-row">
-                    <Label className="text-sm font-medium text-gray-600 block mb-1 print-label">Employee Number:</Label>
-                    <p className="text-lg text-gray-900 print-value">{submission.evaluationData?.employeeId || submission.employeeId || 'N/A'}</p>
+                    <Label className="font-medium text-black block mb-1 print-label" style={{ fontSize: '11px' }}>Employee Number:</Label>
+                    <p className="text-gray-900 print-value" style={{ fontSize: '11px' }}>{submission.evaluationData?.employeeId || submission.employeeId || 'N/A'}</p>
                   </div>
                   <div className="print-info-row">
-                    <Label className="text-sm font-medium text-gray-600 block mb-1 print-label">Position:</Label>
-                    <p className="text-lg text-gray-900 print-value">{submission.evaluationData?.position || 'Not specified'}</p>
+                    <Label className="font-medium text-black block mb-1 print-label" style={{ fontSize: '11px' }}>Position:</Label>
+                    <p className="text-gray-900 print-value" style={{ fontSize: '11px' }}>{submission.evaluationData?.position || 'Not specified'}</p>
                   </div>
                   <div className="print-info-row">
-                    <Label className="text-sm font-medium text-gray-600 block mb-1 print-label">Department/Branch:</Label>
-                    <p className="text-lg text-gray-900 print-value">{submission.evaluationData?.department || 'Not specified'}{submission.evaluationData?.branch ? ` / ${submission.evaluationData.branch}` : ''}</p>
+                    <Label className="font-medium text-black block mb-1 print-label" style={{ fontSize: '11px' }}>Department/Branch:</Label>
+                    <p className="text-gray-900 print-value" style={{ fontSize: '11px' }}>{submission.evaluationData?.department || 'Not specified'}{submission.evaluationData?.branch ? ` / ${submission.evaluationData.branch}` : ''}</p>
                   </div>
                   <div className="print-info-row">
-                    <Label className="text-sm font-medium text-gray-600 block mb-1 print-label">Date Hired:</Label>
-                    <p className="text-lg text-gray-900 print-value">
+                    <Label className="font-medium text-black block mb-1 print-label" style={{ fontSize: '11px' }}>Date Hired:</Label>
+                    <p className="text-gray-900 print-value" style={{ fontSize: '11px' }}>
                       {submission.evaluationData?.hireDate 
                         ? new Date(submission.evaluationData.hireDate).toLocaleDateString() 
                         : 'Not specified'}
                     </p>
                   </div>
                   <div className="print-info-row">
-                    <Label className="text-sm font-medium text-gray-600 block mb-1 print-label">Immediate Supervisor:</Label>
-                    <p className="text-lg text-gray-900 print-value">{submission.evaluationData?.supervisor || 'Not specified'}</p>
+                    <Label className="font-medium text-black block mb-1 print-label" style={{ fontSize: '11px' }}>Immediate Supervisor:</Label>
+                    <p className="text-gray-900 print-value" style={{ fontSize: '11px' }}>{submission.evaluationData?.supervisor || 'Not specified'}</p>
                   </div>
                   <div className="print-info-row">
-                    <Label className="text-sm font-medium text-gray-600 block mb-1 print-label">Performance Coverage:</Label>
-                    <p className="text-lg text-gray-900 print-value">
-                      {submission.evaluationData?.coverageFrom && submission.evaluationData?.coverageTo
-                        ? `${new Date(submission.evaluationData.coverageFrom).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} - ${new Date(submission.evaluationData.coverageTo).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`
-                        : 'Not specified'}
+                    <Label className="font-medium text-black block mb-1 print-label" style={{ fontSize: '11px' }}>Performance Coverage:</Label>
+                    <p className="text-gray-900 print-value" style={{ fontSize: '11px' }}>
+                      {submission.evaluationData?.coverageFrom && submission.evaluationData?.coverageTo ? (
+                        <>
+                          <span className="screen-date">
+                            {`${new Date(submission.evaluationData.coverageFrom).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} - ${new Date(submission.evaluationData.coverageTo).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`}
+                          </span>
+                          <span className="print-date">
+                            {`${new Date(submission.evaluationData.coverageFrom).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${new Date(submission.evaluationData.coverageTo).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                          </span>
+                        </>
+                      ) : 'Not specified'}
                     </p>
                   </div>
                 </div>
@@ -1858,7 +2241,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             </td>
                             <td className="border-2 border-gray-400 px-4 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
-                                <span className={`px-2 py-1 rounded text-sm font-bold ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.jobKnowledgeScore1, submission.evaluationData.jobKnowledgeScore2, submission.evaluationData.jobKnowledgeScore3])))}`}>
+                                <span className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.jobKnowledgeScore1, submission.evaluationData.jobKnowledgeScore2, submission.evaluationData.jobKnowledgeScore3])))}`}>
+                                  {getRatingLabel(calculateScore([submission.evaluationData.jobKnowledgeScore1, submission.evaluationData.jobKnowledgeScore2, submission.evaluationData.jobKnowledgeScore3]))}
+                                </span>
+                                <span className="print-rating-text">
                                   {getRatingLabel(calculateScore([submission.evaluationData.jobKnowledgeScore1, submission.evaluationData.jobKnowledgeScore2, submission.evaluationData.jobKnowledgeScore3]))}
                                 </span>
                               </div>
@@ -1881,7 +2267,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             </td>
                             <td className="border-2 border-gray-400 px-4 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
-                                <span className={`px-2 py-1 rounded text-sm font-bold ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.qualityOfWorkScore1, submission.evaluationData.qualityOfWorkScore2, submission.evaluationData.qualityOfWorkScore3, submission.evaluationData.qualityOfWorkScore4, submission.evaluationData.qualityOfWorkScore5])))}`}>
+                                <span className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.qualityOfWorkScore1, submission.evaluationData.qualityOfWorkScore2, submission.evaluationData.qualityOfWorkScore3, submission.evaluationData.qualityOfWorkScore4, submission.evaluationData.qualityOfWorkScore5])))}`}>
+                                  {getRatingLabel(calculateScore([submission.evaluationData.qualityOfWorkScore1, submission.evaluationData.qualityOfWorkScore2, submission.evaluationData.qualityOfWorkScore3, submission.evaluationData.qualityOfWorkScore4, submission.evaluationData.qualityOfWorkScore5]))}
+                                </span>
+                                <span className="print-rating-text">
                                   {getRatingLabel(calculateScore([submission.evaluationData.qualityOfWorkScore1, submission.evaluationData.qualityOfWorkScore2, submission.evaluationData.qualityOfWorkScore3, submission.evaluationData.qualityOfWorkScore4, submission.evaluationData.qualityOfWorkScore5]))}
                                 </span>
                               </div>
@@ -1904,7 +2293,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             </td>
                             <td className="border-2 border-gray-400 px-4 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
-                                <span className={`px-2 py-1 rounded text-sm font-bold ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.adaptabilityScore1, submission.evaluationData.adaptabilityScore2, submission.evaluationData.adaptabilityScore3])))}`}>
+                                <span className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.adaptabilityScore1, submission.evaluationData.adaptabilityScore2, submission.evaluationData.adaptabilityScore3])))}`}>
+                                  {getRatingLabel(calculateScore([submission.evaluationData.adaptabilityScore1, submission.evaluationData.adaptabilityScore2, submission.evaluationData.adaptabilityScore3]))}
+                                </span>
+                                <span className="print-rating-text">
                                   {getRatingLabel(calculateScore([submission.evaluationData.adaptabilityScore1, submission.evaluationData.adaptabilityScore2, submission.evaluationData.adaptabilityScore3]))}
                                 </span>
                               </div>
@@ -1927,7 +2319,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             </td>
                             <td className="border-2 border-gray-400 px-4 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
-                                <span className={`px-2 py-1 rounded text-sm font-bold ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.teamworkScore1, submission.evaluationData.teamworkScore2, submission.evaluationData.teamworkScore3])))}`}>
+                                <span className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.teamworkScore1, submission.evaluationData.teamworkScore2, submission.evaluationData.teamworkScore3])))}`}>
+                                  {getRatingLabel(calculateScore([submission.evaluationData.teamworkScore1, submission.evaluationData.teamworkScore2, submission.evaluationData.teamworkScore3]))}
+                                </span>
+                                <span className="print-rating-text">
                                   {getRatingLabel(calculateScore([submission.evaluationData.teamworkScore1, submission.evaluationData.teamworkScore2, submission.evaluationData.teamworkScore3]))}
                                 </span>
                               </div>
@@ -1950,7 +2345,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             </td>
                             <td className="border-2 border-gray-400 px-4 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
-                                <span className={`px-2 py-1 rounded text-sm font-bold ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.reliabilityScore1, submission.evaluationData.reliabilityScore2, submission.evaluationData.reliabilityScore3, submission.evaluationData.reliabilityScore4])))}`}>
+                                <span className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.reliabilityScore1, submission.evaluationData.reliabilityScore2, submission.evaluationData.reliabilityScore3, submission.evaluationData.reliabilityScore4])))}`}>
+                                  {getRatingLabel(calculateScore([submission.evaluationData.reliabilityScore1, submission.evaluationData.reliabilityScore2, submission.evaluationData.reliabilityScore3, submission.evaluationData.reliabilityScore4]))}
+                                </span>
+                                <span className="print-rating-text">
                                   {getRatingLabel(calculateScore([submission.evaluationData.reliabilityScore1, submission.evaluationData.reliabilityScore2, submission.evaluationData.reliabilityScore3, submission.evaluationData.reliabilityScore4]))}
                                 </span>
                               </div>
@@ -1973,7 +2371,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             </td>
                             <td className="border-2 border-gray-400 px-4 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
-                                <span className={`px-2 py-1 rounded text-sm font-bold ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.ethicalScore1, submission.evaluationData.ethicalScore2, submission.evaluationData.ethicalScore3, submission.evaluationData.ethicalScore4])))}`}>
+                                <span className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.ethicalScore1, submission.evaluationData.ethicalScore2, submission.evaluationData.ethicalScore3, submission.evaluationData.ethicalScore4])))}`}>
+                                  {getRatingLabel(calculateScore([submission.evaluationData.ethicalScore1, submission.evaluationData.ethicalScore2, submission.evaluationData.ethicalScore3, submission.evaluationData.ethicalScore4]))}
+                                </span>
+                                <span className="print-rating-text">
                                   {getRatingLabel(calculateScore([submission.evaluationData.ethicalScore1, submission.evaluationData.ethicalScore2, submission.evaluationData.ethicalScore3, submission.evaluationData.ethicalScore4]))}
                                 </span>
                               </div>
@@ -1996,7 +2397,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             </td>
                             <td className="border-2 border-gray-400 px-4 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
-                                <span className={`px-2 py-1 rounded text-sm font-bold ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.customerServiceScore1, submission.evaluationData.customerServiceScore2, submission.evaluationData.customerServiceScore3, submission.evaluationData.customerServiceScore4, submission.evaluationData.customerServiceScore5])))}`}>
+                                <span className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.customerServiceScore1, submission.evaluationData.customerServiceScore2, submission.evaluationData.customerServiceScore3, submission.evaluationData.customerServiceScore4, submission.evaluationData.customerServiceScore5])))}`}>
+                                  {getRatingLabel(calculateScore([submission.evaluationData.customerServiceScore1, submission.evaluationData.customerServiceScore2, submission.evaluationData.customerServiceScore3, submission.evaluationData.customerServiceScore4, submission.evaluationData.customerServiceScore5]))}
+                                </span>
+                                <span className="print-rating-text">
                                   {getRatingLabel(calculateScore([submission.evaluationData.customerServiceScore1, submission.evaluationData.customerServiceScore2, submission.evaluationData.customerServiceScore3, submission.evaluationData.customerServiceScore4, submission.evaluationData.customerServiceScore5]))}
                                 </span>
                               </div>
@@ -2127,7 +2531,12 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
             {submission.evaluationData && (submission.evaluationData.priorityArea1 || submission.evaluationData.priorityArea2 || submission.evaluationData.priorityArea3) && (
               <Card>
                 <CardContent className="pt-6 pb-4">
-                  <h4 className="font-semibold text-lg text-gray-900 mb-4">Priority Areas for Improvement</h4>
+                  <h4 className="font-semibold text-lg text-gray-900 mb-4 print-priority-header">Priority Areas for Improvement</h4>
+                  <p className="text-sm text-gray-600 mb-4 print-priority-description">
+                    This section identifies key areas the employee can focus on for development in the upcoming quarter.
+                    These can be specific skills, behaviors, or work outputs that will contribute to better overall performance
+                    and align with branch or company goals. Keep the feedback clear, helpful, and easy to act on.
+                  </p>
                   <div className="space-y-3">
                     {submission.evaluationData.priorityArea1 && (
                       <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-priority-item">
@@ -2162,7 +2571,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
             {submission.evaluationData && submission.evaluationData.remarks && (
               <Card>
                 <CardContent className="pt-6 pb-4">
-                  <h4 className="font-semibold text-lg text-gray-900 mb-4">Remarks</h4>
+                  <h4 className="font-semibold text-lg text-gray-900 mb-4 print-remarks-header">Remarks</h4>
                   <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-remarks-box">
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">{submission.evaluationData.remarks}</p>
                   </div>
@@ -2174,14 +2583,14 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
             {submission.evaluationData && (
               <Card>
                 <CardContent className="pt-6 pb-4">
-                  <h4 className="font-semibold text-lg text-gray-900 mb-4">Acknowledgement</h4>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <h4 className="font-semibold text-lg text-gray-900 mb-4 print-acknowledgement-header">Acknowledgement</h4>
+                  <p className="text-sm text-gray-600 mb-4 print-acknowledgement-description">
                     I hereby acknowledge that the Evaluator has explained to me, to the best of their ability, 
                     and in a manner I fully understand, my performance and respective rating on this performance evaluation.
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print-acknowledgement">
                     {/* Employee Section */}
-                    <div className="space-y-4">
+                    <div>
                       {/* Signature area */}
                       <div className="text-center">
                         <div className="h-20 border-2 border-dashed border-white rounded-lg flex items-center justify-center bg-gray-50 relative">
@@ -2281,7 +2690,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                     </div>
 
                     {/* Evaluator Section */}
-                    <div className="space-y-4">
+                    <div>
                       {/* Signature area */}
                       <div className="text-center">
                         <div className="h-20 border-2 border-dashed border-white rounded-lg flex items-center justify-center bg-gray-50 relative">
@@ -2318,7 +2727,15 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                           }) : 'Not specified'}
                         </p>
                       </div>
+                      
                     </div>
+                  </div>
+                  {/* Confidentiality Notice */}
+                  <div className="mt-6 print-confidentiality-notice">
+                    <p className="text-xs text-gray-700 leading-relaxed">
+                      <strong>CONFIDENTIALITY NOTICE ver.042225:</strong><br />
+                      This document, including any attachments, contains confidential and/or privileged information intended solely for internal use within the company. It is the intellectual property of SMCT Group of Companies, including its subsidiaries, businesses, and trade names. Unauthorized use, copying, distribution, or disclosure of this document, its contents, or any part thereof is strictly prohibited without the express written permission of SMCT Group of Companies.
+                    </p>
                   </div>
                   {/* Date section */}
                   <div className="mt-5 print-date-section no-print">
@@ -2340,6 +2757,12 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                 </CardContent>
               </Card>
             )}
+          </div>
+          {/* Print Footer */}
+          <div className="print-footer">
+            <p className="text-xs text-gray-700">
+              CONFIDENTIALITY NOTICE ver.042225: This document and its contents are confidential and the intellectual property of SMCT Group of Companies and its subsidiaries. Unauthorized use, copying, distribution or disclosure is prohibited.
+            </p>
           </div>
         </div>
       </DialogContent>

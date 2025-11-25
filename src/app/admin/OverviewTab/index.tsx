@@ -599,7 +599,6 @@ export function OverviewTab() {
               <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                 <TableRow>
                   <TableHead className="px-6 py-3">Employee Name</TableHead>
-                  <TableHead className="px-6 py-3">Department</TableHead>
                   <TableHead className="px-6 py-3">Position</TableHead>
                   <TableHead className="px-6 py-3">Evaluator</TableHead>
                   <TableHead className="px-6 py-3">Quarter</TableHead>
@@ -640,7 +639,7 @@ export function OverviewTab() {
                   ))
                 ) : overviewPaginated.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12">
+                    <TableCell colSpan={7} className="text-center py-12">
                       <div className="text-gray-500">
                         {searchTerm ? (
                           <>
@@ -714,11 +713,6 @@ export function OverviewTab() {
                               )}
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Badge variant="outline" className="text-xs">
-                            {review.department}
-                          </Badge>
                         </TableCell>
                         <TableCell className="px-6 py-3 text-sm text-gray-600">
                           {review.position}
