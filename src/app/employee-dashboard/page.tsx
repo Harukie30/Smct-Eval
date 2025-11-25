@@ -19,7 +19,6 @@ import { useUser } from "@/contexts/UserContext";
 import { withAuth } from "@/hoc";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import EvaluationDetailsModal from "@/components/EvaluationDetailsModal";
-// CommentDetailModal import removed
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
   Dialog,
