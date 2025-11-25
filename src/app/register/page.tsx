@@ -90,7 +90,7 @@ function RegisterPage() {
     
     const branchName = branch.label.toLowerCase().trim();
     return branchName === 'ho' || 
-           branchName === 'head office' || 
+           branchName === 'HEAD OFFICE /HO' || 
            branchName === 'none' ||
            branchName === 'none ho' ||
            branchName.startsWith('ho');
