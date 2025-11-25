@@ -42,6 +42,7 @@ interface EvaluationFormProps {
     role: string;
     hireDate: string;
     signature?: string;
+    employeeId?: string; // Formatted employee ID from registration (e.g., "1234-567890")
   };
   currentUser?: {
     id: number;
@@ -78,7 +79,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
   }, []);
   
   const [evaluationData, setEvaluationData] = useState<EvaluationData>({
-    employeeId: employee?.id?.toString() || '',
+    employeeId: employee?.employeeId || employee?.id?.toString() || '',
     employeeName: employee?.name || '',
     position: employee?.position || '',
     department: employee?.department || '',
@@ -199,7 +200,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
       console.log('Updating evaluation data with employee:', employee); // Debug log
       setEvaluationData(prev => ({
         ...prev,
-        employeeId: employee.id.toString(),
+        employeeId: employee.employeeId || employee.id.toString(),
         employeeName: employee.name,
         position: employee.position,
         department: employee.department,

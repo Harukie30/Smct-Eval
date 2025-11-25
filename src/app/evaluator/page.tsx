@@ -118,6 +118,7 @@ type Employee = {
   role: string;
   hireDate: string;
   avatar?: string;
+  employeeId?: string; // Formatted employee ID from registration (e.g., "1234-567890")
 };
 
 function getRatingColor(rating: number) {
@@ -2360,8 +2361,27 @@ function EvaluatorDashboard() {
                 setSelectedEmployeeForView(employee);
                 setIsViewEmployeeModalOpen(true);
               }}
-              onEvaluateEmployee={(employee) => {
-                setSelectedEmployee(employee);
+              onEvaluateEmployee={async (employee) => {
+                // Fetch formatted employee ID from accounts
+                try {
+                  const accounts = await clientDataService.getAccounts();
+                  const account = accounts.find((acc: any) => 
+                    acc.employeeId === employee.id || 
+                    acc.id === employee.id ||
+                    acc.email === employee.email
+                  );
+                  
+                  // Get formatted employee_id from account (stored as employee_id in registration)
+                  const formattedEmployeeId = (account as any)?.employee_id || account?.employeeId;
+                  
+                  setSelectedEmployee({
+                    ...employee,
+                    employeeId: formattedEmployeeId ? String(formattedEmployeeId) : undefined,
+                  });
+                } catch (error) {
+                  console.error('Error fetching employee ID:', error);
+                  setSelectedEmployee(employee);
+                }
                 setIsEvaluationTypeModalOpen(true);
               }}
               getUpdatedAvatar={getUpdatedAvatar}

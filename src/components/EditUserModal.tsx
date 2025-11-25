@@ -78,6 +78,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const { user: currentUser } = useUser();
   
   const isAdmin = currentUser?.role === 'admin';
+  const isHR = currentUser?.role === 'hr';
+  const canEditEmployeeId = isAdmin || isHR;
 
   // Lockout management functions
   const getLockoutKey = () => {
@@ -163,37 +165,89 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
   // Parse formatted employee ID back to number (e.g., "1234-567890" -> 1234567890)
   const parseEmployeeId = (formattedId: string): number | undefined => {
-    if (!formattedId) return undefined;
+    if (!formattedId || formattedId.trim() === '') return undefined;
     // Remove dashes and convert to number
     const numericString = formattedId.replace(/-/g, '');
+    // Don't parse if it's empty after cleaning
+    if (numericString === '') {
+      return undefined;
+    }
+    // Allow "0" to be parsed, but only if it's part of a longer number (e.g., "0123-456789")
+    // If it's just "0" alone, return undefined to prevent premature updates
+    if (numericString === '0' && formattedId.length <= 1) {
+      return undefined;
+    }
     const parsed = parseInt(numericString, 10);
     return isNaN(parsed) ? undefined : parsed;
   };
 
-  // Verify admin password
+  // Verify admin/HR password
   const verifyAdminPassword = async (): Promise<boolean> => {
-    if (!currentUser || !isAdmin) return false;
+    if (!currentUser || !canEditEmployeeId) return false;
     
     try {
       const accounts = await clientDataService.getAccounts();
-      const adminAccount = accounts.find((acc: any) => 
-        acc.id === currentUser.id && acc.role === 'admin'
-      );
+      // Check multiple ways to find the account (id, employeeId, email, username)
+      const userAccount = accounts.find((acc: any) => {
+        // Match by ID (check both id and employeeId)
+        const idMatches = acc.id === currentUser.id || 
+                         acc.employeeId === currentUser.id ||
+                         (acc.employeeId && acc.employeeId === acc.id && acc.id === currentUser.id);
+        
+        // Match by email or username as fallback
+        const emailMatches = acc.email === currentUser.email;
+        const usernameMatches = acc.username === currentUser.username || acc.username === currentUser.email;
+        
+        // Role must be admin or hr (case-insensitive)
+        const roleMatches = acc.role === 'admin' || 
+                          acc.role === 'hr' || 
+                          acc.role?.toLowerCase() === 'hr' ||
+                          acc.role?.toLowerCase() === 'admin';
+        
+        return (idMatches || emailMatches || usernameMatches) && roleMatches;
+      });
       
-      if (!adminAccount) {
+      if (!userAccount) {
+        console.error('User account not found for verification:', {
+          currentUserId: currentUser.id,
+          currentUserEmail: currentUser.email,
+          currentUserUsername: currentUser.username,
+          currentUserRole: currentUser.role,
+          accountsCount: accounts.length,
+          availableAccounts: accounts.map((acc: any) => ({
+            id: acc.id,
+            employeeId: acc.employeeId,
+            email: acc.email,
+            username: acc.username,
+            role: acc.role
+          }))
+        });
         return false;
       }
       
-      return adminAccount.password === adminPassword;
+      // Compare passwords (case-sensitive, trim whitespace)
+      const passwordMatches = userAccount.password?.trim() === adminPassword.trim();
+      
+      if (!passwordMatches) {
+        console.error('Password mismatch:', {
+          provided: adminPassword.substring(0, 2) + '***',
+          expected: userAccount.password.substring(0, 2) + '***',
+          accountId: userAccount.id,
+          accountRole: userAccount.role,
+          accountEmail: userAccount.email
+        });
+      }
+      
+      return passwordMatches;
     } catch (err) {
-      console.error('Error verifying admin password:', err);
+      console.error('Error verifying password:', err);
       return false;
     }
   };
 
-  // Handle employee ID field click/focus (for admins)
+  // Handle employee ID field click/focus (for admins and HR)
   const handleEmployeeIdFocus = () => {
-    if (isAdmin && !isEmployeeIdEditable) {
+    if (canEditEmployeeId && !isEmployeeIdEditable) {
       // Check lockout status before opening modal
       const lockoutStatus = checkLockoutStatus();
       if (lockoutStatus.isLockedOut && lockoutStatus.lockoutUntil) {
@@ -237,7 +291,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         setIsPasswordModalOpen(false);
         setAdminPassword('');
         setEmployeeIdInput(formatEmployeeId(formData.employeeId));
-        success('Admin password verified. You can now edit the Employee ID.');
+        success(`${isAdmin ? 'Admin' : 'HR'} password verified. You can now edit the Employee ID.`);
       } else {
         // Increment failed attempts
         incrementFailedAttempts();
@@ -282,10 +336,19 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
   // Update formData when employee ID is changed (after verification)
   useEffect(() => {
-    if (isEmployeeIdEditable && employeeIdInput) {
-      const parsedId = parseEmployeeId(employeeIdInput);
-      if (parsedId !== undefined) {
-        setFormData(prev => ({ ...prev, employeeId: parsedId }));
+    if (isEmployeeIdEditable) {
+      if (employeeIdInput && employeeIdInput.trim() !== '') {
+        const parsedId = parseEmployeeId(employeeIdInput);
+        // Only update if parsedId is not undefined and not NaN
+        if (parsedId !== undefined && !isNaN(parsedId)) {
+          setFormData(prev => ({ ...prev, employeeId: parsedId }));
+        } else {
+          // Keep the current employeeId if parsing fails (user is still typing)
+          // Don't clear it until they clear the input
+        }
+      } else {
+        // Clear employeeId if input is empty
+        setFormData(prev => ({ ...prev, employeeId: undefined }));
       }
     }
   }, [employeeIdInput, isEmployeeIdEditable]);
@@ -513,11 +576,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
-          {/* Employee ID - Editable for Admins with Password Verification */}
-          {formData.employeeId && (
+          {/* Employee ID - Editable for Admins and HR with Password Verification */}
+          {((formData.employeeId !== undefined && formData.employeeId !== null) || (canEditEmployeeId && isEmployeeIdEditable)) && (
             <div className="space-y-2">
               <Label htmlFor="employeeId">Employee ID</Label>
-              {isAdmin && isEmployeeIdEditable ? (
+              {canEditEmployeeId && isEmployeeIdEditable ? (
                 <Input
                   id="employeeId"
                   value={employeeIdInput}
@@ -529,19 +592,19 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               ) : (
                 <Input
                   id="employeeId"
-                  value={formatEmployeeId(formData.employeeId)}
-                  disabled={!isAdmin}
-                  readOnly={!isAdmin || !isEmployeeIdEditable}
+                  value={formData.employeeId ? formatEmployeeId(formData.employeeId) : ''}
+                  disabled={!canEditEmployeeId}
+                  readOnly={!canEditEmployeeId || !isEmployeeIdEditable}
                   onFocus={handleEmployeeIdFocus}
-                  className={isAdmin ? "bg-gray-100 cursor-pointer hover:bg-gray-200" : "bg-gray-100 cursor-not-allowed"}
-                  title={isAdmin ? "Click to edit (requires admin password)" : "Employee ID assigned during registration"}
+                  className={canEditEmployeeId ? "bg-gray-100 cursor-pointer hover:bg-gray-200" : "bg-gray-100 cursor-not-allowed"}
+                  title={canEditEmployeeId ? `Click to edit (requires ${isAdmin ? 'admin' : 'HR'} password)` : "Employee ID assigned during registration"}
                 />
               )}
               <p className="text-xs text-gray-500">
-                {isAdmin 
+                {canEditEmployeeId 
                   ? isEmployeeIdEditable 
                     ? "Editing enabled. Enter 10-digit Employee ID (format: 1234-567890)"
-                    : "Click to edit (requires admin password verification)"
+                    : `Click to edit (requires ${isAdmin ? 'admin' : 'HR'} password verification)`
                   : "Employee ID assigned during registration"
                 }
               </p>
@@ -796,9 +859,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       }}>
         <DialogContent className="max-w-lg w-full mx-4 p-6">
           <DialogHeader className="pb-4">
-            <DialogTitle className="text-xl font-semibold">Admin Password Verification</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">{isAdmin ? 'Admin' : 'HR'} Password Verification</DialogTitle>
             <DialogDescription className="text-gray-600 pt-2">
-              Please enter your admin password to edit the Employee ID.
+              Please enter your {isAdmin ? 'admin' : 'HR'} password to edit the Employee ID.
             </DialogDescription>
           </DialogHeader>
           {(() => {
@@ -845,7 +908,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <div className="space-y-6 py-4">
                 <div className="space-y-3">
                   <Label htmlFor="adminPassword" className="text-sm font-medium">
-                    Admin Password
+                    {isAdmin ? 'Admin' : 'HR'} Password
                   </Label>
                   <Input
                     id="adminPassword"
@@ -860,7 +923,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                         handleVerifyPassword();
                       }
                     }}
-                    placeholder="Enter admin password"
+                    placeholder={`Enter ${isAdmin ? 'admin' : 'HR'} password`}
                     className={`w-full h-11 px-4 ${passwordError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} bg-white`}
                     disabled={isVerifyingPassword}
                     autoFocus
