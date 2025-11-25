@@ -294,6 +294,11 @@ export const clientDataService = {
     console.warn("uploadImage: API endpoint not implemented yet");
     throw new Error("Not implemented");
   },
+
+  // Avatar upload - uses API service
+  uploadAvatar: async (formData: FormData): Promise<any> => {
+    return await apiService.uploadAvatar(formData);
+  },
 };
 
 export default clientDataService;

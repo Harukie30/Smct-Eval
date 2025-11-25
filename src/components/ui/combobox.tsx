@@ -79,7 +79,7 @@ export function Combobox({
             {value
               ? (() => {
                   const selectedOption = options.find(
-                    (option) => getOptionValue(option) === value
+                    (option) => String(getOptionValue(option)) === String(value)
                   );
                   return selectedOption ? getOptionText(selectedOption) : value;
                 })()
@@ -111,7 +111,7 @@ export function Combobox({
                     key={typeof option === "string" ? option : option.value}
                     className={cn(
                       "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
-                      value === getOptionValue(option) && "bg-accent"
+                      String(value) === String(getOptionValue(option)) && "bg-accent"
                     )}
                     onClick={() => {
                       onValueChangeAction(getOptionValue(option));
@@ -122,7 +122,7 @@ export function Combobox({
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
-                        value === getOptionValue(option)
+                        String(value) === String(getOptionValue(option))
                           ? "opacity-100"
                           : "opacity-0"
                       )}

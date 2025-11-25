@@ -3,9 +3,13 @@
 import RealLoadingScreen from "@/components/RealLoadingScreen";
 import { useAuth } from "@/contexts/UserContext";
 import Link from "next/link";
+import { getUserDashboardPath } from "@/lib/dashboardUtils";
 
 export default function NotFound() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, profile, user } = useAuth();
+  
+  // Get user's dashboard based on role, or return to landing page
+  const dashboardPath = getUserDashboardPath(profile, user, "/") || "/";
 
   if (isLoading) return <RealLoadingScreen />;
   return (
@@ -38,7 +42,7 @@ export default function NotFound() {
           <div className="space-y-4">
             {isLoading ? null : isAuthenticated ? (
               <Link
-                href="/dashboard"
+                href={dashboardPath}
                 className="block w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-medium rounded-lg text-center transition duration-200"
               >
                 Return to Dashboard

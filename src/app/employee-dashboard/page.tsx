@@ -441,9 +441,10 @@ function EmployeeDashboard() {
       if (profile?.email) {
         // Fetch fresh submissions data
         const allSubmissions = await clientDataService.getSubmissions();
+        const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
         const userSubmissions = allSubmissions.filter(
           (submission: any) =>
-            submission.employeeName === profile.name ||
+            submission.employeeName === userFullName ||
             submission.evaluationData?.employeeEmail === profile.email
         );
         const finalSubmissions =
@@ -511,10 +512,11 @@ function EmployeeDashboard() {
       try {
         const allSubmissions = await clientDataService.getSubmissions();
         // Filter submissions to only show current user's data
+        const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
         const userSubmissions = profile?.email
           ? allSubmissions.filter(
               (submission: any) =>
-                submission.employeeName === profile.name ||
+                submission.employeeName === userFullName ||
                 submission.evaluationData?.employeeEmail === profile.email
             )
           : [];
@@ -660,7 +662,8 @@ function EmployeeDashboard() {
     }
 
     setEvaluationToApprove(submission);
-    setEmployeeApprovalName(profile?.name || user?.name || "");
+    const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
+    setEmployeeApprovalName(userFullName || user?.name || "");
     setIsApprovalDialogOpen(true);
   };
 
@@ -715,11 +718,12 @@ function EmployeeDashboard() {
     setIsApproving(true);
 
     try {
+      const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
       const approvalData = {
         id: evaluationToApprove.id,
         approvedAt: new Date().toISOString(),
         employeeSignature: employeeSignature,
-        employeeName: employeeApprovalName || profile.name || user?.name || "",
+        employeeName: employeeApprovalName || userFullName || user?.name || "",
         employeeEmail: profile.email || user?.email || "",
       };
 
@@ -1220,7 +1224,7 @@ function EmployeeDashboard() {
         approvalData={
           selectedEvaluation ? getApprovalData(selectedEvaluation.id) : null
         }
-        currentUserName={profile?.name || user?.name}
+        currentUserName={profile ? `${profile.fname} ${profile.lname}`.trim() : (user?.name || '')}
         currentUserSignature={(() => {
           const signature =
             selectedEvaluation?.evaluationData?.evaluatorSignatureImage ||

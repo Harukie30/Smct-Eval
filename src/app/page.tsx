@@ -829,5 +829,6 @@ function LandingLoginPage() {
 }
 
 // Wrap with HOC for public page with transitions
-// redirectIfAuthenticated: true means logged-in users will be redirected to their dashboard
-export default withPublicPage(LandingLoginPage, { redirectIfAuthenticated: true });
+// redirectIfAuthenticated: false allows authenticated users to access the landing page
+// Users can still log in again or navigate to their dashboard manually
+export default withPublicPage(LandingLoginPage, { redirectIfAuthenticated: false });

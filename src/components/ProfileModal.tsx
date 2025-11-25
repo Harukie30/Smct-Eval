@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserProfile } from './ProfileCard';
 import { User, Camera, Save, X } from 'lucide-react';
-import { uploadProfileImage, deleteProfileImage } from '@/lib/imageUpload';
+import { uploadProfileImage } from '@/lib/imageUpload';
 // Removed profileService import - we'll use UserContext directly
 import SignaturePad from '@/components/SignaturePad';
 import { useToast } from '@/hooks/useToast';
@@ -30,8 +30,9 @@ export default function ProfileModal({
   const [formData, setFormData] = useState<UserProfile>(profile);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [branches, setBranches] = useState<{id: string, name: string}[]>([]);
-  const [positions, setPositions] = useState<{id: string, name: string}[]>([]);
+  const [branches, setBranches] = useState<{value: string | number, label: string}[]>([]);
+  const [positions, setPositions] = useState<{value: string | number, label: string}[]>([]);
+  const [departments, setDepartments] = useState<{value: string | number, label: string}[]>([]);
   const { success } = useToast();
 
   // Format employee ID as 10-digit number with dash (e.g., 1234-567890)
@@ -52,16 +53,19 @@ export default function ProfileModal({
     setErrors({});
   }, [profile]);
 
-  // Load branches and positions data
+  // Load branches, positions, and departments data
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [branchesData, positionsData] = await Promise.all([
+        const [branchesData, positionsData, departmentsData] = await Promise.all([
           clientDataService.getBranches(),
-          clientDataService.getPositions()
+          clientDataService.getPositions(),
+          clientDataService.getDepartments()
         ]);
-        setBranches(branchesData);
-        setPositions(positionsData);
+        // Map to {value, label} format
+        setBranches(branchesData.map((b: any) => ({ value: b.value || b.id, label: b.label || b.name })));
+        setPositions(positionsData.map((p: any) => ({ value: p.value || p.id, label: p.label || p.name })));
+        setDepartments(departmentsData.map((d: any) => ({ value: d.value || d.id, label: d.label || d.name })));
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -71,16 +75,17 @@ export default function ProfileModal({
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    const fullName = `${formData.fname} ${formData.lname}`.trim();
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+    if (!formData.fname.trim() || !formData.lname.trim()) {
+      newErrors.name = 'First and last name are required';
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    if (formData.name.trim().length < 2) {
+    if (fullName.length < 2) {
       newErrors.name = 'Name must be at least 2 characters long';
     }
 
@@ -107,7 +112,10 @@ export default function ProfileModal({
 
       try {
         setIsLoading(true);
-        const imageUrl = await uploadProfileImage(file);
+        // Create FormData from File
+        const formData = new FormData();
+        formData.append('avatar', file);
+        const imageUrl = await uploadProfileImage(formData);
         setFormData(prev => ({ ...prev, avatar: imageUrl }));
         setErrors(prev => ({ ...prev, avatar: '' }));
       } catch (error) {
@@ -131,14 +139,8 @@ export default function ProfileModal({
       // Add a small delay to show the loading animation
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // If avatar changed and old avatar exists, delete the old one
-      if (formData.avatar !== profile.avatar && profile.avatar && !profile.avatar.startsWith('data:')) {
-        try {
-          await deleteProfileImage(profile.avatar);
-        } catch (error) {
-          console.warn('Failed to delete old avatar:', error);
-        }
-      }
+      // Note: Old avatar deletion is handled by the backend
+      // No need to delete client-side when using API
 
       // Call onSave directly - this will update the UserContext and localStorage
       await onSave(formData);
@@ -178,11 +180,11 @@ export default function ProfileModal({
                 {formData.avatar ? (
                   <img 
                     src={formData.avatar} 
-                    alt={formData.name} 
+                    alt={`${formData.fname} ${formData.lname}`} 
                     className="h-24 w-24 rounded-full object-cover"
                   />
                 ) : (
-                  formData.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                  `${formData.fname?.[0] || ''}${formData.lname?.[0] || ''}`.toUpperCase()
                 )}
               </div>
               <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
@@ -224,21 +226,35 @@ export default function ProfileModal({
               </div>
             )}
 
-            {/* Name */}
+            {/* First Name */}
             <div className="space-y-1.5">
-              <Label htmlFor="name" className="text-sm font-medium">
-                Full Name *
+              <Label htmlFor="fname" className="text-sm font-medium">
+                First Name *
               </Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                placeholder="Enter your full name"
+                id="fname"
+                value={formData.fname}
+                onChange={(e) => handleInputChange('fname', e.target.value)}
+                placeholder="Enter your first name"
                 className={errors.name ? 'border-red-500' : ''}
               />
               {errors.name && (
                 <p className="text-sm text-red-600">{errors.name}</p>
               )}
+            </div>
+
+            {/* Last Name */}
+            <div className="space-y-1.5">
+              <Label htmlFor="lname" className="text-sm font-medium">
+                Last Name *
+              </Label>
+              <Input
+                id="lname"
+                value={formData.lname}
+                onChange={(e) => handleInputChange('lname', e.target.value)}
+                placeholder="Enter your last name"
+                className={errors.name ? 'border-red-500' : ''}
+              />
             </div>
 
             {/* Email */}
@@ -261,20 +277,28 @@ export default function ProfileModal({
 
             {/* Role/Position */}
             <div className="space-y-1.5">
-              <Label htmlFor="roleOrPosition" className="text-sm font-medium">
+              <Label htmlFor="position" className="text-sm font-medium">
                 Role/Position
               </Label>
               <Select
-                value={formData.roleOrPosition || ''}
-                onValueChange={(value) => handleInputChange('roleOrPosition', value)}
+                value={formData.positions?.value?.toString() || ''}
+                onValueChange={(value) => {
+                  const selectedPosition = positions.find(p => p.value.toString() === value);
+                  if (selectedPosition) {
+                    setFormData(prev => ({
+                      ...prev,
+                      positions: { value: selectedPosition.value, label: selectedPosition.label }
+                    }));
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select your position" />
                 </SelectTrigger>
                 <SelectContent>
                   {positions.map((position) => (
-                    <SelectItem key={position.id} value={position.id}>
-                      {position.name}
+                    <SelectItem key={position.value.toString()} value={position.value.toString()}>
+                      {position.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -286,12 +310,29 @@ export default function ProfileModal({
               <Label htmlFor="department" className="text-sm font-medium">
                 Department
               </Label>
-              <Input
-                id="department"
-                value={formData.department || ''}
-                onChange={(e) => handleInputChange('department', e.target.value)}
-                placeholder="e.g., Engineering, HR, Sales"
-              />
+              <Select
+                value={formData.departments?.value?.toString() || ''}
+                onValueChange={(value) => {
+                  const selectedDept = departments.find(d => d.value.toString() === value);
+                  if (selectedDept) {
+                    setFormData(prev => ({
+                      ...prev,
+                      departments: { value: selectedDept.value, department_name: selectedDept.label }
+                    }));
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.value.toString()} value={dept.value.toString()}>
+                      {dept.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Branch */}
@@ -300,16 +341,24 @@ export default function ProfileModal({
                 Branch
               </Label>
               <Select
-                value={formData.branch || ''}
-                onValueChange={(value) => handleInputChange('branch', value)}
+                value={formData.branches?.value?.toString() || ''}
+                onValueChange={(value) => {
+                  const selectedBranch = branches.find(b => b.value.toString() === value);
+                  if (selectedBranch) {
+                    setFormData(prev => ({
+                      ...prev,
+                      branches: { value: selectedBranch.value, branch_name: selectedBranch.label }
+                    }));
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select your branch" />
                 </SelectTrigger>
                 <SelectContent>
                   {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
+                    <SelectItem key={branch.value.toString()} value={branch.value.toString()}>
+                      {branch.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

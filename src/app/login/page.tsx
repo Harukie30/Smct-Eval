@@ -22,7 +22,6 @@ import Link from "next/link";
 import PageTransition from "@/components/PageTransition";
 import RealLoadingScreen from "@/components/RealLoadingScreen";
 import InstantLoadingScreen from "@/components/InstantLoadingScreen";
-import SuspensionModal from "@/components/SuspensionModal";
 import GoogleLoginModal from "@/components/GoogleLoginModal";
 import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 import { useAuth } from "@/contexts/UserContext";
@@ -49,7 +48,7 @@ export default function LandingLoginPage() {
     useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
-  const { login, isLoading, user, isAuthenticated } = useAuth();
+  const { login, isLoading, user, isAuthenticated, profile } = useAuth();
   const router = useRouter();
   // Force refresh accounts data on login page load (clears cache)
   useEffect(() => {
@@ -79,8 +78,21 @@ export default function LandingLoginPage() {
       await new Promise((resolve) => setTimeout(resolve, 800)); // UI delay
 
       // 🔑 Authenticate using Sanctum session
-      const user = await login(username, password);
-      console.log("✅ Login successful:", user);
+      const loginResult = await login(username, password);
+      console.log("✅ Login result:", loginResult);
+
+      // Check if login was successful
+      if (loginResult === false || (typeof loginResult === 'object' && loginResult.pending)) {
+        if (typeof loginResult === 'object' && loginResult.pending) {
+          setLoginError("Account pending approval");
+        } else {
+          setLoginError("Invalid credentials");
+        }
+        return;
+      }
+
+      // Wait a bit for context to update
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Optional fake delays to simulate extra steps
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Session creation
@@ -88,6 +100,12 @@ export default function LandingLoginPage() {
 
       toastMessages.login.success(username);
 
+      // Get user role from context (profile or user) - need to wait for context update
+      // Use a small delay to ensure context is updated
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      
+      const userRole = profile?.roles?.[0]?.name || user?.role || '';
+      
       const dashboards: Record<string, string> = {
         admin: "/admin",
         hr: "/hr-dashboard",
@@ -97,11 +115,15 @@ export default function LandingLoginPage() {
         manager: "/evaluator",
       };
 
-      const redirectPath =
-        (user && dashboards[user?.roles[0]?.name]) || "/employee-dashboard";
-      console.log("🚀 Redirecting to:", redirectPath);
-
-      router.push(redirectPath);
+      const redirectPath = dashboards[userRole.toLowerCase()];
+      
+      if (redirectPath) {
+        console.log("🚀 Redirecting to:", redirectPath, "for role:", userRole);
+        router.push(redirectPath);
+      } else {
+        console.warn("⚠️ No dashboard path found for role:", userRole, "- staying on login page");
+        setLoginError("Invalid user role. Please contact support.");
+      }
     } catch (error: any) {
       console.error("Login error:", error);
       setLoginError(error.message || "Login failed.");
@@ -131,9 +153,14 @@ export default function LandingLoginPage() {
       employee: "/employee-dashboard",
       manager: "/evaluator",
     };
-    const dashboardPath =
-      roleDashboards[user?.roles?.[0]?.name || ""] || "/dashboard";
-    return redirect(dashboardPath);
+    const userRole = profile?.roles?.[0]?.name || user?.role || "";
+    const dashboardPath = roleDashboards[userRole.toLowerCase()];
+    
+    // Only redirect if we have a valid dashboard path, otherwise stay on login page
+    if (dashboardPath) {
+      return redirect(dashboardPath);
+    }
+    // If no valid role, just show the login page (don't redirect to avoid loop)
   }
 
   return (
@@ -906,17 +933,7 @@ export default function LandingLoginPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Suspension Modal */}
-      {suspensionData && (
-        <SuspensionModal
-          isOpen={showSuspensionModal}
-          onClose={() => {
-            setShowSuspensionModal(false);
-            setSuspensionData(null);
-          }}
-          suspensionData={suspensionData}
-        />
-      )}
+    
 
       {/* Google Login Modal */}
       <GoogleLoginModal

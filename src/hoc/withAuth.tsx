@@ -102,9 +102,16 @@ export function withAuth<P extends object>(
         user &&
         redirectOnRoleMismatch
       ) {
-        const hasRequiredRole =
-          Array.isArray(requiredRole) &&
-          user?.roles?.some((role) => requiredRole.includes(role?.name));
+        // Get user's role from user object (AuthenticatedUser only has role, not roles array)
+        const userRole = user?.role || "";
+        const normalizedUserRole = userRole.toLowerCase();
+        
+        // Check if user has required role (handle both string and array)
+        const requiredRoles = Array.isArray(requiredRole) 
+          ? requiredRole.map(r => r.toLowerCase())
+          : [requiredRole.toLowerCase()];
+        
+        const hasRequiredRole = requiredRoles.includes(normalizedUserRole);
 
         if (!hasRequiredRole) {
           // Redirect to appropriate dashboard based on user role
@@ -116,12 +123,23 @@ export function withAuth<P extends object>(
             manager: "/evaluator",
           };
 
-          const dashboardPath =
-            roleDashboards[user?.roles?.[0]?.name || ""] || "/dashboard";
+          const dashboardPath = roleDashboards[normalizedUserRole];
+          
+          if (dashboardPath) {
+            console.log(
+              `🔀 withAuth: User role "${userRole}" doesn't match required "${requiredRole}", redirecting to ${dashboardPath}`
+            );
+            router.push(dashboardPath);
+          } else {
+            console.warn(
+              `⚠️ withAuth: No dashboard path found for role "${userRole}", redirecting to /employee-dashboard as fallback`
+            );
+            router.push("/employee-dashboard");
+          }
+        } else {
           console.log(
-            `🔀 withAuth: User role "${user?.roles?.[0]?.name}" doesn't match required "${requiredRole}", redirecting to ${dashboardPath}`
+            `✅ withAuth: User role "${userRole}" matches required "${requiredRole}", allowing access`
           );
-          router.push(dashboardPath);
         }
       }
     }, [
@@ -173,9 +191,16 @@ export function withAuth<P extends object>(
 
     // Check role if required
     if (requiredRole && user) {
-      const hasRequiredRole =
-        Array.isArray(requiredRole) &&
-        user?.roles?.some((role) => requiredRole.includes(role?.name));
+      // Get user's role (AuthenticatedUser only has role, not roles array)
+      const userRole = user?.role || "";
+      const normalizedUserRole = userRole.toLowerCase();
+      
+      // Check if user has required role (handle both string and array)
+      const requiredRoles = Array.isArray(requiredRole) 
+        ? requiredRole.map(r => r.toLowerCase())
+        : [requiredRole.toLowerCase()];
+      
+      const hasRequiredRole = requiredRoles.includes(normalizedUserRole);
 
       if (!hasRequiredRole && redirectOnRoleMismatch) {
         // Will redirect in useEffect - show loading

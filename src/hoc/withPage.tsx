@@ -166,9 +166,13 @@ export function withPublicPage<P extends object>(
                 'manager': '/evaluator'
               };
               
-              const dashboardPath = roleDashboards[user.role] || '/dashboard';
-              console.log('🔄 withPublicPage: User already logged in with role', user.role, '- redirecting to', dashboardPath);
-              router.push(dashboardPath);
+              const dashboardPath = roleDashboards[user.role];
+              if (dashboardPath) {
+                console.log('🔄 withPublicPage: User already logged in with role', user.role, '- redirecting to', dashboardPath);
+                router.push(dashboardPath);
+              } else {
+                console.warn('⚠️ withPublicPage: No dashboard path found for role', user.role, '- staying on current page');
+              }
             } else if (user && user.roleSelectionPending) {
               console.log('🔄 withPublicPage: Role selection pending, not redirecting');
             }

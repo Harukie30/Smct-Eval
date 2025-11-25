@@ -2,254 +2,252 @@
 import { AuthenticatedUser } from '@/contexts/UserContext';
 import { PendingRegistration, Account } from './clientDataService';
 import { CONFIG } from '../../config/config';
+import { api } from './api';
+import { AxiosError } from 'axios';
 
-// const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
-
-// Helper function to get auth token
+// Helper function to get CSRF cookie from Sanctum
 export const sanctum_csrf = async () => {
-  await fetch(`http://localhost:8000/sanctum/csrf-cookie`, {
-    credentials: 'include',
-  });
+  try {
+    await api.get('/sanctum/csrf-cookie');
+  } catch (error) {
+    console.error('Failed to get CSRF cookie:', error);
+    throw error;
+  }
 };
 
 export const apiService = {
 
+  // Authentication
+  login: async (email: string, password: string, remember: boolean = false): Promise<any> => {
+    await sanctum_csrf();
+    try {
+      const response = await api.post('/login', { email, password, remember });
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+        message: axiosError.response?.data?.message || "Login failed",
+      };
+    }
+  },
+
+  // Get current authenticated user
+  getUser: async (): Promise<any> => {
+    await sanctum_csrf();
+    try {
+      const response = await api.get('/user');
+      return response.data.user || response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+        message: axiosError.response?.data?.message || "Failed to get user",
+      };
+    }
+  },
 
   // Registration
   createPendingRegistration: async (formData: FormData): Promise<any> => {
-    const res = await fetch(`${CONFIG.API_URL}/register`, {
-          method: "POST",
-          headers: {
-            "Accept": "application/json",
-          },
-          body: formData,
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw {
-            ...data,
-            status: res.status,
-          };
-        }
-
-        return data;
-      },
+    try {
+      const response = await api.post('/register', formData);
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+      };
+    }
+  },
 
 
   updateEmployee_auth: async (formData: FormData): Promise<any> => {
     await sanctum_csrf();
-    const res = await fetch(`${CONFIG.API_URL}/update_employee_auth`, {
-          method: "POST",
-          credentials: 'include',
-          headers: {
-            "Accept": "application/json",
-          },
-          body: formData,
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw {
-            ...data,
-            status: res.status,
-          };
-        }
-
-        return data;
-      },
+    try {
+      const response = await api.post('/update_employee_auth', formData);
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+      };
+    }
+  },
       
   updateEmployee: async (formData: FormData, id :string | number): Promise<any> => {
     await sanctum_csrf();
-    const res = await fetch(`${CONFIG.API_URL}/update_user/${id}`, {
-          method: "POST",
-          credentials: 'include',
-          headers: {
-            "Accept": "application/json",
-          },
-          body: formData,
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw {
-            ...data,
-            status: res.status,
-          };
-        }
-
-        return data;
+    try {
+      const response = await api.post(`/update_user/${id}`, formData);
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+      };
+    }
   },
   
   approveRegistration: async ( id :string | number): Promise<any> => {
     await sanctum_csrf();
-    const res = await fetch(`${CONFIG.API_URL}/approveRegistration/${id}`, {
-          method: "POST",
-          credentials: 'include',
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-          }
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw {
-            ...data,
-            status: res.status,
-          };
-        }
-
-        return data;
+    try {
+      const response = await api.post(`/approveRegistration/${id}`);
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+      };
+    }
   },
 
   rejectRegistration: async ( id :string | number): Promise<any> => {
     await sanctum_csrf();
-    const res = await fetch(`${CONFIG.API_URL}/rejectRegistration/${id}`, {
-          method: "POST",
-          credentials: 'include',
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-          }
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw {
-            ...data,
-            status: res.status,
-          };
-        }
-
-        return data;
+    try {
+      const response = await api.post(`/rejectRegistration/${id}`);
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+      };
+    }
   },
 
   deleteUser: async (id :string | number): Promise<any> => {
     await sanctum_csrf();
-    const res = await fetch(`${CONFIG.API_URL}/delete_user/${id}`, {
-          method: "POST",
-          credentials: 'include',
-          headers: {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-          },
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw {
-            ...data,
-            status: res.status,
-          };
-        }
-
-        return data;
+    try {
+      const response = await api.post(`/delete_user/${id}`);
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+      };
+    }
   },
 
   getPendingRegistrations: async (): Promise<any | null> => {
-      const response = await fetch(`${CONFIG.API_URL}/getAll_Pending_users`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch pending registrations');
-      }
-
-      const data = await response.json();
-      return data.users || [];
+    try {
+      const response = await api.get('/getAll_Pending_users');
+      return response.data.users || [];
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw new Error(axiosError.response?.data?.message || 'Failed to fetch pending registrations');
+    }
   },
   
   getActiveRegistrations: async (filters? : Record< string , string >): Promise<any | null> => {
-    const query = filters ? `?${ new  URLSearchParams(filters).toString() }` : '';
-    const response = await fetch(`${CONFIG.API_URL}/getAll_Active_users${query}`, {
-      method: 'GET',
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch active registrations');
+    try {
+      const response = await api.get('/getAll_Active_users', {
+        params: filters,
+      });
+      return response.data.users;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw new Error(axiosError.response?.data?.message || 'Failed to fetch active registrations');
     }
-
-    const data = await response.json();
-    return data.users ;
   },
 
   getDepartments: async ():  Promise<{ label: string; value: string }[]> => {
-    const res = await fetch(`${CONFIG.API_URL}/departments`, {
-          method: "GET",
-        });
-        const response = await res.json();
-        if (!res.ok) {
-          throw new Error('Failed to save departments');
-        }
-        return response.departments.map(
-          (departments: any) => ({
-            value: departments.id,
-            label: departments.department_name,
-          })
-        );
-    },
+    try {
+      const response = await api.get('/departments');
+      return response.data.departments.map(
+        (departments: any) => ({
+          value: departments.id,
+          label: departments.department_name,
+        })
+      );
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw new Error(axiosError.response?.data?.message || 'Failed to fetch departments');
+    }
+  },
 
   getPositions: async (): Promise<{ label: string; value: string }[]> => {
-      const res = await fetch(`${CONFIG.API_URL}/positions`, { 
-        method: "GET" 
-      });
-      const response = await res.json();
-      
-      if (!res.ok) {
-          throw new Error('Failed to get positions');
-      }
-      return response.positions.map((position: any) => ({
+    try {
+      const response = await api.get('/positions');
+      return response.data.positions.map((position: any) => ({
         value: position.id,
         label: position.label,
       }));
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw new Error(axiosError.response?.data?.message || 'Failed to get positions');
+    }
   },
 
   getBranches: async ():  Promise<{ label: string; value: string }[]> => {
-      const res = await fetch(`${CONFIG.API_URL}/branches`, {
-        method: "GET",
-      });
-      const response = await res.json();
-      if (!res.ok) {
-              throw new Error('Failed to save positions');
-      }
-      return response.branches.map((branches: any) => ({
+    try {
+      const response = await api.get('/branches');
+      return response.data.branches.map((branches: any) => ({
         value: branches.id,
         label: branches.branch_name + " /" + branches.branch_code,
       }));
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw new Error(axiosError.response?.data?.message || 'Failed to fetch branches');
+    }
   },
 
   getAccounts: async (): Promise<any> => {
-    const response = await fetch('/api/accounts');
-    // return response.accounts || [];
+    try {
+      const response = await api.get('/api/accounts');
+      return response.data.accounts || [];
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw new Error(axiosError.response?.data?.message || 'Failed to fetch accounts');
+    }
   },
 
 
   uploadAvatar: async (formData : FormData): Promise<any> => {
     await sanctum_csrf();
-    const response = await fetch(`${CONFIG.API_URL}/upload_avatar`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        "Accept": 'application/json',
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error('Image upload failed');
+    try {
+      const response = await api.post('/upload_avatar', formData);
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw new Error(axiosError.response?.data?.message || 'Image upload failed');
     }
+  },
 
-    const data = await response.json();
-    return data;
+  // Profile management
+  getProfile: async (id: number): Promise<any> => {
+    await sanctum_csrf();
+    try {
+      const response = await api.get(`/api/profiles/${id}`);
+      return response.data.profile || response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+        message: axiosError.response?.data?.message || "Failed to get profile",
+      };
+    }
+  },
+
+  updateProfile: async (id: number, updates: Partial<any>): Promise<any> => {
+    await sanctum_csrf();
+    try {
+      const response = await api.put(`/api/profiles/${id}`, updates);
+      return response.data.profile || response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+        message: axiosError.response?.data?.message || "Failed to update profile",
+      };
+    }
   },
 }
 

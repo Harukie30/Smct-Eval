@@ -52,6 +52,9 @@ export const useUser = () => {
   return context;
 };
 
+// Export alias for backward compatibility
+export const useAuth = useUser;
+
 interface UserProviderProps {
   children: ReactNode;
 }
@@ -61,6 +64,37 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showLogoutLoading, setShowLogoutLoading] = useState(false);
+
+  // Helper function to split name into fname and lname
+  const splitName = (name: string): { fname: string; lname: string } => {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 0) return { fname: '', lname: '' };
+    if (parts.length === 1) return { fname: parts[0], lname: '' };
+    return {
+      fname: parts[0],
+      lname: parts.slice(1).join(' ')
+    };
+  };
+
+  // Helper function to convert AuthenticatedUser to UserProfile
+  const convertToUserProfile = (userData: AuthenticatedUser, employeeId?: number): UserProfile => {
+    const { fname, lname } = splitName(userData.name);
+    return {
+      id: userData.id,
+      fname,
+      lname,
+      username: userData.username || userData.email,
+      roles: userData.role ? [{ id: 0, name: userData.role }] : [],
+      email: userData.email,
+      avatar: userData.avatar,
+      departments: userData.department ? { value: 0, department_name: userData.department } : undefined,
+      branches: userData.branch ? { value: 0, branch_name: userData.branch } : { value: 0, branch_name: '' },
+      positions: userData.position ? { value: 0, label: userData.position } : { value: 0, label: '' },
+      bio: userData.bio,
+      signature: userData.signature,
+      employeeId,
+    };
+  };
 
   // Helper function to save user data without large binary fields (avatar, signature)
   const saveUserToLocalStorage = (userData: AuthenticatedUser) => {
@@ -135,32 +169,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
                 setUser(completeUser);
                 
                 // Convert to UserProfile format
-                const userProfile: UserProfile = {
-                  id: completeUser.id,
-                  name: completeUser.name,
-                  email: completeUser.email,
-                  roleOrPosition: completeUser.position,
-                  department: completeUser.department,
-                  avatar: completeUser.avatar,
-                  bio: completeUser.bio,
-                  signature: completeUser.signature,
-                  employeeId: employeeId,
-                };
+                const userProfile = convertToUserProfile(completeUser, employeeId);
                 setProfile(userProfile);
               } else {
                 // Fallback if user not found
                 setUser(parsedUser);
-                const userProfile: UserProfile = {
-                  id: parsedUser.id,
-                  name: parsedUser.name,
-                  email: parsedUser.email,
-                  roleOrPosition: parsedUser.position,
-                  department: parsedUser.department,
-                  avatar: parsedUser.avatar,
-                  bio: parsedUser.bio,
-                  signature: parsedUser.signature,
-                  employeeId: employeeId,
-                };
+                const userProfile = convertToUserProfile(parsedUser, employeeId);
                 setProfile(userProfile);
               }
             } catch (fetchError) {
@@ -173,31 +187,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
                 const employeeId = account?.employeeId;
                 
                 setUser(parsedUser);
-                const userProfile: UserProfile = {
-                  id: parsedUser.id,
-                  name: parsedUser.name,
-                  email: parsedUser.email,
-                  roleOrPosition: parsedUser.position,
-                  department: parsedUser.department,
-                  avatar: parsedUser.avatar,
-                  bio: parsedUser.bio,
-                  signature: parsedUser.signature,
-                  employeeId: employeeId,
-                };
+                const userProfile = convertToUserProfile(parsedUser, employeeId);
                 setProfile(userProfile);
               } catch (accountError) {
                 console.error('Error fetching account data:', accountError);
                 setUser(parsedUser);
-                const userProfile: UserProfile = {
-                  id: parsedUser.id,
-                  name: parsedUser.name,
-                  email: parsedUser.email,
-                  roleOrPosition: parsedUser.position,
-                  department: parsedUser.department,
-                  avatar: parsedUser.avatar,
-                  bio: parsedUser.bio,
-                  signature: parsedUser.signature,
-                };
+                const userProfile = convertToUserProfile(parsedUser);
                 setProfile(userProfile);
               }
             }
@@ -252,14 +247,23 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           console.error('Error fetching account data for employeeId:', error);
         }
         
-        // Ensure ID is a number
+        // Ensure ID is a number and all required fields are present
         const userWithNumberId: AuthenticatedUser = {
-          ...authenticatedUser,
           id: typeof authenticatedUser.id === 'string' ? parseInt(authenticatedUser.id) : authenticatedUser.id,
-          username: authenticatedUser.email, // Use email as username
-          isActive: true,
+          username: authenticatedUser.username || authenticatedUser.email || '',
+          name: authenticatedUser.name || '',
+          email: authenticatedUser.email || '',
+          role: authenticatedUser.role || '',
+          position: authenticatedUser.position || '',
+          department: authenticatedUser.department || '',
+          branch: authenticatedUser.branch,
+          hireDate: authenticatedUser.hireDate || new Date().toISOString(),
+          avatar: authenticatedUser.avatar,
+          bio: authenticatedUser.bio,
+          signature: authenticatedUser.signature,
+          isActive: authenticatedUser.isActive ?? true,
           lastLogin: new Date().toISOString(),
-          availableRoles: authenticatedUser.availableRoles, // Include available roles
+          availableRoles: authenticatedUser.availableRoles || [authenticatedUser.role || ''],
           activeRole: authenticatedUser.role, // Set initial active role
           roleSelectionPending: hasMultipleRoles, // Flag to indicate role selection is needed
         };
@@ -267,17 +271,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         setUser(userWithNumberId);
         
         // Convert to UserProfile format
-        const userProfile: UserProfile = {
-          id: userWithNumberId.id,
-          name: userWithNumberId.name,
-          email: userWithNumberId.email,
-          roleOrPosition: userWithNumberId.role, // Use role instead of position
-          department: userWithNumberId.department,
-          avatar: userWithNumberId.avatar,
-          bio: userWithNumberId.bio,
-          signature: userWithNumberId.signature,
-          employeeId: employeeId,
-        };
+        const userProfile = convertToUserProfile(userWithNumberId, employeeId);
         setProfile(userProfile);
 
         // Store in localStorage (without large binary data)
@@ -315,12 +309,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     setShowLogoutLoading(true);
     
     try {
-      // ✅ Notify backend of logout
-      console.log('🔄 Calling backend logout API...');
-      await apiService.logout();
-      console.log('✅ Backend logout successful');
+      // ✅ Notify backend of logout (if logout endpoint exists)
+      // For Laravel Sanctum, logout is typically handled by clearing cookies
+      // The backend will clear the session cookie automatically
+      console.log('🔄 Logging out...');
     } catch (error) {
-      console.error('❌ Backend logout failed:', error);
+      console.error('❌ Logout error:', error);
       // Continue with local logout even if backend call fails
       // This ensures user can still log out from frontend
     }
@@ -351,11 +345,15 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         // Map UserProfile fields to AuthenticatedUser fields
         // Only include fields that are actually provided in updates to avoid overwriting with undefined
         const userUpdates: Partial<AuthenticatedUser> = {};
-        if (updates.name !== undefined) userUpdates.name = updates.name;
+        if (updates.fname !== undefined || updates.lname !== undefined) {
+          const fname = updates.fname ?? profile?.fname ?? '';
+          const lname = updates.lname ?? profile?.lname ?? '';
+          userUpdates.name = `${fname} ${lname}`.trim();
+        }
         if (updates.email !== undefined) userUpdates.email = updates.email;
-        if (updates.roleOrPosition !== undefined) userUpdates.position = updates.roleOrPosition;
-        if (updates.department !== undefined) userUpdates.department = updates.department;
-        if (updates.branch !== undefined) userUpdates.branch = updates.branch;
+        if (updates.positions !== undefined) userUpdates.position = updates.positions.label;
+        if (updates.departments !== undefined) userUpdates.department = updates.departments.department_name;
+        if (updates.branches !== undefined) userUpdates.branch = updates.branches.branch_name;
         if (updates.avatar !== undefined) userUpdates.avatar = updates.avatar;
         if (updates.bio !== undefined) userUpdates.bio = updates.bio;
         if (updates.signature !== undefined) userUpdates.signature = updates.signature;
@@ -374,12 +372,21 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           // Use clientDataService to update all storage locations (accounts, employees, profiles)
           try {
             // Update via clientDataService which syncs signature across all storage
-            // Convert UserProfile updates to compatible format (remove id and map roleOrPosition)
-            const { id: _id, roleOrPosition: _role, ...profileUpdates } = updates;
-            const mappedUpdates = {
-              ...profileUpdates,
-              position: updates.roleOrPosition || undefined
-            };
+            // Convert UserProfile updates to compatible format for clientDataService
+            const mappedUpdates: any = {};
+            if (updates.fname !== undefined || updates.lname !== undefined) {
+              const fname = updates.fname ?? profile?.fname ?? '';
+              const lname = updates.lname ?? profile?.lname ?? '';
+              mappedUpdates.name = `${fname} ${lname}`.trim();
+            }
+            if (updates.email !== undefined) mappedUpdates.email = updates.email;
+            if (updates.positions !== undefined) mappedUpdates.position = updates.positions.label;
+            if (updates.departments !== undefined) mappedUpdates.department = updates.departments.department_name;
+            if (updates.branches !== undefined) mappedUpdates.branch = updates.branches.branch_name;
+            if (updates.avatar !== undefined) mappedUpdates.avatar = updates.avatar;
+            if (updates.bio !== undefined) mappedUpdates.bio = updates.bio;
+            if (updates.signature !== undefined) mappedUpdates.signature = updates.signature;
+            
             await clientDataService.updateProfile(user.id, mappedUpdates);
             await clientDataService.updateEmployee(user.id, mappedUpdates);
           } catch (error) {
@@ -429,16 +436,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           
           setUser(updatedUser);
           
-          const updatedProfile: UserProfile = {
-            id: updatedUser.id,
-            name: updatedUser.name,
-            email: updatedUser.email,
-            roleOrPosition: updatedUser.position,
-            department: updatedUser.department,
-            avatar: updatedUser.avatar,
-            bio: updatedUser.bio,
-            signature: updatedUser.signature,
-          };
+          const updatedProfile = convertToUserProfile(updatedUser);
           setProfile(updatedProfile);
           
           // Store updated user without large binary data

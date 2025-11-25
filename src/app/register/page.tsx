@@ -89,11 +89,16 @@ function RegisterPage() {
     if (!branch) return false;
     
     const branchName = branch.label.toLowerCase().trim();
+    // Check for various HO/Head Office variations
     return branchName === 'ho' || 
-           branchName === 'HEAD OFFICE /HO' || 
+           branchName === 'head office /ho' || 
+           branchName === 'head office' ||
+           branchName.includes('head office') ||
            branchName === 'none' ||
            branchName === 'none ho' ||
-           branchName.startsWith('ho');
+           branchName.startsWith('ho') ||
+           branchName.startsWith('ho-') ||
+           branchName.endsWith('/ho');
   };
 
   // Helper function to load mock data
