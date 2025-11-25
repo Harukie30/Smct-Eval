@@ -1,15 +1,22 @@
 // API-enabled version of clientDataService
 // This replaces the localStorage version with API calls
 
-import apiService from './apiService';
-import { Employee, Submission, PendingRegistration, Profile, Account, Notification } from './clientDataService';
+import apiService from "./apiService";
+import {
+  Employee,
+  Submission,
+  PendingRegistration,
+  Profile,
+  Account,
+  Notification,
+} from "./clientDataService";
 
 export const clientDataService = {
   // Authentication - now uses API with Laravel Sanctum cookies
   login: async (email: string, password: string) => {
     try {
       const response = await apiService.login(email, password, true); // Always remember login
-      
+
       // Laravel Sanctum uses HTTP-only cookies (no token in response)
       // The session cookie is automatically set by the browser
       return {
@@ -22,36 +29,42 @@ export const clientDataService = {
       };
     } catch (error: any) {
       // Check if it's a suspension error (403 status)
-      if (error.message?.includes('suspended') || error.message?.includes('Suspended')) {
+      if (
+        error.message?.includes("suspended") ||
+        error.message?.includes("Suspended")
+      ) {
         return {
           success: false,
-          message: 'Account suspended',
+          message: "Account suspended",
           suspensionData: error.suspensionData || {
-            reason: 'Account suspended',
+            reason: "Account suspended",
             suspendedAt: new Date().toISOString(),
-            suspendedBy: 'Administrator',
-            accountName: 'User',
+            suspendedBy: "Administrator",
+            accountName: "User",
           },
         };
       }
-      
+
       // Check if it's a pending approval error
-      if (error.message?.includes('pending') || error.message?.includes('Pending')) {
+      if (
+        error.message?.includes("pending") ||
+        error.message?.includes("Pending")
+      ) {
         return {
           success: false,
-          message: 'Account pending approval',
+          message: "Account pending approval",
           pending: true,
           pendingData: error.pendingData || {
-            name: 'User',
-            email: '',
+            name: "User",
+            email: "",
             submittedAt: new Date().toISOString(),
           },
         };
       }
-      
+
       return {
         success: false,
-        message: error.message || 'Login failed',
+        message: error.message || "Login failed",
       };
     }
   },
@@ -61,8 +74,10 @@ export const clientDataService = {
     try {
       // Call backend API to get user by ID
       // TODO: Backend needs to provide GET /api/users/:id endpoint
-      console.warn('getUserById: Using fallback - API endpoint not fully implemented');
-      
+      console.warn(
+        "getUserById: Using fallback - API endpoint not fully implemented"
+      );
+
       // For now, try to get user from current session
       const response = await apiService.getUser();
       if (response && response.id === userId) {
@@ -70,7 +85,7 @@ export const clientDataService = {
       }
       return null;
     } catch (error) {
-      console.error('Error getting user by ID:', error);
+      console.error("Error getting user by ID:", error);
       return null;
     }
   },
@@ -80,11 +95,11 @@ export const clientDataService = {
     return await apiService.getPositions();
   },
 
-  getDepartments: async ():  Promise<{ label: string; value: string }[]>  => {
+  getDepartments: async (): Promise<{ label: string; value: string }[]> => {
     return await apiService.getDepartments();
   },
-  
-  getBranches: async (): Promise<{value: string ; label: string}[]> => {
+
+  getBranches: async (): Promise<{ value: string; label: string }[]> => {
     return await apiService.getBranches();
   },
 
@@ -102,7 +117,10 @@ export const clientDataService = {
   },
 
   // Profile management - now uses API
-  updateProfile: async (id: number, updates: Partial<Profile>): Promise<Profile> => {
+  updateProfile: async (
+    id: number,
+    updates: Partial<Profile>
+  ): Promise<Profile> => {
     return await apiService.updateProfile(id, updates);
   },
 
@@ -114,10 +132,12 @@ export const clientDataService = {
   getEmployees: async (): Promise<Employee[]> => {
     try {
       // TODO: Backend needs to implement GET /api/employees
-      console.warn('getEmployees: API endpoint not fully implemented, using mock data');
+      console.warn(
+        "getEmployees: API endpoint not fully implemented, using mock data"
+      );
       return [];
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      console.error("Error fetching employees:", error);
       return [];
     }
   },
@@ -131,8 +151,8 @@ export const clientDataService = {
           id: user.id,
           name: user.name,
           email: user.email,
-          position: user.position || '',
-          department: user.department || '',
+          position: user.position || "",
+          department: user.department || "",
           branch: user.branch,
           role: user.role,
           hireDate: user.hireDate || new Date().toISOString(),
@@ -142,22 +162,27 @@ export const clientDataService = {
           isActive: user.isActive ?? true,
         };
       }
-      console.warn('getEmployee: Could not fetch employee data for ID:', id);
+      console.warn("getEmployee: Could not fetch employee data for ID:", id);
       return null;
     } catch (error) {
-      console.error('Error fetching employee:', error);
+      console.error("Error fetching employee:", error);
       return null;
     }
   },
 
-  updateEmployee: async (id: number, updates: Partial<Employee>): Promise<Employee> => {
+  updateEmployee: async (
+    id: number,
+    updates: Partial<Employee>
+  ): Promise<Employee> => {
     try {
       // TODO: Backend needs to implement PUT /api/employees/:id
       // For now, return the updates as if successful
-      console.warn('updateEmployee: API endpoint not implemented, changes not persisted');
+      console.warn(
+        "updateEmployee: API endpoint not implemented, changes not persisted"
+      );
       return { id, ...updates } as Employee;
     } catch (error) {
-      console.error('Error updating employee:', error);
+      console.error("Error updating employee:", error);
       throw error;
     }
   },
@@ -165,69 +190,80 @@ export const clientDataService = {
   // Submissions - you'll need to implement these API endpoints
   getSubmissions: async (): Promise<Submission[]> => {
     // TODO: Implement GET /api/submissions
-    console.warn('getSubmissions: API endpoint not implemented yet');
+    console.warn("getSubmissions: API endpoint not implemented yet");
     return [];
   },
 
-  createSubmission: async (submission: Omit<Submission, 'id'>): Promise<Submission> => {
+  createSubmission: async (
+    submission: Omit<Submission, "id">
+  ): Promise<Submission> => {
     // TODO: Implement POST /api/submissions
-    console.warn('createSubmission: API endpoint not implemented yet');
-    throw new Error('Not implemented');
+    console.warn("createSubmission: API endpoint not implemented yet");
+    throw new Error("Not implemented");
   },
 
-  updateSubmission: async (id: number, updates: Partial<Submission>): Promise<Submission | null> => {
+  updateSubmission: async (
+    id: number,
+    updates: Partial<Submission>
+  ): Promise<Submission | null> => {
     // TODO: Implement PUT /api/submissions/:id
-    console.warn('updateSubmission: API endpoint not implemented yet');
-    throw new Error('Not implemented');
+    console.warn("updateSubmission: API endpoint not implemented yet");
+    throw new Error("Not implemented");
   },
 
   // Notifications - you'll need to implement these API endpoints
   getNotifications: async (userRole: string): Promise<Notification[]> => {
     // TODO: Implement GET /api/notifications?role=:role
-    console.warn('getNotifications: API endpoint not implemented yet');
+    console.warn("getNotifications: API endpoint not implemented yet");
     return [];
   },
 
-  createNotification: async (notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>): Promise<Notification> => {
+  createNotification: async (
+    notification: Omit<Notification, "id" | "timestamp" | "isRead">
+  ): Promise<Notification> => {
     // TODO: Implement POST /api/notifications
-    console.warn('createNotification: API endpoint not implemented yet');
-    throw new Error('Not implemented');
+    console.warn("createNotification: API endpoint not implemented yet");
+    throw new Error("Not implemented");
   },
 
   markNotificationAsRead: async (notificationId: number): Promise<void> => {
     // TODO: Implement PUT /api/notifications/:id/read
-    console.warn('markNotificationAsRead: API endpoint not implemented yet');
+    console.warn("markNotificationAsRead: API endpoint not implemented yet");
   },
 
   markAllNotificationsAsRead: async (userRole: string): Promise<void> => {
     // TODO: Implement PUT /api/notifications/read-all?role=:role
-    console.warn('markAllNotificationsAsRead: API endpoint not implemented yet');
+    console.warn(
+      "markAllNotificationsAsRead: API endpoint not implemented yet"
+    );
   },
 
   getUnreadNotificationCount: async (userRole: string): Promise<number> => {
     // TODO: Implement GET /api/notifications/unread-count?role=:role
-    console.warn('getUnreadNotificationCount: API endpoint not implemented yet');
+    console.warn(
+      "getUnreadNotificationCount: API endpoint not implemented yet"
+    );
     return 0;
   },
 
   deleteNotification: async (notificationId: number): Promise<void> => {
     // TODO: Implement DELETE /api/notifications/:id
-    console.warn('deleteNotification: API endpoint not implemented yet');
+    console.warn("deleteNotification: API endpoint not implemented yet");
   },
 
   // Utility functions
   resetAllData: (): void => {
-    console.warn('resetAllData: Not applicable for API version');
+    console.warn("resetAllData: Not applicable for API version");
   },
 
   forceReinitializeAccounts: (): void => {
-    console.warn('forceReinitializeAccounts: Not applicable for API version');
+    console.warn("forceReinitializeAccounts: Not applicable for API version");
   },
 
   // Dashboard data - you'll need to implement this API endpoint
   getDashboardData: async (): Promise<any> => {
     // TODO: Implement GET /api/dashboard
-    console.warn('getDashboardData: API endpoint not implemented yet');
+    console.warn("getDashboardData: API endpoint not implemented yet");
     return {
       totalEmployees: 0,
       totalSubmissions: 0,
@@ -238,7 +274,7 @@ export const clientDataService = {
 
   getEmployeeMetrics: async (): Promise<any> => {
     // TODO: Implement GET /api/employee-metrics
-    console.warn('getEmployeeMetrics: API endpoint not implemented yet');
+    console.warn("getEmployeeMetrics: API endpoint not implemented yet");
     return {
       totalEvaluations: 0,
       averageRating: 0,
@@ -248,15 +284,15 @@ export const clientDataService = {
 
   getEmployeeResults: async (): Promise<any[]> => {
     // TODO: Implement GET /api/employee-results
-    console.warn('getEmployeeResults: API endpoint not implemented yet');
+    console.warn("getEmployeeResults: API endpoint not implemented yet");
     return [];
   },
 
   // Image upload - you'll need to implement this API endpoint
   uploadImage: async (file: File): Promise<string> => {
     // TODO: Implement POST /api/upload/image
-    console.warn('uploadImage: API endpoint not implemented yet');
-    throw new Error('Not implemented');
+    console.warn("uploadImage: API endpoint not implemented yet");
+    throw new Error("Not implemented");
   },
 };
 
