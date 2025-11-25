@@ -997,18 +997,6 @@ export function EvaluationRecordsTab({
                             </Button>
 
                             <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onMarkAsSeen(feedback.id);
-                                onPrintFeedback(feedback);
-                              }}
-                              className="text-xs bg-gray-500 text-white px-2 py-1"
-                            >
-                              ⎙ Print
-                            </Button>
-
-                            <Button
                               variant="outline"
                               size="sm"
                               onClick={(e) => {
