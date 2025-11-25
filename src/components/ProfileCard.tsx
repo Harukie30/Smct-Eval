@@ -12,6 +12,7 @@ export type UserProfile = {
   branch?: string;
   bio?: string;
   signature?: string;
+  employeeId?: number;
 };
 
 interface ProfileCardProps {

@@ -133,7 +133,8 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       newErrors.department = 'Department is required';
     }
 
-    if (formData.branch && typeof formData.branch === 'string' && !formData.branch.trim()) {
+    // Branch is required
+    if (!formData.branch || (typeof formData.branch === 'string' && !formData.branch.trim())) {
       newErrors.branch = 'Branch is required';
     }
 

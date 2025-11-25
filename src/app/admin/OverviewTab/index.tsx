@@ -1,15 +1,28 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useMemo } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import clientDataService from '@/lib/clientDataService';
-import accountsDataRaw from '@/data/accounts.json';
-import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
+import clientDataService from "@/lib/clientDataService";
+import accountsDataRaw from "@/data/accounts.json";
+import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 
 const accountsData = accountsDataRaw.accounts || [];
 
@@ -24,7 +37,7 @@ interface Review {
   completedCriteria: number;
   totalCriteria: number;
   lastUpdated: string;
-  status: 'completed' | 'in_progress' | 'pending';
+  status: "completed" | "in_progress" | "pending";
 }
 
 interface SystemMetrics {
@@ -32,7 +45,7 @@ interface SystemMetrics {
   activeUsers: number;
   totalEvaluations: number;
   pendingEvaluations: number;
-  systemHealth: 'excellent' | 'good' | 'warning' | 'critical';
+  systemHealth: "excellent" | "good" | "warning" | "critical";
   lastBackup: string;
   uptime: string;
   storageUsed: number;
@@ -58,13 +71,19 @@ interface DashboardStats {
 }
 
 export function OverviewTab() {
-  const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(
+    null
+  );
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(
+    null
+  );
   const [evaluatedReviews, setEvaluatedReviews] = useState<Review[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [overviewPage, setOverviewPage] = useState(1);
+  const itemsPerPage = 8;
 
   // Shared data loading function
   const loadData = async () => {
@@ -75,40 +94,47 @@ export function OverviewTab() {
         id: submission.id,
         employeeName: submission.employeeName,
         evaluatorName: submission.evaluator,
-        department: submission.evaluationData?.department || 'N/A',
-        position: submission.evaluationData?.position || 'N/A',
+        department: submission.evaluationData?.department || "N/A",
+        position: submission.evaluationData?.position || "N/A",
         evaluationDate: submission.submittedAt,
         overallScore: Math.round((submission.rating / 5) * 100),
-        status: submission.status || 'completed',
+        status: submission.status || "completed",
         lastUpdated: submission.submittedAt,
         totalCriteria: 7,
         completedCriteria: 7,
         submittedAt: submission.submittedAt, // Include for sorting
       }));
-      evaluationResults.sort((a: any, b: any) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      evaluationResults.sort(
+        (a: any, b: any) =>
+          new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+      );
       setEvaluatedReviews(evaluationResults);
 
       // Reload employees to recalculate metrics
-      const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
       const employees = (accounts.length > 0 ? accounts : accountsData)
-        .filter((account: any) => account.role !== 'admin')
+        .filter((account: any) => account.role !== "admin")
         .map((account: any) => ({
           id: account.employeeId || account.id,
           role: account.role,
           isActive: account.isActive,
         }));
 
-      const activeEmployees = employees.filter((emp: any) => emp.isActive !== false);
+      const activeEmployees = employees.filter(
+        (emp: any) => emp.isActive !== false
+      );
 
       // Calculate system metrics
       const metrics: SystemMetrics = {
         totalUsers: employees.length,
         activeUsers: activeEmployees.length,
         totalEvaluations: evaluationResults.length,
-        pendingEvaluations: evaluationResults.filter((r: any) => r.status === 'pending').length,
-        systemHealth: 'excellent',
+        pendingEvaluations: evaluationResults.filter(
+          (r: any) => r.status === "pending"
+        ).length,
+        systemHealth: "excellent",
         lastBackup: new Date().toISOString(),
-        uptime: '99.9%',
+        uptime: "99.9%",
         storageUsed: 2.5,
         storageTotal: 10,
       };
@@ -117,36 +143,42 @@ export function OverviewTab() {
       const stats: DashboardStats = {
         employeeDashboard: {
           activeUsers: activeEmployees.filter((emp: any) => {
-            const role = emp.role?.toLowerCase() || '';
-            return role === 'employee' ||
-              role.includes('representative') ||
-              role.includes('designer') ||
-              role.includes('developer') ||
-              role.includes('analyst') ||
-              role.includes('coordinator');
+            const role = emp.role?.toLowerCase() || "";
+            return (
+              role === "employee" ||
+              role.includes("representative") ||
+              role.includes("designer") ||
+              role.includes("developer") ||
+              role.includes("analyst") ||
+              role.includes("coordinator")
+            );
           }).length,
           totalViews: 0,
           lastActivity: new Date().toISOString(),
         },
         hrDashboard: {
           activeUsers: activeEmployees.filter((emp: any) => {
-            const role = emp.role?.toLowerCase() || '';
-            return role === 'hr' ||
-              role === 'hr-manager' ||
-              role.includes('hr') ||
-              role.includes('human resources');
+            const role = emp.role?.toLowerCase() || "";
+            return (
+              role === "hr" ||
+              role === "hr-manager" ||
+              role.includes("hr") ||
+              role.includes("human resources")
+            );
           }).length,
           totalViews: 0,
           lastActivity: new Date().toISOString(),
         },
         evaluatorDashboard: {
           activeUsers: activeEmployees.filter((emp: any) => {
-            const role = emp.role?.toLowerCase() || '';
-            return role === 'evaluator' ||
-              role.includes('manager') ||
-              role.includes('supervisor') ||
-              role.includes('director') ||
-              role.includes('lead');
+            const role = emp.role?.toLowerCase() || "";
+            return (
+              role === "evaluator" ||
+              role.includes("manager") ||
+              role.includes("supervisor") ||
+              role.includes("director") ||
+              role.includes("lead")
+            );
           }).length,
           totalViews: 0,
           lastActivity: new Date().toISOString(),
@@ -156,7 +188,7 @@ export function OverviewTab() {
       setSystemMetrics(metrics);
       setDashboardStats(stats);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error("Error loading data:", error);
     }
   };
 
@@ -165,22 +197,24 @@ export function OverviewTab() {
     const initialLoad = async () => {
       try {
         // Load metrics and stats first (without refreshing table)
-        const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+        const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
         const employees = (accounts.length > 0 ? accounts : accountsData)
-          .filter((account: any) => account.role !== 'admin')
+          .filter((account: any) => account.role !== "admin")
           .map((account: any) => ({
             id: account.employeeId || account.id,
             role: account.role,
             isActive: account.isActive,
           }));
 
-        const activeEmployees = employees.filter((emp: any) => emp.isActive !== false);
+        const activeEmployees = employees.filter(
+          (emp: any) => emp.isActive !== false
+        );
 
         // Get current reviews count for metrics
         const submissions = await clientDataService.getSubmissions();
         const evaluationResults = submissions.map((submission: any) => ({
           id: submission.id,
-          status: submission.status || 'completed',
+          status: submission.status || "completed",
         }));
 
         // Calculate system metrics
@@ -188,10 +222,12 @@ export function OverviewTab() {
           totalUsers: employees.length,
           activeUsers: activeEmployees.length,
           totalEvaluations: evaluationResults.length,
-          pendingEvaluations: evaluationResults.filter((r: any) => r.status === 'pending').length,
-          systemHealth: 'excellent',
+          pendingEvaluations: evaluationResults.filter(
+            (r: any) => r.status === "pending"
+          ).length,
+          systemHealth: "excellent",
           lastBackup: new Date().toISOString(),
-          uptime: '99.9%',
+          uptime: "99.9%",
           storageUsed: 2.5,
           storageTotal: 10,
         };
@@ -200,36 +236,42 @@ export function OverviewTab() {
         const stats: DashboardStats = {
           employeeDashboard: {
             activeUsers: activeEmployees.filter((emp: any) => {
-              const role = emp.role?.toLowerCase() || '';
-              return role === 'employee' ||
-                role.includes('representative') ||
-                role.includes('designer') ||
-                role.includes('developer') ||
-                role.includes('analyst') ||
-                role.includes('coordinator');
+              const role = emp.role?.toLowerCase() || "";
+              return (
+                role === "employee" ||
+                role.includes("representative") ||
+                role.includes("designer") ||
+                role.includes("developer") ||
+                role.includes("analyst") ||
+                role.includes("coordinator")
+              );
             }).length,
             totalViews: 0,
             lastActivity: new Date().toISOString(),
           },
           hrDashboard: {
             activeUsers: activeEmployees.filter((emp: any) => {
-              const role = emp.role?.toLowerCase() || '';
-              return role === 'hr' ||
-                role === 'hr-manager' ||
-                role.includes('hr') ||
-                role.includes('human resources');
+              const role = emp.role?.toLowerCase() || "";
+              return (
+                role === "hr" ||
+                role === "hr-manager" ||
+                role.includes("hr") ||
+                role.includes("human resources")
+              );
             }).length,
             totalViews: 0,
             lastActivity: new Date().toISOString(),
           },
           evaluatorDashboard: {
             activeUsers: activeEmployees.filter((emp: any) => {
-              const role = emp.role?.toLowerCase() || '';
-              return role === 'evaluator' ||
-                role.includes('manager') ||
-                role.includes('supervisor') ||
-                role.includes('director') ||
-                role.includes('lead');
+              const role = emp.role?.toLowerCase() || "";
+              return (
+                role === "evaluator" ||
+                role.includes("manager") ||
+                role.includes("supervisor") ||
+                role.includes("director") ||
+                role.includes("lead")
+              );
             }).length,
             totalViews: 0,
             lastActivity: new Date().toISOString(),
@@ -239,7 +281,7 @@ export function OverviewTab() {
         setSystemMetrics(metrics);
         setDashboardStats(stats);
       } catch (error) {
-        console.error('Error loading overview data:', error);
+        console.error("Error loading overview data:", error);
       }
     };
 
@@ -252,27 +294,31 @@ export function OverviewTab() {
       setRefreshing(true);
       try {
         // Add a small delay to ensure spinner is visible
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise((resolve) => setTimeout(resolve, 300));
         // Only refresh the reviews data (table data)
         const submissions = await clientDataService.getSubmissions();
         const evaluationResults = submissions.map((submission: any) => ({
           id: submission.id,
           employeeName: submission.employeeName,
           evaluatorName: submission.evaluator,
-          department: submission.evaluationData?.department || 'N/A',
-          position: submission.evaluationData?.position || 'N/A',
+          department: submission.evaluationData?.department || "N/A",
+          position: submission.evaluationData?.position || "N/A",
           evaluationDate: submission.submittedAt,
           overallScore: Math.round((submission.rating / 5) * 100),
-          status: submission.status || 'completed',
+          status: submission.status || "completed",
           lastUpdated: submission.submittedAt,
           totalCriteria: 7,
           completedCriteria: 7,
           submittedAt: submission.submittedAt,
         }));
-        evaluationResults.sort((a: any, b: any) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+        evaluationResults.sort(
+          (a: any, b: any) =>
+            new Date(b.submittedAt).getTime() -
+            new Date(a.submittedAt).getTime()
+        );
         setEvaluatedReviews(evaluationResults);
       } catch (error) {
-        console.error('Error refreshing table data:', error);
+        console.error("Error refreshing table data:", error);
       } finally {
         setRefreshing(false);
       }
@@ -294,7 +340,7 @@ export function OverviewTab() {
   // This hook MUST be called before any early returns to follow Rules of Hooks
   const filteredReviews = useMemo(() => {
     if (!searchTerm) return evaluatedReviews;
-    
+
     const searchLower = searchTerm.toLowerCase();
     return evaluatedReviews.filter((review) => {
       return (
@@ -303,10 +349,27 @@ export function OverviewTab() {
         review.department.toLowerCase().includes(searchLower) ||
         review.position.toLowerCase().includes(searchLower) ||
         review.status.toLowerCase().includes(searchLower) ||
-        getQuarterFromDate(review.evaluationDate).toLowerCase().includes(searchLower)
+        getQuarterFromDate(review.evaluationDate)
+          .toLowerCase()
+          .includes(searchLower)
       );
     });
   }, [evaluatedReviews, searchTerm]);
+
+  // Pagination calculations
+  const overviewTotal = filteredReviews.length;
+  const overviewTotalPages = Math.ceil(overviewTotal / itemsPerPage);
+  const overviewStartIndex = (overviewPage - 1) * itemsPerPage;
+  const overviewEndIndex = overviewStartIndex + itemsPerPage;
+  const overviewPaginated = filteredReviews.slice(
+    overviewStartIndex,
+    overviewEndIndex
+  );
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setOverviewPage(1);
+  }, [searchTerm]);
 
   if (!systemMetrics || !dashboardStats) {
     return <div>No data available</div>;
@@ -314,17 +377,17 @@ export function OverviewTab() {
 
   // Helper functions
   const getScoreColor = (score: number): string => {
-    if (score >= 90) return 'text-green-600';
-    if (score >= 80) return 'text-blue-600';
-    if (score >= 70) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 90) return "text-green-600";
+    if (score >= 80) return "text-blue-600";
+    if (score >= 70) return "text-yellow-600";
+    return "text-red-600";
   };
 
   const getQuarterColor = (quarter: string): string => {
-    if (quarter.includes('Q1')) return 'bg-blue-100 text-blue-800';
-    if (quarter.includes('Q2')) return 'bg-green-100 text-green-800';
-    if (quarter.includes('Q3')) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-purple-100 text-purple-800';
+    if (quarter.includes("Q1")) return "bg-blue-100 text-blue-800";
+    if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
+    if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
+    return "bg-purple-100 text-purple-800";
   };
 
   // Refresh function - refreshes all data including metrics
@@ -332,10 +395,10 @@ export function OverviewTab() {
     setRefreshing(true);
     try {
       // Add a small delay to ensure spinner is visible
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 300));
       await loadData();
     } catch (error) {
-      console.error('Error refreshing data:', error);
+      console.error("Error refreshing data:", error);
     } finally {
       setRefreshing(false);
     }
@@ -346,22 +409,25 @@ export function OverviewTab() {
     try {
       // Fetch the full submission data using the review ID
       const submission = await clientDataService.getSubmissionById(review.id);
-      
+
       if (submission) {
         // Convert overallRating string to number for rating field
-        const ratingValue = submission.overallRating 
-          ? parseFloat(submission.overallRating) 
-          : (review.overallScore / 20); // Convert percentage back to 5-point scale
-        
+        const ratingValue = submission.overallRating
+          ? parseFloat(submission.overallRating)
+          : review.overallScore / 20; // Convert percentage back to 5-point scale
+
         // Transform the submission to match ViewResultsModal's expected format
         const submissionForModal = {
           id: submission.id,
           employeeName: submission.employeeName || review.employeeName,
-          category: 'Performance Review',
+          category: "Performance Review",
           rating: ratingValue,
           submittedAt: submission.submittedAt || review.evaluationDate,
           status: submission.status || review.status,
-          evaluator: submission.evaluator || submission.evaluatorName || review.evaluatorName,
+          evaluator:
+            submission.evaluator ||
+            submission.evaluatorName ||
+            review.evaluatorName,
           evaluationData: submission.evaluationData || {
             department: review.department,
             position: review.position,
@@ -369,7 +435,10 @@ export function OverviewTab() {
           employeeId: submission.employeeId,
           employeeEmail: submission.employeeEmail,
           evaluatorId: submission.evaluatorId,
-          evaluatorName: submission.evaluator || submission.evaluatorName || review.evaluatorName,
+          evaluatorName:
+            submission.evaluator ||
+            submission.evaluatorName ||
+            review.evaluatorName,
           period: submission.period,
           overallRating: submission.overallRating || ratingValue.toString(),
           approvalStatus: submission.approvalStatus,
@@ -378,14 +447,14 @@ export function OverviewTab() {
           evaluatorSignature: submission.evaluatorSignature,
           evaluatorApprovedAt: submission.evaluatorApprovedAt,
         };
-        
+
         setSelectedSubmission(submissionForModal);
         setIsViewResultsModalOpen(true);
       } else {
-        console.error('Submission not found for review ID:', review.id);
+        console.error("Submission not found for review ID:", review.id);
       }
     } catch (error) {
-      console.error('Error fetching submission details:', error);
+      console.error("Error fetching submission details:", error);
     }
   };
 
@@ -396,11 +465,15 @@ export function OverviewTab() {
         {/* Table Header Section */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold text-gray-900">Recent Evaluation Records</h2>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Recent Evaluation Records
+            </h2>
             {(() => {
               const now = new Date();
-              const newCount = filteredReviews.filter(review => {
-                const hoursDiff = (now.getTime() - new Date(review.evaluationDate).getTime()) / (1000 * 60 * 60);
+              const newCount = filteredReviews.filter((review) => {
+                const hoursDiff =
+                  (now.getTime() - new Date(review.evaluationDate).getTime()) /
+                  (1000 * 60 * 60);
                 return hoursDiff <= 24;
               }).length;
               return newCount > 0 ? (
@@ -424,7 +497,7 @@ export function OverviewTab() {
               />
               {searchTerm && (
                 <button
-                  onClick={() => setSearchTerm('')}
+                  onClick={() => setSearchTerm("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
                   aria-label="Clear search"
                 >
@@ -464,52 +537,68 @@ export function OverviewTab() {
             </Button>
           </div>
         </div>
-        
+
         {/* Indicator Legend */}
         <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
           <div className="flex flex-wrap gap-4 text-xs">
-            <span className="text-sm font-medium text-gray-700 mr-2">Indicators:</span>
+            <span className="text-sm font-medium text-gray-700 mr-2">
+              Indicators:
+            </span>
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
-              <Badge className="bg-yellow-200 text-yellow-800 text-xs">New</Badge>
+              <Badge className="bg-yellow-200 text-yellow-800 text-xs">
+                New
+              </Badge>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
-              <Badge className="bg-blue-300 text-blue-800 text-xs">Recent</Badge>
+              <Badge className="bg-blue-300 text-blue-800 text-xs">
+                Recent
+              </Badge>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
-              <Badge className="bg-green-500 text-white text-xs">Completed</Badge>
+              <Badge className="bg-green-500 text-white text-xs">
+                Completed
+              </Badge>
             </div>
           </div>
         </div>
 
         {/* Table Section */}
         <div className="border rounded-lg overflow-hidden">
-        <div className="relative max-h-[600px] overflow-y-auto overflow-x-auto" style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: '#cbd5e1 #f1f5f9'
-        }}>
-          {refreshing && (
-            <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
-              <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                <div className="relative">
-                  {/* Spinning ring */}
-                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                  {/* Logo in center */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+          <div
+            className="relative max-h-[600px] overflow-y-auto overflow-x-auto"
+            style={{
+              scrollbarWidth: "thin",
+              scrollbarColor: "#cbd5e1 #f1f5f9",
+            }}
+          >
+            {refreshing && (
+              <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
+                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                  <div className="relative">
+                    {/* Spinning ring */}
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                    {/* Logo in center */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <img
+                        src="/smct.png"
+                        alt="SMCT Logo"
+                        className="h-10 w-10 object-contain"
+                      />
+                    </div>
                   </div>
+                  <p className="text-sm text-gray-600 font-medium">
+                    Refreshing...
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600 font-medium">Refreshing...</p>
               </div>
-            </div>
-          )}
-          <Table className="min-w-full">
+            )}
+            <Table className="min-w-full">
               <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                 <TableRow>
                   <TableHead className="px-6 py-3">Employee Name</TableHead>
-                  <TableHead className="px-6 py-3">Department</TableHead>
                   <TableHead className="px-6 py-3">Position</TableHead>
                   <TableHead className="px-6 py-3">Evaluator</TableHead>
                   <TableHead className="px-6 py-3">Quarter</TableHead>
@@ -548,49 +637,65 @@ export function OverviewTab() {
                       </TableCell>
                     </TableRow>
                   ))
-                ) : filteredReviews.length === 0 ? (
+                ) : overviewPaginated.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12">
+                    <TableCell colSpan={7} className="text-center py-12">
                       <div className="text-gray-500">
                         {searchTerm ? (
                           <>
-                            <p className="text-sm font-medium">No results found</p>
-                            <p className="text-xs mt-1">Try adjusting your search or filters</p>
+                            <p className="text-sm font-medium">
+                              No results found
+                            </p>
+                            <p className="text-xs mt-1">
+                              Try adjusting your search or filters
+                            </p>
                           </>
                         ) : (
                           <>
-                            <p className="text-sm">No evaluation records to display</p>
-                            <p className="text-xs mt-1">Records will appear here when evaluations are submitted</p>
+                            <p className="text-sm">
+                              No evaluation records to display
+                            </p>
+                            <p className="text-xs mt-1">
+                              Records will appear here when evaluations are
+                              submitted
+                            </p>
                           </>
                         )}
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredReviews.map((review) => {
+                  overviewPaginated.map((review) => {
                     const submittedDate = new Date(review.evaluationDate);
                     const now = new Date();
-                    const hoursDiff = (now.getTime() - submittedDate.getTime()) / (1000 * 60 * 60);
+                    const hoursDiff =
+                      (now.getTime() - submittedDate.getTime()) /
+                      (1000 * 60 * 60);
                     const isNew = hoursDiff <= 24;
                     const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
-                    const isCompleted = review.status === 'completed';
-                    
+                    const isCompleted = review.status === "completed";
+
                     // Determine row background color
                     let rowClassName = "hover:bg-gray-100 transition-colors";
                     if (isCompleted) {
-                      rowClassName = "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
+                      rowClassName =
+                        "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
                     } else if (isNew) {
-                      rowClassName = "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
+                      rowClassName =
+                        "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
                     } else if (isRecent) {
-                      rowClassName = "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
+                      rowClassName =
+                        "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
                     }
-                    
+
                     return (
                       <TableRow key={review.id} className={rowClassName}>
                         <TableCell className="px-6 py-3">
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-gray-900">{review.employeeName}</span>
+                              <span className="font-medium text-gray-900">
+                                {review.employeeName}
+                              </span>
                               {isNew && (
                                 <Badge className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 font-semibold">
                                   ⚡ NEW
@@ -609,11 +714,6 @@ export function OverviewTab() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Badge variant="outline" className="text-xs">
-                            {review.department}
-                          </Badge>
-                        </TableCell>
                         <TableCell className="px-6 py-3 text-sm text-gray-600">
                           {review.position}
                         </TableCell>
@@ -623,7 +723,11 @@ export function OverviewTab() {
                           </div>
                         </TableCell>
                         <TableCell className="px-6 py-3">
-                          <Badge className={getQuarterColor(getQuarterFromDate(review.evaluationDate))}>
+                          <Badge
+                            className={getQuarterColor(
+                              getQuarterFromDate(review.evaluationDate)
+                            )}
+                          >
                             {getQuarterFromDate(review.evaluationDate)}
                           </Badge>
                         </TableCell>
@@ -631,14 +735,20 @@ export function OverviewTab() {
                           {new Date(review.evaluationDate).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="px-6 py-3">
-                          <Badge className={
-                            review.status === 'completed' ? 'bg-green-100 text-green-800' :
-                            review.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }>
-                            {review.status === 'completed' ? '✓ Completed' :
-                             review.status === 'in_progress' ? '⏳ In Progress' :
-                             '⏳ Pending'}
+                          <Badge
+                            className={
+                              review.status === "completed"
+                                ? "bg-green-100 text-green-800"
+                                : review.status === "in_progress"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-gray-100 text-gray-800"
+                            }
+                          >
+                            {review.status === "completed"
+                              ? "✓ Completed"
+                              : review.status === "in_progress"
+                              ? "⏳ In Progress"
+                              : "⏳ Pending"}
                           </Badge>
                         </TableCell>
                         <TableCell className="px-6 py-3">
@@ -659,6 +769,79 @@ export function OverviewTab() {
             </Table>
           </div>
         </div>
+
+        {/* Pagination Controls */}
+        {overviewTotal > itemsPerPage && (
+          <div className="flex items-center justify-between mt-4 px-2">
+            <div className="text-sm text-gray-600">
+              Showing {overviewStartIndex + 1} to{" "}
+              {Math.min(overviewEndIndex, overviewTotal)} of {overviewTotal}{" "}
+              records
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setOverviewPage((prev) => Math.max(1, prev - 1))}
+                disabled={overviewPage === 1}
+                className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+              >
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from(
+                  { length: overviewTotalPages },
+                  (_, i) => i + 1
+                ).map((page) => {
+                  if (
+                    page === 1 ||
+                    page === overviewTotalPages ||
+                    (page >= overviewPage - 1 && page <= overviewPage + 1)
+                  ) {
+                    return (
+                      <Button
+                        key={page}
+                        variant={overviewPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setOverviewPage(page)}
+                        className={`text-xs w-8 h-8 p-0 ${
+                          overviewPage === page
+                            ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                            : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                        }`}
+                      >
+                        {page}
+                      </Button>
+                    );
+                  } else if (
+                    page === overviewPage - 2 ||
+                    page === overviewPage + 2
+                  ) {
+                    return (
+                      <span key={page} className="text-gray-400">
+                        ...
+                      </span>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setOverviewPage((prev) =>
+                    Math.min(overviewTotalPages, prev + 1)
+                  )
+                }
+                disabled={overviewPage === overviewTotalPages}
+                className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* View Results Modal */}

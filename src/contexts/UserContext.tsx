@@ -3,7 +3,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserProfile } from '@/components/ProfileCard';
 import { toastMessages } from '@/lib/toastMessages';
+// Use localStorage version with accounts.json (until backend is ready)
 import clientDataService from '@/lib/clientDataService';
+// import clientDataService from '@/lib/clientDataService.api'; // Switch to this when backend is ready
+import { apiService } from '@/lib/apiService';
 import RealLoadingScreen from '@/components/RealLoadingScreen';
 
 export interface AuthenticatedUser {
@@ -23,6 +26,7 @@ export interface AuthenticatedUser {
   lastLogin?: string;
   availableRoles?: string[]; // For users with multiple roles (e.g., HR + Employee)
   activeRole?: string; // Currently active role
+  roleSelectionPending?: boolean; // True when user needs to select from multiple roles
 }
 
 interface UserContextType {
@@ -30,8 +34,8 @@ interface UserContextType {
   profile: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<boolean | { suspended: true; data: any; requiresRoleSelection?: boolean; pending?: boolean; pendingData?: any }>;
-  logout: () => void;
+  login: (username: string, password: string) => Promise<boolean | { requiresRoleSelection?: boolean; pending?: boolean; pendingData?: any }>;
+  logout: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   refreshUserData: () => Promise<void>;
   switchRole: (role: string) => void; // New function for switching between roles
@@ -114,6 +118,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
             // Fetch full user data including avatar and signature from data source
             try {
               const fullUserData = await clientDataService.getUserById(parsedUser.id);
+              
+              // Get account data to access employeeId
+              const accounts = await clientDataService.getAccounts();
+              const account = accounts.find((acc: any) => acc.id === parsedUser.id);
+              const employeeId = account?.employeeId;
+              
               if (fullUserData) {
                 // Merge stored data with fresh avatar/signature from data source
                 const completeUser = {
@@ -134,6 +144,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
                   avatar: completeUser.avatar,
                   bio: completeUser.bio,
                   signature: completeUser.signature,
+                  employeeId: employeeId,
                 };
                 setProfile(userProfile);
               } else {
@@ -148,24 +159,47 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
                   avatar: parsedUser.avatar,
                   bio: parsedUser.bio,
                   signature: parsedUser.signature,
+                  employeeId: employeeId,
                 };
                 setProfile(userProfile);
               }
             } catch (fetchError) {
               console.error('Error fetching full user data:', fetchError);
               // Use stored data as fallback
-              setUser(parsedUser);
-              const userProfile: UserProfile = {
-                id: parsedUser.id,
-                name: parsedUser.name,
-                email: parsedUser.email,
-                roleOrPosition: parsedUser.position,
-                department: parsedUser.department,
-                avatar: parsedUser.avatar,
-                bio: parsedUser.bio,
-                signature: parsedUser.signature,
-              };
-              setProfile(userProfile);
+              // Get account data to access employeeId
+              try {
+                const accounts = await clientDataService.getAccounts();
+                const account = accounts.find((acc: any) => acc.id === parsedUser.id);
+                const employeeId = account?.employeeId;
+                
+                setUser(parsedUser);
+                const userProfile: UserProfile = {
+                  id: parsedUser.id,
+                  name: parsedUser.name,
+                  email: parsedUser.email,
+                  roleOrPosition: parsedUser.position,
+                  department: parsedUser.department,
+                  avatar: parsedUser.avatar,
+                  bio: parsedUser.bio,
+                  signature: parsedUser.signature,
+                  employeeId: employeeId,
+                };
+                setProfile(userProfile);
+              } catch (accountError) {
+                console.error('Error fetching account data:', accountError);
+                setUser(parsedUser);
+                const userProfile: UserProfile = {
+                  id: parsedUser.id,
+                  name: parsedUser.name,
+                  email: parsedUser.email,
+                  roleOrPosition: parsedUser.position,
+                  department: parsedUser.department,
+                  avatar: parsedUser.avatar,
+                  bio: parsedUser.bio,
+                  signature: parsedUser.signature,
+                };
+                setProfile(userProfile);
+              }
             }
             
             // Ensure keepLoggedIn is set to true for future sessions
@@ -195,7 +229,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean | { suspended: true; data: any; requiresRoleSelection?: boolean }> => {
+  const login = async (username: string, password: string): Promise<boolean | { requiresRoleSelection?: boolean; pending?: boolean; pendingData?: any }> => {
     try {
       setIsLoading(true);
       
@@ -204,6 +238,19 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       
       if (loginResult.success && loginResult.user) {
         const authenticatedUser = loginResult.user;
+        
+        // Check if user has multiple roles (requires role selection)
+        const hasMultipleRoles = authenticatedUser.availableRoles && authenticatedUser.availableRoles.length > 1;
+        
+        // Get account data to access employeeId
+        let employeeId: number | undefined;
+        try {
+          const accounts = await clientDataService.getAccounts();
+          const account = accounts.find((acc: any) => acc.id === authenticatedUser.id || acc.email === authenticatedUser.email);
+          employeeId = account?.employeeId;
+        } catch (error) {
+          console.error('Error fetching account data for employeeId:', error);
+        }
         
         // Ensure ID is a number
         const userWithNumberId: AuthenticatedUser = {
@@ -214,10 +261,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           lastLogin: new Date().toISOString(),
           availableRoles: authenticatedUser.availableRoles, // Include available roles
           activeRole: authenticatedUser.role, // Set initial active role
+          roleSelectionPending: hasMultipleRoles, // Flag to indicate role selection is needed
         };
-        
-        // Check if user has multiple roles (requires role selection)
-        const hasMultipleRoles = userWithNumberId.availableRoles && userWithNumberId.availableRoles.length > 1;
         
         setUser(userWithNumberId);
         
@@ -231,6 +276,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           avatar: userWithNumberId.avatar,
           bio: userWithNumberId.bio,
           signature: userWithNumberId.signature,
+          employeeId: employeeId,
         };
         setProfile(userProfile);
 
@@ -242,18 +288,14 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         
         // Return true with requiresRoleSelection flag if user has multiple roles
         if (hasMultipleRoles) {
-          return { suspended: false, data: null, requiresRoleSelection: true } as any;
+          return { requiresRoleSelection: true };
         }
         
         return true;
-      } else if (loginResult.message === 'Account suspended' && loginResult.suspensionData) {
-        // Account is suspended, return suspension data
-        console.log('UserContext: Account suspended, returning suspension data:', loginResult.suspensionData);
-        return { suspended: true, data: loginResult.suspensionData };
       } else if (loginResult.message === 'Account pending approval' && loginResult.pendingData) {
         // Account is pending approval, return pending data
         console.log('UserContext: Account pending approval, returning pending data:', loginResult.pendingData);
-        return { suspended: false, data: null, pending: true, pendingData: loginResult.pendingData } as any;
+        return { pending: true, pendingData: loginResult.pendingData };
       }
       
       return false;
@@ -265,12 +307,23 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     // Show logout toast
     toastMessages.generic.info('Logging out...', 'See you next time!');
     
     // Show logout loading screen
     setShowLogoutLoading(true);
+    
+    try {
+      // ✅ Notify backend of logout
+      console.log('🔄 Calling backend logout API...');
+      await apiService.logout();
+      console.log('✅ Backend logout successful');
+    } catch (error) {
+      console.error('❌ Backend logout failed:', error);
+      // Continue with local logout even if backend call fails
+      // This ensures user can still log out from frontend
+    }
     
     // Clear user data after a short delay
     setTimeout(() => {
@@ -278,10 +331,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       setProfile(null);
       
       // Clear storage only if in browser
+      // Note: Laravel Sanctum cookies are cleared by the backend
       if (typeof window !== 'undefined') {
         localStorage.removeItem('authenticatedUser');
         localStorage.removeItem('keepLoggedIn');
         sessionStorage.clear();
+        console.log('✅ Local storage cleared (cookies cleared by backend)');
       }
     }, 200);
   };
@@ -294,16 +349,16 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       // Update user data as well
       if (user) {
         // Map UserProfile fields to AuthenticatedUser fields
-        const userUpdates: Partial<AuthenticatedUser> = {
-          name: updates.name,
-          email: updates.email,
-          position: updates.roleOrPosition || user.position,
-          department: updates.department,
-          branch: updates.branch,
-          avatar: updates.avatar,
-          bio: updates.bio,
-          signature: updates.signature,
-        };
+        // Only include fields that are actually provided in updates to avoid overwriting with undefined
+        const userUpdates: Partial<AuthenticatedUser> = {};
+        if (updates.name !== undefined) userUpdates.name = updates.name;
+        if (updates.email !== undefined) userUpdates.email = updates.email;
+        if (updates.roleOrPosition !== undefined) userUpdates.position = updates.roleOrPosition;
+        if (updates.department !== undefined) userUpdates.department = updates.department;
+        if (updates.branch !== undefined) userUpdates.branch = updates.branch;
+        if (updates.avatar !== undefined) userUpdates.avatar = updates.avatar;
+        if (updates.bio !== undefined) userUpdates.bio = updates.bio;
+        if (updates.signature !== undefined) userUpdates.signature = updates.signature;
         
         const updatedUser: AuthenticatedUser = { 
           ...user, 
@@ -402,6 +457,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         ...user,
         activeRole: role,
         role: role, // Also update the primary role field
+        roleSelectionPending: false, // Clear the pending flag
       };
       setUser(updatedUser);
       

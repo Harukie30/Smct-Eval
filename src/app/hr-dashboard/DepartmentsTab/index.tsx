@@ -323,23 +323,17 @@ export function DepartmentsTab({
               <Label htmlFor="departmentName" className="text-sm font-medium">
                 Department Name <span className="text-red-500">*</span>
               </Label>
-              <Select value={newDepartmentName || undefined} onValueChange={(value) => setNewDepartmentName(value || '')}>
-                <SelectTrigger id="departmentName">
-                  <SelectValue placeholder="Select department name" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Engineering">Engineering</SelectItem>
-                  <SelectItem value="Product">Product</SelectItem>
-                  <SelectItem value="Design">Design</SelectItem>
-                  <SelectItem value="Marketing">Marketing</SelectItem>
-                  <SelectItem value="Human Resources">Human Resources</SelectItem>
-                  <SelectItem value="Finance">Finance</SelectItem>
-                  <SelectItem value="Sales">Sales</SelectItem>
-                  <SelectItem value="Customer Support">Customer Support</SelectItem>
-                  <SelectItem value="Operations">Operations</SelectItem>
-                  <SelectItem value="Legal">Legal</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="departmentName"
+                placeholder="Enter department name"
+                value={newDepartmentName}
+                onChange={(e) => setNewDepartmentName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddDepartment();
+                  }
+                }}
+              />
             </div>
           </div>
 
@@ -447,3 +441,4 @@ export function DepartmentsTab({
     </div>
   );
 }
+

@@ -43,6 +43,8 @@ export function EvaluationRecordsTab({
   const [recordsYearFilter, setRecordsYearFilter] = useState<string>('all');
   const [recordsRefreshing, setRecordsRefreshing] = useState(false);
   const [recordsSort, setRecordsSort] = useState<{ field: string; direction: 'asc' | 'desc' }>({ field: 'date', direction: 'desc' });
+  const [recordsPage, setRecordsPage] = useState(1);
+  const itemsPerPage = 8;
 
   // Get available years from submissions
   const availableYears = useMemo(() => {
@@ -384,6 +386,18 @@ export function EvaluationRecordsTab({
     return sorted;
   }, [recentSubmissions, recordsSearchTerm, recordsApprovalFilter, recordsQuarterFilter, recordsYearFilter, recordsSort]);
 
+  // Pagination calculations
+  const recordsTotal = filteredAndSortedSubmissions.length;
+  const recordsTotalPages = Math.ceil(recordsTotal / itemsPerPage);
+  const recordsStartIndex = (recordsPage - 1) * itemsPerPage;
+  const recordsEndIndex = recordsStartIndex + itemsPerPage;
+  const recordsPaginated = filteredAndSortedSubmissions.slice(recordsStartIndex, recordsEndIndex);
+
+  // Reset to page 1 when filters/search change
+  useEffect(() => {
+    setRecordsPage(1);
+  }, [recordsSearchTerm, recordsApprovalFilter, recordsQuarterFilter, recordsYearFilter]);
+
   // Add visible scrollbar styling
   useEffect(() => {
     const style = document.createElement('style');
@@ -415,12 +429,12 @@ export function EvaluationRecordsTab({
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Search and Filter Controls */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            All Evaluation Records
+        <CardHeader className="p-4 md:p-6">
+          <CardTitle className="flex flex-wrap items-center gap-2 text-base md:text-lg lg:text-xl">
+            <span>All Evaluation Records</span>
             {(() => {
               const now = new Date();
               const newCount = recentSubmissions.filter(sub => {
@@ -428,28 +442,28 @@ export function EvaluationRecordsTab({
                 return hoursDiff <= 24;
               }).length;
               return newCount > 0 ? (
-                <Badge className="bg-yellow-500 text-white animate-pulse">
+                <Badge className="bg-yellow-500 text-white animate-pulse text-xs md:text-sm">
                   {newCount} NEW
                 </Badge>
               ) : null;
             })()}
-            <Badge variant="outline" className="text-xs font-normal">
+            <Badge variant="outline" className="text-xs md:text-sm font-normal">
               {recentSubmissions.length} Total Records
             </Badge>
           </CardTitle>
-          <CardDescription>Complete evaluation history with advanced filtering</CardDescription>
+          <CardDescription className="text-xs md:text-sm mt-1 md:mt-2">Complete evaluation history with advanced filtering</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex flex-col md:flex-row gap-3 md:gap-4 mb-4 md:mb-6">
             {/* Search */}
-            <div className="flex-1">
-              <Label htmlFor="records-search" className="text-sm font-medium">Search</Label>
+            <div className="flex-1 min-w-0">
+              <Label htmlFor="records-search" className="text-xs md:text-sm font-medium">Search</Label>
               <div className="mt-1 relative">
                 <div className="relative w-full">
                   <Input
                     id="records-search"
                     placeholder="Search by employee name, evaluator, department, position..."
-                    className="pr-10"
+                    className="pr-10 text-xs md:text-sm"
                     value={recordsSearchTerm}
                     onChange={(e) => setRecordsSearchTerm(e.target.value)}
                   />
@@ -474,8 +488,8 @@ export function EvaluationRecordsTab({
             </div>
 
             {/* Approval Status Filter */}
-            <div className="w-full md:w-48">
-              <Label htmlFor="records-approval-status" className="text-sm font-medium">Approval Status</Label>
+            <div className="w-full md:w-44 lg:w-48 xl:w-52">
+              <Label htmlFor="records-approval-status" className="text-xs md:text-sm font-medium">Approval Status</Label>
               <SearchableDropdown
                 options={['All Statuses', '⏳ Pending', '✓ Fully Approved']}
                 value={recordsApprovalFilter === '' ? 'All Statuses' : recordsApprovalFilter === 'pending' ? '⏳ Pending' : '✓ Fully Approved'}
@@ -489,13 +503,13 @@ export function EvaluationRecordsTab({
                   }
                 }}
                 placeholder="All Statuses"
-                className="mt-1"
+                className="mt-1 text-xs md:text-sm"
               />
             </div>
 
             {/* Quarter Filter */}
-            <div className="w-full md:w-48">
-              <Label htmlFor="records-quarter" className="text-sm font-medium">Quarter</Label>
+            <div className="w-full md:w-44 lg:w-48 xl:w-52">
+              <Label htmlFor="records-quarter" className="text-xs md:text-sm font-medium">Quarter</Label>
               <SearchableDropdown
                 options={['All Quarters', 'Q1', 'Q2', 'Q3', 'Q4']}
                 value={recordsQuarterFilter || 'All Quarters'}
@@ -507,15 +521,15 @@ export function EvaluationRecordsTab({
                   }
                 }}
                 placeholder="All Quarters"
-                className="mt-1"
+                className="mt-1 text-xs md:text-sm"
               />
             </div>
 
             {/* Year Filter */}
-            <div className="w-full md:w-48">
-              <Label htmlFor="records-year" className="text-sm font-medium">Year</Label>
+            <div className="w-full md:w-44 lg:w-48 xl:w-52">
+              <Label htmlFor="records-year" className="text-xs md:text-sm font-medium">Year</Label>
               <Select value={recordsYearFilter} onValueChange={setRecordsYearFilter}>
-                <SelectTrigger className="mt-1">
+                <SelectTrigger className="mt-1 text-xs md:text-sm">
                   <SelectValue placeholder="Select a year" />
                 </SelectTrigger>
                 <SelectContent>
@@ -531,14 +545,14 @@ export function EvaluationRecordsTab({
 
             {/* Refresh Button */}
             <div className="w-full md:w-auto flex gap-2">
-              <div className="w-full md:w-32">
-                <Label className="text-sm font-medium opacity-0">Refresh</Label>
+              <div className="w-full md:w-28 lg:w-32 xl:w-36">
+                <Label className="text-xs md:text-sm font-medium opacity-0">Refresh</Label>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleRecordsRefresh}
                   disabled={recordsRefreshing}
-                  className="mt-1 w-full text-xs bg-blue-500 hover:bg-green-600 text-white hover:text-white disabled:cursor-not-allowed"
+                  className="mt-1 w-full text-xs md:text-sm bg-blue-500 hover:bg-green-600 text-white hover:text-white disabled:cursor-not-allowed"
                   title="Refresh evaluation records data"
                 >
                   {recordsRefreshing ? (
@@ -565,20 +579,20 @@ export function EvaluationRecordsTab({
       <Card>
         <CardContent className="p-0">
           {/* Color Legend */}
-          <div className="m-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex flex-wrap gap-4 text-xs">
+          <div className="m-3 md:m-4 p-2 md:p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex flex-wrap gap-2 md:gap-4 text-xs md:text-sm">
               <span className="font-medium text-gray-700">Status Indicators:</span>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
-                <Badge className="bg-yellow-500 text-white text-xs px-2 py-0.5">NEW</Badge>
+                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
+                <Badge className="bg-yellow-500 text-white text-xs md:text-sm px-1.5 md:px-2 py-0.5">NEW</Badge>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
-                <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5">Recent</Badge>
+                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+                <Badge className="bg-blue-500 text-white text-xs md:text-sm px-1.5 md:px-2 py-0.5">Recent</Badge>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
-                <Badge className="bg-green-500 text-white text-xs px-2 py-0.5">Fully Approved</Badge>
+                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+                <Badge className="bg-green-500 text-white text-xs md:text-sm px-1.5 md:px-2 py-0.5">Fully Approved</Badge>
               </div>
             </div>
           </div>
@@ -610,7 +624,6 @@ export function EvaluationRecordsTab({
                     <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('evaluator')}>
                       Evaluator/HR{getSortIcon('evaluator')}
                     </TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('quarter')}>
                       Quarter{getSortIcon('quarter')}
                     </TableHead>
@@ -679,38 +692,51 @@ export function EvaluationRecordsTab({
               </Table>
             </div>
           ) : (
-            <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto evaluation-records-table">
-              <Table className="min-w-full">
+            <div className="relative max-h-[50vh] lg:max-h-[60vh] xl:max-h-[65vh] 2xl:max-h-[70vh] overflow-y-auto overflow-x-auto evaluation-records-table w-full">
+              <Table className="min-w-full w-full">
                 <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                   <TableRow>
-                    <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('employeeName')}>
-                      Employee{getSortIcon('employeeName')}
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 cursor-pointer hover:bg-gray-50 min-w-[140px] md:min-w-[160px] lg:min-w-[180px] xl:min-w-[200px]" onClick={() => sortRecords('employeeName')}>
+                      <span className="text-xs md:text-sm lg:text-base">Employee{getSortIcon('employeeName')}</span>
                     </TableHead>
-                    <TableHead className="px-6 py-3">Evaluator/HR</TableHead>
-                    <TableHead className="px-6 py-3">Type</TableHead>
-                    <TableHead className="px-6 py-3">Quarter</TableHead>
-                    <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('date')}>
-                      Date{getSortIcon('date')}
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[100px] md:min-w-[120px] lg:min-w-[140px] xl:min-w-[160px]">
+                      <span className="text-xs md:text-sm lg:text-base">Evaluator/HR</span>
                     </TableHead>
-                    <TableHead className="px-6 py-3 cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('rating')}>
-                      Rating{getSortIcon('rating')}
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[80px] md:min-w-[90px] lg:min-w-[100px]">
+                      <span className="text-xs md:text-sm lg:text-base">Quarter</span>
                     </TableHead>
-                    <TableHead className="px-6 py-3">Status</TableHead>
-                    <TableHead className="px-6 py-3">Employee Sign</TableHead>
-                    <TableHead className="px-6 py-3">Evaluator Sign</TableHead>
-                    <TableHead className="px-6 py-3">HR signature</TableHead>
-                    <TableHead className="px-6 py-3">Actions</TableHead>
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 cursor-pointer hover:bg-gray-50 min-w-[90px] md:min-w-[100px] lg:min-w-[110px]" onClick={() => sortRecords('date')}>
+                      <span className="text-xs md:text-sm lg:text-base">Date{getSortIcon('date')}</span>
+                    </TableHead>
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 cursor-pointer hover:bg-gray-50 min-w-[120px] md:min-w-[140px] lg:min-w-[160px]" onClick={() => sortRecords('rating')}>
+                      <span className="text-xs md:text-sm lg:text-base">Rating{getSortIcon('rating')}</span>
+                    </TableHead>
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[90px] md:min-w-[100px] lg:min-w-[110px]">
+                      <span className="text-xs md:text-sm lg:text-base">Status</span>
+                    </TableHead>
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[100px] md:min-w-[110px] lg:min-w-[120px] hidden lg:table-cell">
+                      <span className="text-xs md:text-sm lg:text-base">Employee Sign</span>
+                    </TableHead>
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[110px] md:min-w-[120px] lg:min-w-[130px] hidden xl:table-cell">
+                      <span className="text-xs md:text-sm lg:text-base">Evaluator Sign</span>
+                    </TableHead>
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[100px] md:min-w-[110px] lg:min-w-[120px] hidden xl:table-cell">
+                      <span className="text-xs md:text-sm lg:text-base">HR signature</span>
+                    </TableHead>
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[140px] md:min-w-[160px] lg:min-w-[180px]">
+                      <span className="text-xs md:text-sm lg:text-base">Actions</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
-                  {filteredAndSortedSubmissions.length === 0 ? (
+                  {recordsPaginated.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center py-12 text-gray-500">
+                      <TableCell colSpan={11} className="text-center py-8 md:py-12 text-gray-500 text-sm md:text-base">
                         No evaluation records found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredAndSortedSubmissions.map((submission) => {
+                    recordsPaginated.map((submission) => {
                       const quarter = getQuarterFromDate(submission.submittedAt);
                       
                       // Check if both parties have signed (handle empty strings too)
@@ -754,99 +780,86 @@ export function EvaluationRecordsTab({
                       
                       return (
                         <TableRow key={submission.id} className={rowClassName}>
-                          <TableCell className="px-6 py-3">
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
                             <div>
-                              <div className="font-medium text-gray-900">{submission.employeeName}</div>
-                              <div className="text-sm text-gray-500">{submission.evaluationData?.position || 'N/A'}</div>
+                              <div className="font-medium text-gray-900 text-xs md:text-sm lg:text-base">{submission.employeeName}</div>
+                              <div className="text-xs md:text-sm text-gray-500">{submission.evaluationData?.position || 'N/A'}</div>
                             </div>
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm">
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-xs md:text-sm">
                             {submission.evaluationData?.supervisor || submission.evaluator || 'N/A'}
                           </TableCell>
-                          <TableCell className="px-6 py-3">
-                            <Badge className={isHR ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}>
-                              {isHR ? '👔 HR' : '📋 Evaluator'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="px-6 py-3">
-                            <Badge className={getQuarterColor(quarter)}>
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                            <Badge className={`${getQuarterColor(quarter)} text-xs md:text-sm`}>
                               {quarter}
                             </Badge>
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-xs md:text-sm text-gray-600">
                             {new Date(submission.submittedAt).toLocaleDateString()}
                           </TableCell>
-                          <TableCell className="px-6 py-3">
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
                             {(() => {
                               const rating = calculateOverallRating(submission);
                               return (
-                                <div className="flex items-center gap-2">
-                                  <Badge className={`text-xs ${getRatingColor(rating)}`}>
+                                <div className="flex flex-col md:flex-row items-start md:items-center gap-1 md:gap-2">
+                                  <Badge className={`text-xs md:text-sm ${getRatingColor(rating)}`}>
                                     {rating.toFixed(1)}/5
                                   </Badge>
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-gray-500 hidden md:inline">
                                     {getRatingLabel(rating)}
                                   </span>
                                 </div>
                               );
                             })()}
                           </TableCell>
-                          <TableCell className="px-6 py-3">
-                            <Badge className={
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                            <Badge className={`text-xs md:text-sm ${
                               approvalStatus === 'fully_approved' ? 'bg-green-100 text-green-800' :
                               'bg-gray-100 text-gray-800'
-                            }>
+                            }`}>
                               {approvalStatus === 'fully_approved' ? '✓ Approved' : '⏳ Pending'}
                             </Badge>
                           </TableCell>
-                          <TableCell className="px-6 py-3">
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 hidden lg:table-cell">
                             {submission.employeeSignature ? (
-                              <Badge className="bg-green-100 text-green-800 text-xs">✓ Signed</Badge>
+                              <Badge className="bg-green-100 text-green-800 text-xs md:text-sm">✓ Signed</Badge>
                             ) : (
-                              <Badge className="bg-gray-100 text-gray-600 text-xs">⏳ Pending</Badge>
+                              <Badge className="bg-gray-100 text-gray-600 text-xs md:text-sm">⏳ Pending</Badge>
                             )}
                           </TableCell>
-                          <TableCell className="px-6 py-3">
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 hidden xl:table-cell">
                             {!isHR && hasSigned ? (
-                              <Badge className="bg-green-100 text-green-800 text-xs">✓ Signed</Badge>
+                              <Badge className="bg-green-100 text-green-800 text-xs md:text-sm">✓ Signed</Badge>
                             ) : !isHR && !hasSigned ? (
-                              <Badge className="bg-gray-100 text-gray-600 text-xs">⏳ Pending</Badge>
+                              <Badge className="bg-gray-100 text-gray-600 text-xs md:text-sm">⏳ Pending</Badge>
                             ) : (
                               <span className="text-xs text-gray-400">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="px-6 py-3">
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 hidden xl:table-cell">
                             {isHR && hasSigned ? (
-                              <Badge className="bg-green-100 text-green-800 text-xs">✓ Signed</Badge>
+                              <Badge className="bg-green-100 text-green-800 text-xs md:text-sm">✓ Signed</Badge>
                             ) : isHR && !hasSigned ? (
-                              <Badge className="bg-gray-100 text-gray-600 text-xs">⏳ Pending</Badge>
+                              <Badge className="bg-gray-100 text-gray-600 text-xs md:text-sm">⏳ Pending</Badge>
                             ) : (
                               <span className="text-xs text-gray-400">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="px-6 py-3">
-                            <div className="flex gap-2">
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                            <div className="flex flex-col sm:flex-row gap-1 md:gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => onViewSubmission(submission)}
-                                className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white"
+                                className="text-xs md:text-sm px-2 py-1 md:px-3 md:py-1.5 bg-green-600 hover:bg-green-700 text-white"
                               >
                                 ☰ View
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => printFeedback(submission)}
-                                className="text-xs px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white"
-                              >
-                                ⎙ Print
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
                                 onClick={() => onDeleteClick(submission)}
-                                className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200"
+                                className="text-xs md:text-sm px-2 py-1 md:px-3 md:py-1.5 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200"
                                 title="Delete this evaluation record"
                               >
                                 ❌ Delete
@@ -862,10 +875,69 @@ export function EvaluationRecordsTab({
             </div>
           )}
 
-          {/* Results Counter */}
+          {/* Results Counter and Pagination */}
           {!recordsRefreshing && (
-            <div className="m-4 text-center text-sm text-gray-600">
-              Showing {filteredAndSortedSubmissions.length} of {recentSubmissions.length} evaluation records
+            <div className="m-3 md:m-4 p-2 md:p-0">
+              <div className="text-center text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
+                Showing {filteredAndSortedSubmissions.length} of {recentSubmissions.length} evaluation records
+              </div>
+              
+              {/* Pagination Controls */}
+              {recordsTotal > itemsPerPage && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-0 mt-3 md:mt-4 px-2">
+                  <div className="text-xs md:text-sm text-gray-600 order-2 sm:order-1">
+                    Showing {recordsStartIndex + 1} to {Math.min(recordsEndIndex, recordsTotal)} of {recordsTotal} records
+                  </div>
+                  <div className="flex items-center gap-1.5 md:gap-2 order-1 sm:order-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRecordsPage(prev => Math.max(1, prev - 1))}
+                      disabled={recordsPage === 1}
+                      className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                    >
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-0.5 md:gap-1">
+                      {Array.from({ length: recordsTotalPages }, (_, i) => i + 1).map((page) => {
+                        if (
+                          page === 1 ||
+                          page === recordsTotalPages ||
+                          (page >= recordsPage - 1 && page <= recordsPage + 1)
+                        ) {
+                          return (
+                            <Button
+                              key={page}
+                              variant={recordsPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setRecordsPage(page)}
+                              className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
+                                recordsPage === page
+                                  ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                                  : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                              }`}
+                            >
+                              {page}
+                            </Button>
+                          );
+                        } else if (page === recordsPage - 2 || page === recordsPage + 2) {
+                          return <span key={page} className="text-gray-400 text-xs md:text-sm">...</span>;
+                        }
+                        return null;
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRecordsPage(prev => Math.min(recordsTotalPages, prev + 1))}
+                      disabled={recordsPage === recordsTotalPages}
+                      className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -873,3 +945,4 @@ export function EvaluationRecordsTab({
     </div>
   );
 }
+

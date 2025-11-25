@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { useEmployeeSignatureApproval } from '@/hooks/useEvaluationRecords';
 import { EvaluationRecord } from '@/lib/evaluationRecordsService';
-import { useAuth } from '@/contexts/UserContext';
+import { useUser } from '@/contexts/UserContext';
 import { 
   CheckCircle, 
   XCircle, 
@@ -34,7 +34,7 @@ export default function EmployeeSignatureApproval({
   record,
   onApprovalSuccess
 }: EmployeeSignatureApprovalProps) {
-  const { profile, user } = useAuth();
+  const { profile, user } = useUser();
   const { approveWithSignature, loading, error } = useEmployeeSignatureApproval();
   
   const [approvalComments, setApprovalComments] = useState('');

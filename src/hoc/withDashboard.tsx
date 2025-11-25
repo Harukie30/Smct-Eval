@@ -136,3 +136,4 @@ export function withSimpleDashboard<P extends object>(
     );
   };
 }
+

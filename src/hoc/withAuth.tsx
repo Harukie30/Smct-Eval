@@ -206,3 +206,4 @@ export function withSimpleAuth<P extends object>(
     return <Component {...props} />;
   };
 }
+

@@ -1,25 +1,56 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useRef } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Plus, ChevronDown } from "lucide-react";
-import EditUserModal from '@/components/EditUserModal';
-import AddEmployeeModal from '@/components/AddEmployeeModal';
-import { toastMessages } from '@/lib/toastMessages';
-import clientDataService from '@/lib/clientDataService';
-import accountsDataRaw from '@/data/accounts.json';
-import departmentsData from '@/data/departments.json';
-import branchCodesData from '@/data/branch-code.json';
-import { useDialogAnimation } from '@/hooks/useDialogAnimation';
+import EditUserModal from "@/components/EditUserModal";
+import AddEmployeeModal from "@/components/AddEmployeeModal";
+import { toastMessages } from "@/lib/toastMessages";
+import clientDataService from "@/lib/clientDataService";
+import accountsDataRaw from "@/data/accounts.json";
+import departmentsData from "@/data/departments.json";
+import branchCodesData from "@/data/branch-code.json";
+import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 
 // Extract accounts array from the new structure
 const accountsData = accountsDataRaw.accounts || [];
@@ -45,51 +76,70 @@ interface Employee {
 }
 
 interface UserManagementTabProps {
-  branchesData: {id: string, name: string}[];
-  positionsData: {id: string, name: string}[];
-  refreshDashboardData: (showModal?: boolean, isAutoRefresh?: boolean) => Promise<void>;
+  branchesData: { id: string; name: string }[];
+  positionsData: { id: string; name: string }[];
+  refreshDashboardData: (
+    showModal?: boolean,
+    isAutoRefresh?: boolean
+  ) => Promise<void>;
 }
 
 export function UserManagementTab({
   branchesData,
   positionsData,
-  refreshDashboardData
+  refreshDashboardData,
 }: UserManagementTabProps) {
   // State management
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [pendingRegistrations, setPendingRegistrations] = useState<any[]>([]);
-  const [userManagementTab, setUserManagementTab] = useState<'active' | 'new'>('active');
-  const [userSearchTerm, setUserSearchTerm] = useState('');
-  const [approvedRegistrations, setApprovedRegistrations] = useState<number[]>([]);
-  const [rejectedRegistrations, setRejectedRegistrations] = useState<number[]>([]);
+  const [userManagementTab, setUserManagementTab] = useState<"active" | "new">(
+    "active"
+  );
+  const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [approvedRegistrations, setApprovedRegistrations] = useState<number[]>(
+    []
+  );
+  const [rejectedRegistrations, setRejectedRegistrations] = useState<number[]>(
+    []
+  );
   const [usersRefreshing, setUsersRefreshing] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeUsersPage, setActiveUsersPage] = useState(1);
+  const [newRegistrationsPage, setNewRegistrationsPage] = useState(1);
+  const itemsPerPage = 8;
 
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  
+
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [userToEdit, setUserToEdit] = useState<any>(null);
-  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
+  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(
+    null
+  );
 
   // Function to filter out deleted employees
   const filterDeletedEmployees = (employeeList: Employee[]) => {
-    const deletedEmployees = JSON.parse(localStorage.getItem('deletedEmployees') || '[]');
-    return employeeList.filter(emp => !deletedEmployees.includes(emp.id));
+    const deletedEmployees = JSON.parse(
+      localStorage.getItem("deletedEmployees") || "[]"
+    );
+    return employeeList.filter((emp) => !deletedEmployees.includes(emp.id));
   };
 
   // Function to load accounts data
   const loadAccountsData = async () => {
     try {
-      const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-      const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : accountsData;
+      const localStorageAccounts = JSON.parse(
+        localStorage.getItem("accounts") || "[]"
+      );
+      const accounts =
+        localStorageAccounts.length > 0 ? localStorageAccounts : accountsData;
 
       const employees = accounts
-        .filter((account: any) => account.role !== 'admin')
+        .filter((account: any) => account.role !== "admin")
         .map((account: any) => ({
           id: account.employeeId || account.id,
           name: account.name,
@@ -106,19 +156,19 @@ export function UserManagementTab({
           bio: account.bio,
           contact: account.contact,
           updatedAt: account.updatedAt,
-          approvedDate: account.approvedDate
+          approvedDate: account.approvedDate,
         }));
 
       return employees;
     } catch (error) {
-      console.error('Error loading accounts data:', error);
+      console.error("Error loading accounts data:", error);
       return [];
     }
   };
 
   // Function to refresh user data
   const refreshUserData = async (showLoading = false) => {
-    console.log('🔄 Starting user data refresh...');
+    console.log("🔄 Starting user data refresh...");
     if (showLoading) {
       setUsersRefreshing(true);
     }
@@ -130,15 +180,18 @@ export function UserManagementTab({
       setEmployees(filteredEmployees);
 
       await loadPendingRegistrations();
-      console.log('✅ User data refresh completed successfully');
-      
+      console.log("✅ User data refresh completed successfully");
+
       // Keep spinner visible for at least 800ms for better UX (same as tab switching)
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 800));
     } catch (error) {
-      console.error('❌ Error refreshing user data:', error);
-      toastMessages.generic.error('Refresh Failed', 'Failed to refresh user data. Please try again.');
+      console.error("❌ Error refreshing user data:", error);
+      toastMessages.generic.error(
+        "Refresh Failed",
+        "Failed to refresh user data. Please try again."
+      );
       // Even on error, show spinner for minimum duration
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 800));
     } finally {
       setIsRefreshing(false);
       if (showLoading) {
@@ -154,17 +207,21 @@ export function UserManagementTab({
       setUsersRefreshing(true); // Show spinner on initial load
       try {
         // Add a small delay to ensure spinner is visible
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
         await refreshUserData(false); // Don't show loading spinner again (we're already showing it)
-        
+
         // Load approved/rejected registrations from localStorage
-        const approved = JSON.parse(localStorage.getItem('approvedRegistrations') || '[]');
-        const rejected = JSON.parse(localStorage.getItem('rejectedRegistrations') || '[]');
+        const approved = JSON.parse(
+          localStorage.getItem("approvedRegistrations") || "[]"
+        );
+        const rejected = JSON.parse(
+          localStorage.getItem("rejectedRegistrations") || "[]"
+        );
         setApprovedRegistrations(approved);
         setRejectedRegistrations(rejected);
       } catch (error) {
-        console.error('Error loading initial data:', error);
+        console.error("Error loading initial data:", error);
       } finally {
         setLoading(false);
         setUsersRefreshing(false);
@@ -177,29 +234,37 @@ export function UserManagementTab({
   // Function to load pending registrations
   const loadPendingRegistrations = async () => {
     try {
-      const pendingRegistrations = await clientDataService.getPendingRegistrations();
+      const pendingRegistrations =
+        await clientDataService.getPendingRegistrations();
       setPendingRegistrations(pendingRegistrations);
     } catch (error) {
-      console.error('Error loading pending registrations:', error);
+      console.error("Error loading pending registrations:", error);
       setPendingRegistrations([]);
     }
   };
 
   // Function to get active employees
   const getActiveEmployees = () => {
-    return employees.filter(emp => (emp.isActive !== false));
+    return employees.filter((emp) => emp.isActive !== false);
   };
 
   const getFilteredActiveEmployees = () => {
     const activeEmployees = getActiveEmployees();
     if (!userSearchTerm) return activeEmployees;
 
-    return activeEmployees.filter(employee =>
-      employee.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      employee.position.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      employee.department.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      (employee.branch || '').toLowerCase().includes(userSearchTerm.toLowerCase())
+    return activeEmployees.filter(
+      (employee) =>
+        employee.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        employee.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        employee.position
+          .toLowerCase()
+          .includes(userSearchTerm.toLowerCase()) ||
+        employee.department
+          .toLowerCase()
+          .includes(userSearchTerm.toLowerCase()) ||
+        (employee.branch || "")
+          .toLowerCase()
+          .includes(userSearchTerm.toLowerCase())
     );
   };
 
@@ -218,8 +283,12 @@ export function UserManagementTab({
         position: reg.position,
         department: reg.department,
         branch: reg.branch,
-        registrationDate: new Date(reg.submittedAt || reg.createdAt || Date.now()),
-        status: rejectedRegistrations.includes(reg.id) ? 'rejected' : 'pending_verification'
+        registrationDate: new Date(
+          reg.submittedAt || reg.createdAt || Date.now()
+        ),
+        status: rejectedRegistrations.includes(reg.id)
+          ? "rejected"
+          : "pending_verification",
       }));
   };
 
@@ -227,12 +296,17 @@ export function UserManagementTab({
     const newAccounts = getNewlyRegisteredAccounts();
     if (!userSearchTerm) return newAccounts;
 
-    return newAccounts.filter(account =>
-      account.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      account.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      account.position.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      account.department.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-      (account.branch || '').toLowerCase().includes(userSearchTerm.toLowerCase())
+    return newAccounts.filter(
+      (account) =>
+        account.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        account.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        account.position.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        account.department
+          .toLowerCase()
+          .includes(userSearchTerm.toLowerCase()) ||
+        (account.branch || "")
+          .toLowerCase()
+          .includes(userSearchTerm.toLowerCase())
     );
   };
 
@@ -241,7 +315,6 @@ export function UserManagementTab({
     setUserToEdit(user);
     setIsEditModalOpen(true);
   };
-
 
   const openDeleteModal = (employee: Employee) => {
     setEmployeeToDelete(employee);
@@ -252,9 +325,12 @@ export function UserManagementTab({
     try {
       await clientDataService.updateEmployee(updatedUser.id, updatedUser);
 
-      const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-      const accountIndex = accounts.findIndex((acc: any) => acc.id === updatedUser.id || acc.employeeId === updatedUser.id);
-      
+      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
+      const accountIndex = accounts.findIndex(
+        (acc: any) =>
+          acc.id === updatedUser.id || acc.employeeId === updatedUser.id
+      );
+
       if (accountIndex !== -1) {
         accounts[accountIndex] = {
           ...accounts[accountIndex],
@@ -268,81 +344,133 @@ export function UserManagementTab({
           password: updatedUser.password || accounts[accountIndex].password,
           contact: updatedUser.contact || accounts[accountIndex].contact,
           hireDate: updatedUser.hireDate || accounts[accountIndex].hireDate,
-          isActive: updatedUser.isActive !== undefined ? updatedUser.isActive : accounts[accountIndex].isActive,
-          updatedAt: new Date().toISOString()
+          isActive:
+            updatedUser.isActive !== undefined
+              ? updatedUser.isActive
+              : accounts[accountIndex].isActive,
+          employeeId: updatedUser.employeeId !== undefined ? updatedUser.employeeId : accounts[accountIndex].employeeId,
+          updatedAt: new Date().toISOString(),
         };
-        localStorage.setItem('accounts', JSON.stringify(accounts));
+        localStorage.setItem("accounts", JSON.stringify(accounts));
       }
 
+      // Refresh user data to update the table immediately
+      await refreshUserData(false);
+
+      // Refresh dashboard data to get updated information
       await refreshDashboardData(false, false);
+
+      // Show success toast
       toastMessages.user.updated(updatedUser.name);
     } catch (error) {
-      console.error('Error updating user:', error);
-      toastMessages.generic.error('Update Failed', 'Failed to update user information. Please try again.');
+      console.error("Error updating user:", error);
+      toastMessages.generic.error(
+        "Update Failed",
+        "Failed to update user information. Please try again."
+      );
     }
   };
 
   const handleDeleteEmployee = () => {
     if (!employeeToDelete) return;
 
-    const deletedEmployees = JSON.parse(localStorage.getItem('deletedEmployees') || '[]');
+    const deletedEmployees = JSON.parse(
+      localStorage.getItem("deletedEmployees") || "[]"
+    );
     deletedEmployees.push(employeeToDelete.id);
-    localStorage.setItem('deletedEmployees', JSON.stringify(deletedEmployees));
+    localStorage.setItem("deletedEmployees", JSON.stringify(deletedEmployees));
 
-    setEmployees(prev => prev.filter(emp => emp.id !== employeeToDelete.id));
+    setEmployees((prev) =>
+      prev.filter((emp) => emp.id !== employeeToDelete.id)
+    );
     toastMessages.user.deleted(employeeToDelete.name);
 
     setIsDeleteModalOpen(false);
     setEmployeeToDelete(null);
   };
 
-
-  const handleApproveRegistration = async (registrationId: number, registrationName: string) => {
+  const handleApproveRegistration = async (
+    registrationId: number,
+    registrationName: string
+  ) => {
     try {
-      const result = await clientDataService.approveRegistration(registrationId);
+      const result = await clientDataService.approveRegistration(
+        registrationId
+      );
 
       if (result.success) {
         const newApproved = [...approvedRegistrations, registrationId];
         setApprovedRegistrations(newApproved);
-        localStorage.setItem('approvedRegistrations', JSON.stringify(newApproved));
+        localStorage.setItem(
+          "approvedRegistrations",
+          JSON.stringify(newApproved)
+        );
 
-        const newRejected = rejectedRegistrations.filter(id => id !== registrationId);
+        const newRejected = rejectedRegistrations.filter(
+          (id) => id !== registrationId
+        );
         setRejectedRegistrations(newRejected);
-        localStorage.setItem('rejectedRegistrations', JSON.stringify(newRejected));
+        localStorage.setItem(
+          "rejectedRegistrations",
+          JSON.stringify(newRejected)
+        );
 
         await loadPendingRegistrations();
         await refreshDashboardData(false, false);
         toastMessages.user.approved(registrationName);
       } else {
-        toastMessages.generic.error('Approval Failed', result.message || 'Failed to approve registration. Please try again.');
+        toastMessages.generic.error(
+          "Approval Failed",
+          result.message || "Failed to approve registration. Please try again."
+        );
       }
     } catch (error) {
-      console.error('Error approving registration:', error);
-      toastMessages.generic.error('Approval Error', 'An error occurred while approving the registration. Please try again.');
+      console.error("Error approving registration:", error);
+      toastMessages.generic.error(
+        "Approval Error",
+        "An error occurred while approving the registration. Please try again."
+      );
     }
   };
 
-  const handleRejectRegistration = async (registrationId: number, registrationName: string) => {
+  const handleRejectRegistration = async (
+    registrationId: number,
+    registrationName: string
+  ) => {
     try {
       const result = await clientDataService.rejectRegistration(registrationId);
 
       if (result.success) {
         const newRejected = [...rejectedRegistrations, registrationId];
         setRejectedRegistrations(newRejected);
-        localStorage.setItem('rejectedRegistrations', JSON.stringify(newRejected));
+        localStorage.setItem(
+          "rejectedRegistrations",
+          JSON.stringify(newRejected)
+        );
 
-        const newApproved = approvedRegistrations.filter(id => id !== registrationId);
+        const newApproved = approvedRegistrations.filter(
+          (id) => id !== registrationId
+        );
         setApprovedRegistrations(newApproved);
-        localStorage.setItem('approvedRegistrations', JSON.stringify(newApproved));
+        localStorage.setItem(
+          "approvedRegistrations",
+          JSON.stringify(newApproved)
+        );
 
         await loadPendingRegistrations();
         toastMessages.user.rejected(registrationName);
       } else {
-        toastMessages.generic.error('Rejection Failed', result.message || 'Failed to reject registration. Please try again.');
+        toastMessages.generic.error(
+          "Rejection Failed",
+          result.message || "Failed to reject registration. Please try again."
+        );
       }
     } catch (error) {
-      console.error('Error rejecting registration:', error);
-      toastMessages.generic.error('Rejection Error', 'An error occurred while rejecting the registration. Please try again.');
+      console.error("Error rejecting registration:", error);
+      toastMessages.generic.error(
+        "Rejection Error",
+        "An error occurred while rejecting the registration. Please try again."
+      );
     }
   };
 
@@ -357,34 +485,71 @@ export function UserManagementTab({
         role: newUser.role,
         password: newUser.password,
         isActive: newUser.isActive !== undefined ? newUser.isActive : true,
-        employeeId: Date.now() // Temporary ID
+        employeeId: Date.now(), // Temporary ID
       };
 
-      const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
       accounts.push(newAccount);
-      localStorage.setItem('accounts', JSON.stringify(accounts));
+      localStorage.setItem("accounts", JSON.stringify(accounts));
 
       await refreshUserData();
       await refreshDashboardData(false, false);
-      
+
       toastMessages.user.created(newUser.name);
       setIsAddUserModalOpen(false);
     } catch (error) {
-      console.error('Error adding user:', error);
-      toastMessages.generic.error('Add Failed', 'Failed to add user. Please try again.');
+      console.error("Error adding user:", error);
+      toastMessages.generic.error(
+        "Add Failed",
+        "Failed to add user. Please try again."
+      );
       throw error;
     }
   };
 
-
   // Handle tab change with refresh
-  const handleTabChange = async (tab: 'active' | 'new') => {
+  const handleTabChange = async (tab: "active" | "new") => {
     setUserManagementTab(tab);
-    
+    // Reset to first page when switching tabs
+    setActiveUsersPage(1);
+    setNewRegistrationsPage(1);
+
     // Refresh data when switching tabs
-    console.log(`🔄 ${tab === 'new' ? 'New Registrations' : 'Active Users'} tab clicked, refreshing user data...`);
+    console.log(
+      `🔄 ${
+        tab === "new" ? "New Registrations" : "Active Users"
+      } tab clicked, refreshing user data...`
+    );
     await refreshUserData(true);
   };
+
+  // Pagination calculations for active users
+  const activeUsersTotal = getFilteredActiveEmployees().length;
+  const activeUsersTotalPages = Math.ceil(activeUsersTotal / itemsPerPage);
+  const activeUsersStartIndex = (activeUsersPage - 1) * itemsPerPage;
+  const activeUsersEndIndex = activeUsersStartIndex + itemsPerPage;
+  const activeUsersPaginated = getFilteredActiveEmployees().slice(
+    activeUsersStartIndex,
+    activeUsersEndIndex
+  );
+
+  // Pagination calculations for new registrations
+  const newRegistrationsTotal = getFilteredNewAccounts().length;
+  const newRegistrationsTotalPages = Math.ceil(
+    newRegistrationsTotal / itemsPerPage
+  );
+  const newRegistrationsStartIndex = (newRegistrationsPage - 1) * itemsPerPage;
+  const newRegistrationsEndIndex = newRegistrationsStartIndex + itemsPerPage;
+  const newRegistrationsPaginated = getFilteredNewAccounts().slice(
+    newRegistrationsStartIndex,
+    newRegistrationsEndIndex
+  );
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setActiveUsersPage(1);
+    setNewRegistrationsPage(1);
+  }, [userSearchTerm]);
 
   // Show loading skeleton on initial load
   if (loading) {
@@ -400,7 +565,7 @@ export function UserManagementTab({
               <Skeleton className="h-10 w-32" />
               <Skeleton className="h-10 w-40" />
             </div>
-            
+
             <div className="flex justify-between items-center mb-4">
               <div className="flex space-x-4">
                 <Skeleton className="h-10 w-64" />
@@ -411,10 +576,13 @@ export function UserManagementTab({
                 <Skeleton className="h-10 w-28" />
               </div>
             </div>
-            
+
             <div className="space-y-4">
               {Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="flex items-center space-x-4 border-b pb-4">
+                <div
+                  key={index}
+                  className="flex items-center space-x-4 border-b pb-4"
+                >
                   <Skeleton className="h-10 w-32" />
                   <Skeleton className="h-10 w-48" />
                   <Skeleton className="h-10 w-36" />
@@ -449,37 +617,45 @@ export function UserManagementTab({
                 <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
                 {/* Logo in center */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                  <img
+                    src="/smct.png"
+                    alt="SMCT Logo"
+                    className="h-10 w-10 object-contain"
+                  />
                 </div>
               </div>
               <p className="text-sm text-gray-600 font-medium">
-                {userManagementTab === 'new' ? 'Loading new registrations...' : 'Loading users...'}
+                {userManagementTab === "new"
+                  ? "Loading new registrations..."
+                  : "Loading users..."}
               </p>
             </div>
           </div>
         </>
       )}
-      
+
       {(!usersRefreshing || !loading) && (
         <Card>
           <CardHeader>
             <CardTitle>User Management</CardTitle>
-            <CardDescription>Manage system users and permissions</CardDescription>
+            <CardDescription>
+              Manage system users and permissions
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {/* Tab Navigation */}
             <div className="flex space-x-1 mb-6">
               <Button
-                variant={userManagementTab === 'active' ? 'default' : 'outline'}
-                onClick={() => handleTabChange('active')}
+                variant={userManagementTab === "active" ? "default" : "outline"}
+                onClick={() => handleTabChange("active")}
                 className="flex items-center gap-2"
               >
                 <span>👥</span>
                 Active Users ({getFilteredActiveEmployees().length})
               </Button>
               <Button
-                variant={userManagementTab === 'new' ? 'default' : 'outline'}
-                onClick={() => handleTabChange('new')}
+                variant={userManagementTab === "new" ? "default" : "outline"}
+                onClick={() => handleTabChange("new")}
                 className="flex items-center gap-2"
               >
                 <span>🆕</span>
@@ -488,7 +664,7 @@ export function UserManagementTab({
             </div>
 
             {/* Active Users Tab */}
-            {userManagementTab === 'active' && (
+            {userManagementTab === "active" && (
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex space-x-4">
@@ -520,16 +696,41 @@ export function UserManagementTab({
                     >
                       {isRefreshing || usersRefreshing ? (
                         <>
-                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <svg
+                            className="animate-spin h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
                           Refreshing...
                         </>
                       ) : (
                         <>
-                          <svg className="h-5 w-5 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          <svg
+                            className="h-5 w-5 font-bold"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
                           </svg>
                           Refresh
                         </>
@@ -554,10 +755,16 @@ export function UserManagementTab({
                           <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
                           {/* Logo in center */}
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <img src="/smct.png" alt="SMCT Logo" className="h-8 w-8 object-contain" />
+                            <img
+                              src="/smct.png"
+                              alt="SMCT Logo"
+                              className="h-8 w-8 object-contain"
+                            />
                           </div>
                         </div>
-                        <p className="text-xs text-gray-600 font-medium">Refreshing...</p>
+                        <p className="text-xs text-gray-600 font-medium">
+                          Refreshing...
+                        </p>
                       </div>
                     </div>
                   )}
@@ -574,30 +781,37 @@ export function UserManagementTab({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {getFilteredActiveEmployees().length === 0 ? (
+                      {activeUsersPaginated.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                          <TableCell
+                            colSpan={7}
+                            className="text-center py-8 text-gray-500"
+                          >
                             No active users found
                           </TableCell>
                         </TableRow>
                       ) : (
-                        getFilteredActiveEmployees().slice(0, 10).map((employee) => (
+                        activeUsersPaginated.map((employee) => (
                           <TableRow key={employee.id}>
-                            <TableCell className="font-medium">{employee.name}</TableCell>
+                            <TableCell className="font-medium">
+                              {employee.name}
+                            </TableCell>
                             <TableCell>{employee.email}</TableCell>
                             <TableCell>{employee.position}</TableCell>
                             <TableCell>
-                              {employee.branch 
-                                ? (employee.branch.includes(',') 
-                                    ? employee.branch.split(',')[0].trim() 
-                                    : employee.branch)
-                                : 'N/A'}
+                              {employee.branch
+                                ? employee.branch.includes(",")
+                                  ? employee.branch.split(",")[0].trim()
+                                  : employee.branch
+                                : "N/A"}
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline">{employee.role}</Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge className="text-green-600 bg-green-100">Active</Badge>
+                              <Badge className="text-green-600 bg-green-100">
+                                Active
+                              </Badge>
                             </TableCell>
                             <TableCell>
                               <div className="flex space-x-2">
@@ -625,6 +839,82 @@ export function UserManagementTab({
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* Pagination Controls for Active Users */}
+                {activeUsersTotal > itemsPerPage && (
+                  <div className="flex items-center justify-between mt-4 px-2">
+                    <div className="text-sm text-gray-600">
+                      Showing {activeUsersStartIndex + 1} to{" "}
+                      {Math.min(activeUsersEndIndex, activeUsersTotal)} of{" "}
+                      {activeUsersTotal} users
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setActiveUsersPage((prev) => Math.max(1, prev - 1))
+                        }
+                        disabled={activeUsersPage === 1}
+                        className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      >
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from(
+                          { length: activeUsersTotalPages },
+                          (_, i) => i + 1
+                        ).map((page) => {
+                          if (
+                            page === 1 ||
+                            page === activeUsersTotalPages ||
+                            (page >= activeUsersPage - 1 &&
+                              page <= activeUsersPage + 1)
+                          ) {
+                            return (
+                              <Button
+                                key={page}
+                                variant={
+                                  activeUsersPage === page
+                                    ? "default"
+                                    : "outline"
+                                }
+                                size="sm"
+                                onClick={() => setActiveUsersPage(page)}
+                                className="text-xs w-8 h-8 p-0 bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                              >
+                                {page}
+                              </Button>
+                            );
+                          } else if (
+                            page === activeUsersPage - 2 ||
+                            page === activeUsersPage + 2
+                          ) {
+                            return (
+                              <span key={page} className="text-gray-400">
+                                ...
+                              </span>
+                            );
+                          }
+                          return null;
+                        })}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setActiveUsersPage((prev) =>
+                            Math.min(activeUsersTotalPages, prev + 1)
+                          )
+                        }
+                        disabled={activeUsersPage === activeUsersTotalPages}
+                        className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -632,12 +922,14 @@ export function UserManagementTab({
       )}
 
       {/* New Registrations Tab Content */}
-      {userManagementTab === 'new' && (
+      {userManagementTab === "new" && (
         <div className="relative mt-4">
           <Card className="mt-4">
             <CardHeader>
               <CardTitle>New Registrations</CardTitle>
-              <CardDescription>Review and approve new user registrations</CardDescription>
+              <CardDescription>
+                Review and approve new user registrations
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -655,7 +947,9 @@ export function UserManagementTab({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="pending_verification">Pending Verification</SelectItem>
+                        <SelectItem value="pending_verification">
+                          Pending Verification
+                        </SelectItem>
                         <SelectItem value="approved">Approved</SelectItem>
                         <SelectItem value="rejected">Rejected</SelectItem>
                       </SelectContent>
@@ -670,16 +964,41 @@ export function UserManagementTab({
                     >
                       {isRefreshing || usersRefreshing ? (
                         <>
-                          <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <svg
+                            className="animate-spin h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
                           Refreshing...
                         </>
                       ) : (
                         <>
-                          <svg className="h-5 w-5 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          <svg
+                            className="h-5 w-5 font-bold"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
                           </svg>
                           Refresh
                         </>
@@ -697,10 +1016,16 @@ export function UserManagementTab({
                           <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
                           {/* Logo in center */}
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <img src="/smct.png" alt="SMCT Logo" className="h-8 w-8 object-contain" />
+                            <img
+                              src="/smct.png"
+                              alt="SMCT Logo"
+                              className="h-8 w-8 object-contain"
+                            />
                           </div>
                         </div>
-                        <p className="text-xs text-gray-600 font-medium">Refreshing...</p>
+                        <p className="text-xs text-gray-600 font-medium">
+                          Refreshing...
+                        </p>
                       </div>
                     </div>
                   )}
@@ -710,46 +1035,70 @@ export function UserManagementTab({
                         <TableHead className="px-6 py-3">Name</TableHead>
                         <TableHead className="px-6 py-3">Email</TableHead>
                         <TableHead className="px-6 py-3">Position</TableHead>
-                        <TableHead className="px-6 py-3">Registration Date</TableHead>
+                        <TableHead className="px-6 py-3">
+                          Registration Date
+                        </TableHead>
                         <TableHead className="px-6 py-3">Status</TableHead>
                         <TableHead className="px-6 py-3">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-gray-200">
-                      {getFilteredNewAccounts().length === 0 ? (
+                      {newRegistrationsPaginated.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                            {userSearchTerm ? 'No new registrations match your search.' : 'No new registrations found.'}
+                          <TableCell
+                            colSpan={6}
+                            className="text-center py-8 text-gray-500"
+                          >
+                            {userSearchTerm
+                              ? "No new registrations match your search."
+                              : "No new registrations found."}
                           </TableCell>
                         </TableRow>
                       ) : (
-                        getFilteredNewAccounts().map((account) => (
-                          <TableRow key={account.id} className="hover:bg-gray-50">
-                            <TableCell className="px-6 py-3 font-medium">{account.name}</TableCell>
-                            <TableCell className="px-6 py-3">{account.email}</TableCell>
-                            <TableCell className="px-6 py-3">{account.position}</TableCell>
-                            <TableCell className="px-6 py-3">{account.registrationDate.toLocaleDateString()}</TableCell>
+                        newRegistrationsPaginated.map((account) => (
+                          <TableRow
+                            key={account.id}
+                            className="hover:bg-gray-50"
+                          >
+                            <TableCell className="px-6 py-3 font-medium">
+                              {account.name}
+                            </TableCell>
                             <TableCell className="px-6 py-3">
-                              <Badge className={
-                                account.status === 'rejected'
-                                  ? 'bg-red-100 text-red-800 hover:bg-red-200'
-                                  : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                              }>
-                                {account.status === 'rejected'
-                                  ? 'REJECTED'
-                                  : 'PENDING VERIFICATION'
+                              {account.email}
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              {account.position}
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              {account.registrationDate.toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Badge
+                                className={
+                                  account.status === "rejected"
+                                    ? "bg-red-100 text-red-800 hover:bg-red-200"
+                                    : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
                                 }
+                              >
+                                {account.status === "rejected"
+                                  ? "REJECTED"
+                                  : "PENDING VERIFICATION"}
                               </Badge>
                             </TableCell>
                             <TableCell className="px-6 py-3">
                               <div className="flex space-x-2">
-                                {account.status === 'pending_verification' && (
+                                {account.status === "pending_verification" && (
                                   <>
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       className="text-white bg-green-500 hover:text-white hover:bg-green-600"
-                                      onClick={() => handleApproveRegistration(account.id, account.name)}
+                                      onClick={() =>
+                                        handleApproveRegistration(
+                                          account.id,
+                                          account.name
+                                        )
+                                      }
                                     >
                                       Approve
                                     </Button>
@@ -757,23 +1106,35 @@ export function UserManagementTab({
                                       variant="ghost"
                                       size="sm"
                                       className="text-white bg-red-500 hover:bg-red-600 hover:text-white"
-                                      onClick={() => handleRejectRegistration(account.id, account.name)}
+                                      onClick={() =>
+                                        handleRejectRegistration(
+                                          account.id,
+                                          account.name
+                                        )
+                                      }
                                     >
                                       Reject
                                     </Button>
                                   </>
                                 )}
-                                {account.status === 'rejected' && (
+                                {account.status === "rejected" && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     className="text-green-600 hover:text-green-700"
-                                    onClick={() => handleApproveRegistration(account.id, account.name)}
+                                    onClick={() =>
+                                      handleApproveRegistration(
+                                        account.id,
+                                        account.name
+                                      )
+                                    }
                                   >
                                     Approve
                                   </Button>
                                 )}
-                                <Button variant="ghost" size="sm">View Details</Button>
+                                <Button variant="ghost" size="sm">
+                                  View Details
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -782,6 +1143,89 @@ export function UserManagementTab({
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* Pagination Controls for New Registrations */}
+                {newRegistrationsTotal > itemsPerPage && (
+                  <div className="flex items-center justify-between mt-4 px-2">
+                    <div className="text-sm text-gray-600">
+                      Showing {newRegistrationsStartIndex + 1} to{" "}
+                      {Math.min(
+                        newRegistrationsEndIndex,
+                        newRegistrationsTotal
+                      )}{" "}
+                      of {newRegistrationsTotal} registrations
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setNewRegistrationsPage((prev) =>
+                            Math.max(1, prev - 1)
+                          )
+                        }
+                        disabled={newRegistrationsPage === 1}
+                        className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      >
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from(
+                          { length: newRegistrationsTotalPages },
+                          (_, i) => i + 1
+                        ).map((page) => {
+                          if (
+                            page === 1 ||
+                            page === newRegistrationsTotalPages ||
+                            (page >= newRegistrationsPage - 1 &&
+                              page <= newRegistrationsPage + 1)
+                          ) {
+                            return (
+                              <Button
+                                key={page}
+                                variant={
+                                  newRegistrationsPage === page
+                                    ? "default"
+                                    : "outline"
+                                }
+                                size="sm"
+                                onClick={() => setNewRegistrationsPage(page)}
+                                className="text-xs w-8 h-8 p-0 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                              >
+                                {page}
+                              </Button>
+                            );
+                          } else if (
+                            page === newRegistrationsPage - 2 ||
+                            page === newRegistrationsPage + 2
+                          ) {
+                            return (
+                              <span key={page} className="text-gray-400">
+                                ...
+                              </span>
+                            );
+                          }
+                          return null;
+                        })}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setNewRegistrationsPage((prev) =>
+                            Math.min(newRegistrationsTotalPages, prev + 1)
+                          )
+                        }
+                        disabled={
+                          newRegistrationsPage === newRegistrationsTotalPages
+                        }
+                        className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -799,22 +1243,25 @@ export function UserManagementTab({
         positions={positionsData}
       />
 
-
       {/* Delete Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onOpenChangeAction={(open) => {
-        setIsDeleteModalOpen(open);
-        if (!open) {
-          setEmployeeToDelete(null);
-        }
-      }}>
+      <Dialog
+        open={isDeleteModalOpen}
+        onOpenChangeAction={(open) => {
+          setIsDeleteModalOpen(open);
+          if (!open) {
+            setEmployeeToDelete(null);
+          }
+        }}
+      >
         <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
           <DialogHeader className="pb-4 bg-red-50 rounded-lg ">
-            <DialogTitle className='text-red-800 flex items-center gap-2'>
+            <DialogTitle className="text-red-800 flex items-center gap-2">
               <span className="text-xl">⚠️</span>
               Delete Employee
             </DialogTitle>
-            <DialogDescription className='text-red-700'>
-              This action cannot be undone. Are you sure you want to permanently delete {employeeToDelete?.name}?
+            <DialogDescription className="text-red-700">
+              This action cannot be undone. Are you sure you want to permanently
+              delete {employeeToDelete?.name}?
             </DialogDescription>
           </DialogHeader>
 
@@ -822,12 +1269,22 @@ export function UserManagementTab({
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  <svg
+                    className="h-5 w-5 text-red-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 </div>
                 <div className="text-sm text-red-700">
-                  <p className="font-medium">Warning: This will permanently delete:</p>
+                  <p className="font-medium">
+                    Warning: This will permanently delete:
+                  </p>
                   <ul className="mt-2 list-disc list-inside space-y-1">
                     <li>Employee profile and data</li>
                     <li>All evaluation records</li>
@@ -842,10 +1299,22 @@ export function UserManagementTab({
               <div className="text-sm text-gray-700">
                 <p className="font-medium">Employee Details:</p>
                 <div className="mt-2 space-y-1">
-                  <p><span className="font-medium">Name:</span> {employeeToDelete?.name}</p>
-                  <p><span className="font-medium">Email:</span> {employeeToDelete?.email}</p>
-                  <p><span className="font-medium">Position:</span> {employeeToDelete?.position}</p>
-                  <p><span className="font-medium">Department:</span> {employeeToDelete?.department}</p>
+                  <p>
+                    <span className="font-medium">Name:</span>{" "}
+                    {employeeToDelete?.name}
+                  </p>
+                  <p>
+                    <span className="font-medium">Email:</span>{" "}
+                    {employeeToDelete?.email}
+                  </p>
+                  <p>
+                    <span className="font-medium">Position:</span>{" "}
+                    {employeeToDelete?.position}
+                  </p>
+                  <p>
+                    <span className="font-medium">Department:</span>{" "}
+                    {employeeToDelete?.department}
+                  </p>
                 </div>
               </div>
             </div>
@@ -864,7 +1333,7 @@ export function UserManagementTab({
                 Cancel
               </Button>
               <Button
-                className='bg-red-600 hover:bg-red-700 text-white'
+                className="bg-red-600 hover:bg-red-700 text-white"
                 onClick={handleDeleteEmployee}
               >
                 ❌ Delete Permanently
@@ -881,7 +1350,7 @@ export function UserManagementTab({
           setIsAddUserModalOpen(false);
         }}
         onSave={handleAddUser}
-        departments={departmentsData.map(dept => dept.name)}
+        departments={departmentsData.map((dept) => dept.name)}
         branches={branchesData}
         positions={positionsData}
         onRefresh={async () => {

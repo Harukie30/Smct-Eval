@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Printer, X } from 'lucide-react';
 import { approveEvaluation } from '@/lib/approvalService';
 import { useEmployeeSignatureByEvaluation } from '@/hooks/useEmployeeSignature';
+import { useUser } from '@/contexts/UserContext';
 
 type Submission = {
   id: number;
@@ -111,15 +113,1069 @@ const getQuarterColor = (quarter: string) => {
   return 'bg-gray-100 text-gray-800';
 };
 
-export default function ViewResultsModal({ isOpen, onCloseAction, submission, onApprove, isApproved = false, approvalData = null, currentUserName, currentUserSignature, showApprovalButton = false, isEvaluatorView = false }: ViewResultsModalProps) {
+export default function ViewResultsModal({ isOpen, onCloseAction, submission, onApprove, 
+  isApproved = false, approvalData = null, currentUserName, currentUserSignature, 
+  showApprovalButton = false, isEvaluatorView = false }: ViewResultsModalProps) {
+  const { profile } = useUser();
   const [isApproving, setIsApproving] = useState(false);
   const [approvalError, setApprovalError] = useState('');
+  const [currentApprovalData, setCurrentApprovalData] = useState<ApprovalData | null>(approvalData);
+  const printContentRef = useRef<HTMLDivElement>(null);
+  const lastApprovalDataRef = useRef<string>('');
 
   // Fetch employee signature for this evaluation
   const { signature: employeeSignature, loading: signatureLoading, error: signatureError } = useEmployeeSignatureByEvaluation(submission?.id || null);
 
-  if (!submission) return null;
+  // Update currentApprovalData when approvalData prop changes
+  useEffect(() => {
+    setCurrentApprovalData(approvalData);
+    if (approvalData) {
+      lastApprovalDataRef.current = JSON.stringify(approvalData);
+    }
+  }, [approvalData]);
 
+  // Compute isApproved status based on current approval data
+  const computedIsApproved = isApproved || !!currentApprovalData?.employeeSignature || !!submission?.employeeSignature;
+
+  // Automatic refresh when approval changes are detected in localStorage
+  useEffect(() => {
+    if (!isOpen || !submission?.id || !profile?.email) return;
+
+    const checkForApprovalChanges = () => {
+      try {
+        const approvalDataKey = `approvalData_${profile.email}`;
+        const storedApprovals = JSON.parse(
+          localStorage.getItem(approvalDataKey) || '{}'
+        );
+        const submissionId = submission.id.toString();
+        const storedApproval = storedApprovals[submissionId];
+
+        if (storedApproval) {
+          const storedApprovalStr = JSON.stringify(storedApproval);
+          
+          // Check if approval data has changed
+          if (storedApprovalStr !== lastApprovalDataRef.current) {
+            lastApprovalDataRef.current = storedApprovalStr;
+            
+            // Update the approval data state
+            setCurrentApprovalData({
+              id: storedApproval.id || submissionId,
+              approvedAt: storedApproval.approvedAt,
+              employeeSignature: storedApproval.employeeSignature,
+              employeeName: storedApproval.employeeName,
+              employeeEmail: storedApproval.employeeEmail || profile.email
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error checking for approval changes:', error);
+      }
+    };
+
+    // Check immediately
+    checkForApprovalChanges();
+
+    // Set up polling to check every 2 seconds
+    const intervalId = setInterval(checkForApprovalChanges, 2000);
+
+    // Listen for storage events (for cross-tab synchronization)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === `approvalData_${profile.email}` || e.key === `approvedEvaluations_${profile.email}`) {
+        checkForApprovalChanges();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [isOpen, submission?.id, profile?.email]);
+
+  // Handle print functionality - prints the entire modal content
+  const handlePrint = () => {
+    if (!printContentRef.current) {
+      console.warn('Print content not available');
+      return;
+    }
+
+    // Clone the content without no-print elements
+    const clonedContent = printContentRef.current.cloneNode(true) as HTMLElement;
+    const noPrintElements = clonedContent.querySelectorAll('.no-print');
+    noPrintElements.forEach(el => el.remove());
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      // Get all styles from the current document
+      const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+        .map(el => {
+          if (el.tagName === 'STYLE') {
+            return `<style>${el.innerHTML}</style>`;
+          } else if (el.tagName === 'LINK') {
+            return `<link rel="stylesheet" href="${(el as HTMLLinkElement).href}">`;
+          }
+          return '';
+        })
+        .join('\n');
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${submission ? `Evaluation Details - ${submission.employeeName}` : 'Evaluation Details'}</title>
+            ${styles}
+            <style>
+              @page { 
+                size: 8.5in 13in; 
+                margin: 1.5cm; 
+              }
+              @media print {
+                * {
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+                body { 
+                  font-family: Calibri, sans-serif; 
+                  font-size: 9px; 
+                  line-height: 1.4;
+                  color: #000;
+                  padding: 0;
+                  margin: 40px;
+                }
+                * {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 9px !important;
+                }
+                .no-print { display: none !important; }
+                /* Form container - no border, no padding */
+                .space-y-8 {
+                  border: none !important;
+                  padding: 0 !important;
+                  background: white !important;
+                }
+                /* Remove all shadow and border classes in print */
+                .shadow-md,
+                .shadow-sm {
+                  box-shadow: none !important;
+                  border: none !important;
+                  background: transparent !important;
+                }
+                /* Remove all container backgrounds and borders except form container */
+                div:not(.space-y-8) {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                }
+                /* Only allow borders on tables, input lines, and form container */
+                div:not(.space-y-8):not([class*="print-signature"]):not([class*="print-date"]):not([class*="print-priority"]):not([class*="print-remarks"]) {
+                  border: none !important;
+                }
+                /* Title styling */
+                h1, h2, h3 {
+                  text-align: center !important;
+                  margin: 5px 0 !important;
+                }
+                h1 {
+                  font-size: 16px !important;
+                  font-weight: bold !important;
+                }
+                h3 {
+                  font-size: 14px !important;
+                  font-weight: bold !important;
+                  margin-top: 10px !important;
+                }
+                /* Completely remove all card styling in print - no borders, no backgrounds, no containers */
+                [class*="Card"],
+                [class*="Card"] * {
+                  border: none !important;
+                  box-shadow: none !important;
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  border-radius: 0 !important;
+                }
+                [class*="CardContent"] {
+                  padding: 0 !important;
+                  border: none !important;
+                  background: transparent !important;
+                  background-color: transparent !important;
+                }
+                [class*="CardHeader"] {
+                  display: none !important;
+                  border: none !important;
+                  background: transparent !important;
+                }
+                /* Remove any gray backgrounds */
+                .bg-gray-50,
+                .bg-gray-100,
+                .bg-gray-200,
+                .bg-yellow-50 {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                }
+                /* Remove all borders from cards */
+                .border,
+                .border-b,
+                .border-2,
+                .border-gray-200,
+                .border-gray-300 {
+                  border: none !important;
+                }
+                /* Review Type - checkbox group style */
+                .print-review-type {
+                  display: flex !important;
+                  flex-direction: column !important;
+                  gap: 1px !important;
+                  margin-top: 2px !important;
+                  margin-bottom: 2px !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                }
+                /* Increase padding for card containing review type */
+                [class*="CardContent"]:has(.print-review-type) {
+                  padding: 15px !important;
+                }
+                .print-review-type > div {
+                  display: flex !important;
+                  align-items: flex-start !important;
+                  gap: 8px !important;
+                  text-align: left !important;
+                  padding: 2px 0 !important;
+                  margin: 0 !important;
+                  line-height: 1.2 !important;
+                }
+                .print-review-type h5 {
+                  font-weight: normal !important;
+                  margin-bottom: 0 !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  min-width: 120px !important;
+                  flex-shrink: 0 !important;
+                  line-height: 1.4 !important;
+                  padding: 0 !important;
+                }
+                .print-review-type .space-y-2,
+                .print-review-type .space-y-3,
+                .print-review-type .space-y-6 {
+                  margin: 0 !important;
+                }
+                .print-review-type .space-y-2 > *,
+                .print-review-type .space-y-3 > *,
+                .print-review-type .space-y-6 > * {
+                  margin: 0px 0 !important;
+                }
+                /* Horizontal rows for radio buttons */
+                .print-review-type .flex-row {
+                  display: flex !important;
+                  flex-direction: row !important;
+                  gap: 15px !important;
+                  flex-wrap: wrap !important;
+                }
+                .print-review-type .flex-col {
+                  display: flex !important;
+                  flex-direction: column !important;
+                  gap: 5px !important;
+                }
+                .print-review-type .flex {
+                  display: flex !important;
+                  align-items: center !important;
+                  gap: 8px !important;
+                }
+                .print-review-type span {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  line-height: 1.2 !important;
+                }
+                /* Make checkboxes more visible in print */
+                .print-review-type .w-4 {
+                  width: 12px !important;
+                  height: 12px !important;
+                  border: 1px solid #000 !important;
+                  min-width: 12px !important;
+                  min-height: 12px !important;
+                }
+                .print-review-type .w-2 {
+                  width: 5px !important;
+                  height: 5px !important;
+                }
+                .print-review-type .bg-green-500 {
+                  background-color: #22c55e !important;
+                  border: 1px solid #000 !important;
+                }
+                .print-review-type .bg-gray-300 {
+                  background-color: #d1d5db !important;
+                  border: 1px solid #000 !important;
+                }
+                .print-review-type .w-2 {
+                  width: 6px !important;
+                  height: 6px !important;
+                  background-color: #fff !important;
+                }
+                .print-review-type span {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  color: #000 !important;
+                }
+                /* Grid layout for For Regular section (2x2) */
+                .print-review-type .grid {
+                  display: grid !important;
+                }
+                .print-review-type .grid-cols-2 {
+                  grid-template-columns: 1fr 1fr !important;
+                }
+                .print-review-type .flex {
+                  display: flex !important;
+                  align-items: center !important;
+                  gap: 8px !important;
+                }
+                .print-review-type .flex-row {
+                  display: flex !important;
+                  flex-direction: row !important;
+                  gap: 16px !important;
+                }
+                /* Basic Information - two column layout with horizontal alignment */
+                .print-basic-info {
+                  display: grid !important;
+                  grid-template-columns: 1fr 1fr !important;
+                  gap: 0 !important;
+                  margin-top: 5px !important;
+                  column-gap: 30px !important;
+                  row-gap: 2px !important;
+                }
+                .print-basic-info > div {
+                  display: flex !important;
+                  justify-content: flex-start !important;
+                  align-items: baseline !important;
+                  gap: 4px !important;
+                  margin: 0 !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  text-align: left !important;
+                  padding: 0 !important;
+                  line-height: 1.2 !important;
+                }
+                /* Row 1: Employee Name (left) | Date Hired (right) */
+                .print-basic-info > div:nth-child(1) {
+                  grid-column: 1 !important;
+                  grid-row: 1 !important;
+                }
+                .print-basic-info > div:nth-child(5) {
+                  grid-column: 2 !important;
+                  grid-row: 1 !important;
+                }
+                /* Row 2: Employee Number (left) | Immediate Supervisor (right) */
+                .print-basic-info > div:nth-child(2) {
+                  grid-column: 1 !important;
+                  grid-row: 2 !important;
+                }
+                .print-basic-info > div:nth-child(6) {
+                  grid-column: 2 !important;
+                  grid-row: 2 !important;
+                }
+                /* Row 3: Position (left) | Performance Coverage (right) */
+                .print-basic-info > div:nth-child(3) {
+                  grid-column: 1 !important;
+                  grid-row: 3 !important;
+                }
+                .print-basic-info > div:nth-child(7) {
+                  grid-column: 2 !important;
+                  grid-row: 3 !important;
+                }
+                /* Row 4: Department/Branch (left only) */
+                .print-basic-info > div:nth-child(4) {
+                  grid-column: 1 !important;
+                  grid-row: 4 !important;
+                }
+                .print-basic-info > div > label {
+                  font-weight: normal !important;
+                  width: auto !important;
+                  flex-shrink: 0 !important;
+                  margin-right: 0 !important;
+                  color: #000 !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                }
+                .print-basic-info > div > p {
+                  border-bottom: 1px solid #000 !important;
+                  flex: 1 !important;
+                  min-width: 0 !important;
+                  height: auto !important;
+                  line-height: 1 !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  padding-bottom: 1px !important;
+                  text-align: left !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  font-weight: bold !important;
+                }
+                /* Remove block display from label in print */
+                .print-basic-info .print-label {
+                  display: inline !important;
+                  margin-bottom: 0 !important;
+                  color: #000 !important;
+                }
+                .print-basic-info .print-value {
+                  display: inline !important;
+                }
+                /* Hide screen date, show print date in print */
+                .screen-date {
+                  display: none !important;
+                }
+                .print-date {
+                  display: inline !important;
+                }
+                /* Make Performance Coverage date bigger */
+                .print-basic-info .print-date {
+                  font-size: 14px !important;
+                  font-weight: bold !important;
+                  font-family: Calibri, sans-serif !important;
+                }
+                /* Table styling */
+                table {
+                  width: 100% !important;
+                  border-collapse: collapse !important;
+                  margin-top: 10px !important;
+                }
+                table, td, th {
+                  border: 1px solid #000 !important;
+                  padding: 5px !important;
+                  font-size: 13px !important;
+                }
+                th {
+                  background-color: #d9d9d9 !important;
+                  font-weight: bold !important;
+                }
+                tr { page-break-inside: avoid; }
+                thead { display: table-header-group; }
+                img { max-width: 100%; height: auto; page-break-inside: avoid; }
+                /* Section titles */
+                h4 {
+                  font-weight: bold !important;
+                  margin-top: 8px !important;
+                  border-bottom: 2px solid #000 !important;
+                  padding-bottom: 2px !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  text-transform: uppercase !important;
+                  margin-bottom: 3px !important;
+                }
+                /* Priority Areas - remove underline from header */
+                .print-priority-header {
+                  border-bottom: none !important;
+                  padding-bottom: 0 !important;
+                  margin-bottom: 4px !important;
+                }
+                /* Reduce spacing between Performance Score and Priority Areas */
+                [class*="Card"]:has(.print-priority-header) {
+                  margin-top: 2px !important;
+                  margin-bottom: 2px !important;
+                }
+                [class*="CardContent"]:has(.print-priority-header) {
+                  padding-top: 8px !important;
+                  padding-bottom: 8px !important;
+                }
+                /* Reduce spacing between Priority Areas and Remarks */
+                [class*="Card"]:has(.print-remarks-header) {
+                  margin-top: 2px !important;
+                  margin-bottom: 2px !important;
+                }
+                [class*="CardContent"]:has(.print-remarks-header) {
+                  padding-top: 8px !important;
+                  padding-bottom: 8px !important;
+                }
+                /* Reduce spacing between Remarks and Acknowledgement */
+                [class*="Card"]:has(.print-acknowledgement-header) {
+                  margin-top: 2px !important;
+                }
+                [class*="CardContent"]:has(.print-acknowledgement-header) {
+                  padding-top: 8px !important;
+                }
+                /* Remarks - remove underline from header */
+                .print-remarks-header {
+                  border-bottom: none !important;
+                  padding-bottom: 0 !important;
+                  margin-bottom: 4px !important;
+                }
+                /* Acknowledgement - remove underline from header */
+                .print-acknowledgement-header {
+                  border-bottom: none !important;
+                  padding-bottom: 0 !important;
+                  margin-bottom: 4px !important;
+                }
+                /* Priority Areas - underline style like basic info */
+                .print-priority-item {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  border: none !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                }
+                .print-priority-row {
+                  display: flex !important;
+                  justify-content: flex-start !important;
+                  align-items: baseline !important;
+                  gap: 4px !important;
+                  margin: 0 !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  text-align: left !important;
+                  padding: 0 !important;
+                }
+                .print-priority-label {
+                  font-weight: bold !important;
+                  width: auto !important;
+                  flex-shrink: 0 !important;
+                  margin-right: 0 !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                }
+                .print-priority-value {
+                  border-bottom: 1px solid #000 !important;
+                  flex: 1 !important;
+                  min-width: 0 !important;
+                  height: auto !important;
+                  line-height: 1 !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  padding-bottom: 1px !important;
+                  text-align: left !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                }
+                /* Priority Areas description text */
+                .print-priority-description {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  color: #000 !important;
+                }
+                /* Remarks - large box style */
+                .print-remarks-box {
+                  width: 100% !important;
+                  height: 60px !important;
+                  border: 1px solid #000 !important;
+                  margin-top: 3px !important;
+                  padding: 2px !important;
+                  background: white !important;
+                  background-color: white !important;
+                }
+                .print-remarks-box p {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                }
+                /* Remarks description text */
+                [class*="CardContent"]:has(.print-remarks-box) p:not(.print-remarks-box p) {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                }
+                /* Remove gray backgrounds from remarks in print */
+                .print-remarks-box .bg-yellow-50 {
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  border: none !important;
+                  padding: 1px 2px !important;
+                  margin: 1px 0 !important;
+                }
+                /* Acknowledgement section */
+                .print-acknowledgement {
+                  display: flex !important;
+                  justify-content: space-between !important;
+                  margin-top: 5px !important;
+                  margin-bottom: 0 !important;
+                }
+                .print-acknowledgement > div {
+                  width: 45% !important;
+                  text-align: center !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                }
+                /* Signature boxes - print format - remove all containers */
+                .print-acknowledgement .h-20,
+                .print-acknowledgement [class*="border-dashed"],
+                .print-acknowledgement [class*="rounded"] {
+                  border: none !important;
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  height: auto !important;
+                  padding: 0 !important;
+                  border-radius: 0 !important;
+                }
+                /* Show name text in print */
+                .print-acknowledgement .h-20 > span:not(.print-signature-line) {
+                  display: block !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  font-weight: bold !important;
+                  margin-bottom: 5px !important;
+                  position: relative !important;
+                  z-index: 1 !important;
+                }
+                .print-signature-line {
+                  border-bottom: 1px solid #000 !important;
+                  width: 100% !important;
+                  height: 1px !important;
+                  margin-top: 5px !important;
+                  display: block !important;
+                  background: transparent !important;
+                  position: relative !important;
+                }
+                /* Show signature images in print */
+                .print-acknowledgement img {
+                  display: block !important;
+                  max-height: 40px !important;
+                  max-width: 100% !important;
+                  object-fit: contain !important;
+                  margin: 0 auto !important;
+                }
+                /* Remove all rounded corners and borders from signature containers */
+                .print-acknowledgement [class*="rounded-lg"],
+                .print-acknowledgement [class*="border-2"] {
+                  border: none !important;
+                  border-radius: 0 !important;
+                  background: transparent !important;
+                }
+                /* Date box */
+                .print-date-box {
+                  border-bottom: 1px solid #000 !important;
+                  width: 150px !important;
+                  height: 18px !important;
+                  display: inline-block !important;
+                  padding: 0 5px !important;
+                }
+                .print-date-section {
+                  margin-top: 8px !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                }
+                /* Acknowledgement description text */
+                .print-acknowledgement-description {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  color: #000 !important;
+                }
+                /* Acknowledgement text */
+                .print-acknowledgement p {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  margin-bottom: 3px !important;
+                  line-height: 1.2 !important;
+                }
+                /* Signature container styling in print */
+                .print-acknowledgement .h-20 {
+                  position: relative !important;
+                  min-height: 45px !important;
+                  display: flex !important;
+                  flex-direction: column !important;
+                  align-items: center !important;
+                  justify-content: flex-end !important;
+                  padding: 3px 0 0 0 !important;
+                  margin: 0 !important;
+                  margin-bottom: 0 !important;
+                }
+                /* Show name text in print - at the lower part */
+                .print-acknowledgement .h-20 > span:not(.print-signature-line) {
+                  display: block !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  font-weight: bold !important;
+                  margin-bottom: 1px !important;
+                  position: absolute !important;
+                  bottom: 2px !important;
+                  top: auto !important;
+                  left: 50% !important;
+                  transform: translateX(-50%) !important;
+                  order: 1 !important;
+                  z-index: 1 !important;
+                  line-height: 1 !important;
+                }
+                /* Show signature images in print - at the lower part, positioned to the right */
+                .print-acknowledgement .h-20 img,
+                .print-acknowledgement .h-20 img[class*="top-7"],
+                .print-acknowledgement .h-20 img[class*="top-"],
+                .print-acknowledgement .h-20 img[class*="transform"],
+                .print-acknowledgement .h-20 img[class*="translate"],
+                .print-acknowledgement .h-20 img[class*="left-1/2"] {
+                  display: block !important;
+                  max-height: 40px !important;
+                  max-width: 100% !important;
+                  object-fit: contain !important;
+                  position: absolute !important;
+                  bottom: -25px !important;
+                  top: auto !important;
+                  right: -50px !important;
+                  left: auto !important;
+                  transform: none !important;
+                  -webkit-transform: none !important;
+                  margin: 0 !important;
+                  order: 2 !important;
+                  z-index: 10 !important;
+                }
+                /* Force override any inline styles or Tailwind utilities */
+                @media print {
+                  .print-acknowledgement .h-20 img {
+                    bottom: -25px !important;
+                    top: auto !important;
+                    right: -50px !important;
+                    left: auto !important;
+                    transform: none !important;
+                  }
+                }
+                /* Signature line - at the bottom */
+                .print-signature-line {
+                  position: relative !important;
+                  width: 100% !important;
+                  border-bottom: 1px solid #000 !important;
+                  height: 1px !important;
+                  margin-top: 0 !important;
+                  margin-bottom: 0 !important;
+                  padding: 0 !important;
+                  order: 3 !important;
+                  flex-shrink: 0 !important;
+                }
+                /* Label and date under the underline - print only */
+                .print-acknowledgement > div > div:last-child,
+                .print-acknowledgement > div > div:nth-last-child(2) {
+                  margin-top: 0 !important;
+                }
+                .print-acknowledgement > div > div:last-child > div,
+                .print-acknowledgement > div > div:nth-last-child(2) > div {
+                  margin-top: 0 !important;
+                  margin-bottom: 0 !important;
+                }
+                .print-acknowledgement > div > div:last-child > div > div,
+                .print-acknowledgement > div > div:nth-last-child(2) > div > div {
+                  margin-top: 0 !important;
+                }
+                /* Reduce spacing for signature label and date in print */
+                .print-acknowledgement .text-xs.text-gray-500 {
+                  margin-top: 0 !important;
+                  margin-bottom: 0 !important;
+                  padding-top: 0 !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  line-height: 1 !important;
+                  color: #000 !important;
+                }
+                /* Remove all spacing between signature line and labels */
+                .print-acknowledgement .h-20 + div {
+                  margin-top: 0 !important;
+                  padding-top: 0 !important;
+                }
+                /* Override mt-1 class in print - remove all margin */
+                .print-acknowledgement .mt-1 {
+                  margin-top: 0 !important;
+                  padding-top: 0 !important;
+                }
+                /* Target label divs directly after signature container */
+                .print-acknowledgement .text-center > .h-20 + div.text-xs {
+                  margin-top: 0 !important;
+                  padding-top: 0 !important;
+                }
+                .print-acknowledgement .text-center {
+                  margin-top: 0 !important;
+                  margin-bottom: 0 !important;
+                  padding: 0 !important;
+                  display: flex !important;
+                  flex-direction: column !important;
+                  justify-content: flex-end !important;
+                }
+                /* Move signature area lower to be closer to labels */
+                .print-acknowledgement .text-center > .h-20 {
+                  margin-bottom: 0 !important;
+                }
+                .print-acknowledgement .text-center p {
+                  margin-top: 0 !important;
+                  margin-bottom: 0 !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  line-height: 1 !important;
+                  color: #000 !important;
+                }
+                /* Make all text in acknowledgement section black in print */
+                .print-acknowledgement .text-gray-500 {
+                  color: #000 !important;
+                }
+                .print-acknowledgement .print-date-value {
+                  color: #000 !important;
+                }
+                .print-acknowledgement .space-y-4 {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  gap: 0 !important;
+                }
+                .print-acknowledgement .space-y-4 > * {
+                  margin-top: 0 !important;
+                  margin-bottom: 0 !important;
+                }
+                /* Remove spacing between signature area and date (row 2) */
+                .print-acknowledgement .space-y-4 > div:not(:first-child) {
+                  margin-top: 0 !important;
+                }
+                /* Specifically target date sections */
+                .print-acknowledgement .space-y-4 > div.text-center:last-child {
+                  margin-top: 0 !important;
+                }
+                /* Confidentiality Notice */
+                .print-confidentiality-notice {
+                  margin-top: 12px !important;
+                  margin-bottom: 8px !important;
+                  padding: 8px 0 !important;
+                  border-top: 1px solid #000 !important;
+                  border-bottom: 1px solid #000 !important;
+                }
+                .print-confidentiality-notice p {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 10px !important;
+                  color: #000 !important;
+                  line-height: 1.4 !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  text-align: justify !important;
+                }
+                .print-confidentiality-notice strong {
+                  font-weight: bold !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                }
+                /* Hide detailed step sections in print */
+                .hide-in-print {
+                  display: none !important;
+                }
+                /* Overall Assessment table */
+                .print-overall-assessment-wrapper [class*="Card"] {
+                  border: none !important;
+                  box-shadow: none !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                  background: transparent !important;
+                }
+                .print-overall-assessment-wrapper [class*="CardContent"] {
+                  padding: 0 !important;
+                  border: none !important;
+                  background: transparent !important;
+                }
+                .print-overall-assessment-wrapper h3 {
+                  font-size: 11px !important;
+                  margin-bottom: 2px !important;
+                  margin-top: 4px !important;
+                  text-align: left !important;
+                  font-family: Calibri, sans-serif !important;
+                }
+                .print-overall-assessment-table {
+                  border: none !important;
+                  width: 100% !important;
+                  border-collapse: collapse !important;
+                  margin-top: 2px !important;
+                  margin-bottom: 4px !important;
+                  font-size: 12px !important;
+                  font-family: Calibri, sans-serif !important;
+                }
+                .print-overall-assessment-table th,
+                .print-overall-assessment-table td {
+                  border: 1px solid #000 !important;
+                  padding: 1px 2px !important;
+                  font-size: 12px !important;
+                  text-align: center !important;
+                  line-height: 1.1 !important;
+                  font-family: Calibri, sans-serif !important;
+                }
+                .print-overall-assessment-table th {
+                  background-color: #d9d9d9 !important;
+                  font-weight: bold !important;
+                  padding: 2px 2px !important;
+                  font-size: 12px !important;
+                  font-family: Calibri, sans-serif !important;
+                }
+                .print-overall-assessment-table td:first-child {
+                  text-align: left !important;
+                }
+                /* Override Tailwind font-size classes in print */
+                .print-overall-assessment-table th.text-base,
+                .print-overall-assessment-table td.text-base,
+                .print-overall-assessment-table td.text-sm,
+                .print-overall-assessment-table td.text-lg {
+                  font-size: 12px !important;
+                }
+                .print-overall-assessment-table .text-sm {
+                  font-size: 12px !important;
+                }
+                .print-overall-assessment-table .text-base {
+                  font-size: 12px !important;
+                }
+                .print-overall-assessment-table .text-lg {
+                  font-size: 12px !important;
+                }
+                /* Adjust Performance Criteria column (1st column) width - smaller */
+                .print-overall-assessment-table th:first-child,
+                .print-overall-assessment-table td:first-child {
+                  width: 60px !important;
+                  min-width: 50px !important;
+                  max-width: 80px !important;
+                  padding: 1px 2px !important;
+                  line-height: 1 !important;
+                }
+                /* Make Score column (3rd column) narrower */
+                .print-overall-assessment-table th:nth-child(3),
+                .print-overall-assessment-table td:nth-child(3) {
+                  width: 18px !important;
+                  min-width: 18px !important;
+                  max-width: 18px !important;
+                  padding: 1px 1px !important;
+                  overflow: hidden !important;
+                  text-overflow: ellipsis !important;
+                  white-space: nowrap !important;
+                }
+                /* Rating column (2nd column) - smaller */
+                .print-overall-assessment-table th:nth-child(2),
+                .print-overall-assessment-table td:nth-child(2) {
+                  width: 50px !important;
+                  min-width: 50px !important;
+                  max-width: 50px !important;
+                  padding: 1px 2px !important;
+                }
+                .print-overall-assessment-table tbody tr:last-child {
+                  background-color: #e8e8e8 !important;
+                  font-weight: bold !important;
+                }
+                .print-overall-assessment-table tbody tr:last-child td:first-child {
+                  text-align: right !important;
+                }
+                /* Hide rating badges in print - show only text */
+                .screen-rating-badge {
+                  display: inline;
+                }
+                .print-rating-text {
+                  display: none;
+                }
+                @media print {
+                  .screen-rating-badge {
+                    display: none !important;
+                  }
+                  .print-rating-text {
+                    display: inline !important;
+                    background: transparent !important;
+                    background-color: transparent !important;
+                    padding: 0 !important;
+                    border-radius: 0 !important;
+                    color: #000 !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    font-weight: normal !important;
+                  }
+                  .print-overall-assessment-table td div {
+                    display: inline !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                  }
+                  .print-overall-assessment-table td div.flex {
+                    display: inline !important;
+                    justify-content: center !important;
+                    align-items: center !important;
+                    gap: 0 !important;
+                    space-x: 0 !important;
+                  }
+                }
+                /* Performance Score section - boxed in print */
+                .print-performance-score-wrapper {
+                  display: flex !important;
+                  justify-content: flex-end !important;
+                  align-items: center !important;
+                  gap: 8px !important;
+                  margin-top: 5px !important;
+                  margin-bottom: 2px !important;
+                  border: 2px solid #000 !important;
+                  padding: 8px 15px !important;
+                  width: fit-content !important;
+                  margin-left: auto !important;
+                  background: white !important;
+                  box-sizing: border-box !important;
+                  font-family: Calibri, sans-serif !important;
+                }
+                .print-performance-score-wrapper > div:first-child {
+                  text-align: right !important;
+                  margin-right: 12px !important;
+                }
+                .print-performance-score-wrapper > div:first-child > div:first-child {
+                  font-size: 16px !important;
+                  font-weight: bold !important;
+                  line-height: 1.2 !important;
+                  margin: 0 !important;
+                  font-family: Calibri, sans-serif !important;
+                }
+                .print-performance-score-wrapper > div:first-child > div:last-child {
+                  font-size: 11px !important;
+                  color: #000 !important;
+                  margin-top: 2px !important;
+                  line-height: 1.2 !important;
+                  font-family: Calibri, sans-serif !important;
+                }
+                .print-performance-score-wrapper > div:last-child {
+                  padding: 4px 10px !important;
+                  border-radius: 2px !important;
+                  font-size: 12px !important;
+                  font-weight: bold !important;
+                  line-height: 1.3 !important;
+                  color: white !important;
+                  display: block !important;
+                  font-family: Calibri, sans-serif !important;
+                }
+                /* Ensure PASS/FAIL badge colors show in print */
+                .print-performance-score-wrapper > div:last-child.bg-green-600 {
+                  background-color: #16a34a !important;
+                  color: white !important;
+                }
+                .print-performance-score-wrapper > div:last-child.bg-red-600 {
+                  background-color: #dc2626 !important;
+                  color: white !important;
+                }
+                /* Remove spacing between sections */
+                .space-y-8 > * {
+                  margin-bottom: 0 !important;
+                }
+                /* Print Footer */
+                .print-footer {
+                  display: block !important;
+                  position: fixed !important;
+                  bottom: 0 !important;
+                  left: 0 !important;
+                  right: 0 !important;
+                  width: 100% !important;
+                  padding: 8px 1.5cm !important;
+                  margin: 0 !important;
+                  border-top: 1px solid #000 !important;
+                  background: white !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 10px !important;
+                  line-height: 1.4 !important;
+                  text-align: center !important;
+                  color: #000 !important;
+                }
+                .print-footer p {
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 10px !important;
+                  line-height: 1.4 !important;
+                  color: #000 !important;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            ${clonedContent.innerHTML}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+  };
+
+
+  if (!submission) return null;
 
   // Handle approval API call
   const handleApproveEvaluation = async () => {
@@ -182,96 +1238,63 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-6 animate-popup">
-        <div className="space-y-8">
-          <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+          <style>{`
+            .screen-date {
+              display: inline;
+            }
+            .print-date {
+              display: none;
+            }
+            .screen-rating-badge {
+              display: inline;
+            }
+            .print-rating-text {
+              display: none;
+            }
+            .print-footer {
+              display: none;
+            }
+          `}</style>
+          <div ref={printContentRef} className="space-y-8">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-4 no-print">
             <h2 className="text-3xl font-bold text-gray-900">Evaluation Details</h2>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handlePrint}
+                  className="px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 flex items-center gap-2"
+                >
+                  <Printer className="h-4 w-4" />
+                  Print
+                </Button>
             <Button
               onClick={onCloseAction}
               className="px-4 py-2 bg-blue-500 text-white hover:bg-red-600 hover:text-white"
             >
              🗙 Close
             </Button>
+              </div>
           </div>
 
           <div className="space-y-8">
-            {/* Header Information */}
-            <Card className="shadow-md">
-              <CardHeader className="bg-gray-50 border-b border-gray-200">
-                <CardTitle className="text-xl font-semibold text-gray-900">Basic Information</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Employee Name</Label>
-                    <p className="text-lg font-semibold">{submission.employeeName}</p>
+            {/* Title */}
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold text-gray-900">
+                Performance Review Form (HEAD OFFICE)<br />
+                Rank and File I & II
+              </h1>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Category</Label>
-                    <Badge className="bg-blue-100 text-blue-800">{submission.category || 'Performance Review'}</Badge>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Submitted Date</Label>
-                    <p className="text-lg">{new Date(submission.submittedAt).toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Quarter</Label>
-                    <Badge className={getQuarterColor(getQuarterFromDate(submission.submittedAt))}>
-                      {getQuarterFromDate(submission.submittedAt)}
-                    </Badge>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Immediate Supervisor</Label>
-                    <p className="text-lg">{submission.evaluationData?.supervisor || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Overall Rating</Label>
-                    <p className="text-lg font-semibold">
-                      {submission.evaluationData ? (
-                        (() => {
-                          const jobKnowledgeScore = calculateScore([submission.evaluationData.jobKnowledgeScore1, submission.evaluationData.jobKnowledgeScore2, submission.evaluationData.jobKnowledgeScore3]);
-                          const qualityOfWorkScore = calculateScore([submission.evaluationData.qualityOfWorkScore1, submission.evaluationData.qualityOfWorkScore2, submission.evaluationData.qualityOfWorkScore3, submission.evaluationData.qualityOfWorkScore4, submission.evaluationData.qualityOfWorkScore5]);
-                          const adaptabilityScore = calculateScore([submission.evaluationData.adaptabilityScore1, submission.evaluationData.adaptabilityScore2, submission.evaluationData.adaptabilityScore3]);
-                          const teamworkScore = calculateScore([submission.evaluationData.teamworkScore1, submission.evaluationData.teamworkScore2, submission.evaluationData.teamworkScore3]);
-                          const reliabilityScore = calculateScore([submission.evaluationData.reliabilityScore1, submission.evaluationData.reliabilityScore2, submission.evaluationData.reliabilityScore3, submission.evaluationData.reliabilityScore4]);
-                          const ethicalScore = calculateScore([submission.evaluationData.ethicalScore1, submission.evaluationData.ethicalScore2, submission.evaluationData.ethicalScore3, submission.evaluationData.ethicalScore4]);
-                          const customerServiceScore = calculateScore([submission.evaluationData.customerServiceScore1, submission.evaluationData.customerServiceScore2, submission.evaluationData.customerServiceScore3, submission.evaluationData.customerServiceScore4, submission.evaluationData.customerServiceScore5]);
-
-                          const overallWeightedScore = (
-                            (jobKnowledgeScore * 0.20) +
-                            (qualityOfWorkScore * 0.20) +
-                            (adaptabilityScore * 0.10) +
-                            (teamworkScore * 0.10) +
-                            (reliabilityScore * 0.05) +
-                            (ethicalScore * 0.05) +
-                            (customerServiceScore * 0.30)
-                          );
-
-                          return `${Math.round(overallWeightedScore * 10) / 10}/5`;
-                        })()
-                      ) : (
-                        `${submission.rating || 0}/5`
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
 
             {/* Review Type Section */}
             {submission.evaluationData && (
               <Card className="shadow-md">
-                <CardHeader className="bg-gray-50 border-b border-gray-200">
-                  <CardTitle className="text-xl font-semibold text-gray-900">Review Type</CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                             
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* For Probationary */}
-                    <div className="space-y-3">
-                      <h5 className="font-medium text-gray-800">For Probationary</h5>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
+                  <div className="space-y-2 print-review-type">
+                    {/* Row 1: For Probationary */}
+                    <div className="flex items-start gap-3">
+                      <h5 className="font-medium text-gray-800 min-w-[120px] text-sm">For Probationary</h5>
+                      <div className="flex flex-row gap-2">
+                        <div className="flex items-center gap-1.5">
                           <div className={`w-4 h-4 rounded-full flex items-center justify-center ${submission.evaluationData.reviewTypeProbationary3 ? 'bg-green-500' : 'bg-gray-300'}`}>
                             {submission.evaluationData.reviewTypeProbationary3 && (
                               <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -290,11 +1313,11 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                       </div>
                     </div>
 
-                    {/* For Regular */}
-                    <div className="space-y-3">
-                      <h5 className="font-medium text-gray-800">For Regular</h5>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
+                    {/* Row 2: For Regular */}
+                    <div className="flex items-start gap-3">
+                      <h5 className="font-medium text-gray-800 min-w-[120px] text-sm">For Regular</h5>
+                      <div className="flex flex-row gap-2">
+                        <div className="flex items-center gap-1.5">
                           <div className={`w-4 h-4 rounded-full flex items-center justify-center ${submission.evaluationData.reviewTypeRegularQ1 ? 'bg-green-500' : 'bg-gray-300'}`}>
                             {submission.evaluationData.reviewTypeRegularQ1 && (
                               <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -329,11 +1352,11 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                       </div>
                     </div>
 
-                    {/* Others */}
-                    <div className="space-y-3">
-                      <h5 className="font-medium text-gray-800">Others</h5>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
+                    {/* Row 3: Others */}
+                    <div className="flex items-start gap-3">
+                      <h5 className="font-medium text-gray-800 min-w-[120px] text-sm">Others</h5>
+                      <div className="flex flex-row gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5">
                           <div className={`w-4 h-4 rounded-full flex items-center justify-center ${submission.evaluationData.reviewTypeOthersImprovement ? 'bg-green-500' : 'bg-gray-300'}`}>
                             {submission.evaluationData.reviewTypeOthersImprovement && (
                               <div className="w-2 h-2 bg-white rounded-full"></div>
@@ -341,21 +1364,19 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                           </div>
                           <span className="text-sm text-gray-700">Performance Improvement</span>
                         </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-4 h-4 rounded-full flex items-center justify-center ${submission.evaluationData.reviewTypeOthersCustom ? 'bg-green-500' : 'bg-gray-300'}`}>
-                              {submission.evaluationData.reviewTypeOthersCustom && (
-                                <div className="w-2 h-2 bg-white rounded-full"></div>
-                              )}
-                            </div>
-                            <span className="text-sm text-gray-700">Others:</span>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center ${submission.evaluationData.reviewTypeOthersCustom ? 'bg-green-500' : 'bg-gray-300'}`}>
+                            {submission.evaluationData.reviewTypeOthersCustom && (
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            )}
                           </div>
-                          {submission.evaluationData.reviewTypeOthersCustom && (
-                            <div className="ml-6 p-2 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700">
-                              {submission.evaluationData.reviewTypeOthersCustom}
-                            </div>
-                          )}
+                          <span className="text-sm text-gray-700">Others:</span>
                         </div>
+                        {submission.evaluationData.reviewTypeOthersCustom && (
+                          <div className="ml-2 p-2 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700">
+                            {submission.evaluationData.reviewTypeOthersCustom}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -363,9 +1384,60 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
               </Card>
             )}
 
+            {/* Header Information */}
+            <Card className="shadow-md">
+              <CardContent className="p-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6 print-basic-info">
+                  <div className="print-info-row">
+                    <Label className="font-medium text-black block mb-1 print-label" style={{ fontSize: '11px' }}>Employee Name:</Label>
+                    <p className="font-semibold text-gray-900 print-value" style={{ fontSize: '11px' }}>{submission.employeeName}</p>
+                  </div>
+                  <div className="print-info-row">
+                    <Label className="font-medium text-black block mb-1 print-label" style={{ fontSize: '11px' }}>Employee Number:</Label>
+                    <p className="text-gray-900 print-value" style={{ fontSize: '11px' }}>{submission.evaluationData?.employeeId || submission.employeeId || 'N/A'}</p>
+                  </div>
+                  <div className="print-info-row">
+                    <Label className="font-medium text-black block mb-1 print-label" style={{ fontSize: '11px' }}>Position:</Label>
+                    <p className="text-gray-900 print-value" style={{ fontSize: '11px' }}>{submission.evaluationData?.position || 'Not specified'}</p>
+                  </div>
+                  <div className="print-info-row">
+                    <Label className="font-medium text-black block mb-1 print-label" style={{ fontSize: '11px' }}>Department/Branch:</Label>
+                    <p className="text-gray-900 print-value" style={{ fontSize: '11px' }}>{submission.evaluationData?.department || 'Not specified'}{submission.evaluationData?.branch ? ` / ${submission.evaluationData.branch}` : ''}</p>
+                  </div>
+                  <div className="print-info-row">
+                    <Label className="font-medium text-black block mb-1 print-label" style={{ fontSize: '11px' }}>Date Hired:</Label>
+                    <p className="text-gray-900 print-value" style={{ fontSize: '11px' }}>
+                      {submission.evaluationData?.hireDate 
+                        ? new Date(submission.evaluationData.hireDate).toLocaleDateString() 
+                        : 'Not specified'}
+                    </p>
+                  </div>
+                  <div className="print-info-row">
+                    <Label className="font-medium text-black block mb-1 print-label" style={{ fontSize: '11px' }}>Immediate Supervisor:</Label>
+                    <p className="text-gray-900 print-value" style={{ fontSize: '11px' }}>{submission.evaluationData?.supervisor || 'Not specified'}</p>
+                  </div>
+                  <div className="print-info-row">
+                    <Label className="font-medium text-black block mb-1 print-label" style={{ fontSize: '11px' }}>Performance Coverage:</Label>
+                    <p className="text-gray-900 print-value" style={{ fontSize: '11px' }}>
+                      {submission.evaluationData?.coverageFrom && submission.evaluationData?.coverageTo ? (
+                        <>
+                          <span className="screen-date">
+                            {`${new Date(submission.evaluationData.coverageFrom).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} - ${new Date(submission.evaluationData.coverageTo).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`}
+                          </span>
+                          <span className="print-date">
+                            {`${new Date(submission.evaluationData.coverageFrom).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${new Date(submission.evaluationData.coverageTo).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                          </span>
+                        </>
+                      ) : 'Not specified'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Step 1: Job Knowledge */}
             {submission.evaluationData && (
-              <Card className="shadow-md">
+              <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-blue-50 border-b border-blue-200">
                   <CardTitle className="text-xl font-semibold text-blue-900">I. JOB KNOWLEDGE</CardTitle>
                 </CardHeader>
@@ -457,7 +1529,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
             {/* Step 2: Quality of Work */}
             {submission.evaluationData && (
-              <Card className="shadow-md">
+              <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-green-50 border-b border-green-200">
                   <CardTitle className="text-xl font-semibold text-green-900">II. QUALITY OF WORK</CardTitle>
                 </CardHeader>
@@ -591,7 +1663,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
             {/* Step 3: Adaptability */}
             {submission.evaluationData && (
-              <Card className="shadow-md">
+              <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-yellow-50 border-b border-yellow-200">
                   <CardTitle className="text-xl font-semibold text-yellow-900">III. ADAPTABILITY</CardTitle>
                 </CardHeader>
@@ -683,7 +1755,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
             {/* Step 4: Teamwork */}
             {submission.evaluationData && (
-              <Card className="shadow-md">
+              <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-purple-50 border-b border-purple-200">
                   <CardTitle className="text-xl font-semibold text-purple-900">IV. TEAMWORK</CardTitle>
                 </CardHeader>
@@ -775,7 +1847,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
             {/* Step 5: Reliability */}
             {submission.evaluationData && (
-              <Card className="shadow-md">
+              <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-indigo-50 border-b border-indigo-200">
                   <CardTitle className="text-xl font-semibold text-indigo-900">V. RELIABILITY</CardTitle>
                 </CardHeader>
@@ -888,7 +1960,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
             {/* Step 6: Ethical & Professional Behavior */}
             {submission.evaluationData && (
-              <Card className="shadow-md">
+              <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-red-50 border-b border-red-200">
                   <CardTitle className="text-xl font-semibold text-red-900">VI. ETHICAL & PROFESSIONAL BEHAVIOR</CardTitle>
                 </CardHeader>
@@ -1001,7 +2073,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
 
             {/* Step 7: Customer Service */}
             {submission.evaluationData && (
-              <Card className="shadow-md">
+              <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-teal-50 border-b border-teal-200">
                   <CardTitle className="text-xl font-semibold text-teal-900">VII. CUSTOMER SERVICE</CardTitle>
                 </CardHeader>
@@ -1135,29 +2207,28 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
             
             {/* Performance Assessment Table */}
             {submission.evaluationData && (
+              <div className="print-overall-assessment-wrapper">
               <Card className="shadow-md">
-                <CardHeader className="bg-gray-50 border-b border-gray-200">
-                  <CardTitle className="text-xl font-semibold text-gray-900">Performance Assessment Summary</CardTitle>
-                </CardHeader>
                 <CardContent className="p-6">
                   <div className="space-y-6">
+                      <h3 className="text-base font-semibold text-gray-900 mb-4">Overall Assessment</h3>
                     <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border-2 border-gray-400">
+                        <table className="w-full border-collapse border-2 border-gray-400 print-overall-assessment-table">
                         <thead>
                           <tr className="bg-gray-200">
-                            <th className="border-2 border-gray-400 px-4 py-3 text-left font-bold text-gray-900 text-base">
+                            <th className="border-2 border-gray-400 px-4 py-3 text-left font-bold text-gray-900 text-base print-criteria-col">
                               Performance Criteria
                             </th>
-                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-32">
+                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-32 print-rating-col">
                               Rating
                             </th>
-                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-24">
+                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-24 print-score-col">
                               Score
                             </th>
-                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-24">
+                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-24 print-weight-col">
                               Weight (%)
                             </th>
-                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-32">
+                            <th className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-gray-900 text-base w-32 print-weighted-col">
                               Weighted Score
                             </th>
                           </tr>
@@ -1170,7 +2241,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             </td>
                             <td className="border-2 border-gray-400 px-4 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
-                                <span className={`px-2 py-1 rounded text-sm font-bold ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.jobKnowledgeScore1, submission.evaluationData.jobKnowledgeScore2, submission.evaluationData.jobKnowledgeScore3])))}`}>
+                                <span className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.jobKnowledgeScore1, submission.evaluationData.jobKnowledgeScore2, submission.evaluationData.jobKnowledgeScore3])))}`}>
+                                  {getRatingLabel(calculateScore([submission.evaluationData.jobKnowledgeScore1, submission.evaluationData.jobKnowledgeScore2, submission.evaluationData.jobKnowledgeScore3]))}
+                                </span>
+                                <span className="print-rating-text">
                                   {getRatingLabel(calculateScore([submission.evaluationData.jobKnowledgeScore1, submission.evaluationData.jobKnowledgeScore2, submission.evaluationData.jobKnowledgeScore3]))}
                                 </span>
                               </div>
@@ -1193,7 +2267,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             </td>
                             <td className="border-2 border-gray-400 px-4 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
-                                <span className={`px-2 py-1 rounded text-sm font-bold ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.qualityOfWorkScore1, submission.evaluationData.qualityOfWorkScore2, submission.evaluationData.qualityOfWorkScore3, submission.evaluationData.qualityOfWorkScore4, submission.evaluationData.qualityOfWorkScore5])))}`}>
+                                <span className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.qualityOfWorkScore1, submission.evaluationData.qualityOfWorkScore2, submission.evaluationData.qualityOfWorkScore3, submission.evaluationData.qualityOfWorkScore4, submission.evaluationData.qualityOfWorkScore5])))}`}>
+                                  {getRatingLabel(calculateScore([submission.evaluationData.qualityOfWorkScore1, submission.evaluationData.qualityOfWorkScore2, submission.evaluationData.qualityOfWorkScore3, submission.evaluationData.qualityOfWorkScore4, submission.evaluationData.qualityOfWorkScore5]))}
+                                </span>
+                                <span className="print-rating-text">
                                   {getRatingLabel(calculateScore([submission.evaluationData.qualityOfWorkScore1, submission.evaluationData.qualityOfWorkScore2, submission.evaluationData.qualityOfWorkScore3, submission.evaluationData.qualityOfWorkScore4, submission.evaluationData.qualityOfWorkScore5]))}
                                 </span>
                               </div>
@@ -1216,7 +2293,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             </td>
                             <td className="border-2 border-gray-400 px-4 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
-                                <span className={`px-2 py-1 rounded text-sm font-bold ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.adaptabilityScore1, submission.evaluationData.adaptabilityScore2, submission.evaluationData.adaptabilityScore3])))}`}>
+                                <span className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.adaptabilityScore1, submission.evaluationData.adaptabilityScore2, submission.evaluationData.adaptabilityScore3])))}`}>
+                                  {getRatingLabel(calculateScore([submission.evaluationData.adaptabilityScore1, submission.evaluationData.adaptabilityScore2, submission.evaluationData.adaptabilityScore3]))}
+                                </span>
+                                <span className="print-rating-text">
                                   {getRatingLabel(calculateScore([submission.evaluationData.adaptabilityScore1, submission.evaluationData.adaptabilityScore2, submission.evaluationData.adaptabilityScore3]))}
                                 </span>
                               </div>
@@ -1239,7 +2319,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             </td>
                             <td className="border-2 border-gray-400 px-4 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
-                                <span className={`px-2 py-1 rounded text-sm font-bold ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.teamworkScore1, submission.evaluationData.teamworkScore2, submission.evaluationData.teamworkScore3])))}`}>
+                                <span className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.teamworkScore1, submission.evaluationData.teamworkScore2, submission.evaluationData.teamworkScore3])))}`}>
+                                  {getRatingLabel(calculateScore([submission.evaluationData.teamworkScore1, submission.evaluationData.teamworkScore2, submission.evaluationData.teamworkScore3]))}
+                                </span>
+                                <span className="print-rating-text">
                                   {getRatingLabel(calculateScore([submission.evaluationData.teamworkScore1, submission.evaluationData.teamworkScore2, submission.evaluationData.teamworkScore3]))}
                                 </span>
                               </div>
@@ -1262,7 +2345,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             </td>
                             <td className="border-2 border-gray-400 px-4 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
-                                <span className={`px-2 py-1 rounded text-sm font-bold ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.reliabilityScore1, submission.evaluationData.reliabilityScore2, submission.evaluationData.reliabilityScore3, submission.evaluationData.reliabilityScore4])))}`}>
+                                <span className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.reliabilityScore1, submission.evaluationData.reliabilityScore2, submission.evaluationData.reliabilityScore3, submission.evaluationData.reliabilityScore4])))}`}>
+                                  {getRatingLabel(calculateScore([submission.evaluationData.reliabilityScore1, submission.evaluationData.reliabilityScore2, submission.evaluationData.reliabilityScore3, submission.evaluationData.reliabilityScore4]))}
+                                </span>
+                                <span className="print-rating-text">
                                   {getRatingLabel(calculateScore([submission.evaluationData.reliabilityScore1, submission.evaluationData.reliabilityScore2, submission.evaluationData.reliabilityScore3, submission.evaluationData.reliabilityScore4]))}
                                 </span>
                               </div>
@@ -1285,7 +2371,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             </td>
                             <td className="border-2 border-gray-400 px-4 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
-                                <span className={`px-2 py-1 rounded text-sm font-bold ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.ethicalScore1, submission.evaluationData.ethicalScore2, submission.evaluationData.ethicalScore3, submission.evaluationData.ethicalScore4])))}`}>
+                                <span className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.ethicalScore1, submission.evaluationData.ethicalScore2, submission.evaluationData.ethicalScore3, submission.evaluationData.ethicalScore4])))}`}>
+                                  {getRatingLabel(calculateScore([submission.evaluationData.ethicalScore1, submission.evaluationData.ethicalScore2, submission.evaluationData.ethicalScore3, submission.evaluationData.ethicalScore4]))}
+                                </span>
+                                <span className="print-rating-text">
                                   {getRatingLabel(calculateScore([submission.evaluationData.ethicalScore1, submission.evaluationData.ethicalScore2, submission.evaluationData.ethicalScore3, submission.evaluationData.ethicalScore4]))}
                                 </span>
                               </div>
@@ -1308,7 +2397,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             </td>
                             <td className="border-2 border-gray-400 px-4 py-3 text-center">
                               <div className="flex items-center justify-center space-x-1">
-                                <span className={`px-2 py-1 rounded text-sm font-bold ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.customerServiceScore1, submission.evaluationData.customerServiceScore2, submission.evaluationData.customerServiceScore3, submission.evaluationData.customerServiceScore4, submission.evaluationData.customerServiceScore5])))}`}>
+                                <span className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(getRatingLabel(calculateScore([submission.evaluationData.customerServiceScore1, submission.evaluationData.customerServiceScore2, submission.evaluationData.customerServiceScore3, submission.evaluationData.customerServiceScore4, submission.evaluationData.customerServiceScore5])))}`}>
+                                  {getRatingLabel(calculateScore([submission.evaluationData.customerServiceScore1, submission.evaluationData.customerServiceScore2, submission.evaluationData.customerServiceScore3, submission.evaluationData.customerServiceScore4, submission.evaluationData.customerServiceScore5]))}
+                                </span>
+                                <span className="print-rating-text">
                                   {getRatingLabel(calculateScore([submission.evaluationData.customerServiceScore1, submission.evaluationData.customerServiceScore2, submission.evaluationData.customerServiceScore3, submission.evaluationData.customerServiceScore4, submission.evaluationData.customerServiceScore5]))}
                                 </span>
                               </div>
@@ -1358,7 +2450,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                     </div>
 
                     {/* Final Results */}
-                    <div className="mt-6 flex justify-center items-center space-x-8">
+                      <div className="mt-6 flex justify-center items-center space-x-8 print-performance-score-wrapper">
                       <div className="text-center">
                         <div className="text-4xl font-bold text-gray-700">
                           {(() => {
@@ -1432,30 +2524,42 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                   </div>
                 </CardContent>
               </Card>
+              </div>
             )}
 
             {/* Priority Areas for Improvement */}
             {submission.evaluationData && (submission.evaluationData.priorityArea1 || submission.evaluationData.priorityArea2 || submission.evaluationData.priorityArea3) && (
               <Card>
                 <CardContent className="pt-6 pb-4">
-                  <h4 className="font-semibold text-lg text-gray-900 mb-4">Priority Areas for Improvement</h4>
+                  <h4 className="font-semibold text-lg text-gray-900 mb-4 print-priority-header">Priority Areas for Improvement</h4>
+                  <p className="text-sm text-gray-600 mb-4 print-priority-description">
+                    This section identifies key areas the employee can focus on for development in the upcoming quarter.
+                    These can be specific skills, behaviors, or work outputs that will contribute to better overall performance
+                    and align with branch or company goals. Keep the feedback clear, helpful, and easy to act on.
+                  </p>
                   <div className="space-y-3">
                     {submission.evaluationData.priorityArea1 && (
-                      <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md">
-                        <span className="font-medium text-sm">1. </span>
-                        <span className="text-sm text-gray-700">{submission.evaluationData.priorityArea1}</span>
+                      <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-priority-item">
+                        <div className="print-priority-row">
+                          <span className="font-medium text-sm print-priority-label">1. </span>
+                          <p className="text-sm text-gray-700 print-priority-value">{submission.evaluationData.priorityArea1}</p>
+                        </div>
                       </div>
                     )}
                     {submission.evaluationData.priorityArea2 && (
-                      <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md">
-                        <span className="font-medium text-sm">2. </span>
-                        <span className="text-sm text-gray-700">{submission.evaluationData.priorityArea2}</span>
+                      <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-priority-item">
+                        <div className="print-priority-row">
+                          <span className="font-medium text-sm print-priority-label">2. </span>
+                          <p className="text-sm text-gray-700 print-priority-value">{submission.evaluationData.priorityArea2}</p>
+                        </div>
                       </div>
                     )}
                     {submission.evaluationData.priorityArea3 && (
-                      <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md">
-                        <span className="font-medium text-sm">3. </span>
-                        <span className="text-sm text-gray-700">{submission.evaluationData.priorityArea3}</span>
+                      <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-priority-item">
+                        <div className="print-priority-row">
+                          <span className="font-medium text-sm print-priority-label">3. </span>
+                          <p className="text-sm text-gray-700 print-priority-value">{submission.evaluationData.priorityArea3}</p>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1467,8 +2571,8 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
             {submission.evaluationData && submission.evaluationData.remarks && (
               <Card>
                 <CardContent className="pt-6 pb-4">
-                  <h4 className="font-semibold text-lg text-gray-900 mb-4">Remarks</h4>
-                  <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md">
+                  <h4 className="font-semibold text-lg text-gray-900 mb-4 print-remarks-header">Remarks</h4>
+                  <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-remarks-box">
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">{submission.evaluationData.remarks}</p>
                   </div>
                 </CardContent>
@@ -1479,17 +2583,19 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
             {submission.evaluationData && (
               <Card>
                 <CardContent className="pt-6 pb-4">
-                  <h4 className="font-semibold text-lg text-gray-900 mb-4">Acknowledgement</h4>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <h4 className="font-semibold text-lg text-gray-900 mb-4 print-acknowledgement-header">Acknowledgement</h4>
+                  <p className="text-sm text-gray-600 mb-4 print-acknowledgement-description">
                     I hereby acknowledge that the Evaluator has explained to me, to the best of their ability, 
                     and in a manner I fully understand, my performance and respective rating on this performance evaluation.
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print-acknowledgement">
                     {/* Employee Section */}
-                    <div className="space-y-4">
+                    <div>
                       {/* Signature area */}
                       <div className="text-center">
                         <div className="h-20 border-2 border-dashed border-white rounded-lg flex items-center justify-center bg-gray-50 relative">
+                          {/* Print signature line */}
+                          <div className="print-signature-line"></div>
                           {/* Name as background text - always show */}
                           <span className="text-md text-gray-900 font-bold">
                             {submission.employeeName || 'Employee Name'}
@@ -1503,9 +2609,9 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             <div className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-red-500">
                               Error loading signature
                             </div>
-                          ) : ((isApproved || approvalData?.employeeSignature || submission.employeeSignature) && (employeeSignature?.signature || approvalData?.employeeSignature || submission.employeeSignature)) && (
+                          ) : ((computedIsApproved) && (employeeSignature?.signature || currentApprovalData?.employeeSignature || submission.employeeSignature)) && (
                             <img 
-                              src={employeeSignature?.signature || approvalData?.employeeSignature || submission.employeeSignature || ''} 
+                              src={employeeSignature?.signature || currentApprovalData?.employeeSignature || submission.employeeSignature || ''} 
                               alt="Employee Signature" 
                               className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-16 max-w-full object-contain"
                               onError={(e) => {
@@ -1514,13 +2620,14 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             />
                           )}
                         </div>
+                        <div className="text-xs text-gray-500 mt-1">Employee's Name & Signature</div>
                       </div>
                       
                       {/* Action Section - Only show if showApprovalButton is true */}
                       {showApprovalButton && (
-                        <div className="mt-6 space-y-4">
+                        <div className="mt-6 space-y-4 no-print">
                           {/* Approve Button - Only show if not approved */}
-                          {!isApproved && (
+                          {!computedIsApproved && (
                             <div className="space-y-3">
                               <div className="flex justify-center">
                                 <Button
@@ -1550,7 +2657,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                           )}
                           
                           {/* Approved Status - Only show if approved */}
-                          {isApproved && (
+                          {computedIsApproved && (
                             <div className="space-y-3 px-4 md:px-0">
                               <div className="flex items-center justify-center space-x-2">
                                 <Badge className="bg-green-100 text-green-800 px-4 py-2 text-sm font-medium">
@@ -1558,7 +2665,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                                 </Badge>
                               </div>
                               <p className="text-xs text-gray-500 text-center">
-                                Approved on {approvalData?.approvedAt ? new Date(approvalData.approvedAt).toLocaleDateString('en-US', {
+                                Approved on {currentApprovalData?.approvedAt ? new Date(currentApprovalData.approvedAt).toLocaleDateString('en-US', {
                                   year: 'numeric',
                                   month: 'long',
                                   day: 'numeric'
@@ -1569,13 +2676,10 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                         </div>
                       )}
                       
-                      {/* Employee Name and Date */}
+                      {/* Employee Date */}
                       <div className="text-center">
-                        <p className="text-sm font-medium text-gray-900">
-                          {submission.employeeName || 'Employee Name'}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {submission.employeeApprovedAt ? new Date(submission.employeeApprovedAt).toLocaleDateString('en-US', {
+                        <p className="text-xs text-gray-500 mt-1 print-date-value">
+                          {(submission.employeeApprovedAt || currentApprovalData?.approvedAt) ? new Date(submission.employeeApprovedAt || currentApprovalData?.approvedAt || '').toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric'
@@ -1586,10 +2690,12 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                     </div>
 
                     {/* Evaluator Section */}
-                    <div className="space-y-4">
+                    <div>
                       {/* Signature area */}
                       <div className="text-center">
                         <div className="h-20 border-2 border-dashed border-white rounded-lg flex items-center justify-center bg-gray-50 relative">
+                          {/* Print signature line */}
+                          <div className="print-signature-line"></div>
                           {/* Name as background text - always show */}
                           <span className="text-md text-gray-900 font-bold">
                             {submission.evaluator || submission.evaluationData?.evaluatorSignature || submission.evaluationData?.evaluatorName || 'Evaluator Name'}
@@ -1608,13 +2714,11 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                             <span className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-gray-400 text-sm">No signature</span>
                           )}
                         </div>
+                        <div className="text-xs text-gray-500 mt-1">Evaluator's Name & Signature</div>
                       </div>
                       
-                      {/* Evaluator Name and Date */}
+                      {/* Evaluator Date */}
                       <div className="text-center">
-                        <p className="text-sm font-medium text-gray-900">
-                          {submission.evaluator || submission.evaluationData?.evaluatorSignature || submission.evaluationData?.evaluatorName || 'Evaluator Name'}
-                        </p>
                         <p className="text-xs text-gray-500 mt-1">
                           {submission.evaluatorApprovedAt || submission.evaluationData?.evaluatorSignatureDate ? new Date(submission.evaluatorApprovedAt || submission.evaluationData?.evaluatorSignatureDate).toLocaleDateString('en-US', {
                             year: 'numeric',
@@ -1623,11 +2727,42 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
                           }) : 'Not specified'}
                         </p>
                       </div>
+                      
                     </div>
+                  </div>
+                  {/* Confidentiality Notice */}
+                  <div className="mt-6 print-confidentiality-notice">
+                    <p className="text-xs text-gray-700 leading-relaxed">
+                      <strong>CONFIDENTIALITY NOTICE ver.042225:</strong><br />
+                      This document, including any attachments, contains confidential and/or privileged information intended solely for internal use within the company. It is the intellectual property of SMCT Group of Companies, including its subsidiaries, businesses, and trade names. Unauthorized use, copying, distribution, or disclosure of this document, its contents, or any part thereof is strictly prohibited without the express written permission of SMCT Group of Companies.
+                    </p>
+                  </div>
+                  {/* Date section */}
+                  <div className="mt-5 print-date-section no-print">
+                    <span>Date: </span>
+                    <span className="print-date-box">
+                      {(submission.employeeApprovedAt || submission.evaluatorApprovedAt || submission.submittedAt)
+                        ? new Date(submission.employeeApprovedAt || submission.evaluatorApprovedAt || submission.submittedAt).toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          })
+                        : new Date().toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          })}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
             )}
+          </div>
+          {/* Print Footer */}
+          <div className="print-footer">
+            <p className="text-xs text-gray-700">
+              CONFIDENTIALITY NOTICE ver.042225: This document and its contents are confidential and the intellectual property of SMCT Group of Companies and its subsidiaries. Unauthorized use, copying, distribution or disclosure is prohibited.
+            </p>
           </div>
         </div>
       </DialogContent>

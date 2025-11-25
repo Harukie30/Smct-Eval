@@ -19,6 +19,7 @@ import { useTabLoading } from '@/hooks/useTabLoading';
 import clientDataService from '@/lib/clientDataService';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { useUser } from '@/contexts/UserContext';
+import { toastMessages } from '@/lib/toastMessages';
 import EditUserModal from '@/components/EditUserModal';
 import AddEmployeeModal from '@/components/AddEmployeeModal';
 import { useDialogAnimation } from '@/hooks/useDialogAnimation';
@@ -50,6 +51,7 @@ interface Employee {
   branch: string;
   hireDate: string;
   role: string;
+  employeeId?: string; // Formatted employee ID from registration (e.g., "1234-567890")
 }
 
 interface Department {
@@ -359,9 +361,12 @@ function HRDashboard() {
     try {
       setLoading(true);
       
-      // Load data
+      // Load from localStorage first, fallback to static JSON (same as admin dashboard)
+      const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+      const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : (accountsData.accounts || []);
+      
       // Convert accounts data to employees format (filter out admin accounts)
-      const employeeAccounts = (accountsData.accounts || []).filter((account: any) => account.role !== 'admin');
+      const employeeAccounts = accounts.filter((account: any) => account.role !== 'admin');
       const employeesList = employeeAccounts.map((account: any) => ({
         id: account.employeeId || account.id,
         name: account.name,
@@ -481,9 +486,12 @@ function HRDashboard() {
   useEffect(() => {
     const loadHRData = async () => {
       try {
-        // Load data
+        // Load from localStorage first, fallback to static JSON (same as admin dashboard)
+        const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+        const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : (accountsData.accounts || []);
+        
         // Convert accounts data to employees format (filter out admin accounts)
-        const employeeAccounts = (accountsData.accounts || []).filter((account: any) => account.role !== 'admin');
+        const employeeAccounts = accounts.filter((account: any) => account.role !== 'admin');
         const employeesList = employeeAccounts.map((account: any) => ({
           id: account.employeeId || account.id,
           name: account.name,
@@ -566,7 +574,25 @@ function HRDashboard() {
 
   const handleAddEmployee = async (newUser: any) => {
     try {
-      // Generate new ID and add to storage
+      // Create account entry (similar to admin dashboard)
+      const newAccount = {
+        name: newUser.name,
+        email: newUser.email,
+        position: newUser.position,
+        department: newUser.department,
+        branch: newUser.branch,
+        role: newUser.role,
+        password: newUser.password,
+        isActive: newUser.isActive !== undefined ? newUser.isActive : true,
+        employeeId: Date.now() // Temporary ID
+      };
+
+      // Add account to accounts array
+      const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+      accounts.push(newAccount);
+      localStorage.setItem('accounts', JSON.stringify(accounts));
+
+      // Generate new ID and add employee to storage
       const currentEmployees = await clientDataService.getEmployees();
       const newId = currentEmployees.length > 0 
         ? Math.max(...currentEmployees.map(emp => emp.id), 0) + 1
@@ -582,10 +608,14 @@ function HRDashboard() {
       // Refresh dashboard data to get updated information
       await refreshDashboardData(false, false);
       
+      // Show success toast
+      toastMessages.user.created(newUser.name);
+      
       // Close modal
       setIsAddEmployeeModalOpen(false);
     } catch (error) {
       console.error('Error adding employee:', error);
+      toastMessages.generic.error('Add Failed', 'Failed to add employee. Please try again.');
       throw error;
     }
   };
@@ -595,14 +625,45 @@ function HRDashboard() {
       // Update existing employee using client data service
       await clientDataService.updateEmployee(updatedUser.id, updatedUser);
 
+      // Also update accounts storage to persist changes (same as admin dashboard)
+      const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+      const accountIndex = accounts.findIndex((acc: any) => acc.id === updatedUser.id || acc.employeeId === updatedUser.id);
+      
+      if (accountIndex !== -1) {
+        accounts[accountIndex] = {
+          ...accounts[accountIndex],
+          name: updatedUser.name,
+          email: updatedUser.email,
+          position: updatedUser.position,
+          department: updatedUser.department,
+          branch: updatedUser.branch,
+          role: updatedUser.role,
+          username: updatedUser.username || accounts[accountIndex].username,
+          password: updatedUser.password || accounts[accountIndex].password,
+          contact: updatedUser.contact || accounts[accountIndex].contact,
+          hireDate: updatedUser.hireDate || accounts[accountIndex].hireDate,
+          isActive: updatedUser.isActive !== undefined ? updatedUser.isActive : accounts[accountIndex].isActive,
+          employeeId: updatedUser.employeeId !== undefined ? updatedUser.employeeId : accounts[accountIndex].employeeId,
+          updatedAt: new Date().toISOString()
+        };
+        localStorage.setItem('accounts', JSON.stringify(accounts));
+      }
+
+      // Refresh employee data to update the table immediately
+      await refreshEmployeeData();
+      
       // Refresh dashboard data to get updated information
       await refreshDashboardData(false, false);
+      
+      // Show success toast
+      toastMessages.user.updated(updatedUser.name);
       
       // Close modal and reset
       setIsEditModalOpen(false);
       setSelectedEmployee(null);
     } catch (error) {
       console.error('Error saving employee:', error);
+      toastMessages.generic.error('Update Failed', 'Failed to update user information. Please try again.');
     }
   };
 
@@ -621,8 +682,27 @@ function HRDashboard() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleEvaluateEmployee = (employee: Employee) => {
-    setEmployeeToEvaluate(employee);
+  const handleEvaluateEmployee = async (employee: Employee) => {
+    // Fetch formatted employee ID from accounts
+    try {
+      const accounts = await clientDataService.getAccounts();
+      const account = accounts.find((acc: any) => 
+        acc.employeeId === employee.id || 
+        acc.id === employee.id ||
+        acc.email === employee.email
+      );
+      
+      // Get formatted employee_id from account (stored as employee_id in registration)
+      const formattedEmployeeId = (account as any)?.employee_id || account?.employeeId;
+      
+      setEmployeeToEvaluate({
+        ...employee,
+        employeeId: formattedEmployeeId ? String(formattedEmployeeId) : undefined,
+      });
+    } catch (error) {
+      console.error('Error fetching employee ID:', error);
+      setEmployeeToEvaluate(employee);
+    }
     setIsEvaluationTypeModalOpen(true);
   };
 
@@ -740,8 +820,12 @@ function HRDashboard() {
       // Add a small delay to ensure spinner is visible
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Reload data from accounts.json
-      const employeeAccounts = (accountsData.accounts || []).filter((account: any) => account.role !== 'admin');
+      // Load from localStorage first, fallback to static JSON (same as admin dashboard)
+      const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+      const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : (accountsData.accounts || []);
+      
+      // Reload data from accounts (localStorage or JSON)
+      const employeeAccounts = accounts.filter((account: any) => account.role !== 'admin');
       const employeesList = employeeAccounts.map((account: any) => ({
         id: account.employeeId || account.id,
         name: account.name,
@@ -863,6 +947,19 @@ function HRDashboard() {
             }).length}
           </div>
           <p className="text-sm text-gray-500 mt-1">Completed reviews</p>
+        </CardContent>
+      </Card>
+
+      {/* Total Employees */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-gray-600">👥 Total Employees</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold text-blue-600">
+            {hrMetrics?.totalEmployees || employees.length}
+          </div>
+          <p className="text-sm text-gray-500 mt-1">All registered employees</p>
         </CardContent>
       </Card>
     </>
@@ -1296,13 +1393,20 @@ function HRDashboard() {
             setSelectedEmployee(null);
           }}
           user={{
-            ...selectedEmployee,
+            id: selectedEmployee.id,
+            name: selectedEmployee.name,
+            email: selectedEmployee.email,
+            position: selectedEmployee.position,
+            department: selectedEmployee.department,
+            branch: selectedEmployee.branch,
+            role: selectedEmployee.role,
             username: (selectedEmployee as any).username || '',
             password: (selectedEmployee as any).password || '',
             contact: (selectedEmployee as any).contact || '',
             hireDate: selectedEmployee.hireDate || '',
             isActive: (selectedEmployee as any).isActive !== undefined ? (selectedEmployee as any).isActive : true,
             signature: (selectedEmployee as any).signature || ''
+            // Note: employeeId is fetched by EditUserModal from accounts, not passed here
           }}
           onSave={handleSaveEmployee}
           departments={departments.map(dept => dept.name)}
@@ -1461,20 +1565,40 @@ function HRDashboard() {
             }
           }}
           onSelectEmployeeAction={() => {
-            console.log('Selecting employee evaluation', employeeToEvaluate);
+            const employee = employeeToEvaluate;
+            console.log('Selecting employee evaluation', employee);
+            if (!employee) {
+              console.error('No employee selected!');
+              return;
+            }
             setEvaluationType('employee');
             setIsEvaluationTypeModalOpen(false);
+            // Use setTimeout to ensure state is set before opening modal
             setTimeout(() => {
-              console.log('Opening employee evaluation modal', employeeToEvaluate, 'employee');
+              console.log('Opening employee evaluation modal', employee, 'employee');
+              // Ensure employee is still set
+              if (employee) {
+                setEmployeeToEvaluate(employee);
+              }
               setIsEvaluationModalOpen(true);
             }, 50);
           }}
           onSelectManagerAction={() => {
-            console.log('Selecting manager evaluation', employeeToEvaluate);
+            const employee = employeeToEvaluate;
+            console.log('Selecting manager evaluation', employee);
+            if (!employee) {
+              console.error('No employee selected!');
+              return;
+            }
             setEvaluationType('manager');
             setIsEvaluationTypeModalOpen(false);
+            // Use setTimeout to ensure state is set before opening modal
             setTimeout(() => {
-              console.log('Opening manager evaluation modal', employeeToEvaluate, 'manager');
+              console.log('Opening manager evaluation modal', employee, 'manager');
+              // Ensure employee is still set
+              if (employee) {
+                setEmployeeToEvaluate(employee);
+              }
               setIsEvaluationModalOpen(true);
             }, 50);
           }}
@@ -1482,23 +1606,18 @@ function HRDashboard() {
         />
 
         {/* Employee Evaluation Modal */}
-        {isEvaluationModalOpen && employeeToEvaluate && currentUser && (
-          <Dialog open={isEvaluationModalOpen} onOpenChangeAction={(open) => {
-            if (!open) {
-              setIsEvaluationModalOpen(false);
-              setEmployeeToEvaluate(null);
-              setEvaluationType(null);
-            }
-          }}>
-            <DialogContent className={`max-w-6xl max-h-[95vh] overflow-hidden p-0 ${dialogAnimationClass}`}>
-              {!evaluationType && employeeToEvaluate && (
-                <div className="p-8 text-center">
-                  <p className="text-gray-500">Loading evaluation...</p>
-                </div>
-              )}
-              {evaluationType === 'employee' && (
-                <EvaluationForm
-                key={`hr-eval-${employeeToEvaluate.id}-${isEvaluationModalOpen}`}
+        <Dialog open={isEvaluationModalOpen} onOpenChangeAction={(open) => {
+          console.log('Evaluation modal onOpenChangeAction', open, 'employeeToEvaluate:', employeeToEvaluate, 'evaluationType:', evaluationType);
+          if (!open) {
+            setIsEvaluationModalOpen(false);
+            setEmployeeToEvaluate(null);
+            setEvaluationType(null);
+          }
+        }}>
+          <DialogContent className={`max-w-6xl max-h-[95vh] overflow-hidden p-0 ${dialogAnimationClass}`}>
+            {employeeToEvaluate && evaluationType === 'employee' && currentUser && (
+              <EvaluationForm
+                key={`hr-eval-${employeeToEvaluate.id}-${evaluationType}`}
                 employee={{
                   id: employeeToEvaluate.id,
                   name: employeeToEvaluate.name,
@@ -1508,6 +1627,7 @@ function HRDashboard() {
                   branch: employeeToEvaluate.branch,
                   role: employeeToEvaluate.role,
                   hireDate: employeeToEvaluate.hireDate,
+                  employeeId: employeeToEvaluate.employeeId || undefined,
                 }}
                 currentUser={{
                   id: currentUser.id,
@@ -1533,29 +1653,30 @@ function HRDashboard() {
                   setEvaluationType(null);
                 }}
               />
-              )}
-              {evaluationType === 'manager' && (
-                <ManagerEvaluationForm
-                  key={`hr-manager-eval-${employeeToEvaluate.id}-${isEvaluationModalOpen}`}
-                  employee={{
-                    id: employeeToEvaluate.id,
-                    name: employeeToEvaluate.name,
-                    email: employeeToEvaluate.email,
-                    position: employeeToEvaluate.position,
-                    department: employeeToEvaluate.department,
-                    branch: employeeToEvaluate.branch,
-                    role: employeeToEvaluate.role,
-                    hireDate: employeeToEvaluate.hireDate,
-                  }}
-                  currentUser={{
-                    id: currentUser.id,
-                    name: currentUser.name,
-                    email: currentUser.email,
-                    position: currentUser.position || 'HR Manager',
-                    department: currentUser.department || 'Human Resources',
-                    role: currentUser.role,
-                    signature: currentUser.signature,
-                  }}
+            )}
+            {employeeToEvaluate && evaluationType === 'manager' && currentUser && (
+              <ManagerEvaluationForm
+                key={`hr-manager-eval-${employeeToEvaluate.id}-${evaluationType}`}
+                employee={{
+                  id: employeeToEvaluate.id,
+                  name: employeeToEvaluate.name,
+                  email: employeeToEvaluate.email,
+                  position: employeeToEvaluate.position,
+                  department: employeeToEvaluate.department,
+                  branch: employeeToEvaluate.branch,
+                  role: employeeToEvaluate.role,
+                  hireDate: employeeToEvaluate.hireDate,
+                  employeeId: employeeToEvaluate.employeeId || undefined,
+                }}
+                currentUser={{
+                  id: currentUser.id,
+                  name: currentUser.name,
+                  email: currentUser.email,
+                  position: currentUser.position || 'HR Manager',
+                  department: currentUser.department || 'Human Resources',
+                  role: currentUser.role,
+                  signature: currentUser.signature,
+                }}
                   onCloseAction={async () => {
                     setIsEvaluationModalOpen(false);
                     setEmployeeToEvaluate(null);
@@ -1572,9 +1693,18 @@ function HRDashboard() {
                   }}
                 />
               )}
-            </DialogContent>
-          </Dialog>
-        )}
+            {employeeToEvaluate && !evaluationType && (
+              <div className="p-8 text-center">
+                <p className="text-gray-500">Please select an evaluation type... (Debug: employee={employeeToEvaluate?.name}, type={evaluationType})</p>
+              </div>
+            )}
+            {!employeeToEvaluate && (
+              <div className="p-8 text-center">
+                <p className="text-gray-500">No employee selected (Debug: evaluationType={evaluationType})</p>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Delete Evaluation Record Confirmation Modal */}
         <Dialog open={isDeleteRecordModalOpen} onOpenChangeAction={setIsDeleteRecordModalOpen}>

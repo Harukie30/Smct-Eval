@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { X, RefreshCw, Eye } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,8 @@ export function EvaluationHistoryTab({
   const [quarterlySearchTerm, setQuarterlySearchTerm] = useState('');
   const [selectedQuarter, setSelectedQuarter] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [historyPage, setHistoryPage] = useState(1);
+  const itemsPerPage = 8;
 
   // Get available years from submissions
   const availableYears = useMemo(() => {
@@ -55,8 +57,110 @@ export function EvaluationHistoryTab({
     return Array.from(years).sort((a, b) => b - a); // Sort descending (newest first)
   }, [recentSubmissions]);
 
+  // Calculate filtered quarters with useMemo
+  const filteredQuarters = useMemo(() => {
+    // Group all submissions by quarter (HR sees all evaluations)
+    const quarterlyData = recentSubmissions.reduce((acc, submission) => {
+      const quarter = getQuarterFromEvaluationData(submission.evaluationData || submission);
+      if (!acc[quarter]) {
+        acc[quarter] = {
+          quarter,
+          submissions: [],
+          averageRating: 0,
+          totalEvaluations: 0,
+          latestRating: 0,
+          dateRange: ''
+        };
+      }
+      acc[quarter].submissions.push(submission);
+      return acc;
+    }, {} as any);
+
+    // Calculate statistics for each quarter
+    Object.keys(quarterlyData).forEach(quarter => {
+      const data = quarterlyData[quarter];
+      const ratings = data.submissions.map((s: any) =>
+        s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating || 0
+      ).filter((r: any) => r > 0);
+      data.totalEvaluations = ratings.length;
+      data.averageRating = ratings.length > 0 ? (ratings.reduce((a: any, b: any) => a + b, 0) / ratings.length).toFixed(1) : 0;
+      data.latestRating = ratings.length > 0 ? ratings[ratings.length - 1] : 0;
+      
+      // Calculate date range for this quarter
+      if (data.submissions.length > 0) {
+        const dates = data.submissions.map((s: any) => new Date(s.submittedAt)).sort((a: any, b: any) => a - b);
+        const startDate = dates[0];
+        const endDate = dates[dates.length - 1];
+        
+        if (startDate.getTime() === endDate.getTime()) {
+          data.dateRange = startDate.toLocaleDateString();
+        } else {
+          data.dateRange = `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
+        }
+      }
+    });
+
+    // Sort quarters chronologically
+    const sortedQuarters = Object.values(quarterlyData).sort((a: any, b: any) => {
+      const quarterOrder: { [key: string]: number } = { 'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4 };
+      const aQuarter = a.quarter.split(' ')[0];
+      const bQuarter = b.quarter.split(' ')[0];
+      return (quarterOrder[aQuarter] || 0) - (quarterOrder[bQuarter] || 0);
+    });
+
+    // Filter quarters based on selected quarter and year
+    let filtered = selectedQuarter
+      ? sortedQuarters.filter((q: any) => q.quarter.startsWith(selectedQuarter))
+      : sortedQuarters;
+
+    // Apply year filter - match both quarter year and submission year
+    if (selectedYear && selectedYear !== 'all') {
+      const year = parseInt(selectedYear);
+      filtered = filtered.filter((quarterData: any) => {
+        // Extract year from quarter string (e.g., "Q1 2024" -> "2024")
+        const quarterYear = quarterData.quarter.split(' ')[1];
+        const quarterYearMatches = quarterYear === selectedYear;
+        
+        // Also check if any submission in this quarter matches the year
+        const submissionYearMatches = quarterData.submissions.some((submission: any) => {
+          const submissionYear = new Date(submission.submittedAt).getFullYear();
+          return submissionYear === year;
+        });
+        
+        // Match if either the quarter year or submission year matches
+        return quarterYearMatches || submissionYearMatches;
+      });
+    }
+
+    // Filter by search term
+    if (quarterlySearchTerm) {
+      filtered = filtered.filter((quarterData: any) => {
+        const searchLower = quarterlySearchTerm.toLowerCase();
+        return quarterData.quarter.toLowerCase().includes(searchLower) ||
+          quarterData.submissions.some((s: any) =>
+            s.employeeName?.toLowerCase().includes(searchLower) ||
+            s.evaluatorName?.toLowerCase().includes(searchLower)
+          );
+      });
+    }
+
+    return filtered as any[];
+  }, [recentSubmissions, selectedQuarter, selectedYear, quarterlySearchTerm, calculateOverallRating]);
+
+  // Pagination calculations
+  const historyTotalPages = Math.ceil(filteredQuarters.length / itemsPerPage);
+  const historyStartIndex = (historyPage - 1) * itemsPerPage;
+  const historyEndIndex = historyStartIndex + itemsPerPage;
+  const historyPaginated = filteredQuarters.slice(historyStartIndex, historyEndIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [selectedQuarter, selectedYear, quarterlySearchTerm]);
+
   const clearYearFilter = () => {
     setSelectedYear('all');
+    setHistoryPage(1);
   };
 
   const handleRefreshQuarterly = async () => {
@@ -118,32 +222,26 @@ export function EvaluationHistoryTab({
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Evaluation History</CardTitle>
-            <CardDescription>Complete timeline of all performance evaluations</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Quarterly Performance Summary</CardTitle>
+                <CardDescription>Performance overview grouped by quarter</CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshQuarterly}
+                disabled={quarterlyRefreshing}
+                className="flex items-center bg-blue-500 text-white hover:bg-green-700 hover:text-white space-x-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${quarterlyRefreshing ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Quarterly Performance Summary</CardTitle>
-                    <CardDescription>Performance overview grouped by quarter</CardDescription>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRefreshQuarterly}
-                    disabled={quarterlyRefreshing}
-                    className="flex items-center bg-blue-500 text-white hover:bg-green-700 hover:text-white space-x-2"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${quarterlyRefreshing ? 'animate-spin' : ''}`} />
-                    <span>Refresh</span>
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
                     {/* Search Bar */}
-                    <div className="mb-6 w-1/4">
+                    <div className="mb-6 w-1/2">
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,15 +260,12 @@ export function EvaluationHistoryTab({
                             onClick={() => setQuarterlySearchTerm('')}
                             className="absolute inset-y-0 right-0 pr-3 flex items-center"
                           >
-                            <X className="h-5 w-5 text-red-400 hover:text-red-600" />
+                            <svg className="h-5 w-5 text-red-400 hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={6} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                           </button>
                         )}
                       </div>
-                      {quarterlySearchTerm && (
-                        <div className="mt-2 text-sm text-gray-600">
-                          Searching quarterly data...
-                        </div>
-                      )}
                     </div>
 
                     {/* Year Filter */}
@@ -199,7 +294,7 @@ export function EvaluationHistoryTab({
                       </div>
                     </div>
 
-                    {/* Quarter Filter Buttons */}
+                    {/* Quarter Filter */}
                     <div className="mb-6">
                       <div className="flex flex-wrap gap-2 items-center">
                         <span className="text-sm font-medium text-gray-700 mr-2">Filter by Quarter:</span>
@@ -222,33 +317,15 @@ export function EvaluationHistoryTab({
                             {quarter}
                           </Button>
                         ))}
-                        {selectedQuarter && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedQuarter('')}
-                            className="text-xs text-white bg-red-500 hover:text-white hover:bg-red-600 border border-red-500 shadow-sm transition-all duration-200 hover:shadow-md"
-                          >
-                            Clear Filter
-                          </Button>
-                        )}
                       </div>
-                      {selectedQuarter && (
-                        <div className="mt-2 text-sm text-gray-600">
-                          Showing data for {selectedQuarter} only
-                        </div>
-                      )}
                     </div>
                     <div className="relative max-h-[300px] md:max-h-[450px] lg:max-h-[650px] xl:max-h-[700px] overflow-y-auto overflow-x-auto scrollable-table">
                       {quarterlyRefreshing || loading ? (
                         <>
-                          {/* Centered Loading Spinner with Logo */}
                           <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                             <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
                               <div className="relative">
-                                {/* Spinning ring */}
                                 <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                                {/* Logo in center */}
                                 <div className="absolute inset-0 flex items-center justify-center">
                                   <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
                                 </div>
@@ -256,10 +333,7 @@ export function EvaluationHistoryTab({
                               <p className="text-sm text-gray-600 font-medium">Loading quarterly data...</p>
                             </div>
                           </div>
-
-                          {/* Table skeleton visible in background */}
                           <div className="space-y-2 p-4">
-                            {/* Table Header Skeleton */}
                             <div className="flex space-x-3 py-2 border-b">
                               <Skeleton className="h-3 w-12" />
                               <Skeleton className="h-3 w-18" />
@@ -269,8 +343,6 @@ export function EvaluationHistoryTab({
                               <Skeleton className="h-3 w-10" />
                               <Skeleton className="h-3 w-12" />
                             </div>
-
-                            {/* Table Rows Skeleton */}
                             {Array.from({ length: 3 }).map((_, i) => (
                               <div key={i} className="flex items-center space-x-3 py-2 border-b">
                                 <Skeleton className="h-4 w-8" />
@@ -290,7 +362,7 @@ export function EvaluationHistoryTab({
                             <TableRow>
                               <TableHead>Quarter</TableHead>
                               <TableHead>Dates</TableHead>
-                              <TableHead className="text-center">Total Evaluations</TableHead>
+                              <TableHead>Total Evaluations</TableHead>
                               <TableHead>Average Rating</TableHead>
                               <TableHead>Latest Rating</TableHead>
                               <TableHead>Status</TableHead>
@@ -298,93 +370,8 @@ export function EvaluationHistoryTab({
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {(() => {
-                              // Group all submissions by quarter (HR sees all evaluations)
-                              const quarterlyData = recentSubmissions.reduce((acc, submission) => {
-                                const quarter = getQuarterFromEvaluationData(submission.evaluationData || submission);
-                                if (!acc[quarter]) {
-                                  acc[quarter] = {
-                                    quarter,
-                                    submissions: [],
-                                    averageRating: 0,
-                                    totalEvaluations: 0,
-                                    latestRating: 0,
-                                    dateRange: ''
-                                  };
-                                }
-                                acc[quarter].submissions.push(submission);
-                                return acc;
-                              }, {} as any);
-
-                              // Calculate statistics for each quarter
-                              Object.keys(quarterlyData).forEach(quarter => {
-                                const data = quarterlyData[quarter];
-                                const ratings = data.submissions.map((s: any) =>
-                                  s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating || 0
-                                ).filter((r: any) => r > 0);
-                                data.totalEvaluations = ratings.length;
-                                data.averageRating = ratings.length > 0 ? (ratings.reduce((a: any, b: any) => a + b, 0) / ratings.length).toFixed(1) : 0;
-                                data.latestRating = ratings.length > 0 ? ratings[ratings.length - 1] : 0;
-                                
-                                // Calculate date range for this quarter
-                                if (data.submissions.length > 0) {
-                                  const dates = data.submissions.map((s: any) => new Date(s.submittedAt)).sort((a: any, b: any) => a - b);
-                                  const startDate = dates[0];
-                                  const endDate = dates[dates.length - 1];
-                                  
-                                  if (startDate.getTime() === endDate.getTime()) {
-                                    data.dateRange = startDate.toLocaleDateString();
-                                  } else {
-                                    data.dateRange = `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
-                                  }
-                                }
-                              });
-
-                              // Sort quarters chronologically
-                              const sortedQuarters = Object.values(quarterlyData).sort((a: any, b: any) => {
-                                const quarterOrder: { [key: string]: number } = { 'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4 };
-                                const aQuarter = a.quarter.split(' ')[0];
-                                const bQuarter = b.quarter.split(' ')[0];
-                                return (quarterOrder[aQuarter] || 0) - (quarterOrder[bQuarter] || 0);
-                              });
-
-                              // Filter quarters based on selected quarter and year
-                              let filteredQuarters = selectedQuarter
-                                ? sortedQuarters.filter((q: any) => q.quarter.startsWith(selectedQuarter))
-                                : sortedQuarters;
-
-                              // Apply year filter - match both quarter year and submission year
-                              if (selectedYear && selectedYear !== 'all') {
-                                const year = parseInt(selectedYear);
-                                filteredQuarters = filteredQuarters.filter((quarterData: any) => {
-                                  // Extract year from quarter string (e.g., "Q1 2024" -> "2024")
-                                  const quarterYear = quarterData.quarter.split(' ')[1];
-                                  const quarterYearMatches = quarterYear === selectedYear;
-                                  
-                                  // Also check if any submission in this quarter matches the year
-                                  const submissionYearMatches = quarterData.submissions.some((submission: any) => {
-                                    const submissionYear = new Date(submission.submittedAt).getFullYear();
-                                    return submissionYear === year;
-                                  });
-                                  
-                                  // Match if either the quarter year or submission year matches
-                                  return quarterYearMatches || submissionYearMatches;
-                                });
-                              }
-
-                              // Filter by search term
-                              if (quarterlySearchTerm) {
-                                filteredQuarters = filteredQuarters.filter((quarterData: any) => {
-                                  const searchLower = quarterlySearchTerm.toLowerCase();
-                                  return quarterData.quarter.toLowerCase().includes(searchLower) ||
-                                    quarterData.submissions.some((s: any) =>
-                                      s.employeeName?.toLowerCase().includes(searchLower) ||
-                                      s.evaluatorName?.toLowerCase().includes(searchLower)
-                                    );
-                                });
-                              }
-
-                              return filteredQuarters.length > 0 ? filteredQuarters.map((quarterData: any) => {
+                            {historyPaginated.length > 0 ? (
+                              historyPaginated.map((quarterData: any) => {
                                 const hasNewSubmission = quarterData.submissions.some((submission: any) => 
                                   isNewSubmission(submission.submittedAt)
                                 );
@@ -411,11 +398,7 @@ export function EvaluationHistoryTab({
                                         {quarterData.dateRange || 'No dates available'}
                                       </div>
                                     </TableCell>
-                                    <TableCell className="text-center">
-                                      <div className="flex justify-center">
-                                        <span className="font-medium">{quarterData.totalEvaluations}</span>
-                                      </div>
-                                    </TableCell>
+                                    <TableCell className="font-medium">{quarterData.totalEvaluations}</TableCell>
                                     <TableCell>
                                       <div className="flex items-center space-x-1">
                                         <span className="font-semibold">{quarterData.averageRating}</span>
@@ -460,24 +443,80 @@ export function EvaluationHistoryTab({
                                     </TableCell>
                                   </TableRow>
                                 );
-                              }) : (
-                                <TableRow>
-                                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                                    <p>No quarterly data available</p>
-                                    <p className="text-sm">Evaluations will be grouped by quarter once available</p>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })()}
+                              })
+                            ) : (
+                              <TableRow>
+                                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                                  <p>No quarterly data available</p>
+                                  <p className="text-sm">Evaluations will be grouped by quarter once available</p>
+                                </TableCell>
+                              </TableRow>
+                            )}
                           </TableBody>
                         </Table>
                       )}
                     </div>
-              </CardContent>
-            </Card>
+
+                    {/* Pagination Controls - Show when more than 7 quarters */}
+                    {filteredQuarters.length > 7 && (
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-0 mt-3 md:mt-4 px-2">
+                        <div className="text-xs md:text-sm text-gray-600 order-2 sm:order-1">
+                          Showing {historyStartIndex + 1} to {Math.min(historyEndIndex, filteredQuarters.length)} of {filteredQuarters.length} records
+                        </div>
+                        <div className="flex items-center gap-1.5 md:gap-2 order-1 sm:order-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setHistoryPage(prev => Math.max(1, prev - 1))}
+                            disabled={historyPage === 1}
+                            className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          >
+                            Previous
+                          </Button>
+                          <div className="flex items-center gap-0.5 md:gap-1">
+                            {Array.from({ length: historyTotalPages }, (_, i) => i + 1).map((page) => {
+                              if (
+                                page === 1 ||
+                                page === historyTotalPages ||
+                                (page >= historyPage - 1 && page <= historyPage + 1)
+                              ) {
+                                return (
+                                  <Button
+                                    key={page}
+                                    variant={historyPage === page ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setHistoryPage(page)}
+                                    className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
+                                      historyPage === page
+                                        ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                                        : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                                    }`}
+                                  >
+                                    {page}
+                                  </Button>
+                                );
+                              } else if (page === historyPage - 2 || page === historyPage + 2) {
+                                return <span key={page} className="text-gray-400 text-xs md:text-sm">...</span>;
+                              }
+                              return null;
+                            })}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setHistoryPage(prev => Math.min(historyTotalPages, prev + 1))}
+                            disabled={historyPage === historyTotalPages}
+                            className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
           </CardContent>
         </Card>
       )}
     </div>
   );
 }
+
