@@ -59,12 +59,44 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [isLeadershipOpen, setIsLeadershipOpen] = useState(false);
 
-  const { user, profile: userProfile, updateProfile, logout } = useUser();
+  const { user, logout, refreshUser } = useUser();
   const router = useRouter();
   
-  // Get user role for notifications
-  const userRole = user?.role || 'employee';
+  // Convert user to UserProfile format
+  const userProfile: UserProfile | null = useMemo(() => {
+    if (!user) return null;
+    return {
+      id: user.id,
+      name: `${user.fname} ${user.lname}`.trim(),
+      roleOrPosition: user.position,
+      email: user.email,
+      avatar: user.avatar,
+      department: user.department,
+      branch: user.branch,
+      bio: user.bio,
+      signature: user.signature,
+      employeeId: user.id,
+    };
+  }, [user]);
+  
+  // Get user role for notifications - extract from roles array
+  const userRole = useMemo(() => {
+    if (!user?.roles) return 'employee';
+    // Handle roles as array or object
+    if (Array.isArray(user.roles)) {
+      return user.roles[0]?.name || user.roles[0] || 'employee';
+    }
+    return user.roles?.name || 'employee';
+  }, [user]);
+  
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(userRole);
+  
+  // Update profile function
+  const updateProfile = async (updatedProfile: UserProfile) => {
+    // Update user data - this will be handled by the parent component's onSaveProfile
+    // For now, we'll refresh the user data from the server
+    await refreshUser();
+  };
 
   // Memoize dashboard type detection to avoid dependency issues
   const dashboardType = useMemo(() => {
@@ -157,13 +189,14 @@ export default function DashboardShell(props: DashboardShellProps) {
 
   const handleSaveProfile = async (updatedProfile: UserProfile) => {
     try {
-      // Update in context
-      updateProfile(updatedProfile);
-
       // Call parent callback if provided
       if (onSaveProfile) {
         await onSaveProfile(updatedProfile);
       }
+      
+      // Refresh user data from server to get updated profile
+      await refreshUser();
+      
       setIsProfileModalOpen(false);
     } catch (error) {
       console.error('Error saving profile:', error);
