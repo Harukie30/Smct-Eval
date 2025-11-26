@@ -70,10 +70,11 @@ export function PerformanceReviewsTab({
     try {
       setLoading(true);
       const allSubmissions = await clientDataService.getSubmissions();
+      const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
       const userSubmissions = profile?.email
         ? allSubmissions.filter(
             (submission: any) =>
-              submission.employeeName === profile.name ||
+              submission.employeeName === userFullName ||
               submission.evaluationData?.employeeEmail === profile.email
           )
         : [];

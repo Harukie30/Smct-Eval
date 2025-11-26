@@ -409,11 +409,11 @@ function EvaluatorDashboard() {
           typeof profile.id === "string"
             ? parseInt(profile.id) || 0
             : profile.id || 0,
-        name: profile.name,
+        name: `${profile.fname} ${profile.lname}`.trim(),
         email: profile.email || "",
-        position: profile.roleOrPosition || "",
-        department: profile.department || "",
-        role: profile.roleOrPosition || "",
+        position: profile.positions?.label || "",
+        department: profile.departments?.department_name || "",
+        role: profile.roles?.[0]?.name || "",
         signature: profile.signature, // Include signature from profile
       };
     }

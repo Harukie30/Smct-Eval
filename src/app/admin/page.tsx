@@ -40,7 +40,7 @@ import { Label } from "@/components/ui/label";
 
 import EditUserModal from "@/components/EditUserModal";
 import { toastMessages } from "@/lib/toastMessages";
-import clientDataService from "@/lib/clientDataService";
+import clientDataService from "@/lib/apiService";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 
 // Lazy load tab components for better performance
@@ -156,10 +156,10 @@ function AdminDashboard() {
   const pathname = usePathname();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [positionsData, setPositionsData] = useState<
-    { id: string; name: string }[]
+    { value: string; label: string }[]
   >([]);
   const [branchesData, setBranchesData] = useState<
-    { id: string; name: string }[]
+    { value: string; label: string }[]
   >([]);
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(
     null
@@ -572,7 +572,10 @@ function AdminDashboard() {
             updatedUser.isActive !== undefined
               ? updatedUser.isActive
               : accounts[accountIndex].isActive,
-          employeeId: updatedUser.employeeId !== undefined ? updatedUser.employeeId : accounts[accountIndex].employeeId,
+          employeeId:
+            updatedUser.employeeId !== undefined
+              ? updatedUser.employeeId
+              : accounts[accountIndex].employeeId,
           updatedAt: new Date().toISOString(),
         };
         localStorage.setItem("accounts", JSON.stringify(accounts));
@@ -1232,8 +1235,11 @@ function AdminDashboard() {
                       </SelectTrigger>
                       <SelectContent>
                         {positionsData.map((position) => (
-                          <SelectItem key={position.id} value={position.id}>
-                            {position.name}
+                          <SelectItem
+                            key={position.value}
+                            value={position.value}
+                          >
+                            {position.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1330,8 +1336,8 @@ function AdminDashboard() {
                       </SelectTrigger>
                       <SelectContent>
                         {branchesData.map((branch) => (
-                          <SelectItem key={branch.id} value={branch.id}>
-                            {branch.name}
+                          <SelectItem key={branch.value} value={branch.value}>
+                            {branch.label}
                           </SelectItem>
                         ))}
                       </SelectContent>

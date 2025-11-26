@@ -70,10 +70,11 @@ export function OverviewTab({
     try {
       setLoading(true);
       const allSubmissions = await clientDataService.getSubmissions();
+      const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
       const userSubmissions = profile?.email
         ? allSubmissions.filter(
             (submission: any) =>
-              submission.employeeName === profile.name ||
+              submission.employeeName === userFullName ||
               submission.evaluationData?.employeeEmail === profile.email
           )
         : [];
@@ -118,10 +119,11 @@ export function OverviewTab({
           // Add delay to show spinner
           await new Promise((resolve) => setTimeout(resolve, 500));
           const allSubmissions = await clientDataService.getSubmissions();
+          const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
           const userSubmissions = profile?.email
             ? allSubmissions.filter(
                 (submission: any) =>
-                  submission.employeeName === profile.name ||
+                  submission.employeeName === userFullName ||
                   submission.evaluationData?.employeeEmail === profile.email
               )
             : [];
@@ -145,10 +147,11 @@ export function OverviewTab({
     const refreshSubmissions = async () => {
       try {
         const allSubmissions = await clientDataService.getSubmissions();
+        const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
         const userSubmissions = profile?.email
           ? allSubmissions.filter(
               (submission: any) =>
-                submission.employeeName === profile.name ||
+                submission.employeeName === userFullName ||
                 submission.evaluationData?.employeeEmail === profile.email
             )
           : [];
@@ -197,10 +200,11 @@ export function OverviewTab({
     const checkForNewSubmissions = async () => {
       try {
         const allSubmissions = await clientDataService.getSubmissions();
+        const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
         const userSubmissions = profile?.email
           ? allSubmissions.filter(
               (submission: any) =>
-                submission.employeeName === profile.name ||
+                submission.employeeName === userFullName ||
                 submission.evaluationData?.employeeEmail === profile.email
             )
           : [];
@@ -407,10 +411,11 @@ export function OverviewTab({
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500));
       const allSubmissions = await clientDataService.getSubmissions();
+      const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
       const userSubmissions = profile?.email
         ? allSubmissions.filter(
             (submission: any) =>
-              submission.employeeName === profile.name ||
+              submission.employeeName === userFullName ||
               submission.evaluationData?.employeeEmail === profile.email
           )
         : [];
