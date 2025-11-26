@@ -1,27 +1,40 @@
 // API Service Layer - replaces clientDataService for backend integration
-import { AuthenticatedUser } from '@/contexts/UserContext';
-import { PendingRegistration, Account } from './clientDataService';
-import { CONFIG } from '../../config/config';
-import { api } from './api';
-import { AxiosError } from 'axios';
+import { AuthenticatedUser } from "@/contexts/UserContext";
+import { PendingRegistration, Account } from "./clientDataService";
+import { CONFIG } from "../../config/config";
+import { api, sanctum } from "./api";
+import axios, { AxiosError } from "axios";
 
 // Helper function to get CSRF cookie from Sanctum
 export const sanctum_csrf = async () => {
   try {
-    await api.get('/sanctum/csrf-cookie');
+    await axios.get("http://10.50.2.13:8000/sanctum/csrf-cookie");
   } catch (error) {
-    console.error('Failed to get CSRF cookie:', error);
+    console.error("Failed to get CSRF cookie:", error);
     throw error;
   }
 };
 
 export const apiService = {
-
   // Authentication
-  login: async (email: string, password: string, remember: boolean = false): Promise<any> => {
+  login: async (email: string, password: string): Promise<any> => {
     await sanctum_csrf();
     try {
-      const response = await api.post('/login', { email, password, remember });
+      const response = await api.post("/login", { email, password });
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+        message: axiosError.response?.data?.message || "Login failed",
+      };
+    }
+  },
+
+  logout: async (): Promise<any> => {
+    try {
+      const response = await api.post("/logout");
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
@@ -34,11 +47,10 @@ export const apiService = {
   },
 
   // Get current authenticated user
-  getUser: async (): Promise<any> => {
-    await sanctum_csrf();
+  authUser: async (): Promise<any> => {
     try {
-      const response = await api.get('/user');
-      return response.data.user || response.data;
+      const response = await api.get("/profile");
+      return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw {
@@ -52,7 +64,7 @@ export const apiService = {
   // Registration
   createPendingRegistration: async (formData: FormData): Promise<any> => {
     try {
-      const response = await api.post('/register', formData);
+      const response = await api.post("/register", formData);
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
@@ -62,12 +74,11 @@ export const apiService = {
       };
     }
   },
-
 
   updateEmployee_auth: async (formData: FormData): Promise<any> => {
     await sanctum_csrf();
     try {
-      const response = await api.post('/update_employee_auth', formData);
+      const response = await api.post("/update_employee_auth", formData);
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
@@ -77,8 +88,11 @@ export const apiService = {
       };
     }
   },
-      
-  updateEmployee: async (formData: FormData, id :string | number): Promise<any> => {
+
+  updateEmployee: async (
+    formData: FormData,
+    id: string | number
+  ): Promise<any> => {
     await sanctum_csrf();
     try {
       const response = await api.post(`/update_user/${id}`, formData);
@@ -91,8 +105,8 @@ export const apiService = {
       };
     }
   },
-  
-  approveRegistration: async ( id :string | number): Promise<any> => {
+
+  approveRegistration: async (id: string | number): Promise<any> => {
     await sanctum_csrf();
     try {
       const response = await api.post(`/approveRegistration/${id}`);
@@ -106,7 +120,7 @@ export const apiService = {
     }
   },
 
-  rejectRegistration: async ( id :string | number): Promise<any> => {
+  rejectRegistration: async (id: string | number): Promise<any> => {
     await sanctum_csrf();
     try {
       const response = await api.post(`/rejectRegistration/${id}`);
@@ -120,7 +134,7 @@ export const apiService = {
     }
   },
 
-  deleteUser: async (id :string | number): Promise<any> => {
+  deleteUser: async (id: string | number): Promise<any> => {
     await sanctum_csrf();
     try {
       const response = await api.post(`/delete_user/${id}`);
@@ -136,86 +150,101 @@ export const apiService = {
 
   getPendingRegistrations: async (): Promise<any | null> => {
     try {
-      const response = await api.get('/getAll_Pending_users');
+      const response = await api.get("/getPendingRegistrations");
       return response.data.users || [];
     } catch (error) {
       const axiosError = error as AxiosError<any>;
-      throw new Error(axiosError.response?.data?.message || 'Failed to fetch pending registrations');
+      throw new Error(
+        axiosError.response?.data?.message ||
+          "Failed to fetch pending registrations"
+      );
     }
   },
-  
-  getActiveRegistrations: async (filters? : Record< string , string >): Promise<any | null> => {
+
+  getActiveRegistrations: async (
+    filters?: Record<string, string>
+  ): Promise<any | null> => {
     try {
-      const response = await api.get('/getAll_Active_users', {
+      const response = await api.get("/getAllActiveUsers", {
         params: filters,
       });
       return response.data.users;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
-      throw new Error(axiosError.response?.data?.message || 'Failed to fetch active registrations');
+      throw new Error(
+        axiosError.response?.data?.message ||
+          "Failed to fetch active registrations"
+      );
     }
   },
 
-  getDepartments: async ():  Promise<{ label: string; value: string }[]> => {
+  getDepartments: async (): Promise<{ label: string; value: string }[]> => {
     try {
-      const response = await api.get('/departments');
-      return response.data.departments.map(
-        (departments: any) => ({
-          value: departments.id,
-          label: departments.department_name,
-        })
-      );
+      const response = await api.get("/departments");
+      return response.data.departments.map((departments: any) => ({
+        value: departments.id,
+        label: departments.department_name,
+      }));
     } catch (error) {
       const axiosError = error as AxiosError<any>;
-      throw new Error(axiosError.response?.data?.message || 'Failed to fetch departments');
+      throw new Error(
+        axiosError.response?.data?.message || "Failed to fetch departments"
+      );
     }
   },
 
   getPositions: async (): Promise<{ label: string; value: string }[]> => {
     try {
-      const response = await api.get('/positions');
+      const response = await api.get("/positions");
       return response.data.positions.map((position: any) => ({
         value: position.id,
         label: position.label,
       }));
     } catch (error) {
       const axiosError = error as AxiosError<any>;
-      throw new Error(axiosError.response?.data?.message || 'Failed to get positions');
+      throw new Error(
+        axiosError.response?.data?.message || "Failed to get positions"
+      );
     }
   },
 
-  getBranches: async ():  Promise<{ label: string; value: string }[]> => {
+  getBranches: async (): Promise<{ label: string; value: string }[]> => {
     try {
-      const response = await api.get('/branches');
+      const response = await api.get("/branches");
       return response.data.branches.map((branches: any) => ({
         value: branches.id,
         label: branches.branch_name + " /" + branches.branch_code,
       }));
     } catch (error) {
       const axiosError = error as AxiosError<any>;
-      throw new Error(axiosError.response?.data?.message || 'Failed to fetch branches');
+      throw new Error(
+        axiosError.response?.data?.message || "Failed to fetch branches"
+      );
     }
   },
 
   getAccounts: async (): Promise<any> => {
     try {
-      const response = await api.get('/api/accounts');
+      const response = await api.get("/api/accounts");
       return response.data.accounts || [];
     } catch (error) {
       const axiosError = error as AxiosError<any>;
-      throw new Error(axiosError.response?.data?.message || 'Failed to fetch accounts');
+      throw new Error(
+        axiosError.response?.data?.message || "Failed to fetch accounts"
+      );
     }
   },
 
-
-  uploadAvatar: async (formData : FormData): Promise<any> => {
+  uploadAvatar: async (formData: FormData): Promise<any> => {
     await sanctum_csrf();
     try {
-      const response = await api.post('/upload_avatar', formData);
+      const response = await api.post("/upload_avatar", formData);
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
-      throw new Error(axiosError.response?.data?.message || 'Image upload failed');
+      throw new Error(
+        axiosError.response?.data?.message || "Image upload failed"
+      );
     }
   },
 
@@ -245,11 +274,26 @@ export const apiService = {
       throw {
         ...axiosError.response?.data,
         status: axiosError.response?.status || 500,
-        message: axiosError.response?.data?.message || "Failed to update profile",
+        message:
+          axiosError.response?.data?.message || "Failed to update profile",
       };
     }
   },
-}
 
+  getSubmissions: async (): Promise<any> => {
+    try {
+      const response = await api.get(`/allEvaluations`);
+      return response.data.profile || response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+        message:
+          axiosError.response?.data?.message || "Failed to update profile",
+      };
+    }
+  },
+};
 
 export default apiService;

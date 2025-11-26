@@ -46,7 +46,7 @@ import { Plus, ChevronDown } from "lucide-react";
 import EditUserModal from "@/components/EditUserModal";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import { toastMessages } from "@/lib/toastMessages";
-import clientDataService from "@/lib/clientDataService";
+import clientDataService from "@/lib/apiService";
 import accountsDataRaw from "@/data/accounts.json";
 import departmentsData from "@/data/departments.json";
 import branchCodesData from "@/data/branch-code.json";
@@ -76,8 +76,8 @@ interface Employee {
 }
 
 interface UserManagementTabProps {
-  branchesData: { id: string; name: string }[];
-  positionsData: { id: string; name: string }[];
+  branchesData: { value: string; label: string }[];
+  positionsData: { value: string; label: string }[];
   refreshDashboardData: (
     showModal?: boolean,
     isAutoRefresh?: boolean
@@ -348,7 +348,10 @@ export function UserManagementTab({
             updatedUser.isActive !== undefined
               ? updatedUser.isActive
               : accounts[accountIndex].isActive,
-          employeeId: updatedUser.employeeId !== undefined ? updatedUser.employeeId : accounts[accountIndex].employeeId,
+          employeeId:
+            updatedUser.employeeId !== undefined
+              ? updatedUser.employeeId
+              : accounts[accountIndex].employeeId,
           updatedAt: new Date().toISOString(),
         };
         localStorage.setItem("accounts", JSON.stringify(accounts));
