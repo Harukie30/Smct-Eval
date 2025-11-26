@@ -150,6 +150,11 @@ export default function DashboardShell(props: DashboardShellProps) {
     setIsProfileModalOpen(true);
   };
 
+  const handleSettings = () => {
+    // Settings opens the profile modal for editing
+    setIsProfileModalOpen(true);
+  };
+
   const handleSaveProfile = async (updatedProfile: UserProfile) => {
     try {
       // Update in context
@@ -341,8 +346,9 @@ export default function DashboardShell(props: DashboardShellProps) {
                 profile={userProfile}
                 variant="header"
                 showLogout={true}
-                showSettings={false}
+                showSettings={true}
                 onEditProfile={handleEditProfile}
+                onSettings={handleSettings}
                 onLogout={handleLogout}
               />
             )}
