@@ -1,4 +1,3 @@
-// API Service Layer - replaces clientDataService for backend integration
 import { AuthenticatedUser } from "@/contexts/UserContext";
 import { PendingRegistration, Account } from "./clientDataService";
 import { CONFIG } from "../../config/config";
