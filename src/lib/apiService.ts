@@ -7,7 +7,7 @@ import axios, { AxiosError } from "axios";
 // Helper function to get CSRF cookie from Sanctum
 export const sanctum_csrf = async () => {
   try {
-    await axios.get("http://10.50.2.13:8000/sanctum/csrf-cookie");
+    await sanctum.get("/sanctum/csrf-cookie");
   } catch (error) {
     console.error("Failed to get CSRF cookie:", error);
     throw error;

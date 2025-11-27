@@ -3,34 +3,17 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Bell,
-  X,
-  Trash2,
-  MessageCircle,
-  ChevronDown,
-} from "lucide-react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ChevronLeft, ChevronRight, Bell, X, Trash2, MessageCircle, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, } from "@/components/ui/dialog";
 import ProfileCard, { UserProfile } from "./ProfileCard";
 import ProfileModal from "./ProfileModal";
 import ContactDevsModal from "./ContactDevsModal";
-import { useUser } from "@/contexts/UserContext";
-import { useNotifications } from "@/hooks/useNotifications";
-import { Notification } from "@/lib/clientDataService";
-import clientDataService from "@/lib/clientDataService";
-import { useRouter } from "next/navigation";
+import { useUser } from '@/contexts/UserContext';
+import { useNotifications } from '@/hooks/useNotifications';
+import { Notification } from '@/lib/clientDataService';
+import clientDataService from '@/lib/clientDataService';
+import { useRouter } from 'next/navigation';
 
 export type SidebarItem = {
   id: string;
@@ -67,141 +50,131 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [isContactDevsModalOpen, setIsContactDevsModalOpen] = useState(false);
-  const [isNotificationDetailOpen, setIsNotificationDetailOpen] =
-    useState(false);
-  const [selectedNotification, setSelectedNotification] =
-    useState<Notification | null>(null);
+  const [isNotificationDetailOpen, setIsNotificationDetailOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
-
+  
   // Collapsible states for sidebar groups
   const [isManagementOpen, setIsManagementOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [isLeadershipOpen, setIsLeadershipOpen] = useState(false);
 
-  const { user, profile: userProfile, updateProfile, logout } = useUser();
+  const { user, logout, refreshUser } = useUser();
   const router = useRouter();
-
-  // Get user role for notifications
-  const userRole = user?.role || "employee";
-  const { notifications, unreadCount, markAsRead, markAllAsRead } =
-    useNotifications(userRole);
+  
+  // Convert user to UserProfile format
+  const userProfile: UserProfile | null = useMemo(() => {
+    if (!user) return null;
+    return {
+      id: user.id,
+      name: `${user.fname} ${user.lname}`.trim(),
+      roleOrPosition: user.position,
+      email: user.email,
+      avatar: user.avatar,
+      department: user.department,
+      branch: user.branch,
+      bio: user.bio,
+      signature: user.signature,
+      employeeId: user.id,
+    };
+  }, [user]);
+  
+  // Get user role for notifications - extract from roles array
+  const userRole = useMemo(() => {
+    if (!user?.roles) return 'employee';
+    // Handle roles as array or object
+    if (Array.isArray(user.roles)) {
+      return user.roles[0]?.name || user.roles[0] || 'employee';
+    }
+    return user.roles?.name || 'employee';
+  }, [user]);
+  
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(userRole);
+  
+  // Update profile function
+  const updateProfile = async (updatedProfile: UserProfile) => {
+    // Update user data - this will be handled by the parent component's onSaveProfile
+    // For now, we'll refresh the user data from the server
+    await refreshUser();
+  };
 
   // Memoize dashboard type detection to avoid dependency issues
   const dashboardType = useMemo(() => {
-    const hasFeedback = sidebarItems.some((item) => item.id === "feedback");
-    const hasEvaluationRecords = sidebarItems.some(
-      (item) => item.id === "evaluation-records"
-    );
-    const hasDashboards = sidebarItems.some((item) => item.id === "dashboards");
-    const hasUsers = sidebarItems.some((item) => item.id === "users");
-    const hasEvaluatedReviews = sidebarItems.some(
-      (item) => item.id === "evaluated-reviews"
-    );
-
+    const hasFeedback = sidebarItems.some(item => item.id === 'feedback');
+    const hasEvaluationRecords = sidebarItems.some(item => item.id === 'evaluation-records');
+    const hasDashboards = sidebarItems.some(item => item.id === 'dashboards');
+    const hasUsers = sidebarItems.some(item => item.id === 'users');
+    const hasEvaluatedReviews = sidebarItems.some(item => item.id === 'evaluated-reviews');
+    
     // Detect admin dashboard (has unique items like 'dashboards', 'users', 'evaluated-reviews')
     if (hasDashboards || hasUsers || hasEvaluatedReviews) {
-      return "admin";
+      return 'admin';
     }
-
+    
     if (!hasFeedback && !hasEvaluationRecords) {
-      return "employee";
+      return 'employee';
     } else if (hasFeedback) {
-      return "evaluator";
+      return 'evaluator';
     } else {
-      return "hr";
+      return 'hr';
     }
   }, [sidebarItems]);
-
+  
   // Memoize boolean flags to ensure stable references
-  const isEmployeeDashboard = useMemo(
-    () => dashboardType === "employee",
-    [dashboardType]
-  );
-  const isEvaluatorDashboard = useMemo(
-    () => dashboardType === "evaluator",
-    [dashboardType]
-  );
-  const isAdminDashboard = useMemo(
-    () => dashboardType === "admin",
-    [dashboardType]
-  );
-  const isHRDashboard = useMemo(() => dashboardType === "hr", [dashboardType]);
+  const isEmployeeDashboard = useMemo(() => dashboardType === 'employee', [dashboardType]);
+  const isEvaluatorDashboard = useMemo(() => dashboardType === 'evaluator', [dashboardType]);
+  const isAdminDashboard = useMemo(() => dashboardType === 'admin', [dashboardType]);
+  const isHRDashboard = useMemo(() => dashboardType === 'hr', [dashboardType]);
 
   // Auto-open collapsible groups when their items are active
   useEffect(() => {
     // For admin dashboard, handle management group (departments, branches) and leadership group (branch-heads, area-managers)
     if (isAdminDashboard) {
-      if (
-        ["departments", "branches"].includes(activeItemId) &&
-        !isManagementOpen
-      ) {
+      if (['departments', 'branches'].includes(activeItemId) && !isManagementOpen) {
         setIsManagementOpen(true);
       }
-      if (
-        ["branch-heads", "area-managers"].includes(activeItemId) &&
-        !isLeadershipOpen
-      ) {
+      if (['branch-heads', 'area-managers'].includes(activeItemId) && !isLeadershipOpen) {
         setIsLeadershipOpen(true);
       }
       return;
     }
-
+    
     if (isHRDashboard) {
-      if (
-        ["departments", "branches", "branch-heads", "area-managers"].includes(
-          activeItemId
-        ) &&
-        !isManagementOpen
-      ) {
+      if (['departments', 'branches', 'branch-heads', 'area-managers'].includes(activeItemId) && !isManagementOpen) {
         setIsManagementOpen(true);
       }
       return;
     }
-
-    if (
-      ["departments", "branches"].includes(activeItemId) &&
-      !isManagementOpen
-    ) {
+    
+    if (['departments', 'branches'].includes(activeItemId) && !isManagementOpen) {
       setIsManagementOpen(true);
     }
-
+    
     // For employee and evaluator dashboards, only 'history' should open Analytics
     // For HR dashboard, 'reviews' and 'history' should open Analytics
-    const analyticsItems =
-      isEmployeeDashboard || isEvaluatorDashboard
-        ? ["history"]
-        : ["reviews", "history"];
-
+    const analyticsItems = isEmployeeDashboard || isEvaluatorDashboard
+      ? ['history']
+      : ['reviews', 'history'];
+    
     if (analyticsItems.includes(activeItemId) && !isAnalyticsOpen) {
       setIsAnalyticsOpen(true);
     }
-  }, [
-    activeItemId,
-    isManagementOpen,
-    isAnalyticsOpen,
-    isLeadershipOpen,
-    isEmployeeDashboard,
-    isEvaluatorDashboard,
-    isAdminDashboard,
-  ]);
+  }, [activeItemId, isManagementOpen, isAnalyticsOpen, isLeadershipOpen, isEmployeeDashboard, isEvaluatorDashboard, isAdminDashboard]);
 
   // Close notification panel when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target as Node)
-      ) {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
         setIsNotificationPanelOpen(false);
       }
     };
 
     if (isNotificationPanelOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isNotificationPanelOpen]);
 
@@ -209,18 +182,24 @@ export default function DashboardShell(props: DashboardShellProps) {
     setIsProfileModalOpen(true);
   };
 
+  const handleSettings = () => {
+    // Settings opens the profile modal for editing
+    setIsProfileModalOpen(true);
+  };
+
   const handleSaveProfile = async (updatedProfile: UserProfile) => {
     try {
-      // Update in context
-      updateProfile(updatedProfile);
-
       // Call parent callback if provided
       if (onSaveProfile) {
         await onSaveProfile(updatedProfile);
       }
+      
+      // Refresh user data from server to get updated profile
+      await refreshUser();
+      
       setIsProfileModalOpen(false);
     } catch (error) {
-      console.error("Error saving profile:", error);
+      console.error('Error saving profile:', error);
     }
   };
 
@@ -233,10 +212,10 @@ export default function DashboardShell(props: DashboardShellProps) {
     if (!notification.isRead) {
       await markAsRead(notification.id);
     }
-
+    
     // Close the notification panel
     setIsNotificationPanelOpen(false);
-
+    
     // Navigate to the action URL if it exists
     if (notification.actionUrl) {
       router.push(notification.actionUrl);
@@ -251,42 +230,31 @@ export default function DashboardShell(props: DashboardShellProps) {
     await markAllAsRead();
   };
 
-  const handleDeleteNotification = async (
-    notificationId: number,
-    e: React.MouseEvent
-  ) => {
+  const handleDeleteNotification = async (notificationId: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering the notification click
     try {
       // Use clientDataService to delete notification properly
       await clientDataService.deleteNotification(notificationId);
     } catch (error) {
-      console.error("Failed to delete notification:", error);
+      console.error('Failed to delete notification:', error);
     }
   };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case "success":
-        return "✅";
-      case "warning":
-        return "⚠️";
-      case "error":
-        return "❌";
-      default:
-        return "ℹ️";
+      case 'success': return '✅';
+      case 'warning': return '⚠️';
+      case 'error': return '❌';
+      default: return 'ℹ️';
     }
   };
 
   const getNotificationColor = (type: string) => {
     switch (type) {
-      case "success":
-        return "text-green-600 bg-green-50";
-      case "warning":
-        return "text-yellow-600 bg-yellow-50";
-      case "error":
-        return "text-red-600 bg-red-50";
-      default:
-        return "text-blue-600 bg-blue-50";
+      case 'success': return 'text-green-600 bg-green-50';
+      case 'warning': return 'text-yellow-600 bg-yellow-50';
+      case 'error': return 'text-red-600 bg-red-50';
+      default: return 'text-blue-600 bg-blue-50';
     }
   };
 
@@ -296,16 +264,10 @@ export default function DashboardShell(props: DashboardShellProps) {
       <header className="bg-white shadow-sm border-b rounded-t-lg">
         <div className="flex justify-between items-center px-6 py-4">
           <div className="flex items-center space-x-3">
-            <img
-              src="/smct.png"
-              alt="SMCT Group of Companies"
-              className="h-12 w-auto"
-            />
+            <img src="/smct.png" alt="SMCT Group of Companies" className="h-12 w-auto" />
             <div className="flex flex-col">
               <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-              <p className="text-sm text-gray-600">
-                Performance & Ratings Overview
-              </p>
+              <p className="text-sm text-gray-600">Performance & Ratings Overview</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -320,18 +282,16 @@ export default function DashboardShell(props: DashboardShellProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() =>
-                  setIsNotificationPanelOpen(!isNotificationPanelOpen)
-                }
+                onClick={() => setIsNotificationPanelOpen(!isNotificationPanelOpen)}
                 className="relative p-2 hover:bg-gray-100"
               >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <Badge
-                    variant="destructive"
+                  <Badge 
+                    variant="destructive" 
                     className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs"
                   >
-                    {unreadCount > 99 ? "99+" : unreadCount}
+                    {unreadCount > 99 ? '99+' : unreadCount}
                   </Badge>
                 )}
               </Button>
@@ -341,9 +301,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                 <div className="absolute right-0 top-12 w-80 bg-white rounded-lg shadow-lg border z-50">
                   <div className="p-4 border-b">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">
-                        Notifications
-                      </h3>
+                      <h3 className="font-semibold text-gray-900">Notifications</h3>
                       <div className="flex items-center space-x-2">
                         {unreadCount > 0 && (
                           <Button
@@ -366,7 +324,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                       </div>
                     </div>
                   </div>
-
+                  
                   <div className="h-[270px] overflow-y-auto">
                     {notifications.length === 0 ? (
                       <div className="p-4 text-center text-gray-500">
@@ -377,28 +335,20 @@ export default function DashboardShell(props: DashboardShellProps) {
                         <div
                           key={notification.id}
                           className={`p-4 border-b hover:bg-gray-50 ${
-                            !notification.isRead
-                              ? "bg-blue-50 border-l-4 border-l-blue-500"
-                              : ""
+                            !notification.isRead ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
                           }`}
                         >
                           <div className="flex items-start space-x-3">
                             <span className="text-lg">
                               {getNotificationIcon(notification.type)}
                             </span>
-                            <div
+                            <div 
                               className="flex-1 min-w-0 cursor-pointer"
-                              onClick={() =>
-                                handleNotificationClick(notification)
-                              }
+                              onClick={() => handleNotificationClick(notification)}
                             >
-                              <p className="text-sm text-gray-900">
-                                {notification.message}
-                              </p>
+                              <p className="text-sm text-gray-900">{notification.message}</p>
                               <p className="text-xs text-gray-500 mt-1">
-                                {new Date(
-                                  notification.timestamp
-                                ).toLocaleString()}
+                                {new Date(notification.timestamp).toLocaleString()}
                               </p>
                             </div>
                             <div className="flex items-center space-x-2">
@@ -408,9 +358,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={(e) =>
-                                  handleDeleteNotification(notification.id, e)
-                                }
+                                onClick={(e) => handleDeleteNotification(notification.id, e)}
                                 className="p-1 h-6 w-6 text-gray-400 hover:text-red-500 hover:bg-red-50"
                                 title="Delete notification"
                               >
@@ -431,8 +379,9 @@ export default function DashboardShell(props: DashboardShellProps) {
                 profile={userProfile}
                 variant="header"
                 showLogout={true}
-                showSettings={false}
+                showSettings={true}
                 onEditProfile={handleEditProfile}
+                onSettings={handleSettings}
                 onLogout={handleLogout}
               />
             )}
@@ -443,222 +392,151 @@ export default function DashboardShell(props: DashboardShellProps) {
       {/* Main Layout with Sidebar */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <div
-          className={`relative overflow-hidden transition-all duration-400 ${
-            isSidebarOpen ? "w-64" : "w-0"
-          }`}
-        >
+        <div className={`relative overflow-hidden transition-all duration-400 ${isSidebarOpen ? 'w-64' : 'w-0'}`}>
           <aside className="bg-blue-600 text-blue-50 min-h-screen w-64 rounded-bl-lg">
-            <div
-              className={`p-6 transition-opacity duration-400 ${
-                isSidebarOpen ? "opacity-100" : "opacity-0"
-              }`}
-            >
+            <div className={`p-6 transition-opacity duration-400 ${isSidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
               <Button
                 variant="outline"
                 size="lg"
                 onClick={() => setIsSidebarOpen(false)}
                 className="w-1/3 mb-4 bg-white/10 text-white hover:bg-white/20 border-white/30"
               >
-                <div className="flex items-center">
-                  <ChevronLeft className="w-10 h-10 mr-[-6px]" />
-                  <ChevronLeft className="w-10 h-10" />
-                </div>
+                 <div className="flex items-center">
+                <ChevronLeft className="w-10 h-10 mr-[-6px]" />
+                <ChevronLeft className="w-10 h-10" />
+              </div>
+
               </Button>
+
+
 
               <h2 className="text-lg font-bold text-white mb-6">Navigation</h2>
               <nav className="space-y-2">
                 {(() => {
                   // Use the memoized dashboard type values
-
+                  
                   // Define which items should be visible (main items)
                   // For employee dashboard: overview, reviews
                   // For evaluator dashboard: overview, employees, feedback, reviews
                   // For HR dashboard: overview, evaluation-records, employees (management items go in collapsible group)
                   // For admin dashboard: all items except departments, branches, branch-heads, and area-managers (they go in collapsible groups)
                   const visibleItems = isAdminDashboard
-                    ? sidebarItems
-                        .map((item) => item.id)
-                        .filter(
-                          (id) =>
-                            ![
-                              "departments",
-                              "branches",
-                              "branch-heads",
-                              "area-managers",
-                            ].includes(id)
-                        )
+                    ? sidebarItems.map(item => item.id).filter(id => !['departments', 'branches', 'branch-heads', 'area-managers'].includes(id))
                     : isHRDashboard
-                    ? sidebarItems
-                        .map((item) => item.id)
-                        .filter(
-                          (id) =>
-                            ![
-                              "departments",
-                              "branches",
-                              "branch-heads",
-                              "area-managers",
-                            ].includes(id)
-                        )
-                    : isEmployeeDashboard
-                    ? ["overview", "reviews", "history"]
+                    ? sidebarItems.map(item => item.id).filter(id => !['departments', 'branches', 'branch-heads', 'area-managers'].includes(id))
+                    : isEmployeeDashboard 
+                    ? ['overview', 'reviews', 'history']
                     : isEvaluatorDashboard
-                    ? [
-                        "overview",
-                        "employees",
-                        "feedback",
-                        "reviews",
-                        "history",
-                      ]
-                    : ["overview", "evaluation-records", "employees"];
-
+                    ? ['overview', 'employees', 'feedback', 'reviews', 'history']
+                    : ['overview', 'evaluation-records', 'employees'];
+                  
                   // Define collapsible groups
                   // For HR dashboard, management includes departments, branches, branch-heads, and area-managers
                   // For admin dashboard, management includes departments and branches, leadership includes branch-heads and area-managers
-                  const managementItems = isHRDashboard
-                    ? [
-                        "departments",
-                        "branches",
-                        "branch-heads",
-                        "area-managers",
-                      ]
-                    : ["departments", "branches"];
-                  const leadershipItems = ["branch-heads", "area-managers"];
+                  const managementItems = isHRDashboard 
+                    ? ['departments', 'branches', 'branch-heads', 'area-managers']
+                    : ['departments', 'branches'];
+                  const leadershipItems = ['branch-heads', 'area-managers'];
                   // Analytics items vary by dashboard type - exclude items that are already visible
                   const analyticsItems = isEmployeeDashboard
                     ? [] // No analytics items for employee dashboard - history is now visible
                     : isEvaluatorDashboard
                     ? [] // No analytics items for evaluator dashboard - history is now visible
-                    : ["reviews", "history"]; // For HR, 'reviews' goes in Analytics
-
+                    : ['reviews', 'history']; // For HR, 'reviews' goes in Analytics
+                  
                   return sidebarItems.map((item) => {
                     const isVisible = visibleItems.includes(item.id);
                     const isManagementItem = managementItems.includes(item.id);
                     const isLeadershipItem = leadershipItems.includes(item.id);
                     const isAnalyticsItem = analyticsItems.includes(item.id);
-
+                    
                     // For admin and HR dashboards, handle management items in collapsible group
-                    if (
-                      (isAdminDashboard || isHRDashboard) &&
-                      isManagementItem &&
-                      item.id === "departments"
-                    ) {
+                    if ((isAdminDashboard || isHRDashboard) && isManagementItem && item.id === 'departments') {
                       return (
-                        <Collapsible
-                          key="management"
-                          open={isManagementOpen}
-                          onOpenChange={setIsManagementOpen}
-                        >
+                        <Collapsible key="management" open={isManagementOpen} onOpenChange={setIsManagementOpen}>
                           <CollapsibleTrigger asChild>
                             <button
                               className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
                                 managementItems.includes(activeItemId)
-                                  ? "bg-white/20 text-white border border-white/30"
-                                  : "text-blue-100 hover:bg-white/10"
+                                  ? 'bg-white/20 text-white border border-white/30'
+                                  : 'text-blue-100 hover:bg-white/10'
                               }`}
                             >
                               <div className="flex items-center space-x-3">
                                 <span className="text-lg">⚙️</span>
                                 <span className="font-medium">Management</span>
                               </div>
-                              <ChevronDown
-                                className={`h-4 w-4 transition-transform ${
-                                  isManagementOpen ? "transform rotate-180" : ""
-                                }`}
-                              />
+                              <ChevronDown className={`h-4 w-4 transition-transform ${isManagementOpen ? 'transform rotate-180' : ''}`} />
                             </button>
                           </CollapsibleTrigger>
                           <CollapsibleContent className="pl-4 mt-2 space-y-1">
                             {sidebarItems
-                              .filter((i) => managementItems.includes(i.id))
+                              .filter(i => managementItems.includes(i.id))
                               .map((subItem) => (
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
                                   className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
                                     activeItemId === subItem.id
-                                      ? "bg-white/20 text-white border border-white/30"
-                                      : "text-blue-100 hover:bg-white/10"
+                                      ? 'bg-white/20 text-white border border-white/30'
+                                      : 'text-blue-100 hover:bg-white/10'
                                   }`}
                                 >
-                                  <span className="text-lg">
-                                    {subItem.icon}
-                                  </span>
-                                  <span className="font-medium text-sm">
-                                    {subItem.label}
-                                  </span>
+                                  <span className="text-lg">{subItem.icon}</span>
+                                  <span className="font-medium text-sm">{subItem.label}</span>
                                 </button>
                               ))}
                           </CollapsibleContent>
                         </Collapsible>
                       );
                     }
-
+                    
                     // For admin dashboard only, handle leadership items in collapsible group (HR uses management group)
-                    if (
-                      isAdminDashboard &&
-                      isLeadershipItem &&
-                      item.id === "branch-heads"
-                    ) {
+                    if (isAdminDashboard && isLeadershipItem && item.id === 'branch-heads') {
                       return (
-                        <Collapsible
-                          key="leadership"
-                          open={isLeadershipOpen}
-                          onOpenChange={setIsLeadershipOpen}
-                        >
+                        <Collapsible key="leadership" open={isLeadershipOpen} onOpenChange={setIsLeadershipOpen}>
                           <CollapsibleTrigger asChild>
                             <button
                               className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
                                 leadershipItems.includes(activeItemId)
-                                  ? "bg-white/20 text-white border border-white/30"
-                                  : "text-blue-100 hover:bg-white/10"
+                                  ? 'bg-white/20 text-white border border-white/30'
+                                  : 'text-blue-100 hover:bg-white/10'
                               }`}
                             >
                               <div className="flex items-center space-x-3">
                                 <span className="text-lg">👥</span>
                                 <span className="font-medium">Leadership</span>
                               </div>
-                              <ChevronDown
-                                className={`h-4 w-4 transition-transform ${
-                                  isLeadershipOpen ? "transform rotate-180" : ""
-                                }`}
-                              />
+                              <ChevronDown className={`h-4 w-4 transition-transform ${isLeadershipOpen ? 'transform rotate-180' : ''}`} />
                             </button>
                           </CollapsibleTrigger>
                           <CollapsibleContent className="pl-4 mt-2 space-y-1">
                             {sidebarItems
-                              .filter((i) => leadershipItems.includes(i.id))
+                              .filter(i => leadershipItems.includes(i.id))
                               .map((subItem) => (
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
                                   className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
                                     activeItemId === subItem.id
-                                      ? "bg-white/20 text-white border border-white/30"
-                                      : "text-blue-100 hover:bg-white/10"
+                                      ? 'bg-white/20 text-white border border-white/30'
+                                      : 'text-blue-100 hover:bg-white/10'
                                   }`}
                                 >
-                                  <span className="text-lg">
-                                    {subItem.icon}
-                                  </span>
-                                  <span className="font-medium text-sm">
-                                    {subItem.label}
-                                  </span>
+                                  <span className="text-lg">{subItem.icon}</span>
+                                  <span className="font-medium text-sm">{subItem.label}</span>
                                 </button>
                               ))}
                           </CollapsibleContent>
                         </Collapsible>
                       );
                     }
-
+                    
                     // For admin dashboard, skip management and leadership items (already handled above)
-                    if (
-                      isAdminDashboard &&
-                      (isManagementItem || isLeadershipItem)
-                    ) {
+                    if (isAdminDashboard && (isManagementItem || isLeadershipItem)) {
                       return null;
                     }
-
+                    
                     // For admin dashboard, render other items as regular buttons
                     if (isAdminDashboard) {
                       return (
@@ -667,8 +545,8 @@ export default function DashboardShell(props: DashboardShellProps) {
                           onClick={() => onChangeActive(item.id)}
                           className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
                             activeItemId === item.id
-                              ? "bg-white/20 text-white border border-white/30"
-                              : "text-blue-100 hover:bg-white/10"
+                              ? 'bg-white/20 text-white border border-white/30'
+                              : 'text-blue-100 hover:bg-white/10'
                           }`}
                         >
                           <span className="text-lg">{item.icon}</span>
@@ -676,7 +554,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         </button>
                       );
                     }
-
+                    
                     // Render visible items as regular buttons
                     if (isVisible) {
                       return (
@@ -685,8 +563,8 @@ export default function DashboardShell(props: DashboardShellProps) {
                           onClick={() => onChangeActive(item.id)}
                           className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
                             activeItemId === item.id
-                              ? "bg-white/20 text-white border border-white/30"
-                              : "text-blue-100 hover:bg-white/10"
+                              ? 'bg-white/20 text-white border border-white/30'
+                              : 'text-blue-100 hover:bg-white/10'
                           }`}
                         >
                           <span className="text-lg">{item.icon}</span>
@@ -694,140 +572,111 @@ export default function DashboardShell(props: DashboardShellProps) {
                         </button>
                       );
                     }
-
+                    
                     // Render Management collapsible group
-                    if (item.id === "departments") {
+                    if (item.id === 'departments') {
                       return (
-                        <Collapsible
-                          key="management"
-                          open={isManagementOpen}
-                          onOpenChange={setIsManagementOpen}
-                        >
+                        <Collapsible key="management" open={isManagementOpen} onOpenChange={setIsManagementOpen}>
                           <CollapsibleTrigger asChild>
                             <button
                               className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
                                 managementItems.includes(activeItemId)
-                                  ? "bg-white/20 text-white border border-white/30"
-                                  : "text-blue-100 hover:bg-white/10"
+                                  ? 'bg-white/20 text-white border border-white/30'
+                                  : 'text-blue-100 hover:bg-white/10'
                               }`}
                             >
                               <div className="flex items-center space-x-3">
                                 <span className="text-lg">⚙️</span>
                                 <span className="font-medium">Management</span>
                               </div>
-                              <ChevronDown
-                                className={`h-4 w-4 transition-transform ${
-                                  isManagementOpen ? "transform rotate-180" : ""
-                                }`}
-                              />
+                              <ChevronDown className={`h-4 w-4 transition-transform ${isManagementOpen ? 'transform rotate-180' : ''}`} />
                             </button>
                           </CollapsibleTrigger>
                           <CollapsibleContent className="pl-4 mt-2 space-y-1">
                             {sidebarItems
-                              .filter((i) => managementItems.includes(i.id))
+                              .filter(i => managementItems.includes(i.id))
                               .map((subItem) => (
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
                                   className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
                                     activeItemId === subItem.id
-                                      ? "bg-white/20 text-white border border-white/30"
-                                      : "text-blue-100 hover:bg-white/10"
+                                      ? 'bg-white/20 text-white border border-white/30'
+                                      : 'text-blue-100 hover:bg-white/10'
                                   }`}
                                 >
-                                  <span className="text-lg">
-                                    {subItem.icon}
-                                  </span>
-                                  <span className="font-medium text-sm">
-                                    {subItem.label}
-                                  </span>
+                                  <span className="text-lg">{subItem.icon}</span>
+                                  <span className="font-medium text-sm">{subItem.label}</span>
                                 </button>
                               ))}
                           </CollapsibleContent>
                         </Collapsible>
                       );
                     }
-
+                    
                     // Render Analytics collapsible group
                     // For employee and evaluator dashboards, skip Analytics (history is now visible)
                     // For HR dashboard, trigger on 'reviews'
-                    const analyticsTriggerId =
-                      isEmployeeDashboard || isEvaluatorDashboard
-                        ? null
-                        : "reviews";
+                    const analyticsTriggerId = (isEmployeeDashboard || isEvaluatorDashboard) ? null : 'reviews';
                     if (analyticsTriggerId && item.id === analyticsTriggerId) {
                       return (
-                        <Collapsible
-                          key="analytics"
-                          open={isAnalyticsOpen}
-                          onOpenChange={setIsAnalyticsOpen}
-                        >
+                        <Collapsible key="analytics" open={isAnalyticsOpen} onOpenChange={setIsAnalyticsOpen}>
                           <CollapsibleTrigger asChild>
                             <button
                               className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
                                 analyticsItems.includes(activeItemId)
-                                  ? "bg-white/20 text-white border border-white/30"
-                                  : "text-blue-100 hover:bg-white/10"
+                                  ? 'bg-white/20 text-white border border-white/30'
+                                  : 'text-blue-100 hover:bg-white/10'
                               }`}
                             >
                               <div className="flex items-center space-x-3">
                                 <span className="text-lg">📊</span>
                                 <span className="font-medium">Analytics</span>
                               </div>
-                              <ChevronDown
-                                className={`h-4 w-4 transition-transform ${
-                                  isAnalyticsOpen ? "transform rotate-180" : ""
-                                }`}
-                              />
+                              <ChevronDown className={`h-4 w-4 transition-transform ${isAnalyticsOpen ? 'transform rotate-180' : ''}`} />
                             </button>
                           </CollapsibleTrigger>
                           <CollapsibleContent className="pl-4 mt-2 space-y-1">
                             {sidebarItems
-                              .filter((i) => analyticsItems.includes(i.id))
+                              .filter(i => analyticsItems.includes(i.id))
                               .map((subItem) => (
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
                                   className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
                                     activeItemId === subItem.id
-                                      ? "bg-white/20 text-white border border-white/30"
-                                      : "text-blue-100 hover:bg-white/10"
+                                      ? 'bg-white/20 text-white border border-white/30'
+                                      : 'text-blue-100 hover:bg-white/10'
                                   }`}
                                 >
-                                  <span className="text-lg">
-                                    {subItem.icon}
-                                  </span>
-                                  <span className="font-medium text-sm">
-                                    {subItem.label}
-                                  </span>
+                                  <span className="text-lg">{subItem.icon}</span>
+                                  <span className="font-medium text-sm">{subItem.label}</span>
                                 </button>
                               ))}
                           </CollapsibleContent>
                         </Collapsible>
                       );
                     }
-
+                    
                     // Skip other items (they're already handled in collapsible groups)
                     return null;
                   });
                 })()}
               </nav>
+
+
             </div>
           </aside>
         </div>
 
         {!isSidebarOpen && (
           <div className="p-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsSidebarOpen(true)}
-              className="bg-blue-700 text-white hover:bg-blue-300  hover:text-blue-700 border-blue-700"
-            >
+            <Button variant="outline" size="sm" onClick={() => setIsSidebarOpen(true)} className="bg-blue-700 text-white hover:bg-blue-300  hover:text-blue-700 border-blue-700">
               <div className="flex items-center">
                 <ChevronRight className="w-10 h-10 mr-[-6px]" />
                 <ChevronRight className="w-10 h-10" />
               </div>
+
             </Button>
           </div>
         )}
@@ -835,17 +684,13 @@ export default function DashboardShell(props: DashboardShellProps) {
         {/* Main Content */}
         <main className="flex-1 p-8 flex flex-col overflow-hidden rounded-br-lg">
           {/* Top Summary - Only show on overview tab */}
-          {activeItemId === "overview" && (
+          {activeItemId === 'overview' && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 flex-none">
               {topSummary}
             </div>
           )}
           {/* Children Content */}
-          <div
-            className={`space-y-6 flex-1 overflow-hidden ${
-              activeItemId === "overview" ? "" : "pt-0"
-            }`}
-          >
+          <div className={`space-y-6 flex-1 overflow-hidden ${activeItemId === 'overview' ? '' : 'pt-0'}`}>
             {children}
           </div>
         </main>
@@ -868,14 +713,11 @@ export default function DashboardShell(props: DashboardShellProps) {
       />
 
       {/* Notification Detail Modal */}
-      <Dialog
-        open={isNotificationDetailOpen}
-        onOpenChangeAction={setIsNotificationDetailOpen}
-      >
-        <DialogContent
+      <Dialog open={isNotificationDetailOpen} onOpenChangeAction={setIsNotificationDetailOpen}>
+        <DialogContent 
           className="max-w-lg w-full mx-4 p-6"
           style={{
-            animation: "modalPopup 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+            animation: 'modalPopup 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
           <style jsx>{`
@@ -892,30 +734,22 @@ export default function DashboardShell(props: DashboardShellProps) {
           `}</style>
           <DialogHeader className="pb-4 border-b mb-2">
             <DialogTitle className="flex items-center gap-3 text-xl">
-              <span className="text-3xl">
-                {selectedNotification &&
-                  getNotificationIcon(selectedNotification.type)}
-              </span>
+              <span className="text-3xl">{selectedNotification && getNotificationIcon(selectedNotification.type)}</span>
               Notification Details
             </DialogTitle>
           </DialogHeader>
-
+          
           {selectedNotification && (
             <div className="space-y-6 py-4">
               {/* Notification Type Badge */}
               <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-gray-700 w-24">
-                  Type:
-                </span>
-                <Badge
+                <span className="text-sm font-semibold text-gray-700 w-24">Type:</span>
+                <Badge 
                   className={`px-3 py-1 text-sm font-medium ${
-                    selectedNotification.type === "success"
-                      ? "bg-green-100 text-green-800"
-                      : selectedNotification.type === "warning"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : selectedNotification.type === "error"
-                      ? "bg-red-100 text-red-800"
-                      : "bg-blue-100 text-blue-800"
+                    selectedNotification.type === 'success' ? 'bg-green-100 text-green-800' :
+                    selectedNotification.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                    selectedNotification.type === 'error' ? 'bg-red-100 text-red-800' :
+                    'bg-blue-100 text-blue-800'
                   }`}
                 >
                   {selectedNotification.type.toUpperCase()}
@@ -925,47 +759,26 @@ export default function DashboardShell(props: DashboardShellProps) {
               {/* Location/Destination (Where notification points to) */}
               {selectedNotification.actionUrl && (
                 <div className="space-y-2">
-                  <span className="text-sm font-semibold text-gray-700 block">
-                    📍 Navigate To:
-                  </span>
+                  <span className="text-sm font-semibold text-gray-700 block">📍 Navigate To:</span>
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">
-                        {selectedNotification.actionUrl.includes("reviews")
-                          ? "📝"
-                          : selectedNotification.actionUrl.includes(
-                              "history"
-                            ) &&
-                            selectedNotification.actionUrl.includes("account")
-                          ? "📋"
-                          : selectedNotification.actionUrl.includes("history")
-                          ? "📈"
-                          : selectedNotification.actionUrl.includes("overview")
-                          ? "📊"
-                          : "🔗"}
+                        {selectedNotification.actionUrl.includes('reviews') ? '📝' :
+                         selectedNotification.actionUrl.includes('history') && selectedNotification.actionUrl.includes('account') ? '📋' :
+                         selectedNotification.actionUrl.includes('history') ? '📈' :
+                         selectedNotification.actionUrl.includes('overview') ? '📊' :
+                         '🔗'}
                       </span>
                       <div>
                         <div className="text-blue-900 text-sm font-bold">
                           {(() => {
                             const url = selectedNotification.actionUrl;
                             // Match employee dashboard sidebar tabs
-                            if (
-                              url.includes("tab=overview") ||
-                              url.includes("overview")
-                            )
-                              return "Overview";
-                            if (
-                              url.includes("tab=reviews") ||
-                              url.includes("reviews")
-                            )
-                              return "Performance Reviews";
-                            if (
-                              url.includes("tab=history") ||
-                              url.includes("history")
-                            )
-                              return "Evaluation History";
+                            if (url.includes('tab=overview') || url.includes('overview')) return 'Overview';
+                            if (url.includes('tab=reviews') || url.includes('reviews')) return 'Performance Reviews';
+                            if (url.includes('tab=history') || url.includes('history')) return 'Evaluation History';
                             // Fallback
-                            return "Dashboard";
+                            return 'Dashboard';
                           })()}
                         </div>
                         <div className="text-blue-600 text-xs mt-1">
@@ -979,9 +792,7 @@ export default function DashboardShell(props: DashboardShellProps) {
 
               {/* Message */}
               <div className="space-y-2">
-                <span className="text-sm font-semibold text-gray-700 block">
-                  Message:
-                </span>
+                <span className="text-sm font-semibold text-gray-700 block">Message:</span>
                 <p className="text-base text-gray-900 bg-gray-50 p-4 rounded-lg border border-gray-200 leading-relaxed">
                   {selectedNotification.message}
                 </p>
@@ -989,33 +800,23 @@ export default function DashboardShell(props: DashboardShellProps) {
 
               {/* Timestamp */}
               <div className="flex items-center gap-3 text-sm">
-                <span className="font-semibold text-gray-700 w-24">
-                  Received:
-                </span>
-                <span className="text-gray-600">
-                  {new Date(selectedNotification.timestamp).toLocaleString()}
-                </span>
+                <span className="font-semibold text-gray-700 w-24">Received:</span>
+                <span className="text-gray-600">{new Date(selectedNotification.timestamp).toLocaleString()}</span>
               </div>
 
               {/* Status */}
               <div className="flex items-center gap-3 text-sm">
-                <span className="font-semibold text-gray-700 w-24">
-                  Status:
-                </span>
+                <span className="font-semibold text-gray-700 w-24">Status:</span>
                 {selectedNotification.isRead ? (
-                  <Badge className="bg-gray-100 text-gray-800 px-3 py-1">
-                    Read
-                  </Badge>
+                  <Badge className="bg-gray-100 text-gray-800 px-3 py-1">Read</Badge>
                 ) : (
-                  <Badge className="bg-blue-100 text-blue-800 px-3 py-1">
-                    Unread
-                  </Badge>
+                  <Badge className="bg-blue-100 text-blue-800 px-3 py-1">Unread</Badge>
                 )}
               </div>
 
               {/* Close Button */}
               <div className="pt-6 border-t flex justify-end">
-                <Button
+                <Button 
                   onClick={() => setIsNotificationDetailOpen(false)}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
                 >
@@ -1040,3 +841,5 @@ export default function DashboardShell(props: DashboardShellProps) {
     </div>
   );
 }
+
+

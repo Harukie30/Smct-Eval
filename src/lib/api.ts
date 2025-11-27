@@ -24,7 +24,7 @@ api.interceptors.response.use(
 );
 
 const sanctum = axios.create({
-  baseURL: CONFIG.API_URL,
+  baseURL: CONFIG.SANCTUM_API_URL,
   withCredentials: true,
   withXSRFToken: true,
   headers: {
