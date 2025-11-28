@@ -64,11 +64,6 @@ export const apiService = {
   createPendingRegistration: async (formData: FormData): Promise<any> => {
     try {
       const response = await api.post("/register", formData);
-<<<<<<< Updated upstream
-=======
-      console.log("signatureFile", formData.get("signature"));
-
->>>>>>> Stashed changes
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
@@ -80,10 +75,6 @@ export const apiService = {
   },
 
   updateEmployee_auth: async (formData: FormData): Promise<any> => {
-<<<<<<< Updated upstream
-    await sanctum_csrf();
-=======
->>>>>>> Stashed changes
     try {
       const response = await api.post("/update_employee_auth", formData);
       return response.data;
@@ -100,10 +91,6 @@ export const apiService = {
     formData: FormData,
     id: string | number
   ): Promise<any> => {
-<<<<<<< Updated upstream
-    await sanctum_csrf();
-=======
->>>>>>> Stashed changes
     try {
       const response = await api.post(`/update_user/${id}`, formData);
       return response.data;
@@ -117,10 +104,6 @@ export const apiService = {
   },
 
   approveRegistration: async (id: string | number): Promise<any> => {
-<<<<<<< Updated upstream
-    await sanctum_csrf();
-=======
->>>>>>> Stashed changes
     try {
       const response = await api.post(`/approveRegistration/${id}`);
       return response.data;
@@ -134,10 +117,6 @@ export const apiService = {
   },
 
   rejectRegistration: async (id: string | number): Promise<any> => {
-<<<<<<< Updated upstream
-    await sanctum_csrf();
-=======
->>>>>>> Stashed changes
     try {
       const response = await api.post(`/rejectRegistration/${id}`);
       return response.data;
@@ -151,10 +130,6 @@ export const apiService = {
   },
 
   deleteUser: async (id: string | number): Promise<any> => {
-<<<<<<< Updated upstream
-    await sanctum_csrf();
-=======
->>>>>>> Stashed changes
     try {
       const response = await api.post(`/delete_user/${id}`);
       return response.data;
@@ -255,10 +230,6 @@ export const apiService = {
   },
 
   uploadAvatar: async (formData: FormData): Promise<any> => {
-<<<<<<< Updated upstream
-    await sanctum_csrf();
-=======
->>>>>>> Stashed changes
     try {
       const response = await api.post("/upload_avatar", formData);
       return response.data;
@@ -272,10 +243,6 @@ export const apiService = {
 
   // Profile management
   getProfile: async (id: number): Promise<any> => {
-<<<<<<< Updated upstream
-    await sanctum_csrf();
-=======
->>>>>>> Stashed changes
     try {
       const response = await api.get(`/api/profiles/${id}`);
       return response.data.profile || response.data;
@@ -290,10 +257,6 @@ export const apiService = {
   },
 
   updateProfile: async (id: number, updates: Partial<any>): Promise<any> => {
-<<<<<<< Updated upstream
-    await sanctum_csrf();
-=======
->>>>>>> Stashed changes
     try {
       const response = await api.put(`/api/profiles/${id}`, updates);
       return response.data.profile || response.data;
@@ -314,14 +277,6 @@ export const apiService = {
     perPage: number
   ): Promise<any> => {
     try {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-      const response = await api.get(`/allEvaluations`);
-      return response.data.profile || response.data;
-=======
-=======
->>>>>>> Stashed changes
       const response = await api.get(`/allEvaluations`, {
         params: {
           search: searchTerm || "",
@@ -346,8 +301,6 @@ export const apiService = {
     try {
       const response = await api.get(`/submissions/${id}`);
       return response.data;
-<<<<<<< Updated upstream
-=======
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw {
@@ -363,7 +316,6 @@ export const apiService = {
     try {
       const response = await api.get(`/adminDashboard`);
       return response.data;
->>>>>>> Stashed changes
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw {
@@ -372,62 +324,6 @@ export const apiService = {
         message:
           axiosError.response?.data?.message || "Failed to update profile",
       };
-    }
-  },
-
-  adminDashboard: async (): Promise<any> => {
-    try {
-      const response = await api.get(`/adminDashboard`);
-      return response.data;
->>>>>>> Stashed changes
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-        message:
-          axiosError.response?.data?.message || "Failed to update profile",
-      };
-=======
-      const response = await api.get("/allEvaluations");
-      const data = response.data;
-
-      // Handle different response formats
-      if (data.success && data.evaluations) {
-        return data.evaluations;
-      }
-      if (data.success && data.submissions) {
-        return data.submissions;
-      }
-      if (Array.isArray(data.evaluations)) {
-        return data.evaluations;
-      }
-      if (Array.isArray(data.submissions)) {
-        return data.submissions;
-      }
-      if (Array.isArray(data)) {
-        return data;
-      }
-
-      return [];
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch evaluations"
-      );
-    }
-  },
-
-  // Submission methods
-  getSubmissionById: async (id: number): Promise<any> => {
-    try {
-      const response = await api.get(`/submissions/${id}`);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch submission"
-      );
     }
   },
 
@@ -1258,24 +1154,6 @@ export const apiService = {
     }
   },
 
-  // ============================================
-  // DASHBOARD ENDPOINTS (Missing)
-  // ============================================
-
-  // Admin dashboard total cards
-  adminDashboard: async (): Promise<any> => {
-    try {
-      const response = await api.get("/adminDashboard");
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to fetch admin dashboard data"
-      );
-    }
-  },
-
   // Evaluator dashboard total cards
   evaluatorDashboard: async (): Promise<any> => {
     try {
@@ -1359,7 +1237,6 @@ export const apiService = {
         axiosError.response?.data?.message ||
           "Failed to mark notification as read"
       );
->>>>>>> Stashed changes
     }
   },
 };
