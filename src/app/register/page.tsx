@@ -18,8 +18,9 @@ import Link from "next/link";
 import PageTransition from "@/components/PageTransition";
 import { CONFIG } from "../../../config/config";
 import { id } from "date-fns/locale";
-import clientDataService from "@/lib/clientDataService.api";
+import apiService from "@/lib/apiService";
 import { withPublicPage } from "@/hoc";
+import { dataURLtoFile } from "@/utils/data-url-to-file";
 // Mock data for testing
 import branchCodes from "@/data/branch-code.json";
 import positionsData from "@/data/positions.json";
@@ -137,28 +138,28 @@ function RegisterPage() {
 
     const fetchData = async () => {
       try {
-        // Fetch positions using client data service
-        const positionsDataFromAPI = await clientDataService.getPositions();
-        // Convert {id, name} to {value, label} for Combobox
-        const formattedPositions = positionsDataFromAPI?.map((pos: any) => ({
-          value: pos.id || pos.value || String(pos),
-          label: pos.name || pos.label || String(pos)
+        // Fetch positions using API service
+        const positionsDataFromAPI = await apiService.getPositions();
+        // Convert from {id, name} to {value, label} format for Combobox
+        const formattedPositions = positionsDataFromAPI?.map((pos) => ({
+          value: pos.id,
+          label: pos.name
         })) || [];
         
-        // Fetch departments using client data service
-        const departmentsDataFromAPI = await clientDataService.getDepartments();
-        // Convert {id, name} to {value, label} for Combobox
-        const formattedDepartments = departmentsDataFromAPI?.map((dept: any) => ({
-          value: dept.id || dept.value || String(dept),
-          label: dept.name || dept.label || String(dept)
+        // Fetch departments using API service
+        const departmentsDataFromAPI = await apiService.getDepartments();
+        // Convert from {id, name} to {value, label} format for Combobox
+        const formattedDepartments = departmentsDataFromAPI?.map((dept) => ({
+          value: dept.id,
+          label: dept.name
         })) || [];
         
-        // Fetch branches using client data service
-        const branchDataFromAPI = await clientDataService.getBranches();
-        // Convert {id, name} to {value, label} for Combobox
-        const formattedBranches = branchDataFromAPI?.map((branch: any) => ({
-          value: branch.id || branch.value || String(branch),
-          label: branch.name || branch.label || String(branch)
+        // Fetch branches using API service
+        const branchDataFromAPI = await apiService.getBranches();
+        // Convert from {id, name} to {value, label} format for Combobox
+        const formattedBranches = branchDataFromAPI?.map((branch) => ({
+          value: branch.id,
+          label: branch.name
         })) || [];
         
         // Check if API returned valid data, otherwise use mock data
@@ -383,10 +384,15 @@ function RegisterPage() {
     formDataToUpload.append("department_id", String(formData.department_id));
     formDataToUpload.append("password", formData.password);
     formDataToUpload.append("password_confirmation",formData.password_confirmation);
-    formDataToUpload.append("signature", formData.signature);
+    
+    // Convert signature data URL to File object (PNG)
+    if (formData.signature) {
+      const signatureFile = dataURLtoFile(formData.signature, "signature.png");
+      formDataToUpload.append("signature", signatureFile);
+    }
 
         try {
-          const data = await clientDataService.registerUser(formDataToUpload);
+          const data = await apiService.createPendingRegistration(formDataToUpload);
 
           showAlert(
             "Registration Successful!",

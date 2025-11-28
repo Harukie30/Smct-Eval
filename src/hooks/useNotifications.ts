@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import clientDataService, { Notification } from '@/lib/clientDataService';
+import { apiService } from '@/lib/apiService';
+import { Notification } from '@/lib/types';
 
 interface UseNotificationsReturn {
   notifications: Notification[];
@@ -23,8 +24,8 @@ export const useNotifications = (userRole: string): UseNotificationsReturn => {
       setError(null);
       
       const [notificationsData, unreadCountData] = await Promise.all([
-        clientDataService.getNotifications(userRole),
-        clientDataService.getUnreadNotificationCount(userRole)
+        apiService.getNotifications(userRole),
+        apiService.getUnreadNotificationCount(userRole)
       ]);
       
       setNotifications(notificationsData);
@@ -39,7 +40,7 @@ export const useNotifications = (userRole: string): UseNotificationsReturn => {
 
   const markAsRead = useCallback(async (notificationId: number) => {
     try {
-      await clientDataService.markNotificationAsRead(notificationId);
+      await apiService.markNotificationAsRead(notificationId);
       
       // Update local state
       setNotifications(prev => 
@@ -58,7 +59,7 @@ export const useNotifications = (userRole: string): UseNotificationsReturn => {
 
   const markAllAsRead = useCallback(async () => {
     try {
-      await clientDataService.markAllNotificationsAsRead(userRole);
+      await apiService.markAllNotificationsAsRead(userRole);
       
       // Update local state
       setNotifications(prev => 

@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import clientDataService from "@/lib/clientDataService";
+import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
@@ -91,13 +91,60 @@ export function AreaManagersTab({
     useState<Employee | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [areaManagersPage, setAreaManagersPage] = useState(1);
+  const [areaManagersData, setAreaManagersData] = useState<Employee[]>([]);
+  const [loadingAreaManagers, setLoadingAreaManagers] = useState(true);
   const itemsPerPage = 8;
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
-  // Memoized area managers (only recalculates when employees change)
+  // Load area managers from API
+  useEffect(() => {
+    const loadAreaManagers = async () => {
+      setLoadingAreaManagers(true);
+      try {
+        const data = await apiService.getAllAreaManager();
+        // Normalize the data format to match Employee interface
+        const normalizedData = data.map((item: any) => ({
+          id: item.id || item.employeeId,
+          name: item.name || `${item.fname || ""} ${item.lname || ""}`.trim(),
+          email: item.email || "",
+          position: item.position || "",
+          department: item.department || "",
+          branch: item.branch || "",
+          contact: item.contact || "",
+          role: item.role || "",
+          isActive: item.isActive !== undefined ? item.isActive : true,
+        }));
+        setAreaManagersData(normalizedData);
+      } catch (error) {
+        console.error("Error loading area managers:", error);
+        // Fallback to employees prop if API fails
+        if (employees && employees.length > 0) {
+          const filtered = employees.filter((emp) => {
+            const position = emp.position?.toLowerCase() || "";
+            return (
+              position.includes("area manager") ||
+              position.includes("areamanager") ||
+              position.includes("regional manager")
+            );
+          });
+          setAreaManagersData(filtered);
+        }
+      } finally {
+        setLoadingAreaManagers(false);
+      }
+    };
+
+    loadAreaManagers();
+  }, [employees]);
+
+  // Memoized area managers (use API data if available, otherwise fallback to filtered employees)
   const areaManagers = useMemo(() => {
+    if (areaManagersData.length > 0) {
+      return areaManagersData;
+    }
+    // Fallback to manual filtering if API data not available
     if (!employees || employees.length === 0) return [];
 
     return employees.filter((emp) => {
@@ -110,7 +157,7 @@ export function AreaManagersTab({
         position.includes("regional manager")
       );
     });
-  }, [employees]);
+  }, [areaManagersData, employees]);
 
   // Filter area managers based on search term
   const filteredAreaManagers = useMemo(() => {
@@ -150,7 +197,7 @@ export function AreaManagersTab({
 
     const result = await withErrorHandling(
       async () => {
-        const branchesData = await clientDataService.getBranches();
+        const branchesData = await apiService.getBranches();
         // Normalize the data format - handle both {id, name} and {value, label} formats
         const normalizedBranches = branchesData.map((branch: any) => {
           if ("id" in branch && "name" in branch) {
@@ -334,7 +381,7 @@ export function AreaManagersTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {!employees || employees.length === 0 ? (
+                {loadingAreaManagers || (!areaManagersData.length && (!employees || employees.length === 0)) ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
                       <TableCell className="py-4">
@@ -740,14 +787,11 @@ export function AreaManagersTab({
                               .map((b) => b.name)
                               .join(", ");
 
-                            // Update using clientDataService
-                            await clientDataService.updateEmployee(
-                              selectedAreaManager.id,
-                              {
-                                branch: branchNames, // Store branch names
-                                updatedAt: new Date().toISOString(),
-                              }
-                            );
+                            // Update using API service
+                            const formData = new FormData();
+                            formData.append("branch", branchNames);
+                            formData.append("updatedAt", new Date().toISOString());
+                            await apiService.updateEmployee(formData, selectedAreaManager.id);
 
                             // Also update accounts in localStorage
                             const accounts = JSON.parse(
@@ -1122,14 +1166,11 @@ export function AreaManagersTab({
                       .map((b) => b.name)
                       .join(", ");
 
-                    // Update using clientDataService
-                    await clientDataService.updateEmployee(
-                      areaManagerToEdit.id,
-                      {
-                        branch: branchNames,
-                        updatedAt: new Date().toISOString(),
-                      }
-                    );
+                    // Update using API service
+                    const formData = new FormData();
+                    formData.append("branch", branchNames);
+                    formData.append("updatedAt", new Date().toISOString());
+                    await apiService.updateEmployee(formData, areaManagerToEdit.id);
 
                     // Also update accounts in localStorage
                     const accounts = JSON.parse(
@@ -1296,13 +1337,10 @@ export function AreaManagersTab({
                   await withErrorHandling(
                     async () => {
                       // Remove branch assignment (set branch to empty)
-                      await clientDataService.updateEmployee(
-                        areaManagerToDelete.id,
-                        {
-                          branch: "",
-                          updatedAt: new Date().toISOString(),
-                        }
-                      );
+                      const formData = new FormData();
+                      formData.append("branch", "");
+                      formData.append("updatedAt", new Date().toISOString());
+                      await apiService.updateEmployee(formData, areaManagerToDelete.id);
 
                       // Also update accounts in localStorage
                       const accounts = JSON.parse(

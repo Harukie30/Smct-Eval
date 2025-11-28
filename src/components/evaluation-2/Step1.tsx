@@ -16,9 +16,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { ChevronDownIcon, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { EvaluationData } from './types';
-// branches now comes from clientDataService
 import { getQuarterlyReviewStatus, getCurrentYear } from '@/lib/quarterlyReviewUtils';
-import clientDataService from '@/lib/clientDataService';
 
 interface Step1Props {
   data: EvaluationData;

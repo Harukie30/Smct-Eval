@@ -1,6 +1,16 @@
 export function dataURLtoFile(dataURL: any, filename: string) {
-  const arr = dataURL?.split(",");
-  const mime = arr[0]?.match(/:(.*?);/)[1];
+  if (!dataURL) {
+    throw new Error("Data URL is required");
+  }
+
+  const arr = dataURL.split(",");
+  if (arr.length < 2) {
+    throw new Error("Invalid data URL format");
+  }
+
+  const mimeMatch = arr[0]?.match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : "image/png"; // Default to PNG if mime type not found
+  
   const bstr = atob(arr[1]);
   let n = bstr.length;
   const u8arr = new Uint8Array(n);

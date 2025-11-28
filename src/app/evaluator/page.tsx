@@ -24,7 +24,7 @@ import EvaluationTypeModal from "@/components/EvaluationTypeModal";
 import mockData from "@/data/dashboard.json";
 import accountsData from "@/data/accounts.json";
 import { UserProfile } from "@/components/ProfileCard";
-import clientDataService from "@/lib/clientDataService";
+import { apiService } from "@/lib/apiService";
 import { withAuth } from "@/hoc";
 import PageTransition from "@/components/PageTransition";
 import { AlertDialog } from "@/components/ui/alert-dialog";
@@ -218,7 +218,7 @@ const calculateScore = (scores: string[]) => {
 };
 
 function EvaluatorDashboard() {
-  const { profile, user } = useUser();
+  const { user } = useUser();
   const { success, error } = useToast();
   const { getUpdatedAvatar, hasAvatarUpdate } = useProfilePictureUpdates();
 
@@ -395,26 +395,12 @@ function EvaluatorDashboard() {
       // AuthenticatedUser type
       return {
         id: user.id,
-        name: user.name,
+        name: `${user.fname} ${user.lname}`.trim(),
         email: user.email,
         position: user.position,
         department: user.department,
-        role: user.role,
+        role: user.roles?.[0]?.name || "",
         signature: user.signature, // Include signature from user
-      };
-    } else if (profile) {
-      // UserProfile type
-      return {
-        id:
-          typeof profile.id === "string"
-            ? parseInt(profile.id) || 0
-            : profile.id || 0,
-        name: `${profile.fname} ${profile.lname}`.trim(),
-        email: profile.email || "",
-        position: profile.positions?.label || "",
-        department: profile.departments?.department_name || "",
-        role: profile.roles?.[0]?.name || "",
-        signature: profile.signature, // Include signature from profile
       };
     }
     return undefined;
@@ -609,12 +595,12 @@ function EvaluatorDashboard() {
   // Lightweight refresh function that only updates submissions (for tab-specific refreshes)
   const refreshSubmissionsOnly = async () => {
     try {
-      // Fetch recent submissions from client data service
-      const submissions = await clientDataService.getSubmissions();
+      // Use role-specific endpoint (replaces getSubmissions + filter)
+      const evaluations = await apiService.getEvalAuthEvaluator();
 
-      if (Array.isArray(submissions)) {
+      if (Array.isArray(evaluations)) {
         // Ensure data is valid and has unique IDs
-        const validData = submissions.filter(
+        const validData = evaluations.filter(
           (item: any) =>
             item &&
             typeof item === "object" &&
@@ -622,13 +608,8 @@ function EvaluatorDashboard() {
             item.employeeName
         );
 
-        // Filter to show only evaluations created by this evaluator
-        const evaluatorFiltered = validData.filter(
-          (item: any) => item.evaluatorId === user?.id
-        );
-
         // Remove duplicates based on ID
-        const uniqueData = evaluatorFiltered.filter(
+        const uniqueData = validData.filter(
           (item: any, index: number, self: any[]) =>
             index === self.findIndex((t) => t.id === item.id)
         );
@@ -639,7 +620,34 @@ function EvaluatorDashboard() {
         setRecentSubmissions([]);
       }
     } catch (error) {
-      console.error("Error refreshing submissions:", error);
+      console.warn("getEvalAuthEvaluator failed, falling back to getSubmissions:", error);
+      // Fallback to old method if new endpoint fails
+      try {
+        const submissions = await apiService.getSubmissions();
+        
+        if (Array.isArray(submissions)) {
+          const validData = submissions.filter(
+            (item: any) =>
+              item &&
+              typeof item === "object" &&
+              item.id !== undefined &&
+              item.employeeName &&
+              item.evaluatorId === user?.id
+          );
+
+          const uniqueData = validData.filter(
+            (item: any, index: number, self: any[]) =>
+              index === self.findIndex((t) => t.id === item.id)
+          );
+
+          setRecentSubmissions(uniqueData);
+        } else {
+          setRecentSubmissions([]);
+        }
+      } catch (fallbackError) {
+        console.error("Error refreshing submissions:", fallbackError);
+        setRecentSubmissions([]);
+      }
     }
   };
 
@@ -647,38 +655,71 @@ function EvaluatorDashboard() {
     try {
       setLoading(true);
 
-      // Load dashboard data
-      setCurrentPeriod(mockData.dashboard.currentPeriod);
-      setData(mockData.dashboard.performanceData as unknown as PerformanceData);
+      // Load dashboard data from API
+      try {
+        const dashboardData = await apiService.evaluatorDashboard();
+        const data = dashboardData?.data || dashboardData;
+        
+        if (data) {
+          // Update dashboard metrics if provided
+          // Note: You may need to adjust this based on your backend response format
+        }
+      } catch (dashboardError) {
+        console.warn("Dashboard API not available, using fallback:", dashboardError);
+        // Fallback to mock data
+        setCurrentPeriod(mockData.dashboard.currentPeriod);
+        setData(mockData.dashboard.performanceData as unknown as PerformanceData);
+      }
 
-      // Fetch recent submissions from client data service
-      const submissions = await clientDataService.getSubmissions();
+      // Fetch evaluations using role-specific endpoint (replaces getSubmissions + filter)
+      try {
+        const evaluations = await apiService.getEvalAuthEvaluator();
 
-      if (Array.isArray(submissions)) {
-        // Ensure data is valid and has unique IDs
-        const validData = submissions.filter(
-          (item: any) =>
-            item &&
-            typeof item === "object" &&
-            item.id !== undefined &&
-            item.employeeName
-        );
+        if (Array.isArray(evaluations)) {
+          // Ensure data is valid and has unique IDs
+          const validData = evaluations.filter(
+            (item: any) =>
+              item &&
+              typeof item === "object" &&
+              item.id !== undefined &&
+              item.employeeName
+          );
 
-        // Filter to show only evaluations created by this evaluator
-        const evaluatorFiltered = validData.filter(
-          (item: any) => item.evaluatorId === user?.id
-        );
+          // Remove duplicates based on ID
+          const uniqueData = validData.filter(
+            (item: any, index: number, self: any[]) =>
+              index === self.findIndex((t) => t.id === item.id)
+          );
 
-        // Remove duplicates based on ID
-        const uniqueData = evaluatorFiltered.filter(
-          (item: any, index: number, self: any[]) =>
-            index === self.findIndex((t) => t.id === item.id)
-        );
+          setRecentSubmissions(uniqueData);
+        } else {
+          console.warn("Invalid data structure received from API");
+          setRecentSubmissions([]);
+        }
+      } catch (evalError) {
+        console.warn("getEvalAuthEvaluator failed, falling back to getSubmissions:", evalError);
+        // Fallback to old method if new endpoint fails
+        const submissions = await apiService.getSubmissions();
+        
+        if (Array.isArray(submissions)) {
+          const validData = submissions.filter(
+            (item: any) =>
+              item &&
+              typeof item === "object" &&
+              item.id !== undefined &&
+              item.employeeName &&
+              item.evaluatorId === user?.id
+          );
 
-        setRecentSubmissions(uniqueData);
-      } else {
-        console.warn("Invalid data structure received from API");
-        setRecentSubmissions([]);
+          const uniqueData = validData.filter(
+            (item: any, index: number, self: any[]) =>
+              index === self.findIndex((t) => t.id === item.id)
+          );
+
+          setRecentSubmissions(uniqueData);
+        } else {
+          setRecentSubmissions([]);
+        }
       }
     } catch (error) {
       console.error("Error refreshing evaluator data:", error);
@@ -744,7 +785,7 @@ function EvaluatorDashboard() {
       setIsRefreshing(true);
 
       // Fetch fresh employee data from clientDataService
-      const employees = await clientDataService.getEmployees();
+      const employees = await apiService.getEmployees();
 
       if (Array.isArray(employees)) {
         // Ensure data is valid and has unique IDs
@@ -793,11 +834,12 @@ function EvaluatorDashboard() {
   const refreshSubmissions = async () => {
     try {
       // Don't set isRefreshing here - let the calling function handle it
-      const submissions = await clientDataService.getSubmissions();
+      // Use role-specific endpoint (replaces getSubmissions + filter)
+      const evaluations = await apiService.getEvalAuthEvaluator();
 
-      if (Array.isArray(submissions)) {
+      if (Array.isArray(evaluations)) {
         // Ensure data is valid and has unique IDs
-        const validData = submissions.filter(
+        const validData = evaluations.filter(
           (item: any) =>
             item &&
             typeof item === "object" &&
@@ -805,18 +847,8 @@ function EvaluatorDashboard() {
             item.employeeName
         );
 
-        // Filter to show:
-        // 1. Evaluations created by this evaluator (evaluatorId === user.id)
-        // 2. Evaluations where this user is the employee (employeeId === user.id) - for branch managers being evaluated
-        const evaluatorFiltered = validData.filter(
-          (item: any) =>
-            item.evaluatorId === user?.id ||
-            item.employeeId === user?.id ||
-            item.evaluationData?.employeeId === user?.id?.toString()
-        );
-
         // Remove duplicates based on ID
-        const uniqueData = evaluatorFiltered.filter(
+        const uniqueData = validData.filter(
           (item: any, index: number, self: any[]) =>
             index === self.findIndex((t) => t.id === item.id)
         );
@@ -836,12 +868,48 @@ function EvaluatorDashboard() {
         );
       }
     } catch (err) {
-      console.error("Error fetching submissions:", err);
-      setRecentSubmissions([]);
-      error(
-        "Refresh Failed",
-        "Failed to refresh evaluation records. Please try again."
-      );
+      console.warn("getEvalAuthEvaluator failed, falling back to getSubmissions:", err);
+      // Fallback to old method if new endpoint fails
+      try {
+        const submissions = await apiService.getSubmissions();
+        
+        if (Array.isArray(submissions)) {
+          const validData = submissions.filter(
+            (item: any) =>
+              item &&
+              typeof item === "object" &&
+              item.id !== undefined &&
+              item.employeeName &&
+              (item.evaluatorId === user?.id ||
+               item.employeeId === user?.id ||
+               item.evaluationData?.employeeId === user?.id?.toString())
+          );
+
+          const uniqueData = validData.filter(
+            (item: any, index: number, self: any[]) =>
+              index === self.findIndex((t) => t.id === item.id)
+          );
+
+          setRecentSubmissions(uniqueData);
+          success(
+            "Evaluation Records Refreshed",
+            `Successfully loaded ${uniqueData.length} evaluation records`
+          );
+        } else {
+          setRecentSubmissions([]);
+          error(
+            "Invalid Data",
+            "Received invalid data structure from the server"
+          );
+        }
+      } catch (fallbackError) {
+        console.error("Error fetching submissions:", fallbackError);
+        setRecentSubmissions([]);
+        error(
+          "Refresh Failed",
+          "Failed to refresh evaluation records. Please try again."
+        );
+      }
     }
   };
 
@@ -953,7 +1021,7 @@ function EvaluatorDashboard() {
 
     try {
       // Get all submissions from localStorage
-      const allSubmissions = await clientDataService.getSubmissions();
+      const allSubmissions = await apiService.getSubmissions();
 
       // Filter out the record to delete
       const updatedSubmissions = allSubmissions.filter(
@@ -1890,7 +1958,7 @@ function EvaluatorDashboard() {
       });
 
       // Save to localStorage using the proper service method
-      const allSubmissions = await clientDataService.getSubmissions();
+      const allSubmissions = await apiService.getSubmissions();
       const updatedSubmissions = allSubmissions.map((sub: any) =>
         sub.id === feedback.id ? updatedSubmission : sub
       );
@@ -2001,7 +2069,7 @@ function EvaluatorDashboard() {
             setRecentSubmissions(updatedSubmissions);
 
             // Also update in localStorage
-            await clientDataService.updateSubmission(submission.id, {
+            await apiService.updateSubmission(submission.id, {
               fullyApprovedNotified: true,
             });
           } catch (error) {
@@ -2075,34 +2143,55 @@ function EvaluatorDashboard() {
           mockData.dashboard.performanceData as unknown as PerformanceData
         );
 
-        // Fetch recent submissions from client data service
-        const submissions = await clientDataService.getSubmissions();
+        // Fetch evaluations using role-specific endpoint (replaces getSubmissions + filter)
+        try {
+          const evaluations = await apiService.getEvalAuthEvaluator();
 
-        if (Array.isArray(submissions)) {
-          // Ensure data is valid and has unique IDs
-          const validData = submissions.filter(
-            (item: any) =>
-              item &&
-              typeof item === "object" &&
-              item.id !== undefined &&
-              item.employeeName
-          );
+          if (Array.isArray(evaluations)) {
+            // Ensure data is valid and has unique IDs
+            const validData = evaluations.filter(
+              (item: any) =>
+                item &&
+                typeof item === "object" &&
+                item.id !== undefined &&
+                item.employeeName
+            );
 
-          // Filter to show only evaluations created by this evaluator
-          const evaluatorFiltered = validData.filter(
-            (item: any) => item.evaluatorId === user?.id
-          );
+            // Remove duplicates based on ID
+            const uniqueData = validData.filter(
+              (item: any, index: number, self: any[]) =>
+                index === self.findIndex((t) => t.id === item.id)
+            );
 
-          // Remove duplicates based on ID
-          const uniqueData = evaluatorFiltered.filter(
-            (item: any, index: number, self: any[]) =>
-              index === self.findIndex((t) => t.id === item.id)
-          );
+            setRecentSubmissions(uniqueData);
+          } else {
+            console.warn("Invalid data structure received from API");
+            setRecentSubmissions([]);
+          }
+        } catch (evalError) {
+          console.warn("getEvalAuthEvaluator failed, falling back to getSubmissions:", evalError);
+          // Fallback to old method if new endpoint fails
+          const submissions = await apiService.getSubmissions();
+          
+          if (Array.isArray(submissions)) {
+            const validData = submissions.filter(
+              (item: any) =>
+                item &&
+                typeof item === "object" &&
+                item.id !== undefined &&
+                item.employeeName &&
+                item.evaluatorId === user?.id
+            );
 
-          setRecentSubmissions(uniqueData);
-        } else {
-          console.warn("Invalid data structure received from API");
-          setRecentSubmissions([]);
+            const uniqueData = validData.filter(
+              (item: any, index: number, self: any[]) =>
+                index === self.findIndex((t) => t.id === item.id)
+            );
+
+            setRecentSubmissions(uniqueData);
+          } else {
+            setRecentSubmissions([]);
+          }
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -2364,7 +2453,7 @@ function EvaluatorDashboard() {
               onEvaluateEmployee={async (employee) => {
                 // Fetch formatted employee ID from accounts
                 try {
-                  const accounts = await clientDataService.getAccounts();
+                  const accounts = await apiService.getAccounts();
                   const account = accounts.find((acc: any) => 
                     acc.employeeId === employee.id || 
                     acc.id === employee.id ||

@@ -40,7 +40,7 @@ import { Label } from "@/components/ui/label";
 
 import EditUserModal from "@/components/EditUserModal";
 import { toastMessages } from "@/lib/toastMessages";
-import clientDataService from "@/lib/apiService";
+import { apiService } from "@/lib/apiService";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 
 // Lazy load tab components for better performance
@@ -103,11 +103,6 @@ interface SystemMetrics {
   activeUsers: number;
   totalEvaluations: number;
   pendingEvaluations: number;
-  systemHealth: "excellent" | "good" | "warning" | "critical";
-  lastBackup: string;
-  uptime: string;
-  storageUsed: number;
-  storageTotal: number;
 }
 
 interface DashboardStats {
@@ -278,7 +273,10 @@ function AdminDashboard() {
       await loadPendingRegistrations();
       await loadEvaluatedReviews();
 
-      // Update system metrics to reflect current state
+      // Load dashboard data from API (replaces manual calculation)
+      await loadDashboardData();
+
+      // Fallback: Update system metrics to reflect current state if API didn't provide all data
       updateSystemMetrics();
 
       console.log("✅ User data refresh completed successfully");
@@ -440,7 +438,7 @@ function AdminDashboard() {
   const loadPendingRegistrations = async () => {
     try {
       const pendingRegistrations =
-        await clientDataService.getPendingRegistrations();
+        await apiService.getPendingRegistrations();
       setPendingRegistrations(pendingRegistrations);
     } catch (error) {
       console.error("Error loading pending registrations:", error);
@@ -451,7 +449,7 @@ function AdminDashboard() {
   // Function to load evaluated reviews from client data service
   const loadEvaluatedReviews = async () => {
     try {
-      const submissions = await clientDataService.getSubmissions();
+      const submissions = await apiService.getSubmissions();
 
       // Transform submissions data to match the Review interface expected by the table
       const evaluationResults = submissions.map((submission: any) => ({
@@ -544,8 +542,16 @@ function AdminDashboard() {
 
   const handleSaveUser = async (updatedUser: any) => {
     try {
-      // Update user using client data service
-      await clientDataService.updateEmployee(updatedUser.id, updatedUser);
+      // Update user using API service
+      // Convert user object to FormData as required by apiService
+      const formData = new FormData();
+      Object.keys(updatedUser).forEach((key) => {
+        const value = updatedUser[key as keyof typeof updatedUser];
+        if (value !== null && value !== undefined) {
+          formData.append(key, String(value));
+        }
+      });
+      await apiService.updateEmployee(formData, updatedUser.id);
 
       // Also update accounts storage to persist changes
       const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
@@ -625,7 +631,7 @@ function AdminDashboard() {
     registrationName: string
   ) => {
     try {
-      const result = await clientDataService.approveRegistration(
+      const result = await apiService.approveRegistration(
         registrationId
       );
 
@@ -679,7 +685,7 @@ function AdminDashboard() {
     registrationName: string
   ) => {
     try {
-      const result = await clientDataService.rejectRegistration(registrationId);
+      const result = await apiService.rejectRegistration(registrationId);
 
       if (result.success) {
         // Add to rejected list
@@ -745,7 +751,73 @@ function AdminDashboard() {
     };
   };
 
-  // Function to update system metrics with correct active user count
+  // Function to load dashboard data from API
+  const loadDashboardData = async () => {
+    try {
+      const dashboardData = await apiService.adminDashboard();
+      
+      // Handle different response formats
+      const data = dashboardData?.data || dashboardData;
+      
+      if (data) {
+        // Update system metrics from API response
+        if (data.totalUsers !== undefined || data.totalEvaluations !== undefined) {
+          setSystemMetrics((prev) => {
+            const defaultMetrics: SystemMetrics = {
+              totalUsers: 0,
+              activeUsers: 0,
+              totalEvaluations: 0,
+              pendingEvaluations: 0,
+            };
+            return {
+              ...defaultMetrics,
+              ...prev,
+              totalUsers: data.totalUsers ?? prev?.totalUsers ?? defaultMetrics.totalUsers,
+              activeUsers: data.activeUsers ?? prev?.activeUsers ?? defaultMetrics.activeUsers,
+              totalEvaluations: data.totalEvaluations ?? prev?.totalEvaluations ?? defaultMetrics.totalEvaluations,
+              pendingEvaluations: data.pendingEvaluations ?? prev?.pendingEvaluations ?? defaultMetrics.pendingEvaluations,
+            };
+          });
+        }
+        
+        // Update dashboard stats from API response
+        if (data.employeeDashboard || data.hrDashboard || data.evaluatorDashboard) {
+          setDashboardStats((prev) => {
+            const defaultStats: DashboardStats = {
+              employeeDashboard: {
+                activeUsers: 0,
+                totalViews: 0,
+                lastActivity: new Date().toISOString(),
+              },
+              hrDashboard: {
+                activeUsers: 0,
+                totalViews: 0,
+                lastActivity: new Date().toISOString(),
+              },
+              evaluatorDashboard: {
+                activeUsers: 0,
+                totalViews: 0,
+                lastActivity: new Date().toISOString(),
+              },
+            };
+            return {
+              ...defaultStats,
+              ...prev,
+              employeeDashboard: data.employeeDashboard ?? prev?.employeeDashboard ?? defaultStats.employeeDashboard,
+              hrDashboard: data.hrDashboard ?? prev?.hrDashboard ?? defaultStats.hrDashboard,
+              evaluatorDashboard: data.evaluatorDashboard ?? prev?.evaluatorDashboard ?? defaultStats.evaluatorDashboard,
+            };
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error loading dashboard data from API:", error);
+      // Fallback to manual calculation if API fails
+      updateSystemMetrics();
+    }
+  };
+
+  // Function to update system metrics with correct active user count (fallback)
   const updateSystemMetrics = () => {
     setSystemMetrics((prev) =>
       prev
@@ -810,12 +882,20 @@ function AdminDashboard() {
     const loadAdminData = async () => {
       try {
         // Load positions data
-        const positions = await clientDataService.getPositions();
-        setPositionsData(positions);
+        const positions = await apiService.getPositions();
+        // Convert from {id, name} to {value, label} format
+        setPositionsData(positions.map((pos: { id: string; name: string }) => ({
+          value: pos.id,
+          label: pos.name
+        })));
 
         // Load branches data
-        const branches = await clientDataService.getBranches();
-        setBranchesData(branches);
+        const branches = await apiService.getBranches();
+        // Convert from {id, name} to {value, label} format
+        setBranchesData(branches.map((branch: { id: string; name: string }) => ({
+          value: branch.id,
+          label: branch.name
+        })));
 
         // Load persisted registration data
         const savedApproved = JSON.parse(
@@ -836,11 +916,6 @@ function AdminDashboard() {
           activeUsers: 0, // Will be updated after data loads
           totalEvaluations: 0, // Will be updated when real evaluations are available
           pendingEvaluations: 0, // Will be updated when real evaluations are available
-          systemHealth: "excellent",
-          lastBackup: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          uptime: "99.9%",
-          storageUsed: 2.3,
-          storageTotal: 10,
         };
 
         // Real dashboard stats based on actual data (will be updated after data loads)
@@ -875,7 +950,10 @@ function AdminDashboard() {
         // Load evaluated reviews
         await loadEvaluatedReviews();
 
-        // Update system metrics with correct active user counts
+        // Load dashboard data from API (replaces manual calculation)
+        await loadDashboardData();
+
+        // Fallback: Update system metrics with correct active user counts if API didn't provide all data
         updateSystemMetrics();
 
         setLoading(false);
@@ -888,20 +966,6 @@ function AdminDashboard() {
     loadAdminData();
   }, []);
 
-  const getSystemHealthColor = (health: string) => {
-    switch (health) {
-      case "excellent":
-        return "text-green-600 bg-green-100";
-      case "good":
-        return "text-blue-600 bg-blue-100";
-      case "warning":
-        return "text-yellow-600 bg-yellow-100";
-      case "critical":
-        return "text-red-600 bg-red-100";
-      default:
-        return "text-gray-600 bg-gray-100";
-    }
-  };
 
   const getReviewStatusColor = (status: string) => {
     switch (status) {
@@ -1093,7 +1157,7 @@ function AdminDashboard() {
               key={active}
               branchesData={branchesData}
               positionsData={positionsData}
-              refreshDashboardData={refreshDashboardData}
+              refreshDashboardDataAction={refreshDashboardData}
             />
           </Suspense>
         )}
@@ -1577,8 +1641,8 @@ function AdminDashboard() {
           user={userToEdit}
           onSave={handleSaveUser}
           departments={departmentsData.map((dept: any) => dept.name)}
-          branches={branchesData}
-          positions={positionsData}
+          branches={branchesData.map((branch: { value: string; label: string }) => ({ id: branch.value, name: branch.label }))}
+          positions={positionsData.map((pos: { value: string; label: string }) => ({ id: pos.value, name: pos.label }))}
           onRefresh={async () => {
             // Directly refresh user data to update the table immediately
             await refreshUserData();

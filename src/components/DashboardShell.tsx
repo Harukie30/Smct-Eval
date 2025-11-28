@@ -11,8 +11,8 @@ import ProfileModal from "./ProfileModal";
 import ContactDevsModal from "./ContactDevsModal";
 import { useUser } from '@/contexts/UserContext';
 import { useNotifications } from '@/hooks/useNotifications';
-import { Notification } from '@/lib/clientDataService';
-import clientDataService from '@/lib/clientDataService';
+import { Notification } from '@/lib/types';
+import { apiService } from '@/lib/apiService';
 import { useRouter } from 'next/navigation';
 
 export type SidebarItem = {
@@ -182,11 +182,6 @@ export default function DashboardShell(props: DashboardShellProps) {
     setIsProfileModalOpen(true);
   };
 
-  const handleSettings = () => {
-    // Settings opens the profile modal for editing
-    setIsProfileModalOpen(true);
-  };
-
   const handleSaveProfile = async (updatedProfile: UserProfile) => {
     try {
       // Call parent callback if provided
@@ -234,7 +229,7 @@ export default function DashboardShell(props: DashboardShellProps) {
     e.stopPropagation(); // Prevent triggering the notification click
     try {
       // Use clientDataService to delete notification properly
-      await clientDataService.deleteNotification(notificationId);
+      await apiService.deleteNotification(notificationId);
     } catch (error) {
       console.error('Failed to delete notification:', error);
     }
@@ -379,9 +374,8 @@ export default function DashboardShell(props: DashboardShellProps) {
                 profile={userProfile}
                 variant="header"
                 showLogout={true}
-                showSettings={true}
+                showSettings={false}
                 onEditProfile={handleEditProfile}
-                onSettings={handleSettings}
                 onLogout={handleLogout}
               />
             )}

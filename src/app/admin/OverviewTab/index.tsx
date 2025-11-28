@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import clientDataService from "@/lib/clientDataService";
+import { apiService } from "@/lib/apiService";
 import accountsDataRaw from "@/data/accounts.json";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 
@@ -79,6 +79,7 @@ export function OverviewTab() {
   );
   const [evaluatedReviews, setEvaluatedReviews] = useState<Review[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
@@ -89,7 +90,7 @@ export function OverviewTab() {
   const loadData = async () => {
     try {
       // Load evaluated reviews
-      const submissions = await clientDataService.getSubmissions();
+      const submissions = await apiService.getSubmissions();
       const evaluationResults = submissions.map((submission: any) => ({
         id: submission.id,
         employeeName: submission.employeeName,
@@ -192,11 +193,11 @@ export function OverviewTab() {
     }
   };
 
-  // Load initial data when component mounts (metrics and stats)
+  // Load initial data when component mounts (metrics, stats, and table data)
   useEffect(() => {
     const initialLoad = async () => {
       try {
-        // Load metrics and stats first (without refreshing table)
+        // Load metrics and stats first
         const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
         const employees = (accounts.length > 0 ? accounts : accountsData)
           .filter((account: any) => account.role !== "admin")
@@ -210,12 +211,29 @@ export function OverviewTab() {
           (emp: any) => emp.isActive !== false
         );
 
-        // Get current reviews count for metrics
-        const submissions = await clientDataService.getSubmissions();
+        // Get submissions for both metrics and table
+        const submissions = await apiService.getSubmissions();
+        
+        // Load table data
         const evaluationResults = submissions.map((submission: any) => ({
           id: submission.id,
+          employeeName: submission.employeeName,
+          evaluatorName: submission.evaluator,
+          department: submission.evaluationData?.department || "N/A",
+          position: submission.evaluationData?.position || "N/A",
+          evaluationDate: submission.submittedAt,
+          overallScore: Math.round((submission.rating / 5) * 100),
           status: submission.status || "completed",
+          lastUpdated: submission.submittedAt,
+          totalCriteria: 7,
+          completedCriteria: 7,
+          submittedAt: submission.submittedAt,
         }));
+        evaluationResults.sort(
+          (a: any, b: any) =>
+            new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+        );
+        setEvaluatedReviews(evaluationResults);
 
         // Calculate system metrics
         const metrics: SystemMetrics = {
@@ -282,6 +300,8 @@ export function OverviewTab() {
         setDashboardStats(stats);
       } catch (error) {
         console.error("Error loading overview data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -289,14 +309,17 @@ export function OverviewTab() {
   }, []);
 
   // Refresh table when tab is clicked (component remounts due to key prop)
+  // This runs after initial load completes to refresh data when switching tabs
   useEffect(() => {
+    if (loading) return; // Don't refresh if initial load is still happening
+    
     const refreshTable = async () => {
       setRefreshing(true);
       try {
         // Add a small delay to ensure spinner is visible
         await new Promise((resolve) => setTimeout(resolve, 300));
         // Only refresh the reviews data (table data)
-        const submissions = await clientDataService.getSubmissions();
+        const submissions = await apiService.getSubmissions();
         const evaluationResults = submissions.map((submission: any) => ({
           id: submission.id,
           employeeName: submission.employeeName,
@@ -325,7 +348,7 @@ export function OverviewTab() {
     };
 
     refreshTable();
-  }, []);
+  }, [loading]);
 
   // Helper functions (defined before useMemo to avoid reference errors)
   const getQuarterFromDate = (date: string): string => {
@@ -371,10 +394,6 @@ export function OverviewTab() {
     setOverviewPage(1);
   }, [searchTerm]);
 
-  if (!systemMetrics || !dashboardStats) {
-    return <div>No data available</div>;
-  }
-
   // Helper functions
   const getScoreColor = (score: number): string => {
     if (score >= 90) return "text-green-600";
@@ -408,7 +427,7 @@ export function OverviewTab() {
   const handleViewEvaluation = async (review: Review) => {
     try {
       // Fetch the full submission data using the review ID
-      const submission = await clientDataService.getSubmissionById(review.id);
+      const submission = await apiService.getSubmissionById(review.id);
 
       if (submission) {
         // Convert overallRating string to number for rating field
@@ -574,7 +593,7 @@ export function OverviewTab() {
               scrollbarColor: "#cbd5e1 #f1f5f9",
             }}
           >
-            {refreshing && (
+            {(refreshing || loading) && (
               <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
                 <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
                   <div className="relative">
@@ -590,7 +609,7 @@ export function OverviewTab() {
                     </div>
                   </div>
                   <p className="text-sm text-gray-600 font-medium">
-                    Refreshing...
+                    {loading ? "Loading..." : "Refreshing..."}
                   </p>
                 </div>
               </div>
@@ -608,7 +627,7 @@ export function OverviewTab() {
                 </TableRow>
               </TableHeader>
               <TableBody className="divide-y divide-gray-200">
-                {refreshing ? (
+                {(refreshing || loading) ? (
                   Array.from({ length: 8 }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
                       <TableCell className="px-6 py-3">

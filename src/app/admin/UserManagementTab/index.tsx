@@ -46,7 +46,7 @@ import { Plus, ChevronDown } from "lucide-react";
 import EditUserModal from "@/components/EditUserModal";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import { toastMessages } from "@/lib/toastMessages";
-import clientDataService from "@/lib/apiService";
+import apiService from "@/lib/apiService";
 import accountsDataRaw from "@/data/accounts.json";
 import departmentsData from "@/data/departments.json";
 import branchCodesData from "@/data/branch-code.json";
@@ -78,7 +78,7 @@ interface Employee {
 interface UserManagementTabProps {
   branchesData: { value: string; label: string }[];
   positionsData: { value: string; label: string }[];
-  refreshDashboardData: (
+  refreshDashboardDataAction: (
     showModal?: boolean,
     isAutoRefresh?: boolean
   ) => Promise<void>;
@@ -87,7 +87,7 @@ interface UserManagementTabProps {
 export function UserManagementTab({
   branchesData,
   positionsData,
-  refreshDashboardData,
+  refreshDashboardDataAction: refreshDashboardData,
 }: UserManagementTabProps) {
   // State management
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -235,7 +235,7 @@ export function UserManagementTab({
   const loadPendingRegistrations = async () => {
     try {
       const pendingRegistrations =
-        await clientDataService.getPendingRegistrations();
+        await apiService.getPendingRegistrations();
       setPendingRegistrations(pendingRegistrations);
     } catch (error) {
       console.error("Error loading pending registrations:", error);
@@ -323,7 +323,19 @@ export function UserManagementTab({
 
   const handleSaveUser = async (updatedUser: any) => {
     try {
-      await clientDataService.updateEmployee(updatedUser.id, updatedUser);
+      // Convert user object to FormData for API
+      const formData = new FormData();
+      Object.keys(updatedUser).forEach((key) => {
+        if (updatedUser[key] !== undefined && updatedUser[key] !== null) {
+          if (key === 'avatar' && updatedUser[key] instanceof File) {
+            formData.append(key, updatedUser[key]);
+          } else {
+            formData.append(key, String(updatedUser[key]));
+          }
+        }
+      });
+      
+      await apiService.updateEmployee(formData, updatedUser.id);
 
       const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
       const accountIndex = accounts.findIndex(
@@ -397,11 +409,13 @@ export function UserManagementTab({
     registrationName: string
   ) => {
     try {
-      const result = await clientDataService.approveRegistration(
+      const result = await apiService.approveRegistration(
         registrationId
       );
 
-      if (result.success) {
+      // Handle API response - check for success in various formats
+      const success = result?.success || result?.data?.success || (result && !result.error);
+      if (success) {
         const newApproved = [...approvedRegistrations, registrationId];
         setApprovedRegistrations(newApproved);
         localStorage.setItem(
@@ -424,7 +438,7 @@ export function UserManagementTab({
       } else {
         toastMessages.generic.error(
           "Approval Failed",
-          result.message || "Failed to approve registration. Please try again."
+          result?.message || result?.data?.message || "Failed to approve registration. Please try again."
         );
       }
     } catch (error) {
@@ -441,9 +455,11 @@ export function UserManagementTab({
     registrationName: string
   ) => {
     try {
-      const result = await clientDataService.rejectRegistration(registrationId);
+      const result = await apiService.rejectRegistration(registrationId);
 
-      if (result.success) {
+      // Handle API response - check for success in various formats
+      const success = result?.success || result?.data?.success || (result && !result.error);
+      if (success) {
         const newRejected = [...rejectedRegistrations, registrationId];
         setRejectedRegistrations(newRejected);
         localStorage.setItem(
@@ -465,7 +481,7 @@ export function UserManagementTab({
       } else {
         toastMessages.generic.error(
           "Rejection Failed",
-          result.message || "Failed to reject registration. Please try again."
+          result?.message || result?.data?.message || "Failed to reject registration. Please try again."
         );
       }
     } catch (error) {
@@ -491,6 +507,7 @@ export function UserManagementTab({
         employeeId: Date.now(), // Temporary ID
       };
 
+      
       const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
       accounts.push(newAccount);
       localStorage.setItem("accounts", JSON.stringify(accounts));
@@ -1242,8 +1259,8 @@ export function UserManagementTab({
         user={userToEdit}
         onSave={handleSaveUser}
         departments={departmentsData.map((dept: any) => dept.name)}
-        branches={branchesData}
-        positions={positionsData}
+        branches={branchesData.map((branch: { value: string; label: string }) => ({ id: branch.value, name: branch.label }))}
+        positions={positionsData.map((pos: { value: string; label: string }) => ({ id: pos.value, name: pos.label }))}
       />
 
       {/* Delete Confirmation Modal */}
@@ -1354,8 +1371,8 @@ export function UserManagementTab({
         }}
         onSave={handleAddUser}
         departments={departmentsData.map((dept) => dept.name)}
-        branches={branchesData}
-        positions={positionsData}
+        branches={branchesData.map((branch: { value: string; label: string }) => ({ id: branch.value, name: branch.label }))}
+        positions={positionsData.map((pos: { value: string; label: string }) => ({ id: pos.value, name: pos.label }))}
         onRefresh={async () => {
           await refreshUserData();
           await refreshDashboardData(false, false);

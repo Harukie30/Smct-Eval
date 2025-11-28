@@ -31,7 +31,7 @@ import {
 import { getQuarterFromDate, getQuarterColor } from "@/lib/quarterUtils";
 import accountsData from "@/data/accounts.json";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
-import clientDataService from "@/lib/clientDataService";
+import { apiService } from "@/lib/apiService";
 
 export function EvaluatedReviewsTab() {
   const [recentSubmissions, setRecentSubmissions] = useState<any[]>([]);
@@ -65,7 +65,7 @@ export function EvaluatedReviewsTab() {
   const loadSubmissions = async () => {
     try {
       setRecordsRefreshing(true);
-      const submissions = await clientDataService.getSubmissions();
+      const submissions = await apiService.getSubmissions();
       setRecentSubmissions(submissions);
     } catch (error) {
       console.error("Error loading submissions:", error);
@@ -571,7 +571,7 @@ export function EvaluatedReviewsTab() {
   const handleViewEvaluation = async (submission: any) => {
     try {
       // Fetch the full submission data
-      const fullSubmission = await clientDataService.getSubmissionById(
+      const fullSubmission = await apiService.getSubmissionById(
         submission.id
       );
 
@@ -625,7 +625,7 @@ export function EvaluatedReviewsTab() {
       )
     ) {
       try {
-        await clientDataService.deleteSubmission(submission.id);
+        await apiService.deleteSubmission(submission.id);
         await loadSubmissions();
       } catch (error) {
         console.error("Error deleting submission:", error);

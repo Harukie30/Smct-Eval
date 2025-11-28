@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import clientDataService from "@/lib/clientDataService";
+import { apiService } from "@/lib/apiService";
 import {
   getEmployeeResults,
   initializeMockData,
@@ -58,7 +58,7 @@ const EvaluationHistoryTab = lazy(() =>
 );
 
 function EmployeeDashboard() {
-  const { profile, user, isLoading: authLoading, logout } = useUser();
+  const { user, isLoading: authLoading, logout } = useUser();
   const { success, error } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -95,6 +95,7 @@ function EmployeeDashboard() {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [evaluationResults, setEvaluationResults] = useState<any[]>([]);
   const [selectedEvaluation, setSelectedEvaluation] = useState<any>(null);
+  const [employeeMetrics, setEmployeeMetrics] = useState<any>(null);
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [isEvaluationDetailsModalOpen, setIsEvaluationDetailsModalOpen] =
     useState(false);
@@ -368,15 +369,16 @@ function EmployeeDashboard() {
         initializeMockData();
 
         // Migrate old notification URLs from reviews tab to overview tab
-        await clientDataService.migrateNotificationUrls();
+        // Note: This migration function is only needed for client-side data migration
+        // If using API, this is handled server-side
 
         // Use the comprehensive refresh function to load all data with modal
         await refreshDashboardData(false, true, true);
 
         // Load approved evaluations
-        if (profile?.email) {
+        if (user?.email) {
           const approvedData = localStorage.getItem(
-            `approvedEvaluations_${profile.email}`
+            `approvedEvaluations_${user.email}`
           );
           if (approvedData) {
             setApprovedEvaluations(new Set(JSON.parse(approvedData)));
@@ -391,13 +393,13 @@ function EmployeeDashboard() {
     };
 
     // Always try to load data, let ProtectedRoute handle authentication
-    if (profile) {
+    if (user) {
       loadEmployeeData();
     } else {
-      // If no profile, still stop loading to prevent infinite loading
+      // If no user, still stop loading to prevent infinite loading
       setLoading(false);
     }
-  }, [profile]);
+  }, [user]);
 
   // Handle URL parameter changes for tab navigation
   useEffect(() => {
@@ -431,6 +433,19 @@ function EmployeeDashboard() {
 
   // Handle refresh modal completion
 
+  // Load employee dashboard metrics
+  const loadDashboardMetrics = async () => {
+    try {
+      const dashboardData = await apiService.employeeDashboard();
+      setEmployeeMetrics(dashboardData);
+      return dashboardData;
+    } catch (error) {
+      console.error("Error loading employee dashboard metrics:", error);
+      // Fallback to manual calculation if endpoint fails
+      return null;
+    }
+  };
+
   // Comprehensive refresh function for all dashboard data
   const refreshDashboardData = async (
     showToast = true,
@@ -438,21 +453,31 @@ function EmployeeDashboard() {
     isInitialLoad = false
   ) => {
     try {
-      if (profile?.email) {
-        // Fetch fresh submissions data
-        const allSubmissions = await clientDataService.getSubmissions();
-        const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
-        const userSubmissions = allSubmissions.filter(
-          (submission: any) =>
-            submission.employeeName === userFullName ||
-            submission.evaluationData?.employeeEmail === profile.email
-        );
-        const finalSubmissions =
-          userSubmissions.length > 0 ? userSubmissions : allSubmissions;
-        setSubmissions(finalSubmissions);
+      if (user?.email) {
+        // Try to load dashboard metrics first
+        await loadDashboardMetrics();
+
+        // Fetch employee-specific submissions using dedicated endpoint
+        try {
+          const userSubmissions = await apiService.getMyEvalAuthEmployee();
+          setSubmissions(userSubmissions);
+        } catch (error) {
+          console.error("Error fetching employee evaluations:", error);
+          // Fallback to old method if new endpoint fails
+          const allSubmissions = await apiService.getSubmissions();
+          const userFullName = user ? `${user.fname} ${user.lname}`.trim() : '';
+          const userSubmissions = allSubmissions.filter(
+            (submission: any) =>
+              submission.employeeName === userFullName ||
+              submission.evaluationData?.employeeEmail === user.email
+          );
+          const finalSubmissions =
+            userSubmissions.length > 0 ? userSubmissions : allSubmissions;
+          setSubmissions(finalSubmissions);
+        }
 
         // Refresh evaluation results
-        const results = getEmployeeResults(profile.email);
+        const results = getEmployeeResults(user.email);
         setEvaluationResults(results);
 
         // Comments functionality removed
@@ -508,16 +533,26 @@ function EmployeeDashboard() {
       // Add a small delay to simulate loading
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Fetch submissions data using client data service
+      // Fetch employee-specific submissions using dedicated endpoint
       try {
-        const allSubmissions = await clientDataService.getSubmissions();
-        // Filter submissions to only show current user's data
-        const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
-        const userSubmissions = profile?.email
+        const userSubmissions = await apiService.getMyEvalAuthEmployee();
+        setSubmissions(userSubmissions);
+
+        // Show success toast
+        success(
+          "Performance reviews refreshed successfully",
+          "All performance data has been updated"
+        );
+      } catch (error) {
+        console.error("Error fetching employee evaluations:", error);
+        // Fallback to old method if new endpoint fails
+        const allSubmissions = await apiService.getSubmissions();
+        const userFullName = user ? `${user.fname} ${user.lname}`.trim() : '';
+        const userSubmissions = user?.email
           ? allSubmissions.filter(
               (submission: any) =>
                 submission.employeeName === userFullName ||
-                submission.evaluationData?.employeeEmail === profile.email
+                submission.evaluationData?.employeeEmail === user.email
             )
           : [];
 
@@ -531,7 +566,7 @@ function EmployeeDashboard() {
           "Performance reviews refreshed successfully",
           "All performance data has been updated"
         );
-      } catch (error) {}
+      }
     } catch (error) {
       console.error("Error refreshing submissions:", error);
     } finally {
@@ -554,12 +589,12 @@ function EmployeeDashboard() {
     setRefreshingMessage("Refreshing quarterly performance...");
     setShowRefreshingDialog(true);
     try {
-      if (profile?.email) {
+      if (user?.email) {
         // Add a small delay to simulate loading
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
         // Reload evaluation results which are used for quarterly performance
-        const results = getEmployeeResults(profile.email);
+        const results = getEmployeeResults(user.email);
         setEvaluationResults(results);
 
         // Show success toast
@@ -585,12 +620,12 @@ function EmployeeDashboard() {
     setShowRefreshingDialog(true);
 
     try {
-      if (profile?.email) {
+      if (user?.email) {
         // Add a small delay to simulate loading
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
         // Reload evaluation results which are used for evaluation history
-        const results = getEmployeeResults(profile.email);
+        const results = getEmployeeResults(user.email);
         setEvaluationResults(results);
 
         // Show success toast
@@ -662,8 +697,8 @@ function EmployeeDashboard() {
     }
 
     setEvaluationToApprove(submission);
-    const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
-    setEmployeeApprovalName(userFullName || user?.name || "");
+    const userFullName = user ? `${user.fname} ${user.lname}`.trim() : '';
+    setEmployeeApprovalName(userFullName || "");
     setIsApprovalDialogOpen(true);
   };
 
@@ -702,10 +737,10 @@ function EmployeeDashboard() {
   };
 
   const confirmApproval = async () => {
-    if (!evaluationToApprove || !profile?.email) return;
+    if (!evaluationToApprove || !user?.email) return;
 
     // Check if user has a signature
-    const employeeSignature = profile.signature || user?.signature || "";
+    const employeeSignature = user?.signature || "";
 
     if (!employeeSignature) {
       error(
@@ -718,13 +753,13 @@ function EmployeeDashboard() {
     setIsApproving(true);
 
     try {
-      const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
+      const userFullName = user ? `${user.fname} ${user.lname}`.trim() : '';
       const approvalData = {
         id: evaluationToApprove.id,
         approvedAt: new Date().toISOString(),
         employeeSignature: employeeSignature,
-        employeeName: employeeApprovalName || userFullName || user?.name || "",
-        employeeEmail: profile.email || user?.email || "",
+        employeeName: employeeApprovalName || userFullName || "",
+        employeeEmail: user?.email || "",
       };
 
       // Add to approved evaluations with full approval data
@@ -734,7 +769,7 @@ function EmployeeDashboard() {
 
       // Save approval data to localStorage
       const existingApprovals = JSON.parse(
-        localStorage.getItem(`approvalData_${profile.email}`) || "{}"
+        localStorage.getItem(`approvalData_${user.email}`) || "{}"
       );
       // Ensure we use the correct submission ID as the key
       const submissionId = evaluationToApprove.id?.toString() || "";
@@ -746,13 +781,13 @@ function EmployeeDashboard() {
       }
       existingApprovals[submissionId] = approvalData;
       localStorage.setItem(
-        `approvalData_${profile.email}`,
+        `approvalData_${user.email}`,
         JSON.stringify(existingApprovals)
       );
 
       // Also save the approved IDs list
       localStorage.setItem(
-        `approvedEvaluations_${profile.email}`,
+        `approvedEvaluations_${user.email}`,
         JSON.stringify([...newApproved])
       );
 
@@ -790,9 +825,9 @@ function EmployeeDashboard() {
   };
 
   const getApprovalData = (submissionId: string) => {
-    if (!profile?.email) return null;
+    if (!user?.email) return null;
     const approvalData = JSON.parse(
-      localStorage.getItem(`approvalData_${profile.email}`) || "{}"
+      localStorage.getItem(`approvalData_${user.email}`) || "{}"
     );
     // Ensure we use the correct submission ID format (convert to string)
     const key = submissionId.toString();
@@ -1124,7 +1159,7 @@ function EmployeeDashboard() {
           >
             <PerformanceReviewsTab
               isActive={activeTab === "reviews"}
-              onViewEvaluation={(submission) => {
+              onViewEvaluationAction={(submission) => {
                 setSelectedEvaluation(submission);
                 setModalOpenedFromTab("reviews");
                 setIsViewResultsModalOpen(true);
@@ -1144,7 +1179,7 @@ function EmployeeDashboard() {
           >
             <EvaluationHistoryTab
               isActive={activeTab === "history"}
-              onViewEvaluation={(submission) => {
+              onViewEvaluationAction={(submission: any) => {
                 setSelectedEvaluation(submission);
                 setModalOpenedFromTab("history");
                 setIsViewResultsModalOpen(true);
@@ -1161,14 +1196,14 @@ function EmployeeDashboard() {
   return (
     <>
       {/* Loading Screen - Shows during initial load, authentication, and auto-refresh */}
-      {(loading || authLoading || !profile) && (
+      {(loading || authLoading || !user) && (
         <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-lg font-medium text-gray-800">
               {authLoading
                 ? "Authenticating..."
-                : !profile
+                : !user
                 ? "Loading user profile..."
                 : "Loading Employee Dashboard..."}
             </p>
@@ -1224,7 +1259,7 @@ function EmployeeDashboard() {
         approvalData={
           selectedEvaluation ? getApprovalData(selectedEvaluation.id) : null
         }
-        currentUserName={profile ? `${profile.fname} ${profile.lname}`.trim() : (user?.name || '')}
+        currentUserName={user ? `${user.fname} ${user.lname}`.trim() : ''}
         currentUserSignature={(() => {
           const signature =
             selectedEvaluation?.evaluationData?.evaluatorSignatureImage ||
@@ -1569,7 +1604,7 @@ function EmployeeDashboard() {
 
               {/* Signature Status Check */}
               {(() => {
-                const hasSignature = profile?.signature || user?.signature;
+                const hasSignature = user?.signature;
                 return hasSignature ? (
                   <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-center space-x-2">
@@ -1639,7 +1674,7 @@ function EmployeeDashboard() {
                   disabled={
                     isApproving ||
                     !employeeApprovalName.trim() ||
-                    !(profile?.signature || user?.signature)
+                    !user?.signature
                   }
                   className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
