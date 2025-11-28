@@ -82,11 +82,8 @@ function LandingLoginPage() {
       await new Promise((resolve) => setTimeout(resolve, 1200)); // Initial validation delay
 
       const result = await login(username, password);
-      console.log("✅ Login successful :", result);
 
       if (result) {
-        // Login successful - single role user
-
         // Simulate additional authentication steps
         await new Promise((resolve) => setTimeout(resolve, 1000)); // Session creation
         await new Promise((resolve) => setTimeout(resolve, 800)); // Permission loading
@@ -95,28 +92,7 @@ function LandingLoginPage() {
         // Show success toast
         toastMessages.login.success(username);
 
-        // Set remember me preference
-        // if (rememberMe) {
-        //   localStorage.setItem("keepLoggedIn", "true");
-        // } else {
-        //   localStorage.setItem("keepLoggedIn", "false");
-        // }
-
-        // IMPORTANT: Wait a bit longer to ensure UserContext state is fully updated
         await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // Get user role for personalized loading message
-        // const storedUser = localStorage.getItem("authenticatedUser");
-        // console.log("🔍 DEBUG - localStorage check:", {
-        //   hasStoredUser: !!storedUser,
-        //   storedUserData: storedUser ? JSON.parse(storedUser) : null,
-        //   keepLoggedIn: localStorage.getItem("keepLoggedIn"),
-        //   isAuthenticated: !!result,
-        // });
-
-        // if (storedUser) {
-        //   const userData = JSON.parse(storedUser);
-        //   console.log("✅ User role for redirect:", userData.role);
 
         const roleDashboards: Record<string, string> = {
           admin: "/admin",
@@ -129,13 +105,6 @@ function LandingLoginPage() {
         console.log("🚀 Redirecting to:", dashboardPath);
         console.log("🚀 Redirecting to:", result);
 
-        // if (!dashboardPath) {
-        //   console.error("❌ No dashboard path found for role:", result.role);
-        //   setShowLoadingScreen(false);
-        //   setLoginError("Invalid user role. Please contact support.");
-        //   return;
-        // }
-
         // Wait to ensure authentication state is propagated
         console.log("⏳ Waiting for authentication state to propagate...");
         await new Promise((resolve) => setTimeout(resolve, 300));
@@ -144,13 +113,8 @@ function LandingLoginPage() {
         router.push(dashboardPath);
       } else {
         setShowLoadingScreen(false);
-        setLoginError("Session error. Please try logging in again.");
+        setLoginError("Invalid Credentials");
       }
-      // }
-      // else {
-      //   // Login failed
-      //   throw new Error("Invalid username or password");
-      // }
     } catch (error: any) {
       // const errorMessage = 'Invalid username or password. Please try again.';
       console.log(error);

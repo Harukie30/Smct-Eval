@@ -308,11 +308,57 @@ export const apiService = {
     }
   },
 
-  getSubmissions: async (): Promise<any> => {
+  getSubmissions: async (
+    searchTerm: string,
+    page: number,
+    perPage: number
+  ): Promise<any> => {
     try {
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
       const response = await api.get(`/allEvaluations`);
       return response.data.profile || response.data;
+=======
+      const response = await api.get(`/allEvaluations`, {
+        params: {
+          search: searchTerm || "",
+          page: page,
+          per_page: perPage,
+        },
+      });
+
+      return response.data.evaluations;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+        message:
+          axiosError.response?.data?.message || "Failed to fetch evaluations",
+      };
+    }
+  },
+
+  getSubmissionById: async (id: number | string): Promise<any> => {
+    try {
+      const response = await api.get(`/submissions/${id}`);
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+        message:
+          axiosError.response?.data?.message || "Failed to update profile",
+      };
+    }
+  },
+
+  adminDashboard: async (): Promise<any> => {
+    try {
+      const response = await api.get(`/adminDashboard`);
+      return response.data;
+>>>>>>> Stashed changes
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw {

@@ -1000,44 +1000,7 @@ function AdminDashboard() {
     );
   }
 
-  const topSummary = (
-    <>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">
-            Total Users
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-gray-900">
-            {systemMetrics.totalUsers}
-          </div>
-          <p className="text-sm text-gray-500 mt-1">
-            {systemMetrics.activeUsers} active
-          </p>
-          <p className="text-xs text-orange-500 mt-1">
-            {pendingRegistrations.length} pending
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">
-            Evaluations
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-gray-900">
-            {systemMetrics.totalEvaluations}
-          </div>
-          <p className="text-sm text-gray-500 mt-1">
-            {systemMetrics.pendingEvaluations} pending
-          </p>
-        </CardContent>
-      </Card>
-    </>
-  );
+  const topSummary = <></>;
 
   return (
     <DashboardShell
