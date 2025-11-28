@@ -437,8 +437,7 @@ function AdminDashboard() {
   // Function to load pending registrations
   const loadPendingRegistrations = async () => {
     try {
-      const pendingRegistrations =
-        await apiService.getPendingRegistrations();
+      const pendingRegistrations = await apiService.getPendingRegistrations();
       setPendingRegistrations(pendingRegistrations);
     } catch (error) {
       console.error("Error loading pending registrations:", error);
@@ -449,39 +448,36 @@ function AdminDashboard() {
   // Function to load evaluated reviews from client data service
   const loadEvaluatedReviews = async () => {
     try {
-      const submissions = await apiService.getSubmissions();
-
+      // const submissions = await apiService.getSubmissions();
       // Transform submissions data to match the Review interface expected by the table
-      const evaluationResults = submissions.map((submission: any) => ({
-        id: submission.id,
-        employeeName: submission.employeeName,
-        evaluatorName: submission.evaluator,
-        department: submission.evaluationData?.department || "N/A",
-        position: submission.evaluationData?.position || "N/A",
-        evaluationDate: submission.submittedAt,
-        overallScore: Math.round((submission.rating / 5) * 100), // Convert 5-point scale to percentage
-        status: submission.status || "completed",
-        lastUpdated: submission.submittedAt,
-        totalCriteria: 7, // Default total criteria count
-        completedCriteria: 7, // Assume all criteria are completed for submitted reviews
-        // Keep original data for other uses
-        employeeId: submission.evaluationData?.employeeId || submission.id,
-        employeeEmail: submission.evaluationData?.employeeEmail || "",
-        overallRating: submission.rating,
-        period:
-          submission.evaluationData?.period ||
-          new Date().toISOString().slice(0, 7),
-        submittedAt: submission.submittedAt,
-        evaluationData: submission.evaluationData,
-      }));
-
+      // const evaluationResults = submissions.map((submission: any) => ({
+      //   id: submission.id,
+      //   employeeName: submission.employeeName,
+      //   evaluatorName: submission.evaluator,
+      //   department: submission.evaluationData?.department || "N/A",
+      //   position: submission.evaluationData?.position || "N/A",
+      //   evaluationDate: submission.submittedAt,
+      //   overallScore: Math.round((submission.rating / 5) * 100), // Convert 5-point scale to percentage
+      //   status: submission.status || "completed",
+      //   lastUpdated: submission.submittedAt,
+      //   totalCriteria: 7, // Default total criteria count
+      //   completedCriteria: 7, // Assume all criteria are completed for submitted reviews
+      //   // Keep original data for other uses
+      //   employeeId: submission.evaluationData?.employeeId || submission.id,
+      //   employeeEmail: submission.evaluationData?.employeeEmail || "",
+      //   overallRating: submission.rating,
+      //   period:
+      //     submission.evaluationData?.period ||
+      //     new Date().toISOString().slice(0, 7),
+      //   submittedAt: submission.submittedAt,
+      //   evaluationData: submission.evaluationData,
+      // }));
       // Sort by submission date (newest first)
-      evaluationResults.sort(
-        (a: any, b: any) =>
-          new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-      );
-
-      setEvaluatedReviews(evaluationResults);
+      // evaluationResults.sort(
+      //   (a: any, b: any) =>
+      //     new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+      // );
+      //   setEvaluatedReviews(evaluationResults);
     } catch (error) {
       console.error("Error loading evaluated reviews:", error);
       setEvaluatedReviews([]);
@@ -631,9 +627,7 @@ function AdminDashboard() {
     registrationName: string
   ) => {
     try {
-      const result = await apiService.approveRegistration(
-        registrationId
-      );
+      const result = await apiService.approveRegistration(registrationId);
 
       if (result.success) {
         // Add to approved list
@@ -755,13 +749,16 @@ function AdminDashboard() {
   const loadDashboardData = async () => {
     try {
       const dashboardData = await apiService.adminDashboard();
-      
+
       // Handle different response formats
       const data = dashboardData?.data || dashboardData;
-      
+
       if (data) {
         // Update system metrics from API response
-        if (data.totalUsers !== undefined || data.totalEvaluations !== undefined) {
+        if (
+          data.totalUsers !== undefined ||
+          data.totalEvaluations !== undefined
+        ) {
           setSystemMetrics((prev) => {
             const defaultMetrics: SystemMetrics = {
               totalUsers: 0,
@@ -772,16 +769,32 @@ function AdminDashboard() {
             return {
               ...defaultMetrics,
               ...prev,
-              totalUsers: data.totalUsers ?? prev?.totalUsers ?? defaultMetrics.totalUsers,
-              activeUsers: data.activeUsers ?? prev?.activeUsers ?? defaultMetrics.activeUsers,
-              totalEvaluations: data.totalEvaluations ?? prev?.totalEvaluations ?? defaultMetrics.totalEvaluations,
-              pendingEvaluations: data.pendingEvaluations ?? prev?.pendingEvaluations ?? defaultMetrics.pendingEvaluations,
+              totalUsers:
+                data.totalUsers ??
+                prev?.totalUsers ??
+                defaultMetrics.totalUsers,
+              activeUsers:
+                data.activeUsers ??
+                prev?.activeUsers ??
+                defaultMetrics.activeUsers,
+              totalEvaluations:
+                data.totalEvaluations ??
+                prev?.totalEvaluations ??
+                defaultMetrics.totalEvaluations,
+              pendingEvaluations:
+                data.pendingEvaluations ??
+                prev?.pendingEvaluations ??
+                defaultMetrics.pendingEvaluations,
             };
           });
         }
-        
+
         // Update dashboard stats from API response
-        if (data.employeeDashboard || data.hrDashboard || data.evaluatorDashboard) {
+        if (
+          data.employeeDashboard ||
+          data.hrDashboard ||
+          data.evaluatorDashboard
+        ) {
           setDashboardStats((prev) => {
             const defaultStats: DashboardStats = {
               employeeDashboard: {
@@ -803,9 +816,18 @@ function AdminDashboard() {
             return {
               ...defaultStats,
               ...prev,
-              employeeDashboard: data.employeeDashboard ?? prev?.employeeDashboard ?? defaultStats.employeeDashboard,
-              hrDashboard: data.hrDashboard ?? prev?.hrDashboard ?? defaultStats.hrDashboard,
-              evaluatorDashboard: data.evaluatorDashboard ?? prev?.evaluatorDashboard ?? defaultStats.evaluatorDashboard,
+              employeeDashboard:
+                data.employeeDashboard ??
+                prev?.employeeDashboard ??
+                defaultStats.employeeDashboard,
+              hrDashboard:
+                data.hrDashboard ??
+                prev?.hrDashboard ??
+                defaultStats.hrDashboard,
+              evaluatorDashboard:
+                data.evaluatorDashboard ??
+                prev?.evaluatorDashboard ??
+                defaultStats.evaluatorDashboard,
             };
           });
         }
@@ -884,18 +906,12 @@ function AdminDashboard() {
         // Load positions data
         const positions = await apiService.getPositions();
         // Convert from {id, name} to {value, label} format
-        setPositionsData(positions.map((pos: { id: string; name: string }) => ({
-          value: pos.id,
-          label: pos.name
-        })));
+        setPositionsData(positions);
 
         // Load branches data
         const branches = await apiService.getBranches();
         // Convert from {id, name} to {value, label} format
-        setBranchesData(branches.map((branch: { id: string; name: string }) => ({
-          value: branch.id,
-          label: branch.name
-        })));
+        setBranchesData(branches);
 
         // Load persisted registration data
         const savedApproved = JSON.parse(
@@ -965,7 +981,6 @@ function AdminDashboard() {
 
     loadAdminData();
   }, []);
-
 
   const getReviewStatusColor = (status: string) => {
     switch (status) {
@@ -1604,8 +1619,18 @@ function AdminDashboard() {
           user={userToEdit}
           onSave={handleSaveUser}
           departments={departmentsData.map((dept: any) => dept.name)}
-          branches={branchesData.map((branch: { value: string; label: string }) => ({ id: branch.value, name: branch.label }))}
-          positions={positionsData.map((pos: { value: string; label: string }) => ({ id: pos.value, name: pos.label }))}
+          branches={branchesData.map(
+            (branch: { value: string; label: string }) => ({
+              id: branch.value,
+              name: branch.label,
+            })
+          )}
+          positions={positionsData.map(
+            (pos: { value: string; label: string }) => ({
+              id: pos.value,
+              name: pos.label,
+            })
+          )}
           onRefresh={async () => {
             // Directly refresh user data to update the table immediately
             await refreshUserData();

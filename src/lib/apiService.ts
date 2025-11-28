@@ -1,5 +1,4 @@
 import { AuthenticatedUser } from "@/contexts/UserContext";
-import { PendingRegistration, Account } from "./clientDataService";
 import { CONFIG } from "../../config/config";
 import { api, sanctum } from "./api";
 import axios, { AxiosError } from "axios";
@@ -301,24 +300,6 @@ export const apiService = {
     try {
       const response = await api.get(`/submissions/${id}`);
       return response.data;
-<<<<<<< Updated upstream
-=======
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-        message:
-          axiosError.response?.data?.message || "Failed to update profile",
-      };
-    }
-  },
-
-  adminDashboard: async (): Promise<any> => {
-    try {
-      const response = await api.get(`/adminDashboard`);
-      return response.data;
->>>>>>> Stashed changes
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw {
@@ -699,33 +680,6 @@ export const apiService = {
       const axiosError = error as AxiosError<any>;
       throw new Error(
         axiosError.response?.data?.message || "Failed to fetch employee stats"
-      );
-    }
-  },
-
-  // Notification methods
-  getNotifications: async (userRole: string): Promise<any[]> => {
-    try {
-      const response = await api.get("/notifications", {
-        params: { role: userRole },
-      });
-      const data = response.data;
-
-      let notifications: any[] = [];
-      if (data.success && data.notifications) {
-        notifications = data.notifications;
-      } else if (Array.isArray(data.notifications)) {
-        notifications = data.notifications;
-      } else if (Array.isArray(data)) {
-        notifications = data;
-      }
-
-      // Backend handles filtering by role, return results as-is
-      return notifications;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch notifications"
       );
     }
   },
