@@ -17,7 +17,7 @@ import OverallAssessment from './OverallAssessment';
 import WelcomeStep from './WelcomeStep';
 import { EvaluationData } from './types';
 import { storeEvaluationResult } from '@/lib/evaluationStorage';
-import clientDataService from '@/lib/clientDataService';
+import { apiService } from '@/lib/apiService';
 import { createEvaluationNotification } from '@/lib/notificationUtils';
 
 const steps = [
@@ -437,7 +437,7 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
 
       // Also store in client data service for consistency
       try {
-        await clientDataService.createSubmission({
+        await apiService.createSubmission({
           employeeId: parseInt(evaluationData.employeeId),
           employeeName: evaluationData.employeeName,
           employeeEmail: employee?.email || `${evaluationData.employeeName.toLowerCase().replace(/\s+/g, '.')}@smct.com`,

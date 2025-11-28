@@ -1,10 +1,11 @@
 // src/hooks/useEmployeeData.ts
 
 import { useState, useEffect, useCallback } from 'react';
-import clientDataService, {
+import { apiService } from '@/lib/apiService';
+import {
   Employee,
   EmployeeSearchResult
-} from '@/lib/clientDataService';
+} from '@/lib/types';
 
 // Hook for getting all employees
 export const useEmployees = () => {
@@ -16,7 +17,7 @@ export const useEmployees = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await clientDataService.getEmployees();
+      const data = await apiService.getEmployees();
       setEmployees(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employees');
@@ -43,7 +44,7 @@ export const useEmployee = (id: number | null) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await clientDataService.getEmployee(employeeId);
+      const data = await apiService.getEmployee(employeeId);
       setEmployee(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employee');
@@ -79,7 +80,7 @@ export const useEmployeeSearch = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await clientDataService.searchEmployees(query);
+      const data = await apiService.searchEmployees(query);
       setResults(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to search employees');
@@ -106,7 +107,7 @@ export const useEmployeesByDepartment = (department: string | null) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await clientDataService.getEmployeesByDepartment(dept);
+      const data = await apiService.getEmployeesByDepartment(dept);
       setEmployees(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employees by department');
@@ -137,7 +138,7 @@ export const useEmployeesByRole = (role: string | null) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await clientDataService.getEmployeesByRole(employeeRole);
+      const data = await apiService.getEmployeesByRole(employeeRole);
       setEmployees(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employees by role');
@@ -168,7 +169,7 @@ export const useEmployeeStats = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await clientDataService.getEmployeeStats();
+      const data = await apiService.getEmployeeStats();
       setStats(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employee statistics');
@@ -194,7 +195,21 @@ export const useUpdateEmployee = () => {
     try {
       setLoading(true);
       setError(null);
-      const updatedEmployee = await clientDataService.updateEmployee(id, updates);
+      // Convert updates to FormData for apiService
+      const formData = new FormData();
+      Object.keys(updates).forEach(key => {
+        const value = updates[key as keyof Employee];
+        if (value !== undefined && value !== null) {
+          // Check if value is a File object by checking for File-specific properties
+          const valueAny = value as any;
+          if (valueAny && typeof valueAny === 'object' && valueAny.constructor && valueAny.constructor.name === 'File') {
+            formData.append(key, valueAny as File);
+          } else {
+            formData.append(key, String(value));
+          }
+        }
+      });
+      const updatedEmployee = await apiService.updateEmployee(formData, id);
       return updatedEmployee;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update employee';
@@ -225,7 +240,7 @@ export const useEmployeeByEmail = (email: string | null) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await clientDataService.getEmployeeByEmail(employeeEmail);
+      const data = await apiService.getEmployeeByEmail(employeeEmail);
       setEmployee(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employee by email');

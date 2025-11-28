@@ -27,7 +27,7 @@ import ForgotPasswordModal from "@/components/ForgotPasswordModal";
 import { useUser } from "@/contexts/UserContext";
 import { useRouter } from "next/navigation";
 import { toastMessages } from "@/lib/toastMessages";
-import clientDataService from "@/lib/clientDataService";
+// Removed clientDataService import - forceRefreshAccounts is no longer needed with pure API approach
 import ContactDevsModal from "@/components/ContactDevsModal";
 import { HowItWorksModal } from "@/components/HowItWorksModal";
 import { LoginRegistrationGuideModal } from "@/components/LoginRegistrationGuideModal";
@@ -51,10 +51,7 @@ function LandingLoginPage() {
 
   const { login, isLoading, user } = useUser();
   const router = useRouter();
-  // Force refresh accounts data on login page load (clears cache)
-  useEffect(() => {
-    clientDataService.forceRefreshAccounts();
-  }, []);
+  // Removed forceRefreshAccounts - no longer needed with pure API approach
 
   useEffect(() => {
     if (isAboutModalOpen) {

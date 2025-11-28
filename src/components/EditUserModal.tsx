@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
 import LoadingAnimation from "@/components/LoadingAnimation";
 import { useToast } from "@/hooks/useToast";
-import clientDataService from "@/lib/clientDataService";
+import { apiService } from "@/lib/apiService";
 import { useUser } from "@/contexts/UserContext";
 import { LazyGif } from "@/components/LazyGif";
 
@@ -202,7 +202,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     if (!currentUser || !canEditEmployeeId) return false;
 
     try {
-      const accounts = await clientDataService.getAccounts();
+      const accounts = await apiService.getAccounts();
       // Check multiple ways to find the account (id, employeeId, email, username)
       const userAccount = accounts.find((acc: any) => {
         // Match by ID (check both id and employeeId)
@@ -440,7 +440,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       const fetchEmployeeId = async () => {
         if (!user.employeeId) {
           try {
-            const accounts = await clientDataService.getAccounts();
+            const accounts = await apiService.getAccounts();
             const account = accounts.find(
               (acc: any) => acc.id === user.id || acc.employeeId === user.id
             );

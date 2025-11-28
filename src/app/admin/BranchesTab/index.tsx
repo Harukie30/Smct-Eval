@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2 } from "lucide-react";
-import clientDataService from "@/lib/clientDataService";
+import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 
@@ -60,7 +60,7 @@ export function BranchesTab({ employees }: BranchesTabProps) {
   const loadData = async () => {
     try {
       // Load branches from API - now returns {id, name} format consistently
-      const branchesData = await clientDataService.getBranches();
+      const branchesData = await apiService.getBranches();
 
       // Load from localStorage if available, otherwise use API data
       const savedBranches = JSON.parse(

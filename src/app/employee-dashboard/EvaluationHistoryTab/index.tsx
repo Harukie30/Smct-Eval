@@ -34,18 +34,18 @@ import {
   getQuarterColor,
 } from "@/lib/quarterUtils";
 import { getEmployeeResults } from "@/lib/evaluationStorage";
-import clientDataService from "@/lib/clientDataService";
+import { apiService } from "@/lib/apiService";
 
 interface EvaluationHistoryTabProps {
   isActive?: boolean;
-  onViewEvaluation: (submission: any) => void;
+  onViewEvaluationAction: (submission: any) => void;
 }
 
 export function EvaluationHistoryTab({
   isActive = false,
-  onViewEvaluation,
+  onViewEvaluationAction: onViewEvaluation,
 }: EvaluationHistoryTabProps) {
-  const { profile } = useUser();
+  const { user } = useUser();
   const { success } = useToast();
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [evaluationResults, setEvaluationResults] = useState<any[]>([]);
@@ -63,32 +63,32 @@ export function EvaluationHistoryTab({
 
   // Load approved evaluations
   useEffect(() => {
-    if (profile?.email) {
+    if (user?.email) {
       const approved = JSON.parse(
-        localStorage.getItem(`approvedEvaluations_${profile.email}`) || "[]"
+        localStorage.getItem(`approvedEvaluations_${user.email}`) || "[]"
       );
       setApprovedEvaluations(new Set(approved));
     }
-  }, [profile?.email]);
+  }, [user?.email]);
 
   // Load data
   const loadData = async () => {
-    if (!profile?.email) return;
+    if (!user?.email) return;
 
     try {
       setLoading(true);
-      const allSubmissions = await clientDataService.getSubmissions();
-      const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
+      const allSubmissions = await apiService.getSubmissions();
+      const userFullName = user ? `${user.fname} ${user.lname}`.trim() : '';
       const userSubmissions = allSubmissions.filter(
         (submission: any) =>
           submission.employeeName === userFullName ||
-          submission.evaluationData?.employeeEmail === profile.email
+          submission.evaluationData?.employeeEmail === user.email
       );
       const finalSubmissions =
         userSubmissions.length > 0 ? userSubmissions : allSubmissions;
       setSubmissions(finalSubmissions);
 
-      const results = getEmployeeResults(profile.email);
+      const results = getEmployeeResults(user.email);
       setEvaluationResults(results);
     } catch (error) {
       console.error("Error loading data:", error);
@@ -100,7 +100,7 @@ export function EvaluationHistoryTab({
   // Initial load
   useEffect(() => {
     loadData();
-  }, [profile]);
+  }, [user]);
 
   // Refresh when tab becomes active
   useEffect(() => {
@@ -109,7 +109,7 @@ export function EvaluationHistoryTab({
       return;
     }
 
-    if (isActive && profile?.email) {
+    if (isActive && user?.email) {
       const refreshOnTabClick = async () => {
         setIsRefreshingQuarterly(true);
         try {
@@ -123,7 +123,7 @@ export function EvaluationHistoryTab({
       };
       refreshOnTabClick();
     }
-  }, [isActive, profile]);
+  }, [isActive, user]);
 
   // Helper functions
   const getTimeAgo = (submittedAt: string) => {
@@ -212,9 +212,9 @@ export function EvaluationHistoryTab({
   };
 
   const getApprovalData = (submissionId: string) => {
-    if (!profile?.email) return null;
+    if (!user?.email) return null;
     const approvalData = JSON.parse(
-      localStorage.getItem(`approvalData_${profile.email}`) || "{}"
+      localStorage.getItem(`approvalData_${user.email}`) || "{}"
     );
     const key = submissionId.toString();
     return approvalData[key] || null;
@@ -285,11 +285,11 @@ export function EvaluationHistoryTab({
   }, [submissions]);
 
   const handleRefreshQuarterly = async () => {
-    if (!profile?.email) return;
+    if (!user?.email) return;
     setIsRefreshingQuarterly(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      const results = getEmployeeResults(profile.email);
+      const results = getEmployeeResults(user.email);
       setEvaluationResults(results);
       success(
         "Quarterly performance refreshed successfully",

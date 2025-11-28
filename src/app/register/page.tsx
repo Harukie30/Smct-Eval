@@ -35,7 +35,7 @@ interface FormDataType {
   contact: string;
   position_id: number | string;
   branch_id: number | string;
-  department_id?: number | string;
+  department_id?: number | string ;
   password: string;
   password_confirmation: string;
   signature: string;
@@ -44,17 +44,11 @@ interface FormDataType {
 function RegisterPage() {
   // Set to true to force mock data for testing
   const FORCE_MOCK_DATA = false; // Change to true to always use mock data
-
+  
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
-  const [positions, setPositions] = useState<
-    { value: string; label: string }[]
-  >([]);
-  const [branches, setBranches] = useState<{ value: string; label: string }[]>(
-    []
-  );
-  const [departments, setDepartments] = useState<
-    { value: string; label: string }[]
-  >([]);
+  const [positions, setPositions] = useState<{value: string , label: string}[]>([]);
+  const [branches, setBranches] = useState<{value: string, label: string}[]>([]);
+  const [departments, setDepartments] = useState<{value: string, label: string}[]>([]);
   const [alertDialog, setAlertDialog] = useState({
     open: false,
     title: "",
@@ -84,67 +78,56 @@ function RegisterPage() {
   // Helper function to check if branch is HO, Head Office, or none
   const isBranchHOOrNone = (branchId: string | number): boolean => {
     if (!branchId) return false;
-
+    
     // Find the branch from branches array
-    const branch = branches.find((b) => {
-      const branchValue = String(b.value || "")
-        .toLowerCase()
-        .trim();
-      const branchLabel = String(b.label || "")
-        .toLowerCase()
-        .trim();
+    const branch = branches.find(b => {
+      const branchValue = String(b.value || '').toLowerCase().trim();
+      const branchLabel = String(b.label || '').toLowerCase().trim();
       const branchIdStr = String(branchId).toLowerCase().trim();
       return branchValue === branchIdStr || branchLabel === branchIdStr;
     });
-
+    
     if (!branch) return false;
-
+    
     const branchName = branch.label.toLowerCase().trim();
     // Check for various HO/Head Office variations
-    return (
-      branchName === "ho" ||
-      branchName === "head office /ho" ||
-      branchName === "head office" ||
-      branchName.includes("head office") ||
-      branchName === "none" ||
-      branchName === "none ho" ||
-      branchName.startsWith("ho") ||
-      branchName.startsWith("ho-") ||
-      branchName.endsWith("/ho")
-    );
+    return branchName === 'ho' || 
+           branchName === 'head office /ho' || 
+           branchName === 'head office' ||
+           branchName.includes('head office') ||
+           branchName === 'none' ||
+           branchName === 'none ho' ||
+           branchName.startsWith('ho') ||
+           branchName.startsWith('ho-') ||
+           branchName.endsWith('/ho');
   };
 
   // Helper function to load mock data
   const loadMockData = () => {
     // Mock positions - positionsData is an array of strings, convert to {value, label} format
-    const mockPositions: { value: string; label: string }[] = positionsData.map(
-      (pos: string, index: number) => ({
-        value: String(index + 1),
-        label: pos,
-      })
-    );
+    const mockPositions: {value: string, label: string}[] = positionsData.map((pos: string, index: number) => ({
+      value: String(index + 1),
+      label: pos
+    }));
     setPositions(mockPositions);
-
+    
     // Mock departments - departmentsData is an array of {id, name, ...}, convert to {value, label} format
-    const mockDepartments: { value: string; label: string }[] =
-      departmentsData.map((dept: any) => ({
-        value: String(dept.id),
-        label: dept.name,
-      }));
+    const mockDepartments: {value: string, label: string}[] = departmentsData.map((dept: any) => ({
+      value: String(dept.id),
+      label: dept.name
+    }));
     setDepartments(mockDepartments);
-
+    
     // Mock branches - branchCodes is an array of strings like ["HO", "HO-MNL", "CEB", ...]
     // Use branch code as both value and label for easier testing and matching
-    const mockBranches: { value: string; label: string }[] = branchCodes.map(
-      (branch: string) => ({
-        value: branch, // Use branch code as value for easier testing
-        label: branch, // Use branch code as label
-      })
-    );
+    const mockBranches: {value: string, label: string}[] = branchCodes.map((branch: string) => ({
+      value: branch, // Use branch code as value for easier testing
+      label: branch   // Use branch code as label
+    }));
     setBranches(mockBranches);
   };
 
-  // Load positions from client data service.api
+ // Load positions from client data service.api
   useEffect(() => {
     // If force mock data is enabled, load mock data immediately
     if (FORCE_MOCK_DATA) {
@@ -158,40 +141,33 @@ function RegisterPage() {
         // Fetch positions using API service
         const positionsDataFromAPI = await apiService.getPositions();
         // Convert from {id, name} to {value, label} format for Combobox
-        const formattedPositions =
-          positionsDataFromAPI?.map((pos) => ({
-            value: pos.id,
-            label: pos.name,
-          })) || [];
-
+        const formattedPositions = positionsDataFromAPI?.map((pos) => ({
+          value: pos.id,
+          label: pos.name
+        })) || [];
+        
         // Fetch departments using API service
         const departmentsDataFromAPI = await apiService.getDepartments();
         // Convert from {id, name} to {value, label} format for Combobox
-        const formattedDepartments =
-          departmentsDataFromAPI?.map((dept) => ({
-            value: dept.id,
-            label: dept.name,
-          })) || [];
-
+        const formattedDepartments = departmentsDataFromAPI?.map((dept) => ({
+          value: dept.id,
+          label: dept.name
+        })) || [];
+        
         // Fetch branches using API service
         const branchDataFromAPI = await apiService.getBranches();
         // Convert from {id, name} to {value, label} format for Combobox
-        const formattedBranches =
-          branchDataFromAPI?.map((branch) => ({
-            value: branch.id,
-            label: branch.name,
-          })) || [];
-
+        const formattedBranches = branchDataFromAPI?.map((branch) => ({
+          value: branch.id,
+          label: branch.name
+        })) || [];
+        
         // Check if API returned valid data, otherwise use mock data
-        if (
-          formattedPositions.length > 0 &&
-          formattedDepartments.length > 0 &&
-          formattedBranches.length > 0
-        ) {
-          console.log("Using API data:", {
-            positions: formattedPositions.length,
-            departments: formattedDepartments.length,
-            branches: formattedBranches.length,
+        if (formattedPositions.length > 0 && formattedDepartments.length > 0 && formattedBranches.length > 0) {
+          console.log("Using API data:", { 
+            positions: formattedPositions.length, 
+            departments: formattedDepartments.length, 
+            branches: formattedBranches.length 
           });
           setPositions(formattedPositions);
           setDepartments(formattedDepartments);
@@ -200,6 +176,7 @@ function RegisterPage() {
           console.log("API returned empty data, using mock data");
           loadMockData();
         }
+        
       } catch (error) {
         console.error("Error fetching data, using mock data:", error);
         loadMockData();
@@ -208,6 +185,7 @@ function RegisterPage() {
 
     fetchData();
   }, []);
+
 
   const showAlert = (
     title: string,
@@ -344,11 +322,7 @@ function RegisterPage() {
 
     // Department is only required if branch IS HO/Head Office
     if (isBranchHOOrNone(formData.branch_id) && !formData.department_id) {
-      showAlert(
-        "Missing Information",
-        "Department is required for Head Office branches!",
-        "error"
-      );
+      showAlert("Missing Information", "Department is required for Head Office branches!", "error");
       return;
     }
 
@@ -409,92 +383,50 @@ function RegisterPage() {
     formDataToUpload.append("branch_id", String(formData.branch_id));
     formDataToUpload.append("department_id", String(formData.department_id));
     formDataToUpload.append("password", formData.password);
-    formDataToUpload.append(
-      "password_confirmation",
-      formData.password_confirmation
-    );
-
+    formDataToUpload.append("password_confirmation",formData.password_confirmation);
+    
     // Convert signature data URL to File object (PNG) for binary upload
     if (formData.signature) {
       try {
-        const signatureFile = dataURLtoFile(
-          formData.signature,
-          "signature.png"
-        );
-
+        const signatureFile = dataURLtoFile(formData.signature, "signature.png");
+        
         // Verify file was created correctly
         if (!signatureFile || !(signatureFile instanceof File)) {
           throw new Error("Failed to create signature file");
         }
-
+        
         // Ensure file has valid size
         if (signatureFile.size === 0) {
           throw new Error("Signature file is empty");
         }
-
+        
         // Debug: Log file details
         console.log("📝 Signature File Details:", {
           name: signatureFile.name,
           size: signatureFile.size,
           type: signatureFile.type,
           isFile: signatureFile instanceof File,
-          isBlob: signatureFile instanceof Blob,
+          isBlob: signatureFile instanceof Blob
         });
-
+        
         formDataToUpload.append("signature", signatureFile);
-
+        console.log ("signatureFile", signatureFile);
         // Debug: Verify it's in FormData
-        // console.log("✅ Signature appended to FormData");
-        // console.log(
-        //   "📦 FormData entries:",
-        //   Array.from(formDataToUpload.entries()).map(([key, value]) => ({
-        //     key,
-        //     valueType: value instanceof File ? "File" : typeof value,
-        //     valueInfo:
-        //       value instanceof File
-        //         ? {
-        //             name: value.name,
-        //             size: value.size,
-        //             type: value.type,
-        //           }
-        //         : value,
-        //   }))
-        // );
-        const data = await apiService.createPendingRegistration(
-          formDataToUpload
-        );
-
-        showAlert(
-          "Registration Successful!",
-          "Account registration submitted successfully! Your registration is pending approval. You will be notified once approved.",
-          "success",
-          () => {
-            // Reset form
-            setFormData({
-              fname: "",
-              lname: "",
-              username: "",
-              employee_id: "",
-              email: "",
-              contact: "",
-              position_id: 0,
-              department_id: 0,
-              branch_id: 0,
-              password: "",
-              password_confirmation: "",
-              signature: "",
-            });
-            setSignatureError(false);
-            // Redirect to login page
-            window.location.href = "/";
-          }
-        );
+        console.log("✅ Signature appended to FormData");
+        console.log("📦 FormData entries:", Array.from(formDataToUpload.entries()).map(([key, value]) => ({
+          key,
+          valueType: value instanceof File ? 'File' : typeof value,
+          valueInfo: value instanceof File ? {
+            name: value.name,
+            size: value.size,
+            type: value.type
+          } : value
+        })));
       } catch (error: any) {
         console.error("❌ Signature conversion error:", error);
         showAlert(
           "Invalid Signature",
-          error.message ||
-            "Please draw your signature again. The signature format is invalid.",
+          error.message || "Please draw your signature again. The signature format is invalid.",
           "error"
         );
         setIsRegisterButtonClicked(false);
@@ -504,21 +436,46 @@ function RegisterPage() {
       console.warn("⚠️ No signature in formData");
     }
 
-    // try {
+        try {
+          const data = await apiService.createPendingRegistration(formDataToUpload);
 
-    // } catch (error: any) {
-    //   // console.error(error);
-    //   if (error.status === 422) {
-    //     setFieldErrors(error.errors);
-    //   }
-    //   if (error.status === 400) {
-    //     setFieldErrors({
-    //       signature: [error.message],
-    //     });
-    //   }
-    // } finally {
-    //   setIsRegisterButtonClicked(false);
-    // }
+          showAlert(
+            "Registration Successful!",
+            "Account registration submitted successfully! Your registration is pending approval. You will be notified once approved.",
+            "success",
+            () => {
+              // Reset form
+              setFormData({
+                fname: "",
+                lname: "",
+                username: "",
+                employee_id: "",
+                email: "",
+                contact: "",
+                position_id: 0,
+                department_id: 0,
+                branch_id: 0,
+                password: "",
+                password_confirmation: "",
+                signature: "",
+              });
+              setSignatureError(false);
+              // Redirect to login page
+              window.location.href = "/";
+            })
+        }catch (error : any ) {
+          // console.error(error);
+            if (error.status === 422) {
+              setFieldErrors(error.errors);
+            }
+            if (error.status === 400) {
+              setFieldErrors({
+                signature: [error.message],
+              });
+            }
+        }finally{
+            setIsRegisterButtonClicked(false);
+        }
   };
 
   return (
@@ -667,7 +624,7 @@ function RegisterPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <form onSubmit={handleRegisterSubmit}>
+                <form onSubmit={  handleRegisterSubmit}>
                   <div className="space-y-4">
                     {/* Personal Information */}
                     <div className="grid grid-cols-2 gap-4">
@@ -744,18 +701,18 @@ function RegisterPage() {
                         onChange={(e) => {
                           // Remove all non-numeric characters except dash
                           let value = e.target.value.replace(/[^\d-]/g, "");
-
+                          
                           // Remove all dashes first
                           value = value.replace(/-/g, "");
-
+                          
                           // Limit to 10 digits (4 + 6)
                           value = value.slice(0, 10);
-
+                          
                           // Add dash after first 4 digits
                           if (value.length > 4) {
                             value = value.slice(0, 4) + "-" + value.slice(4);
                           }
-
+                          
                           setFormData({ ...formData, employee_id: value });
                           validateField("employee_id", value);
                         }}
@@ -853,7 +810,7 @@ function RegisterPage() {
                           // Clear department if branch is NOT HO/Head Office
                           const newFormData = { ...formData, branch_id: value };
                           if (!isBranchHOOrNone(value)) {
-                            newFormData.department_id = "";
+                            newFormData.department_id = '';
                           }
                           setFormData(newFormData);
                         }}

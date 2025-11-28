@@ -1,9 +1,9 @@
-import clientDataService from './clientDataService';
+import { apiService } from './apiService';
 
 export async function uploadProfileImage(file: File): Promise<string> {
   try {
     // Use client-side image upload (converts to data URL)
-    const imageUrl = await clientDataService.uploadImage(file);
+    const imageUrl = await apiService.uploadImage(file);
     return imageUrl;
   } catch (error) {
     console.error('Error uploading image:', error);

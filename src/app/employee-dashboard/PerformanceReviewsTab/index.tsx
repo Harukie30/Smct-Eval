@@ -32,18 +32,18 @@ import {
   getQuarterFromEvaluationData,
   getQuarterColor,
 } from "@/lib/quarterUtils";
-import clientDataService from "@/lib/clientDataService";
+import { apiService } from "@/lib/apiService";
 
 interface PerformanceReviewsTabProps {
   isActive?: boolean;
-  onViewEvaluation: (submission: any) => void;
+  onViewEvaluationAction: (submission: any) => void;
 }
 
 export function PerformanceReviewsTab({
   isActive = false,
-  onViewEvaluation,
+  onViewEvaluationAction,
 }: PerformanceReviewsTabProps) {
-  const { profile } = useUser();
+  const { user } = useUser();
   const { success } = useToast();
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,25 +57,25 @@ export function PerformanceReviewsTab({
 
   // Load approved evaluations
   useEffect(() => {
-    if (profile?.email) {
+    if (user?.email) {
       const approved = JSON.parse(
-        localStorage.getItem(`approvedEvaluations_${profile.email}`) || "[]"
+        localStorage.getItem(`approvedEvaluations_${user.email}`) || "[]"
       );
       setApprovedEvaluations(new Set(approved));
     }
-  }, [profile?.email]);
+  }, [user?.email]);
 
   // Load submissions data
   const loadSubmissions = async () => {
     try {
       setLoading(true);
-      const allSubmissions = await clientDataService.getSubmissions();
-      const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
-      const userSubmissions = profile?.email
+      const allSubmissions = await apiService.getSubmissions();
+      const userFullName = user ? `${user.fname} ${user.lname}`.trim() : '';
+      const userSubmissions = user?.email
         ? allSubmissions.filter(
             (submission: any) =>
               submission.employeeName === userFullName ||
-              submission.evaluationData?.employeeEmail === profile.email
+              submission.evaluationData?.employeeEmail === user.email
           )
         : [];
       const finalSubmissions =
@@ -91,7 +91,7 @@ export function PerformanceReviewsTab({
   // Initial load
   useEffect(() => {
     loadSubmissions();
-  }, [profile]);
+  }, [user]);
 
   // Refresh when tab becomes active
   useEffect(() => {
@@ -100,7 +100,7 @@ export function PerformanceReviewsTab({
       return;
     }
 
-    if (isActive && profile) {
+    if (isActive && user) {
       const refreshOnTabClick = async () => {
         setIsRefreshingReviews(true);
         try {
@@ -114,7 +114,7 @@ export function PerformanceReviewsTab({
       };
       refreshOnTabClick();
     }
-  }, [isActive, profile]);
+  }, [isActive, user]);
 
   const handleRefreshSubmissions = async () => {
     setIsRefreshingReviews(true);
@@ -219,9 +219,9 @@ export function PerformanceReviewsTab({
   };
 
   const getApprovalData = (submissionId: string) => {
-    if (!profile?.email) return null;
+    if (!user?.email) return null;
     const approvalData = JSON.parse(
-      localStorage.getItem(`approvalData_${profile.email}`) || "{}"
+      localStorage.getItem(`approvalData_${user.email}`) || "{}"
     );
     const key = submissionId.toString();
     return approvalData[key] || null;
@@ -910,7 +910,7 @@ export function PerformanceReviewsTab({
                                       employeeApprovedAt:
                                         approvalData?.approvedAt || null,
                                     };
-                                    onViewEvaluation(submissionWithApproval);
+                                    onViewEvaluationAction(submissionWithApproval);
                                   }}
                                   className="text-white bg-blue-500 hover:text-white hover:bg-blue-600"
                                 >

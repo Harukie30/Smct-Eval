@@ -12,7 +12,16 @@ import { uploadProfileImage } from '@/lib/imageUpload';
 import SignaturePad from '@/components/SignaturePad';
 import { useToast } from '@/hooks/useToast';
 import LoadingAnimation from '@/components/LoadingAnimation';
-import clientDataService from '@/lib/clientDataService';
+import { apiService } from '@/lib/apiService';
+
+// Extended form data type for editing
+type ProfileFormData = UserProfile & {
+  fname?: string;
+  lname?: string;
+  positions?: { value: string | number; label: string };
+  departments?: { value: string | number; department_name: string };
+  branches?: { value: string | number; branch_name: string };
+};
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -27,7 +36,76 @@ export default function ProfileModal({
   profile,
   onSave,
 }: ProfileModalProps) {
-  const [formData, setFormData] = useState<UserProfile>(profile);
+  // Helper to convert UserProfile to form data
+  const profileToFormData = (prof: UserProfile, options?: {
+    positions?: {value: string | number, label: string}[],
+    departments?: {value: string | number, label: string}[],
+    branches?: {value: string | number, label: string}[]
+  }): ProfileFormData => {
+    const nameParts = prof.name?.split(' ') || [];
+    const fname = nameParts[0] || '';
+    const lname = nameParts.slice(1).join(' ') || '';
+    
+    // Find matching position
+    let positionObj = undefined;
+    if (prof.roleOrPosition && options?.positions) {
+      const matched = options.positions.find(p => p.label === prof.roleOrPosition);
+      if (matched) {
+        positionObj = { value: matched.value, label: matched.label };
+      } else {
+        positionObj = { value: '', label: prof.roleOrPosition };
+      }
+    }
+    
+    // Find matching department
+    let deptObj = undefined;
+    if (prof.department && options?.departments) {
+      const matched = options.departments.find(d => d.label === prof.department);
+      if (matched) {
+        deptObj = { value: matched.value, department_name: matched.label };
+      } else {
+        deptObj = { value: '', department_name: prof.department };
+      }
+    }
+    
+    // Find matching branch
+    let branchObj = undefined;
+    if (prof.branch && options?.branches) {
+      const matched = options.branches.find(b => b.label === prof.branch);
+      if (matched) {
+        branchObj = { value: matched.value, branch_name: matched.label };
+      } else {
+        branchObj = { value: '', branch_name: prof.branch };
+      }
+    }
+    
+    return {
+      ...prof,
+      fname,
+      lname,
+      positions: positionObj,
+      departments: deptObj,
+      branches: branchObj,
+    };
+  };
+
+  // Helper to convert form data back to UserProfile
+  const formDataToProfile = (form: ProfileFormData): UserProfile => {
+    return {
+      id: form.id,
+      name: `${form.fname || ''} ${form.lname || ''}`.trim() || form.name,
+      roleOrPosition: form.positions?.label || form.roleOrPosition,
+      email: form.email,
+      avatar: form.avatar,
+      department: form.departments?.department_name || form.department,
+      branch: form.branches?.branch_name || form.branch,
+      bio: form.bio,
+      signature: form.signature,
+      employeeId: form.employeeId,
+    };
+  };
+
+  const [formData, setFormData] = useState<ProfileFormData>(() => profileToFormData(profile));
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [branches, setBranches] = useState<{value: string | number, label: string}[]>([]);
@@ -47,9 +125,20 @@ export default function ProfileModal({
     return idString;
   };
 
-  // Reset form data when profile changes
+  // Reset form data when profile changes (but only if options are already loaded)
   useEffect(() => {
-    setFormData(profile);
+    if (positions.length > 0 && departments.length > 0 && branches.length > 0) {
+      setFormData(profileToFormData(profile, { positions, departments, branches }));
+    } else {
+      // If options aren't loaded yet, just update basic fields
+      const nameParts = profile.name?.split(' ') || [];
+      setFormData(prev => ({
+        ...prev,
+        ...profile,
+        fname: nameParts[0] || '',
+        lname: nameParts.slice(1).join(' ') || '',
+      }));
+    }
     setErrors({});
   }, [profile]);
 
@@ -58,26 +147,40 @@ export default function ProfileModal({
     const loadData = async () => {
       try {
         const [branchesData, positionsData, departmentsData] = await Promise.all([
-          clientDataService.getBranches(),
-          clientDataService.getPositions(),
-          clientDataService.getDepartments()
+          apiService.getBranches(),
+          apiService.getPositions(),
+          apiService.getDepartments()
         ]);
-        // Map to {value, label} format
-        setBranches(branchesData.map((b: any) => ({ value: b.value || b.id, label: b.label || b.name })));
-        setPositions(positionsData.map((p: any) => ({ value: p.value || p.id, label: p.label || p.name })));
-        setDepartments(departmentsData.map((d: any) => ({ value: d.value || d.id, label: d.label || d.name })));
+        // Convert from {id, name} to {value, label} format for Combobox
+        const branchesOptions = branchesData.map((b) => ({ value: b.id, label: b.name }));
+        const positionsOptions = positionsData.map((p) => ({ value: p.id, label: p.name }));
+        const departmentsOptions = departmentsData.map((d) => ({ value: d.id, label: d.name }));
+        
+        setBranches(branchesOptions);
+        setPositions(positionsOptions);
+        setDepartments(departmentsOptions);
+        
+        // Update formData with matched values once options are loaded
+        const updatedFormData = profileToFormData(profile, {
+          positions: positionsOptions,
+          departments: departmentsOptions,
+          branches: branchesOptions
+        });
+        setFormData(updatedFormData);
       } catch (error) {
         console.error('Error loading data:', error);
       }
     };
     loadData();
-  }, []);
+  }, [profile]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    const fullName = `${formData.fname} ${formData.lname}`.trim();
+    const fname = formData.fname?.trim() || '';
+    const lname = formData.lname?.trim() || '';
+    const fullName = `${fname} ${lname}`.trim();
 
-    if (!formData.fname.trim() || !formData.lname.trim()) {
+    if (!fname || !lname) {
       newErrors.name = 'First and last name are required';
     }
 
@@ -93,7 +196,7 @@ export default function ProfileModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (field: keyof UserProfile, value: string) => {
+  const handleInputChange = (field: keyof ProfileFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Clear error when user starts typing
@@ -112,10 +215,8 @@ export default function ProfileModal({
 
       try {
         setIsLoading(true);
-        // Create FormData from File
-        const formData = new FormData();
-        formData.append('avatar', file);
-        const imageUrl = await uploadProfileImage(formData);
+        // Pass File directly to uploadProfileImage
+        const imageUrl = await uploadProfileImage(file);
         setFormData(prev => ({ ...prev, avatar: imageUrl }));
         setErrors(prev => ({ ...prev, avatar: '' }));
       } catch (error) {
@@ -142,8 +243,11 @@ export default function ProfileModal({
       // Note: Old avatar deletion is handled by the backend
       // No need to delete client-side when using API
 
-      // Call onSave directly - this will update the UserContext and localStorage
-      await onSave(formData);
+      // Convert form data back to UserProfile format
+      const updatedProfile = formDataToProfile(formData);
+      
+      // Call onSave with converted profile
+      await onSave(updatedProfile);
       
       // Show success toast
       success('Profile updated successfully!');
@@ -157,7 +261,7 @@ export default function ProfileModal({
   };
 
   const handleCancel = () => {
-    setFormData(profile); // Reset to original data
+    setFormData(profileToFormData(profile)); // Reset to original data
     setErrors({});
     onClose();
   };
@@ -180,11 +284,11 @@ export default function ProfileModal({
                 {formData.avatar ? (
                   <img 
                     src={formData.avatar} 
-                    alt={`${formData.fname} ${formData.lname}`} 
+                    alt={formData.name || `${formData.fname} ${formData.lname}`} 
                     className="h-24 w-24 rounded-full object-cover"
                   />
                 ) : (
-                  `${formData.fname?.[0] || ''}${formData.lname?.[0] || ''}`.toUpperCase()
+                  `${formData.fname?.[0] || formData.name?.[0] || ''}${formData.lname?.[0] || formData.name?.split(' ')[1]?.[0] || ''}`.toUpperCase()
                 )}
               </div>
               <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">

@@ -1,10 +1,10 @@
-import clientDataService from './clientDataService';
+import { apiService } from './apiService';
 
 // Utility functions for creating notifications based on user actions
 
 export const createEvaluationNotification = async (employeeName: string, evaluatorName: string, employeeId?: number, employeeEmail?: string) => {
   // Notify evaluators and HR
-  await clientDataService.createNotification({
+  await apiService.createNotification({
     message: `New evaluation submitted for ${employeeName}`,
     type: 'info',
     roles: ['manager', 'evaluator', 'hr', 'admin'],
@@ -12,7 +12,7 @@ export const createEvaluationNotification = async (employeeName: string, evaluat
   });
 
   // Notify the employee (for regular employees with role 'employee')
-  await clientDataService.createNotification({
+  await apiService.createNotification({
     message: `Your evaluation has been completed by ${evaluatorName} and is awaiting approval`,
     type: 'success',
     roles: ['employee'],
@@ -26,7 +26,7 @@ export const createEvaluationNotification = async (employeeName: string, evaluat
 export const createApprovalNotification = async (employeeName: string, approverName: string, approverType: 'employee' | 'evaluator') => {
   try {
     // Notify HR and Admin when either employee or evaluator approves
-    await clientDataService.createNotification({
+    await apiService.createNotification({
       message: `Evaluation for ${employeeName} approved by ${approverName} (${approverType})`,
       type: 'success',
       roles: ['hr', 'admin'],
@@ -35,7 +35,7 @@ export const createApprovalNotification = async (employeeName: string, approverN
 
     // If evaluator approved, also notify the employee
     if (approverType === 'evaluator') {
-      await clientDataService.createNotification({
+      await apiService.createNotification({
         message: `Your evaluation has been approved by ${approverName}`,
         type: 'success',
         roles: ['employee'],
@@ -50,7 +50,7 @@ export const createApprovalNotification = async (employeeName: string, approverN
 export const createFullyApprovedNotification = async (employeeName: string) => {
   try {
     // Notify HR and Admin when evaluation is fully approved
-    await clientDataService.createNotification({
+    await apiService.createNotification({
       message: `Evaluation for ${employeeName} is now fully approved by both parties!`,
       type: 'success',
       roles: ['hr', 'admin'],
@@ -58,7 +58,7 @@ export const createFullyApprovedNotification = async (employeeName: string) => {
     });
 
     // Notify the employee separately with correct URL
-    await clientDataService.createNotification({
+    await apiService.createNotification({
       message: `Your evaluation is now fully approved by both parties!`,
       type: 'success',
       roles: ['employee'],
@@ -66,7 +66,7 @@ export const createFullyApprovedNotification = async (employeeName: string) => {
     });
 
     // Notify evaluators and managers separately
-    await clientDataService.createNotification({
+    await apiService.createNotification({
       message: `Evaluation for ${employeeName} has been fully approved and completed!`,
       type: 'success',
       roles: ['evaluator', 'manager'],
@@ -78,7 +78,7 @@ export const createFullyApprovedNotification = async (employeeName: string) => {
 };
 
 export const createSystemNotification = async (message: string, roles: string[] = ['admin']) => {
-  await clientDataService.createNotification({
+  await apiService.createNotification({
     message,
     type: 'info',
     roles,
@@ -87,7 +87,7 @@ export const createSystemNotification = async (message: string, roles: string[] 
 };
 
 export const createWarningNotification = async (message: string, roles: string[] = ['admin']) => {
-  await clientDataService.createNotification({
+  await apiService.createNotification({
     message,
     type: 'warning',
     roles,
@@ -96,7 +96,7 @@ export const createWarningNotification = async (message: string, roles: string[]
 };
 
 export const createEmployeeNotification = async (message: string, employeeRole: string = 'employee', tab: string = 'overview') => {
-  await clientDataService.createNotification({
+  await apiService.createNotification({
     message,
     type: 'info',
     roles: [employeeRole],

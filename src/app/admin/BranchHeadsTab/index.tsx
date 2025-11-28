@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import clientDataService from "@/lib/clientDataService";
+import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 
@@ -89,13 +89,59 @@ export function BranchHeadsTab({
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [branchHeadsPage, setBranchHeadsPage] = useState(1);
+  const [branchHeadsData, setBranchHeadsData] = useState<Employee[]>([]);
+  const [loadingBranchHeads, setLoadingBranchHeads] = useState(true);
   const itemsPerPage = 8;
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
-  // Memoized branch heads (only recalculates when employees change)
+  // Load branch heads from API
+  useEffect(() => {
+    const loadBranchHeads = async () => {
+      setLoadingBranchHeads(true);
+      try {
+        const data = await apiService.getAllBranchHeads();
+        // Normalize the data format to match Employee interface
+        const normalizedData = data.map((item: any) => ({
+          id: item.id || item.employeeId,
+          name: item.name || `${item.fname || ""} ${item.lname || ""}`.trim(),
+          email: item.email || "",
+          position: item.position || "",
+          department: item.department || "",
+          branch: item.branch || "",
+          role: item.role || "",
+          isActive: item.isActive !== undefined ? item.isActive : true,
+        }));
+        setBranchHeadsData(normalizedData);
+      } catch (error) {
+        console.error("Error loading branch heads:", error);
+        // Fallback to employees prop if API fails
+        if (employees && employees.length > 0) {
+          const filtered = employees.filter((emp) => {
+            const position = emp.position?.toLowerCase() || "";
+            return (
+              position.includes("branch head") ||
+              position.includes("branchhead") ||
+              position.includes("branch manager")
+            );
+          });
+          setBranchHeadsData(filtered);
+        }
+      } finally {
+        setLoadingBranchHeads(false);
+      }
+    };
+
+    loadBranchHeads();
+  }, [employees]);
+
+  // Memoized branch heads (use API data if available, otherwise fallback to filtered employees)
   const branchHeads = useMemo(() => {
+    if (branchHeadsData.length > 0) {
+      return branchHeadsData;
+    }
+    // Fallback to manual filtering if API data not available
     if (!employees || employees.length === 0) return [];
 
     return employees.filter((emp) => {
@@ -108,7 +154,7 @@ export function BranchHeadsTab({
         position.includes("branch manager")
       );
     });
-  }, [employees]);
+  }, [branchHeadsData, employees]);
 
   // Filter branch heads based on search term
   const filteredBranchHeads = useMemo(() => {
@@ -146,7 +192,7 @@ export function BranchHeadsTab({
 
     setBranchesLoading(true);
     try {
-      const branchesData = await clientDataService.getBranches();
+      const branchesData = await apiService.getBranches();
       // Normalize the data format - handle both {id, name} and {value, label} formats
       const normalizedBranches = branchesData.map((branch: any) => {
         if ("id" in branch && "name" in branch) {
@@ -327,7 +373,7 @@ export function BranchHeadsTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading || !employees || employees.length === 0 ? (
+                {isLoading || loadingBranchHeads || (!branchHeadsData.length && (!employees || employees.length === 0)) ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
                       <TableCell className="py-4">
@@ -740,14 +786,11 @@ export function BranchHeadsTab({
                             .map((b) => b.id)
                             .join(", ");
 
-                          // Update using clientDataService
-                          await clientDataService.updateEmployee(
-                            selectedBranchHead.id,
-                            {
-                              branch: branchNames, // Store branch names
-                              updatedAt: new Date().toISOString(),
-                            }
-                          );
+                          // Update using API service
+                          const formData = new FormData();
+                          formData.append("branch", branchNames);
+                          formData.append("updatedAt", new Date().toISOString());
+                          await apiService.updateEmployee(formData, selectedBranchHead.id);
 
                           // Also update accounts in localStorage
                           const accounts = JSON.parse(
@@ -1135,11 +1178,11 @@ export function BranchHeadsTab({
                     .map((b) => b.name)
                     .join(", ");
 
-                  // Update using clientDataService
-                  await clientDataService.updateEmployee(branchHeadToEdit.id, {
-                    branch: branchNames,
-                    updatedAt: new Date().toISOString(),
-                  });
+                  // Update using API service
+                  const formData = new FormData();
+                  formData.append("branch", branchNames);
+                  formData.append("updatedAt", new Date().toISOString());
+                  await apiService.updateEmployee(formData, branchHeadToEdit.id);
 
                   // Also update accounts in localStorage
                   const accounts = JSON.parse(
@@ -1300,13 +1343,10 @@ export function BranchHeadsTab({
 
                   try {
                     // Remove branch assignment (set branch to empty)
-                    await clientDataService.updateEmployee(
-                      branchHeadToDelete.id,
-                      {
-                        branch: "",
-                        updatedAt: new Date().toISOString(),
-                      }
-                    );
+                    const formData = new FormData();
+                    formData.append("branch", "");
+                    formData.append("updatedAt", new Date().toISOString());
+                    await apiService.updateEmployee(formData, branchHeadToDelete.id);
 
                     // Also update accounts in localStorage
                     const accounts = JSON.parse(

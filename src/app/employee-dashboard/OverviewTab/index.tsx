@@ -27,7 +27,7 @@ import {
   getQuarterFromEvaluationData,
   getQuarterColor,
 } from "@/lib/quarterUtils";
-import clientDataService from "@/lib/clientDataService";
+import { apiService } from "@/lib/apiService";
 
 interface OverviewTabProps {
   onViewEvaluation: (submission: any) => void;
@@ -69,7 +69,7 @@ export function OverviewTab({
   const loadSubmissions = async () => {
     try {
       setLoading(true);
-      const allSubmissions = await clientDataService.getSubmissions();
+      const allSubmissions = await apiService.getSubmissions();
       const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
       const userSubmissions = profile?.email
         ? allSubmissions.filter(
@@ -118,7 +118,7 @@ export function OverviewTab({
         try {
           // Add delay to show spinner
           await new Promise((resolve) => setTimeout(resolve, 500));
-          const allSubmissions = await clientDataService.getSubmissions();
+          const allSubmissions = await apiService.getSubmissions();
           const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
           const userSubmissions = profile?.email
             ? allSubmissions.filter(
@@ -146,7 +146,7 @@ export function OverviewTab({
 
     const refreshSubmissions = async () => {
       try {
-        const allSubmissions = await clientDataService.getSubmissions();
+        const allSubmissions = await apiService.getSubmissions();
         const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
         const userSubmissions = profile?.email
           ? allSubmissions.filter(
@@ -199,7 +199,7 @@ export function OverviewTab({
 
     const checkForNewSubmissions = async () => {
       try {
-        const allSubmissions = await clientDataService.getSubmissions();
+        const allSubmissions = await apiService.getSubmissions();
         const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
         const userSubmissions = profile?.email
           ? allSubmissions.filter(
@@ -410,7 +410,7 @@ export function OverviewTab({
     setIsRefreshingOverview(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      const allSubmissions = await clientDataService.getSubmissions();
+      const allSubmissions = await apiService.getSubmissions();
       const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
       const userSubmissions = profile?.email
         ? allSubmissions.filter(

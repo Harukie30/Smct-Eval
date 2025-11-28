@@ -1,5 +1,6 @@
 import { UserProfile } from '@/components/ProfileCard';
-import clientDataService, { Profile } from './clientDataService';
+import { apiService } from './apiService';
+import { Profile } from './types';
 
 // Event system for profile updates
 export type ProfileUpdateEvent = {
@@ -35,7 +36,7 @@ export async function updateProfile(profileId: string, profileData: Partial<User
       id: parseInt(profileId)
     };
     
-    const updatedProfile = await clientDataService.updateProfile(parseInt(profileId), profileUpdates);
+    const updatedProfile = await apiService.updateProfile(parseInt(profileId), profileUpdates);
     console.log('Profile updated successfully:', updatedProfile);
     
     // Notify all listeners about the profile update
@@ -56,7 +57,7 @@ export async function updateProfile(profileId: string, profileData: Partial<User
 export async function getProfile(profileId: string): Promise<UserProfile | null> {
   try {
     console.log('Fetching profile with ID:', profileId);
-    const profile = await clientDataService.getProfile(parseInt(profileId));
+    const profile = await apiService.getProfile(parseInt(profileId));
     
     console.log('Profile data received:', profile);
     return profile as UserProfile | null;
