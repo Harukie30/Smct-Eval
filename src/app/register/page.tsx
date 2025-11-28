@@ -385,10 +385,31 @@ function RegisterPage() {
     formDataToUpload.append("password", formData.password);
     formDataToUpload.append("password_confirmation",formData.password_confirmation);
     
-    // Send signature as base64 string (backend expects string, not File)
+    // Convert signature data URL to File object (PNG) for binary upload
     if (formData.signature) {
-      // Send the data URL string directly - backend will handle conversion
-      formDataToUpload.append("signature", formData.signature);
+      try {
+        const signatureFile = dataURLtoFile(formData.signature, "signature.png");
+        
+        // Verify file was created correctly
+        if (!signatureFile || !(signatureFile instanceof File)) {
+          throw new Error("Failed to create signature file");
+        }
+        
+        // Ensure file has valid size
+        if (signatureFile.size === 0) {
+          throw new Error("Signature file is empty");
+        }
+        
+        formDataToUpload.append("signature", signatureFile, "signature.png");
+      } catch (error: any) {
+        showAlert(
+          "Invalid Signature",
+          error.message || "Please draw your signature again. The signature format is invalid.",
+          "error"
+        );
+        setIsRegisterButtonClicked(false);
+        return;
+      }
     }
 
         try {
