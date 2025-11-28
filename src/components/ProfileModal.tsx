@@ -5,8 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { UserProfile } from './ProfileCard';
-import { User, Camera, Save, X } from 'lucide-react';
+import { User, Camera, Save, X, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { uploadProfileImage } from '@/lib/imageUpload';
 // Removed profileService import - we'll use UserContext directly
 import SignaturePad from '@/components/SignaturePad';
@@ -21,6 +22,9 @@ type ProfileFormData = UserProfile & {
   positions?: { value: string | number; label: string };
   departments?: { value: string | number; department_name: string };
   branches?: { value: string | number; branch_name: string };
+  currentPassword?: string;
+  newPassword?: string;
+  confirmPassword?: string;
 };
 
 interface ProfileModalProps {
@@ -37,14 +41,22 @@ export default function ProfileModal({
   onSave,
 }: ProfileModalProps) {
   // Helper to convert UserProfile to form data
-  const profileToFormData = (prof: UserProfile, options?: {
+  const profileToFormData = (prof: UserProfile & { fname?: string; lname?: string }, options?: {
     positions?: {value: string | number, label: string}[],
     departments?: {value: string | number, label: string}[],
     branches?: {value: string | number, label: string}[]
   }): ProfileFormData => {
-    const nameParts = prof.name?.split(' ') || [];
-    const fname = nameParts[0] || '';
-    const lname = nameParts.slice(1).join(' ') || '';
+    // Use fname/lname if available, otherwise split name
+    let fname = '';
+    let lname = '';
+    if (prof.fname || prof.lname) {
+      fname = prof.fname || '';
+      lname = prof.lname || '';
+    } else {
+      const nameParts = prof.name?.split(' ') || [];
+      fname = nameParts[0] || '';
+      lname = nameParts.slice(1).join(' ') || '';
+    }
     
     // Find matching position
     let positionObj = undefined;
@@ -90,10 +102,12 @@ export default function ProfileModal({
   };
 
   // Helper to convert form data back to UserProfile
-  const formDataToProfile = (form: ProfileFormData): UserProfile => {
+  const formDataToProfile = (form: ProfileFormData): UserProfile & { fname?: string; lname?: string } => {
     return {
       id: form.id,
       name: `${form.fname || ''} ${form.lname || ''}`.trim() || form.name,
+      fname: form.fname || '',
+      lname: form.lname || '',
       roleOrPosition: form.positions?.label || form.roleOrPosition,
       email: form.email,
       avatar: form.avatar,
@@ -108,6 +122,12 @@ export default function ProfileModal({
   const [formData, setFormData] = useState<ProfileFormData>(() => profileToFormData(profile));
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
   const [branches, setBranches] = useState<{value: string | number, label: string}[]>([]);
   const [positions, setPositions] = useState<{value: string | number, label: string}[]>([]);
   const [departments, setDepartments] = useState<{value: string | number, label: string}[]>([]);
@@ -128,18 +148,40 @@ export default function ProfileModal({
   // Reset form data when profile changes (but only if options are already loaded)
   useEffect(() => {
     if (positions.length > 0 && departments.length > 0 && branches.length > 0) {
-      setFormData(profileToFormData(profile, { positions, departments, branches }));
+      const newFormData = profileToFormData(profile, { positions, departments, branches });
+      // Reset password fields when profile changes
+      setFormData({
+        ...newFormData,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
     } else {
       // If options aren't loaded yet, just update basic fields
-      const nameParts = profile.name?.split(' ') || [];
+      // Use fname/lname if available, otherwise split name
+      let fname = '';
+      let lname = '';
+      if ((profile as any).fname || (profile as any).lname) {
+        fname = (profile as any).fname || '';
+        lname = (profile as any).lname || '';
+      } else {
+        const nameParts = profile.name?.split(' ') || [];
+        fname = nameParts[0] || '';
+        lname = nameParts.slice(1).join(' ') || '';
+      }
       setFormData(prev => ({
         ...prev,
         ...profile,
-        fname: nameParts[0] || '',
-        lname: nameParts.slice(1).join(' ') || '',
+        fname: fname,
+        lname: lname,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
       }));
     }
     setErrors({});
+    setShowPasswords({ current: false, new: false, confirm: false });
+    setIsPasswordOpen(false);
   }, [profile]);
 
   // Load branches, positions, and departments data
@@ -192,6 +234,26 @@ export default function ProfileModal({
       newErrors.name = 'Name must be at least 2 characters long';
     }
 
+    // Password validation - only validate if any password field is filled
+    const hasAnyPassword = formData.currentPassword || formData.newPassword || formData.confirmPassword;
+    if (hasAnyPassword) {
+      if (!formData.currentPassword?.trim()) {
+        newErrors.currentPassword = 'Current password is required';
+      }
+      
+      if (!formData.newPassword?.trim()) {
+        newErrors.newPassword = 'New password is required';
+      } else if (formData.newPassword.length < 8) {
+        newErrors.newPassword = 'New password must be at least 8 characters long';
+      }
+      
+      if (!formData.confirmPassword?.trim()) {
+        newErrors.confirmPassword = 'Please confirm your new password';
+      } else if (formData.newPassword !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -240,17 +302,47 @@ export default function ProfileModal({
       // Add a small delay to show the loading animation
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // Handle password change separately if password fields are filled
+      const hasPasswordChange = formData.currentPassword || formData.newPassword || formData.confirmPassword;
+      
+      if (hasPasswordChange && formData.id) {
+        try {
+          // Create FormData for password change
+          const passwordFormData = new FormData();
+          passwordFormData.append('current_password', formData.currentPassword || '');
+          passwordFormData.append('new_password', formData.newPassword || '');
+          passwordFormData.append('password_confirmation', formData.confirmPassword || '');
+          
+          // Update password using the authenticated user endpoint
+          await apiService.updateEmployee_auth(passwordFormData);
+        } catch (error: any) {
+          console.error('Error updating password:', error);
+          const errorMessage = error?.message || error?.response?.data?.message || 'Failed to update password. Please check your current password.';
+          setErrors(prev => ({ ...prev, password: errorMessage }));
+          setIsLoading(false);
+          return;
+        }
+      }
+      
       // Note: Old avatar deletion is handled by the backend
       // No need to delete client-side when using API
 
-      // Convert form data back to UserProfile format
+      // Convert form data back to UserProfile format (excluding password fields)
       const updatedProfile = formDataToProfile(formData);
       
       // Call onSave with converted profile
       await onSave(updatedProfile);
       
+      // Clear password fields after successful save
+      setFormData(prev => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      }));
+      
       // Show success toast
-      success('Profile updated successfully!');
+      success(hasPasswordChange ? 'Profile and password updated successfully!' : 'Profile updated successfully!');
       onClose();
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -263,6 +355,8 @@ export default function ProfileModal({
   const handleCancel = () => {
     setFormData(profileToFormData(profile)); // Reset to original data
     setErrors({});
+    setShowPasswords({ current: false, new: false, confirm: false });
+    setIsPasswordOpen(false);
     onClose();
   };
 
@@ -378,8 +472,132 @@ export default function ProfileModal({
                 <p className="text-sm text-red-600">{errors.email}</p>
               )}
             </div>
+          </div>
 
-            {/* Role/Position */}
+          {/* Password Change Section - Collapsible */}
+          <Collapsible open={isPasswordOpen} onOpenChange={setIsPasswordOpen} className="pt-4 border-t">
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center justify-between w-full text-left space-y-2 hover:bg-gray-50 p-2 rounded-lg transition-colors"
+              >
+                <div className="space-y-1">
+                  <h3 className="text-sm font-semibold text-gray-700">Change Password</h3>
+                  <p className="text-xs text-gray-500">Click to expand and change your password</p>
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${
+                    isPasswordOpen ? 'transform rotate-180' : ''
+                  }`}
+                />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                {/* Current Password */}
+                <div className="space-y-1.5 w-1/2">
+                  <Label htmlFor="currentPassword" className="text-sm font-medium">
+                    Current Password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="currentPassword"
+                      type={showPasswords.current ? 'text' : 'password'}
+                      value={formData.currentPassword || ''}
+                      onChange={(e) => handleInputChange('currentPassword', e.target.value)}
+                      placeholder="Enter your current password"
+                      className={errors.currentPassword ? 'border-red-500 pr-10' : 'pr-10'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPasswords.current ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.currentPassword && (
+                    <p className="text-sm text-red-600">{errors.currentPassword}</p>
+                  )}
+                </div>
+
+                {/* New Password */}
+                <div className="space-y-1.5 w-1/2">
+                  <Label htmlFor="newPassword" className="text-sm font-medium">
+                    New Password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="newPassword"
+                      type={showPasswords.new ? 'text' : 'password'}
+                      value={formData.newPassword || ''}
+                      onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                      placeholder="Enter your new password"
+                      className={errors.newPassword ? 'border-red-500 pr-10' : 'pr-10'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPasswords.new ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.newPassword && (
+                    <p className="text-sm text-red-600">{errors.newPassword}</p>
+                  )}
+                  <p className="text-xs text-gray-500">Must be at least 8 characters long</p>
+                </div>
+
+                {/* Confirm Password */}
+                <div className="space-y-1.5 w-1/2">
+                  <Label htmlFor="confirmPassword" className="text-sm font-medium">
+                    Confirm New Password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showPasswords.confirm ? 'text' : 'password'}
+                      value={formData.confirmPassword || ''}
+                      onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                      placeholder="Confirm your new password"
+                      className={errors.confirmPassword ? 'border-red-500 pr-10' : 'pr-10'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPasswords.confirm ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="text-sm text-red-600">{errors.confirmPassword}</p>
+                  )}
+                </div>
+              </div>
+              {errors.password && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-sm text-red-600">{errors.password}</p>
+                </div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Role/Position */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
             <div className="space-y-1.5">
               <Label htmlFor="position" className="text-sm font-medium">
                 Role/Position

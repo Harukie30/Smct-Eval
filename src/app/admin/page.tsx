@@ -69,14 +69,10 @@ const AreaManagersTab = lazy(() =>
 );
 
 // Import data
-import accountsDataRaw from "@/data/accounts.json";
 import departmentsData from "@/data/departments.json";
 // branchData now comes from clientDataService
 // positionsData now comes from clientDataService
 import branchCodesData from "@/data/branch-code.json";
-
-// Extract accounts array from the new structure
-const accountsData = accountsDataRaw.accounts || [];
 
 // TypeScript interfaces
 interface Employee {
@@ -208,7 +204,7 @@ function AdminDashboard() {
 
       setEmployees(filteredEmployees);
 
-      // Update system metrics with actual data (will be updated by updateSystemMetrics)
+      // Update system metrics with actual data
       setSystemMetrics((prev) =>
         prev
           ? {
@@ -227,7 +223,7 @@ function AdminDashboard() {
               employeeDashboard: {
                 ...prev.employeeDashboard,
                 activeUsers: filteredEmployees.filter((emp: any) => {
-                  const role = emp.role?.toLowerCase() || "";
+                  const role = String(emp.role || "").toLowerCase();
                   return (
                     role === "employee" ||
                     role.includes("representative") ||
@@ -243,7 +239,7 @@ function AdminDashboard() {
               hrDashboard: {
                 ...prev.hrDashboard,
                 activeUsers: filteredEmployees.filter((emp: any) => {
-                  const role = emp.role?.toLowerCase() || "";
+                  const role = String(emp.role || "").toLowerCase();
                   return (
                     role === "hr" ||
                     role === "hr-manager" ||
@@ -255,7 +251,7 @@ function AdminDashboard() {
               evaluatorDashboard: {
                 ...prev.evaluatorDashboard,
                 activeUsers: filteredEmployees.filter((emp: any) => {
-                  const role = emp.role?.toLowerCase() || "";
+                  const role = String(emp.role || "").toLowerCase();
                   return (
                     role === "evaluator" ||
                     role.includes("manager") ||
@@ -276,9 +272,6 @@ function AdminDashboard() {
       // Load dashboard data from API (replaces manual calculation)
       await loadDashboardData();
 
-      // Fallback: Update system metrics to reflect current state if API didn't provide all data
-      updateSystemMetrics();
-
       console.log("✅ User data refresh completed successfully");
     } catch (error) {
       console.error("❌ Error refreshing user data:", error);
@@ -288,16 +281,6 @@ function AdminDashboard() {
         "Refresh Failed",
         "Failed to refresh user data. Please try again."
       );
-
-      // Fallback: load accounts data directly
-      try {
-        const employees = await loadAccountsData();
-        const filteredEmployees = filterDeletedEmployees(employees);
-        setEmployees(filteredEmployees);
-        console.log("🔄 Fallback refresh completed");
-      } catch (fallbackError) {
-        console.error("❌ Fallback refresh also failed:", fallbackError);
-      }
     } finally {
       setIsRefreshing(false);
     }
@@ -488,39 +471,65 @@ function AdminDashboard() {
     }
   };
 
-  // Function to load accounts data directly (no merging needed since accounts.json is now the single source)
+  // Function to load accounts data from API
   const loadAccountsData = async () => {
     try {
-      // Load from localStorage first (for any runtime updates)
-      const localStorageAccounts = JSON.parse(
-        localStorage.getItem("accounts") || "[]"
-      );
-
-      // If localStorage has data, use it; otherwise use the imported data
-      const accounts =
-        localStorageAccounts.length > 0 ? localStorageAccounts : accountsData;
+      // Load from API
+      const accounts = await apiService.getAllUsers();
+      
+      // Debug: Log the first account to see the structure
+      if (accounts.length > 0) {
+        console.log("📊 Sample account data structure:", accounts[0]);
+      }
 
       // Filter out admin accounts and convert to Employee format
       const employees = accounts
-        .filter((account: any) => account.role !== "admin") // Exclude admin accounts from employee list
-        .map((account: any) => ({
-          id: account.employeeId || account.id,
-          name: account.name,
-          email: account.email,
-          position: account.position,
-          department: account.department,
-          branch: account.branch,
-          hireDate: account.hireDate,
-          role: account.role,
-          username: account.username,
-          password: account.password,
-          isActive: account.isActive,
-          avatar: account.avatar,
-          bio: account.bio,
-          contact: account.contact,
-          updatedAt: account.updatedAt,
-          approvedDate: account.approvedDate,
-        }));
+        .filter((account: any) => {
+          const role = account.role || account.roles || account.user_role;
+          return role !== "admin" && role !== "Admin";
+        })
+        .map((account: any) => {
+          // Handle different possible field names from backend
+          const fname = account.fname || account.first_name || account.firstName || "";
+          const lname = account.lname || account.last_name || account.lastName || "";
+          const name = account.name || 
+                      (fname && lname ? `${fname} ${lname}`.trim() : null) ||
+                      account.full_name ||
+                      account.user_name ||
+                      "";
+          
+          const position = account.position || 
+                          account.position_name || 
+                          account.position?.name ||
+                          "";
+          
+          const role = account.role || 
+                      account.roles || 
+                      account.user_role ||
+                      account.role_name ||
+                      "";
+
+          return {
+            id: account.employeeId || account.id || account.user_id,
+            name: name,
+            fname: fname,
+            lname: lname,
+            email: account.email || account.user_email || "",
+            position: position,
+            department: account.department || account.department_name || account.department?.name || "",
+            branch: account.branch || account.branch_name || account.branch?.name || "",
+            hireDate: account.hireDate || account.hire_date || account.created_at || "",
+            role: String(role || ""), // Ensure role is always a string
+            username: account.username || account.user_name || "",
+            password: account.password || "",
+            isActive: account.isActive !== undefined ? account.isActive : (account.is_active !== undefined ? account.is_active : true),
+            avatar: account.avatar || account.avatar_url || null,
+            bio: account.bio || null,
+            contact: account.contact || account.phone || account.contact_number || "",
+            updatedAt: account.updatedAt || account.updated_at || "",
+            approvedDate: account.approvedDate || account.approved_date || account.created_at || "",
+          };
+        });
 
       return employees;
     } catch (error) {
@@ -551,41 +560,24 @@ function AdminDashboard() {
           formData.append(key, String(value));
         }
       });
+      
+      // Send fname and lname separately if they exist, otherwise use name
+      if (updatedUser.fname || updatedUser.lname) {
+        formData.append('fname', updatedUser.fname || '');
+        formData.append('lname', updatedUser.lname || '');
+        // Also keep name for backward compatibility
+        if (!updatedUser.name) {
+          formData.append('name', `${updatedUser.fname || ''} ${updatedUser.lname || ''}`.trim());
+        }
+      }
+      
       await apiService.updateEmployee(formData, updatedUser.id);
 
-      // Also update accounts storage to persist changes
-      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
-      const accountIndex = accounts.findIndex(
-        (acc: any) =>
-          acc.id === updatedUser.id || acc.employeeId === updatedUser.id
-      );
+      // Small delay to ensure backend has processed the update
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-      if (accountIndex !== -1) {
-        // Update the account with the new user data
-        accounts[accountIndex] = {
-          ...accounts[accountIndex],
-          name: updatedUser.name,
-          email: updatedUser.email,
-          position: updatedUser.position,
-          department: updatedUser.department,
-          branch: updatedUser.branch,
-          role: updatedUser.role,
-          username: updatedUser.username || accounts[accountIndex].username,
-          password: updatedUser.password || accounts[accountIndex].password,
-          contact: updatedUser.contact || accounts[accountIndex].contact,
-          hireDate: updatedUser.hireDate || accounts[accountIndex].hireDate,
-          isActive:
-            updatedUser.isActive !== undefined
-              ? updatedUser.isActive
-              : accounts[accountIndex].isActive,
-          employeeId:
-            updatedUser.employeeId !== undefined
-              ? updatedUser.employeeId
-              : accounts[accountIndex].employeeId,
-          updatedAt: new Date().toISOString(),
-        };
-        localStorage.setItem("accounts", JSON.stringify(accounts));
-      }
+      // Refresh user data from API to update the table immediately
+      await refreshUserData();
 
       // Show success toast
       toastMessages.user.updated(updatedUser.name);
@@ -745,7 +737,7 @@ function AdminDashboard() {
       count: deptEmployees.length,
       managers: deptEmployees.filter(
         (emp) =>
-          emp.role === "Manager" || emp.role?.toLowerCase().includes("manager")
+          emp.role === "Manager" || String(emp.role || "").toLowerCase().includes("manager")
       ).length,
       averageTenure: 2.5, // Mock data
     };
@@ -812,70 +804,7 @@ function AdminDashboard() {
       }
     } catch (error) {
       console.error("Error loading dashboard data from API:", error);
-      // Fallback to manual calculation if API fails
-      updateSystemMetrics();
     }
-  };
-
-  // Function to update system metrics with correct active user count (fallback)
-  const updateSystemMetrics = () => {
-    setSystemMetrics((prev) =>
-      prev
-        ? {
-            ...prev,
-            totalUsers: employees.length, // Total users in system
-            activeUsers: activeEmployees.length, // Active users
-          }
-        : null
-    );
-
-    // Update dashboard stats with correct active user counts
-    setDashboardStats((prev) =>
-      prev
-        ? {
-            ...prev,
-            employeeDashboard: {
-              ...prev.employeeDashboard,
-              activeUsers: activeEmployees.filter((emp: any) => {
-                const role = emp.role?.toLowerCase() || "";
-                return (
-                  role === "employee" ||
-                  role.includes("representative") ||
-                  role.includes("designer") ||
-                  role.includes("developer") ||
-                  role.includes("analyst") ||
-                  role.includes("coordinator")
-                );
-              }).length,
-            },
-            hrDashboard: {
-              ...prev.hrDashboard,
-              activeUsers: activeEmployees.filter((emp: any) => {
-                const role = emp.role?.toLowerCase() || "";
-                return (
-                  role === "hr" ||
-                  role === "hr-manager" ||
-                  role.includes("hr") ||
-                  role.includes("human resources")
-                );
-              }).length,
-            },
-            evaluatorDashboard: {
-              ...prev.evaluatorDashboard,
-              activeUsers: activeEmployees.filter((emp: any) => {
-                const role = emp.role?.toLowerCase() || "";
-                return (
-                  role === "evaluator" ||
-                  role.includes("manager") ||
-                  role.includes("supervisor") ||
-                  role.includes("director") ||
-                  role.includes("lead")
-                );
-              }).length,
-            },
-          }
-        : null
-    );
   };
 
   useEffect(() => {
@@ -952,9 +881,6 @@ function AdminDashboard() {
 
         // Load dashboard data from API (replaces manual calculation)
         await loadDashboardData();
-
-        // Fallback: Update system metrics with correct active user counts if API didn't provide all data
-        updateSystemMetrics();
 
         setLoading(false);
       } catch (error) {

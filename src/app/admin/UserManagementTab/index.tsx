@@ -47,13 +47,9 @@ import EditUserModal from "@/components/EditUserModal";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import { toastMessages } from "@/lib/toastMessages";
 import apiService from "@/lib/apiService";
-import accountsDataRaw from "@/data/accounts.json";
 import departmentsData from "@/data/departments.json";
 import branchCodesData from "@/data/branch-code.json";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
-
-// Extract accounts array from the new structure
-const accountsData = accountsDataRaw.accounts || [];
 
 // TypeScript interfaces
 interface Employee {
@@ -129,35 +125,63 @@ export function UserManagementTab({
     return employeeList.filter((emp) => !deletedEmployees.includes(emp.id));
   };
 
-  // Function to load accounts data
+  // Function to load accounts data from API
   const loadAccountsData = async () => {
     try {
-      const localStorageAccounts = JSON.parse(
-        localStorage.getItem("accounts") || "[]"
-      );
-      const accounts =
-        localStorageAccounts.length > 0 ? localStorageAccounts : accountsData;
+      const accounts = await apiService.getAllUsers();
+      
+      // Debug: Log the first account to see the structure
+      if (accounts.length > 0) {
+        console.log("📊 Sample account data structure:", accounts[0]);
+      }
 
       const employees = accounts
-        .filter((account: any) => account.role !== "admin")
-        .map((account: any) => ({
-          id: account.employeeId || account.id,
-          name: account.name,
-          email: account.email,
-          position: account.position,
-          department: account.department,
-          branch: account.branch,
-          hireDate: account.hireDate,
-          role: account.role,
-          username: account.username,
-          password: account.password,
-          isActive: account.isActive,
-          avatar: account.avatar,
-          bio: account.bio,
-          contact: account.contact,
-          updatedAt: account.updatedAt,
-          approvedDate: account.approvedDate,
-        }));
+        .filter((account: any) => {
+          const role = account.role || account.roles || account.user_role;
+          return role !== "admin" && role !== "Admin";
+        })
+        .map((account: any) => {
+          // Handle different possible field names from backend
+          const fname = account.fname || account.first_name || account.firstName || "";
+          const lname = account.lname || account.last_name || account.lastName || "";
+          const name = account.name || 
+                      (fname && lname ? `${fname} ${lname}`.trim() : null) ||
+                      account.full_name ||
+                      account.user_name ||
+                      "";
+          
+          const position = account.position || 
+                          account.position_name || 
+                          account.position?.name ||
+                          "";
+          
+          const role = account.role || 
+                      account.roles || 
+                      account.user_role ||
+                      account.role_name ||
+                      "";
+
+          return {
+            id: account.employeeId || account.id || account.user_id,
+            name: name,
+            fname: fname,
+            lname: lname,
+            email: account.email || account.user_email || "",
+            position: position,
+            department: account.department || account.department_name || account.department?.name || "",
+            branch: account.branch || account.branch_name || account.branch?.name || "",
+            hireDate: account.hireDate || account.hire_date || account.created_at || "",
+            role: String(role || ""), // Ensure role is always a string
+            username: account.username || account.user_name || "",
+            password: account.password || "",
+            isActive: account.isActive !== undefined ? account.isActive : (account.is_active !== undefined ? account.is_active : true),
+            avatar: account.avatar || account.avatar_url || null,
+            bio: account.bio || null,
+            contact: account.contact || account.phone || account.contact_number || "",
+            updatedAt: account.updatedAt || account.updated_at || "",
+            approvedDate: account.approvedDate || account.approved_date || account.created_at || "",
+          };
+        });
 
       return employees;
     } catch (error) {
@@ -330,46 +354,45 @@ export function UserManagementTab({
           if (key === 'avatar' && updatedUser[key] instanceof File) {
             formData.append(key, updatedUser[key]);
           } else {
-            formData.append(key, String(updatedUser[key]));
+            // Convert boolean to string, handle empty strings
+            const value = updatedUser[key];
+            if (typeof value === 'boolean') {
+              formData.append(key, value ? '1' : '0');
+            } else if (value !== '') {
+              formData.append(key, String(value));
+            }
           }
         }
       });
       
+      // Send fname and lname separately if they exist, otherwise use name
+      if (updatedUser.fname || updatedUser.lname) {
+        formData.append('fname', updatedUser.fname || '');
+        formData.append('lname', updatedUser.lname || '');
+        // Also keep name for backward compatibility
+        if (!formData.has('name') || !updatedUser.name) {
+          formData.append('name', `${updatedUser.fname || ''} ${updatedUser.lname || ''}`.trim());
+        }
+      }
+      
+      // Debug: Log what we're sending
+      console.log("📤 Updating user with data:", {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        fname: updatedUser.fname,
+        lname: updatedUser.lname,
+        email: updatedUser.email,
+        position: updatedUser.position,
+        role: updatedUser.role,
+        employeeId: updatedUser.employeeId
+      });
+      
       await apiService.updateEmployee(formData, updatedUser.id);
 
-      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
-      const accountIndex = accounts.findIndex(
-        (acc: any) =>
-          acc.id === updatedUser.id || acc.employeeId === updatedUser.id
-      );
+      // Small delay to ensure backend has processed the update
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-      if (accountIndex !== -1) {
-        accounts[accountIndex] = {
-          ...accounts[accountIndex],
-          name: updatedUser.name,
-          email: updatedUser.email,
-          position: updatedUser.position,
-          department: updatedUser.department,
-          branch: updatedUser.branch,
-          role: updatedUser.role,
-          username: updatedUser.username || accounts[accountIndex].username,
-          password: updatedUser.password || accounts[accountIndex].password,
-          contact: updatedUser.contact || accounts[accountIndex].contact,
-          hireDate: updatedUser.hireDate || accounts[accountIndex].hireDate,
-          isActive:
-            updatedUser.isActive !== undefined
-              ? updatedUser.isActive
-              : accounts[accountIndex].isActive,
-          employeeId:
-            updatedUser.employeeId !== undefined
-              ? updatedUser.employeeId
-              : accounts[accountIndex].employeeId,
-          updatedAt: new Date().toISOString(),
-        };
-        localStorage.setItem("accounts", JSON.stringify(accounts));
-      }
-
-      // Refresh user data to update the table immediately
+      // Refresh user data from API to update the table immediately
       await refreshUserData(false);
 
       // Refresh dashboard data to get updated information
@@ -433,6 +456,14 @@ export function UserManagementTab({
         );
 
         await loadPendingRegistrations();
+        // Small delay to ensure backend has processed the approval
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        // Refresh active users list to show the newly approved user
+        await refreshUserData(false);
+        // If user is on "new" tab, switch to "active" tab to show the newly approved user
+        if (userManagementTab === "new") {
+          setUserManagementTab("active");
+        }
         await refreshDashboardData(false, false);
         toastMessages.user.approved(registrationName);
       } else {

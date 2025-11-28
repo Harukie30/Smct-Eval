@@ -662,55 +662,10 @@ export const apiService = {
   },
 
   // Notification methods
-  getNotifications: async (userRole: string): Promise<any[]> => {
-    try {
-      const response = await api.get("/notifications", {
-        params: { role: userRole },
-      });
-      const data = response.data;
-      
-      let notifications: any[] = [];
-      if (data.success && data.notifications) {
-        notifications = data.notifications;
-      } else if (Array.isArray(data.notifications)) {
-        notifications = data.notifications;
-      } else if (Array.isArray(data)) {
-        notifications = data;
-      }
-      
-      // Backend handles filtering by role, return results as-is
-      return notifications;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch notifications"
-      );
-    }
-  },
-
-  createNotification: async (notification: any): Promise<any> => {
-    try {
-      const response = await api.post("/notifications", notification);
-      const data = response.data;
-      
-      if (data.success && data.notification) {
-        return data.notification;
-      }
-      if (data.notification) {
-        return data.notification;
-      }
-      return data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to create notification"
-      );
-    }
-  },
-
+  // Note: createNotification removed - backend automatically creates notifications
   markNotificationAsRead: async (notificationId: number): Promise<void> => {
     try {
-      await api.put(`/notifications/${notificationId}/read`);
+      await api.put(`/isReadNotification/${notificationId}`);
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw new Error(
