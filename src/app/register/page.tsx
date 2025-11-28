@@ -385,10 +385,10 @@ function RegisterPage() {
     formDataToUpload.append("password", formData.password);
     formDataToUpload.append("password_confirmation",formData.password_confirmation);
     
-    // Convert signature data URL to File object (PNG)
+    // Send signature as base64 string (backend expects string, not File)
     if (formData.signature) {
-      const signatureFile = dataURLtoFile(formData.signature, "signature.png");
-      formDataToUpload.append("signature", signatureFile);
+      // Send the data URL string directly - backend will handle conversion
+      formDataToUpload.append("signature", formData.signature);
     }
 
         try {
