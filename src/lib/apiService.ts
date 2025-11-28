@@ -64,7 +64,7 @@ export const apiService = {
   // Registration
   createPendingRegistration: async (formData: FormData): Promise<any> => {
     try {
-      const response = await api.post("/register", formData);
+      const response = await api.post("/register", {formData});
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;

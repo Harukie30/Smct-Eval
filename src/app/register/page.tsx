@@ -400,8 +400,30 @@ function RegisterPage() {
           throw new Error("Signature file is empty");
         }
         
-        formDataToUpload.append("signature", signatureFile, "signature.png");
+        // Debug: Log file details
+        console.log("📝 Signature File Details:", {
+          name: signatureFile.name,
+          size: signatureFile.size,
+          type: signatureFile.type,
+          isFile: signatureFile instanceof File,
+          isBlob: signatureFile instanceof Blob
+        });
+        
+        formDataToUpload.append("signature", signatureFile);
+        console.log ("signatureFile", signatureFile);
+        // Debug: Verify it's in FormData
+        console.log("✅ Signature appended to FormData");
+        console.log("📦 FormData entries:", Array.from(formDataToUpload.entries()).map(([key, value]) => ({
+          key,
+          valueType: value instanceof File ? 'File' : typeof value,
+          valueInfo: value instanceof File ? {
+            name: value.name,
+            size: value.size,
+            type: value.type
+          } : value
+        })));
       } catch (error: any) {
+        console.error("❌ Signature conversion error:", error);
         showAlert(
           "Invalid Signature",
           error.message || "Please draw your signature again. The signature format is invalid.",
@@ -410,6 +432,8 @@ function RegisterPage() {
         setIsRegisterButtonClicked(false);
         return;
       }
+    } else {
+      console.warn("⚠️ No signature in formData");
     }
 
         try {
