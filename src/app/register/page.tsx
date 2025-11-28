@@ -18,8 +18,9 @@ import Link from "next/link";
 import PageTransition from "@/components/PageTransition";
 import { CONFIG } from "../../../config/config";
 import { id } from "date-fns/locale";
-import clientDataService from "@/lib/clientDataService.api";
+import apiService from "@/lib/apiService";
 import { withPublicPage } from "@/hoc";
+import { dataURLtoFile } from "@/utils/data-url-to-file";
 // Mock data for testing
 import branchCodes from "@/data/branch-code.json";
 import positionsData from "@/data/positions.json";
@@ -154,32 +155,6 @@ function RegisterPage() {
 
     const fetchData = async () => {
       try {
-<<<<<<< Updated upstream
-        // Fetch positions using client data service
-        const positionsDataFromAPI = await clientDataService.getPositions();
-        // Convert {id, name} to {value, label} for Combobox
-        const formattedPositions = positionsDataFromAPI?.map((pos: any) => ({
-          value: pos.id || pos.value || String(pos),
-          label: pos.name || pos.label || String(pos)
-        })) || [];
-        
-        // Fetch departments using client data service
-        const departmentsDataFromAPI = await clientDataService.getDepartments();
-        // Convert {id, name} to {value, label} for Combobox
-        const formattedDepartments = departmentsDataFromAPI?.map((dept: any) => ({
-          value: dept.id || dept.value || String(dept),
-          label: dept.name || dept.label || String(dept)
-        })) || [];
-        
-        // Fetch branches using client data service
-        const branchDataFromAPI = await clientDataService.getBranches();
-        // Convert {id, name} to {value, label} for Combobox
-        const formattedBranches = branchDataFromAPI?.map((branch: any) => ({
-          value: branch.id || branch.value || String(branch),
-          label: branch.name || branch.label || String(branch)
-        })) || [];
-        
-=======
         // Fetch positions using API service
         const positionsDataFromAPI = await apiService.getPositions();
         // Convert from {id, name} to {value, label} format for Combobox
@@ -207,7 +182,6 @@ function RegisterPage() {
             label: branch.name,
           })) || [];
 
->>>>>>> Stashed changes
         // Check if API returned valid data, otherwise use mock data
         if (
           formattedPositions.length > 0 &&
@@ -435,13 +409,6 @@ function RegisterPage() {
     formDataToUpload.append("branch_id", String(formData.branch_id));
     formDataToUpload.append("department_id", String(formData.department_id));
     formDataToUpload.append("password", formData.password);
-<<<<<<< Updated upstream
-    formDataToUpload.append("password_confirmation",formData.password_confirmation);
-    formDataToUpload.append("signature", formData.signature);
-
-        try {
-          const data = await clientDataService.registerUser(formDataToUpload);
-=======
     formDataToUpload.append(
       "password_confirmation",
       formData.password_confirmation
@@ -476,7 +443,6 @@ function RegisterPage() {
 
         formDataToUpload.append("signature", signatureFile);
 
-        console.log("signatureFile", formDataToUpload.get("signature"));
         // Debug: Verify it's in FormData
         // console.log("✅ Signature appended to FormData");
         // console.log(
@@ -539,7 +505,6 @@ function RegisterPage() {
     }
 
     // try {
->>>>>>> Stashed changes
 
     // } catch (error: any) {
     //   // console.error(error);
