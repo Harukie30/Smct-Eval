@@ -316,9 +316,12 @@ export const apiService = {
     try {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       const response = await api.get(`/allEvaluations`);
       return response.data.profile || response.data;
 =======
+=======
+>>>>>>> Stashed changes
       const response = await api.get(`/allEvaluations`, {
         params: {
           search: searchTerm || "",
@@ -343,6 +346,24 @@ export const apiService = {
     try {
       const response = await api.get(`/submissions/${id}`);
       return response.data;
+<<<<<<< Updated upstream
+=======
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw {
+        ...axiosError.response?.data,
+        status: axiosError.response?.status || 500,
+        message:
+          axiosError.response?.data?.message || "Failed to update profile",
+      };
+    }
+  },
+
+  adminDashboard: async (): Promise<any> => {
+    try {
+      const response = await api.get(`/adminDashboard`);
+      return response.data;
+>>>>>>> Stashed changes
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw {
