@@ -154,13 +154,9 @@ export const apiService = {
     }
   },
 
-  getActiveRegistrations: async (
-    filters?: Record<string, string>
-  ): Promise<any | null> => {
+  getActiveRegistrations: async (): Promise<any | null> => {
     try {
-      const response = await api.get("/getAllActiveUsers", {
-        params: filters,
-      });
+      const response = await api.get("/getAllActiveUsers");
       return response.data.users;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
@@ -684,26 +680,6 @@ export const apiService = {
     }
   },
 
-  createNotification: async (notification: any): Promise<any> => {
-    try {
-      const response = await api.post("/notifications", notification);
-      const data = response.data;
-
-      if (data.success && data.notification) {
-        return data.notification;
-      }
-      if (data.notification) {
-        return data.notification;
-      }
-      return data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to create notification"
-      );
-    }
-  },
-
   markNotificationAsRead: async (notificationId: number): Promise<void> => {
     try {
       await api.put(`/notifications/${notificationId}/read`);
@@ -726,40 +702,6 @@ export const apiService = {
       throw new Error(
         axiosError.response?.data?.message ||
           "Failed to mark all notifications as read"
-      );
-    }
-  },
-
-  getUnreadNotificationCount: async (userRole: string): Promise<number> => {
-    try {
-      const response = await api.get("/notifications/unread-count", {
-        params: { role: userRole },
-      });
-      const data = response.data;
-
-      if (typeof data.count === "number") {
-        return data.count;
-      }
-      if (typeof data.unreadCount === "number") {
-        return data.unreadCount;
-      }
-      return 0;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to get unread notification count"
-      );
-    }
-  },
-
-  deleteNotification: async (notificationId: number): Promise<void> => {
-    try {
-      await api.delete(`/notifications/${notificationId}`);
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to delete notification"
       );
     }
   },

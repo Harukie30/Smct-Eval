@@ -33,7 +33,7 @@ import accountsData from "@/data/accounts.json";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import { apiService } from "@/lib/apiService";
 
-export function EvaluatedReviewsTab() {
+export default function EvaluatedReviewsTab() {
   const [recentSubmissions, setRecentSubmissions] = useState<any[]>([]);
   const [recordsSearchTerm, setRecordsSearchTerm] = useState("");
   const [recordsApprovalFilter, setRecordsApprovalFilter] = useState("");
@@ -571,9 +571,7 @@ export function EvaluatedReviewsTab() {
   const handleViewEvaluation = async (submission: any) => {
     try {
       // Fetch the full submission data
-      const fullSubmission = await apiService.getSubmissionById(
-        submission.id
-      );
+      const fullSubmission = await apiService.getSubmissionById(submission.id);
 
       if (fullSubmission) {
         const ratingValue = calculateOverallRating(fullSubmission);

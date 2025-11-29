@@ -31,7 +31,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
-import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 
 interface Employee {
@@ -41,41 +40,35 @@ interface Employee {
   position: string;
   department: string;
   branch?: string;
-  contact?: string;
-  isActive?: boolean;
   role: string;
+  isActive?: boolean;
 }
 
-interface AreaManagersTabProps {
+interface BranchHeadsTabProps {
   employees: Employee[];
   onRefresh?: (showModal?: boolean, isAutoRefresh?: boolean) => Promise<void>;
+  isLoading?: boolean;
 }
 
-export function AreaManagersTab({
-  employees,
-  onRefresh,
-}: AreaManagersTabProps) {
-  const { withErrorHandling } = useErrorHandler({
-    showToast: true,
-    logToConsole: true,
-  });
+export default function BranchHeadsTab() {
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [isBranchesModalOpen, setIsBranchesModalOpen] = useState(false);
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(false);
-  const [selectedAreaManager, setSelectedAreaManager] =
-    useState<Employee | null>(null);
+  const [selectedBranchHead, setSelectedBranchHead] = useState<Employee | null>(
+    null
+  );
   const [selectedBranches, setSelectedBranches] = useState<
     { id: string; name: string }[]
   >([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successData, setSuccessData] = useState<{
-    areaManager: Employee | null;
+    branchHead: Employee | null;
     branches: { id: string; name: string }[];
-  }>({ areaManager: null, branches: [] });
+  }>({ branchHead: null, branches: [] });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [areaManagerToEdit, setAreaManagerToEdit] = useState<Employee | null>(
+  const [branchHeadToEdit, setBranchHeadToEdit] = useState<Employee | null>(
     null
   );
   const [editSelectedBranches, setEditSelectedBranches] = useState<
@@ -83,27 +76,28 @@ export function AreaManagersTab({
   >([]);
   const [showEditSuccessDialog, setShowEditSuccessDialog] = useState(false);
   const [editSuccessData, setEditSuccessData] = useState<{
-    areaManager: Employee | null;
+    branchHead: Employee | null;
     branches: { id: string; name: string }[];
-  }>({ areaManager: null, branches: [] });
+  }>({ branchHead: null, branches: [] });
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [areaManagerToDelete, setAreaManagerToDelete] =
-    useState<Employee | null>(null);
+  const [branchHeadToDelete, setBranchHeadToDelete] = useState<Employee | null>(
+    null
+  );
   const [searchTerm, setSearchTerm] = useState("");
-  const [areaManagersPage, setAreaManagersPage] = useState(1);
-  const [areaManagersData, setAreaManagersData] = useState<Employee[]>([]);
-  const [loadingAreaManagers, setLoadingAreaManagers] = useState(true);
+  const [branchHeadsPage, setBranchHeadsPage] = useState(1);
+  const [branchHeadsData, setBranchHeadsData] = useState<Employee[]>([]);
+  const [loadingBranchHeads, setLoadingBranchHeads] = useState(true);
   const itemsPerPage = 8;
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
-  // Load area managers from API
+  // Load branch heads from API
   useEffect(() => {
-    const loadAreaManagers = async () => {
-      setLoadingAreaManagers(true);
+    const loadBranchHeads = async () => {
+      setLoadingBranchHeads(true);
       try {
-        const data = await apiService.getAllAreaManager();
+        const data = await apiService.getAllBranchHeads();
         // Normalize the data format to match Employee interface
         const normalizedData = data.map((item: any) => ({
           id: item.id || item.employeeId,
@@ -112,37 +106,36 @@ export function AreaManagersTab({
           position: item.position || "",
           department: item.department || "",
           branch: item.branch || "",
-          contact: item.contact || "",
           role: item.role || "",
           isActive: item.isActive !== undefined ? item.isActive : true,
         }));
-        setAreaManagersData(normalizedData);
+        setBranchHeadsData(normalizedData);
       } catch (error) {
-        console.error("Error loading area managers:", error);
+        console.error("Error loading branch heads:", error);
         // Fallback to employees prop if API fails
         if (employees && employees.length > 0) {
           const filtered = employees.filter((emp) => {
             const position = emp.position?.toLowerCase() || "";
             return (
-              position.includes("area manager") ||
-              position.includes("areamanager") ||
-              position.includes("regional manager")
+              position.includes("branch head") ||
+              position.includes("branchhead") ||
+              position.includes("branch manager")
             );
           });
-          setAreaManagersData(filtered);
+          setBranchHeadsData(filtered);
         }
       } finally {
-        setLoadingAreaManagers(false);
+        setLoadingBranchHeads(false);
       }
     };
 
-    loadAreaManagers();
+    loadBranchHeads();
   }, [employees]);
 
-  // Memoized area managers (use API data if available, otherwise fallback to filtered employees)
-  const areaManagers = useMemo(() => {
-    if (areaManagersData.length > 0) {
-      return areaManagersData;
+  // Memoized branch heads (use API data if available, otherwise fallback to filtered employees)
+  const branchHeads = useMemo(() => {
+    if (branchHeadsData.length > 0) {
+      return branchHeadsData;
     }
     // Fallback to manual filtering if API data not available
     if (!employees || employees.length === 0) return [];
@@ -150,40 +143,40 @@ export function AreaManagersTab({
     return employees.filter((emp) => {
       const position = emp.position?.toLowerCase() || "";
 
-      // Filter by position only - looking for area manager or regional manager positions
+      // Filter by position only - looking for branch head or branch manager positions
       return (
-        position.includes("area manager") ||
-        position.includes("areamanager") ||
-        position.includes("regional manager")
+        position.includes("branch head") ||
+        position.includes("branchhead") ||
+        position.includes("branch manager")
       );
     });
-  }, [areaManagersData, employees]);
+  }, [branchHeadsData, employees]);
 
-  // Filter area managers based on search term
-  const filteredAreaManagers = useMemo(() => {
-    if (!searchTerm) return areaManagers;
+  // Filter branch heads based on search term
+  const filteredBranchHeads = useMemo(() => {
+    if (!searchTerm) return branchHeads;
 
     const searchLower = searchTerm.toLowerCase();
-    return areaManagers.filter((manager) => {
-      const nameMatch = manager.name?.toLowerCase().includes(searchLower);
-      const branchMatch = manager.branch?.toLowerCase().includes(searchLower);
+    return branchHeads.filter((head) => {
+      const nameMatch = head.name?.toLowerCase().includes(searchLower);
+      const branchMatch = head.branch?.toLowerCase().includes(searchLower);
       return nameMatch || branchMatch;
     });
-  }, [areaManagers, searchTerm]);
+  }, [branchHeads, searchTerm]);
 
   // Pagination calculations
-  const areaManagersTotal = filteredAreaManagers.length;
-  const areaManagersTotalPages = Math.ceil(areaManagersTotal / itemsPerPage);
-  const areaManagersStartIndex = (areaManagersPage - 1) * itemsPerPage;
-  const areaManagersEndIndex = areaManagersStartIndex + itemsPerPage;
-  const areaManagersPaginated = filteredAreaManagers.slice(
-    areaManagersStartIndex,
-    areaManagersEndIndex
+  const branchHeadsTotal = filteredBranchHeads.length;
+  const branchHeadsTotalPages = Math.ceil(branchHeadsTotal / itemsPerPage);
+  const branchHeadsStartIndex = (branchHeadsPage - 1) * itemsPerPage;
+  const branchHeadsEndIndex = branchHeadsStartIndex + itemsPerPage;
+  const branchHeadsPaginated = filteredBranchHeads.slice(
+    branchHeadsStartIndex,
+    branchHeadsEndIndex
   );
 
   // Reset to page 1 when search term changes
   useEffect(() => {
-    setAreaManagersPage(1);
+    setBranchHeadsPage(1);
   }, [searchTerm]);
 
   // Load branches data
@@ -194,45 +187,62 @@ export function AreaManagersTab({
     }
 
     setBranchesLoading(true);
-
-    const result = await withErrorHandling(
-      async () => {
-        const branchesData = await apiService.getBranches();
-        // Normalize the data format - handle both {id, name} and {value, label} formats
-        const normalizedBranches = branchesData.map((branch: any) => {
-          if ("id" in branch && "name" in branch) {
-            return { id: branch.id, name: branch.name };
-          } else if ("value" in branch && "label" in branch) {
-            // Extract branch code from label if it contains " /"
-            const labelParts = branch.label.split(" /");
-            return {
-              id: branch.value,
-              name: labelParts[0] || branch.label,
-            };
-          }
+    try {
+      const branchesData = await apiService.getBranches();
+      // Normalize the data format - handle both {id, name} and {value, label} formats
+      const normalizedBranches = branchesData.map((branch: any) => {
+        if ("id" in branch && "name" in branch) {
+          return { id: branch.id, name: branch.name };
+        } else if ("value" in branch && "label" in branch) {
+          // Extract branch code from label if it contains " /"
+          const labelParts = branch.label.split(" /");
           return {
-            id: String(branch.id || branch.value || ""),
-            name: String(branch.name || branch.label || ""),
+            id: branch.value,
+            name: labelParts[0] || branch.label,
           };
-        });
-        setBranches(normalizedBranches);
-        return normalizedBranches;
-      },
-      {
-        errorTitle: "Failed to Load Branches",
-        errorMessage: "Unable to load branches. Please try again.",
-        showSuccessToast: false,
-      }
-    );
-
-    setBranchesLoading(false);
-    return result || [];
+        }
+        return {
+          id: String(branch.id || branch.value || ""),
+          name: String(branch.name || branch.label || ""),
+        };
+      });
+      setBranches(normalizedBranches);
+      return normalizedBranches;
+    } catch (error) {
+      console.error("Error loading branches:", error);
+      setBranches([]);
+      return [];
+    } finally {
+      setBranchesLoading(false);
+    }
   };
+
+  // Auto-close success dialog after 2 seconds
+  useEffect(() => {
+    if (showSuccessDialog) {
+      const timer = setTimeout(() => {
+        setShowSuccessDialog(false);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessDialog]);
+
+  // Auto-close edit success dialog after 2 seconds
+  useEffect(() => {
+    if (showEditSuccessDialog) {
+      const timer = setTimeout(() => {
+        setShowEditSuccessDialog(false);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [showEditSuccessDialog]);
 
   // Add custom CSS for success dialog content animations (checkmark, ripple, etc.)
   // Note: Container animations are now handled by useDialogAnimation hook
   useEffect(() => {
-    const styleId = "area-managers-success-animations";
+    const styleId = "branch-heads-success-animations";
     const existingStyle = document.getElementById(styleId);
     if (existingStyle) {
       return; // Styles already injected
@@ -296,36 +306,14 @@ export function AreaManagersTab({
     document.head.appendChild(style);
   }, []);
 
-  // Auto-close success dialog after 2 seconds
-  useEffect(() => {
-    if (showSuccessDialog) {
-      const timer = setTimeout(() => {
-        setShowSuccessDialog(false);
-      }, 2000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [showSuccessDialog]);
-
-  // Auto-close edit success dialog after 2 seconds
-  useEffect(() => {
-    if (showEditSuccessDialog) {
-      const timer = setTimeout(() => {
-        setShowEditSuccessDialog(false);
-      }, 2000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [showEditSuccessDialog]);
-
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <div>
-            <CardTitle>Area Managers</CardTitle>
+            <CardTitle>Branch Heads</CardTitle>
             <CardDescription>
-              List of all area managers in the organization
+              List of all branch heads in the organization
             </CardDescription>
           </div>
         </CardHeader>
@@ -334,14 +322,14 @@ export function AreaManagersTab({
           <div className="mb-6">
             <div className="relative w-full md:w-1/3">
               <Label
-                htmlFor="area-managers-search"
+                htmlFor="branch-heads-search"
                 className="text-sm font-medium mb-2 block"
               >
                 Search
               </Label>
               <div className="relative">
                 <Input
-                  id="area-managers-search"
+                  id="branch-heads-search"
                   placeholder="Search by name or branch..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -376,47 +364,56 @@ export function AreaManagersTab({
               <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                 <TableRow>
                   <TableHead className="w-1/3">Name</TableHead>
-                  <TableHead className="w-1/3 text-center">Branches</TableHead>
+                  <TableHead className="w-1/3 text-center">Branch</TableHead>
                   <TableHead className="w-1/3 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loadingAreaManagers || (!areaManagersData.length && (!employees || employees.length === 0)) ? (
+                {isLoading ||
+                loadingBranchHeads ||
+                (!branchHeadsData.length &&
+                  (!employees || employees.length === 0)) ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
                       <TableCell className="py-4">
-                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-5 w-40" />
                       </TableCell>
                       <TableCell className="py-4 text-center">
-                        <Skeleton className="h-4 w-24 mx-auto" />
+                        <div className="flex flex-wrap justify-center gap-2">
+                          <Skeleton className="h-6 w-24" />
+                          <Skeleton className="h-6 w-24" />
+                        </div>
                       </TableCell>
-                      <TableCell className="py-4 text-right">
-                        <Skeleton className="h-8 w-16 ml-auto" />
+                      <TableCell className="py-4">
+                        <div className="flex justify-end space-x-2">
+                          <Skeleton className="h-8 w-16" />
+                          <Skeleton className="h-8 w-16" />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
-                ) : areaManagersPaginated.length === 0 ? (
+                ) : branchHeadsPaginated.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={3}
                       className="text-center py-8 text-gray-500"
                     >
                       {searchTerm
-                        ? `No area managers found matching "${searchTerm}"`
-                        : "No area managers found"}
+                        ? `No branch heads found matching "${searchTerm}"`
+                        : "No branch heads found"}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  areaManagersPaginated.map((manager) => {
-                    // Parse branches - handle both comma-separated string and single branch
-                    const branchList = manager.branch
-                      ? manager.branch.split(", ").filter((b) => b.trim())
+                  branchHeadsPaginated.map((head) => {
+                    // Parse branches from comma-separated string
+                    const branchList = head.branch
+                      ? head.branch.split(", ").filter((b) => b.trim())
                       : [];
 
                     return (
-                      <TableRow key={manager.id}>
-                        <TableCell className="py-4 font-medium">
-                          {manager.name}
+                      <TableRow key={head.id}>
+                        <TableCell className="font-medium py-4">
+                          {head.name}
                         </TableCell>
                         <TableCell className="py-4 text-center">
                           {branchList.length > 0 ? (
@@ -426,7 +423,7 @@ export function AreaManagersTab({
                                   key={index}
                                   className="bg-blue-600 text-white"
                                 >
-                                  {branch}
+                                  {branch.trim()}
                                 </Badge>
                               ))}
                             </div>
@@ -441,13 +438,13 @@ export function AreaManagersTab({
                               size="sm"
                               className="text-white bg-blue-400 hover:text-blue-700 hover:bg-blue-50"
                               onClick={async () => {
-                                setAreaManagerToEdit(manager);
+                                setBranchHeadToEdit(head);
                                 setIsEditModalOpen(true);
                                 // Load branches first and wait for them
                                 const loadedBranches = await loadBranches();
                                 // Then parse existing branches after branches are loaded
-                                if (manager.branch && loadedBranches) {
-                                  const existingBranches = manager.branch
+                                if (head.branch && loadedBranches) {
+                                  const existingBranches = head.branch
                                     .split(", ")
                                     .map((name) => {
                                       // Try to find matching branch from loaded branches
@@ -476,7 +473,7 @@ export function AreaManagersTab({
                               size="sm"
                               className="text-white bg-red-400 hover:text-red-700 hover:bg-red-50"
                               onClick={() => {
-                                setAreaManagerToDelete(manager);
+                                setBranchHeadToDelete(head);
                                 setIsDeleteModalOpen(true);
                               }}
                             >
@@ -493,46 +490,46 @@ export function AreaManagersTab({
           </div>
 
           {/* Pagination Controls */}
-          {areaManagersTotal > itemsPerPage && (
+          {branchHeadsTotal > itemsPerPage && (
             <div className="flex items-center justify-between mt-4 px-2">
               <div className="text-sm text-gray-600">
-                Showing {areaManagersStartIndex + 1} to{" "}
-                {Math.min(areaManagersEndIndex, areaManagersTotal)} of{" "}
-                {areaManagersTotal} area managers
+                Showing {branchHeadsStartIndex + 1} to{" "}
+                {Math.min(branchHeadsEndIndex, branchHeadsTotal)} of{" "}
+                {branchHeadsTotal} branch heads
               </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() =>
-                    setAreaManagersPage((prev) => Math.max(1, prev - 1))
+                    setBranchHeadsPage((prev) => Math.max(1, prev - 1))
                   }
-                  disabled={areaManagersPage === 1}
+                  disabled={branchHeadsPage === 1}
                   className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
                 >
                   Previous
                 </Button>
                 <div className="flex items-center gap-1">
                   {Array.from(
-                    { length: areaManagersTotalPages },
+                    { length: branchHeadsTotalPages },
                     (_, i) => i + 1
                   ).map((page) => {
                     if (
                       page === 1 ||
-                      page === areaManagersTotalPages ||
-                      (page >= areaManagersPage - 1 &&
-                        page <= areaManagersPage + 1)
+                      page === branchHeadsTotalPages ||
+                      (page >= branchHeadsPage - 1 &&
+                        page <= branchHeadsPage + 1)
                     ) {
                       return (
                         <Button
                           key={page}
                           variant={
-                            areaManagersPage === page ? "default" : "outline"
+                            branchHeadsPage === page ? "default" : "outline"
                           }
                           size="sm"
-                          onClick={() => setAreaManagersPage(page)}
+                          onClick={() => setBranchHeadsPage(page)}
                           className={`text-xs w-8 h-8 p-0 ${
-                            areaManagersPage === page
+                            branchHeadsPage === page
                               ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
                               : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
                           }`}
@@ -541,8 +538,8 @@ export function AreaManagersTab({
                         </Button>
                       );
                     } else if (
-                      page === areaManagersPage - 2 ||
-                      page === areaManagersPage + 2
+                      page === branchHeadsPage - 2 ||
+                      page === branchHeadsPage + 2
                     ) {
                       return (
                         <span key={page} className="text-gray-400">
@@ -557,11 +554,11 @@ export function AreaManagersTab({
                   variant="outline"
                   size="sm"
                   onClick={() =>
-                    setAreaManagersPage((prev) =>
-                      Math.min(areaManagersTotalPages, prev + 1)
+                    setBranchHeadsPage((prev) =>
+                      Math.min(branchHeadsTotalPages, prev + 1)
                     )
                   }
-                  disabled={areaManagersPage === areaManagersTotalPages}
+                  disabled={branchHeadsPage === branchHeadsTotalPages}
                   className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
                 >
                   Next
@@ -572,17 +569,17 @@ export function AreaManagersTab({
         </CardContent>
       </Card>
 
-      {/* Area Managers List Modal */}
+      {/* Branch Heads List Modal */}
       <Dialog open={isListModalOpen} onOpenChangeAction={setIsListModalOpen}>
         <DialogContent
-          className={`max-w-4xl max-h-[90vh] p-6 flex flex-col ${dialogAnimationClass}`}
+          className={`max-w-xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}
         >
-          <DialogHeader className="pb-4">
+          <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle>Area Managers List</DialogTitle>
+                <DialogTitle>Branch Heads List</DialogTitle>
                 <DialogDescription>
-                  Complete list of all area managers in the organization
+                  Complete list of all branch heads in the organization
                 </DialogDescription>
               </div>
               <Button
@@ -607,10 +604,10 @@ export function AreaManagersTab({
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 flex-1 overflow-y-auto min-h-0">
-            {areaManagers.length === 0 ? (
+          <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
+            {branchHeads.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                No area managers found
+                No branch heads found
               </div>
             ) : (
               <div className="border rounded-lg overflow-hidden">
@@ -625,21 +622,21 @@ export function AreaManagersTab({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {areaManagers.map((manager) => (
-                        <TableRow key={manager.id} className="hover:bg-gray-50">
+                      {branchHeads.map((head) => (
+                        <TableRow key={head.id} className="hover:bg-gray-50">
                           <TableCell className="font-medium py-3 px-6">
-                            {manager.name}
+                            {head.name}
                           </TableCell>
                           <TableCell className="py-3 text-center px-6">
                             <Button
                               className="bg-blue-600 hover:bg-blue-700 text-white"
                               size="sm"
                               onClick={async () => {
-                                // Store the selected area manager
-                                setSelectedAreaManager(manager);
+                                // Store the selected branch head
+                                setSelectedBranchHead(head);
                                 // Load branches first (in background) to prevent loading state flicker
                                 await loadBranches();
-                                // Close the Area Managers modal
+                                // Close the Branch Heads modal
                                 setIsListModalOpen(false);
                                 // Use double requestAnimationFrame for smoother transition (allows DOM to update)
                                 requestAnimationFrame(() => {
@@ -669,9 +666,9 @@ export function AreaManagersTab({
         onOpenChangeAction={setIsBranchesModalOpen}
       >
         <DialogContent
-          className={`max-w-4xl max-h-[90vh] p-6 flex flex-col ${dialogAnimationClass}`}
+          className={`max-w-xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}
         >
-          <DialogHeader className="pb-4">
+          <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
                 <DialogTitle>Branches List</DialogTitle>
@@ -705,11 +702,11 @@ export function AreaManagersTab({
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 flex-1 overflow-y-auto min-h-0">
+          <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
             {/* Confirmation Indicator */}
             {showConfirmation &&
               selectedBranches.length > 0 &&
-              selectedAreaManager && (
+              selectedBranchHead && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 mt-0.5">
@@ -723,20 +720,19 @@ export function AreaManagersTab({
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M12 4v16m8-8H4"
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-blue-900">
-                        Add Area Manager
+                        Branch Assignment Ready
                       </p>
                       <p className="text-sm text-blue-700 mt-1">
-                        Add{" "}
                         <span className="font-semibold">
-                          {selectedAreaManager.name}
+                          {selectedBranchHead.name}
                         </span>{" "}
-                        to:
+                        will be assigned to:
                       </p>
                       <div className="mt-2 space-y-1">
                         {selectedBranches.map((branch) => (
@@ -768,92 +764,97 @@ export function AreaManagersTab({
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                       onClick={async () => {
                         if (
-                          !selectedAreaManager ||
+                          !selectedBranchHead ||
                           selectedBranches.length === 0
                         )
                           return;
 
-                        await withErrorHandling(
-                          async () => {
-                            // Store data for success message
-                            setSuccessData({
-                              areaManager: selectedAreaManager,
-                              branches: [...selectedBranches],
-                            });
+                        try {
+                          // Store data for success message
+                          setSuccessData({
+                            branchHead: selectedBranchHead,
+                            branches: [...selectedBranches],
+                          });
 
-                            // Update employee with branch assignments
-                            // If multiple branches, combine them with comma separator
-                            const branchNames = selectedBranches
-                              .map((b) => b.name)
-                              .join(", ");
+                          // Update employee with branch assignments
+                          // If multiple branches, combine them with comma separator
+                          const branchNames = selectedBranches
+                            .map((b) => b.name)
+                            .join(", ");
+                          const branchIds = selectedBranches
+                            .map((b) => b.id)
+                            .join(", ");
 
-                            // Update using API service
-                            const formData = new FormData();
-                            formData.append("branch", branchNames);
-                            formData.append("updatedAt", new Date().toISOString());
-                            await apiService.updateEmployee(formData, selectedAreaManager.id);
+                          // Update using API service
+                          const formData = new FormData();
+                          formData.append("branch", branchNames);
+                          formData.append(
+                            "updatedAt",
+                            new Date().toISOString()
+                          );
+                          await apiService.updateEmployee(
+                            formData,
+                            selectedBranchHead.id
+                          );
 
-                            // Also update accounts in localStorage
-                            const accounts = JSON.parse(
-                              localStorage.getItem("accounts") || "[]"
+                          // Also update accounts in localStorage
+                          const accounts = JSON.parse(
+                            localStorage.getItem("accounts") || "[]"
+                          );
+                          const accountIndex = accounts.findIndex(
+                            (acc: any) =>
+                              acc.id === selectedBranchHead.id ||
+                              acc.employeeId === selectedBranchHead.id
+                          );
+
+                          if (accountIndex !== -1) {
+                            accounts[accountIndex] = {
+                              ...accounts[accountIndex],
+                              branch: branchNames,
+                              updatedAt: new Date().toISOString(),
+                            };
+                            localStorage.setItem(
+                              "accounts",
+                              JSON.stringify(accounts)
                             );
-                            const accountIndex = accounts.findIndex(
-                              (acc: any) =>
-                                acc.id === selectedAreaManager.id ||
-                                acc.employeeId === selectedAreaManager.id
-                            );
-
-                            if (accountIndex !== -1) {
-                              accounts[accountIndex] = {
-                                ...accounts[accountIndex],
-                                branch: branchNames,
-                                updatedAt: new Date().toISOString(),
-                              };
-                              localStorage.setItem(
-                                "accounts",
-                                JSON.stringify(accounts)
-                              );
-                            }
-
-                            // Close the branches modal after confirmation
-                            setIsBranchesModalOpen(false);
-                            setShowConfirmation(false);
-                            // Show success dialog
-                            setShowSuccessDialog(true);
-                            // Clear selections after a delay
-                            setTimeout(() => {
-                              setSelectedBranches([]);
-                            }, 100);
-
-                            // Show success toast
-                            toastMessages.generic.success(
-                              "Branch Assignment Successful",
-                              `${
-                                selectedAreaManager.name
-                              } has been assigned to ${
-                                selectedBranches.length
-                              } ${
-                                selectedBranches.length === 1
-                                  ? "branch"
-                                  : "branches"
-                              }.`
-                            );
-
-                            // Refresh parent component data to update the table
-                            if (onRefresh) {
-                              await onRefresh(false, false);
-                            } else {
-                              // Fallback: reload the page if no refresh callback
-                              window.location.reload();
-                            }
-                          },
-                          {
-                            errorTitle: "Assignment Failed",
-                            errorMessage:
-                              "Failed to assign branches. Please try again.",
-                            showSuccessToast: false, // We show custom success toast above
                           }
-                        );
+
+                          // Close the branches modal after confirmation
+                          setIsBranchesModalOpen(false);
+                          setShowConfirmation(false);
+                          // Show success dialog
+                          setShowSuccessDialog(true);
+                          // Clear selections after a delay
+                          setTimeout(() => {
+                            setSelectedBranches([]);
+                          }, 100);
+
+                          // Show success toast
+                          toastMessages.generic.success(
+                            "Branch Assignment Successful",
+                            `${selectedBranchHead.name} has been assigned to ${
+                              selectedBranches.length
+                            } ${
+                              selectedBranches.length === 1
+                                ? "branch"
+                                : "branches"
+                            }.`
+                          );
+
+                          // Refresh parent component data to update the table
+                          if (onRefresh) {
+                            await onRefresh(false, false);
+                          } else {
+                            // Fallback: reload the page if no refresh callback
+                            window.location.reload();
+                          }
+                        } catch (error) {
+                          console.error("Error assigning branches:", error);
+                          toastMessages.generic.error(
+                            "Assignment Failed",
+                            "Failed to assign branches. Please try again."
+                          );
+                        }
                       }}
                     >
                       Confirm ({selectedBranches.length})
@@ -951,55 +952,72 @@ export function AreaManagersTab({
       </Dialog>
 
       {/* Success Dialog */}
-      <Dialog open={showSuccessDialog} onOpenChangeAction={() => {}}>
+      <Dialog
+        open={showSuccessDialog}
+        onOpenChangeAction={setShowSuccessDialog}
+      >
         <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
-          <div className="flex flex-col items-center justify-center py-6">
-            <div className="relative mb-4">
-              <div className="animate-success-ripple absolute inset-0 rounded-full bg-green-200"></div>
-              <div className="relative w-16 h-16 bg-green-100 rounded-full flex items-center justify-center animate-success-scale">
+          <div className="flex flex-col items-center justify-center py-6 space-y-4">
+            {/* Success Animation */}
+            <div className="relative">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center animate-success-scale">
                 <svg
-                  className="w-8 h-8 text-green-600 animate-success-checkmark"
+                  className="w-12 h-12 text-green-600 animate-success-checkmark"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
-                  strokeWidth={3}
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                    strokeWidth={3}
+                    d="M5 13l4 4L19 7"
                     strokeDasharray="20"
                     strokeDashoffset="20"
-                    d="M5 13l4 4L19 7"
+                    className="animate-draw-checkmark"
                   />
                 </svg>
               </div>
+              {/* Ripple effect */}
+              <div className="absolute inset-0 bg-green-200 rounded-full animate-success-ripple opacity-0"></div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Success!
-            </h3>
-            <p className="text-sm text-gray-600 text-center">
-              {successData.areaManager && successData.branches.length > 0 && (
-                <>
-                  {successData.areaManager.name} has been assigned to{" "}
-                  {successData.branches.map((b) => b.name).join(", ")}
-                </>
-              )}
-            </p>
+
+            {/* Success Message */}
+            <div className="text-center space-y-2">
+              <DialogTitle className="text-2xl font-bold text-gray-900">
+                Success!
+              </DialogTitle>
+              <DialogDescription className="text-base text-gray-600">
+                {successData.branchHead && successData.branches.length > 0 && (
+                  <>
+                    <span className="font-semibold">
+                      {successData.branchHead.name}
+                    </span>{" "}
+                    has been successfully assigned to{" "}
+                    {successData.branches.length}{" "}
+                    {successData.branches.length === 1 ? "branch" : "branches"}.
+                  </>
+                )}
+              </DialogDescription>
+              <p className="text-sm text-gray-500 mt-2">
+                Closing automatically...
+              </p>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Area Manager Modal */}
+      {/* Edit Branch Head Modal */}
       <Dialog open={isEditModalOpen} onOpenChangeAction={setIsEditModalOpen}>
         <DialogContent
-          className={`max-w-4xl max-h-[90vh] p-6 flex flex-col ${dialogAnimationClass}`}
+          className={`max-w-xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}
         >
-          <DialogHeader className="pb-4">
+          <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
                 <DialogTitle>Edit Branch Assignment</DialogTitle>
                 <DialogDescription>
-                  Update branch assignments for {areaManagerToEdit?.name}
+                  Update branch assignments for {branchHeadToEdit?.name}
                 </DialogDescription>
               </div>
               <Button
@@ -1007,7 +1025,7 @@ export function AreaManagersTab({
                 size="sm"
                 onClick={() => {
                   setIsEditModalOpen(false);
-                  setAreaManagerToEdit(null);
+                  setBranchHeadToEdit(null);
                   setEditSelectedBranches([]);
                 }}
                 className="h-10 w-10 p-0 hover:bg-gray-100 bg-blue-600 text-white rounded-full hover:text-white hover:bg-red-700"
@@ -1028,15 +1046,15 @@ export function AreaManagersTab({
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 flex-1 overflow-y-auto min-h-0">
+          <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
             {/* Current Assignment Display */}
-            {areaManagerToEdit && (
+            {branchHeadToEdit && (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <p className="text-sm font-medium text-gray-700 mb-2">
                   Current Assignment:
                 </p>
                 <p className="text-sm text-gray-600">
-                  {areaManagerToEdit.branch || "No branches assigned"}
+                  {branchHeadToEdit.branch || "No branches assigned"}
                 </p>
               </div>
             )}
@@ -1142,7 +1160,7 @@ export function AreaManagersTab({
               className="border-gray-300 text-gray-700 hover:bg-gray-50"
               onClick={() => {
                 setIsEditModalOpen(false);
-                setAreaManagerToEdit(null);
+                setBranchHeadToEdit(null);
                 setEditSelectedBranches([]);
               }}
             >
@@ -1151,7 +1169,7 @@ export function AreaManagersTab({
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white"
               onClick={async () => {
-                if (!areaManagerToEdit || editSelectedBranches.length === 0) {
+                if (!branchHeadToEdit || editSelectedBranches.length === 0) {
                   toastMessages.generic.error(
                     "Validation Error",
                     "Please select at least one branch."
@@ -1159,73 +1177,71 @@ export function AreaManagersTab({
                   return;
                 }
 
-                await withErrorHandling(
-                  async () => {
-                    // Update employee with branch assignments
-                    const branchNames = editSelectedBranches
-                      .map((b) => b.name)
-                      .join(", ");
+                try {
+                  // Update employee with branch assignments
+                  const branchNames = editSelectedBranches
+                    .map((b) => b.name)
+                    .join(", ");
 
-                    // Update using API service
-                    const formData = new FormData();
-                    formData.append("branch", branchNames);
-                    formData.append("updatedAt", new Date().toISOString());
-                    await apiService.updateEmployee(formData, areaManagerToEdit.id);
+                  // Update using API service
+                  const formData = new FormData();
+                  formData.append("branch", branchNames);
+                  formData.append("updatedAt", new Date().toISOString());
+                  await apiService.updateEmployee(
+                    formData,
+                    branchHeadToEdit.id
+                  );
 
-                    // Also update accounts in localStorage
-                    const accounts = JSON.parse(
-                      localStorage.getItem("accounts") || "[]"
-                    );
-                    const accountIndex = accounts.findIndex(
-                      (acc: any) =>
-                        acc.id === areaManagerToEdit.id ||
-                        acc.employeeId === areaManagerToEdit.id
-                    );
+                  // Also update accounts in localStorage
+                  const accounts = JSON.parse(
+                    localStorage.getItem("accounts") || "[]"
+                  );
+                  const accountIndex = accounts.findIndex(
+                    (acc: any) =>
+                      acc.id === branchHeadToEdit.id ||
+                      acc.employeeId === branchHeadToEdit.id
+                  );
 
-                    if (accountIndex !== -1) {
-                      accounts[accountIndex] = {
-                        ...accounts[accountIndex],
-                        branch: branchNames,
-                        updatedAt: new Date().toISOString(),
-                      };
-                      localStorage.setItem(
-                        "accounts",
-                        JSON.stringify(accounts)
-                      );
-                    }
-
-                    // Refresh parent component data
-                    if (onRefresh) {
-                      await onRefresh(false, false);
-                    }
-
-                    // Store success data
-                    setEditSuccessData({
-                      areaManager: areaManagerToEdit,
-                      branches: [...editSelectedBranches],
-                    });
-
-                    // Close modal
-                    setIsEditModalOpen(false);
-                    setAreaManagerToEdit(null);
-                    setEditSelectedBranches([]);
-
-                    // Show success dialog
-                    setShowEditSuccessDialog(true);
-
-                    // Show success toast
-                    toastMessages.generic.success(
-                      "Branch Assignment Updated",
-                      `${areaManagerToEdit.name}'s branch assignment has been updated.`
-                    );
-                  },
-                  {
-                    errorTitle: "Update Failed",
-                    errorMessage:
-                      "Failed to update branch assignment. Please try again.",
-                    showSuccessToast: false, // We show custom success toast above
+                  if (accountIndex !== -1) {
+                    accounts[accountIndex] = {
+                      ...accounts[accountIndex],
+                      branch: branchNames,
+                      updatedAt: new Date().toISOString(),
+                    };
+                    localStorage.setItem("accounts", JSON.stringify(accounts));
                   }
-                );
+
+                  // Refresh parent component data
+                  if (onRefresh) {
+                    await onRefresh(false, false);
+                  }
+
+                  // Store success data
+                  setEditSuccessData({
+                    branchHead: branchHeadToEdit,
+                    branches: [...editSelectedBranches],
+                  });
+
+                  // Close modal
+                  setIsEditModalOpen(false);
+                  setBranchHeadToEdit(null);
+                  setEditSelectedBranches([]);
+
+                  // Show success dialog
+                  setShowEditSuccessDialog(true);
+
+                  // Show success toast
+                  toastMessages.generic.success(
+                    "Branch Assignment Updated",
+                    `${branchHeadToEdit.name}'s branch assignment has been updated.`
+                  );
+                } catch (error) {
+                  console.error("Error updating branch assignment:", error);
+                  toastMessages.generic.error(
+                    "Update Failed",
+                    "Failed to update branch assignment. Please try again."
+                  );
+                }
               }}
             >
               Save Changes
@@ -1271,11 +1287,11 @@ export function AreaManagersTab({
                 Updated!
               </DialogTitle>
               <DialogDescription className="text-base text-gray-600">
-                {editSuccessData.areaManager &&
+                {editSuccessData.branchHead &&
                   editSuccessData.branches.length > 0 && (
                     <>
                       <span className="font-semibold">
-                        {editSuccessData.areaManager.name}
+                        {editSuccessData.branchHead.name}
                       </span>
                       's branch assignment has been updated to{" "}
                       {editSuccessData.branches.length}{" "}
@@ -1294,13 +1310,13 @@ export function AreaManagersTab({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Area Manager Dialog */}
+      {/* Delete Branch Head Dialog */}
       <Dialog
         open={isDeleteModalOpen}
         onOpenChangeAction={(open) => {
           setIsDeleteModalOpen(open);
           if (!open) {
-            setAreaManagerToDelete(null);
+            setBranchHeadToDelete(null);
           }
         }}
       >
@@ -1312,7 +1328,7 @@ export function AreaManagersTab({
             </DialogTitle>
             <DialogDescription className="text-red-700">
               This action cannot be undone. Are you sure you want to permanently
-              remove branch assignments for {areaManagerToDelete?.name}?
+              remove branch assignments for {branchHeadToDelete?.name}?
             </DialogDescription>
           </DialogHeader>
 
@@ -1322,7 +1338,7 @@ export function AreaManagersTab({
                 variant="outline"
                 onClick={() => {
                   setIsDeleteModalOpen(false);
-                  setAreaManagerToDelete(null);
+                  setBranchHeadToDelete(null);
                 }}
                 className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
               >
@@ -1331,61 +1347,61 @@ export function AreaManagersTab({
               <Button
                 className="bg-red-600 hover:bg-red-700 text-white"
                 onClick={async () => {
-                  if (!areaManagerToDelete) return;
+                  if (!branchHeadToDelete) return;
 
-                  // Proceed with deletion using error handler
-                  await withErrorHandling(
-                    async () => {
-                      // Remove branch assignment (set branch to empty)
-                      const formData = new FormData();
-                      formData.append("branch", "");
-                      formData.append("updatedAt", new Date().toISOString());
-                      await apiService.updateEmployee(formData, areaManagerToDelete.id);
+                  try {
+                    // Remove branch assignment (set branch to empty)
+                    const formData = new FormData();
+                    formData.append("branch", "");
+                    formData.append("updatedAt", new Date().toISOString());
+                    await apiService.updateEmployee(
+                      formData,
+                      branchHeadToDelete.id
+                    );
 
-                      // Also update accounts in localStorage
-                      const accounts = JSON.parse(
-                        localStorage.getItem("accounts") || "[]"
+                    // Also update accounts in localStorage
+                    const accounts = JSON.parse(
+                      localStorage.getItem("accounts") || "[]"
+                    );
+                    const accountIndex = accounts.findIndex(
+                      (acc: any) =>
+                        acc.id === branchHeadToDelete.id ||
+                        acc.employeeId === branchHeadToDelete.id
+                    );
+
+                    if (accountIndex !== -1) {
+                      accounts[accountIndex] = {
+                        ...accounts[accountIndex],
+                        branch: "",
+                        updatedAt: new Date().toISOString(),
+                      };
+                      localStorage.setItem(
+                        "accounts",
+                        JSON.stringify(accounts)
                       );
-                      const accountIndex = accounts.findIndex(
-                        (acc: any) =>
-                          acc.id === areaManagerToDelete.id ||
-                          acc.employeeId === areaManagerToDelete.id
-                      );
-
-                      if (accountIndex !== -1) {
-                        accounts[accountIndex] = {
-                          ...accounts[accountIndex],
-                          branch: "",
-                          updatedAt: new Date().toISOString(),
-                        };
-                        localStorage.setItem(
-                          "accounts",
-                          JSON.stringify(accounts)
-                        );
-                      }
-
-                      // Refresh parent component data
-                      if (onRefresh) {
-                        await onRefresh(false, false);
-                      }
-
-                      // Show success message
-                      toastMessages.generic.success(
-                        "Branch Assignment Removed",
-                        `${areaManagerToDelete.name}'s branch assignment has been removed.`
-                      );
-
-                      // Close modal and reset
-                      setIsDeleteModalOpen(false);
-                      setAreaManagerToDelete(null);
-                    },
-                    {
-                      errorTitle: "Delete Failed",
-                      errorMessage:
-                        "Failed to remove branch assignment. Please try again.",
-                      showSuccessToast: false, // We show custom success toast above
                     }
-                  );
+
+                    // Refresh parent component data
+                    if (onRefresh) {
+                      await onRefresh(false, false);
+                    }
+
+                    // Show success message
+                    toastMessages.generic.success(
+                      "Branch Assignment Removed",
+                      `${branchHeadToDelete.name}'s branch assignment has been removed.`
+                    );
+
+                    // Close modal and reset
+                    setIsDeleteModalOpen(false);
+                    setBranchHeadToDelete(null);
+                  } catch (error) {
+                    console.error("Error deleting branch assignment:", error);
+                    toastMessages.generic.error(
+                      "Delete Failed",
+                      "Failed to remove branch assignment. Please try again."
+                    );
+                  }
                 }}
               >
                 🗑️ Delete Permanently

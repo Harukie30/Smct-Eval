@@ -22,39 +22,36 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2 } from "lucide-react";
-import departmentsData from "@/data/departments.json";
-import accountsDataRaw from "@/data/accounts.json";
+import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
-
-const accountsData = accountsDataRaw.accounts || [];
 
 interface Employee {
   id: number;
   name: string;
-  email: string;
-  position: string;
-  department: string;
   branch?: string;
   role: string;
-  isActive?: boolean;
 }
 
-interface Department {
-  id: number;
+interface Branch {
+  id: string;
   name: string;
+  branchCode?: string;
 }
 
-export function DepartmentsTab() {
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+interface BranchesTabProps {
+  employees: Employee[];
+}
+
+export default function BranchesTab() {
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newDepartmentName, setNewDepartmentName] = useState("");
+  const [newBranchName, setNewBranchName] = useState("");
+  const [newBranchCode, setNewBranchCode] = useState<string>("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [departmentToDelete, setDepartmentToDelete] =
-    useState<Department | null>(null);
+  const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -62,44 +59,28 @@ export function DepartmentsTab() {
   // Function to load data
   const loadData = async () => {
     try {
-      // Load departments from localStorage or fallback to departmentsData
-      const savedDepartments = JSON.parse(
-        localStorage.getItem("departments") || "[]"
-      );
-      let departmentsToUse;
+      // Load branches from API - now returns {id, name} format consistently
+      const branchesData = await apiService.getBranches();
 
-      if (savedDepartments.length > 0) {
-        departmentsToUse = savedDepartments;
-      } else {
-        // Initialize localStorage with default departments if empty
-        departmentsToUse = departmentsData;
-        localStorage.setItem("departments", JSON.stringify(departmentsData));
+      // Load from localStorage if available, otherwise use API data
+      const savedBranches = JSON.parse(
+        localStorage.getItem("branches") || "[]"
+      );
+      const branchesToUse =
+        savedBranches.length > 0 ? savedBranches : branchesData;
+
+      // If no saved branches, initialize localStorage with API data
+      if (savedBranches.length === 0 && branchesData.length > 0) {
+        localStorage.setItem("branches", JSON.stringify(branchesData));
       }
 
-      setDepartments(departmentsToUse);
-
-      // Load employees from localStorage or fallback to accountsData
-      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
-      const employeesData = (accounts.length > 0 ? accounts : accountsData)
-        .filter((account: any) => account.role !== "admin")
-        .map((account: any) => ({
-          id: account.employeeId || account.id,
-          name: account.name,
-          email: account.email,
-          position: account.position,
-          department: account.department,
-          branch: account.branch,
-          role: account.role,
-          isActive: account.isActive,
-        }));
-
-      setEmployees(employeesData);
+      setBranches(branchesToUse);
     } catch (error) {
-      console.error("Error loading departments:", error);
+      console.error("Error loading branches:", error);
     }
   };
 
-  // Load departments and employees when component mounts
+  // Load branches when component mounts
   useEffect(() => {
     const initializeData = async () => {
       setLoading(true);
@@ -108,7 +89,7 @@ export function DepartmentsTab() {
         await new Promise((resolve) => setTimeout(resolve, 300));
         await loadData();
       } catch (error) {
-        console.error("Error initializing departments:", error);
+        console.error("Error initializing branches:", error);
       } finally {
         setLoading(false);
       }
@@ -119,17 +100,17 @@ export function DepartmentsTab() {
 
   // Function to refresh data
   const refreshData = async () => {
-    console.log("🔄 Starting departments refresh...");
+    console.log("🔄 Starting branches refresh...");
     setIsRefreshing(true);
 
     try {
       await loadData();
-      console.log("✅ Departments refresh completed successfully");
+      console.log("✅ Branches refresh completed successfully");
 
       // Keep spinner visible for at least 800ms for better UX
       await new Promise((resolve) => setTimeout(resolve, 800));
     } catch (error) {
-      console.error("❌ Error refreshing departments:", error);
+      console.error("❌ Error refreshing branches:", error);
       // Even on error, show spinner for minimum duration
       await new Promise((resolve) => setTimeout(resolve, 800));
     } finally {
@@ -137,125 +118,127 @@ export function DepartmentsTab() {
     }
   };
 
-  // Function to handle adding a new department
-  const handleAddDepartment = () => {
-    if (!newDepartmentName.trim()) {
+  // Function to handle adding a new branch
+  const handleAddBranch = () => {
+    if (!newBranchName.trim()) {
       toastMessages.generic.warning(
         "Validation Error",
-        "Please enter a department name."
+        "Please enter a branch name."
       );
       return;
     }
 
-    // Check if department already exists
-    const departmentExists = departments.some(
-      (dept) =>
-        dept.name.toLowerCase().trim() ===
-        newDepartmentName.toLowerCase().trim()
+    // Check if branch already exists
+    const branchExists = branches.some(
+      (branch) =>
+        branch.name.toLowerCase().trim() === newBranchName.toLowerCase().trim()
     );
 
-    if (departmentExists) {
+    if (branchExists) {
       toastMessages.generic.warning(
-        "Duplicate Department",
-        "A department with this name already exists."
+        "Duplicate Branch",
+        "A branch with this name already exists."
       );
       return;
     }
 
     try {
-      // Generate new ID (get max ID and add 1)
+      // Generate new ID (get max ID and add 1, or use timestamp)
       const maxId =
-        departments.length > 0 ? Math.max(...departments.map((d) => d.id)) : 0;
+        branches.length > 0
+          ? Math.max(...branches.map((b) => parseInt(b.id) || 0))
+          : 0;
 
-      const newDepartment: Department = {
-        id: maxId + 1,
-        name: newDepartmentName.trim(),
+      const newBranch: Branch = {
+        id: String(maxId + 1),
+        name: newBranchName.trim(),
+        branchCode: newBranchCode.trim() || undefined,
       };
 
       // Add to state
-      const updatedDepartments = [...departments, newDepartment];
-      setDepartments(updatedDepartments);
+      const updatedBranches = [...branches, newBranch];
+      setBranches(updatedBranches);
 
       // Save to localStorage
-      localStorage.setItem("departments", JSON.stringify(updatedDepartments));
+      localStorage.setItem("branches", JSON.stringify(updatedBranches));
 
       // Show success toast
       toastMessages.generic.success(
-        "Department Added",
-        `"${newDepartmentName}" has been added successfully.`
+        "Branch Added",
+        `"${newBranchName}" has been added successfully.`
       );
 
       // Reset form and close modal
-      setNewDepartmentName("");
+      setNewBranchName("");
+      setNewBranchCode("");
       setIsAddModalOpen(false);
     } catch (error) {
-      console.error("Error adding department:", error);
+      console.error("Error adding branch:", error);
       toastMessages.generic.error(
         "Error",
-        "Failed to add department. Please try again."
+        "Failed to add branch. Please try again."
       );
     }
   };
 
-  // Function to handle deleting a department
-  const handleDeleteDepartment = () => {
-    if (!departmentToDelete) return;
+  // Function to handle deleting a branch
+  const handleDeleteBranch = () => {
+    if (!branchToDelete) return;
 
     try {
-      // Check if department has employees
-      const deptEmployees = employees.filter(
-        (emp) => emp.department === departmentToDelete.name
+      // Check if branch has employees
+      const branchEmployees = employees.filter(
+        (emp) => emp.branch === branchToDelete.name
       );
 
-      if (deptEmployees.length > 0) {
+      if (branchEmployees.length > 0) {
         toastMessages.generic.warning(
-          "Cannot Delete Department",
-          `This department has ${deptEmployees.length} employee(s). Please reassign them before deleting.`
+          "Cannot Delete Branch",
+          `This branch has ${branchEmployees.length} employee(s). Please reassign them before deleting.`
         );
         setIsDeleteModalOpen(false);
-        setDepartmentToDelete(null);
+        setBranchToDelete(null);
         return;
       }
 
       // Remove from state
-      const updatedDepartments = departments.filter(
-        (dept) => dept.id !== departmentToDelete.id
+      const updatedBranches = branches.filter(
+        (branch) => branch.id !== branchToDelete.id
       );
-      setDepartments(updatedDepartments);
+      setBranches(updatedBranches);
 
       // Update localStorage
-      localStorage.setItem("departments", JSON.stringify(updatedDepartments));
+      localStorage.setItem("branches", JSON.stringify(updatedBranches));
 
       // Show success toast
       toastMessages.generic.success(
-        "Department Deleted",
-        `"${departmentToDelete.name}" has been deleted successfully.`
+        "Branch Deleted",
+        `"${branchToDelete.name}" has been deleted successfully.`
       );
 
       // Close modal and reset
       setIsDeleteModalOpen(false);
-      setDepartmentToDelete(null);
+      setBranchToDelete(null);
     } catch (error) {
-      console.error("Error deleting department:", error);
+      console.error("Error deleting branch:", error);
       toastMessages.generic.error(
         "Error",
-        "Failed to delete department. Please try again."
+        "Failed to delete branch. Please try again."
       );
     }
   };
 
-  // Helper function to get department statistics
-  const getDepartmentStats = (deptName: string) => {
-    const deptEmployees = employees.filter(
-      (emp) => emp.department === deptName
+  // Function to get branch statistics
+  const getBranchStats = (branchName: string) => {
+    const branchEmployees = employees.filter(
+      (emp) => emp.branch === branchName
     );
     return {
-      count: deptEmployees.length,
-      managers: deptEmployees.filter(
+      count: branchEmployees.length,
+      managers: branchEmployees.filter(
         (emp) =>
           emp.role === "Manager" || emp.role?.toLowerCase().includes("manager")
       ).length,
-      averageTenure: 2.5, // Mock data
     };
   };
 
@@ -265,7 +248,7 @@ export function DepartmentsTab() {
       <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {Array.from({ length: 4 }).map((_, index) => (
-            <Card key={`skeleton-dept-${index}`} className="animate-pulse">
+            <Card key={`skeleton-branch-${index}`} className="animate-pulse">
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <Skeleton className="h-6 w-32" />
@@ -298,9 +281,9 @@ export function DepartmentsTab() {
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Departments</CardTitle>
+              <CardTitle>Branches</CardTitle>
               <CardDescription>
-                View and manage department information
+                View and manage branch information
               </CardDescription>
             </div>
             <div className="flex space-x-2">
@@ -309,7 +292,7 @@ export function DepartmentsTab() {
                 className="flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 hover:text-white"
               >
                 <Plus className="h-5 w-5" />
-                Add Department
+                Add Branch
               </Button>
               <Button
                 variant="outline"
@@ -388,13 +371,13 @@ export function DepartmentsTab() {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {departments.map((dept) => {
-                const stats = getDepartmentStats(dept.name);
+              {branches.map((branch) => {
+                const stats = getBranchStats(branch.name);
                 return (
-                  <Card key={dept.id}>
+                  <Card key={branch.id}>
                     <CardHeader>
                       <CardTitle className="flex justify-between items-center">
-                        {dept.name}
+                        {branch.name}
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">
                             {stats.count} employees
@@ -403,7 +386,7 @@ export function DepartmentsTab() {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setDepartmentToDelete(dept);
+                              setBranchToDelete(branch);
                               setIsDeleteModalOpen(true);
                             }}
                             className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -412,7 +395,7 @@ export function DepartmentsTab() {
                           </Button>
                         </div>
                       </CardTitle>
-                      <CardDescription>Department Manager</CardDescription>
+                      <CardDescription>Branch Location</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
@@ -438,32 +421,44 @@ export function DepartmentsTab() {
         </CardContent>
       </Card>
 
-      {/* Add Department Modal */}
+      {/* Add Branch Modal */}
       <Dialog open={isAddModalOpen} onOpenChangeAction={setIsAddModalOpen}>
         <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
           <DialogHeader className="pb-4">
-            <DialogTitle>Add New Department</DialogTitle>
+            <DialogTitle>Add New Branch</DialogTitle>
             <DialogDescription>
-              Create a new department in the system
+              Create a new branch in the system
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 px-2">
             <div className="space-y-2">
-              <Label htmlFor="departmentName" className="text-sm font-medium">
-                Department Name <span className="text-red-500">*</span>
+              <Label htmlFor="branchName" className="text-sm font-medium">
+                Branch Name <span className="text-red-500">*</span>
               </Label>
               <Input
-                id="departmentName"
-                placeholder="Enter department name"
-                value={newDepartmentName}
-                onChange={(e) => setNewDepartmentName(e.target.value)}
+                id="branchName"
+                placeholder="Enter branch name"
+                value={newBranchName}
+                onChange={(e) => setNewBranchName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    handleAddDepartment();
+                    handleAddBranch();
                   }
                 }}
                 autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="branchCode" className="text-sm font-medium">
+                Branch Code
+              </Label>
+              <Input
+                id="branchCode"
+                placeholder="Enter branch code (optional)"
+                value={newBranchCode}
+                onChange={(e) => setNewBranchCode(e.target.value.toUpperCase())}
+                style={{ textTransform: "uppercase" }}
               />
             </div>
           </div>
@@ -473,30 +468,31 @@ export function DepartmentsTab() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setNewDepartmentName("");
+                  setNewBranchName("");
+                  setNewBranchCode("");
                   setIsAddModalOpen(false);
                 }}
               >
                 Cancel
               </Button>
               <Button
-                onClick={handleAddDepartment}
+                onClick={handleAddBranch}
                 className="bg-green-500 text-white hover:bg-green-600 hover:text-white"
               >
-                Add Department
+                Add Branch
               </Button>
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Department Confirmation Modal */}
+      {/* Delete Branch Confirmation Modal */}
       <Dialog
         open={isDeleteModalOpen}
         onOpenChangeAction={(open) => {
           setIsDeleteModalOpen(open);
           if (!open) {
-            setDepartmentToDelete(null);
+            setBranchToDelete(null);
           }
         }}
       >
@@ -504,21 +500,21 @@ export function DepartmentsTab() {
           <DialogHeader className="pb-4 bg-red-50 rounded-lg">
             <DialogTitle className="text-red-800 flex items-center gap-2">
               <span className="text-xl">⚠️</span>
-              Delete Department
+              Delete Branch
             </DialogTitle>
             <DialogDescription className="text-red-700">
               This action cannot be undone. Are you sure you want to permanently
-              delete "{departmentToDelete?.name}"?
+              delete "{branchToDelete?.name}"?
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 px-2 mt-8">
-            {departmentToDelete &&
+            {branchToDelete &&
               (() => {
-                const deptEmployees = employees.filter(
-                  (emp) => emp.department === departmentToDelete.name
+                const branchEmployees = employees.filter(
+                  (emp) => emp.branch === branchToDelete.name
                 );
-                return deptEmployees.length > 0 ? (
+                return branchEmployees.length > 0 ? (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
                       <div className="flex-shrink-0">
@@ -536,12 +532,12 @@ export function DepartmentsTab() {
                       </div>
                       <div className="text-sm text-yellow-700">
                         <p className="font-medium">
-                          Warning: This department has {deptEmployees.length}{" "}
+                          Warning: This branch has {branchEmployees.length}{" "}
                           employee(s).
                         </p>
                         <p className="mt-1">
                           Please reassign all employees before deleting this
-                          department.
+                          branch.
                         </p>
                       </div>
                     </div>
@@ -567,7 +563,7 @@ export function DepartmentsTab() {
                           Warning: This will permanently delete:
                         </p>
                         <ul className="mt-2 list-disc list-inside space-y-1">
-                          <li>Department record</li>
+                          <li>Branch record</li>
                           <li>All associated data</li>
                         </ul>
                       </div>
@@ -583,7 +579,7 @@ export function DepartmentsTab() {
                 variant="outline"
                 onClick={() => {
                   setIsDeleteModalOpen(false);
-                  setDepartmentToDelete(null);
+                  setBranchToDelete(null);
                 }}
                 className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
               >
@@ -591,11 +587,11 @@ export function DepartmentsTab() {
               </Button>
               <Button
                 className="bg-red-600 hover:bg-red-700 text-white"
-                onClick={handleDeleteDepartment}
+                onClick={handleDeleteBranch}
                 disabled={
-                  departmentToDelete
+                  branchToDelete
                     ? employees.filter(
-                        (emp) => emp.department === departmentToDelete.name
+                        (emp) => emp.branch === branchToDelete.name
                       ).length > 0
                     : false
                 }
