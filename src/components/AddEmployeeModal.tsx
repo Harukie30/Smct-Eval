@@ -224,7 +224,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
             {/* fName */}
             <div className="space-y-2">
-              <Label htmlFor="fname">Full Name *</Label>
+              <Label htmlFor="fname">First Name *</Label>
               <Input
                 id="fname"
                 value={formData.fname}
@@ -239,7 +239,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
             {/* lName */}
             <div className="space-y-2">
-              <Label htmlFor="lname">Full Name *</Label>
+              <Label htmlFor="lname">Last Name *</Label>
               <Input
                 id="lname"
                 value={formData.lname}

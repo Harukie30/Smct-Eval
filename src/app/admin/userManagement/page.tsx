@@ -380,21 +380,8 @@ export default function UserManagementTab() {
 
   const handleAddUser = async (newUser: any) => {
     try {
-      const newAccount = {
-        name: newUser.name,
-        email: newUser.email,
-        position: newUser.position,
-        department: newUser.department,
-        branch: newUser.branch,
-        role: newUser.role,
-        password: newUser.password,
-        isActive: newUser.isActive !== undefined ? newUser.isActive : true,
-        employeeId: Date.now(), // Temporary ID
-      };
-
-      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
-      accounts.push(newAccount);
-      localStorage.setItem("accounts", JSON.stringify(accounts));
+      console.log("newUser", newUser);
+      // const addUser = await apiService.addUser(newUser);
 
       await refreshUserData();
 
