@@ -322,7 +322,7 @@ export default function DashboardShell(props: DashboardShellProps) {
   };
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
       <header className="bg-white shadow-sm border-b rounded-t-lg">
         <div className="flex justify-between items-center px-6 py-4">

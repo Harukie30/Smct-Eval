@@ -54,7 +54,6 @@ export default function OverviewTab() {
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
 
-  console.log("currentPage:", currentPage);
   const loadEvaluations = async (searchValue: string) => {
     const response = await clientDataService.getSubmissions(
       searchValue,

@@ -42,8 +42,8 @@ import { toastMessages } from "@/lib/toastMessages";
 import apiService from "@/lib/apiService";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 
-import accountsDataRaw from "@/data/accounts.json";
 import departmentsData from "@/data/departments.json";
+import EvaluationsPagination from "@/components/paginationComponent";
 
 // TypeScript interfaces
 interface Employee {
@@ -66,6 +66,10 @@ interface Employee {
   updated_at?: Date;
 }
 
+interface RoleType {
+  id: string;
+  name: string;
+}
 interface UserManagementTabProps {
   branchesData: any;
   departmentData: any;
@@ -90,15 +94,13 @@ export default function UserManagementTab({
     []
   );
   const [tab, setTab] = useState<"active" | "new">("active");
-  const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [roles, setRoles] = useState<RoleType[]>([]);
   const [approvedRegistrations, setApprovedRegistrations] = useState<number[]>(
     []
   );
   const [rejectedRegistrations, setRejectedRegistrations] = useState<number[]>(
     []
   );
-  const [usersRefreshing, setUsersRefreshing] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Modal states
@@ -118,73 +120,95 @@ export default function UserManagementTab({
   //
   //
   //
-  //filters and paginations
+  //filters
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  const [roleFilter, setRoleFilter] = useState("");
+  const [debouncedRoleFilter, setDebouncedRoleFilter] = useState(roleFilter);
+  //pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(4);
   const [overviewTotal, setOverviewTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
 
-  const loadPendingUsers = async () => {
-    try {
-      const pendingUsers = await apiService.getPendingRegistrations();
-      setPendingRegistrations(pendingUsers);
+  const loadPendingUsers = async (searchValue: string, roleFilter: string) => {
+    const pendingUsers = await apiService.getPendingRegistrations(
+      searchValue,
+      roleFilter,
+      currentPage,
+      itemsPerPage
+    );
+    setPendingRegistrations(pendingUsers);
 
-      setLoading(true);
-
-      setOverviewTotal(pendingUsers.total);
-      setTotalPages(pendingUsers.last_page);
-      setPerPage(pendingUsers.per_page);
-    } catch (error) {
-      console.log(error);
-      setLoading(false);
-    } finally {
-      setLoading(false);
-    }
+    setOverviewTotal(pendingUsers.total);
+    setTotalPages(pendingUsers.last_page);
+    setPerPage(pendingUsers.per_page);
   };
 
-  const loadActiveUsers = async () => {
-    try {
-      const activeUsers = await apiService.getActiveRegistrations();
-      setActiveRegistrations(activeUsers);
+  const loadActiveUsers = async (searchValue: string, roleFilter: string) => {
+    const activeUsers = await apiService.getActiveRegistrations(
+      searchValue,
+      roleFilter,
+      currentPage,
+      itemsPerPage
+    );
+    setActiveRegistrations(activeUsers);
 
-      setLoading(true);
-
-      setOverviewTotal(activeUsers.total);
-      setTotalPages(activeUsers.last_page);
-      setPerPage(activeUsers.per_page);
-    } catch (error) {
-      console.log(error);
-      setLoading(false);
-    } finally {
-      setLoading(false);
-    }
+    setOverviewTotal(activeUsers.total);
+    setTotalPages(activeUsers.last_page);
+    setPerPage(activeUsers.per_page);
   };
 
+  //render when page reload not loading not everySearch or Filters
+  console.log(activeRegistrations);
   useEffect(() => {
-    if (tab === "new") {
-      loadPendingUsers();
-    }
-    if (tab === "active") {
-      loadActiveUsers();
-    }
+    const mountData = async () => {
+      const roles = await apiService.getAllRoles();
+      setRoles(roles);
+    };
+    mountData();
   }, []);
+
+  //mount every searchTerm changes and RoleFilter
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      searchTerm === "" ? currentPage : setCurrentPage(1);
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm, roleFilter]);
+
+  // Fetch API whenever debounced search term changes
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        if (tab === "active") {
+          await loadActiveUsers(debouncedSearchTerm, debouncedRoleFilter);
+        }
+        if (tab === "new") {
+          await loadPendingUsers(debouncedSearchTerm, debouncedRoleFilter);
+        }
+      } catch (error) {
+        console.error("Error refreshing data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [debouncedSearchTerm, debouncedRoleFilter, currentPage]);
 
   // Function to refresh user data
   const refreshUserData = async (showLoading = false) => {
     try {
-      if (showLoading) {
-        setUsersRefreshing(true);
-        setIsRefreshing(true);
-      }
-
       if (tab === "new") {
-        loadPendingUsers();
+        loadPendingUsers(searchTerm, roleFilter);
       }
       if (tab === "active") {
-        loadActiveUsers();
+        loadActiveUsers(searchTerm, roleFilter);
       }
 
       if (showLoading) {
@@ -197,10 +221,7 @@ export default function UserManagementTab({
         "Failed to refresh user data. Please try again."
       );
     } finally {
-      if (showLoading) {
-        setUsersRefreshing(false);
-        setIsRefreshing(false);
-      }
+      setLoading(false);
     }
   };
 
@@ -322,7 +343,7 @@ export default function UserManagementTab({
           JSON.stringify(newRejected)
         );
 
-        await loadUsers();
+        await loadPendingUsers(searchTerm, roleFilter);
         await refreshDashboardData(false, false);
         toastMessages.user.approved(registrationName);
       } else {
@@ -369,7 +390,7 @@ export default function UserManagementTab({
           JSON.stringify(newApproved)
         );
 
-        await loadUsers();
+        await loadPendingUsers(searchTerm, roleFilter);
         toastMessages.user.rejected(registrationName);
       } else {
         toastMessages.generic.error(
@@ -423,8 +444,15 @@ export default function UserManagementTab({
 
   // Handle tab change with refresh
   const handleTabChange = async (tab: "active" | "new") => {
-    setTab(tab);
-    await refreshUserData(true);
+    try {
+      setTab(tab);
+      await refreshUserData(true);
+    } catch (error) {
+      console.log(error);
+      setLoading(false);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Show loading skeleton on initial load
@@ -476,41 +504,34 @@ export default function UserManagementTab({
             </div>
           </CardContent>
         </Card>
+        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+          <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+            <div className="relative">
+              {/* Spinning ring */}
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+              {/* Logo in center */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <img
+                  src="/smct.png"
+                  alt="SMCT Logo"
+                  className="h-10 w-10 object-contain"
+                />
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 font-medium">
+              {tab === "new"
+                ? "Loading new registrations..."
+                : "Loading users..."}
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
-      {/* Only show top-level spinner during initial load, not during refresh */}
-      {usersRefreshing && loading && (
-        <>
-          {/* Centered Loading Spinner with Logo */}
-          <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-            <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-              <div className="relative">
-                {/* Spinning ring */}
-                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                {/* Logo in center */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <img
-                    src="/smct.png"
-                    alt="SMCT Logo"
-                    className="h-10 w-10 object-contain"
-                  />
-                </div>
-              </div>
-              <p className="text-sm text-gray-600 font-medium">
-                {tab === "new"
-                  ? "Loading new registrations..."
-                  : "Loading users..."}
-              </p>
-            </div>
-          </div>
-        </>
-      )}
-
-      {(!usersRefreshing || !loading) && (
+    <div className="relative overflow-y-auto pr-2 min-h-[400px]">
+      {!loading && (
         <Card>
           <CardHeader>
             <CardTitle>User Management</CardTitle>
@@ -548,18 +569,19 @@ export default function UserManagementTab({
                       placeholder="Search users..."
                       className="w-64"
                       value={searchTerm}
-                      onChange={(e) => setUserSearchTerm(e.target.value)}
+                      onChange={(e) => setSearchTerm(e.target.value)}
                     />
-                    <Select>
+                    <Select onValueChange={(value) => setRoleFilter(value)}>
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="Filter by role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Roles</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="hr">HR</SelectItem>
-                        <SelectItem value="evaluator">Evaluator</SelectItem>
-                        <SelectItem value="employee">Employee</SelectItem>
+                        <SelectItem value="0">All Roles</SelectItem>
+                        {roles.map((role) => (
+                          <SelectItem key={role.id} value={role.id}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -567,10 +589,10 @@ export default function UserManagementTab({
                     <Button
                       variant="outline"
                       onClick={() => refreshUserData(true)}
-                      disabled={isRefreshing || usersRefreshing}
+                      disabled={loading}
                       className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
                     >
-                      {isRefreshing || usersRefreshing ? (
+                      {loading ? (
                         <>
                           <svg
                             className="animate-spin h-5 w-5"
@@ -616,34 +638,13 @@ export default function UserManagementTab({
                       onClick={() => setIsAddUserModalOpen(true)}
                       className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2"
                     >
-                      <Plus className="h-5 w-5 font-blod " />
+                      <Plus className="h-5 w-5 font-bold " />
                       Add User
                     </Button>
                   </div>
                 </div>
 
                 <div className="relative max-h-[450px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                  {isRefreshing && (
-                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none bg-white/60 rounded-lg">
-                      <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                        <div className="relative">
-                          {/* Spinning ring */}
-                          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-                          {/* Logo in center */}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <img
-                              src="/smct.png"
-                              alt="SMCT Logo"
-                              className="h-8 w-8 object-contain"
-                            />
-                          </div>
-                        </div>
-                        <p className="text-xs text-gray-600 font-medium">
-                          Refreshing...
-                        </p>
-                      </div>
-                    </div>
-                  )}
                   <Table>
                     <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
@@ -713,84 +714,22 @@ export default function UserManagementTab({
                     </TableBody>
                   </Table>
                 </div>
-
-                {/* Pagination Controls for Active Users */}
-                {
-                  // activeUsersTotal > itemsPerPage && (
-                  // <div className="flex items-center justify-between mt-4 px-2">
-                  //   <div className="text-sm text-gray-600">
-                  //     Showing {activeUsersStartIndex + 1} to{" "}
-                  //     {Math.min(activeUsersEndIndex, activeUsersTotal)} of{" "}
-                  //     {activeUsersTotal} users
-                  //   </div>
-                  //   <div className="flex items-center gap-2">
-                  //     <Button
-                  //       variant="outline"
-                  //       size="sm"
-                  //       onClick={() =>
-                  //         setActiveUsersPage((prev) => Math.max(1, prev - 1))
-                  //       }
-                  //       disabled={activeUsersPage === 1}
-                  //       className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                  //     >
-                  //       Previous
-                  //     </Button>
-                  //     <div className="flex items-center gap-1">
-                  //       {Array.from(
-                  //         { length: activeUsersTotalPages },
-                  //         (_, i) => i + 1
-                  //       ).map((page) => {
-                  //         if (
-                  //           page === 1 ||
-                  //           page === activeUsersTotalPages ||
-                  //           (page >= activeUsersPage - 1 &&
-                  //             page <= activeUsersPage + 1)
-                  //         ) {
-                  //           return (
-                  //             <Button
-                  //               key={page}
-                  //               variant={
-                  //                 activeUsersPage === page
-                  //                   ? "default"
-                  //                   : "outline"
-                  //               }
-                  //               size="sm"
-                  //               onClick={() => setActiveUsersPage(page)}
-                  //               className="text-xs w-8 h-8 p-0 bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
-                  //             >
-                  //               {page}
-                  //             </Button>
-                  //           );
-                  //         } else if (
-                  //           page === activeUsersPage - 2 ||
-                  //           page === activeUsersPage + 2
-                  //         ) {
-                  //           return (
-                  //             <span key={page} className="text-gray-400">
-                  //               ...
-                  //             </span>
-                  //           );
-                  //         }
-                  //         return null;
-                  //       })}
-                  //     </div>
-                  //     <Button
-                  //       variant="outline"
-                  //       size="sm"
-                  //       onClick={() =>
-                  //         setActiveUsersPage((prev) =>
-                  //           Math.min(activeUsersTotalPages, prev + 1)
-                  //         )
-                  //       }
-                  //       disabled={activeUsersPage === activeUsersTotalPages}
-                  //       className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                  //     >
-                  //       Next
-                  //     </Button>
-                  //   </div>
-                  // </div>
-                  // )
-                }
+                <div>
+                  {tab === "active" && (
+                    <div>
+                      <EvaluationsPagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        total={overviewTotal}
+                        perPage={perPage}
+                        onPageChange={(page) => {
+                          setCurrentPage(page);
+                          loadActiveUsers(searchTerm, roleFilter);
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </CardContent>
@@ -814,8 +753,8 @@ export default function UserManagementTab({
                     <Input
                       placeholder="Search new registrations..."
                       className="w-64"
-                      value={userSearchTerm}
-                      onChange={(e) => setUserSearchTerm(e.target.value)}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
                     />
                     <Select>
                       <SelectTrigger className="w-48">
@@ -835,10 +774,10 @@ export default function UserManagementTab({
                     <Button
                       variant="outline"
                       onClick={() => refreshUserData(true)}
-                      disabled={isRefreshing || usersRefreshing}
+                      disabled={loading}
                       className="flex items-center gap-2"
                     >
-                      {isRefreshing || usersRefreshing ? (
+                      {loading ? (
                         <>
                           <svg
                             className="animate-spin h-5 w-5"
@@ -884,7 +823,7 @@ export default function UserManagementTab({
                 </div>
 
                 <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                  {isRefreshing && (
+                  {loading && (
                     <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none bg-white/60 rounded-lg">
                       <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
                         <div className="relative">
@@ -925,7 +864,7 @@ export default function UserManagementTab({
                             colSpan={6}
                             className="text-center py-8 text-gray-500"
                           >
-                            {userSearchTerm
+                            {searchTerm
                               ? "No new registrations match your search."
                               : "No new registrations found."}
                           </TableCell>

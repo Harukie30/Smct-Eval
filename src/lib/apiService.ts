@@ -141,9 +141,21 @@ export const apiService = {
     }
   },
 
-  getPendingRegistrations: async (): Promise<any | null> => {
+  getPendingRegistrations: async (
+    searchTerm: string,
+    role: string | number,
+    page: number,
+    perPage: number
+  ): Promise<any | null> => {
     try {
-      const response = await api.get("/getPendingRegistrations");
+      const response = await api.get("/getPendingRegistrations", {
+        params: {
+          search: searchTerm || "",
+          role: role || "",
+          page: page,
+          per_page: perPage,
+        },
+      });
       return response.data.users || [];
     } catch (error) {
       const axiosError = error as AxiosError<any>;
@@ -154,10 +166,22 @@ export const apiService = {
     }
   },
 
-  getActiveRegistrations: async (): Promise<any | null> => {
+  getActiveRegistrations: async (
+    searchTerm: string,
+    role: string | number,
+    page: number,
+    perPage: number
+  ): Promise<any | null> => {
     try {
-      const response = await api.get("/getAllActiveUsers");
-      return response.data.users;
+      const response = await api.get("/getAllActiveUsers", {
+        params: {
+          search: searchTerm || "",
+          role: role || "",
+          page: page,
+          per_page: perPage,
+        },
+      });
+      return response.data.users.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw new Error(
@@ -1119,17 +1143,7 @@ export const apiService = {
     try {
       const response = await api.get("/getAllRoles");
       const data = response.data;
-
-      if (data.success && data.roles) {
-        return data.roles;
-      }
-      if (Array.isArray(data.roles)) {
-        return data.roles;
-      }
-      if (Array.isArray(data)) {
-        return data;
-      }
-      return [];
+      return data.roles;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw new Error(
