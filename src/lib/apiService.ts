@@ -143,7 +143,7 @@ export const apiService = {
 
   getPendingRegistrations: async (
     searchTerm: string,
-    role: string | number,
+    status: string | number,
     page: number,
     perPage: number
   ): Promise<any | null> => {
@@ -151,7 +151,7 @@ export const apiService = {
       const response = await api.get("/getPendingRegistrations", {
         params: {
           search: searchTerm || "",
-          role: role || "",
+          status: status || "",
           page: page,
           per_page: perPage,
         },
@@ -181,7 +181,7 @@ export const apiService = {
           per_page: perPage,
         },
       });
-      return response.data.users.data;
+      return response.data.users || [];
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw new Error(

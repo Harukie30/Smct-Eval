@@ -95,6 +95,8 @@ export default function UserManagementTab({
   );
   const [tab, setTab] = useState<"active" | "new">("active");
   const [roles, setRoles] = useState<RoleType[]>([]);
+  const [activeTotalItems, setActiveTotalItems] = useState(0);
+  const [pendingTotalItems, setPendingTotalItems] = useState(0);
   const [approvedRegistrations, setApprovedRegistrations] = useState<number[]>(
     []
   );
@@ -120,28 +122,40 @@ export default function UserManagementTab({
   //
   //
   //
-  //filters
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  //filters for active users
+  const [activeSearchTerm, setActiveSearchTerm] = useState("");
+  const [debouncedActiveSearchTerm, setDebouncedActiveSearchTerm] =
+    useState(activeSearchTerm);
   const [roleFilter, setRoleFilter] = useState("");
   const [debouncedRoleFilter, setDebouncedRoleFilter] = useState(roleFilter);
+  //filters for pending users
+  const [pendingSearchTerm, setPendingSearchTerm] = useState("");
+  const [debouncedPendingSearchTerm, setDebouncedPendingSearchTerm] =
+    useState(pendingSearchTerm);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [debouncedStatusFilter, setDebouncedStatusFilter] =
+    useState(statusFilter);
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(4);
-  const [overviewTotal, setOverviewTotal] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
 
-  const loadPendingUsers = async (searchValue: string, roleFilter: string) => {
+  const loadPendingUsers = async (
+    searchValue: string,
+    statusFilter: string
+  ) => {
     const pendingUsers = await apiService.getPendingRegistrations(
       searchValue,
-      roleFilter,
+      statusFilter,
       currentPage,
       itemsPerPage
     );
-    setPendingRegistrations(pendingUsers);
+    setPendingRegistrations(pendingUsers.data);
 
-    setOverviewTotal(pendingUsers.total);
+    setTotalItems(pendingUsers.total);
+    setPendingTotalItems(pendingUsers.total);
     setTotalPages(pendingUsers.last_page);
     setPerPage(pendingUsers.per_page);
   };
@@ -153,43 +167,51 @@ export default function UserManagementTab({
       currentPage,
       itemsPerPage
     );
-    setActiveRegistrations(activeUsers);
+    setActiveRegistrations(activeUsers.data);
 
-    setOverviewTotal(activeUsers.total);
+    setTotalItems(activeUsers.total);
+    setActiveTotalItems(activeUsers.total);
     setTotalPages(activeUsers.last_page);
     setPerPage(activeUsers.per_page);
   };
 
   //render when page reload not loading not everySearch or Filters
-  console.log(activeRegistrations);
   useEffect(() => {
-    const mountData = async () => {
-      const roles = await apiService.getAllRoles();
-      setRoles(roles);
-    };
-    mountData();
+    try {
+      setLoading(true);
+      const mountData = async () => {
+        const roles = await apiService.getAllRoles();
+        setRoles(roles);
+      };
+      mountData();
+      loadActiveUsers(activeSearchTerm, roleFilter);
+      loadPendingUsers(pendingSearchTerm, statusFilter);
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  //mount every searchTerm changes and RoleFilter
+  //mount every activeSearchTerm changes and RoleFilter
   useEffect(() => {
     const handler = setTimeout(() => {
-      searchTerm === "" ? currentPage : setCurrentPage(1);
-      setDebouncedSearchTerm(searchTerm);
-    }, 500);
+      activeSearchTerm === "" ? currentPage : setCurrentPage(1);
+      setDebouncedActiveSearchTerm(activeSearchTerm);
+      setDebouncedRoleFilter(roleFilter);
+    }, 1500);
 
     return () => clearTimeout(handler);
-  }, [searchTerm, roleFilter]);
+  }, [activeSearchTerm, roleFilter]);
 
-  // Fetch API whenever debounced search term changes
+  // Fetch API whenever debounced active search term changes
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
+        setLoading(true);
         if (tab === "active") {
-          await loadActiveUsers(debouncedSearchTerm, debouncedRoleFilter);
-        }
-        if (tab === "new") {
-          await loadPendingUsers(debouncedSearchTerm, debouncedRoleFilter);
+          await loadActiveUsers(debouncedActiveSearchTerm, debouncedRoleFilter);
         }
       } catch (error) {
         console.error("Error refreshing data:", error);
@@ -199,16 +221,49 @@ export default function UserManagementTab({
     };
 
     fetchData();
-  }, [debouncedSearchTerm, debouncedRoleFilter, currentPage]);
+  }, [debouncedActiveSearchTerm, debouncedRoleFilter, currentPage]);
+
+  //mount every pendingSearchTerm changes and statusFilter
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      pendingSearchTerm === "" ? currentPage : setCurrentPage(1);
+      setDebouncedPendingSearchTerm(pendingSearchTerm);
+      setDebouncedStatusFilter(statusFilter);
+    }, 1500);
+
+    return () => clearTimeout(handler);
+  }, [pendingSearchTerm, statusFilter]);
+
+  // Fetch API whenever debounced pending search term changes
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        if (tab === "new") {
+          await loadPendingUsers(
+            debouncedPendingSearchTerm,
+            debouncedStatusFilter
+          );
+        }
+      } catch (error) {
+        console.error("Error refreshing data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [debouncedPendingSearchTerm, debouncedStatusFilter, currentPage]);
 
   // Function to refresh user data
   const refreshUserData = async (showLoading = false) => {
     try {
+      setLoading(true);
       if (tab === "new") {
-        loadPendingUsers(searchTerm, roleFilter);
+        loadPendingUsers(pendingSearchTerm, statusFilter);
       }
       if (tab === "active") {
-        loadActiveUsers(searchTerm, roleFilter);
+        loadActiveUsers(activeSearchTerm, roleFilter);
       }
 
       if (showLoading) {
@@ -343,7 +398,7 @@ export default function UserManagementTab({
           JSON.stringify(newRejected)
         );
 
-        await loadPendingUsers(searchTerm, roleFilter);
+        await loadPendingUsers(pendingSearchTerm, statusFilter);
         await refreshDashboardData(false, false);
         toastMessages.user.approved(registrationName);
       } else {
@@ -390,7 +445,7 @@ export default function UserManagementTab({
           JSON.stringify(newApproved)
         );
 
-        await loadPendingUsers(searchTerm, roleFilter);
+        await loadPendingUsers(pendingSearchTerm, statusFilter);
         toastMessages.user.rejected(registrationName);
       } else {
         toastMessages.generic.error(
@@ -548,7 +603,7 @@ export default function UserManagementTab({
                 className="flex items-center gap-2"
               >
                 <span>👥</span>
-                Active Users ({activeRegistrations.length})
+                Active Users ({activeTotalItems})
               </Button>
               <Button
                 variant={tab === "new" ? "default" : "outline"}
@@ -556,7 +611,7 @@ export default function UserManagementTab({
                 className="flex items-center gap-2"
               >
                 <span>🆕</span>
-                New Registrations ({pendingRegistrations.length})
+                New Registrations ({pendingTotalItems})
               </Button>
             </div>
 
@@ -565,13 +620,38 @@ export default function UserManagementTab({
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex space-x-4">
-                    <Input
-                      placeholder="Search users..."
-                      className="w-64"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    <Select onValueChange={(value) => setRoleFilter(value)}>
+                    <div className="relative flex-1 max-w-md">
+                      <Input
+                        placeholder="Search users..."
+                        className="w-64"
+                        value={activeSearchTerm}
+                        onChange={(e) => setActiveSearchTerm(e.target.value)}
+                      />
+                      {activeSearchTerm && (
+                        <button
+                          onClick={() => setActiveSearchTerm("")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
+                          aria-label="Clear search"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-6 w-6"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    <Select
+                      value={roleFilter}
+                      onValueChange={(value) => setRoleFilter(value)}
+                    >
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="Filter by role" />
                       </SelectTrigger>
@@ -644,7 +724,7 @@ export default function UserManagementTab({
                   </div>
                 </div>
 
-                <div className="relative max-h-[450px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   <Table>
                     <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
@@ -720,11 +800,11 @@ export default function UserManagementTab({
                       <EvaluationsPagination
                         currentPage={currentPage}
                         totalPages={totalPages}
-                        total={overviewTotal}
+                        total={totalItems}
                         perPage={perPage}
                         onPageChange={(page) => {
                           setCurrentPage(page);
-                          loadActiveUsers(searchTerm, roleFilter);
+                          loadActiveUsers(activeSearchTerm, roleFilter);
                         }}
                       />
                     </div>
@@ -732,323 +812,268 @@ export default function UserManagementTab({
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-      )}
 
-      {/* New Registrations Tab Content */}
-      {tab === "new" && (
-        <div className="relative mt-4">
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle>New Registrations</CardTitle>
-              <CardDescription>
-                Review and approve new user registrations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex space-x-4">
-                    <Input
-                      placeholder="Search new registrations..."
-                      className="w-64"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    <Select>
-                      <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="pending_verification">
-                          Pending Verification
-                        </SelectItem>
-                        <SelectItem value="approved">Approved</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => refreshUserData(true)}
-                      disabled={loading}
-                      className="flex items-center gap-2"
-                    >
-                      {loading ? (
-                        <>
-                          <svg
-                            className="animate-spin h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                          Refreshing...
-                        </>
-                      ) : (
-                        <>
-                          <svg
-                            className="h-5 w-5 font-bold"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            {/* New Registrations Tab Content */}
+            {tab === "new" && (
+              <div className="relative mt-4">
+                <Card className="mt-4">
+                  <CardHeader>
+                    <CardTitle>New Registrations</CardTitle>
+                    <CardDescription>
+                      Review and approve new user registrations
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <div className="flex space-x-4">
+                          <div className="relative flex-1 max-w-md">
+                            <Input
+                              placeholder="Search new registrations..."
+                              className="w-64"
+                              value={pendingSearchTerm}
+                              onChange={(e) =>
+                                setPendingSearchTerm(e.target.value)
+                              }
                             />
-                          </svg>
-                          Refresh
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
+                            {activeSearchTerm && (
+                              <button
+                                onClick={() => setPendingSearchTerm("")}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
+                                aria-label="Clear search"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-6 w-6"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                          <Select
+                            value={statusFilter}
+                            onValueChange={(value) => setStatusFilter(value)}
+                          >
+                            <SelectTrigger className="w-48">
+                              <SelectValue placeholder="Filter by status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="0">All Status</SelectItem>
+                              <SelectItem value="pending">
+                                Pending Verification
+                              </SelectItem>
+                              <SelectItem value="declined">Rejected</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => refreshUserData(true)}
+                            disabled={loading}
+                            className="flex items-center gap-2"
+                          >
+                            {loading ? (
+                              <>
+                                <svg
+                                  className="animate-spin h-5 w-5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  ></circle>
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  ></path>
+                                </svg>
+                                Refreshing...
+                              </>
+                            ) : (
+                              <>
+                                <svg
+                                  className="h-5 w-5 font-bold"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                  />
+                                </svg>
+                                Refresh
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
 
-                <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                  {loading && (
-                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none bg-white/60 rounded-lg">
-                      <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                        <div className="relative">
-                          {/* Spinning ring */}
-                          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-                          {/* Logo in center */}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <img
-                              src="/smct.png"
-                              alt="SMCT Logo"
-                              className="h-8 w-8 object-contain"
+                      <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                        <Table>
+                          <TableHeader className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-200">
+                            <TableRow>
+                              <TableHead className="px-6 py-3">Name</TableHead>
+                              <TableHead className="px-6 py-3">Email</TableHead>
+                              <TableHead className="px-6 py-3">
+                                Position
+                              </TableHead>
+                              <TableHead className="px-6 py-3">
+                                Registration Date
+                              </TableHead>
+                              <TableHead className="px-6 py-3">
+                                Status
+                              </TableHead>
+                              <TableHead className="px-6 py-3">
+                                Actions
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody className="divide-y divide-gray-200">
+                            {pendingRegistrations.length === 0 ? (
+                              <TableRow>
+                                <TableCell
+                                  colSpan={6}
+                                  className="text-center py-8 text-gray-500"
+                                >
+                                  {pendingSearchTerm
+                                    ? "No new registrations match your search."
+                                    : "No new registrations found."}
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              pendingRegistrations.map((account) => (
+                                <TableRow
+                                  key={account.id}
+                                  className="hover:bg-gray-50"
+                                >
+                                  <TableCell className="px-6 py-3 font-medium">
+                                    {account.fname + " " + account.lname}
+                                  </TableCell>
+                                  <TableCell className="px-6 py-3">
+                                    {account.email}
+                                  </TableCell>
+                                  <TableCell className="px-6 py-3">
+                                    {account.positions.label}
+                                  </TableCell>
+                                  <TableCell className="px-6 py-3">
+                                    {new Date(
+                                      account.created_at
+                                    ).toLocaleDateString()}
+                                  </TableCell>
+                                  <TableCell className="px-6 py-3">
+                                    <Badge
+                                      className={
+                                        account.is_active === "declined"
+                                          ? "bg-red-100 text-red-800 hover:bg-red-200"
+                                          : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                                      }
+                                    >
+                                      {account.is_active === "declined"
+                                        ? "REJECTED"
+                                        : "PENDING VERIFICATION"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="px-6 py-3">
+                                    <div className="flex space-x-2">
+                                      {account.is_active === "pending" && (
+                                        <>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-white bg-green-500 hover:text-white hover:bg-green-600"
+                                            onClick={() =>
+                                              handleApproveRegistration(
+                                                account.id,
+                                                account.fname
+                                              )
+                                            }
+                                          >
+                                            Approve
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-white bg-red-500 hover:bg-red-600 hover:text-white"
+                                            onClick={() =>
+                                              handleRejectRegistration(
+                                                account.id,
+                                                account.fname
+                                              )
+                                            }
+                                          >
+                                            Reject
+                                          </Button>
+                                        </>
+                                      )}
+                                      {account.is_active === "declined" && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-green-600 hover:text-green-700"
+                                          onClick={() =>
+                                            handleApproveRegistration(
+                                              account.id,
+                                              account.fname
+                                            )
+                                          }
+                                        >
+                                          Approve
+                                        </Button>
+                                      )}
+                                      <Button variant="ghost" size="sm">
+                                        View Details
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <div>
+                        {tab === "new" && (
+                          <div>
+                            <EvaluationsPagination
+                              currentPage={currentPage}
+                              totalPages={totalPages}
+                              total={totalItems}
+                              perPage={perPage}
+                              onPageChange={(page) => {
+                                setCurrentPage(page);
+                                loadPendingUsers(
+                                  pendingSearchTerm,
+                                  statusFilter
+                                );
+                              }}
                             />
                           </div>
-                        </div>
-                        <p className="text-xs text-gray-600 font-medium">
-                          Refreshing...
-                        </p>
+                        )}
                       </div>
                     </div>
-                  )}
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-200">
-                      <TableRow>
-                        <TableHead className="px-6 py-3">Name</TableHead>
-                        <TableHead className="px-6 py-3">Email</TableHead>
-                        <TableHead className="px-6 py-3">Position</TableHead>
-                        <TableHead className="px-6 py-3">
-                          Registration Date
-                        </TableHead>
-                        <TableHead className="px-6 py-3">Status</TableHead>
-                        <TableHead className="px-6 py-3">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody className="divide-y divide-gray-200">
-                      {pendingRegistrations.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={6}
-                            className="text-center py-8 text-gray-500"
-                          >
-                            {searchTerm
-                              ? "No new registrations match your search."
-                              : "No new registrations found."}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        pendingRegistrations.map((account) => (
-                          <TableRow
-                            key={account.id}
-                            className="hover:bg-gray-50"
-                          >
-                            <TableCell className="px-6 py-3 font-medium">
-                              {account.fname + " " + account.lname}
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              {account.email}
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              {account.positions.label}
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              {new Date(
-                                account.created_at
-                              ).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              <Badge
-                                className={
-                                  account.is_active === "declined"
-                                    ? "bg-red-100 text-red-800 hover:bg-red-200"
-                                    : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                                }
-                              >
-                                {account.is_active === "declined"
-                                  ? "REJECTED"
-                                  : "PENDING VERIFICATION"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              <div className="flex space-x-2">
-                                {account.is_active === "pending" && (
-                                  <>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-white bg-green-500 hover:text-white hover:bg-green-600"
-                                      onClick={() =>
-                                        handleApproveRegistration(
-                                          account.id,
-                                          account.fname
-                                        )
-                                      }
-                                    >
-                                      Approve
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-white bg-red-500 hover:bg-red-600 hover:text-white"
-                                      onClick={() =>
-                                        handleRejectRegistration(
-                                          account.id,
-                                          account.fname
-                                        )
-                                      }
-                                    >
-                                      Reject
-                                    </Button>
-                                  </>
-                                )}
-                                {account.is_active === "declined" && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-green-600 hover:text-green-700"
-                                    onClick={() =>
-                                      handleApproveRegistration(
-                                        account.id,
-                                        account.fname
-                                      )
-                                    }
-                                  >
-                                    Approve
-                                  </Button>
-                                )}
-                                <Button variant="ghost" size="sm">
-                                  View Details
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Pagination Controls for New Registrations */}
-                {
-                  // newRegistrationsTotal > itemsPerPage && (
-                  //   <div className="flex items-center justify-between mt-4 px-2">
-                  //     <div className="text-sm text-gray-600">
-                  //       Showing {newRegistrationsStartIndex + 1} to{" "}
-                  //       {Math.min(
-                  //         newRegistrationsEndIndex,
-                  //         newRegistrationsTotal
-                  //       )}{" "}
-                  //       of {newRegistrationsTotal} registrations
-                  //     </div>
-                  //     <div className="flex items-center gap-2">
-                  //       <Button
-                  //         variant="outline"
-                  //         size="sm"
-                  //         onClick={() =>
-                  //           setNewRegistrationsPage((prev) =>
-                  //             Math.max(1, prev - 1)
-                  //           )
-                  //         }
-                  //         disabled={newRegistrationsPage === 1}
-                  //         className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                  //       >
-                  //         Previous
-                  //       </Button>
-                  //       <div className="flex items-center gap-1">
-                  //         {Array.from(
-                  //           { length: newRegistrationsTotalPages },
-                  //           (_, i) => i + 1
-                  //         ).map((page) => {
-                  //           if (
-                  //             page === 1 ||
-                  //             page === newRegistrationsTotalPages ||
-                  //             (page >= newRegistrationsPage - 1 &&
-                  //               page <= newRegistrationsPage + 1)
-                  //           ) {
-                  //             return (
-                  //               <Button
-                  //                 key={page}
-                  //                 variant={
-                  //                   newRegistrationsPage === page
-                  //                     ? "default"
-                  //                     : "outline"
-                  //                 }
-                  //                 size="sm"
-                  //                 onClick={() => setNewRegistrationsPage(page)}
-                  //                 className="text-xs w-8 h-8 p-0 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                  //               >
-                  //                 {page}
-                  //               </Button>
-                  //             );
-                  //           } else if (
-                  //             page === newRegistrationsPage - 2 ||
-                  //             page === newRegistrationsPage + 2
-                  //           ) {
-                  //             return (
-                  //               <span key={page} className="text-gray-400">
-                  //                 ...
-                  //               </span>
-                  //             );
-                  //           }
-                  //           return null;
-                  //         })}
-                  //       </div>
-                  //       <Button
-                  //         variant="outline"
-                  //         size="sm"
-                  //         onClick={() =>
-                  //           setNewRegistrationsPage((prev) =>
-                  //             Math.min(newRegistrationsTotalPages, prev + 1)
-                  //           )
-                  //         }
-                  //         disabled={
-                  //           newRegistrationsPage === newRegistrationsTotalPages
-                  //         }
-                  //         className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                  //       >
-                  //         Next
-                  //       </Button>
-                  //     </div>
-                  //   </div>
-                  // )
-                }
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Edit User Modal */}

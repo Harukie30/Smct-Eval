@@ -70,7 +70,7 @@ export default function OverviewTab() {
     const handler = setTimeout(() => {
       searchTerm === "" ? currentPage : setCurrentPage(1);
       setDebouncedSearchTerm(searchTerm);
-    }, 500);
+    }, 1500);
 
     return () => clearTimeout(handler);
   }, [searchTerm]);
