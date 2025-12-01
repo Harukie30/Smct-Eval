@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 interface User {
-  id: number;
+  employee_id: string;
   fname: string;
   lname: string;
   email: string;
@@ -44,7 +44,6 @@ interface AddEmployeeModalProps {
   branches: any;
   positions: any;
   roles: any;
-  onRefresh?: () => void | Promise<void>;
 }
 
 const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
@@ -55,10 +54,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   branches,
   positions,
   roles,
-  onRefresh,
 }) => {
   const [formData, setFormData] = useState<User>({
-    id: 0,
+    employee_id: "",
     fname: "",
     lname: "",
     email: "",
@@ -82,7 +80,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setFormData({
-        id: 0,
+        employee_id: "",
         fname: "",
         lname: "",
         email: "",
@@ -103,6 +101,12 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
+    if (formData.employee_id && !/^\d{4}-\d{6}$/.test(formData.employee_id)) {
+      errors.employee_id = "Format: 1234-567890 (4 digits, dash, 6 digits)";
+    }
+    if (!formData.employee_id.trim()) {
+      errors.employee_id = "Employee ID is required!";
+    }
     if (!formData.fname.trim()) {
       newErrors.name = "Name is required";
     }
@@ -159,7 +163,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       setFormData((prev) => ({
         ...prev,
         [field]: value,
-        department: "", // Clear department when branch is a regular branch (not HO/none)
+        department_id: "", // Clear department when branch is a regular branch (not HO/none)
       }));
     } else {
       setFormData((prev) => ({
@@ -182,14 +186,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       setIsSaving(true);
       try {
         await onSave(formData);
-
-        // Refresh the table if onRefresh callback is provided
-        if (onRefresh) {
-          await onRefresh();
-          // Small delay to ensure state updates propagate
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-
         success("Success! New employee has been added.");
         onClose();
       } catch (error) {
@@ -222,6 +218,42 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="employee_id">Employee ID</Label>
+              <Input
+                id="employee_id"
+                placeholder="****-******"
+                value={formData.employee_id}
+                onChange={(e) => {
+                  // Remove all non-numeric characters except dash
+                  let value = e.target.value.replace(/[^\d-]/g, "");
+
+                  // Remove all dashes first
+                  value = value.replace(/-/g, "");
+
+                  // Limit to 10 digits (4 + 6)
+                  value = value.slice(0, 10);
+
+                  // Add dash after first 4 digits
+                  if (value.length > 4) {
+                    value = value.slice(0, 4) + "-" + value.slice(4);
+                  }
+
+                  handleInputChange("employee_id", e.target.value);
+                }}
+                onKeyPress={(e) => {
+                  // Only allow numbers
+                  if (!/[0-9]/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                maxLength={11}
+                className={errors?.employee_id ? "border-red-500" : "bg-white"}
+              />
+              {errors?.employee_id && (
+                <p className="text-sm text-red-500">{errors?.employee_id}</p>
+              )}
+            </div>
             {/* fName */}
             <div className="space-y-2">
               <Label htmlFor="fname">First Name *</Label>

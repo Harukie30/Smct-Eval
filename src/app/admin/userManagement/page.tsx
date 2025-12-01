@@ -380,8 +380,7 @@ export default function UserManagementTab() {
 
   const handleAddUser = async (newUser: any) => {
     try {
-      console.log("newUser", newUser);
-      // const addUser = await apiService.addUser(newUser);
+      const addUser = await apiService.addUser(newUser);
 
       await refreshUserData();
 
@@ -1114,9 +1113,6 @@ export default function UserManagementTab() {
         branches={branchesData}
         positions={positionsData}
         roles={roles}
-        onRefresh={async () => {
-          await refreshUserData();
-        }}
       />
     </div>
   );
