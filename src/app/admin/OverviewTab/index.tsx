@@ -67,7 +67,12 @@ interface DashboardStats {
   };
 }
 
-export function OverviewTab() {
+interface OverviewTabProps {
+  onRefresh?: () => void | Promise<void>;
+  refreshTrigger?: number; // Trigger refresh when this changes
+}
+
+export function OverviewTab({ onRefresh, refreshTrigger }: OverviewTabProps = {}) {
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(
     null
   );
@@ -110,6 +115,8 @@ export function OverviewTab() {
 
       // Reload employees to recalculate metrics from API
       const accounts = await apiService.getAllUsers();
+      console.log("📊 OverviewTab: Loaded accounts from API:", accounts.length);
+      
       const employees = accounts
         .filter((account: any) => {
           const role = account.role || account.roles || account.user_role;
@@ -124,6 +131,8 @@ export function OverviewTab() {
       const activeEmployees = employees.filter(
         (emp: any) => emp.isActive !== false
       );
+      
+      console.log("📊 OverviewTab: Calculated metrics - Total:", employees.length, "Active:", activeEmployees.length);
 
       // Calculate system metrics
       const metrics: SystemMetrics = {
@@ -197,110 +206,10 @@ export function OverviewTab() {
   useEffect(() => {
     const initialLoad = async () => {
       try {
-        // Load metrics and stats first from API
-        const accounts = await apiService.getAllUsers();
-        const employees = accounts
-          .filter((account: any) => {
-            const role = account.role || account.roles || account.user_role;
-            return role !== "admin" && role !== "Admin";
-          })
-          .map((account: any) => ({
-            id: account.employeeId || account.id || account.user_id,
-            role: account.role || account.roles || account.user_role || "",
-            isActive: account.isActive !== undefined ? account.isActive : (account.is_active !== undefined ? account.is_active : true),
-          }));
-
-        const activeEmployees = employees.filter(
-          (emp: any) => emp.isActive !== false
-        );
-
-        // Get submissions for both metrics and table
-        const submissions = await apiService.getSubmissions();
-        
-        // Load table data
-        const evaluationResults = submissions.map((submission: any) => ({
-          id: submission.id,
-          employeeName: submission.employeeName,
-          evaluatorName: submission.evaluator,
-          department: submission.evaluationData?.department || "N/A",
-          position: submission.evaluationData?.position || "N/A",
-          evaluationDate: submission.submittedAt,
-          overallScore: Math.round((submission.rating / 5) * 100),
-          status: submission.status || "completed",
-          lastUpdated: submission.submittedAt,
-          totalCriteria: 7,
-          completedCriteria: 7,
-          submittedAt: submission.submittedAt,
-        }));
-        evaluationResults.sort(
-          (a: any, b: any) =>
-            new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-        );
-        setEvaluatedReviews(evaluationResults);
-
-        // Calculate system metrics
-        const metrics: SystemMetrics = {
-          totalUsers: employees.length,
-          activeUsers: activeEmployees.length,
-          totalEvaluations: evaluationResults.length,
-          pendingEvaluations: evaluationResults.filter(
-            (r: any) => r.status === "pending"
-          ).length,
-          systemHealth: "excellent",
-          lastBackup: new Date().toISOString(),
-          uptime: "99.9%",
-          storageUsed: 2.5,
-          storageTotal: 10,
-        };
-
-        // Calculate dashboard stats
-        const stats: DashboardStats = {
-          employeeDashboard: {
-            activeUsers: activeEmployees.filter((emp: any) => {
-              const role = emp.role?.toLowerCase() || "";
-              return (
-                role === "employee" ||
-                role.includes("representative") ||
-                role.includes("designer") ||
-                role.includes("developer") ||
-                role.includes("analyst") ||
-                role.includes("coordinator")
-              );
-            }).length,
-            totalViews: 0,
-            lastActivity: new Date().toISOString(),
-          },
-          hrDashboard: {
-            activeUsers: activeEmployees.filter((emp: any) => {
-              const role = emp.role?.toLowerCase() || "";
-              return (
-                role === "hr" ||
-                role === "hr-manager" ||
-                role.includes("hr") ||
-                role.includes("human resources")
-              );
-            }).length,
-            totalViews: 0,
-            lastActivity: new Date().toISOString(),
-          },
-          evaluatorDashboard: {
-            activeUsers: activeEmployees.filter((emp: any) => {
-              const role = emp.role?.toLowerCase() || "";
-              return (
-                role === "evaluator" ||
-                role.includes("manager") ||
-                role.includes("supervisor") ||
-                role.includes("director") ||
-                role.includes("lead")
-              );
-            }).length,
-            totalViews: 0,
-            lastActivity: new Date().toISOString(),
-          },
-        };
-
-        setSystemMetrics(metrics);
-        setDashboardStats(stats);
+        setLoading(true);
+        // Use the shared loadData function which properly loads all metrics
+        // This ensures we get fresh data including total users and active users
+        await loadData();
       } catch (error) {
         console.error("Error loading overview data:", error);
       } finally {
@@ -309,9 +218,17 @@ export function OverviewTab() {
     };
 
     initialLoad();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run on mount
 
-  // Refresh table when tab is clicked (component remounts due to key prop)
+  // Refresh data when refreshTrigger changes (from parent component)
+  useEffect(() => {
+    if (refreshTrigger !== undefined && refreshTrigger > 0 && !loading) {
+      loadData();
+    }
+  }, [refreshTrigger, loading]);
+
+  // Refresh table and metrics when tab is clicked (component remounts due to key prop)
   // This runs after initial load completes to refresh data when switching tabs
   useEffect(() => {
     if (loading) return; // Don't refresh if initial load is still happening
@@ -321,28 +238,8 @@ export function OverviewTab() {
       try {
         // Add a small delay to ensure spinner is visible
         await new Promise((resolve) => setTimeout(resolve, 300));
-        // Only refresh the reviews data (table data)
-        const submissions = await apiService.getSubmissions();
-        const evaluationResults = submissions.map((submission: any) => ({
-          id: submission.id,
-          employeeName: submission.employeeName,
-          evaluatorName: submission.evaluator,
-          department: submission.evaluationData?.department || "N/A",
-          position: submission.evaluationData?.position || "N/A",
-          evaluationDate: submission.submittedAt,
-          overallScore: Math.round((submission.rating / 5) * 100),
-          status: submission.status || "completed",
-          lastUpdated: submission.submittedAt,
-          totalCriteria: 7,
-          completedCriteria: 7,
-          submittedAt: submission.submittedAt,
-        }));
-        evaluationResults.sort(
-          (a: any, b: any) =>
-            new Date(b.submittedAt).getTime() -
-            new Date(a.submittedAt).getTime()
-        );
-        setEvaluatedReviews(evaluationResults);
+        // Refresh ALL data including metrics (total users, active users, etc.)
+        await loadData();
       } catch (error) {
         console.error("Error refreshing table data:", error);
       } finally {

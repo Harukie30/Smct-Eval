@@ -40,6 +40,7 @@ export function EvaluatedReviewsTab() {
   const [recordsQuarterFilter, setRecordsQuarterFilter] = useState("");
   const [recordsYearFilter, setRecordsYearFilter] = useState<string>("all");
   const [recordsRefreshing, setRecordsRefreshing] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [recordsSort, setRecordsSort] = useState<{
     field: string;
     direction: "asc" | "desc";
@@ -62,30 +63,38 @@ export function EvaluatedReviewsTab() {
   }, [recentSubmissions]);
 
   // Load submissions data
-  const loadSubmissions = async () => {
+  const loadSubmissions = async (showRefreshIndicator: boolean = true) => {
     try {
-      setRecordsRefreshing(true);
+      if (showRefreshIndicator) {
+        setRecordsRefreshing(true);
+      }
       const submissions = await apiService.getSubmissions();
       setRecentSubmissions(submissions);
     } catch (error) {
       console.error("Error loading submissions:", error);
       setRecentSubmissions([]);
     } finally {
-      setRecordsRefreshing(false);
+      if (showRefreshIndicator) {
+        setRecordsRefreshing(false);
+      }
+      // Mark initial load as complete
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
+      }
     }
   };
 
   // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
-      setRecordsRefreshing(true);
       try {
+        // Small delay for smooth transition
         await new Promise((resolve) => setTimeout(resolve, 300));
-        await loadSubmissions();
+        // Don't show refresh indicator on initial load (Suspense already handles it)
+        await loadSubmissions(false);
       } catch (error) {
         console.error("Error loading data:", error);
-      } finally {
-        setRecordsRefreshing(false);
+        setIsInitialLoad(false);
       }
     };
 
@@ -428,10 +437,8 @@ export function EvaluatedReviewsTab() {
 
   // Refresh handler
   const handleRecordsRefresh = async () => {
-    setRecordsRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    await loadSubmissions();
-    setRecordsRefreshing(false);
+    // Show refresh indicator when manually refreshing
+    await loadSubmissions(true);
   };
 
   // Filter and sort submissions
@@ -626,7 +633,8 @@ export function EvaluatedReviewsTab() {
     ) {
       try {
         await apiService.deleteSubmission(submission.id);
-        await loadSubmissions();
+        // Don't show refresh indicator when deleting (quick operation)
+        await loadSubmissions(false);
       } catch (error) {
         console.error("Error deleting submission:", error);
       }

@@ -63,12 +63,24 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       try {
         const stored = localStorage.getItem("authUser");
 
+        // First, restore user from localStorage immediately
         if (stored) {
-          setUser(JSON.parse(stored));
+          try {
+            const parsedUser = JSON.parse(stored);
+            setUser(parsedUser);
+          } catch (e) {
+            console.error("Failed to parse stored user:", e);
+            localStorage.removeItem("authUser");
+          }
         }
 
-        await refreshUser(); // verifies with backend
-      } catch {
+        // Then verify with backend (this will update user if successful, or keep existing if network error)
+        await refreshUser();
+      } catch (error) {
+        // If refreshUser throws an error, we still want to keep the stored user
+        console.error("Error during session restoration:", error);
+        // The user should already be set from localStorage above
+        // refreshUser() handles clearing session only on 401/403 errors
       } finally {
         setIsLoading(false);
       }
@@ -83,9 +95,32 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       const res = await apiService.authUser();
       setUser(res);
       localStorage.setItem("authUser", JSON.stringify(res.data));
-    } catch {
-      setUser(null);
-      localStorage.removeItem("authUser");
+    } catch (error: any) {
+      // Only clear session if it's an authentication error (401 Unauthorized)
+      // For other errors (network issues, 500 errors, etc.), keep the user logged in
+      const status = error?.status || error?.response?.status;
+      
+      if (status === 401 || status === 403) {
+        // Authentication failed - clear session
+        setUser(null);
+        localStorage.removeItem("authUser");
+      } else {
+        // Network error or server error - keep user logged in with stored session
+        // Don't clear the session, just log the error
+        console.warn("Failed to refresh user from backend, keeping stored session:", error);
+        // Ensure user is set from localStorage if it exists
+        // Use functional update to avoid stale closure issues
+        const stored = localStorage.getItem("authUser");
+        if (stored) {
+          try {
+            const parsedUser = JSON.parse(stored);
+            // Only update if user is not already set or if stored user is different
+            setUser((prevUser) => prevUser || parsedUser);
+          } catch (e) {
+            console.error("Failed to parse stored user:", e);
+          }
+        }
+      }
     }
   };
 

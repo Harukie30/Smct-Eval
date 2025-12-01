@@ -32,10 +32,7 @@ import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/useToast";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  createApprovalNotification,
-  createFullyApprovedNotification,
-} from "@/lib/notificationUtils";
+// Removed notification imports - backend handles notification creation automatically
 import { useProfilePictureUpdates } from "@/hooks/useProfileUpdates";
 import { EvaluatorDashboardGuideModal } from "@/components/EvaluatorDashboardGuideModal";
 
@@ -1973,19 +1970,7 @@ function EvaluatorDashboard() {
         `Evaluation for ${feedback.employeeName} has been approved successfully!`
       );
 
-      // Create notification for evaluator approval
-      try {
-        await createApprovalNotification(
-          feedback.employeeName,
-          currentUser?.name || "Evaluator",
-          "evaluator"
-        );
-      } catch (notificationError) {
-        console.warn(
-          "Failed to create approval notification:",
-          notificationError
-        );
-      }
+      // Backend automatically creates notification for evaluator approval
     } catch (error) {
       console.error("Error approving evaluation:", error);
       alert("Failed to approve evaluation. Please try again.");
@@ -2038,52 +2023,8 @@ function EvaluatorDashboard() {
     }
   };
 
-  // Monitor for fully approved evaluations and send notifications
-  // Only check when there's a recent change, not on initial load
-  const [hasCheckedNotifications, setHasCheckedNotifications] = useState(false);
-
-  useEffect(() => {
-    const checkForFullyApproved = async () => {
-      if (!recentSubmissions || recentSubmissions.length === 0) return;
-
-      // Only check notifications after initial load
-      if (!hasCheckedNotifications) {
-        setHasCheckedNotifications(true);
-        return;
-      }
-
-      for (const submission of recentSubmissions) {
-        const status = getCorrectApprovalStatus(submission);
-
-        // Check if this submission is fully approved and we haven't notified yet
-        if (status === "fully_approved" && !submission.fullyApprovedNotified) {
-          try {
-            await createFullyApprovedNotification(submission.employeeName);
-
-            // Mark as notified to prevent duplicate notifications
-            const updatedSubmissions = recentSubmissions.map((sub) =>
-              sub.id === submission.id
-                ? { ...sub, fullyApprovedNotified: true }
-                : sub
-            );
-            setRecentSubmissions(updatedSubmissions);
-
-            // Also update in localStorage
-            await apiService.updateSubmission(submission.id, {
-              fullyApprovedNotified: true,
-            });
-          } catch (error) {
-            console.warn(
-              "Failed to create fully approved notification:",
-              error
-            );
-          }
-        }
-      }
-    };
-
-    checkForFullyApproved();
-  }, [recentSubmissions, hasCheckedNotifications]);
+  // Backend automatically creates notifications when evaluations are fully approved
+  // No need to monitor or manually create notifications - they're handled by the backend
 
   // Function to merge employee approval data from localStorage
   const mergeEmployeeApprovalData = (submissions: any[]) => {

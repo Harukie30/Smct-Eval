@@ -28,8 +28,8 @@ export const useNotifications = (userRole: string): UseNotificationsReturn => {
       // Get notifications from user profile (backend includes them)
       const notificationsData = (user as any)?.notifications || [];
       
-      // Get unread count from backend
-      const unreadCountData = await apiService.getUnreadNotificationCount(userRole);
+      // Calculate unread count from notifications array
+      const unreadCountData = notificationsData.filter((n: Notification) => !n.isRead).length;
       
       setNotifications(notificationsData);
       setUnreadCount(unreadCountData);
@@ -39,7 +39,7 @@ export const useNotifications = (userRole: string): UseNotificationsReturn => {
     } finally {
       setLoading(false);
     }
-  }, [user, userRole]);
+  }, [user]);
 
   const markAsRead = useCallback(async (notificationId: number) => {
     try {

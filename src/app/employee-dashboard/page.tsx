@@ -29,12 +29,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { apiService } from "@/lib/apiService";
-import {
-  getEmployeeResults,
-  initializeMockData,
-} from "@/lib/evaluationStorage";
-// commentsService import removed
-import accountsData from "@/data/accounts.json";
+// Removed localStorage dependencies - using API only
 import { useToast } from "@/hooks/useToast";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -95,6 +90,7 @@ function EmployeeDashboard() {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [evaluationResults, setEvaluationResults] = useState<any[]>([]);
   const [selectedEvaluation, setSelectedEvaluation] = useState<any>(null);
+  const [selectedEvaluationApprovalData, setSelectedEvaluationApprovalData] = useState<any>(null);
   const [employeeMetrics, setEmployeeMetrics] = useState<any>(null);
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [isEvaluationDetailsModalOpen, setIsEvaluationDetailsModalOpen] =
@@ -242,15 +238,13 @@ function EmployeeDashboard() {
 
   // Comments & feedback functionality removed
 
-  // Function to validate password for deletion
-  const validateDeletePassword = (password: string) => {
-    // Validate against the current user's actual password from accounts.json
+  // Function to validate password for deletion - uses API for secure verification
+  const validateDeletePassword = async (password: string): Promise<boolean> => {
     if (!user || !user.email) {
       setIsPasswordValid(false);
       setPasswordError("User not found. Please try again.");
       setShowIncorrectPasswordDialog(true);
 
-      // Start pop-down animation after 1 second, then close after 1.3 seconds
       setTimeout(() => {
         setIsDialogClosing(true);
       }, 1000);
@@ -265,40 +259,17 @@ function EmployeeDashboard() {
       return false;
     }
 
-    // Find user account in accounts data
-    const userAccount = accountsData.accounts.find(
-      (account: any) => account.email === user.email
-    );
-
-    if (!userAccount) {
-      setIsPasswordValid(false);
-      setPasswordError("User account not found. Please try again.");
-      setShowIncorrectPasswordDialog(true);
-
-      setTimeout(() => {
-        setIsDialogClosing(true);
-      }, 1000);
-
-      setTimeout(() => {
-        setShowIncorrectPasswordDialog(false);
-        setDeletePassword("");
-        setPasswordError("");
-        setIsDialogClosing(false);
-      }, 1300);
-
-      return false;
-    }
-
-    if (password === userAccount.password) {
+    try {
+      // Use API to verify password securely
+      await apiService.login(user.email, password);
       setIsPasswordValid(true);
       setPasswordError("");
       return true;
-    } else {
+    } catch (error) {
       setIsPasswordValid(false);
       setPasswordError("Incorrect password. Please try again.");
       setShowIncorrectPasswordDialog(true);
 
-      // Start pop-down animation after 1 second, then close after 1.3 seconds
       setTimeout(() => {
         setIsDialogClosing(true);
       }, 1000);
@@ -365,23 +336,19 @@ function EmployeeDashboard() {
   useEffect(() => {
     const loadEmployeeData = async () => {
       try {
-        // Initialize mock data on first load (now empty)
-        initializeMockData();
-
-        // Migrate old notification URLs from reviews tab to overview tab
-        // Note: This migration function is only needed for client-side data migration
-        // If using API, this is handled server-side
-
         // Use the comprehensive refresh function to load all data with modal
         await refreshDashboardData(false, true, true);
 
-        // Load approved evaluations
+        // Load approved evaluations from API (submissions with employee signature)
         if (user?.email) {
-          const approvedData = localStorage.getItem(
-            `approvedEvaluations_${user.email}`
-          );
-          if (approvedData) {
-            setApprovedEvaluations(new Set(JSON.parse(approvedData)));
+          try {
+            const userSubmissions = await apiService.getMyEvalAuthEmployee();
+            const approvedIds = userSubmissions
+              .filter((sub: any) => sub.employeeSignature && sub.employeeSignature.trim())
+              .map((sub: any) => sub.id);
+            setApprovedEvaluations(new Set(approvedIds));
+          } catch (error) {
+            console.error("Error loading approved evaluations:", error);
           }
         }
 
@@ -476,9 +443,9 @@ function EmployeeDashboard() {
           setSubmissions(finalSubmissions);
         }
 
-        // Refresh evaluation results
-        const results = getEmployeeResults(user.email);
-        setEvaluationResults(results);
+        // Refresh evaluation results from API
+        const userSubmissions = await apiService.getMyEvalAuthEmployee();
+        setEvaluationResults(userSubmissions);
 
         // Comments functionality removed
       }
@@ -507,18 +474,7 @@ function EmployeeDashboard() {
     customMessage: "Welcome back! Refreshing your employee dashboard data...",
   });
 
-  // Real-time data updates via localStorage events
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      // Only refresh if the change is from another tab/window
-      if (e.key === "submissions" && e.newValue !== e.oldValue) {
-        handleRefreshSubmissions();
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+  // Removed localStorage event listeners - using API only
 
   // Comments refresh functionality removed
 
@@ -593,9 +549,9 @@ function EmployeeDashboard() {
         // Add a small delay to simulate loading
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
-        // Reload evaluation results which are used for quarterly performance
-        const results = getEmployeeResults(user.email);
-        setEvaluationResults(results);
+        // Reload evaluation results from API
+        const userSubmissions = await apiService.getMyEvalAuthEmployee();
+        setEvaluationResults(userSubmissions);
 
         // Show success toast
         success(
@@ -624,9 +580,9 @@ function EmployeeDashboard() {
         // Add a small delay to simulate loading
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
-        // Reload evaluation results which are used for evaluation history
-        const results = getEmployeeResults(user.email);
-        setEvaluationResults(results);
+        // Reload evaluation results from API
+        const userSubmissions = await apiService.getMyEvalAuthEmployee();
+        setEvaluationResults(userSubmissions);
 
         // Show success toast
         success(
@@ -643,11 +599,11 @@ function EmployeeDashboard() {
     }
   };
 
-  const handleViewDetails = (id: string | number) => {
+  const handleViewDetails = async (id: string | number) => {
     const evaluation = evaluationResults.find((result) => result.id === id);
     if (evaluation) {
-      // Get approval data for this evaluation
-      const approvalData = getApprovalData(evaluation.id);
+      // Get approval data for this evaluation from API
+      const approvalData = await getApprovalData(evaluation.id.toString());
 
       // Convert evaluation result to submission format for ViewResultsModal
       const submission = {
@@ -660,10 +616,11 @@ function EmployeeDashboard() {
         evaluator: evaluation.evaluatorName,
         evaluationData: evaluation.evaluationData,
         // Include approval data in the submission object
-        employeeSignature: approvalData?.employeeSignature || null,
-        employeeApprovedAt: approvalData?.approvedAt || null,
+        employeeSignature: approvalData?.employeeSignature || evaluation.employeeSignature || null,
+        employeeApprovedAt: approvalData?.approvedAt || evaluation.employeeApprovedAt || null,
       };
       setSelectedEvaluation(submission);
+      setSelectedEvaluationApprovalData(approvalData);
       setIsViewResultsModalOpen(true);
     }
   };
@@ -702,39 +659,7 @@ function EmployeeDashboard() {
     setIsApprovalDialogOpen(true);
   };
 
-  // Function to update the submissions data with employee signature
-  const updateSubmissionWithEmployeeSignature = async (
-    evaluationId: number,
-    employeeSignature: string
-  ) => {
-    try {
-      // Get current submissions from localStorage
-      const currentSubmissions = JSON.parse(
-        localStorage.getItem("submissions") || "[]"
-      );
-
-      // Find and update the specific submission
-      const updatedSubmissions = currentSubmissions.map((submission: any) => {
-        if (submission.id === evaluationId) {
-          return {
-            ...submission,
-            employeeSignature: employeeSignature,
-            employeeApprovedAt: new Date().toISOString(),
-            approvalStatus: "employee_approved",
-          };
-        }
-        return submission;
-      });
-
-      // Save back to localStorage
-      localStorage.setItem("submissions", JSON.stringify(updatedSubmissions));
-    } catch (error) {
-      console.error(
-        "Error updating submission with employee signature:",
-        error
-      );
-    }
-  };
+  // Removed updateSubmissionWithEmployeeSignature - now using API directly in confirmApproval
 
   const confirmApproval = async () => {
     if (!evaluationToApprove || !user?.email) return;
@@ -762,40 +687,19 @@ function EmployeeDashboard() {
         employeeEmail: user?.email || "",
       };
 
-      // Add to approved evaluations with full approval data
-      const newApproved = new Set(approvedEvaluations);
-      newApproved.add(evaluationToApprove.id);
-      setApprovedEvaluations(newApproved);
-
-      // Save approval data to localStorage
-      const existingApprovals = JSON.parse(
-        localStorage.getItem(`approvalData_${user.email}`) || "{}"
-      );
-      // Ensure we use the correct submission ID as the key
-      const submissionId = evaluationToApprove.id?.toString() || "";
-      if (!submissionId) {
-        console.error(
-          "❌ Cannot save approval: evaluationToApprove.id is undefined"
-        );
-        return;
-      }
-      existingApprovals[submissionId] = approvalData;
-      localStorage.setItem(
-        `approvalData_${user.email}`,
-        JSON.stringify(existingApprovals)
-      );
-
-      // Also save the approved IDs list
-      localStorage.setItem(
-        `approvedEvaluations_${user.email}`,
-        JSON.stringify([...newApproved])
-      );
-
-      // CRITICAL: Update the main submissions data so evaluator can see the signature
-      await updateSubmissionWithEmployeeSignature(
+      // Update submission with employee signature via API
+      await apiService.updateSubmissionWithEmployeeSignature(
         evaluationToApprove.id,
         employeeSignature
       );
+
+      // Also call the approvedByEmployee endpoint
+      await apiService.approvedByEmployee(evaluationToApprove.id, approvalData);
+
+      // Add to approved evaluations set
+      const newApproved = new Set(approvedEvaluations);
+      newApproved.add(evaluationToApprove.id);
+      setApprovedEvaluations(newApproved);
 
       // Show success animation
       setIsApproving(false);
@@ -824,16 +728,22 @@ function EmployeeDashboard() {
     return approvedEvaluations.has(submissionId);
   };
 
-  const getApprovalData = (submissionId: string) => {
+  const getApprovalData = async (submissionId: string) => {
     if (!user?.email) return null;
-    const approvalData = JSON.parse(
-      localStorage.getItem(`approvalData_${user.email}`) || "{}"
-    );
-    // Ensure we use the correct submission ID format (convert to string)
-    const key = submissionId.toString();
-    const data = approvalData[key] || null;
-
-    return data;
+    try {
+      // Fetch submission from API to get approval data
+      const submission = await apiService.getSubmissionById(Number(submissionId));
+      if (submission && submission.employeeSignature) {
+        return {
+          employeeSignature: submission.employeeSignature,
+          approvedAt: submission.employeeApprovedAt || submission.updatedAt,
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching approval data:", error);
+      return null;
+    }
   };
 
   const handleLogout = () => {
@@ -947,10 +857,58 @@ function EmployeeDashboard() {
           ) : (
             <>
               <div className="flex items-center space-x-2">
-                <span className="text-3xl font-bold text-gray-900">4.2</span>
+                <span className="text-3xl font-bold text-gray-900">
+                  {submissions.length > 0
+                    ? (() => {
+                        const totalScore = submissions.reduce((sum, submission) => {
+                          const score = submission.evaluationData
+                            ? calculateOverallRating(submission.evaluationData)
+                            : submission.rating || 0;
+                          return sum + score;
+                        }, 0);
+                        return (totalScore / submissions.length).toFixed(1);
+                      })()
+                    : "0.0"}
+                </span>
                 <span className="text-sm text-gray-500">/ 5.0</span>
               </div>
-              <Badge className="mt-2 text-green-600 bg-green-100">Good</Badge>
+              <Badge
+                className={`mt-2 ${
+                  submissions.length > 0
+                    ? (() => {
+                        const avgScore =
+                          submissions.reduce((sum, submission) => {
+                            const score = submission.evaluationData
+                              ? calculateOverallRating(submission.evaluationData)
+                              : submission.rating || 0;
+                            return sum + score;
+                          }, 0) / submissions.length;
+                        if (avgScore >= 4.5)
+                          return "text-green-600 bg-green-100";
+                        if (avgScore >= 4.0) return "text-blue-600 bg-blue-100";
+                        if (avgScore >= 3.5)
+                          return "text-yellow-600 bg-yellow-100";
+                        return "text-red-600 bg-red-100";
+                      })()
+                    : "text-gray-600 bg-gray-100"
+                }`}
+              >
+                {submissions.length > 0
+                  ? (() => {
+                      const avgScore =
+                        submissions.reduce((sum, submission) => {
+                          const score = submission.evaluationData
+                            ? calculateOverallRating(submission.evaluationData)
+                            : submission.rating || 0;
+                          return sum + score;
+                        }, 0) / submissions.length;
+                      if (avgScore >= 4.5) return "Outstanding";
+                      if (avgScore >= 4.0) return "Good";
+                      if (avgScore >= 3.5) return "Average";
+                      return "Needs Improvement";
+                    })()
+                  : "No Data"}
+              </Badge>
             </>
           )}
         </CardContent>
@@ -970,8 +928,12 @@ function EmployeeDashboard() {
             </div>
           ) : (
             <>
-              <div className="text-3xl font-bold text-gray-900">3</div>
-              <p className="text-sm text-gray-500 mt-1">This quarter</p>
+              <div className="text-3xl font-bold text-gray-900">
+                {submissions.length}
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                {submissions.length === 1 ? "Review" : "Reviews"} total
+              </p>
             </>
           )}
         </CardContent>
@@ -1139,8 +1101,11 @@ function EmployeeDashboard() {
           >
             <OverviewTab
               isActive={activeTab === "overview"}
-              onViewEvaluation={(submission) => {
+              onViewEvaluation={async (submission) => {
                 setSelectedEvaluation(submission);
+                // Fetch approval data for this submission
+                const approvalData = await getApprovalData(submission.id.toString());
+                setSelectedEvaluationApprovalData(approvalData);
                 setModalOpenedFromTab("overview");
                 setIsViewResultsModalOpen(true);
               }}
@@ -1159,8 +1124,11 @@ function EmployeeDashboard() {
           >
             <PerformanceReviewsTab
               isActive={activeTab === "reviews"}
-              onViewEvaluationAction={(submission) => {
+              onViewEvaluationAction={async (submission) => {
                 setSelectedEvaluation(submission);
+                // Fetch approval data for this submission
+                const approvalData = await getApprovalData(submission.id.toString());
+                setSelectedEvaluationApprovalData(approvalData);
                 setModalOpenedFromTab("reviews");
                 setIsViewResultsModalOpen(true);
               }}
@@ -1179,8 +1147,11 @@ function EmployeeDashboard() {
           >
             <EvaluationHistoryTab
               isActive={activeTab === "history"}
-              onViewEvaluationAction={(submission: any) => {
+              onViewEvaluationAction={async (submission: any) => {
                 setSelectedEvaluation(submission);
+                // Fetch approval data for this submission
+                const approvalData = await getApprovalData(submission.id.toString());
+                setSelectedEvaluationApprovalData(approvalData);
                 setModalOpenedFromTab("history");
                 setIsViewResultsModalOpen(true);
               }}
@@ -1256,9 +1227,7 @@ function EmployeeDashboard() {
             ? isEvaluationApproved(selectedEvaluation.id)
             : false
         }
-        approvalData={
-          selectedEvaluation ? getApprovalData(selectedEvaluation.id) : null
-        }
+        approvalData={selectedEvaluationApprovalData}
         currentUserName={user ? `${user.fname} ${user.lname}`.trim() : ''}
         currentUserSignature={(() => {
           const signature =
@@ -1285,9 +1254,7 @@ function EmployeeDashboard() {
               }
             : null
         }
-        approvalData={
-          selectedEvaluation ? getApprovalData(selectedEvaluation.id) : null
-        }
+        approvalData={selectedEvaluationApprovalData}
         isApproved={
           selectedEvaluation
             ? isEvaluationApproved(selectedEvaluation.id)

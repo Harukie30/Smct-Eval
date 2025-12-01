@@ -55,32 +55,31 @@ export function PerformanceReviewsTab({
   );
   const isFirstMount = useRef(true);
 
-  // Load approved evaluations
+  // Load approved evaluations from API
   useEffect(() => {
-    if (user?.email) {
-      const approved = JSON.parse(
-        localStorage.getItem(`approvedEvaluations_${user.email}`) || "[]"
-      );
-      setApprovedEvaluations(new Set(approved));
-    }
+    const loadApprovedEvaluations = async () => {
+      if (user?.email) {
+        try {
+          const userSubmissions = await apiService.getMyEvalAuthEmployee();
+          const approvedIds = userSubmissions
+            .filter((sub: any) => sub.employeeSignature && sub.employeeSignature.trim())
+            .map((sub: any) => sub.id);
+          setApprovedEvaluations(new Set(approvedIds));
+        } catch (error) {
+          console.error("Error loading approved evaluations:", error);
+        }
+      }
+    };
+    loadApprovedEvaluations();
   }, [user?.email]);
 
-  // Load submissions data
+  // Load submissions data from API
   const loadSubmissions = async () => {
     try {
       setLoading(true);
-      const allSubmissions = await apiService.getSubmissions();
-      const userFullName = user ? `${user.fname} ${user.lname}`.trim() : '';
-      const userSubmissions = user?.email
-        ? allSubmissions.filter(
-            (submission: any) =>
-              submission.employeeName === userFullName ||
-              submission.evaluationData?.employeeEmail === user.email
-          )
-        : [];
-      const finalSubmissions =
-        userSubmissions.length > 0 ? userSubmissions : allSubmissions;
-      setSubmissions(finalSubmissions);
+      // Use employee-specific endpoint
+      const userSubmissions = await apiService.getMyEvalAuthEmployee();
+      setSubmissions(userSubmissions);
     } catch (error) {
       console.error("Error loading submissions:", error);
     } finally {
@@ -218,13 +217,22 @@ export function PerformanceReviewsTab({
     return approvedEvaluations.has(submissionId);
   };
 
-  const getApprovalData = (submissionId: string) => {
+  const getApprovalData = async (submissionId: string) => {
     if (!user?.email) return null;
-    const approvalData = JSON.parse(
-      localStorage.getItem(`approvalData_${user.email}`) || "{}"
-    );
-    const key = submissionId.toString();
-    return approvalData[key] || null;
+    try {
+      // Fetch submission from API to get approval data
+      const submission = await apiService.getSubmissionById(Number(submissionId));
+      if (submission && submission.employeeSignature) {
+        return {
+          employeeSignature: submission.employeeSignature,
+          approvedAt: submission.employeeApprovedAt || submission.updatedAt,
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching approval data:", error);
+      return null;
+    }
   };
 
   const getSubmissionHighlight = (
@@ -899,16 +907,16 @@ export function PerformanceReviewsTab({
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => {
-                                    const approvalData = getApprovalData(
-                                      submission.id
+                                  onClick={async () => {
+                                    const approvalData = await getApprovalData(
+                                      submission.id.toString()
                                     );
                                     const submissionWithApproval = {
                                       ...submission,
                                       employeeSignature:
-                                        approvalData?.employeeSignature || null,
+                                        approvalData?.employeeSignature || submission.employeeSignature || null,
                                       employeeApprovedAt:
-                                        approvalData?.approvedAt || null,
+                                        approvalData?.approvedAt || submission.employeeApprovedAt || null,
                                     };
                                     onViewEvaluationAction(submissionWithApproval);
                                   }}

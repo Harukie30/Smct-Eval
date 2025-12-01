@@ -687,27 +687,9 @@ export const apiService = {
     }
   },
 
-  getUnreadNotificationCount: async (userRole: string): Promise<number> => {
-    try {
-      const response = await api.get("/notifications/unread-count", {
-        params: { role: userRole },
-      });
-      const data = response.data;
-      
-      if (typeof data.count === "number") {
-        return data.count;
-      }
-      if (typeof data.unreadCount === "number") {
-        return data.unreadCount;
-      }
-      return 0;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to get unread notification count"
-      );
-    }
-  },
+  // Removed getUnreadNotificationCount - unread count is calculated from user.notifications
+  // Backend doesn't have /notifications/unread-count endpoint
+  // Notifications are already in user context, so we calculate unread count directly
 
   deleteNotification: async (notificationId: number): Promise<void> => {
     try {

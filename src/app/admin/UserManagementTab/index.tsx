@@ -277,12 +277,12 @@ export function UserManagementTab({
 
     return activeEmployees.filter(
       (employee) =>
-        employee.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-        employee.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-        employee.position
+        (employee.name || "").toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        (employee.email || "").toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        (employee.position || "")
           .toLowerCase()
           .includes(userSearchTerm.toLowerCase()) ||
-        employee.department
+        (employee.department || "")
           .toLowerCase()
           .includes(userSearchTerm.toLowerCase()) ||
         (employee.branch || "")
@@ -321,10 +321,10 @@ export function UserManagementTab({
 
     return newAccounts.filter(
       (account) =>
-        account.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-        account.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-        account.position.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-        account.department
+        (account.name || "").toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        (account.email || "").toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        (account.position || "").toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+        (account.department || "")
           .toLowerCase()
           .includes(userSearchTerm.toLowerCase()) ||
         (account.branch || "")
@@ -358,7 +358,74 @@ export function UserManagementTab({
             if (typeof value === 'boolean') {
               formData.append(key, value ? '1' : '0');
             } else if (value !== '') {
-              formData.append(key, String(value));
+              // Special handling for position - backend expects position_id (ID), not position (name)
+              if (key === 'position') {
+                // Check if value is an ID (numeric string) or name
+                const positionValue = String(value);
+                const position = positionsData.find(p => String(p.value) === positionValue || p.label === positionValue);
+                if (position) {
+                  // Send position_id (ID) to backend, not position name
+                  formData.append('position_id', String(position.value)); // Send position ID
+                } else {
+                  // If not found, try to parse as ID or send as-is
+                  if (/^\d+$/.test(positionValue)) {
+                    formData.append('position_id', positionValue);
+                  } else {
+                    // If it's a name, try to find the ID
+                    const foundPosition = positionsData.find(p => p.label === positionValue);
+                    if (foundPosition) {
+                      formData.append('position_id', String(foundPosition.value));
+                    } else {
+                      // Fallback: send as position_id if it looks like a number
+                      formData.append('position_id', positionValue);
+                    }
+                  }
+                }
+              } else if (key === 'department') {
+                // Backend expects department_id (ID), not department (name)
+                const deptValue = String(value);
+                const dept = departmentsData.find(d => String(d.id) === deptValue || d.name === deptValue);
+                if (dept) {
+                  formData.append('department_id', String(dept.id)); // Send department ID
+                } else {
+                  // If not found, try to parse as ID
+                  if (/^\d+$/.test(deptValue)) {
+                    formData.append('department_id', deptValue);
+                  } else {
+                    // If it's a name, try to find the ID
+                    const foundDept = departmentsData.find(d => d.name === deptValue);
+                    if (foundDept) {
+                      formData.append('department_id', String(foundDept.id));
+                    } else {
+                      // Fallback: send as-is
+                      formData.append('department_id', deptValue);
+                    }
+                  }
+                }
+              } else if (key === 'branch') {
+                // Backend expects branch_id (ID), not branch (name)
+                const branchValue = String(value);
+                const branch = branchesData.find(b => String(b.value) === branchValue || b.label === branchValue);
+                if (branch) {
+                  formData.append('branch_id', String(branch.value)); // Send branch ID
+                } else {
+                  // If not found, try to parse as ID
+                  if (/^\d+$/.test(branchValue)) {
+                    formData.append('branch_id', branchValue);
+                  } else {
+                    // If it's a name, try to find the ID
+                    const foundBranch = branchesData.find(b => b.label === branchValue);
+                    if (foundBranch) {
+                      formData.append('branch_id', String(foundBranch.value));
+                    } else {
+                      // Fallback: send as-is
+                      formData.append('branch_id', branchValue);
+                    }
+                  }
+                }
+              } else {
+                formData.append(key, String(value));
+              }
             }
           }
         }
@@ -386,25 +453,76 @@ export function UserManagementTab({
         employeeId: updatedUser.employeeId
       });
       
+      // Debug: Log FormData contents
+      console.log("📦 FormData contents:");
+      for (const [key, value] of formData.entries()) {
+        console.log(`  ${key}:`, value);
+      }
+      
+      // Update user via API
       await apiService.updateEmployee(formData, updatedUser.id);
 
       // Small delay to ensure backend has processed the update
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       // Refresh user data from API to update the table immediately
-      await refreshUserData(false);
+      // Wrap in try-catch to prevent refresh errors from showing error messages
+      try {
+        await refreshUserData(false);
+      } catch (refreshError) {
+        console.error("Error refreshing user data after update:", refreshError);
+        // Don't show error toast for refresh failures - the update was successful
+      }
 
       // Refresh dashboard data to get updated information
-      await refreshDashboardData(false, false);
+      try {
+        await refreshDashboardData(false, false);
+      } catch (refreshError) {
+        console.error("Error refreshing dashboard data after update:", refreshError);
+        // Don't show error toast for refresh failures - the update was successful
+      }
 
-      // Show success toast
+      // Show success toast only after successful update
       toastMessages.user.updated(updatedUser.name);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating user:", error);
+      
+      // Extract detailed error message from 422 validation errors
+      let errorMessage = "Failed to update user information. Please try again.";
+      
+      if (error?.response?.data) {
+        const errorData = error.response.data;
+        
+        // Handle Laravel validation errors (422)
+        if (errorData.errors && typeof errorData.errors === 'object') {
+          // Format validation errors
+          const validationErrors = Object.entries(errorData.errors)
+            .map(([field, messages]: [string, any]) => {
+              const fieldName = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
+              const messageList = Array.isArray(messages) ? messages.join(', ') : messages;
+              return `${fieldName}: ${messageList}`;
+            })
+            .join('\n');
+          errorMessage = `Validation Error:\n${validationErrors}`;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      console.error("📛 Detailed error:", {
+        status: error?.status || error?.response?.status,
+        data: error?.response?.data,
+        message: errorMessage
+      });
+      
       toastMessages.generic.error(
         "Update Failed",
-        "Failed to update user information. Please try again."
+        errorMessage
       );
+      // Re-throw error so EditUserModal can handle it
+      throw error;
     }
   };
 

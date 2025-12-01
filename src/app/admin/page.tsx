@@ -1067,7 +1067,7 @@ function AdminDashboard() {
               </div>
             }
           >
-            <OverviewTab key={active} />
+            <OverviewTab key={`${active}-${employees.length}`} refreshTrigger={employees.length} />
           </Suspense>
         )}
 
