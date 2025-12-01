@@ -21,10 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiService } from "@/lib/apiService";
-import accountsDataRaw from "@/data/accounts.json";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
-
-const accountsData = accountsDataRaw.accounts || [];
 
 interface Review {
   id: number;
@@ -111,14 +108,17 @@ export function OverviewTab() {
       );
       setEvaluatedReviews(evaluationResults);
 
-      // Reload employees to recalculate metrics
-      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
-      const employees = (accounts.length > 0 ? accounts : accountsData)
-        .filter((account: any) => account.role !== "admin")
+      // Reload employees to recalculate metrics from API
+      const accounts = await apiService.getAllUsers();
+      const employees = accounts
+        .filter((account: any) => {
+          const role = account.role || account.roles || account.user_role;
+          return role !== "admin" && role !== "Admin";
+        })
         .map((account: any) => ({
-          id: account.employeeId || account.id,
-          role: account.role,
-          isActive: account.isActive,
+          id: account.employeeId || account.id || account.user_id,
+          role: account.role || account.roles || account.user_role || "",
+          isActive: account.isActive !== undefined ? account.isActive : (account.is_active !== undefined ? account.is_active : true),
         }));
 
       const activeEmployees = employees.filter(
@@ -197,14 +197,17 @@ export function OverviewTab() {
   useEffect(() => {
     const initialLoad = async () => {
       try {
-        // Load metrics and stats first
-        const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
-        const employees = (accounts.length > 0 ? accounts : accountsData)
-          .filter((account: any) => account.role !== "admin")
+        // Load metrics and stats first from API
+        const accounts = await apiService.getAllUsers();
+        const employees = accounts
+          .filter((account: any) => {
+            const role = account.role || account.roles || account.user_role;
+            return role !== "admin" && role !== "Admin";
+          })
           .map((account: any) => ({
-            id: account.employeeId || account.id,
-            role: account.role,
-            isActive: account.isActive,
+            id: account.employeeId || account.id || account.user_id,
+            role: account.role || account.roles || account.user_role || "",
+            isActive: account.isActive !== undefined ? account.isActive : (account.is_active !== undefined ? account.is_active : true),
           }));
 
         const activeEmployees = employees.filter(

@@ -35,20 +35,11 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Plus, ChevronDown } from "lucide-react";
 import EditUserModal from "@/components/EditUserModal";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import { toastMessages } from "@/lib/toastMessages";
-import apiService from "@/lib/apiService";
-import departmentsData from "@/data/departments.json";
-import branchCodesData from "@/data/branch-code.json";
+import { apiService } from "@/lib/apiService";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 
 // TypeScript interfaces
@@ -88,6 +79,7 @@ export function UserManagementTab({
   // State management
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [pendingRegistrations, setPendingRegistrations] = useState<any[]>([]);
+  const [departmentsData, setDepartmentsData] = useState<{id: number, name: string}[]>([]);
   const [userManagementTab, setUserManagementTab] = useState<"active" | "new">(
     "active"
   );
@@ -232,6 +224,13 @@ export function UserManagementTab({
       try {
         // Add a small delay to ensure spinner is visible
         await new Promise((resolve) => setTimeout(resolve, 300));
+
+        // Load departments from API
+        const departments = await apiService.getDepartments();
+        setDepartmentsData(departments.map((dept: any) => ({
+          id: Number(dept.id),
+          name: dept.name
+        })));
 
         await refreshUserData(false); // Don't show loading spinner again (we're already showing it)
 
@@ -526,33 +525,49 @@ export function UserManagementTab({
 
   const handleAddUser = async (newUser: any) => {
     try {
-      const newAccount = {
-        name: newUser.name,
-        email: newUser.email,
-        position: newUser.position,
-        department: newUser.department,
-        branch: newUser.branch,
-        role: newUser.role,
-        password: newUser.password,
-        isActive: newUser.isActive !== undefined ? newUser.isActive : true,
-        employeeId: Date.now(), // Temporary ID
-      };
-
+      // Create FormData for API call
+      const formData = new FormData();
       
-      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
-      accounts.push(newAccount);
-      localStorage.setItem("accounts", JSON.stringify(accounts));
+      // Handle name - split if needed or use fname/lname if available
+      if (newUser.fname && newUser.lname) {
+        formData.append('fname', newUser.fname);
+        formData.append('lname', newUser.lname);
+        formData.append('name', `${newUser.fname} ${newUser.lname}`.trim());
+      } else if (newUser.name) {
+        const nameParts = newUser.name.split(' ');
+        formData.append('fname', nameParts[0] || '');
+        formData.append('lname', nameParts.slice(1).join(' ') || '');
+        formData.append('name', newUser.name);
+      }
+      
+      // Add other fields
+      if (newUser.email) formData.append('email', newUser.email);
+      if (newUser.position) formData.append('position', newUser.position);
+      if (newUser.department) formData.append('department', newUser.department);
+      if (newUser.branch) formData.append('branch', newUser.branch);
+      if (newUser.role) formData.append('role', newUser.role);
+      if (newUser.password) formData.append('password', newUser.password);
+      if (newUser.contact) formData.append('contact', newUser.contact);
+      if (newUser.hireDate) formData.append('hireDate', newUser.hireDate);
+      formData.append('isActive', String(newUser.isActive !== undefined ? newUser.isActive : true));
 
-      await refreshUserData();
-      await refreshDashboardData(false, false);
+      // Call API to add user
+      const result = await apiService.addUser(formData);
 
-      toastMessages.user.created(newUser.name);
-      setIsAddUserModalOpen(false);
-    } catch (error) {
+      if (result.success || result) {
+        await refreshUserData();
+        await refreshDashboardData(false, false);
+
+        toastMessages.user.created(newUser.name || `${newUser.fname} ${newUser.lname}`.trim());
+        setIsAddUserModalOpen(false);
+      } else {
+        throw new Error(result.message || "Failed to add user");
+      }
+    } catch (error: any) {
       console.error("Error adding user:", error);
       toastMessages.generic.error(
         "Add Failed",
-        "Failed to add user. Please try again."
+        error.message || "Failed to add user. Please try again."
       );
       throw error;
     }
@@ -1289,7 +1304,7 @@ export function UserManagementTab({
         onClose={() => setIsEditModalOpen(false)}
         user={userToEdit}
         onSave={handleSaveUser}
-        departments={departmentsData.map((dept: any) => dept.name)}
+        departments={departmentsData.map((dept) => dept.name)}
         branches={branchesData.map((branch: { value: string; label: string }) => ({ id: branch.value, name: branch.label }))}
         positions={positionsData.map((pos: { value: string; label: string }) => ({ id: pos.value, name: pos.label }))}
       />
