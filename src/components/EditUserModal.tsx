@@ -19,7 +19,9 @@ import { LazyGif } from "@/components/LazyGif";
 
 interface User {
   id: number;
-  name: string;
+  name?: string; // Keep for backward compatibility
+  fname?: string;
+  lname?: string;
   email: string;
   position: string;
   department: string;
@@ -58,6 +60,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const [formData, setFormData] = useState<User>({
     id: 0,
     name: "",
+    fname: "",
+    lname: "",
     email: "",
     position: "",
     department: "",
@@ -84,9 +88,39 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const { success, error: errorToast } = useToast();
   const { user: currentUser } = useUser();
 
-  const isAdmin = currentUser?.roles === "admin";
-  const isHR = currentUser?.roles === "hr";
+  // Check if user is admin or HR (handle different role formats)
+  const userRole = currentUser?.roles;
+  const isAdmin =
+    userRole === "admin" ||
+    (typeof userRole === "string" && userRole.toLowerCase() === "admin") ||
+    (Array.isArray(userRole) &&
+      userRole.some(
+        (r: any) =>
+          (typeof r === "string" ? r.toLowerCase() : r?.name?.toLowerCase()) ===
+          "admin"
+      ));
+  const isHR =
+    userRole === "hr" ||
+    (typeof userRole === "string" && userRole.toLowerCase() === "hr") ||
+    (Array.isArray(userRole) &&
+      userRole.some(
+        (r: any) =>
+          (typeof r === "string" ? r.toLowerCase() : r?.name?.toLowerCase()) ===
+          "hr"
+      ));
   const canEditEmployeeId = isAdmin || isHR;
+
+  // Debug: Log role check
+  useEffect(() => {
+    if (isOpen && canEditEmployeeId) {
+      console.log("🔐 Employee ID editing enabled for:", {
+        userRole,
+        isAdmin,
+        isHR,
+        canEditEmployeeId,
+      });
+    }
+  }, [isOpen, canEditEmployeeId, userRole, isAdmin, isHR]);
 
   // Lockout management functions
   const getLockoutKey = () => {
@@ -197,71 +231,33 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     return isNaN(parsed) ? undefined : parsed;
   };
 
-  // Verify admin/HR password
+  // Verify admin/HR password using login endpoint (handles password hashing correctly)
   const verifyAdminPassword = async (): Promise<boolean> => {
     if (!currentUser || !canEditEmployeeId) return false;
 
     try {
-      const accounts = await apiService.getAccounts();
-      // Check multiple ways to find the account (id, employeeId, email, username)
-      const userAccount = accounts.find((acc: any) => {
-        // Match by ID (check both id and employeeId)
-        const idMatches =
-          acc.id === currentUser.id ||
-          acc.employeeId === currentUser.id ||
-          (acc.employeeId &&
-            acc.employeeId === acc.id &&
-            acc.id === currentUser.id);
+      // Use the login endpoint to verify password (handles hashing correctly)
+      // This is more secure than comparing plain text passwords
+      const userEmail = currentUser.email;
 
-        // Match by email or username as fallback
-        const emailMatches = acc.email === currentUser.email;
-        const usernameMatches =
-          acc.username === currentUser.username ||
-          acc.username === currentUser.email;
-
-        // Role must be admin or hr (case-insensitive)
-        const roleMatches =
-          acc.role === "admin" ||
-          acc.role === "hr" ||
-          acc.role?.toLowerCase() === "hr" ||
-          acc.role?.toLowerCase() === "admin";
-
-        return (idMatches || emailMatches || usernameMatches) && roleMatches;
-      });
-
-      if (!userAccount) {
-        console.error("User account not found for verification:", {
-          currentUserId: currentUser.id,
-          currentUserEmail: currentUser.email,
-          currentUserUsername: currentUser.username,
-          currentUserRole: currentUser.roles,
-          accountsCount: accounts.length,
-          availableAccounts: accounts.map((acc: any) => ({
-            id: acc.id,
-            employeeId: acc.employeeId,
-            email: acc.email,
-            username: acc.username,
-            role: acc.role,
-          })),
-        });
+      if (!userEmail) {
+        console.error("User email not found for password verification");
         return false;
       }
 
-      // Compare passwords (case-sensitive, trim whitespace)
-      const passwordMatches =
-        userAccount.password?.trim() === adminPassword.trim();
-
-      if (!passwordMatches) {
-        console.error("Password mismatch:", {
-          provided: adminPassword.substring(0, 2) + "***",
-          expected: userAccount.password.substring(0, 2) + "***",
-          accountId: userAccount.id,
-          accountRole: userAccount.role,
-          accountEmail: userAccount.email,
-        });
+      try {
+        // Try to login with the provided password
+        // If login succeeds, password is correct
+        await apiService.login(userEmail, adminPassword);
+        return true;
+      } catch (loginError: any) {
+        // Login failed - password is incorrect
+        console.log(
+          "Password verification failed:",
+          loginError?.message || "Invalid password"
+        );
+        return false;
       }
-
-      return passwordMatches;
     } catch (err) {
       console.error("Error verifying password:", err);
       return false;
@@ -404,19 +400,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     );
   };
 
-  // Helper function to check if position contains "manager" (case-insensitive)
-  const isManagerPosition = (positionId: string): boolean => {
-    if (!positionId) return false;
-    // Find the position name from the positions array
-    const position = positions.find(
-      (p) => p.id === positionId || p.name === positionId
-    );
-    if (!position) return false;
-    const positionName = position.name.toLowerCase().trim();
-    // Check if position name contains "manager"
-    return positionName.includes("manager");
-  };
-
   // Update form data when user prop changes
   useEffect(() => {
     if (user) {
@@ -426,29 +409,40 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           : user.branch
           ? String(user.branch)
           : "";
-      const userPosition = user.position || "";
-      // Find position ID if user.position is a name, otherwise use as-is
-      const positionId =
-        positions.find((p) => p.name === userPosition || p.id === userPosition)
-          ?.id || userPosition;
-      // If position contains "manager", role must be evaluator
-      const userRole = isManagerPosition(positionId)
-        ? "evaluator"
-        : user.role || "";
+      const userPosition = user.position;
 
       // Fetch employeeId from account data if not already in user object
       const fetchEmployeeId = async () => {
-        if (!user.employeeId) {
+        // Check for employeeId in different possible field names
+        const employeeId =
+          user.employeeId ||
+          (user as any).employee_id ||
+          (user as any).employeeId;
+
+        if (!employeeId) {
           try {
-            const accounts = await apiService.getAccounts();
+            const accounts = await apiService.getAllUsers();
             const account = accounts.find(
-              (acc: any) => acc.id === user.id || acc.employeeId === user.id
+              (acc: any) =>
+                acc.id === user.id ||
+                acc.employeeId === user.id ||
+                acc.employee_id === user.id ||
+                acc.user_id === user.id
             );
-            if (account?.employeeId) {
+
+            // Try different field names for employeeId
+            const foundEmployeeId =
+              account?.employeeId ||
+              account?.employee_id ||
+              account?.emp_id ||
+              account?.id;
+
+            if (foundEmployeeId) {
               setFormData((prev) => ({
                 ...prev,
-                employeeId: account.employeeId,
+                employeeId: foundEmployeeId,
               }));
+              setEmployeeIdInput(formatEmployeeId(foundEmployeeId));
               return;
             }
           } catch (error) {
@@ -457,9 +451,30 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         }
       };
 
+      // Get employeeId from user object (check multiple possible field names)
+      const userEmployeeId =
+        user.employeeId ||
+        (user as any).employee_id ||
+        (user as any).emp_id ||
+        undefined;
+
+      // Split name into first and last name if name exists, otherwise use fname/lname
+      let fname = "";
+      let lname = "";
+      if (user.name) {
+        const nameParts = user.name.trim().split(/\s+/);
+        fname = nameParts[0] || "";
+        lname = nameParts.slice(1).join(" ") || "";
+      } else {
+        fname = (user as any).fname || user.fname || "";
+        lname = (user as any).lname || user.lname || "";
+      }
+
       setFormData({
         id: user.id,
-        name: user.name || "",
+        name: user.name || `${fname} ${lname}`.trim() || "",
+        fname: fname,
+        lname: lname,
         email: user.email || "",
         position: positionId,
         // Clear department if branch is NOT HO/none/Head Office (i.e., regular branch)
@@ -472,7 +487,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         hireDate: user.hireDate || "",
         isActive: user.isActive !== undefined ? user.isActive : true,
         signature: user.signature || "",
-        employeeId: user.employeeId,
+        employeeId: userEmployeeId,
       });
       setErrors({});
 
@@ -480,11 +495,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       setIsEmployeeIdEditable(false);
       setEmployeeIdInput("");
 
-      // Fetch employeeId if not present
-      if (!user.employeeId) {
-        fetchEmployeeId();
+      // Set employeeId input if we have it, otherwise fetch it
+      if (userEmployeeId) {
+        setEmployeeIdInput(formatEmployeeId(userEmployeeId));
       } else {
-        setEmployeeIdInput(formatEmployeeId(user.employeeId));
+        fetchEmployeeId();
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -493,8 +508,12 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
+    if (!formData.fname?.trim()) {
+      newErrors.fname = "First name is required";
+    }
+
+    if (!formData.lname?.trim()) {
+      newErrors.lname = "Last name is required";
     }
 
     if (!formData.email.trim()) {
@@ -598,8 +617,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       try {
         // Simulate a delay to show the loading animation
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        console.log("Calling onSave...");
-        await onSave(formData);
+
+        await onSave(dataToSave);
         console.log("Save completed, refreshing table...");
 
         // Refresh the table if onRefresh callback is provided
@@ -649,72 +668,89 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
             {/* Employee ID - Editable for Admins and HR with Password Verification */}
-            {((formData.employeeId !== undefined &&
-              formData.employeeId !== null) ||
-              (canEditEmployeeId && isEmployeeIdEditable)) && (
-              <div className="space-y-2">
-                <Label htmlFor="employeeId">Employee ID</Label>
-                {canEditEmployeeId && isEmployeeIdEditable ? (
-                  <Input
-                    id="employeeId"
-                    value={employeeIdInput}
-                    onChange={(e) => handleEmployeeIdChange(e.target.value)}
-                    placeholder="1234-567890"
-                    maxLength={11}
-                    className="bg-white"
-                  />
-                ) : (
-                  <Input
-                    id="employeeId"
-                    value={
-                      formData.employeeId
-                        ? formatEmployeeId(formData.employeeId)
-                        : ""
-                    }
-                    disabled={!canEditEmployeeId}
-                    readOnly={!canEditEmployeeId || !isEmployeeIdEditable}
-                    onFocus={handleEmployeeIdFocus}
-                    className={
-                      canEditEmployeeId
-                        ? "bg-gray-100 cursor-pointer hover:bg-gray-200"
-                        : "bg-gray-100 cursor-not-allowed"
-                    }
-                    title={
-                      canEditEmployeeId
-                        ? `Click to edit (requires ${
-                            isAdmin ? "admin" : "HR"
-                          } password)`
-                        : "Employee ID assigned during registration"
-                    }
-                  />
-                )}
-                <p className="text-xs text-gray-500">
-                  {canEditEmployeeId
-                    ? isEmployeeIdEditable
-                      ? "Editing enabled. Enter 10-digit Employee ID (format: 1234-567890)"
-                      : `Click to edit (requires ${
-                          isAdmin ? "admin" : "HR"
-                        } password verification)`
-                    : "Employee ID assigned during registration"}
-                </p>
-                {errors.employeeId && (
-                  <p className="text-sm text-red-500">{errors.employeeId}</p>
-                )}
-              </div>
-            )}
-
-            {/* Name */}
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name *</Label>
+              <Label htmlFor="employeeId">Employee ID</Label>
+              {canEditEmployeeId && isEmployeeIdEditable ? (
+                <Input
+                  id="employeeId"
+                  value={employeeIdInput}
+                  onChange={(e) => handleEmployeeIdChange(e.target.value)}
+                  placeholder="1234-567890"
+                  maxLength={11}
+                  className="bg-white"
+                />
+              ) : (
+                <Input
+                  id="employeeId"
+                  value={
+                    formData.employeeId
+                      ? formatEmployeeId(formData.employeeId)
+                      : ""
+                  }
+                  disabled={!canEditEmployeeId}
+                  readOnly={canEditEmployeeId ? !isEmployeeIdEditable : true}
+                  onFocus={
+                    canEditEmployeeId ? handleEmployeeIdFocus : undefined
+                  }
+                  onClick={
+                    canEditEmployeeId ? handleEmployeeIdFocus : undefined
+                  }
+                  style={canEditEmployeeId ? { cursor: "pointer" } : undefined}
+                  className={
+                    canEditEmployeeId
+                      ? "bg-gray-100 cursor-pointer hover:bg-gray-200"
+                      : "bg-gray-100 cursor-not-allowed"
+                  }
+                  title={
+                    canEditEmployeeId
+                      ? `Click to edit (requires ${
+                          isAdmin ? "admin" : "HR"
+                        } password)`
+                      : "Employee ID assigned during registration"
+                  }
+                />
+              )}
+              <p className="text-xs text-gray-500">
+                {canEditEmployeeId
+                  ? isEmployeeIdEditable
+                    ? "Editing enabled. Enter 10-digit Employee ID (format: 1234-567890)"
+                    : `Click to edit (requires ${
+                        isAdmin ? "admin" : "HR"
+                      } password verification)`
+                  : "Employee ID assigned during registration"}
+              </p>
+              {errors.employeeId && (
+                <p className="text-sm text-red-500">{errors.employeeId}</p>
+              )}
+            </div>
+
+            {/* First Name */}
+            <div className="space-y-2">
+              <Label htmlFor="fname">First Name *</Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                className={errors.name ? "border-red-500 " : "bg-white"}
-                placeholder="Enter full name"
+                id="fname"
+                value={formData.fname || ""}
+                onChange={(e) => handleInputChange("fname", e.target.value)}
+                className={errors.fname ? "border-red-500 " : "bg-white"}
+                placeholder="Enter first name"
               />
-              {errors.name && (
-                <p className="text-sm text-red-500">{errors.name}</p>
+              {errors.fname && (
+                <p className="text-sm text-red-500">{errors.fname}</p>
+              )}
+            </div>
+
+            {/* Last Name */}
+            <div className="space-y-2">
+              <Label htmlFor="lname">Last Name *</Label>
+              <Input
+                id="lname"
+                value={formData.lname || ""}
+                onChange={(e) => handleInputChange("lname", e.target.value)}
+                className={errors.lname ? "border-red-500 " : "bg-white"}
+                placeholder="Enter last name"
+              />
+              {errors.lname && (
+                <p className="text-sm text-red-500">{errors.lname}</p>
               )}
             </div>
 
@@ -866,7 +902,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <div className="space-y-2 w-2/3">
               <Label htmlFor="position">Position *</Label>
               <Combobox
-                options={positions.map((p) => ({ value: p.id, label: p.name }))}
+                options={positions}
                 value={formData.position}
                 onValueChangeAction={(value) =>
                   handleInputChange("position", value as string)
@@ -1143,7 +1179,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                     if (
                       !status.isLockedOut &&
                       status.remainingAttempts !== undefined &&
-                      status.remainingAttempts < 3
+                      status.remainingAttempts < 6
                     ) {
                       return (
                         <p className="text-xs text-amber-600 mt-1">

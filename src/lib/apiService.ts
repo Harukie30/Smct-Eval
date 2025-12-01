@@ -130,7 +130,7 @@ export const apiService = {
 
   deleteUser: async (id: string | number): Promise<any> => {
     try {
-      const response = await api.post(`/delete_user/${id}`);
+      const response = await api.post(`/deleteUser/${id}`);
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;

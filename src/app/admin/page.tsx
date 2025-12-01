@@ -65,12 +65,26 @@ export default function OverviewTab() {
     setTotalPages(response.last_page);
     setPerPage(response.per_page);
   };
+  useEffect(() => {
+    const mount = async () => {
+      setRefreshing(true);
+      try {
+        await loadEvaluations(searchTerm);
+      } catch (error) {
+        console.log(error);
+        setRefreshing(false);
+      } finally {
+        setRefreshing(false);
+      }
+    };
+    mount();
+  }, []);
 
   useEffect(() => {
     const handler = setTimeout(() => {
       searchTerm === "" ? currentPage : setCurrentPage(1);
       setDebouncedSearchTerm(searchTerm);
-    }, 1500);
+    }, 500);
 
     return () => clearTimeout(handler);
   }, [searchTerm]);
@@ -78,16 +92,9 @@ export default function OverviewTab() {
   // Fetch API whenever debounced search term changes
   useEffect(() => {
     const fetchData = async () => {
-      setRefreshing(true);
-      try {
-        await loadEvaluations(debouncedSearchTerm);
-        const getTotals = await clientDataService.adminDashboard();
-        setDashboardTotals(getTotals);
-      } catch (error) {
-        console.error("Error refreshing data:", error);
-      } finally {
-        setRefreshing(false);
-      }
+      await loadEvaluations(debouncedSearchTerm);
+      const getTotals = await clientDataService.adminDashboard();
+      setDashboardTotals(getTotals);
     };
 
     fetchData();
@@ -327,7 +334,7 @@ export default function OverviewTab() {
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
                   {refreshing ? (
-                    Array.from({ length: 8 }).map((_, index) => (
+                    Array.from({ length: itemsPerPage }).map((_, index) => (
                       <TableRow key={`skeleton-${index}`}>
                         <TableCell className="px-6 py-3">
                           <Skeleton className="h-4 w-24" />

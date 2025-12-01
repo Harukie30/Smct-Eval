@@ -14,21 +14,26 @@ import { Combobox } from "@/components/ui/combobox";
 import LoadingAnimation from "@/components/LoadingAnimation";
 import { useToast } from "@/hooks/useToast";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 interface User {
   id: number;
-  name: string;
+  fname: string;
+  lname: string;
   email: string;
-  position: string;
-  department: string;
-  branch: string;
-  role?: string;
-  username?: string;
-  password?: string;
-  contact?: string;
+  position_id: number;
+  department_id?: number | string;
+  branch_id: number;
+  role_id: number;
+  username: string;
+  password: string;
+  contact: string;
   hireDate?: string;
-  isActive?: boolean;
-  signature?: string;
 }
 
 interface AddEmployeeModalProps {
@@ -38,6 +43,7 @@ interface AddEmployeeModalProps {
   departments: any;
   branches: any;
   positions: any;
+  roles: any;
   onRefresh?: () => void | Promise<void>;
 }
 
@@ -48,22 +54,22 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   departments,
   branches,
   positions,
+  roles,
   onRefresh,
 }) => {
   const [formData, setFormData] = useState<User>({
     id: 0,
-    name: "",
+    fname: "",
+    lname: "",
     email: "",
-    position: "",
-    department: "",
-    branch: "",
-    role: "",
+    position_id: 0,
+    department_id: "",
+    branch_id: 0,
+    role_id: 0,
     username: "",
     password: "",
     contact: "",
     hireDate: "",
-    isActive: true,
-    signature: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -72,52 +78,22 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const { success } = useToast();
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
-  // Helper function to check if branch is HO, Head Office, or none
-  const isBranchHOOrNone = (branch: string): boolean => {
-    if (!branch) return false;
-    const branchLower = branch.toLowerCase().trim();
-    return (
-      branchLower === "ho" ||
-      branchLower === "head office" ||
-      branchLower === "none" ||
-      branchLower === "none ho"
-    );
-  };
-
-  // Helper function to check if position is Branch Manager or Branch Head
-  const isBranchManager = (positionId: string): boolean => {
-    if (!positionId) return false;
-    // Find the position name from the positions array
-    const position = positions.find(
-      (p) => p.id === positionId || p.name === positionId
-    );
-    if (!position) return false;
-    const positionName = position.name.toLowerCase().trim();
-    return (
-      positionName.includes("branch manager") ||
-      positionName.includes("branch head") ||
-      positionName === "branch manager" ||
-      positionName === "branch head"
-    );
-  };
-
   // Reset form when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
       setFormData({
         id: 0,
-        name: "",
+        fname: "",
+        lname: "",
         email: "",
-        position: "",
-        department: "",
-        branch: "",
-        role: "",
+        position_id: 0,
+        department_id: "",
+        branch_id: 0,
+        role_id: 0,
         username: "",
         password: "",
         contact: "",
         hireDate: "",
-        isActive: true,
-        signature: "",
       });
       setErrors({});
       setShowPassword(false);
@@ -127,7 +103,10 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) {
+    if (!formData.fname.trim()) {
+      newErrors.name = "Name is required";
+    }
+    if (!formData.lname.trim()) {
       newErrors.name = "Name is required";
     }
 
@@ -137,28 +116,25 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       newErrors.email = "Please enter a valid email address";
     }
 
-    if (!formData.position.trim()) {
+    if (!formData.position_id) {
       newErrors.position = "Position is required";
     }
 
     // Department is only required if branch IS HO/none/Head Office
-    if (isBranchHOOrNone(formData.branch) && !formData.department.trim()) {
+    if (formData.branch_id === 126 && !formData.department_id) {
       newErrors.department = "Department is required";
     }
 
     // Branch is required
-    if (
-      !formData.branch ||
-      (typeof formData.branch === "string" && !formData.branch.trim())
-    ) {
+    if (!formData.branch_id) {
       newErrors.branch = "Branch is required";
     }
 
-    if (!formData.role?.trim()) {
+    if (!formData.role_id) {
       newErrors.role = "Role is required";
     }
 
-    if (formData.username && !formData.username.trim()) {
+    if (!formData.username.trim()) {
       newErrors.username = "Username cannot be empty if provided";
     }
 
@@ -179,27 +155,11 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
   const handleInputChange = (field: keyof User, value: string | boolean) => {
     // If branch is changed to a regular branch (not HO/none/Head Office), clear department
-    if (
-      field === "branch" &&
-      typeof value === "string" &&
-      !isBranchHOOrNone(value)
-    ) {
+    if (formData.branch_id !== 126) {
       setFormData((prev) => ({
         ...prev,
         [field]: value,
         department: "", // Clear department when branch is a regular branch (not HO/none)
-      }));
-    }
-    // If position is changed to Branch Manager, automatically set role to evaluator
-    else if (
-      field === "position" &&
-      typeof value === "string" &&
-      isBranchManager(value)
-    ) {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: value,
-        role: "evaluator", // Auto-set role to evaluator for Branch Manager
       }));
     } else {
       setFormData((prev) => ({
@@ -262,18 +222,33 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
-            {/* Name */}
+            {/* fName */}
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name *</Label>
+              <Label htmlFor="fname">Full Name *</Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                className={errors.name ? "border-red-500 " : "bg-white"}
-                placeholder="Enter full name"
+                id="fname"
+                value={formData.fname}
+                onChange={(e) => handleInputChange("fname", e.target.value)}
+                className={errors.fname ? "border-red-500 " : "bg-white"}
+                placeholder="Enter first name"
               />
-              {errors.name && (
-                <p className="text-sm text-red-500">{errors.name}</p>
+              {errors.fname && (
+                <p className="text-sm text-red-500">{errors.fname}</p>
+              )}
+            </div>
+
+            {/* lName */}
+            <div className="space-y-2">
+              <Label htmlFor="lname">Full Name *</Label>
+              <Input
+                id="lname"
+                value={formData.lname}
+                onChange={(e) => handleInputChange("lname", e.target.value)}
+                className={errors.lname ? "border-red-500 " : "bg-white"}
+                placeholder="Enter last name"
+              />
+              {errors.lname && (
+                <p className="text-sm text-red-500">{errors.lname}</p>
               )}
             </div>
 
@@ -382,36 +357,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 type="tel"
                 value={formData.contact || ""}
                 onChange={(e) => {
-                  // Only allow numbers, spaces, hyphens, and parentheses (for formatting)
-                  const value = e.target.value.replace(/[^\d\s\-()]/g, "");
-                  handleInputChange("contact", value);
-                }}
-                onKeyDown={(e) => {
-                  // Allow: backspace, delete, tab, escape, enter, and arrow keys
-                  if (
-                    [8, 9, 27, 13, 46, 37, 38, 39, 40].indexOf(e.keyCode) !==
-                      -1 ||
-                    // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-                    (e.keyCode === 65 && e.ctrlKey === true) ||
-                    (e.keyCode === 67 && e.ctrlKey === true) ||
-                    (e.keyCode === 86 && e.ctrlKey === true) ||
-                    (e.keyCode === 88 && e.ctrlKey === true) ||
-                    // Allow: home, end, left, right
-                    (e.keyCode >= 35 && e.keyCode <= 39)
-                  ) {
-                    return;
-                  }
-                  // Ensure that it is a number and stop the keypress
-                  if (
-                    (e.shiftKey || e.keyCode < 48 || e.keyCode > 57) &&
-                    (e.keyCode < 96 || e.keyCode > 105) &&
-                    e.key !== " " &&
-                    e.key !== "-" &&
-                    e.key !== "(" &&
-                    e.key !== ")"
-                  ) {
-                    e.preventDefault();
-                  }
+                  handleInputChange("contact", e.target.value);
                 }}
                 className={errors.contact ? "border-red-500" : "bg-white"}
                 placeholder="Enter contact number (numbers only)"
@@ -423,108 +369,87 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
             {/* Position */}
             <div className="space-y-2 w-1/2">
-              <Label htmlFor="position">Position *</Label>
+              <Label htmlFor="position_id">Position *</Label>
               <Combobox
                 options={positions}
-                value={formData.position}
+                value={formData.position_id}
                 onValueChangeAction={(value) =>
-                  handleInputChange("position", value as string)
+                  handleInputChange("position_id", value as string)
                 }
                 placeholder="Select position"
                 searchPlaceholder="Search positions..."
                 emptyText="No positions found."
-                className={errors.position ? "border-red-500" : "bg-white"}
-                error={errors.position || null}
+                className={errors.position_id ? "border-red-500" : "bg-white"}
+                error={errors.position_id || null}
               />
-              {errors.position && (
-                <p className="text-sm text-red-500">{errors.position}</p>
+              {errors.position_id && (
+                <p className="text-sm text-red-500">{errors.position_id}</p>
               )}
             </div>
 
-            {/* Department - Show only if branch is HO, Head Office, or none */}
-            {isBranchHOOrNone(formData.branch) && (
-              <div className="space-y-2 w-1/2">
-                <Label htmlFor="department">Department *</Label>
-                <Combobox
-                  options={departments.map((dept) => ({
-                    value: dept,
-                    label: dept,
-                  }))}
-                  value={formData.department}
-                  onValueChangeAction={(value) =>
-                    handleInputChange("department", value as string)
-                  }
-                  placeholder="Select department"
-                  searchPlaceholder="Search departments..."
-                  emptyText="No departments found."
-                  className={errors.department ? "border-red-500" : "bg-white"}
-                  error={errors.department || null}
-                />
-                {errors.department && (
-                  <p className="text-sm text-red-500">{errors.department}</p>
-                )}
-              </div>
-            )}
-
             {/* Branch */}
             <div className="space-y-2 w-1/2">
-              <Label htmlFor="branch">Branch *</Label>
+              <Label htmlFor="branch_id">Branch *</Label>
               <Combobox
-                options={
-                  Array.isArray(branches) &&
-                  branches.length > 0 &&
-                  typeof branches[0] === "object" &&
-                  !("value" in branches[0])
-                    ? (branches as { id: string; name: string }[]).map((b) => ({
-                        value: b.name,
-                        label: b.name,
-                      }))
-                    : (branches as string[])
-                }
-                value={formData.branch || ""}
+                options={branches}
+                value={formData.branch_id || ""}
                 onValueChangeAction={(value) =>
-                  handleInputChange("branch", value as string)
+                  handleInputChange("branch_id", value as string)
                 }
                 placeholder="Select branch"
                 searchPlaceholder="Search branches..."
                 emptyText="No branches found."
-                className={errors.branch ? "border-red-500" : ""}
-                error={errors.branch || null}
+                className={errors.branch_id ? "border-red-500" : ""}
+                error={errors.branch_id || null}
               />
-              {errors.branch && (
-                <p className="text-sm text-red-500">{errors.branch}</p>
+              {errors.branch_id && (
+                <p className="text-sm text-red-500">{errors.branch_id}</p>
               )}
             </div>
+
+            {/* Department - Show only if branch is HO, Head Office, or none */}
+            {formData.branch_id === 126 && (
+              <div className="space-y-2 w-1/2">
+                <Label htmlFor="department">Department *</Label>
+                <Combobox
+                  options={departments}
+                  value={String(formData.department_id)}
+                  onValueChangeAction={(value) =>
+                    handleInputChange("department_id", value as string)
+                  }
+                  placeholder="Select department"
+                  searchPlaceholder="Search departments..."
+                  emptyText="No departments found."
+                  className={
+                    errors.department_id ? "border-red-500" : "bg-white"
+                  }
+                  error={errors.department_id || null}
+                />
+                {errors.department_id && (
+                  <p className="text-sm text-red-500">{errors.department_id}</p>
+                )}
+              </div>
+            )}
 
             {/* Role */}
             <div className="space-y-2 w-1/2">
               <Label htmlFor="role">Role *</Label>
-              <Combobox
-                options={[
-                  { value: "admin", label: "Admin" },
-                  { value: "hr", label: "HR" },
-                  { value: "evaluator", label: "Evaluator" },
-                  { value: "employee", label: "Employee" },
-                ]}
-                value={formData.role || ""}
-                onValueChangeAction={(value) =>
-                  handleInputChange("role", value as string)
-                }
-                placeholder="Select role"
-                searchPlaceholder="Search roles..."
-                emptyText="No roles found."
-                className={errors.role ? "border-red-500" : ""}
-                error={errors.role || null}
-                disabled={isBranchManager(formData.position)}
-              />
-              {errors.role && (
-                <p className="text-sm text-red-500">{errors.role}</p>
-              )}
-              {isBranchManager(formData.position) && (
-                <p className="text-xs text-gray-500">
-                  Role is automatically set to "Evaluator" for Branch Manager
-                  position
-                </p>
+              <Select
+                onValueChange={(value) => handleInputChange("role_id", value)}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role: any) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.role_id && (
+                <p className="text-sm text-red-500">{errors.role_id}</p>
               )}
             </div>
 
@@ -537,24 +462,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 value={formData.hireDate || ""}
                 onChange={(e) => handleInputChange("hireDate", e.target.value)}
                 placeholder="Select hire date"
-              />
-            </div>
-
-            {/* Active Status */}
-            <div className="space-y-2 w-1/2">
-              <Label htmlFor="isActive">Status</Label>
-              <Combobox
-                options={[
-                  { value: "active", label: "Active" },
-                  { value: "inactive", label: "Inactive" },
-                ]}
-                value={formData.isActive ? "active" : "inactive"}
-                onValueChangeAction={(value) =>
-                  handleInputChange("isActive", value === "active")
-                }
-                placeholder="Select status"
-                searchPlaceholder="Search status..."
-                emptyText="No status found."
               />
             </div>
           </div>

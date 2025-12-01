@@ -420,7 +420,7 @@ function RegisterPage() {
               email: "",
               contact: "",
               position_id: 0,
-              department_id: 0,
+              department_id: "",
               branch_id: 0,
               password: "",
               password_confirmation: "",

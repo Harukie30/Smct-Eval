@@ -41,11 +41,8 @@ import AddEmployeeModal from "@/components/AddEmployeeModal";
 import { toastMessages } from "@/lib/toastMessages";
 import apiService from "@/lib/apiService";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
-
-import departmentsData from "@/data/departments.json";
 import EvaluationsPagination from "@/components/paginationComponent";
 
-// TypeScript interfaces
 interface Employee {
   id: number;
   fname: string;
@@ -70,22 +67,8 @@ interface RoleType {
   id: string;
   name: string;
 }
-interface UserManagementTabProps {
-  branchesData: any;
-  departmentData: any;
-  positionsData: any;
-  refreshDashboardDataAction: (
-    showModal?: boolean,
-    isAutoRefresh?: boolean
-  ) => Promise<void>;
-}
 
-export default function UserManagementTab({
-  branchesData,
-  departmentData,
-  positionsData,
-  refreshDashboardDataAction: refreshDashboardData,
-}: UserManagementTabProps) {
+export default function UserManagementTab() {
   const [pendingRegistrations, setPendingRegistrations] = useState<Employee[]>(
     []
   );
@@ -97,13 +80,12 @@ export default function UserManagementTab({
   const [roles, setRoles] = useState<RoleType[]>([]);
   const [activeTotalItems, setActiveTotalItems] = useState(0);
   const [pendingTotalItems, setPendingTotalItems] = useState(0);
-  const [approvedRegistrations, setApprovedRegistrations] = useState<number[]>(
-    []
-  );
-  const [rejectedRegistrations, setRejectedRegistrations] = useState<number[]>(
-    []
-  );
-  const [loading, setLoading] = useState(true);
+
+  //data
+  const [departmentData, setDepartmentData] = useState<any[]>([]);
+  const [positionsData, setPositionData] = useState<any[]>([]);
+  const [branchesData, setBranchesData] = useState<any[]>([]);
+  const [refresh, setRefresh] = useState(true);
 
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -117,11 +99,6 @@ export default function UserManagementTab({
     null
   );
 
-  //
-  //
-  //
-  //
-  //
   //filters for active users
   const [activeSearchTerm, setActiveSearchTerm] = useState("");
   const [debouncedActiveSearchTerm, setDebouncedActiveSearchTerm] =
@@ -177,20 +154,29 @@ export default function UserManagementTab({
 
   //render when page reload not loading not everySearch or Filters
   useEffect(() => {
-    try {
-      setLoading(true);
-      const mountData = async () => {
+    const mountData = async () => {
+      setRefresh(true);
+      try {
+        const [positions, branches, departments] = await Promise.all([
+          apiService.getPositions(),
+          apiService.getBranches(),
+          apiService.getDepartments(),
+        ]);
+        setPositionData(positions);
+        setBranchesData(branches);
+        setDepartmentData(departments);
         const roles = await apiService.getAllRoles();
         setRoles(roles);
-      };
-      mountData();
-      loadActiveUsers(activeSearchTerm, roleFilter);
-      loadPendingUsers(pendingSearchTerm, statusFilter);
-    } catch (error) {
-      console.error("Error refreshing data:", error);
-    } finally {
-      setLoading(false);
-    }
+        await loadActiveUsers(activeSearchTerm, roleFilter);
+        await loadPendingUsers(pendingSearchTerm, statusFilter);
+      } catch (error) {
+        console.error("Error refreshing data:", error);
+        setRefresh(false);
+      } finally {
+        setRefresh(false);
+      }
+    };
+    mountData();
   }, []);
 
   //mount every activeSearchTerm changes and RoleFilter
@@ -199,7 +185,7 @@ export default function UserManagementTab({
       activeSearchTerm === "" ? currentPage : setCurrentPage(1);
       setDebouncedActiveSearchTerm(activeSearchTerm);
       setDebouncedRoleFilter(roleFilter);
-    }, 1500);
+    }, 500);
 
     return () => clearTimeout(handler);
   }, [activeSearchTerm, roleFilter]);
@@ -207,16 +193,8 @@ export default function UserManagementTab({
   // Fetch API whenever debounced active search term changes
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
-      try {
-        setLoading(true);
-        if (tab === "active") {
-          await loadActiveUsers(debouncedActiveSearchTerm, debouncedRoleFilter);
-        }
-      } catch (error) {
-        console.error("Error refreshing data:", error);
-      } finally {
-        setLoading(false);
+      if (tab === "active") {
+        await loadActiveUsers(debouncedActiveSearchTerm, debouncedRoleFilter);
       }
     };
 
@@ -229,7 +207,7 @@ export default function UserManagementTab({
       pendingSearchTerm === "" ? currentPage : setCurrentPage(1);
       setDebouncedPendingSearchTerm(pendingSearchTerm);
       setDebouncedStatusFilter(statusFilter);
-    }, 1500);
+    }, 500);
 
     return () => clearTimeout(handler);
   }, [pendingSearchTerm, statusFilter]);
@@ -237,18 +215,11 @@ export default function UserManagementTab({
   // Fetch API whenever debounced pending search term changes
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        setLoading(true);
-        if (tab === "new") {
-          await loadPendingUsers(
-            debouncedPendingSearchTerm,
-            debouncedStatusFilter
-          );
-        }
-      } catch (error) {
-        console.error("Error refreshing data:", error);
-      } finally {
-        setLoading(false);
+      if (tab === "new") {
+        await loadPendingUsers(
+          debouncedPendingSearchTerm,
+          debouncedStatusFilter
+        );
       }
     };
 
@@ -258,12 +229,12 @@ export default function UserManagementTab({
   // Function to refresh user data
   const refreshUserData = async (showLoading = false) => {
     try {
-      setLoading(true);
+      setRefresh(true);
       if (tab === "new") {
-        loadPendingUsers(pendingSearchTerm, statusFilter);
+        await loadPendingUsers(pendingSearchTerm, statusFilter);
       }
       if (tab === "active") {
-        loadActiveUsers(activeSearchTerm, roleFilter);
+        await loadActiveUsers(activeSearchTerm, roleFilter);
       }
 
       if (showLoading) {
@@ -276,14 +247,18 @@ export default function UserManagementTab({
         "Failed to refresh user data. Please try again."
       );
     } finally {
-      setLoading(false);
+      setRefresh(false);
     }
   };
 
   // Handlers
-  const openEditModal = (user: any) => {
-    setUserToEdit(user);
-    setIsEditModalOpen(true);
+  const openEditModal = async (user: any) => {
+    try {
+      setUserToEdit(user);
+      setIsEditModalOpen(true);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const openDeleteModal = (employee: Employee) => {
@@ -343,7 +318,6 @@ export default function UserManagementTab({
       await refreshUserData(false);
 
       // Refresh dashboard data to get updated information
-      await refreshDashboardData(false, false);
 
       // Show success toast
       toastMessages.user.updated(updatedUser.name);
@@ -356,19 +330,18 @@ export default function UserManagementTab({
     }
   };
 
-  const handleDeleteEmployee = () => {
-    if (!employeeToDelete) return;
-
-    const deletedEmployees = JSON.parse(
-      localStorage.getItem("deletedEmployees") || "[]"
-    );
-    deletedEmployees.push(employeeToDelete.id);
-    localStorage.setItem("deletedEmployees", JSON.stringify(deletedEmployees));
-
-    toastMessages.user.deleted(employeeToDelete.fname);
-
-    setIsDeleteModalOpen(false);
-    setEmployeeToDelete(null);
+  const handleDeleteEmployee = async (employee: any) => {
+    console.log(employee.id);
+    try {
+      await apiService.deleteUser(employee.id);
+      toastMessages.user.deleted(employee.fname);
+      loadActiveUsers(activeSearchTerm, roleFilter);
+    } catch (error) {
+      console.error("Error approving registration:", error);
+    } finally {
+      setIsDeleteModalOpen(false);
+      setEmployeeToDelete(null);
+    }
   };
 
   const handleApproveRegistration = async (
@@ -376,39 +349,9 @@ export default function UserManagementTab({
     registrationName: string
   ) => {
     try {
-      const result = await apiService.approveRegistration(registrationId);
-
-      // Handle API response - check for success in various formats
-      const success =
-        result?.success || result?.data?.success || (result && !result.error);
-      if (success) {
-        const newApproved = [...approvedRegistrations, registrationId];
-        setApprovedRegistrations(newApproved);
-        localStorage.setItem(
-          "approvedRegistrations",
-          JSON.stringify(newApproved)
-        );
-
-        const newRejected = rejectedRegistrations.filter(
-          (id) => id !== registrationId
-        );
-        setRejectedRegistrations(newRejected);
-        localStorage.setItem(
-          "rejectedRegistrations",
-          JSON.stringify(newRejected)
-        );
-
-        await loadPendingUsers(pendingSearchTerm, statusFilter);
-        await refreshDashboardData(false, false);
-        toastMessages.user.approved(registrationName);
-      } else {
-        toastMessages.generic.error(
-          "Approval Failed",
-          result?.message ||
-            result?.data?.message ||
-            "Failed to approve registration. Please try again."
-        );
-      }
+      await apiService.approveRegistration(registrationId);
+      await loadPendingUsers(pendingSearchTerm, statusFilter);
+      toastMessages.user.approved(registrationName);
     } catch (error) {
       console.error("Error approving registration:", error);
       toastMessages.generic.error(
@@ -423,38 +366,9 @@ export default function UserManagementTab({
     registrationName: string
   ) => {
     try {
-      const result = await apiService.rejectRegistration(registrationId);
-
-      // Handle API response - check for success in various formats
-      const success =
-        result?.success || result?.data?.success || (result && !result.error);
-      if (success) {
-        const newRejected = [...rejectedRegistrations, registrationId];
-        setRejectedRegistrations(newRejected);
-        localStorage.setItem(
-          "rejectedRegistrations",
-          JSON.stringify(newRejected)
-        );
-
-        const newApproved = approvedRegistrations.filter(
-          (id) => id !== registrationId
-        );
-        setApprovedRegistrations(newApproved);
-        localStorage.setItem(
-          "approvedRegistrations",
-          JSON.stringify(newApproved)
-        );
-
-        await loadPendingUsers(pendingSearchTerm, statusFilter);
-        toastMessages.user.rejected(registrationName);
-      } else {
-        toastMessages.generic.error(
-          "Rejection Failed",
-          result?.message ||
-            result?.data?.message ||
-            "Failed to reject registration. Please try again."
-        );
-      }
+      await apiService.rejectRegistration(registrationId);
+      await loadPendingUsers(pendingSearchTerm, statusFilter);
+      toastMessages.user.rejected(registrationName);
     } catch (error) {
       console.error("Error rejecting registration:", error);
       toastMessages.generic.error(
@@ -483,7 +397,6 @@ export default function UserManagementTab({
       localStorage.setItem("accounts", JSON.stringify(accounts));
 
       await refreshUserData();
-      await refreshDashboardData(false, false);
 
       toastMessages.user.created(newUser.name);
       setIsAddUserModalOpen(false);
@@ -504,132 +417,322 @@ export default function UserManagementTab({
       await refreshUserData(true);
     } catch (error) {
       console.log(error);
-      setLoading(false);
     } finally {
-      setLoading(false);
+      setRefresh(false);
     }
   };
 
-  // Show loading skeleton on initial load
-  if (loading) {
-    return (
-      <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
-        <Card>
+  return (
+    <div className="relative overflow-y-auto pr-2 min-h-[400px]">
+      <Card>
+        <CardHeader>
+          <CardTitle>User Management</CardTitle>
+          <CardDescription>Manage system users and permissions</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Tab Navigation */}
+          <div className="flex space-x-1 mb-6">
+            <Button
+              variant={tab === "active" ? "default" : "outline"}
+              onClick={() => handleTabChange("active")}
+              className="flex items-center gap-2"
+            >
+              <span>👥</span>
+              Active Users ({activeTotalItems})
+            </Button>
+            <Button
+              variant={tab === "new" ? "default" : "outline"}
+              onClick={() => handleTabChange("new")}
+              className="flex items-center gap-2"
+            >
+              <span>🆕</span>
+              New Registrations ({pendingTotalItems})
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Active Users Tab */}
+      {tab === "active" && (
+        <Card className="mt-4">
           <CardHeader>
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-64 mt-2" />
+            <CardTitle>Approved Registrations</CardTitle>
+            <CardDescription>List of Active Users</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex space-x-1 mb-6">
-              <Skeleton className="h-10 w-32" />
-              <Skeleton className="h-10 w-40" />
-            </div>
-
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex space-x-4">
-                <Skeleton className="h-10 w-64" />
-                <Skeleton className="h-10 w-48" />
-              </div>
-              <div className="flex space-x-2">
-                <Skeleton className="h-10 w-24" />
-                <Skeleton className="h-10 w-28" />
-              </div>
-            </div>
-
             <div className="space-y-4">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="flex items-center space-x-4 border-b pb-4"
-                >
-                  <Skeleton className="h-10 w-32" />
-                  <Skeleton className="h-10 w-48" />
-                  <Skeleton className="h-10 w-36" />
-                  <Skeleton className="h-10 w-28" />
-                  <Skeleton className="h-10 w-24" />
-                  <Skeleton className="h-6 w-20 rounded-full" />
-                  <Skeleton className="h-6 w-16 rounded-full" />
-                  <div className="flex space-x-2">
-                    <Skeleton className="h-8 w-16" />
-                    <Skeleton className="h-8 w-16" />
-                    <Skeleton className="h-8 w-16" />
+              <div className="flex justify-between items-center">
+                <div className="flex space-x-4">
+                  <div className="relative flex-1 max-w-md">
+                    <Input
+                      placeholder="Search users..."
+                      className="w-64"
+                      value={activeSearchTerm}
+                      onChange={(e) => setActiveSearchTerm(e.target.value)}
+                    />
+                    {activeSearchTerm && (
+                      <button
+                        onClick={() => setActiveSearchTerm("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
+                        aria-label="Clear search"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
+                    )}
                   </div>
+                  <Select
+                    value={roleFilter}
+                    onValueChange={(value) => setRoleFilter(value)}
+                  >
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Filter by role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">All Roles</SelectItem>
+                      {roles.map((role) => (
+                        <SelectItem key={role.id} value={role.id}>
+                          {role.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              ))}
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => refreshUserData(true)}
+                    disabled={refresh}
+                    className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
+                  >
+                    {refresh ? (
+                      <>
+                        <svg
+                          className="animate-spin h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Refreshing...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          className="h-5 w-5 font-bold"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                        Refresh
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={() => setIsAddUserModalOpen(true)}
+                    className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2"
+                  >
+                    <Plus className="h-5 w-5 font-bold " />
+                    Add User
+                  </Button>
+                </div>
+              </div>
+
+              <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                {refresh && (
+                  <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                    <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                      <div className="relative">
+                        {/* Spinning ring */}
+                        <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                        {/* Logo in center */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <img
+                            src="/smct.png"
+                            alt="SMCT Logo"
+                            className="h-10 w-10 object-contain"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 font-medium">
+                        Loading Users....
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <Table>
+                  <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Position</TableHead>
+                      <TableHead>Branch</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {refresh ? (
+                      Array.from({ length: itemsPerPage }).map((_, index) => (
+                        <TableRow key={`skeleton-${index}`}>
+                          <TableCell className="px-6 py-3">
+                            <Skeleton className="h-4 w-24" />
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            <Skeleton className="h-6 w-16 rounded-full" />
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            <Skeleton className="h-4 w-20" />
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            <Skeleton className="h-4 w-20" />
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            <Skeleton className="h-6 w-16 rounded-full" />
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            <Skeleton className="h-4 w-20" />
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            <Skeleton className="h-6 w-20 rounded-full" />
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            <Skeleton className="h-8 w-16" />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : activeRegistrations.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          className="text-center py-8 text-gray-500"
+                        >
+                          No active users found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      activeRegistrations.map((employee) => (
+                        <TableRow key={employee.id}>
+                          <TableCell className="font-medium">
+                            {employee.fname + " " + employee.lname}
+                          </TableCell>
+                          <TableCell>{employee.email}</TableCell>
+                          <TableCell>{employee.positions.label}</TableCell>
+                          <TableCell>
+                            {employee.branches[0]?.branch_name}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {employee.roles[0].name}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className="text-green-600 bg-green-100">
+                              Active
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-600 hover:text-blue-700"
+                                onClick={() => openEditModal(employee)}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                                onClick={() => openDeleteModal(employee)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              <div>
+                {tab === "active" && (
+                  <div>
+                    <EvaluationsPagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      total={activeTotalItems}
+                      perPage={perPage}
+                      onPageChange={(page) => {
+                        setCurrentPage(page);
+                        loadActiveUsers(activeSearchTerm, roleFilter);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
-        <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-          <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-            <div className="relative">
-              {/* Spinning ring */}
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-              {/* Logo in center */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <img
-                  src="/smct.png"
-                  alt="SMCT Logo"
-                  className="h-10 w-10 object-contain"
-                />
-              </div>
-            </div>
-            <p className="text-sm text-gray-600 font-medium">
-              {tab === "new"
-                ? "Loading new registrations..."
-                : "Loading users..."}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+      )}
 
-  return (
-    <div className="relative overflow-y-auto pr-2 min-h-[400px]">
-      {!loading && (
-        <Card>
-          <CardHeader>
-            <CardTitle>User Management</CardTitle>
-            <CardDescription>
-              Manage system users and permissions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Tab Navigation */}
-            <div className="flex space-x-1 mb-6">
-              <Button
-                variant={tab === "active" ? "default" : "outline"}
-                onClick={() => handleTabChange("active")}
-                className="flex items-center gap-2"
-              >
-                <span>👥</span>
-                Active Users ({activeTotalItems})
-              </Button>
-              <Button
-                variant={tab === "new" ? "default" : "outline"}
-                onClick={() => handleTabChange("new")}
-                className="flex items-center gap-2"
-              >
-                <span>🆕</span>
-                New Registrations ({pendingTotalItems})
-              </Button>
-            </div>
-
-            {/* Active Users Tab */}
-            {tab === "active" && (
+      {/* New Registrations Tab Content */}
+      {tab === "new" && (
+        <div className="relative mt-4">
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>New Registrations</CardTitle>
+              <CardDescription>
+                Review and approve new user registrations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex space-x-4">
                     <div className="relative flex-1 max-w-md">
                       <Input
-                        placeholder="Search users..."
+                        placeholder="Search new registrations..."
                         className="w-64"
-                        value={activeSearchTerm}
-                        onChange={(e) => setActiveSearchTerm(e.target.value)}
+                        value={pendingSearchTerm}
+                        onChange={(e) => setPendingSearchTerm(e.target.value)}
                       />
-                      {activeSearchTerm && (
+
+                      {pendingSearchTerm && (
                         <button
-                          onClick={() => setActiveSearchTerm("")}
+                          onClick={() => setPendingSearchTerm("")}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
                           aria-label="Clear search"
                         >
@@ -649,19 +752,18 @@ export default function UserManagementTab({
                       )}
                     </div>
                     <Select
-                      value={roleFilter}
-                      onValueChange={(value) => setRoleFilter(value)}
+                      value={statusFilter}
+                      onValueChange={(value) => setStatusFilter(value)}
                     >
                       <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Filter by role" />
+                        <SelectValue placeholder="Filter by status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="0">All Roles</SelectItem>
-                        {roles.map((role) => (
-                          <SelectItem key={role.id} value={role.id}>
-                            {role.name}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="0">All Status</SelectItem>
+                        <SelectItem value="pending">
+                          Pending Verification
+                        </SelectItem>
+                        <SelectItem value="declined">Rejected</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -669,10 +771,10 @@ export default function UserManagementTab({
                     <Button
                       variant="outline"
                       onClick={() => refreshUserData(true)}
-                      disabled={loading}
-                      className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
+                      disabled={refresh}
+                      className="flex items-center gap-2"
                     >
-                      {loading ? (
+                      {refresh ? (
                         <>
                           <svg
                             className="animate-spin h-5 w-5"
@@ -714,78 +816,165 @@ export default function UserManagementTab({
                         </>
                       )}
                     </Button>
-                    <Button
-                      onClick={() => setIsAddUserModalOpen(true)}
-                      className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2"
-                    >
-                      <Plus className="h-5 w-5 font-bold " />
-                      Add User
-                    </Button>
                   </div>
                 </div>
 
-                <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                  {refresh && (
+                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                      <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                        <div className="relative">
+                          {/* Spinning ring */}
+                          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                          {/* Logo in center */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <img
+                              src="/smct.png"
+                              alt="SMCT Logo"
+                              className="h-10 w-10 object-contain"
+                            />
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 font-medium">
+                          Loading Users....
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <Table>
-                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-200">
                       <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Position</TableHead>
-                        <TableHead>Branch</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead className="px-6 py-3">Name</TableHead>
+                        <TableHead className="px-6 py-3">Email</TableHead>
+                        <TableHead className="px-6 py-3">Position</TableHead>
+                        <TableHead className="px-6 py-3">
+                          Registration Date
+                        </TableHead>
+                        <TableHead className="px-6 py-3">Status</TableHead>
+                        <TableHead className="px-6 py-3">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
-                      {activeRegistrations.length === 0 ? (
+                    <TableBody className="divide-y divide-gray-200">
+                      {refresh ? (
+                        Array.from({ length: itemsPerPage }).map((_, index) => (
+                          <TableRow key={`skeleton-${index}`}>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-4 w-24" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-6 w-16 rounded-full" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-4 w-20" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-4 w-20" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-6 w-16 rounded-full" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-4 w-20" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-6 w-20 rounded-full" />
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Skeleton className="h-8 w-16" />
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : pendingRegistrations.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={7}
+                            colSpan={6}
                             className="text-center py-8 text-gray-500"
                           >
-                            No active users found
+                            {pendingSearchTerm
+                              ? "No new registrations match your search."
+                              : "No new registrations found."}
                           </TableCell>
                         </TableRow>
                       ) : (
-                        activeRegistrations.map((employee) => (
-                          <TableRow key={employee.id}>
-                            <TableCell className="font-medium">
-                              {employee.fname + " " + employee.lname}
+                        pendingRegistrations.map((account) => (
+                          <TableRow
+                            key={account.id}
+                            className="hover:bg-gray-50"
+                          >
+                            <TableCell className="px-6 py-3 font-medium">
+                              {account.fname + " " + account.lname}
                             </TableCell>
-                            <TableCell>{employee.email}</TableCell>
-                            <TableCell>{employee.positions.label}</TableCell>
-                            <TableCell>
-                              {employee.branches[0]?.branch_name}
+                            <TableCell className="px-6 py-3">
+                              {account.email}
                             </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {employee.roles[0].name}
+                            <TableCell className="px-6 py-3">
+                              {account.positions.label}
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              {new Date(
+                                account.created_at
+                              ).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="px-6 py-3">
+                              <Badge
+                                className={
+                                  account.is_active === "declined"
+                                    ? "bg-red-100 text-red-800 hover:bg-red-200"
+                                    : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                                }
+                              >
+                                {account.is_active === "declined"
+                                  ? "REJECTED"
+                                  : "PENDING VERIFICATION"}
                               </Badge>
                             </TableCell>
-                            <TableCell>
-                              <Badge className="text-green-600 bg-green-100">
-                                Active
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
+                            <TableCell className="px-6 py-3">
                               <div className="flex space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-blue-600 hover:text-blue-700"
-                                  onClick={() => openEditModal(employee)}
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-red-600 hover:text-red-700"
-                                  onClick={() => openDeleteModal(employee)}
-                                >
-                                  Delete
-                                </Button>
+                                {account.is_active === "pending" && (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-white bg-green-500 hover:text-white hover:bg-green-600"
+                                      onClick={() =>
+                                        handleApproveRegistration(
+                                          account.id,
+                                          account.fname
+                                        )
+                                      }
+                                    >
+                                      Approve
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-white bg-red-500 hover:bg-red-600 hover:text-white"
+                                      onClick={() =>
+                                        handleRejectRegistration(
+                                          account.id,
+                                          account.fname
+                                        )
+                                      }
+                                    >
+                                      Reject
+                                    </Button>
+                                  </>
+                                )}
+                                {account.is_active === "declined" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-green-600 hover:text-green-700"
+                                    onClick={() =>
+                                      handleApproveRegistration(
+                                        account.id,
+                                        account.fname
+                                      )
+                                    }
+                                  >
+                                    Approve
+                                  </Button>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -795,285 +984,25 @@ export default function UserManagementTab({
                   </Table>
                 </div>
                 <div>
-                  {tab === "active" && (
+                  {tab === "new" && (
                     <div>
                       <EvaluationsPagination
                         currentPage={currentPage}
                         totalPages={totalPages}
-                        total={totalItems}
+                        total={pendingTotalItems}
                         perPage={perPage}
                         onPageChange={(page) => {
                           setCurrentPage(page);
-                          loadActiveUsers(activeSearchTerm, roleFilter);
+                          loadPendingUsers(pendingSearchTerm, statusFilter);
                         }}
                       />
                     </div>
                   )}
                 </div>
               </div>
-            )}
-
-            {/* New Registrations Tab Content */}
-            {tab === "new" && (
-              <div className="relative mt-4">
-                <Card className="mt-4">
-                  <CardHeader>
-                    <CardTitle>New Registrations</CardTitle>
-                    <CardDescription>
-                      Review and approve new user registrations
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <div className="flex space-x-4">
-                          <div className="relative flex-1 max-w-md">
-                            <Input
-                              placeholder="Search new registrations..."
-                              className="w-64"
-                              value={pendingSearchTerm}
-                              onChange={(e) =>
-                                setPendingSearchTerm(e.target.value)
-                              }
-                            />
-                            {activeSearchTerm && (
-                              <button
-                                onClick={() => setPendingSearchTerm("")}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
-                                aria-label="Clear search"
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-6 w-6"
-                                  viewBox="0 0 20 20"
-                                  fill="currentColor"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              </button>
-                            )}
-                          </div>
-                          <Select
-                            value={statusFilter}
-                            onValueChange={(value) => setStatusFilter(value)}
-                          >
-                            <SelectTrigger className="w-48">
-                              <SelectValue placeholder="Filter by status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="0">All Status</SelectItem>
-                              <SelectItem value="pending">
-                                Pending Verification
-                              </SelectItem>
-                              <SelectItem value="declined">Rejected</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => refreshUserData(true)}
-                            disabled={loading}
-                            className="flex items-center gap-2"
-                          >
-                            {loading ? (
-                              <>
-                                <svg
-                                  className="animate-spin h-5 w-5"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <circle
-                                    className="opacity-25"
-                                    cx="12"
-                                    cy="12"
-                                    r="10"
-                                    stroke="currentColor"
-                                    strokeWidth="4"
-                                  ></circle>
-                                  <path
-                                    className="opacity-75"
-                                    fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                  ></path>
-                                </svg>
-                                Refreshing...
-                              </>
-                            ) : (
-                              <>
-                                <svg
-                                  className="h-5 w-5 font-bold"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                  />
-                                </svg>
-                                Refresh
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                        <Table>
-                          <TableHeader className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-200">
-                            <TableRow>
-                              <TableHead className="px-6 py-3">Name</TableHead>
-                              <TableHead className="px-6 py-3">Email</TableHead>
-                              <TableHead className="px-6 py-3">
-                                Position
-                              </TableHead>
-                              <TableHead className="px-6 py-3">
-                                Registration Date
-                              </TableHead>
-                              <TableHead className="px-6 py-3">
-                                Status
-                              </TableHead>
-                              <TableHead className="px-6 py-3">
-                                Actions
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody className="divide-y divide-gray-200">
-                            {pendingRegistrations.length === 0 ? (
-                              <TableRow>
-                                <TableCell
-                                  colSpan={6}
-                                  className="text-center py-8 text-gray-500"
-                                >
-                                  {pendingSearchTerm
-                                    ? "No new registrations match your search."
-                                    : "No new registrations found."}
-                                </TableCell>
-                              </TableRow>
-                            ) : (
-                              pendingRegistrations.map((account) => (
-                                <TableRow
-                                  key={account.id}
-                                  className="hover:bg-gray-50"
-                                >
-                                  <TableCell className="px-6 py-3 font-medium">
-                                    {account.fname + " " + account.lname}
-                                  </TableCell>
-                                  <TableCell className="px-6 py-3">
-                                    {account.email}
-                                  </TableCell>
-                                  <TableCell className="px-6 py-3">
-                                    {account.positions.label}
-                                  </TableCell>
-                                  <TableCell className="px-6 py-3">
-                                    {new Date(
-                                      account.created_at
-                                    ).toLocaleDateString()}
-                                  </TableCell>
-                                  <TableCell className="px-6 py-3">
-                                    <Badge
-                                      className={
-                                        account.is_active === "declined"
-                                          ? "bg-red-100 text-red-800 hover:bg-red-200"
-                                          : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                                      }
-                                    >
-                                      {account.is_active === "declined"
-                                        ? "REJECTED"
-                                        : "PENDING VERIFICATION"}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="px-6 py-3">
-                                    <div className="flex space-x-2">
-                                      {account.is_active === "pending" && (
-                                        <>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-white bg-green-500 hover:text-white hover:bg-green-600"
-                                            onClick={() =>
-                                              handleApproveRegistration(
-                                                account.id,
-                                                account.fname
-                                              )
-                                            }
-                                          >
-                                            Approve
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-white bg-red-500 hover:bg-red-600 hover:text-white"
-                                            onClick={() =>
-                                              handleRejectRegistration(
-                                                account.id,
-                                                account.fname
-                                              )
-                                            }
-                                          >
-                                            Reject
-                                          </Button>
-                                        </>
-                                      )}
-                                      {account.is_active === "declined" && (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="text-green-600 hover:text-green-700"
-                                          onClick={() =>
-                                            handleApproveRegistration(
-                                              account.id,
-                                              account.fname
-                                            )
-                                          }
-                                        >
-                                          Approve
-                                        </Button>
-                                      )}
-                                      <Button variant="ghost" size="sm">
-                                        View Details
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                      <div>
-                        {tab === "new" && (
-                          <div>
-                            <EvaluationsPagination
-                              currentPage={currentPage}
-                              totalPages={totalPages}
-                              total={totalItems}
-                              perPage={perPage}
-                              onPageChange={(page) => {
-                                setCurrentPage(page);
-                                loadPendingUsers(
-                                  pendingSearchTerm,
-                                  statusFilter
-                                );
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Edit User Modal */}
@@ -1178,7 +1107,7 @@ export default function UserManagementTab({
               </Button>
               <Button
                 className="bg-red-600 hover:bg-red-700 text-white"
-                onClick={handleDeleteEmployee}
+                onClick={() => handleDeleteEmployee(employeeToDelete)}
               >
                 ❌ Delete Permanently
               </Button>
@@ -1194,12 +1123,12 @@ export default function UserManagementTab({
           setIsAddUserModalOpen(false);
         }}
         onSave={handleAddUser}
-        departments={departmentsData}
+        departments={departmentData}
         branches={branchesData}
         positions={positionsData}
+        roles={roles}
         onRefresh={async () => {
           await refreshUserData();
-          await refreshDashboardData(false, false);
         }}
       />
     </div>

@@ -111,7 +111,8 @@ export function Combobox({
                     key={typeof option === "string" ? option : option.value}
                     className={cn(
                       "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
-                      String(value) === String(getOptionValue(option)) && "bg-accent"
+                      String(value) === String(getOptionValue(option)) &&
+                        "bg-accent"
                     )}
                     onClick={() => {
                       onValueChangeAction(getOptionValue(option));
