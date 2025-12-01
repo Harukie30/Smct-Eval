@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -123,6 +123,7 @@ export default function ProfileModal({
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
+  const [isPasswordSaved, setIsPasswordSaved] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
@@ -182,6 +183,7 @@ export default function ProfileModal({
     setErrors({});
     setShowPasswords({ current: false, new: false, confirm: false });
     setIsPasswordOpen(false);
+    setIsPasswordSaved(false);
   }, [profile]);
 
   // Load branches, positions, and departments data
@@ -258,14 +260,25 @@ export default function ProfileModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (field: keyof ProfileFormData, value: string) => {
+  const handleInputChange = useCallback((field: keyof ProfileFormData, value: string) => {
+    // Update form data - React 18+ batches these automatically
     setFormData(prev => ({ ...prev, [field]: value }));
     
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+    // Reset password saved flag if user starts typing in password fields
+    if (field === 'currentPassword' || field === 'newPassword' || field === 'confirmPassword') {
+      setIsPasswordSaved(false);
     }
-  };
+    
+    // Clear error for this field if it exists - optimized to minimize re-renders
+    setErrors(prev => {
+      if (!prev[field]) {
+        return prev; // Return same reference if no error to clear
+      }
+      const newErrors = { ...prev };
+      delete newErrors[field];
+      return Object.keys(newErrors).length > 0 ? newErrors : {};
+    });
+  }, []);
 
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -290,6 +303,83 @@ export default function ProfileModal({
     }
   };
 
+  // Separate handler for saving password only
+  const handleSavePassword = async () => {
+    // Validate password fields
+    const passwordErrors: Record<string, string> = {};
+    
+    if (!formData.currentPassword?.trim()) {
+      passwordErrors.currentPassword = 'Current password is required';
+    }
+    
+    if (!formData.newPassword?.trim()) {
+      passwordErrors.newPassword = 'New password is required';
+    } else if (formData.newPassword.length < 8) {
+      passwordErrors.newPassword = 'New password must be at least 8 characters long';
+    }
+    
+    if (!formData.confirmPassword?.trim()) {
+      passwordErrors.confirmPassword = 'Please confirm your new password';
+    } else if (formData.newPassword !== formData.confirmPassword) {
+      passwordErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    // If there are password errors, set them and return
+    if (Object.keys(passwordErrors).length > 0) {
+      setErrors(prev => ({ ...prev, ...passwordErrors }));
+      return;
+    }
+
+    // Clear any previous password errors
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors.currentPassword;
+      delete newErrors.newPassword;
+      delete newErrors.confirmPassword;
+      delete newErrors.password;
+      return newErrors;
+    });
+
+    setIsLoading(true);
+    try {
+      if (!formData.id) {
+        throw new Error('User ID is required');
+      }
+
+      // Create FormData for password change
+      const passwordFormData = new FormData();
+      passwordFormData.append('current_password', formData.currentPassword || '');
+      passwordFormData.append('new_password', formData.newPassword || '');
+      passwordFormData.append('password_confirmation', formData.confirmPassword || '');
+      
+      // Update password using the authenticated user endpoint
+      await apiService.updateEmployee_auth(passwordFormData);
+
+      // Clear password fields after successful save
+      setFormData(prev => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      }));
+
+      // Reset password visibility
+      setShowPasswords({ current: false, new: false, confirm: false });
+
+      // Mark password as saved to prevent duplicate saves
+      setIsPasswordSaved(true);
+
+      // Show success toast
+      success('Password updated successfully!');
+    } catch (error: any) {
+      console.error('Error updating password:', error);
+      const errorMessage = error?.message || error?.response?.data?.message || 'Failed to update password. Please check your current password.';
+      setErrors(prev => ({ ...prev, password: errorMessage }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -302,8 +392,8 @@ export default function ProfileModal({
       // Add a small delay to show the loading animation
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Handle password change separately if password fields are filled
-      const hasPasswordChange = formData.currentPassword || formData.newPassword || formData.confirmPassword;
+      // Handle password change separately if password fields are filled and not already saved
+      const hasPasswordChange = (formData.currentPassword || formData.newPassword || formData.confirmPassword) && !isPasswordSaved;
       
       if (hasPasswordChange && formData.id) {
         try {
@@ -593,6 +683,28 @@ export default function ProfileModal({
                   <p className="text-sm text-red-600">{errors.password}</p>
                 </div>
               )}
+              
+              {/* Save Password Button */}
+              <div className="flex justify-end pt-2 border-t">
+                <Button
+                  type="button"
+                  onClick={handleSavePassword}
+                  disabled={isLoading || !formData.currentPassword || !formData.newPassword || !formData.confirmPassword}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {isLoading ? (
+                    <>
+                      <LoadingAnimation size="sm" variant="spinner" color="white" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Save Password</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </CollapsibleContent>
           </Collapsible>
 

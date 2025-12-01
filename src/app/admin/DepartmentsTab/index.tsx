@@ -22,12 +22,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2 } from "lucide-react";
-import departmentsData from "@/data/departments.json";
-import accountsDataRaw from "@/data/accounts.json";
 import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
-
-const accountsData = accountsDataRaw.accounts || [];
+import { apiService } from "@/lib/apiService";
 
 interface Employee {
   id: number;
@@ -41,7 +38,7 @@ interface Employee {
 }
 
 interface Department {
-  id: number;
+  id: string | number;
   name: string;
 }
 
@@ -62,40 +59,58 @@ export function DepartmentsTab() {
   // Function to load data
   const loadData = async () => {
     try {
-      // Load departments from localStorage or fallback to departmentsData
-      const savedDepartments = JSON.parse(
-        localStorage.getItem("departments") || "[]"
-      );
-      let departmentsToUse;
-
-      if (savedDepartments.length > 0) {
-        departmentsToUse = savedDepartments;
-      } else {
-        // Initialize localStorage with default departments if empty
-        departmentsToUse = departmentsData;
-        localStorage.setItem("departments", JSON.stringify(departmentsData));
-      }
+      // Load departments from API
+      const departmentsData = await apiService.getDepartments();
+      
+      // Convert API format to component format
+      const departmentsToUse = departmentsData.map((dept: any) => ({
+        id: dept.id,
+        name: dept.name,
+      }));
 
       setDepartments(departmentsToUse);
 
-      // Load employees from localStorage or fallback to accountsData
-      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
-      const employeesData = (accounts.length > 0 ? accounts : accountsData)
-        .filter((account: any) => account.role !== "admin")
-        .map((account: any) => ({
-          id: account.employeeId || account.id,
-          name: account.name,
-          email: account.email,
-          position: account.position,
-          department: account.department,
-          branch: account.branch,
-          role: account.role,
-          isActive: account.isActive,
-        }));
+      // Load employees from API
+      const accounts = await apiService.getAllUsers();
+      
+      // Filter out admin accounts and map to Employee format
+      const employeesData = accounts
+        .filter((account: any) => {
+          const role = account.role || account.roles || account.user_role;
+          return role !== "admin" && role !== "Admin";
+        })
+        .map((account: any) => {
+          // Handle different possible field names from backend
+          const fname = account.fname || account.first_name || account.firstName || "";
+          const lname = account.lname || account.last_name || account.lastName || "";
+          const name = account.name || 
+                      (fname && lname ? `${fname} ${lname}`.trim() : null) ||
+                      account.full_name ||
+                      account.user_name ||
+                      "";
+          
+          const department = account.department || account.department_name || account.department?.name || "";
+          const role = account.role || account.roles || account.user_role || "";
+          
+          return {
+            id: account.employeeId || account.id || account.user_id,
+            name: name,
+            email: account.email || account.user_email || "",
+            position: account.position || account.position_name || account.position?.name || "",
+            department: department,
+            branch: account.branch || account.branch_name || account.branch?.name || "",
+            role: String(role || ""),
+            isActive: account.isActive !== undefined ? account.isActive : (account.is_active !== undefined ? account.is_active : true),
+          };
+        });
 
       setEmployees(employeesData);
     } catch (error) {
       console.error("Error loading departments:", error);
+      toastMessages.generic.error(
+        "Error",
+        "Failed to load departments data. Please try again."
+      );
     }
   };
 
@@ -138,7 +153,7 @@ export function DepartmentsTab() {
   };
 
   // Function to handle adding a new department
-  const handleAddDepartment = () => {
+  const handleAddDepartment = async () => {
     if (!newDepartmentName.trim()) {
       toastMessages.generic.warning(
         "Validation Error",
@@ -163,42 +178,40 @@ export function DepartmentsTab() {
     }
 
     try {
-      // Generate new ID (get max ID and add 1)
-      const maxId =
-        departments.length > 0 ? Math.max(...departments.map((d) => d.id)) : 0;
+      // Create FormData for API call
+      const formData = new FormData();
+      formData.append("department_name", newDepartmentName.trim());
 
-      const newDepartment: Department = {
-        id: maxId + 1,
-        name: newDepartmentName.trim(),
-      };
+      // Call API to add department
+      const result = await apiService.addDepartment(formData);
 
-      // Add to state
-      const updatedDepartments = [...departments, newDepartment];
-      setDepartments(updatedDepartments);
+      if (result.success || result) {
+        // Reload departments from API to get the updated list with new ID
+        await loadData();
 
-      // Save to localStorage
-      localStorage.setItem("departments", JSON.stringify(updatedDepartments));
+        // Show success toast
+        toastMessages.generic.success(
+          "Department Added",
+          `"${newDepartmentName}" has been added successfully.`
+        );
 
-      // Show success toast
-      toastMessages.generic.success(
-        "Department Added",
-        `"${newDepartmentName}" has been added successfully.`
-      );
-
-      // Reset form and close modal
-      setNewDepartmentName("");
-      setIsAddModalOpen(false);
-    } catch (error) {
+        // Reset form and close modal
+        setNewDepartmentName("");
+        setIsAddModalOpen(false);
+      } else {
+        throw new Error(result.message || "Failed to add department");
+      }
+    } catch (error: any) {
       console.error("Error adding department:", error);
       toastMessages.generic.error(
         "Error",
-        "Failed to add department. Please try again."
+        error.message || "Failed to add department. Please try again."
       );
     }
   };
 
   // Function to handle deleting a department
-  const handleDeleteDepartment = () => {
+  const handleDeleteDepartment = async () => {
     if (!departmentToDelete) return;
 
     try {
@@ -217,29 +230,30 @@ export function DepartmentsTab() {
         return;
       }
 
-      // Remove from state
-      const updatedDepartments = departments.filter(
-        (dept) => dept.id !== departmentToDelete.id
-      );
-      setDepartments(updatedDepartments);
+      // Call API to delete department
+      const result = await apiService.deleteDepartment(departmentToDelete.id);
 
-      // Update localStorage
-      localStorage.setItem("departments", JSON.stringify(updatedDepartments));
+      if (result.success || result) {
+        // Reload departments from API to get the updated list
+        await loadData();
 
-      // Show success toast
-      toastMessages.generic.success(
-        "Department Deleted",
-        `"${departmentToDelete.name}" has been deleted successfully.`
-      );
+        // Show success toast
+        toastMessages.generic.success(
+          "Department Deleted",
+          `"${departmentToDelete.name}" has been deleted successfully.`
+        );
 
-      // Close modal and reset
-      setIsDeleteModalOpen(false);
-      setDepartmentToDelete(null);
-    } catch (error) {
+        // Close modal and reset
+        setIsDeleteModalOpen(false);
+        setDepartmentToDelete(null);
+      } else {
+        throw new Error(result.message || "Failed to delete department");
+      }
+    } catch (error: any) {
       console.error("Error deleting department:", error);
       toastMessages.generic.error(
         "Error",
-        "Failed to delete department. Please try again."
+        error.message || "Failed to delete department. Please try again."
       );
     }
   };
@@ -253,7 +267,8 @@ export function DepartmentsTab() {
       count: deptEmployees.length,
       managers: deptEmployees.filter(
         (emp) =>
-          emp.role === "Manager" || emp.role?.toLowerCase().includes("manager")
+          emp.role === "Manager" || 
+          String(emp.role || "").toLowerCase().includes("manager")
       ).length,
       averageTenure: 2.5, // Mock data
     };
