@@ -475,7 +475,7 @@ export default function DashboardShell(props: DashboardShellProps) {
       <div className="flex overflow-hidden">
         {/* Sidebar */}
         <div
-          className={`relative overflow-hidden transition-all duration-400 ${
+          className={`relative overflow-hidden bg-blue-600 transition-all duration-400 ${
             isSidebarOpen ? "w-64" : "w-0"
           }`}
         >
@@ -846,7 +846,6 @@ export default function DashboardShell(props: DashboardShellProps) {
             </div>
           </aside>
         </div>
-        <main className="flex-1 p-5">{children}</main>
 
         {!isSidebarOpen && (
           <div className="p-4">
@@ -863,6 +862,7 @@ export default function DashboardShell(props: DashboardShellProps) {
             </Button>
           </div>
         )}
+        <main className="flex-1 p-5">{children}</main>
       </div>
 
       {/* Profile Modal */}

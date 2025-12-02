@@ -131,7 +131,7 @@ export default function DepartmentsTab() {
   };
 
   // Function to handle adding a new department
-  const handleAddDepartment = () => {
+  const handleAddDepartment = async () => {
     if (!newDepartmentName.trim()) {
       toastMessages.generic.warning(
         "Validation Error",
@@ -139,39 +139,54 @@ export default function DepartmentsTab() {
       );
       return;
     }
+    try {
+      const add_department = await apiService.addDepartment(newDepartmentName);
+      loadData(searchTerm);
+      toastMessages.generic.success(
+        "Success " + newDepartmentName + " has been added",
+        "A new department has been save."
+      );
+      setNewDepartmentName("");
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsAddModalOpen(false);
+    }
   };
 
   // Function to handle deleting a department
-  const handleDeleteDepartment = () => {
+  const handleDeleteDepartment = async () => {
     if (!departmentToDelete) return;
 
     try {
-      // Check if department has employees
-
-      // Remove from state
-      const updatedDepartments = departments.filter(
-        (dept) => dept.id !== departmentToDelete.id
-      );
-      setDepartments(updatedDepartments);
-
-      // Update localStorage
-      localStorage.setItem("departments", JSON.stringify(updatedDepartments));
-
-      // Show success toast
-      toastMessages.generic.success(
-        "Department Deleted",
-        `"${departmentToDelete.department_name}" has been deleted successfully.`
-      );
-
-      // Close modal and reset
-      setIsDeleteModalOpen(false);
-      setDepartmentToDelete(null);
+      if (
+        Number(departmentToDelete.employees_count) !== 0 &&
+        Number(departmentToDelete.managers_count) !== 0
+      ) {
+        toastMessages.generic.warning(
+          "Department Deleted revoked",
+          `Deletion failed: "${departmentToDelete.department_name}" has employees linked to it.`
+        );
+        return;
+      } else {
+        const deleteDepartment = await apiService.deleteDepartment(
+          departmentToDelete.id
+        );
+        loadData(searchTerm);
+        toastMessages.generic.success(
+          "Department Deleted",
+          `"${departmentToDelete.department_name}" has been deleted successfully.`
+        );
+      }
     } catch (error) {
       console.error("Error deleting department:", error);
       toastMessages.generic.error(
         "Error",
         "Failed to delete department. Please try again."
       );
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDepartmentToDelete(null);
     }
   };
 
@@ -377,26 +392,58 @@ export default function DepartmentsTab() {
               })}
             </div>
           </div>
+          {departments.length === 0 && (
+            <div className="flex flex-col items-center justify-center gap-4">
+              <img
+                src="/not-found.gif"
+                alt="No data"
+                className="w-25 h-25 object-contain"
+                style={{
+                  imageRendering: "auto",
+                  willChange: "auto",
+                  transform: "translateZ(0)",
+                  backfaceVisibility: "hidden",
+                  WebkitBackfaceVisibility: "hidden",
+                }}
+              />
+              <div className="text-gray-500 text-center">
+                {searchTerm ? (
+                  <>
+                    <p className="text-base font-medium mb-1">
+                      No results found
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      Try adjusting your search or filters
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-base font-medium mb-1">
+                      No evaluation records to display
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      Records will appear here when evaluations are submitted
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          {/* Pagination Controls */}
+          {overviewTotal > itemsPerPage && (
+            <EvaluationsPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              total={overviewTotal}
+              perPage={perPage}
+              onPageChange={(page) => {
+                setCurrentPage(page);
+                loadData(searchTerm);
+              }}
+            />
+          )}
         </CardContent>
       </Card>
-
-      <div className="bg-amber-500 justify-center items-center inset-0">
-        <></>
-      </div>
-
-      {/* Pagination Controls */}
-      {overviewTotal > itemsPerPage && (
-        <EvaluationsPagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          total={overviewTotal}
-          perPage={perPage}
-          onPageChange={(page) => {
-            setCurrentPage(page);
-            loadData(searchTerm);
-          }}
-        />
-      )}
 
       {/* Add Department Modal */}
       <Dialog open={isAddModalOpen} onOpenChangeAction={setIsAddModalOpen}>
@@ -450,7 +497,7 @@ export default function DepartmentsTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Department Confirmation Modal */}
+      {/* Delete Confirmation Modal */}
       <Dialog
         open={isDeleteModalOpen}
         onOpenChangeAction={(open) => {
@@ -461,80 +508,61 @@ export default function DepartmentsTab() {
         }}
       >
         <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
-          <DialogHeader className="pb-4 bg-red-50 rounded-lg">
+          <DialogHeader className="pb-4 bg-red-50 rounded-lg ">
             <DialogTitle className="text-red-800 flex items-center gap-2">
               <span className="text-xl">⚠️</span>
-              Delete Department
+              Delete {departmentToDelete?.department_name} Department
             </DialogTitle>
             <DialogDescription className="text-red-700">
               This action cannot be undone. Are you sure you want to permanently
-              delete "{departmentToDelete?.department_name}"?
+              delete this department?
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 px-2 mt-8">
-            {departmentToDelete &&
-              (() => {
-                const deptEmployees = employees.filter(
-                  (emp) => emp.department === departmentToDelete.department_name
-                );
-                return deptEmployees.length > 0 ? (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0">
-                        <svg
-                          className="h-5 w-5 text-yellow-400"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </div>
-                      <div className="text-sm text-yellow-700">
-                        <p className="font-medium">
-                          Warning: This department has {deptEmployees.length}{" "}
-                          employee(s).
-                        </p>
-                        <p className="mt-1">
-                          Please reassign all employees before deleting this
-                          department.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0">
-                        <svg
-                          className="h-5 w-5 text-red-400"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </div>
-                      <div className="text-sm text-red-700">
-                        <p className="font-medium">
-                          Warning: This will permanently delete:
-                        </p>
-                        <ul className="mt-2 list-disc list-inside space-y-1">
-                          <li>Department record</li>
-                          <li>All associated data</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="h-5 w-5 text-red-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="text-sm text-red-700">
+                  <p className="font-medium">
+                    Warning: This will permanently delete:
+                  </p>
+                  <ul className="mt-2 list-disc list-inside space-y-1">
+                    <li>This department record</li>
+                    <li>All users under this department</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <div className="text-sm text-gray-700">
+                <p className="font-medium">Department Details:</p>
+                <div className="mt-2 space-y-1">
+                  <p>
+                    <span className="font-medium">Department Name:</span>{" "}
+                    {departmentToDelete?.department_name}
+                  </p>
+                  <p>
+                    <span className="font-medium">No. of employees:</span>{" "}
+                    {Number(departmentToDelete?.employees_count) +
+                      Number(departmentToDelete?.managers_count)}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <DialogFooter className="pt-6 px-2">
@@ -551,17 +579,9 @@ export default function DepartmentsTab() {
               </Button>
               <Button
                 className="bg-red-600 hover:bg-red-700 text-white"
-                onClick={handleDeleteDepartment}
-                disabled={
-                  departmentToDelete
-                    ? employees.filter(
-                        (emp) =>
-                          emp.department === departmentToDelete.department_name
-                      ).length > 0
-                    : false
-                }
+                onClick={() => handleDeleteDepartment()}
               >
-                🗑️ Delete Permanently
+                ❌ Delete Permanently
               </Button>
             </div>
           </DialogFooter>

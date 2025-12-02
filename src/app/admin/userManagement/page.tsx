@@ -114,7 +114,7 @@ export default function UserManagementTab() {
     useState(statusFilter);
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(4);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
@@ -623,7 +623,42 @@ export default function UserManagementTab() {
                           colSpan={7}
                           className="text-center py-8 text-gray-500"
                         >
-                          No active users found
+                          <div className="flex flex-col items-center justify-center gap-4">
+                            <img
+                              src="/not-found.gif"
+                              alt="No data"
+                              className="w-25 h-25 object-contain"
+                              style={{
+                                imageRendering: "auto",
+                                willChange: "auto",
+                                transform: "translateZ(0)",
+                                backfaceVisibility: "hidden",
+                                WebkitBackfaceVisibility: "hidden",
+                              }}
+                            />
+                            <div className="text-gray-500">
+                              {activeSearchTerm ? (
+                                <>
+                                  <p className="text-base font-medium mb-1">
+                                    No results found
+                                  </p>
+                                  <p className="text-sm text-gray-400">
+                                    Try adjusting your search or filters
+                                  </p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-base font-medium mb-1">
+                                    No evaluation records to display
+                                  </p>
+                                  <p className="text-sm text-gray-400">
+                                    Records will appear here when evaluations
+                                    are submitted
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -876,9 +911,42 @@ export default function UserManagementTab() {
                             colSpan={6}
                             className="text-center py-8 text-gray-500"
                           >
-                            {pendingSearchTerm
-                              ? "No new registrations match your search."
-                              : "No new registrations found."}
+                            <div className="flex flex-col items-center justify-center gap-4">
+                              <img
+                                src="/not-found.gif"
+                                alt="No data"
+                                className="w-25 h-25 object-contain"
+                                style={{
+                                  imageRendering: "auto",
+                                  willChange: "auto",
+                                  transform: "translateZ(0)",
+                                  backfaceVisibility: "hidden",
+                                  WebkitBackfaceVisibility: "hidden",
+                                }}
+                              />
+                              <div className="text-gray-500">
+                                {pendingSearchTerm ? (
+                                  <>
+                                    <p className="text-base font-medium mb-1">
+                                      No results found
+                                    </p>
+                                    <p className="text-sm text-gray-400">
+                                      Try adjusting your search or filters
+                                    </p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="text-base font-medium mb-1">
+                                      No evaluation records to display
+                                    </p>
+                                    <p className="text-sm text-gray-400">
+                                      Records will appear here when evaluations
+                                      are submitted
+                                    </p>
+                                  </>
+                                )}
+                              </div>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ) : (
