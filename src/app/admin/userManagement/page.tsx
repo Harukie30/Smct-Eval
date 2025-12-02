@@ -384,7 +384,7 @@ export default function UserManagementTab() {
 
       await refreshUserData();
 
-      toastMessages.user.created(newUser.name);
+      toastMessages.user.created(newUser.fname);
       setIsAddUserModalOpen(false);
     } catch (error) {
       console.error("Error adding user:", error);
@@ -639,7 +639,7 @@ export default function UserManagementTab() {
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {employee.roles[0].name}
+                              {employee.roles[0]?.name}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -1071,8 +1071,8 @@ export default function UserManagementTab() {
                     {employeeToDelete?.positions.label}
                   </p>
                   <p>
-                    <span className="font-medium">Department:</span>{" "}
-                    {employeeToDelete?.departments.department_name}
+                    <span className="font-medium">Branch:</span>{" "}
+                    {employeeToDelete?.branches?.branch_name}
                   </p>
                 </div>
               </div>

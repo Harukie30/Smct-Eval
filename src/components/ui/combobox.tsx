@@ -28,7 +28,6 @@ interface ComboboxProps {
   emptyText?: string;
   className?: string;
   disabled?: boolean;
-  error?: null | string;
 }
 
 export function Combobox({
@@ -40,7 +39,6 @@ export function Combobox({
   emptyText = "No option found.",
   className,
   disabled = false,
-  error = null,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -71,8 +69,7 @@ export function Combobox({
             className={cn(
               "w-full justify-between",
               !value && "text-muted-foreground",
-              className,
-              error && "border-red-500"
+              className
             )}
             disabled={disabled}
           >
@@ -136,7 +133,6 @@ export function Combobox({
           </div>
         </PopoverContent>
       </Popover>
-      {error && <small className="text-red-500">{error[0]}</small>}
     </>
   );
 }

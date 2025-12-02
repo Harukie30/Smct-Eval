@@ -101,17 +101,14 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (formData.employee_id && !/^\d{4}-\d{6}$/.test(formData.employee_id)) {
-      errors.employee_id = "Format: 1234-567890 (4 digits, dash, 6 digits)";
-    }
     if (!formData.employee_id.trim()) {
-      errors.employee_id = "Employee ID is required!";
+      newErrors.employee_id = "Employee ID is required!";
     }
     if (!formData.fname.trim()) {
-      newErrors.name = "Name is required";
+      newErrors.fname = "First name is required";
     }
     if (!formData.lname.trim()) {
-      newErrors.name = "Name is required";
+      newErrors.lname = "Last name is required";
     }
 
     if (!formData.email.trim()) {
@@ -121,21 +118,19 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     }
 
     if (!formData.position_id) {
-      newErrors.position = "Position is required";
+      newErrors.position_id = "Position is required";
     }
 
-    // Department is only required if branch IS HO/none/Head Office
     if (formData.branch_id === 126 && !formData.department_id) {
-      newErrors.department = "Department is required";
+      newErrors.department_id = "Department is required";
     }
 
-    // Branch is required
     if (!formData.branch_id) {
-      newErrors.branch = "Branch is required";
+      newErrors.branch_id = "Branch is required";
     }
 
     if (!formData.role_id) {
-      newErrors.role = "Role is required";
+      newErrors.role_id = "Role is required";
     }
 
     if (!formData.username.trim()) {
@@ -147,6 +142,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       !/^\d{10,15}$/.test(formData.contact.replace(/\D/g, ""))
     ) {
       newErrors.contact = "Please enter a valid phone number";
+    }
+    if (!formData.contact) {
+      newErrors.contact = "contact is required";
     }
 
     if (!formData.password || formData.password.length < 8) {
@@ -186,7 +184,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       setIsSaving(true);
       try {
         await onSave(formData);
-        success("Success! New employee has been added.");
         onClose();
       } catch (error) {
         console.error("Error adding employee:", error);
@@ -218,7 +215,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
-            <div className="space-y-2">
+            <div className="space-y-2 ">
               <Label htmlFor="employee_id">Employee ID</Label>
               <Input
                 id="employee_id"
@@ -239,7 +236,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                     value = value.slice(0, 4) + "-" + value.slice(4);
                   }
 
-                  handleInputChange("employee_id", e.target.value);
+                  setFormData({ ...formData, employee_id: value });
                 }}
                 onKeyPress={(e) => {
                   // Only allow numbers
@@ -412,7 +409,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 searchPlaceholder="Search positions..."
                 emptyText="No positions found."
                 className={errors.position_id ? "border-red-500" : "bg-white"}
-                error={errors.position_id || null}
               />
               {errors.position_id && (
                 <p className="text-sm text-red-500">{errors.position_id}</p>
@@ -432,7 +428,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 searchPlaceholder="Search branches..."
                 emptyText="No branches found."
                 className={errors.branch_id ? "border-red-500" : ""}
-                error={errors.branch_id || null}
               />
               {errors.branch_id && (
                 <p className="text-sm text-red-500">{errors.branch_id}</p>
@@ -455,7 +450,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   className={
                     errors.department_id ? "border-red-500" : "bg-white"
                   }
-                  error={errors.department_id || null}
                 />
                 {errors.department_id && (
                   <p className="text-sm text-red-500">{errors.department_id}</p>
@@ -465,7 +459,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
             {/* Role */}
             <div className="space-y-2 w-1/2">
-              <Label htmlFor="role">Role *</Label>
+              <Label htmlFor="role_id">Role *</Label>
               <Select
                 onValueChange={(value) => handleInputChange("role_id", value)}
               >

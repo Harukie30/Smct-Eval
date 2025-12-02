@@ -291,9 +291,9 @@ export const apiService = {
   },
 
   getSubmissions: async (
-    searchTerm: string,
-    page: number,
-    perPage: number
+    searchTerm?: string,
+    page?: number,
+    perPage?: number
   ): Promise<any> => {
     try {
       const response = await api.get(`/allEvaluations`, {
