@@ -293,12 +293,18 @@ export const apiService = {
   getSubmissions: async (
     searchTerm?: string,
     page?: number,
-    perPage?: number
+    perPage?: number,
+    status?: string,
+    quarter?: string,
+    year?: string
   ): Promise<any> => {
     try {
       const response = await api.get(`/allEvaluations`, {
         params: {
           search: searchTerm || "",
+          status: status || "",
+          quarter: quarter || "",
+          year: year || "",
           page: page,
           per_page: perPage,
         },
@@ -395,8 +401,8 @@ export const apiService = {
     id: number
   ): Promise<{ success: boolean; message: string }> => {
     try {
-      await api.delete(`/delete_eval/${id}`);
-      return { success: true, message: "Submission deleted successfully" };
+      const delete_eval = await api.post(`/deleteEval/${id}`);
+      return delete_eval.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw new Error(
@@ -994,14 +1000,9 @@ export const apiService = {
   // ============================================
 
   // Get total employees under a department
-  getTotalEmployeesDepartments: async (
-    departmentId?: string | number
-  ): Promise<any> => {
+  getTotalEmployeesDepartments: async (): Promise<any> => {
     try {
-      const endpoint = departmentId
-        ? `/getTotalEmployeesDepartments?department=${departmentId}`
-        : "/getTotalEmployeesDepartments";
-      const response = await api.get(endpoint);
+      const response = await api.get("/getTotalEmployeesDepartments");
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;

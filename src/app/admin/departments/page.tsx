@@ -26,6 +26,7 @@ import departmentsData from "@/data/departments.json";
 import accountsDataRaw from "@/data/accounts.json";
 import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
+import apiService from "@/lib/apiService";
 
 const accountsData = accountsDataRaw.accounts || [];
 
@@ -42,7 +43,9 @@ interface Employee {
 
 interface Department {
   id: number;
-  name: string;
+  department_name: string;
+  managers_count: string;
+  employees_count: string;
 }
 
 export default function DepartmentsTab() {
@@ -62,38 +65,8 @@ export default function DepartmentsTab() {
   // Function to load data
   const loadData = async () => {
     try {
-      // Load departments from localStorage or fallback to departmentsData
-      const savedDepartments = JSON.parse(
-        localStorage.getItem("departments") || "[]"
-      );
-      let departmentsToUse;
-
-      if (savedDepartments.length > 0) {
-        departmentsToUse = savedDepartments;
-      } else {
-        // Initialize localStorage with default departments if empty
-        departmentsToUse = departmentsData;
-        localStorage.setItem("departments", JSON.stringify(departmentsData));
-      }
-
-      setDepartments(departmentsToUse);
-
-      // Load employees from localStorage or fallback to accountsData
-      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
-      const employeesData = (accounts.length > 0 ? accounts : accountsData)
-        .filter((account: any) => account.role !== "admin")
-        .map((account: any) => ({
-          id: account.employeeId || account.id,
-          name: account.name,
-          email: account.email,
-          position: account.position,
-          department: account.department,
-          branch: account.branch,
-          role: account.role,
-          isActive: account.isActive,
-        }));
-
-      setEmployees(employeesData);
+      const departments = await apiService.getTotalEmployeesDepartments();
+      setDepartments(departments);
     } catch (error) {
       console.error("Error loading departments:", error);
     }
@@ -104,8 +77,6 @@ export default function DepartmentsTab() {
     const initializeData = async () => {
       setLoading(true);
       try {
-        // Add a small delay to ensure skeleton is visible
-        await new Promise((resolve) => setTimeout(resolve, 300));
         await loadData();
       } catch (error) {
         console.error("Error initializing departments:", error);
@@ -119,19 +90,11 @@ export default function DepartmentsTab() {
 
   // Function to refresh data
   const refreshData = async () => {
-    console.log("🔄 Starting departments refresh...");
     setIsRefreshing(true);
-
     try {
       await loadData();
-      console.log("✅ Departments refresh completed successfully");
-
-      // Keep spinner visible for at least 800ms for better UX
-      await new Promise((resolve) => setTimeout(resolve, 800));
     } catch (error) {
       console.error("❌ Error refreshing departments:", error);
-      // Even on error, show spinner for minimum duration
-      await new Promise((resolve) => setTimeout(resolve, 800));
     } finally {
       setIsRefreshing(false);
     }
@@ -147,55 +110,6 @@ export default function DepartmentsTab() {
       return;
     }
 
-    // Check if department already exists
-    const departmentExists = departments.some(
-      (dept) =>
-        dept.name.toLowerCase().trim() ===
-        newDepartmentName.toLowerCase().trim()
-    );
-
-    if (departmentExists) {
-      toastMessages.generic.warning(
-        "Duplicate Department",
-        "A department with this name already exists."
-      );
-      return;
-    }
-
-    try {
-      // Generate new ID (get max ID and add 1)
-      const maxId =
-        departments.length > 0 ? Math.max(...departments.map((d) => d.id)) : 0;
-
-      const newDepartment: Department = {
-        id: maxId + 1,
-        name: newDepartmentName.trim(),
-      };
-
-      // Add to state
-      const updatedDepartments = [...departments, newDepartment];
-      setDepartments(updatedDepartments);
-
-      // Save to localStorage
-      localStorage.setItem("departments", JSON.stringify(updatedDepartments));
-
-      // Show success toast
-      toastMessages.generic.success(
-        "Department Added",
-        `"${newDepartmentName}" has been added successfully.`
-      );
-
-      // Reset form and close modal
-      setNewDepartmentName("");
-      setIsAddModalOpen(false);
-    } catch (error) {
-      console.error("Error adding department:", error);
-      toastMessages.generic.error(
-        "Error",
-        "Failed to add department. Please try again."
-      );
-    }
-  };
 
   // Function to handle deleting a department
   const handleDeleteDepartment = () => {
@@ -244,20 +158,7 @@ export default function DepartmentsTab() {
     }
   };
 
-  // Helper function to get department statistics
-  const getDepartmentStats = (deptName: string) => {
-    const deptEmployees = employees.filter(
-      (emp) => emp.department === deptName
-    );
-    return {
-      count: deptEmployees.length,
-      managers: deptEmployees.filter(
-        (emp) =>
-          emp.role === "Manager" || emp.role?.toLowerCase().includes("manager")
-      ).length,
-      averageTenure: 2.5, // Mock data
-    };
-  };
+
 
   // Show loading skeleton on initial load
   if (loading) {
@@ -389,15 +290,14 @@ export default function DepartmentsTab() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {departments.map((dept) => {
-                const stats = getDepartmentStats(dept.name);
                 return (
                   <Card key={dept.id}>
                     <CardHeader>
                       <CardTitle className="flex justify-between items-center">
-                        {dept.name}
+                        {dept.department_name}
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">
-                            {stats.count} employees
+                            {dept.employees_count} employees
                           </Badge>
                           <Button
                             variant="ghost"
@@ -418,13 +318,13 @@ export default function DepartmentsTab() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="text-center p-3 bg-blue-50 rounded-lg">
                           <div className="text-lg font-bold text-blue-600">
-                            {stats.count}
+                            {dept.employees_count}
                           </div>
                           <div className="text-xs text-gray-600">Employees</div>
                         </div>
                         <div className="text-center p-3 bg-green-50 rounded-lg">
                           <div className="text-lg font-bold text-green-600">
-                            {stats.managers}
+                            {dept.managers_count}
                           </div>
                           <div className="text-xs text-gray-600">Managers</div>
                         </div>
