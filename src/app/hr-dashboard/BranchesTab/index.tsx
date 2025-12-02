@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 import { toastMessages } from '@/lib/toastMessages';
 import { useDialogAnimation } from '@/hooks/useDialogAnimation';
-import branchCodesData from '@/data/branch-code.json';
+import { apiService } from '@/lib/apiService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Employee {
@@ -35,13 +35,15 @@ interface BranchesTabProps {
   employees: Employee[];
   branchesRefreshing: boolean;
   isActive?: boolean;
+  onBranchesUpdate?: () => void; // Callback to refresh branches in parent
 }
 
 export function BranchesTab({
   branches: initialBranches,
   employees,
   branchesRefreshing,
-  isActive = false
+  isActive = false,
+  onBranchesUpdate
 }: BranchesTabProps) {
   const [branches, setBranches] = useState<Branch[]>(initialBranches.map(b => ({ id: b.id, name: b.name })));
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -58,7 +60,7 @@ export function BranchesTab({
   }, [initialBranches]);
 
   // Function to handle adding a new branch
-  const handleAddBranch = () => {
+  const handleAddBranch = async () => {
     if (!newBranchName.trim()) {
       toastMessages.generic.warning('Validation Error', 'Please enter a branch name.');
       return;
@@ -75,25 +77,24 @@ export function BranchesTab({
     }
 
     try {
-      // Generate new ID (get max ID and add 1, or use timestamp)
-      const maxId = branches.length > 0 
-        ? Math.max(...branches.map(b => parseInt(b.id) || 0))
-        : 0;
-      
-      const newBranch: Branch = {
-        id: String(maxId + 1),
-        name: newBranchName.trim(),
-        branchCode: newBranchCode && newBranchCode !== 'none' ? newBranchCode : undefined,
-      };
+      // Create FormData for API call
+      const formData = new FormData();
+      formData.append('name', newBranchName.trim());
+      if (newBranchCode && newBranchCode !== 'none') {
+        formData.append('branchCode', newBranchCode.trim());
+      }
 
-      // Add to state
-      const updatedBranches = [...branches, newBranch];
-      setBranches(updatedBranches);
+      // Add branch via API
+      await apiService.addBranch(formData);
 
-      // Save to localStorage
-      const savedBranches = JSON.parse(localStorage.getItem('branches') || '[]');
-      const updatedAllBranches = [...savedBranches, newBranch];
-      localStorage.setItem('branches', JSON.stringify(updatedAllBranches));
+      // Refresh branches from API
+      const updatedBranches = await apiService.getBranches();
+      setBranches(updatedBranches.map(b => ({ id: b.id, name: b.name })));
+
+      // Notify parent to refresh branches
+      if (onBranchesUpdate) {
+        onBranchesUpdate();
+      }
 
       // Show success toast
       toastMessages.generic.success('Branch Added', `"${newBranchName}" has been added successfully.`);
@@ -102,9 +103,12 @@ export function BranchesTab({
       setNewBranchName('');
       setNewBranchCode('');
       setIsAddModalOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding branch:', error);
-      toastMessages.generic.error('Error', 'Failed to add branch. Please try again.');
+      toastMessages.generic.error(
+        'Error',
+        error.message || 'Failed to add branch. Please try again.'
+      );
     }
   };
 

@@ -41,6 +41,15 @@ import AddEmployeeModal from "@/components/AddEmployeeModal";
 import { toastMessages } from "@/lib/toastMessages";
 import { apiService } from "@/lib/apiService";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 // TypeScript interfaces
 interface Employee {
@@ -729,6 +738,45 @@ export function UserManagementTab({
     newRegistrationsEndIndex
   );
 
+  // Helper function to generate pagination pages with ellipsis
+  const generatePaginationPages = (
+    currentPage: number,
+    totalPages: number
+  ): (number | "ellipsis")[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages: (number | "ellipsis")[] = [];
+
+    if (currentPage <= 3) {
+      // Show first 5 pages, ellipsis, last page
+      for (let i = 1; i <= 5; i++) {
+        pages.push(i);
+      }
+      pages.push("ellipsis");
+      pages.push(totalPages);
+    } else if (currentPage >= totalPages - 2) {
+      // Show first page, ellipsis, last 5 pages
+      pages.push(1);
+      pages.push("ellipsis");
+      for (let i = totalPages - 4; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Show first page, ellipsis, current-1, current, current+1, ellipsis, last page
+      pages.push(1);
+      pages.push("ellipsis");
+      pages.push(currentPage - 1);
+      pages.push(currentPage);
+      pages.push(currentPage + 1);
+      pages.push("ellipsis");
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
+
   // Reset to page 1 when search term changes
   useEffect(() => {
     setActiveUsersPage(1);
@@ -1023,85 +1071,80 @@ export function UserManagementTab({
                     </TableBody>
                   </Table>
                 </div>
-
-                {/* Pagination Controls for Active Users */}
-                {activeUsersTotal > itemsPerPage && (
-                  <div className="flex items-center justify-between mt-4 px-2">
-                    <div className="text-sm text-gray-600">
-                      Showing {activeUsersStartIndex + 1} to{" "}
-                      {Math.min(activeUsersEndIndex, activeUsersTotal)} of{" "}
-                      {activeUsersTotal} users
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setActiveUsersPage((prev) => Math.max(1, prev - 1))
-                        }
-                        disabled={activeUsersPage === 1}
-                        className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                      >
-                        Previous
-                      </Button>
-                      <div className="flex items-center gap-1">
-                        {Array.from(
-                          { length: activeUsersTotalPages },
-                          (_, i) => i + 1
-                        ).map((page) => {
-                          if (
-                            page === 1 ||
-                            page === activeUsersTotalPages ||
-                            (page >= activeUsersPage - 1 &&
-                              page <= activeUsersPage + 1)
-                          ) {
-                            return (
-                              <Button
-                                key={page}
-                                variant={
-                                  activeUsersPage === page
-                                    ? "default"
-                                    : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setActiveUsersPage(page)}
-                                className="text-xs w-8 h-8 p-0 bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
-                              >
-                                {page}
-                              </Button>
-                            );
-                          } else if (
-                            page === activeUsersPage - 2 ||
-                            page === activeUsersPage + 2
-                          ) {
-                            return (
-                              <span key={page} className="text-gray-400">
-                                ...
-                              </span>
-                            );
-                          }
-                          return null;
-                        })}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setActiveUsersPage((prev) =>
-                            Math.min(activeUsersTotalPages, prev + 1)
-                          )
-                        }
-                        disabled={activeUsersPage === activeUsersTotalPages}
-                        className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </CardContent>
+          
+          {/* Pagination Controls for Active Users */}
+          {userManagementTab === "active" && activeUsersTotal > itemsPerPage && (
+            <div className="flex items-center justify-end px-6 py-4 border-t">
+              <Pagination className="justify-end">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setActiveUsersPage((prev) => Math.max(1, prev - 1));
+                      }}
+                      className={
+                        activeUsersPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      }
+                    />
+                  </PaginationItem>
+                  {generatePaginationPages(
+                    activeUsersPage,
+                    activeUsersTotalPages
+                  ).map((page, index) => {
+                    if (page === "ellipsis") {
+                      return (
+                        <PaginationItem key={`ellipsis-${index}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      );
+                    }
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setActiveUsersPage(page);
+                          }}
+                          isActive={activeUsersPage === page}
+                          className={
+                            activeUsersPage === page
+                              ? "cursor-pointer bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
+                              : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          }
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setActiveUsersPage((prev) =>
+                          Math.min(activeUsersTotalPages, prev + 1)
+                        );
+                      }}
+                      className={
+                        activeUsersPage === activeUsersTotalPages
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </Card>
       )}
 
@@ -1327,91 +1370,81 @@ export function UserManagementTab({
                     </TableBody>
                   </Table>
                 </div>
-
-                {/* Pagination Controls for New Registrations */}
-                {newRegistrationsTotal > itemsPerPage && (
-                  <div className="flex items-center justify-between mt-4 px-2">
-                    <div className="text-sm text-gray-600">
-                      Showing {newRegistrationsStartIndex + 1} to{" "}
-                      {Math.min(
-                        newRegistrationsEndIndex,
-                        newRegistrationsTotal
-                      )}{" "}
-                      of {newRegistrationsTotal} registrations
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setNewRegistrationsPage((prev) =>
-                            Math.max(1, prev - 1)
-                          )
-                        }
-                        disabled={newRegistrationsPage === 1}
-                        className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                      >
-                        Previous
-                      </Button>
-                      <div className="flex items-center gap-1">
-                        {Array.from(
-                          { length: newRegistrationsTotalPages },
-                          (_, i) => i + 1
-                        ).map((page) => {
-                          if (
-                            page === 1 ||
-                            page === newRegistrationsTotalPages ||
-                            (page >= newRegistrationsPage - 1 &&
-                              page <= newRegistrationsPage + 1)
-                          ) {
-                            return (
-                              <Button
-                                key={page}
-                                variant={
-                                  newRegistrationsPage === page
-                                    ? "default"
-                                    : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setNewRegistrationsPage(page)}
-                                className="text-xs w-8 h-8 p-0 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                              >
-                                {page}
-                              </Button>
-                            );
-                          } else if (
-                            page === newRegistrationsPage - 2 ||
-                            page === newRegistrationsPage + 2
-                          ) {
-                            return (
-                              <span key={page} className="text-gray-400">
-                                ...
-                              </span>
-                            );
-                          }
-                          return null;
-                        })}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setNewRegistrationsPage((prev) =>
-                            Math.min(newRegistrationsTotalPages, prev + 1)
-                          )
-                        }
-                        disabled={
-                          newRegistrationsPage === newRegistrationsTotalPages
-                        }
-                        className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </div>
             </CardContent>
+            
+            {/* Pagination Controls for New Registrations */}
+            {userManagementTab === "new" && newRegistrationsTotal > itemsPerPage && (
+              <div className="flex items-center justify-end px-6 py-4 border-t">
+                <Pagination className="justify-end">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setNewRegistrationsPage((prev) =>
+                            Math.max(1, prev - 1)
+                          );
+                        }}
+                        className={
+                          newRegistrationsPage === 1
+                            ? "pointer-events-none opacity-50"
+                            : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                        }
+                      />
+                    </PaginationItem>
+                    {generatePaginationPages(
+                      newRegistrationsPage,
+                      newRegistrationsTotalPages
+                    ).map((page, index) => {
+                      if (page === "ellipsis") {
+                        return (
+                          <PaginationItem key={`ellipsis-${index}`}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setNewRegistrationsPage(page);
+                            }}
+                            isActive={newRegistrationsPage === page}
+                            className={
+                              newRegistrationsPage === page
+                                ? "cursor-pointer bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
+                                : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                            }
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+                    <PaginationItem>
+                      <PaginationNext
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setNewRegistrationsPage((prev) =>
+                            Math.min(newRegistrationsTotalPages, prev + 1)
+                          );
+                        }}
+                        className={
+                          newRegistrationsPage === newRegistrationsTotalPages
+                            ? "pointer-events-none opacity-50"
+                            : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </Card>
         </div>
       )}

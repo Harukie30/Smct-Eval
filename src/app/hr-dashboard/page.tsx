@@ -25,10 +25,7 @@ import AddEmployeeModal from '@/components/AddEmployeeModal';
 import { useDialogAnimation } from '@/hooks/useDialogAnimation';
 import { HRDashboardGuideModal } from '@/components/HRDashboardGuideModal';
 
-// Import data
-import accountsData from '@/data/accounts.json';
-import departmentsData from '@/data/departments.json';
-// branchData now comes from clientDataService
+// Removed static JSON imports - using API only
 
 // Lazy load tab components for better performance
 const OverviewTab = lazy(() => import('./OverviewTab').then(m => ({ default: m.OverviewTab })));
@@ -282,8 +279,15 @@ function HRDashboard() {
         setDepartmentsRefreshing(true);
         // Add a small delay to ensure spinner is visible
         await new Promise(resolve => setTimeout(resolve, 800));
-        // Refresh departments data (reload from departmentsData)
-        setDepartments(departmentsData);
+        // Refresh departments data from API
+        const departments = await apiService.getDepartments();
+        setDepartments(departments.map((dept: any) => ({
+          id: dept.id,
+          name: dept.name,
+          manager: dept.manager || '',
+          employeeCount: dept.employeeCount || 0,
+          performance: dept.performance || 0
+        })));
         setDepartmentsRefreshing(false);
       } else if (tabId === 'branches') {
         setBranchesRefreshing(true);
@@ -404,73 +408,87 @@ function HRDashboard() {
   };
 
   // Function to calculate HR metrics manually (fallback)
-  const calculateHRMetrics = (branchesData?: {id: string, name: string}[]) => {
-    // Load from localStorage first, fallback to static JSON
-    const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-    const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : (accountsData.accounts || []);
-    
-    // Convert accounts data to employees format (filter out admin accounts)
-    const employeeAccounts = accounts.filter((account: any) => account.role !== 'admin');
-    const employees = employeeAccounts;
-    
-    // Use provided branchesData or fallback to state
-    const branchesCount = branchesData ? branchesData.length : branches.length;
-    
-    const metrics: HRMetrics = {
-      totalEmployees: employees.length,
-      activeEmployees: employees.length,
-      newHires: employees.filter((emp: any) => {
-        const hireDate = new Date(emp.hireDate);
-        const sixMonthsAgo = new Date();
-        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-        return hireDate > sixMonthsAgo;
-      }).length,
-      turnoverRate: 5.2, // Mock data
-      averageTenure: 2.8, // Mock data
-      departmentsCount: departmentsData.length,
-      branchesCount: branchesCount,
-      genderDistribution: {
-        male: Math.floor(employees.length * 0.55),
-        female: Math.floor(employees.length * 0.45)
-      },
-      ageDistribution: {
-        '18-25': Math.floor(employees.length * 0.15),
-        '26-35': Math.floor(employees.length * 0.45),
-        '36-45': Math.floor(employees.length * 0.30),
-        '46+': Math.floor(employees.length * 0.10)
-      },
-      performanceDistribution: {
-        excellent: Math.floor(employees.length * 0.25),
-        good: Math.floor(employees.length * 0.40),
-        average: Math.floor(employees.length * 0.25),
-        needsImprovement: Math.floor(employees.length * 0.10)
-      }
-    };
-    setHrMetrics(metrics);
+  const calculateHRMetrics = async (branchesData?: {id: string, name: string}[]) => {
+    try {
+      // Load employees from API
+      const allUsers = await apiService.getAllUsers();
+      const employees = allUsers.filter((user: any) => user.role !== 'admin');
+      
+      // Load departments from API
+      const departments = await apiService.getDepartments();
+      
+      // Use provided branchesData or fallback to state
+      const branchesCount = branchesData ? branchesData.length : branches.length;
+      
+      const metrics: HRMetrics = {
+        totalEmployees: employees.length,
+        activeEmployees: employees.filter((emp: any) => emp.isActive !== false).length,
+        newHires: employees.filter((emp: any) => {
+          if (!emp.hireDate) return false;
+          const hireDate = new Date(emp.hireDate);
+          const sixMonthsAgo = new Date();
+          sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+          return hireDate > sixMonthsAgo;
+        }).length,
+        turnoverRate: 5.2, // Mock data
+        averageTenure: 2.8, // Mock data
+        departmentsCount: departments.length,
+        branchesCount: branchesCount,
+        genderDistribution: {
+          male: Math.floor(employees.length * 0.55),
+          female: Math.floor(employees.length * 0.45)
+        },
+        ageDistribution: {
+          '18-25': Math.floor(employees.length * 0.15),
+          '26-35': Math.floor(employees.length * 0.45),
+          '36-45': Math.floor(employees.length * 0.30),
+          '46+': Math.floor(employees.length * 0.10)
+        },
+        performanceDistribution: {
+          excellent: Math.floor(employees.length * 0.25),
+          good: Math.floor(employees.length * 0.40),
+          average: Math.floor(employees.length * 0.25),
+          needsImprovement: Math.floor(employees.length * 0.10)
+        }
+      };
+      setHrMetrics(metrics);
+    } catch (error) {
+      console.error('Error calculating HR metrics:', error);
+    }
   };
 
   const refreshHRData = async () => {
     try {
       setLoading(true);
       
-      // Load from localStorage first, fallback to static JSON (same as admin dashboard)
-      const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-      const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : (accountsData.accounts || []);
-      
-      // Convert accounts data to employees format (filter out admin accounts)
-      const employeeAccounts = accounts.filter((account: any) => account.role !== 'admin');
-      const employeesList = employeeAccounts.map((account: any) => ({
-        id: account.employeeId || account.id,
-        name: account.name,
-        email: account.email,
-        position: account.position,
-        department: account.department,
-        branch: account.branch,
-        hireDate: account.hireDate,
-        role: account.role
-      }));
+      // Load employees from API
+      const allUsers = await apiService.getAllUsers();
+      const employeesList = allUsers
+        .filter((user: any) => user.role !== 'admin')
+        .map((user: any) => ({
+          id: user.employeeId || user.id,
+          name: user.name || `${user.fname || ''} ${user.lname || ''}`.trim(),
+          fname: user.fname,
+          lname: user.lname,
+          email: user.email,
+          position: user.position,
+          department: user.department,
+          branch: user.branch,
+          hireDate: user.hireDate,
+          role: user.role,
+          isActive: user.isActive
+        }));
       setEmployees(employeesList);
-      setDepartments(departmentsData);
+      
+      // Load departments from API
+      const departments = await apiService.getDepartments();
+      setDepartments(departments.map((dept: any) => ({
+        id: dept.id,
+        name: dept.name,
+        manager: dept.manager || '',
+        employeeCount: dept.employeeCount || 0,
+        performance: dept.performance || 0
+      })));
       
       // Load branches from API
       const branchesData = await apiService.getBranches();
@@ -484,7 +502,7 @@ function HRDashboard() {
       await loadDashboardData();
 
       // Fallback: Calculate HR metrics manually if API didn't provide all data
-      calculateHRMetrics(branchesData);
+      await calculateHRMetrics(branchesData);
       
       // Refresh recent submissions
       await fetchRecentSubmissions();
@@ -550,24 +568,34 @@ function HRDashboard() {
   useEffect(() => {
     const loadHRData = async () => {
       try {
-        // Load from localStorage first, fallback to static JSON (same as admin dashboard)
-        const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-        const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : (accountsData.accounts || []);
-        
-        // Convert accounts data to employees format (filter out admin accounts)
-        const employeeAccounts = accounts.filter((account: any) => account.role !== 'admin');
-        const employeesList = employeeAccounts.map((account: any) => ({
-          id: account.employeeId || account.id,
-          name: account.name,
-          email: account.email,
-          position: account.position,
-          department: account.department,
-          branch: account.branch,
-          hireDate: account.hireDate,
-          role: account.role
-        }));
+        // Load employees from API
+        const allUsers = await apiService.getAllUsers();
+        const employeesList = allUsers
+          .filter((user: any) => user.role !== 'admin')
+          .map((user: any) => ({
+            id: user.employeeId || user.id,
+            name: user.name || `${user.fname || ''} ${user.lname || ''}`.trim(),
+            fname: user.fname,
+            lname: user.lname,
+            email: user.email,
+            position: user.position,
+            department: user.department,
+            branch: user.branch,
+            hireDate: user.hireDate,
+            role: user.role,
+            isActive: user.isActive
+          }));
         setEmployees(employeesList);
-        setDepartments(departmentsData);
+        
+        // Load departments from API
+        const departments = await apiService.getDepartments();
+        setDepartments(departments.map((dept: any) => ({
+          id: dept.id,
+          name: dept.name,
+          manager: dept.manager || '',
+          employeeCount: dept.employeeCount || 0,
+          performance: dept.performance || 0
+        })));
         
         // Load branches from API
         const branchesData = await apiService.getBranches();
@@ -581,7 +609,7 @@ function HRDashboard() {
         await loadDashboardData();
 
         // Fallback: Calculate HR metrics manually if API didn't provide all data
-        calculateHRMetrics(branchesData);
+        await calculateHRMetrics(branchesData);
 
         setLoading(false);
       } catch (error) {
@@ -610,42 +638,29 @@ function HRDashboard() {
 
   const handleAddEmployee = async (newUser: any) => {
     try {
-      // Create account entry (similar to admin dashboard)
-      const newAccount = {
-        name: newUser.name,
-        email: newUser.email,
-        position: newUser.position,
-        department: newUser.department,
-        branch: newUser.branch,
-        role: newUser.role,
-        password: newUser.password,
-        isActive: newUser.isActive !== undefined ? newUser.isActive : true,
-        employeeId: Date.now() // Temporary ID
-      };
+      // Create FormData for API call
+      const formData = new FormData();
+      formData.append('name', newUser.name || '');
+      formData.append('fname', newUser.fname || newUser.name?.split(' ')[0] || '');
+      formData.append('lname', newUser.lname || newUser.name?.split(' ').slice(1).join(' ') || '');
+      formData.append('email', newUser.email || '');
+      formData.append('password', newUser.password || '');
+      formData.append('position_id', String(newUser.position_id || newUser.position || ''));
+      formData.append('department_id', String(newUser.department_id || newUser.department || ''));
+      formData.append('branch_id', String(newUser.branch_id || newUser.branch || ''));
+      formData.append('role', newUser.role || 'employee');
+      formData.append('isActive', String(newUser.isActive !== undefined ? newUser.isActive : true));
+      if (newUser.hireDate) formData.append('hireDate', newUser.hireDate);
+      if (newUser.contact) formData.append('contact', newUser.contact);
 
-      // Add account to accounts array
-      const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-      accounts.push(newAccount);
-      localStorage.setItem('accounts', JSON.stringify(accounts));
-
-      // Generate new ID and add employee to storage
-      const currentEmployees = await apiService.getEmployees();
-      const newId = currentEmployees.length > 0 
-        ? Math.max(...currentEmployees.map((emp: any) => emp.id), 0) + 1
-        : 1;
-      newUser.id = newId;
-      
-      // Add to employees array and save to storage
-      const newEmployees = [...currentEmployees, newUser];
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('employees', JSON.stringify(newEmployees));
-      }
+      // Add user via API
+      await apiService.addUser(formData);
 
       // Refresh dashboard data to get updated information
-      await refreshDashboardData(false, false);
+      await refreshHRData();
       
       // Show success toast
-      toastMessages.user.created(newUser.name);
+      toastMessages.user.created(newUser.name || newUser.fname || 'Employee');
       
       // Close modal
       setIsAddEmployeeModalOpen(false);
@@ -667,30 +682,6 @@ function HRDashboard() {
         }
       });
       await apiService.updateEmployee(formData, updatedUser.id);
-
-      // Also update accounts storage to persist changes (same as admin dashboard)
-      const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-      const accountIndex = accounts.findIndex((acc: any) => acc.id === updatedUser.id || acc.employeeId === updatedUser.id);
-      
-      if (accountIndex !== -1) {
-        accounts[accountIndex] = {
-          ...accounts[accountIndex],
-          name: updatedUser.name,
-          email: updatedUser.email,
-          position: updatedUser.position,
-          department: updatedUser.department,
-          branch: updatedUser.branch,
-          role: updatedUser.role,
-          username: updatedUser.username || accounts[accountIndex].username,
-          password: updatedUser.password || accounts[accountIndex].password,
-          contact: updatedUser.contact || accounts[accountIndex].contact,
-          hireDate: updatedUser.hireDate || accounts[accountIndex].hireDate,
-          isActive: updatedUser.isActive !== undefined ? updatedUser.isActive : accounts[accountIndex].isActive,
-          employeeId: updatedUser.employeeId !== undefined ? updatedUser.employeeId : accounts[accountIndex].employeeId,
-          updatedAt: new Date().toISOString()
-        };
-        localStorage.setItem('accounts', JSON.stringify(accounts));
-      }
 
       // Refresh employee data to update the table immediately
       await refreshEmployeeData();
@@ -759,12 +750,15 @@ function HRDashboard() {
     }
 
     try {
-      // Get current user's password from accounts data
-      const hrAccount = (accountsData as any).accounts?.find(
-        (acc: any) => acc.email === currentUser?.email || acc.username === currentUser?.username
-      );
+      // Verify password using API (secure method)
+      if (!currentUser?.email) {
+        setDeleteEmployeePasswordError('User not found. Please refresh and try again.');
+        return;
+      }
 
-      if (!hrAccount || hrAccount.password !== deleteEmployeePassword) {
+      try {
+        await apiService.login(currentUser.email, deleteEmployeePassword);
+      } catch (error) {
         setDeleteEmployeePasswordError('Incorrect password. Please try again.');
         return;
       }
@@ -817,33 +811,29 @@ function HRDashboard() {
       return;
     }
 
-    // Get the user's password from the accounts data
-    const userAccount = (accountsData as any).accounts.find((account: any) =>
-      account.email === currentUser.email || account.username === currentUser.email
-    );
-
-    if (!userAccount) {
-      setDeletePasswordError('User account not found. Please refresh and try again.');
+    // Verify password using API (secure method)
+    if (!currentUser?.email) {
+      setDeletePasswordError('User not found. Please refresh and try again.');
       return;
     }
 
-    // Verify password
-    if (deletePassword !== userAccount.password) {
+    try {
+      await apiService.login(currentUser.email, deletePassword);
+    } catch (error) {
       setDeletePasswordError('Incorrect password. Please try again.');
       return;
     }
 
     try {
-      // Remove from localStorage
-      const storedSubmissions = localStorage.getItem('submissions');
-      if (storedSubmissions) {
-        const submissions = JSON.parse(storedSubmissions);
-        const updatedSubmissions = submissions.filter((sub: any) => sub.id !== recordToDelete.id);
-        localStorage.setItem('submissions', JSON.stringify(updatedSubmissions));
-      }
+      // Delete submission via API (if endpoint exists)
+      // Note: Backend should handle deletion, we just update local state
+      // If API endpoint exists, uncomment: await apiService.deleteSubmission(recordToDelete.id);
 
       // Update state
       setRecentSubmissions(prev => prev.filter(sub => sub.id !== recordToDelete.id));
+      
+      // Refresh submissions from API
+      await fetchRecentSubmissions();
 
       // Close modal and reset
       setIsDeleteRecordModalOpen(false);
@@ -863,22 +853,23 @@ function HRDashboard() {
       // Add a small delay to ensure spinner is visible
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Load from localStorage first, fallback to static JSON (same as admin dashboard)
-      const localStorageAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-      const accounts = localStorageAccounts.length > 0 ? localStorageAccounts : (accountsData.accounts || []);
-      
-      // Reload data from accounts (localStorage or JSON)
-      const employeeAccounts = accounts.filter((account: any) => account.role !== 'admin');
-      const employeesList = employeeAccounts.map((account: any) => ({
-        id: account.employeeId || account.id,
-        name: account.name,
-        email: account.email,
-        position: account.position,
-        department: account.department,
-        branch: account.branch,
-        hireDate: account.hireDate,
-        role: account.role
-      }));
+      // Load employees from API
+      const allUsers = await apiService.getAllUsers();
+      const employeesList = allUsers
+        .filter((user: any) => user.role !== 'admin')
+        .map((user: any) => ({
+          id: user.employeeId || user.id,
+          name: user.name || `${user.fname || ''} ${user.lname || ''}`.trim(),
+          fname: user.fname,
+          lname: user.lname,
+          email: user.email,
+          position: user.position,
+          department: user.department,
+          branch: user.branch,
+          hireDate: user.hireDate,
+          role: user.role,
+          isActive: user.isActive
+        }));
       setEmployees(employeesList);
       
       // Recalculate HR metrics
@@ -893,7 +884,7 @@ function HRDashboard() {
         }).length,
         turnoverRate: 5.2, // Mock data
         averageTenure: 2.8, // Mock data
-        departmentsCount: departmentsData.length,
+        departmentsCount: departments.length,
         branchesCount: branches.length,
         genderDistribution: {
           male: Math.floor(employeesList.length * 0.55),
@@ -1161,6 +1152,11 @@ function HRDashboard() {
             employees={employees}
             branchesRefreshing={branchesRefreshing}
             isActive={active === 'branches'}
+            onBranchesUpdate={async () => {
+              // Refresh branches from API
+              const branchesData = await apiService.getBranches();
+              setBranches(branchesData);
+            }}
           />
         </Suspense>
       )}

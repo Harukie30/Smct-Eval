@@ -32,6 +32,15 @@ import { Label } from "@/components/ui/label";
 import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface Employee {
   id: number;
@@ -182,6 +191,45 @@ export function BranchHeadsTab({
   useEffect(() => {
     setBranchHeadsPage(1);
   }, [searchTerm]);
+
+  // Helper function to generate pagination pages
+  const generatePaginationPages = (
+    currentPage: number,
+    totalPages: number
+  ): (number | "ellipsis")[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages: (number | "ellipsis")[] = [];
+
+    if (currentPage <= 3) {
+      // Show first 5 pages, ellipsis, last page
+      for (let i = 1; i <= 5; i++) {
+        pages.push(i);
+      }
+      pages.push("ellipsis");
+      pages.push(totalPages);
+    } else if (currentPage >= totalPages - 2) {
+      // Show first page, ellipsis, last 5 pages
+      pages.push(1);
+      pages.push("ellipsis");
+      for (let i = totalPages - 4; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Show first page, ellipsis, current-1, current, current+1, ellipsis, last page
+      pages.push(1);
+      pages.push("ellipsis");
+      pages.push(currentPage - 1);
+      pages.push(currentPage);
+      pages.push(currentPage + 1);
+      pages.push("ellipsis");
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   // Load branches data
   const loadBranches = async (): Promise<{ id: string; name: string }[]> => {
@@ -397,11 +445,43 @@ export function BranchHeadsTab({
                   <TableRow>
                     <TableCell
                       colSpan={3}
-                      className="text-center py-8 text-gray-500"
+                      className="text-center py-12"
                     >
-                      {searchTerm
-                        ? `No branch heads found matching "${searchTerm}"`
-                        : "No branch heads found"}
+                      <div className="flex flex-col items-center justify-center gap-4">
+                        <img
+                          src="/not-found.gif"
+                          alt="No data"
+                          className="w-25 h-25 object-contain"
+                          style={{
+                            imageRendering: 'auto',
+                            willChange: 'auto',
+                            transform: 'translateZ(0)',
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden',
+                          }}
+                        />
+                        <div className="text-gray-500">
+                          {searchTerm ? (
+                            <>
+                              <p className="text-base font-medium mb-1">
+                                No branch heads found matching "{searchTerm}"
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Try adjusting your search term
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-base font-medium mb-1">
+                                No branch heads found
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Branch heads will appear here once added
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -498,73 +578,71 @@ export function BranchHeadsTab({
                 {Math.min(branchHeadsEndIndex, branchHeadsTotal)} of{" "}
                 {branchHeadsTotal} branch heads
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setBranchHeadsPage((prev) => Math.max(1, prev - 1))
-                  }
-                  disabled={branchHeadsPage === 1}
-                  className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                >
-                  Previous
-                </Button>
-                <div className="flex items-center gap-1">
-                  {Array.from(
-                    { length: branchHeadsTotalPages },
-                    (_, i) => i + 1
-                  ).map((page) => {
-                    if (
-                      page === 1 ||
-                      page === branchHeadsTotalPages ||
-                      (page >= branchHeadsPage - 1 &&
-                        page <= branchHeadsPage + 1)
-                    ) {
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setBranchHeadsPage((prev) => Math.max(1, prev - 1));
+                      }}
+                      className={
+                        branchHeadsPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      }
+                    />
+                  </PaginationItem>
+                  {generatePaginationPages(
+                    branchHeadsPage,
+                    branchHeadsTotalPages
+                  ).map((page, index) => {
+                    if (page === "ellipsis") {
                       return (
-                        <Button
-                          key={page}
-                          variant={
-                            branchHeadsPage === page ? "default" : "outline"
-                          }
-                          size="sm"
-                          onClick={() => setBranchHeadsPage(page)}
-                          className={`text-xs w-8 h-8 p-0 ${
-                            branchHeadsPage === page
-                              ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
-                              : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                          }`}
-                        >
-                          {page}
-                        </Button>
-                      );
-                    } else if (
-                      page === branchHeadsPage - 2 ||
-                      page === branchHeadsPage + 2
-                    ) {
-                      return (
-                        <span key={page} className="text-gray-400">
-                          ...
-                        </span>
+                        <PaginationItem key={`ellipsis-${index}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
                       );
                     }
-                    return null;
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setBranchHeadsPage(page);
+                          }}
+                          isActive={branchHeadsPage === page}
+                          className={
+                            branchHeadsPage === page
+                              ? "cursor-pointer bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
+                              : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          }
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                      );
                   })}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
                     setBranchHeadsPage((prev) =>
                       Math.min(branchHeadsTotalPages, prev + 1)
-                    )
-                  }
-                  disabled={branchHeadsPage === branchHeadsTotalPages}
-                  className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                >
-                  Next
-                </Button>
-              </div>
+                        );
+                      }}
+                      className={
+                        branchHeadsPage === branchHeadsTotalPages
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </CardContent>
@@ -777,42 +855,15 @@ export function BranchHeadsTab({
                             branches: [...selectedBranches],
                           });
 
-                          // Update employee with branch assignments
-                          // If multiple branches, combine them with comma separator
-                          const branchNames = selectedBranches
-                            .map((b) => b.name)
-                            .join(", ");
-                          const branchIds = selectedBranches
-                            .map((b) => b.id)
-                            .join(", ");
-
-                          // Update using API service
+                          // Update user branch assignments using dedicated API endpoint
                           const formData = new FormData();
-                          formData.append("branch", branchNames);
-                          formData.append("updatedAt", new Date().toISOString());
-                          await apiService.updateEmployee(formData, selectedBranchHead.id);
-
-                          // Also update accounts in localStorage
-                          const accounts = JSON.parse(
-                            localStorage.getItem("accounts") || "[]"
-                          );
-                          const accountIndex = accounts.findIndex(
-                            (acc: any) =>
-                              acc.id === selectedBranchHead.id ||
-                              acc.employeeId === selectedBranchHead.id
-                          );
-
-                          if (accountIndex !== -1) {
-                            accounts[accountIndex] = {
-                              ...accounts[accountIndex],
-                              branch: branchNames,
-                              updatedAt: new Date().toISOString(),
-                            };
-                            localStorage.setItem(
-                              "accounts",
-                              JSON.stringify(accounts)
-                            );
-                          }
+                          // Add each branch ID to the form data
+                          selectedBranches.forEach((branch) => {
+                            formData.append("branch_ids[]", branch.id);
+                          });
+                          
+                          // Use updateUserBranch API endpoint for branch assignments
+                          await apiService.updateUserBranch(selectedBranchHead.id, formData);
 
                           // Close the branches modal after confirmation
                           setIsBranchesModalOpen(false);
@@ -1173,35 +1224,15 @@ export function BranchHeadsTab({
                 }
 
                 try {
-                  // Update employee with branch assignments
-                  const branchNames = editSelectedBranches
-                    .map((b) => b.name)
-                    .join(", ");
-
-                  // Update using API service
+                  // Update user branch assignments using dedicated API endpoint
                   const formData = new FormData();
-                  formData.append("branch", branchNames);
-                  formData.append("updatedAt", new Date().toISOString());
-                  await apiService.updateEmployee(formData, branchHeadToEdit.id);
-
-                  // Also update accounts in localStorage
-                  const accounts = JSON.parse(
-                    localStorage.getItem("accounts") || "[]"
-                  );
-                  const accountIndex = accounts.findIndex(
-                    (acc: any) =>
-                      acc.id === branchHeadToEdit.id ||
-                      acc.employeeId === branchHeadToEdit.id
-                  );
-
-                  if (accountIndex !== -1) {
-                    accounts[accountIndex] = {
-                      ...accounts[accountIndex],
-                      branch: branchNames,
-                      updatedAt: new Date().toISOString(),
-                    };
-                    localStorage.setItem("accounts", JSON.stringify(accounts));
-                  }
+                  // Add each branch ID to the form data
+                  editSelectedBranches.forEach((branch) => {
+                    formData.append("branch_ids[]", branch.id);
+                  });
+                  
+                  // Use updateUserBranch API endpoint for branch assignments
+                  await apiService.updateUserBranch(branchHeadToEdit.id, formData);
 
                   // Refresh parent component data
                   if (onRefresh) {
@@ -1342,33 +1373,8 @@ export function BranchHeadsTab({
                   if (!branchHeadToDelete) return;
 
                   try {
-                    // Remove branch assignment (set branch to empty)
-                    const formData = new FormData();
-                    formData.append("branch", "");
-                    formData.append("updatedAt", new Date().toISOString());
-                    await apiService.updateEmployee(formData, branchHeadToDelete.id);
-
-                    // Also update accounts in localStorage
-                    const accounts = JSON.parse(
-                      localStorage.getItem("accounts") || "[]"
-                    );
-                    const accountIndex = accounts.findIndex(
-                      (acc: any) =>
-                        acc.id === branchHeadToDelete.id ||
-                        acc.employeeId === branchHeadToDelete.id
-                    );
-
-                    if (accountIndex !== -1) {
-                      accounts[accountIndex] = {
-                        ...accounts[accountIndex],
-                        branch: "",
-                        updatedAt: new Date().toISOString(),
-                      };
-                      localStorage.setItem(
-                        "accounts",
-                        JSON.stringify(accounts)
-                      );
-                    }
+                    // Remove all branch assignments using dedicated API endpoint
+                    await apiService.removeUserBranches(branchHeadToDelete.id);
 
                     // Refresh parent component data
                     if (onRefresh) {

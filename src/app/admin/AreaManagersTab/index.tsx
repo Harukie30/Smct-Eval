@@ -33,6 +33,15 @@ import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface Employee {
   id: number;
@@ -185,6 +194,45 @@ export function AreaManagersTab({
   useEffect(() => {
     setAreaManagersPage(1);
   }, [searchTerm]);
+
+  // Helper function to generate pagination pages
+  const generatePaginationPages = (
+    currentPage: number,
+    totalPages: number
+  ): (number | "ellipsis")[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages: (number | "ellipsis")[] = [];
+
+    if (currentPage <= 3) {
+      // Show first 5 pages, ellipsis, last page
+      for (let i = 1; i <= 5; i++) {
+        pages.push(i);
+      }
+      pages.push("ellipsis");
+      pages.push(totalPages);
+    } else if (currentPage >= totalPages - 2) {
+      // Show first page, ellipsis, last 5 pages
+      pages.push(1);
+      pages.push("ellipsis");
+      for (let i = totalPages - 4; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Show first page, ellipsis, current-1, current, current+1, ellipsis, last page
+      pages.push(1);
+      pages.push("ellipsis");
+      pages.push(currentPage - 1);
+      pages.push(currentPage);
+      pages.push(currentPage + 1);
+      pages.push("ellipsis");
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   // Load branches data
   const loadBranches = async (): Promise<{ id: string; name: string }[]> => {
@@ -399,11 +447,43 @@ export function AreaManagersTab({
                   <TableRow>
                     <TableCell
                       colSpan={3}
-                      className="text-center py-8 text-gray-500"
+                      className="text-center py-12"
                     >
-                      {searchTerm
-                        ? `No area managers found matching "${searchTerm}"`
-                        : "No area managers found"}
+                      <div className="flex flex-col items-center justify-center gap-4">
+                        <img
+                          src="/not-found.gif"
+                          alt="No data"
+                          className="w-25 h-25 object-contain"
+                          style={{
+                            imageRendering: 'auto',
+                            willChange: 'auto',
+                            transform: 'translateZ(0)',
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden',
+                          }}
+                        />
+                        <div className="text-gray-500">
+                          {searchTerm ? (
+                            <>
+                              <p className="text-base font-medium mb-1">
+                                No area managers found matching "{searchTerm}"
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Try adjusting your search term
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-base font-medium mb-1">
+                                No area managers found
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Area managers will appear here once added
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -500,73 +580,71 @@ export function AreaManagersTab({
                 {Math.min(areaManagersEndIndex, areaManagersTotal)} of{" "}
                 {areaManagersTotal} area managers
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setAreaManagersPage((prev) => Math.max(1, prev - 1))
-                  }
-                  disabled={areaManagersPage === 1}
-                  className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                >
-                  Previous
-                </Button>
-                <div className="flex items-center gap-1">
-                  {Array.from(
-                    { length: areaManagersTotalPages },
-                    (_, i) => i + 1
-                  ).map((page) => {
-                    if (
-                      page === 1 ||
-                      page === areaManagersTotalPages ||
-                      (page >= areaManagersPage - 1 &&
-                        page <= areaManagersPage + 1)
-                    ) {
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setAreaManagersPage((prev) => Math.max(1, prev - 1));
+                      }}
+                      className={
+                        areaManagersPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      }
+                    />
+                  </PaginationItem>
+                  {generatePaginationPages(
+                    areaManagersPage,
+                    areaManagersTotalPages
+                  ).map((page, index) => {
+                    if (page === "ellipsis") {
                       return (
-                        <Button
-                          key={page}
-                          variant={
-                            areaManagersPage === page ? "default" : "outline"
-                          }
-                          size="sm"
-                          onClick={() => setAreaManagersPage(page)}
-                          className={`text-xs w-8 h-8 p-0 ${
-                            areaManagersPage === page
-                              ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
-                              : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                          }`}
-                        >
-                          {page}
-                        </Button>
-                      );
-                    } else if (
-                      page === areaManagersPage - 2 ||
-                      page === areaManagersPage + 2
-                    ) {
-                      return (
-                        <span key={page} className="text-gray-400">
-                          ...
-                        </span>
+                        <PaginationItem key={`ellipsis-${index}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
                       );
                     }
-                    return null;
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setAreaManagersPage(page);
+                          }}
+                          isActive={areaManagersPage === page}
+                          className={
+                            areaManagersPage === page
+                              ? "cursor-pointer bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
+                              : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          }
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
                   })}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setAreaManagersPage((prev) =>
-                      Math.min(areaManagersTotalPages, prev + 1)
-                    )
-                  }
-                  disabled={areaManagersPage === areaManagersTotalPages}
-                  className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                >
-                  Next
-                </Button>
-              </div>
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setAreaManagersPage((prev) =>
+                          Math.min(areaManagersTotalPages, prev + 1)
+                        );
+                      }}
+                      className={
+                        areaManagersPage === areaManagersTotalPages
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </CardContent>

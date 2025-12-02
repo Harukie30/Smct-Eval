@@ -64,7 +64,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         const stored = localStorage.getItem("authUser");
 
         // First, restore user from localStorage immediately
-        if (stored) {
+        // Check if stored value is valid (not "undefined", "null", or empty)
+        if (stored && stored !== "undefined" && stored !== "null" && stored.trim() !== "") {
           try {
             const parsedUser = JSON.parse(stored);
             setUser(parsedUser);
@@ -93,8 +94,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const refreshUser = async () => {
     try {
       const res = await apiService.authUser();
-      setUser(res);
-      localStorage.setItem("authUser", JSON.stringify(res.data));
+      // Handle different response structures (res.data or res directly)
+      const userData = res?.data || res;
+      if (userData) {
+        setUser(userData);
+        localStorage.setItem("authUser", JSON.stringify(userData));
+      }
     } catch (error: any) {
       // Only clear session if it's an authentication error (401 Unauthorized)
       // For other errors (network issues, 500 errors, etc.), keep the user logged in
@@ -111,13 +116,15 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         // Ensure user is set from localStorage if it exists
         // Use functional update to avoid stale closure issues
         const stored = localStorage.getItem("authUser");
-        if (stored) {
+        // Check if stored value is valid (not "undefined", "null", or empty)
+        if (stored && stored !== "undefined" && stored !== "null" && stored.trim() !== "") {
           try {
             const parsedUser = JSON.parse(stored);
             // Only update if user is not already set or if stored user is different
             setUser((prevUser) => prevUser || parsedUser);
           } catch (e) {
             console.error("Failed to parse stored user:", e);
+            localStorage.removeItem("authUser");
           }
         }
       }

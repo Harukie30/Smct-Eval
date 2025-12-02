@@ -1020,9 +1020,43 @@ export function EvaluatedReviewsTab() {
                     <TableRow>
                       <TableCell
                         colSpan={11}
-                        className="text-center py-12 text-gray-500"
+                        className="text-center py-12"
                       >
-                        No evaluation records found
+                        <div className="flex flex-col items-center justify-center gap-4">
+                          <img
+                            src="/not-found.gif"
+                            alt="No data"
+                            className="w-25 h-25 object-contain"
+                            style={{
+                              imageRendering: 'auto',
+                              willChange: 'auto',
+                              transform: 'translateZ(0)',
+                              backfaceVisibility: 'hidden',
+                              WebkitBackfaceVisibility: 'hidden',
+                            }}
+                          />
+                          <div className="text-gray-500">
+                            {recordsSearchTerm ? (
+                              <>
+                                <p className="text-base font-medium mb-1">
+                                  No evaluation records found matching "{recordsSearchTerm}"
+                                </p>
+                                <p className="text-sm text-gray-400">
+                                  Try adjusting your search term
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-base font-medium mb-1">
+                                  No evaluation records found
+                                </p>
+                                <p className="text-sm text-gray-400">
+                                  Evaluation records will appear here once submitted
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (

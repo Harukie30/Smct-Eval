@@ -559,27 +559,41 @@ export function OverviewTab({ onRefresh, refreshTrigger }: OverviewTabProps = {}
                 ) : overviewPaginated.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-12">
-                      <div className="text-gray-500">
-                        {searchTerm ? (
-                          <>
-                            <p className="text-sm font-medium">
-                              No results found
-                            </p>
-                            <p className="text-xs mt-1">
-                              Try adjusting your search or filters
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-sm">
-                              No evaluation records to display
-                            </p>
-                            <p className="text-xs mt-1">
-                              Records will appear here when evaluations are
-                              submitted
-                            </p>
-                          </>
-                        )}
+                      <div className="flex flex-col items-center justify-center gap-4">
+                        <img
+                          src="/not-found.gif"
+                          alt="No data"
+                          className="w-25 h-25 object-contain"
+                          style={{
+                            imageRendering: 'auto',
+                            willChange: 'auto',
+                            transform: 'translateZ(0)',
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden',
+                          }}
+                        />
+                        <div className="text-gray-500">
+                          {searchTerm ? (
+                            <>
+                              <p className="text-base font-medium mb-1">
+                                No results found
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Try adjusting your search or filters
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-base font-medium mb-1">
+                                No evaluation records to display
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Records will appear here when evaluations are
+                                submitted
+                              </p>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                   </TableRow>

@@ -25,6 +25,15 @@ import { Plus, Trash2 } from "lucide-react";
 import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 
 interface Employee {
   id: number;
@@ -52,6 +61,9 @@ export function BranchesTab({ employees }: BranchesTabProps) {
   const [newBranchCode, setNewBranchCode] = useState<string>("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
+  const [branchesPage, setBranchesPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const itemsPerPage = 6; // 2 columns x 3 rows = 6 items per page
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -242,6 +254,67 @@ export function BranchesTab({ employees }: BranchesTabProps) {
     };
   };
 
+  // Filter branches based on search term
+  const filteredBranches = branches.filter((branch) => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      branch.name.toLowerCase().includes(searchLower) ||
+      (branch.branchCode && branch.branchCode.toLowerCase().includes(searchLower))
+    );
+  });
+
+  // Helper function to generate pagination pages with ellipsis
+  const generatePaginationPages = (
+    currentPage: number,
+    totalPages: number
+  ): (number | "ellipsis")[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages: (number | "ellipsis")[] = [];
+
+    if (currentPage <= 3) {
+      // Show first 5 pages, ellipsis, last page
+      for (let i = 1; i <= 5; i++) {
+        pages.push(i);
+      }
+      pages.push("ellipsis");
+      pages.push(totalPages);
+    } else if (currentPage >= totalPages - 2) {
+      // Show first page, ellipsis, last 5 pages
+      pages.push(1);
+      pages.push("ellipsis");
+      for (let i = totalPages - 4; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Show first page, ellipsis, current-1, current, current+1, ellipsis, last page
+      pages.push(1);
+      pages.push("ellipsis");
+      pages.push(currentPage - 1);
+      pages.push(currentPage);
+      pages.push(currentPage + 1);
+      pages.push("ellipsis");
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
+
+  // Pagination calculations (using filtered branches)
+  const branchesTotal = filteredBranches.length;
+  const branchesTotalPages = Math.ceil(branchesTotal / itemsPerPage);
+  const branchesStartIndex = (branchesPage - 1) * itemsPerPage;
+  const branchesEndIndex = branchesStartIndex + itemsPerPage;
+  const branchesPaginated = filteredBranches.slice(branchesStartIndex, branchesEndIndex);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setBranchesPage(1);
+  }, [searchTerm]);
+
   // Show loading skeleton on initial load
   if (loading) {
     return (
@@ -346,6 +419,37 @@ export function BranchesTab({ employees }: BranchesTabProps) {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Search Bar */}
+          <div className="mb-6">
+            <div className="relative w-full max-w-md">
+              <Input
+                placeholder="Search branches by name or code..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  title="Clear search"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="relative">
             {/* Refresh overlay spinner - shows content underneath */}
             {isRefreshing && (
@@ -371,54 +475,164 @@ export function BranchesTab({ employees }: BranchesTabProps) {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {branches.map((branch) => {
-                const stats = getBranchStats(branch.name);
-                return (
-                  <Card key={branch.id}>
-                    <CardHeader>
-                      <CardTitle className="flex justify-between items-center">
-                        {branch.name}
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">
-                            {stats.count} employees
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setBranchToDelete(branch);
-                              setIsDeleteModalOpen(true);
-                            }}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardTitle>
-                      <CardDescription>Branch Location</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-blue-50 rounded-lg">
-                          <div className="text-lg font-bold text-blue-600">
-                            {stats.count}
+              {branchesPaginated.length === 0 ? (
+                <div className="col-span-2 text-center py-12">
+                  <div className="flex flex-col items-center justify-center gap-4">
+                    <img
+                      src="/not-found.gif"
+                      alt="No data"
+                      className="w-25 h-25 object-contain"
+                      style={{
+                        imageRendering: 'auto',
+                        willChange: 'auto',
+                        transform: 'translateZ(0)',
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                      }}
+                    />
+                    <div className="text-gray-500">
+                      {searchTerm ? (
+                        <>
+                          <p className="text-base font-medium mb-1">
+                            No branches found matching "{searchTerm}"
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            Try adjusting your search term
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-base font-medium mb-1">
+                            No branches found
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            Branches will appear here once added
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                branchesPaginated.map((branch) => {
+                  const stats = getBranchStats(branch.name);
+                  return (
+                    <Card key={branch.id}>
+                      <CardHeader>
+                        <CardTitle className="flex justify-between items-center">
+                          {branch.name}
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">
+                              {stats.count} employees
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setBranchToDelete(branch);
+                                setIsDeleteModalOpen(true);
+                              }}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <div className="text-xs text-gray-600">Employees</div>
-                        </div>
-                        <div className="text-center p-3 bg-green-50 rounded-lg">
-                          <div className="text-lg font-bold text-green-600">
-                            {stats.managers}
+                        </CardTitle>
+                        <CardDescription>Branch Location</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="text-center p-3 bg-blue-50 rounded-lg">
+                            <div className="text-lg font-bold text-blue-600">
+                              {stats.count}
+                            </div>
+                            <div className="text-xs text-gray-600">Employees</div>
                           </div>
-                          <div className="text-xs text-gray-600">Managers</div>
+                          <div className="text-center p-3 bg-green-50 rounded-lg">
+                            <div className="text-lg font-bold text-green-600">
+                              {stats.managers}
+                            </div>
+                            <div className="text-xs text-gray-600">Managers</div>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
             </div>
           </div>
         </CardContent>
+        
+        {/* Pagination Controls */}
+        {branchesTotal > itemsPerPage && (
+          <div className="flex items-center justify-end px-6 py-4 border-t">
+            <Pagination className="justify-end">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setBranchesPage((prev) => Math.max(1, prev - 1));
+                    }}
+                    className={
+                      branchesPage === 1
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                    }
+                  />
+                </PaginationItem>
+                {generatePaginationPages(branchesPage, branchesTotalPages).map(
+                  (page, index) => {
+                    if (page === "ellipsis") {
+                      return (
+                        <PaginationItem key={`ellipsis-${index}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      );
+                    }
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setBranchesPage(page);
+                          }}
+                          isActive={branchesPage === page}
+                          className={
+                            branchesPage === page
+                              ? "cursor-pointer bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
+                              : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          }
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  }
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setBranchesPage((prev) =>
+                        Math.min(branchesTotalPages, prev + 1)
+                      );
+                    }}
+                    className={
+                      branchesPage === branchesTotalPages
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </Card>
 
       {/* Add Branch Modal */}
