@@ -27,8 +27,7 @@ import accountsDataRaw from "@/data/accounts.json";
 import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import apiService from "@/lib/apiService";
-
-const accountsData = accountsDataRaw.accounts || [];
+import EvaluationsPagination from "@/components/paginationComponent";
 
 interface Employee {
   id: number;
@@ -50,7 +49,6 @@ interface Department {
 
 export default function DepartmentsTab() {
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -59,14 +57,29 @@ export default function DepartmentsTab() {
   const [departmentToDelete, setDepartmentToDelete] =
     useState<Department | null>(null);
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
+  const [overviewTotal, setOverviewTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [perPage, setPerPage] = useState(0);
+
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
   // Function to load data
-  const loadData = async () => {
+  const loadData = async (search: string) => {
     try {
-      const departments = await apiService.getTotalEmployeesDepartments();
-      setDepartments(departments);
+      const departments = await apiService.getTotalEmployeesDepartments(
+        search,
+        currentPage,
+        itemsPerPage
+      );
+      setDepartments(departments.data);
+      setOverviewTotal(departments.total);
+      setTotalPages(departments.last_page);
+      setPerPage(departments.per_page);
     } catch (error) {
       console.error("Error loading departments:", error);
     }
@@ -77,7 +90,7 @@ export default function DepartmentsTab() {
     const initializeData = async () => {
       setLoading(true);
       try {
-        await loadData();
+        await loadData(searchTerm);
       } catch (error) {
         console.error("Error initializing departments:", error);
       } finally {
@@ -88,11 +101,28 @@ export default function DepartmentsTab() {
     initializeData();
   }, []);
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      searchTerm === "" ? currentPage : setCurrentPage(1);
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await refreshData();
+    };
+
+    fetchData();
+  }, [debouncedSearchTerm, currentPage]);
+
   // Function to refresh data
   const refreshData = async () => {
     setIsRefreshing(true);
     try {
-      await loadData();
+      await loadData(searchTerm);
     } catch (error) {
       console.error("❌ Error refreshing departments:", error);
     } finally {
@@ -109,7 +139,7 @@ export default function DepartmentsTab() {
       );
       return;
     }
-
+  };
 
   // Function to handle deleting a department
   const handleDeleteDepartment = () => {
@@ -117,19 +147,6 @@ export default function DepartmentsTab() {
 
     try {
       // Check if department has employees
-      const deptEmployees = employees.filter(
-        (emp) => emp.department === departmentToDelete.name
-      );
-
-      if (deptEmployees.length > 0) {
-        toastMessages.generic.warning(
-          "Cannot Delete Department",
-          `This department has ${deptEmployees.length} employee(s). Please reassign them before deleting.`
-        );
-        setIsDeleteModalOpen(false);
-        setDepartmentToDelete(null);
-        return;
-      }
 
       // Remove from state
       const updatedDepartments = departments.filter(
@@ -143,7 +160,7 @@ export default function DepartmentsTab() {
       // Show success toast
       toastMessages.generic.success(
         "Department Deleted",
-        `"${departmentToDelete.name}" has been deleted successfully.`
+        `"${departmentToDelete.department_name}" has been deleted successfully.`
       );
 
       // Close modal and reset
@@ -158,14 +175,12 @@ export default function DepartmentsTab() {
     }
   };
 
-
-
   // Show loading skeleton on initial load
   if (loading) {
     return (
-      <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {Array.from({ length: 4 }).map((_, index) => (
+      <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px] mt-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 ">
+          {Array.from({ length: itemsPerPage }).map((_, index) => (
             <Card key={`skeleton-dept-${index}`} className="animate-pulse">
               <CardHeader>
                 <div className="flex justify-between items-center">
@@ -194,15 +209,43 @@ export default function DepartmentsTab() {
   }
 
   return (
-    <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
+    <div className="relative  overflow-y-auto pr-2 min-h-[400px]">
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <div>
+            <div className="w-1/4">
               <CardTitle>Departments</CardTitle>
               <CardDescription>
                 View and manage department information
               </CardDescription>
+              <div className="relative flex-1 mt-5">
+                <Input
+                  placeholder="Search by department name"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pr-10"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
+                    aria-label="Clear search"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-6 w-6"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex space-x-2">
               <Button
@@ -265,23 +308,22 @@ export default function DepartmentsTab() {
         </CardHeader>
         <CardContent>
           <div className="relative">
-            {/* Refresh overlay spinner - shows content underneath */}
             {isRefreshing && (
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none bg-white/60 rounded-lg">
+              <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
                 <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
                   <div className="relative">
                     {/* Spinning ring */}
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
                     {/* Logo in center */}
                     <div className="absolute inset-0 flex items-center justify-center">
                       <img
                         src="/smct.png"
                         alt="SMCT Logo"
-                        className="h-8 w-8 object-contain"
+                        className="h-10 w-10 object-contain"
                       />
                     </div>
                   </div>
-                  <p className="text-xs text-gray-600 font-medium">
+                  <p className="text-sm text-gray-600 font-medium">
                     Refreshing...
                   </p>
                 </div>
@@ -337,6 +379,24 @@ export default function DepartmentsTab() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="bg-amber-500 justify-center items-center inset-0">
+        <></>
+      </div>
+
+      {/* Pagination Controls */}
+      {overviewTotal > itemsPerPage && (
+        <EvaluationsPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          total={overviewTotal}
+          perPage={perPage}
+          onPageChange={(page) => {
+            setCurrentPage(page);
+            loadData(searchTerm);
+          }}
+        />
+      )}
 
       {/* Add Department Modal */}
       <Dialog open={isAddModalOpen} onOpenChangeAction={setIsAddModalOpen}>
@@ -408,7 +468,7 @@ export default function DepartmentsTab() {
             </DialogTitle>
             <DialogDescription className="text-red-700">
               This action cannot be undone. Are you sure you want to permanently
-              delete "{departmentToDelete?.name}"?
+              delete "{departmentToDelete?.department_name}"?
             </DialogDescription>
           </DialogHeader>
 
@@ -416,7 +476,7 @@ export default function DepartmentsTab() {
             {departmentToDelete &&
               (() => {
                 const deptEmployees = employees.filter(
-                  (emp) => emp.department === departmentToDelete.name
+                  (emp) => emp.department === departmentToDelete.department_name
                 );
                 return deptEmployees.length > 0 ? (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -495,7 +555,8 @@ export default function DepartmentsTab() {
                 disabled={
                   departmentToDelete
                     ? employees.filter(
-                        (emp) => emp.department === departmentToDelete.name
+                        (emp) =>
+                          emp.department === departmentToDelete.department_name
                       ).length > 0
                     : false
                 }

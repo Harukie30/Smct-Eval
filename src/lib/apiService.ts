@@ -302,11 +302,11 @@ export const apiService = {
       const response = await api.get(`/allEvaluations`, {
         params: {
           search: searchTerm || "",
+          page: page,
+          per_page: perPage,
           status: status || "",
           quarter: quarter || "",
           year: year || "",
-          page: page,
-          per_page: perPage,
         },
       });
 
@@ -995,15 +995,21 @@ export const apiService = {
     }
   },
 
-  // ============================================
-  // DEPARTMENT MANAGEMENT (Missing Endpoints)
-  // ============================================
-
   // Get total employees under a department
-  getTotalEmployeesDepartments: async (): Promise<any> => {
+  getTotalEmployeesDepartments: async (
+    searchValue: string,
+    currentPage: number,
+    itemsPerPage: number
+  ): Promise<any> => {
     try {
-      const response = await api.get("/getTotalEmployeesDepartments");
-      return response.data;
+      const response = await api.get("/getTotalEmployeesDepartments", {
+        params: {
+          search: searchValue || "",
+          page: currentPage,
+          per_page: itemsPerPage,
+        },
+      });
+      return response.data.departments;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw new Error(
