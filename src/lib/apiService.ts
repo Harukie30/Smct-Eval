@@ -500,20 +500,9 @@ export const apiService = {
   },
 
   // Get all area managers
-  getAllAreaManager: async (): Promise<any[]> => {
+  getAllAreaManager: async (): Promise<any> => {
     const response = await api.get("/getAllAreaManager");
-    const data = response.data;
-
-    if (data.success && data.users) {
-      return data.users;
-    }
-    if (Array.isArray(data.users)) {
-      return data.users;
-    }
-    if (Array.isArray(data)) {
-      return data;
-    }
-    return [];
+    return response.data.branch_heads;
   },
 
   // Get all employees under authenticated user

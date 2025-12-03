@@ -262,7 +262,7 @@ export default function DepartmentsTab() {
   // Show loading skeleton on initial load
   if (loading) {
     return (
-      <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px] mt-5">
+      <div className="relative  overflow-y-auto ">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 ">
           {Array.from({ length: itemsPerPage }).map((_, index) => (
             <Card key={`skeleton-dept-${index}`} className="animate-pulse">
@@ -293,7 +293,7 @@ export default function DepartmentsTab() {
   }
 
   return (
-    <div className="relative  overflow-y-auto pr-2 min-h-[400px]">
+    <div className="relative  overflow-y-auto">
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">

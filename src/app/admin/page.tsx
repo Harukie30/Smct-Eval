@@ -135,8 +135,8 @@ export default function OverviewTab() {
   };
 
   return (
-    <>
-      <div className="flex w-1/2 gap-4 mb-5">
+    <div className="relative">
+      <div className="flex gap-4 mb-5">
         <Card className="w-3/4">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
@@ -564,6 +564,6 @@ export default function OverviewTab() {
           isEvaluatorView={false}
         />
       </div>
-    </>
+    </div>
   );
 }
