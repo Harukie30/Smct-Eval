@@ -218,9 +218,9 @@ export default function OverviewTab() {
   }, {});
 
   return (
-    <>
-      <div className="flex w-full gap-4 mb-5">
-        <Card className="w-full">
+    <div className="relative ">
+      <div className="relative  overflow-y-auto">
+        <Card className="">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 w-100">
               All Evaluation Records
@@ -379,7 +379,7 @@ export default function OverviewTab() {
           </CardContent>
         </Card>
       </div>
-      <div className="space-y-6">
+      <div className="space-y-6 mt-2">
         {/* Main Container Div (replacing Card) */}
         <div className="bg-white border rounded-lg p-6">
           {/* Table Header Section */}
@@ -830,6 +830,6 @@ export default function OverviewTab() {
           isEvaluatorView={false}
         />
       </div>
-    </>
+    </div>
   );
 }
