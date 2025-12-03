@@ -152,11 +152,22 @@ export function PerformanceReviewsTab({
                   if (chartData.length === 0) {
                     return (
                       <div className="h-64 flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="text-4xl mb-2">📊</div>
-                          <div className="text-sm text-gray-500">No data available</div>
-                          <div className="text-xs text-gray-400 mt-1">
-                            Complete your first evaluation to see trends
+                        <div className="flex flex-col items-center justify-center gap-4">
+                          <img
+                            src="/not-found.gif"
+                            alt="No data"
+                            className="w-25 h-25 object-contain"
+                            style={{
+                              imageRendering: 'auto',
+                              willChange: 'auto',
+                              transform: 'translateZ(0)',
+                              backfaceVisibility: 'hidden',
+                              WebkitBackfaceVisibility: 'hidden',
+                            }}
+                          />
+                          <div className="text-gray-500 text-center">
+                            <p className="text-base font-medium mb-1">No data available</p>
+                            <p className="text-sm">Complete your first evaluation to see trends</p>
                           </div>
                         </div>
                       </div>

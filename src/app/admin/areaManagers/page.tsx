@@ -33,6 +33,15 @@ import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface Employee {
   id: number;
@@ -44,11 +53,6 @@ interface Employee {
   contact?: string;
   isActive?: boolean;
   role: string;
-}
-
-interface AreaManagersTabProps {
-  employees: Employee[];
-  onRefresh?: (showModal?: boolean, isAutoRefresh?: boolean) => Promise<void>;
 }
 
 export default function AreaManagersTab() {
@@ -116,52 +120,27 @@ export default function AreaManagersTab() {
         setAreaManagersData(normalizedData);
       } catch (error) {
         console.error("Error loading area managers:", error);
-        // Fallback to employees prop if API fails
-        if (employees && employees.length > 0) {
-          const filtered = employees.filter((emp) => {
-            const position = emp.position?.toLowerCase() || "";
-            return (
-              position.includes("area manager") ||
-              position.includes("areamanager") ||
-              position.includes("regional manager")
-            );
-          });
-          setAreaManagersData(filtered);
-        }
+        // Set empty array if API fails - no fallback needed
+        setAreaManagersData([]);
       } finally {
         setLoadingAreaManagers(false);
       }
     };
 
     loadAreaManagers();
-  }, [employees]);
+  }, []);
 
-  // Memoized area managers (use API data if available, otherwise fallback to filtered employees)
+  // Memoized area managers (use API data)
   const areaManagers = useMemo(() => {
-    if (areaManagersData.length > 0) {
-      return areaManagersData;
-    }
-    // Fallback to manual filtering if API data not available
-    if (!employees || employees.length === 0) return [];
-
-    return employees.filter((emp) => {
-      const position = emp.position?.toLowerCase() || "";
-
-      // Filter by position only - looking for area manager or regional manager positions
-      return (
-        position.includes("area manager") ||
-        position.includes("areamanager") ||
-        position.includes("regional manager")
-      );
-    });
-  }, [areaManagersData, employees]);
+    return areaManagersData;
+  }, [areaManagersData]);
 
   // Filter area managers based on search term
   const filteredAreaManagers = useMemo(() => {
     if (!searchTerm) return areaManagers;
 
     const searchLower = searchTerm.toLowerCase();
-    return areaManagers.filter((manager) => {
+    return areaManagers.filter((manager: Employee) => {
       const nameMatch = manager.name?.toLowerCase().includes(searchLower);
       const branchMatch = manager.branch?.toLowerCase().includes(searchLower);
       return nameMatch || branchMatch;
@@ -182,6 +161,45 @@ export default function AreaManagersTab() {
   useEffect(() => {
     setAreaManagersPage(1);
   }, [searchTerm]);
+
+  // Helper function to generate pagination pages
+  const generatePaginationPages = (
+    currentPage: number,
+    totalPages: number
+  ): (number | "ellipsis")[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages: (number | "ellipsis")[] = [];
+
+    if (currentPage <= 3) {
+      // Show first 5 pages, ellipsis, last page
+      for (let i = 1; i <= 5; i++) {
+        pages.push(i);
+      }
+      pages.push("ellipsis");
+      pages.push(totalPages);
+    } else if (currentPage >= totalPages - 2) {
+      // Show first page, ellipsis, last 5 pages
+      pages.push(1);
+      pages.push("ellipsis");
+      for (let i = totalPages - 4; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Show first page, ellipsis, current-1, current, current+1, ellipsis, last page
+      pages.push(1);
+      pages.push("ellipsis");
+      pages.push(currentPage - 1);
+      pages.push(currentPage);
+      pages.push(currentPage + 1);
+      pages.push("ellipsis");
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   // Load branches data
   const loadBranches = async (): Promise<{ id: string; name: string }[]> => {
@@ -378,9 +396,7 @@ export default function AreaManagersTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loadingAreaManagers ||
-                (!areaManagersData.length &&
-                  (!employees || employees.length === 0)) ? (
+                {loadingAreaManagers ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
                       <TableCell className="py-4">
@@ -398,18 +414,50 @@ export default function AreaManagersTab() {
                   <TableRow>
                     <TableCell
                       colSpan={3}
-                      className="text-center py-8 text-gray-500"
+                      className="text-center py-12"
                     >
-                      {searchTerm
-                        ? `No area managers found matching "${searchTerm}"`
-                        : "No area managers found"}
+                      <div className="flex flex-col items-center justify-center gap-4">
+                        <img
+                          src="/not-found.gif"
+                          alt="No data"
+                          className="w-25 h-25 object-contain"
+                          style={{
+                            imageRendering: 'auto',
+                            willChange: 'auto',
+                            transform: 'translateZ(0)',
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden',
+                          }}
+                        />
+                        <div className="text-gray-500">
+                          {searchTerm ? (
+                            <>
+                              <p className="text-base font-medium mb-1">
+                                No area managers found matching "{searchTerm}"
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Try adjusting your search term
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-base font-medium mb-1">
+                                No area managers found
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Area managers will appear here once added
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  areaManagersPaginated.map((manager) => {
+                  areaManagersPaginated.map((manager: Employee) => {
                     // Parse branches - handle both comma-separated string and single branch
                     const branchList = manager.branch
-                      ? manager.branch.split(", ").filter((b) => b.trim())
+                      ? manager.branch.split(", ").filter((b: string) => b.trim())
                       : [];
 
                     return (
@@ -420,7 +468,7 @@ export default function AreaManagersTab() {
                         <TableCell className="py-4 text-center">
                           {branchList.length > 0 ? (
                             <div className="flex flex-wrap justify-center gap-2">
-                              {branchList.map((branch, index) => (
+                              {branchList.map((branch: string, index: number) => (
                                 <Badge
                                   key={index}
                                   className="bg-blue-600 text-white"
@@ -448,7 +496,7 @@ export default function AreaManagersTab() {
                                 if (manager.branch && loadedBranches) {
                                   const existingBranches = manager.branch
                                     .split(", ")
-                                    .map((name) => {
+                                    .map((name: string) => {
                                       // Try to find matching branch from loaded branches
                                       const branch = loadedBranches.find(
                                         (b: { id: string; name: string }) =>
@@ -499,73 +547,71 @@ export default function AreaManagersTab() {
                 {Math.min(areaManagersEndIndex, areaManagersTotal)} of{" "}
                 {areaManagersTotal} area managers
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setAreaManagersPage((prev) => Math.max(1, prev - 1))
-                  }
-                  disabled={areaManagersPage === 1}
-                  className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                >
-                  Previous
-                </Button>
-                <div className="flex items-center gap-1">
-                  {Array.from(
-                    { length: areaManagersTotalPages },
-                    (_, i) => i + 1
-                  ).map((page) => {
-                    if (
-                      page === 1 ||
-                      page === areaManagersTotalPages ||
-                      (page >= areaManagersPage - 1 &&
-                        page <= areaManagersPage + 1)
-                    ) {
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setAreaManagersPage((prev) => Math.max(1, prev - 1));
+                      }}
+                      className={
+                        areaManagersPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      }
+                    />
+                  </PaginationItem>
+                  {generatePaginationPages(
+                    areaManagersPage,
+                    areaManagersTotalPages
+                  ).map((page, index) => {
+                    if (page === "ellipsis") {
                       return (
-                        <Button
-                          key={page}
-                          variant={
-                            areaManagersPage === page ? "default" : "outline"
-                          }
-                          size="sm"
-                          onClick={() => setAreaManagersPage(page)}
-                          className={`text-xs w-8 h-8 p-0 ${
-                            areaManagersPage === page
-                              ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
-                              : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                          }`}
-                        >
-                          {page}
-                        </Button>
-                      );
-                    } else if (
-                      page === areaManagersPage - 2 ||
-                      page === areaManagersPage + 2
-                    ) {
-                      return (
-                        <span key={page} className="text-gray-400">
-                          ...
-                        </span>
+                        <PaginationItem key={`ellipsis-${index}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
                       );
                     }
-                    return null;
+                    return (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setAreaManagersPage(page);
+                          }}
+                          isActive={areaManagersPage === page}
+                          className={
+                            areaManagersPage === page
+                              ? "cursor-pointer bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
+                              : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          }
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
                   })}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setAreaManagersPage((prev) =>
-                      Math.min(areaManagersTotalPages, prev + 1)
-                    )
-                  }
-                  disabled={areaManagersPage === areaManagersTotalPages}
-                  className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                >
-                  Next
-                </Button>
-              </div>
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setAreaManagersPage((prev) =>
+                          Math.min(areaManagersTotalPages, prev + 1)
+                        );
+                      }}
+                      className={
+                        areaManagersPage === areaManagersTotalPages
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </CardContent>
@@ -624,7 +670,7 @@ export default function AreaManagersTab() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {areaManagers.map((manager) => (
+                      {areaManagers.map((manager: Employee) => (
                         <TableRow key={manager.id} className="hover:bg-gray-50">
                           <TableCell className="font-medium py-3 px-6">
                             {manager.name}
@@ -780,45 +826,15 @@ export default function AreaManagersTab() {
                               branches: [...selectedBranches],
                             });
 
-                            // Update employee with branch assignments
-                            // If multiple branches, combine them with comma separator
-                            const branchNames = selectedBranches
-                              .map((b) => b.name)
-                              .join(", ");
-
-                            // Update using API service
+                            // Update user branch assignments using dedicated API endpoint
                             const formData = new FormData();
-                            formData.append("branch", branchNames);
-                            formData.append(
-                              "updatedAt",
-                              new Date().toISOString()
-                            );
-                            await apiService.updateEmployee(
-                              formData,
-                              selectedAreaManager.id
-                            );
-
-                            // Also update accounts in localStorage
-                            const accounts = JSON.parse(
-                              localStorage.getItem("accounts") || "[]"
-                            );
-                            const accountIndex = accounts.findIndex(
-                              (acc: any) =>
-                                acc.id === selectedAreaManager.id ||
-                                acc.employeeId === selectedAreaManager.id
-                            );
-
-                            if (accountIndex !== -1) {
-                              accounts[accountIndex] = {
-                                ...accounts[accountIndex],
-                                branch: branchNames,
-                                updatedAt: new Date().toISOString(),
-                              };
-                              localStorage.setItem(
-                                "accounts",
-                                JSON.stringify(accounts)
-                              );
-                            }
+                            // Add each branch ID to the form data
+                            selectedBranches.forEach((branch) => {
+                              formData.append("branch_ids[]", branch.id);
+                            });
+                            
+                            // Use updateUserBranch API endpoint for branch assignments
+                            await apiService.updateUserBranch(selectedAreaManager.id, formData);
 
                             // Close the branches modal after confirmation
                             setIsBranchesModalOpen(false);
@@ -844,13 +860,20 @@ export default function AreaManagersTab() {
                               }.`
                             );
 
-                            // Refresh parent component data to update the table
-                            if (onRefresh) {
-                              await onRefresh(false, false);
-                            } else {
-                              // Fallback: reload the page if no refresh callback
-                              window.location.reload();
-                            }
+                            // Reload area managers data to update the table
+                            const reloadedData = await apiService.getAllAreaManager();
+                            const normalizedData = reloadedData.map((item: any) => ({
+                              id: item.id || item.employeeId,
+                              name: item.name || `${item.fname || ""} ${item.lname || ""}`.trim(),
+                              email: item.email || "",
+                              position: item.position || "",
+                              department: item.department || "",
+                              branch: item.branch || "",
+                              contact: item.contact || "",
+                              role: item.role || "",
+                              isActive: item.isActive !== undefined ? item.isActive : true,
+                            }));
+                            setAreaManagersData(normalizedData);
                           },
                           {
                             errorTitle: "Assignment Failed",
@@ -1166,46 +1189,30 @@ export default function AreaManagersTab() {
 
                 await withErrorHandling(
                   async () => {
-                    // Update employee with branch assignments
-                    const branchNames = editSelectedBranches
-                      .map((b) => b.name)
-                      .join(", ");
-
-                    // Update using API service
+                    // Update user branch assignments using dedicated API endpoint
                     const formData = new FormData();
-                    formData.append("branch", branchNames);
-                    formData.append("updatedAt", new Date().toISOString());
-                    await apiService.updateEmployee(
-                      formData,
-                      areaManagerToEdit.id
-                    );
+                    // Add each branch ID to the form data
+                    editSelectedBranches.forEach((branch) => {
+                      formData.append("branch_ids[]", branch.id);
+                    });
+                    
+                    // Use updateUserBranch API endpoint for branch assignments
+                    await apiService.updateUserBranch(areaManagerToEdit.id, formData);
 
-                    // Also update accounts in localStorage
-                    const accounts = JSON.parse(
-                      localStorage.getItem("accounts") || "[]"
-                    );
-                    const accountIndex = accounts.findIndex(
-                      (acc: any) =>
-                        acc.id === areaManagerToEdit.id ||
-                        acc.employeeId === areaManagerToEdit.id
-                    );
-
-                    if (accountIndex !== -1) {
-                      accounts[accountIndex] = {
-                        ...accounts[accountIndex],
-                        branch: branchNames,
-                        updatedAt: new Date().toISOString(),
-                      };
-                      localStorage.setItem(
-                        "accounts",
-                        JSON.stringify(accounts)
-                      );
-                    }
-
-                    // Refresh parent component data
-                    if (onRefresh) {
-                      await onRefresh(false, false);
-                    }
+                    // Reload area managers data to update the table
+                    const reloadedData = await apiService.getAllAreaManager();
+                    const normalizedData = reloadedData.map((item: any) => ({
+                      id: item.id || item.employeeId,
+                      name: item.name || `${item.fname || ""} ${item.lname || ""}`.trim(),
+                      email: item.email || "",
+                      position: item.position || "",
+                      department: item.department || "",
+                      branch: item.branch || "",
+                      contact: item.contact || "",
+                      role: item.role || "",
+                      isActive: item.isActive !== undefined ? item.isActive : true,
+                    }));
+                    setAreaManagersData(normalizedData);
 
                     // Store success data
                     setEditSuccessData({
@@ -1344,41 +1351,23 @@ export default function AreaManagersTab() {
                   // Proceed with deletion using error handler
                   await withErrorHandling(
                     async () => {
-                      // Remove branch assignment (set branch to empty)
-                      const formData = new FormData();
-                      formData.append("branch", "");
-                      formData.append("updatedAt", new Date().toISOString());
-                      await apiService.updateEmployee(
-                        formData,
-                        areaManagerToDelete.id
-                      );
+                      // Remove all branch assignments using dedicated API endpoint
+                      await apiService.removeUserBranches(areaManagerToDelete.id);
 
-                      // Also update accounts in localStorage
-                      const accounts = JSON.parse(
-                        localStorage.getItem("accounts") || "[]"
-                      );
-                      const accountIndex = accounts.findIndex(
-                        (acc: any) =>
-                          acc.id === areaManagerToDelete.id ||
-                          acc.employeeId === areaManagerToDelete.id
-                      );
-
-                      if (accountIndex !== -1) {
-                        accounts[accountIndex] = {
-                          ...accounts[accountIndex],
-                          branch: "",
-                          updatedAt: new Date().toISOString(),
-                        };
-                        localStorage.setItem(
-                          "accounts",
-                          JSON.stringify(accounts)
-                        );
-                      }
-
-                      // Refresh parent component data
-                      if (onRefresh) {
-                        await onRefresh(false, false);
-                      }
+                      // Reload area managers data to update the table
+                      const reloadedData = await apiService.getAllAreaManager();
+                      const normalizedData = reloadedData.map((item: any) => ({
+                        id: item.id || item.employeeId,
+                        name: item.name || `${item.fname || ""} ${item.lname || ""}`.trim(),
+                        email: item.email || "",
+                        position: item.position || "",
+                        department: item.department || "",
+                        branch: item.branch || "",
+                        contact: item.contact || "",
+                        role: item.role || "",
+                        isActive: item.isActive !== undefined ? item.isActive : true,
+                      }));
+                      setAreaManagersData(normalizedData);
 
                       // Show success message
                       toastMessages.generic.success(

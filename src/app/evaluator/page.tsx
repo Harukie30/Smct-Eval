@@ -32,10 +32,7 @@ import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/useToast";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  createApprovalNotification,
-  createFullyApprovedNotification,
-} from "@/lib/notificationUtils";
+// Removed notification imports - backend handles notification creation automatically
 import { useProfilePictureUpdates } from "@/hooks/useProfileUpdates";
 import { EvaluatorDashboardGuideModal } from "@/components/EvaluatorDashboardGuideModal";
 
@@ -740,6 +737,13 @@ function EvaluatorDashboard() {
     customMessage: "Welcome back! Refreshing your evaluator dashboard data...",
   });
 
+  // Load employees and positions on mount
+  useEffect(() => {
+    if (user) {
+      loadEmployeesAndPositions();
+    }
+  }, [user]);
+
   // Real-time data updates via localStorage events
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -766,6 +770,8 @@ function EvaluatorDashboard() {
   const [isHistoryRefreshing, setIsHistoryRefreshing] = useState(false);
   const [isQuarterlyRefreshing, setIsQuarterlyRefreshing] = useState(false);
   const [employeeDataRefresh, setEmployeeDataRefresh] = useState(0);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [positions, setPositions] = useState<string[]>([]);
 
   // Delete confirmation modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -779,46 +785,51 @@ function EvaluatorDashboard() {
   const [isSuccessDialogClosing, setIsSuccessDialogClosing] = useState(false);
   const [isDeleteDialogClosing, setIsDeleteDialogClosing] = useState(false);
 
+  // Function to load employees and positions from API
+  const loadEmployeesAndPositions = async () => {
+    try {
+      // Load employees
+      const employeesData = await apiService.getAllUsers();
+      const employeeUsers = employeesData.filter((user: any) => 
+        user.role?.name === 'employee' || 
+        user.roles?.[0]?.name === 'employee' ||
+        (typeof user.role === 'string' && user.role.toLowerCase() === 'employee')
+      );
+      setEmployees(employeeUsers);
+
+      // Load positions
+      const positionsData = await apiService.getPositions();
+      const positionNames = positionsData.map((pos: any) => pos.name || pos);
+      setPositions(positionNames);
+    } catch (err) {
+      console.error("Error loading employees and positions:", err);
+    }
+  };
+
   // Function to refresh employee data
   const refreshEmployeeData = async () => {
     try {
       setIsRefreshing(true);
 
-      // Fetch fresh employee data from clientDataService
-      const employees = await apiService.getEmployees();
+      // Load fresh employee and position data
+      await loadEmployeesAndPositions();
 
-      if (Array.isArray(employees)) {
-        // Ensure data is valid and has unique IDs
-        const validData = employees.filter(
-          (item: any) =>
-            item &&
-            typeof item === "object" &&
-            item.id !== undefined &&
-            item.name &&
-            item.email
-        );
+      // Force re-render by updating the refresh counter
+      setEmployeeDataRefresh((prev) => prev + 1);
 
-        // Remove duplicates based on ID
-        const uniqueData = validData.filter(
-          (item: any, index: number, self: any[]) =>
-            index === self.findIndex((t) => t.id === item.id)
-        );
+      // Get updated count after loading
+      const updatedEmployees = await apiService.getAllUsers();
+      const employeeCount = updatedEmployees.filter((user: any) => 
+        user.role?.name === 'employee' || 
+        user.roles?.[0]?.name === 'employee' ||
+        (typeof user.role === 'string' && user.role.toLowerCase() === 'employee')
+      ).length;
 
-        // Force re-render by updating the refresh counter
-        setEmployeeDataRefresh((prev) => prev + 1);
-
-        // Show success feedback
-        success(
-          "Employee Data Refreshed",
-          `Successfully loaded ${uniqueData.length} employee records`
-        );
-      } else {
-        setEmployeeDataRefresh((prev) => prev + 1);
-        error(
-          "Invalid Data",
-          "Received invalid employee data structure from the server"
-        );
-      }
+      // Show success feedback
+      success(
+        "Employee Data Refreshed",
+        `Successfully loaded ${employeeCount} employee records`
+      );
     } catch (err) {
       console.error("Error refreshing employee data:", err);
       setEmployeeDataRefresh((prev) => prev + 1);
@@ -1973,19 +1984,7 @@ function EvaluatorDashboard() {
         `Evaluation for ${feedback.employeeName} has been approved successfully!`
       );
 
-      // Create notification for evaluator approval
-      try {
-        await createApprovalNotification(
-          feedback.employeeName,
-          currentUser?.name || "Evaluator",
-          "evaluator"
-        );
-      } catch (notificationError) {
-        console.warn(
-          "Failed to create approval notification:",
-          notificationError
-        );
-      }
+      // Backend automatically creates notification for evaluator approval
     } catch (error) {
       console.error("Error approving evaluation:", error);
       alert("Failed to approve evaluation. Please try again.");
@@ -2038,52 +2037,8 @@ function EvaluatorDashboard() {
     }
   };
 
-  // Monitor for fully approved evaluations and send notifications
-  // Only check when there's a recent change, not on initial load
-  const [hasCheckedNotifications, setHasCheckedNotifications] = useState(false);
-
-  useEffect(() => {
-    const checkForFullyApproved = async () => {
-      if (!recentSubmissions || recentSubmissions.length === 0) return;
-
-      // Only check notifications after initial load
-      if (!hasCheckedNotifications) {
-        setHasCheckedNotifications(true);
-        return;
-      }
-
-      for (const submission of recentSubmissions) {
-        const status = getCorrectApprovalStatus(submission);
-
-        // Check if this submission is fully approved and we haven't notified yet
-        if (status === "fully_approved" && !submission.fullyApprovedNotified) {
-          try {
-            await createFullyApprovedNotification(submission.employeeName);
-
-            // Mark as notified to prevent duplicate notifications
-            const updatedSubmissions = recentSubmissions.map((sub) =>
-              sub.id === submission.id
-                ? { ...sub, fullyApprovedNotified: true }
-                : sub
-            );
-            setRecentSubmissions(updatedSubmissions);
-
-            // Also update in localStorage
-            await apiService.updateSubmission(submission.id, {
-              fullyApprovedNotified: true,
-            });
-          } catch (error) {
-            console.warn(
-              "Failed to create fully approved notification:",
-              error
-            );
-          }
-        }
-      }
-    };
-
-    checkForFullyApproved();
-  }, [recentSubmissions, hasCheckedNotifications]);
+  // Backend automatically creates notifications when evaluations are fully approved
+  // No need to monitor or manually create notifications - they're handled by the backend
 
   // Function to merge employee approval data from localStorage
   const mergeEmployeeApprovalData = (submissions: any[]) => {
@@ -2446,29 +2401,54 @@ function EvaluatorDashboard() {
               isEmployeesRefreshing={isEmployeesRefreshing}
               employeeDataRefresh={employeeDataRefresh}
               onRefresh={handleEmployeesRefresh}
+              employees={employees}
+              positions={positions}
               onViewEmployee={(employee) => {
                 setSelectedEmployeeForView(employee);
                 setIsViewEmployeeModalOpen(true);
               }}
               onEvaluateEmployee={async (employee) => {
-                // Fetch formatted employee ID from accounts
+                // Fetch fresh employee data from API to ensure we have latest updates (position, department, role, hireDate)
                 try {
-                  const accounts = await apiService.getAccounts();
-                  const account = accounts.find((acc: any) => 
-                    acc.employeeId === employee.id || 
-                    acc.id === employee.id ||
-                    acc.email === employee.email
-                  );
+                  // Fetch latest employee data from API
+                  const freshEmployeeData = await apiService.getEmployee(employee.id);
                   
-                  // Get formatted employee_id from account (stored as employee_id in registration)
-                  const formattedEmployeeId = (account as any)?.employee_id || account?.employeeId;
+                  // If API returns fresh data, use it; otherwise fall back to cached employee data
+                  const updatedEmployee: Employee = freshEmployeeData ? {
+                    id: freshEmployeeData.id || employee.id,
+                    name: freshEmployeeData.name || freshEmployeeData.fname + ' ' + freshEmployeeData.lname || employee.name,
+                    email: freshEmployeeData.email || employee.email,
+                    position: freshEmployeeData.position || employee.position,
+                    department: freshEmployeeData.department || employee.department,
+                    branch: freshEmployeeData.branch || employee.branch,
+                    role: freshEmployeeData.role || freshEmployeeData.roles?.[0]?.name || freshEmployeeData.roles?.[0] || employee.role,
+                    hireDate: freshEmployeeData.hireDate || employee.hireDate,
+                    ...(freshEmployeeData.avatar || (employee as any).avatar ? { avatar: freshEmployeeData.avatar || (employee as any).avatar } : {}),
+                  } as Employee : employee;
                   
-                  setSelectedEmployee({
-                    ...employee,
-                    employeeId: formattedEmployeeId ? String(formattedEmployeeId) : undefined,
-                  });
+                  // Fetch formatted employee ID from accounts
+                  try {
+                    const accounts = await apiService.getAccounts();
+                    const account = accounts.find((acc: any) => 
+                      acc.employeeId === updatedEmployee.id || 
+                      acc.id === updatedEmployee.id ||
+                      acc.email === updatedEmployee.email
+                    );
+                    
+                    // Get formatted employee_id from account (stored as employee_id in registration)
+                    const formattedEmployeeId = (account as any)?.employee_id || account?.employeeId;
+                    
+                    setSelectedEmployee({
+                      ...updatedEmployee,
+                      employeeId: formattedEmployeeId ? String(formattedEmployeeId) : undefined,
+                    });
+                  } catch (error) {
+                    console.error('Error fetching employee ID:', error);
+                    setSelectedEmployee(updatedEmployee);
+                  }
                 } catch (error) {
-                  console.error('Error fetching employee ID:', error);
+                  console.error('Error fetching fresh employee data:', error);
+                  // Fallback to cached employee data if API call fails
                   setSelectedEmployee(employee);
                 }
                 setIsEvaluationTypeModalOpen(true);
@@ -3035,9 +3015,33 @@ function EvaluatorDashboard() {
           isOpen={isViewEmployeeModalOpen}
           onCloseAction={() => setIsViewEmployeeModalOpen(false)}
           employee={selectedEmployeeForView}
-          onStartEvaluationAction={(employee: Employee) => {
+          onStartEvaluationAction={async (employee: Employee) => {
             setIsViewEmployeeModalOpen(false);
-            setSelectedEmployee(employee);
+            
+            // Fetch fresh employee data from API to ensure we have latest updates (position, department, role, hireDate)
+            try {
+              const freshEmployeeData = await apiService.getEmployee(employee.id);
+              
+              // If API returns fresh data, use it; otherwise fall back to cached employee data
+              const updatedEmployee: Employee = freshEmployeeData ? {
+                id: freshEmployeeData.id || employee.id,
+                name: freshEmployeeData.name || freshEmployeeData.fname + ' ' + freshEmployeeData.lname || employee.name,
+                email: freshEmployeeData.email || employee.email,
+                position: freshEmployeeData.position || employee.position,
+                department: freshEmployeeData.department || employee.department,
+                branch: freshEmployeeData.branch || employee.branch,
+                role: freshEmployeeData.role || freshEmployeeData.roles?.[0]?.name || freshEmployeeData.roles?.[0] || employee.role,
+                hireDate: freshEmployeeData.hireDate || employee.hireDate,
+                ...(freshEmployeeData.avatar || (employee as any).avatar ? { avatar: freshEmployeeData.avatar || (employee as any).avatar } : {}),
+              } as Employee : employee;
+              
+              setSelectedEmployee(updatedEmployee);
+            } catch (error) {
+              console.error('Error fetching fresh employee data:', error);
+              // Fallback to cached employee data if API call fails
+              setSelectedEmployee(employee);
+            }
+            
             setIsEvaluationTypeModalOpen(true);
           }}
           onViewSubmissionAction={(submission: any) => {

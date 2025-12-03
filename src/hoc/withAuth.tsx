@@ -27,12 +27,21 @@ export function withAuth<P extends object>(
     const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
 
-    // Redirect if not authenticated
+    // Redirect if not authenticated - only after loading is complete
     useEffect(() => {
-      if (!isLoading && !isAuthenticated) {
-        router.push(fallbackPath);
+      // Wait for loading to finish, then check authentication
+      // This prevents premature redirects during hard refresh when session is being restored
+      if (!isLoading && !isAuthenticated && !user) {
+        // Check localStorage as a last resort before redirecting
+        const stored = localStorage.getItem("authUser");
+        if (!stored) {
+          // No stored session, definitely not authenticated
+          router.push(fallbackPath);
+        }
+        // If stored exists, wait a bit more for UserContext to restore it
+        // This handles race conditions during hard refresh
       }
-    }, [isAuthenticated, isLoading, router, fallbackPath]);
+    }, [isAuthenticated, isLoading, user, router, fallbackPath]);
 
     // Redirect if role doesn't match
     useEffect(() => {
@@ -43,12 +52,12 @@ export function withAuth<P extends object>(
         user &&
         redirectOnRoleMismatch
       ) {
-        const userRole = user?.roles[0]?.name.toLowerCase();
+        const userRole = user?.roles?.[0]?.name?.toLowerCase();
         const requiredRoles = Array.isArray(requiredRole)
           ? requiredRole.map((r) => r.toLowerCase())
           : [requiredRole.toLowerCase()];
 
-        if (!requiredRoles.includes(userRole)) {
+        if (userRole && !requiredRoles.includes(userRole)) {
           // Optionally redirect based on role
           const roleDashboards: Record<string, string> = {
             admin: "/admin",
@@ -73,7 +82,8 @@ export function withAuth<P extends object>(
     ]);
 
     // Show loading screen while auth is resolving
-    if (isLoading || !user) {
+    // Wait for loading to complete, but also check if there's a stored user
+    if (isLoading) {
       return (
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
@@ -82,6 +92,25 @@ export function withAuth<P extends object>(
           </div>
         </div>
       );
+    }
+
+    // After loading, check if we have a user (either from state or can restore from localStorage)
+    if (!user && !isAuthenticated) {
+      // Check localStorage one more time before giving up
+      const stored = localStorage.getItem("authUser");
+      if (stored) {
+        // Stored session exists, wait a bit more for it to be restored
+        return (
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Restoring session...</p>
+            </div>
+          </div>
+        );
+      }
+      // No stored session, redirect (handled by useEffect above)
+      return null;
     }
 
     return <Component {...props} />;

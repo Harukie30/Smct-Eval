@@ -36,6 +36,7 @@ interface UserContextType {
   login: (username: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateUserField: (field: keyof AuthenticatedUser, value: any) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -63,12 +64,25 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       try {
         const stored = localStorage.getItem("authUser");
 
-        if (stored) {
-          setUser(JSON.parse(stored));
+        // First, restore user from localStorage immediately
+        // Check if stored value is valid (not "undefined", "null", or empty)
+        if (stored && stored !== "undefined" && stored !== "null" && stored.trim() !== "") {
+          try {
+            const parsedUser = JSON.parse(stored);
+            setUser(parsedUser);
+          } catch (e) {
+            console.error("Failed to parse stored user:", e);
+            localStorage.removeItem("authUser");
+          }
         }
 
-        await refreshUser(); // verifies with backend
-      } catch {
+        // Then verify with backend (this will update user if successful, or keep existing if network error)
+        await refreshUser();
+      } catch (error) {
+        // If refreshUser throws an error, we still want to keep the stored user
+        console.error("Error during session restoration:", error);
+        // The user should already be set from localStorage above
+        // refreshUser() handles clearing session only on 401/403 errors
       } finally {
         setIsLoading(false);
       }
@@ -81,11 +95,45 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const refreshUser = async () => {
     try {
       const res = await apiService.authUser();
-      setUser(res);
-      localStorage.setItem("authUser", JSON.stringify(res.data));
-    } catch {
-      setUser(null);
-      localStorage.removeItem("authUser");
+      // Handle different response structures (res.data or res directly)
+      const userData = res?.data || res;
+      if (userData) {
+        console.log('🔄 User data refreshed from API:', {
+          hasSignature: !!userData.signature,
+          signatureLength: userData.signature?.length || 0,
+          signaturePreview: userData.signature?.substring(0, 50) || 'none',
+        });
+        setUser(userData);
+        localStorage.setItem("authUser", JSON.stringify(userData));
+      }
+    } catch (error: any) {
+      // Only clear session if it's an authentication error (401 Unauthorized)
+      // For other errors (network issues, 500 errors, etc.), keep the user logged in
+      const status = error?.status || error?.response?.status;
+      
+      if (status === 401 || status === 403) {
+        // Authentication failed - clear session
+        setUser(null);
+        localStorage.removeItem("authUser");
+      } else {
+        // Network error or server error - keep user logged in with stored session
+        // Don't clear the session, just log the error
+        console.warn("Failed to refresh user from backend, keeping stored session:", error);
+        // Ensure user is set from localStorage if it exists
+        // Use functional update to avoid stale closure issues
+        const stored = localStorage.getItem("authUser");
+        // Check if stored value is valid (not "undefined", "null", or empty)
+        if (stored && stored !== "undefined" && stored !== "null" && stored.trim() !== "") {
+          try {
+            const parsedUser = JSON.parse(stored);
+            // Only update if user is not already set or if stored user is different
+            setUser((prevUser) => prevUser || parsedUser);
+          } catch (e) {
+            console.error("Failed to parse stored user:", e);
+            localStorage.removeItem("authUser");
+          }
+        }
+      }
     }
   };
 
@@ -103,6 +151,17 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // ⬇ Update a specific user field (useful for preserving data not returned by backend)
+  const updateUserField = (field: keyof AuthenticatedUser, value: any) => {
+    setUser((prevUser) => {
+      if (!prevUser) return prevUser;
+      const updatedUser = { ...prevUser, [field]: value };
+      localStorage.setItem("authUser", JSON.stringify(updatedUser));
+      console.log(`💾 Updated user field '${field}' in context and localStorage`);
+      return updatedUser;
+    });
   };
 
   // ⬇ Logout using Sanctum
@@ -134,6 +193,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     login,
     logout,
     refreshUser,
+    updateUserField,
   };
 
   return (

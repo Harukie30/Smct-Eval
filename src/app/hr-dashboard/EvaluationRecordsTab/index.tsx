@@ -731,8 +731,25 @@ export function EvaluationRecordsTab({
                 <TableBody className="divide-y divide-gray-200">
                   {recordsPaginated.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={11} className="text-center py-8 md:py-12 text-gray-500 text-sm md:text-base">
-                        No evaluation records found
+                      <TableCell colSpan={11} className="text-center py-8 md:py-12">
+                        <div className="flex flex-col items-center justify-center gap-4">
+                          <img
+                            src="/not-found.gif"
+                            alt="No data"
+                            className="w-25 h-25 object-contain"
+                            style={{
+                              imageRendering: 'auto',
+                              willChange: 'auto',
+                              transform: 'translateZ(0)',
+                              backfaceVisibility: 'hidden',
+                              WebkitBackfaceVisibility: 'hidden',
+                            }}
+                          />
+                          <div className="text-gray-500">
+                            <p className="text-base font-medium mb-1">No evaluation records found</p>
+                            <p className="text-sm">Start evaluating employees to see records here</p>
+                          </div>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (

@@ -634,16 +634,23 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         // Refresh the table if onRefresh callback is provided
         // This ensures the table updates with the latest data
         if (onRefresh) {
-          await onRefresh();
-          // Small delay to ensure state updates propagate
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          try {
+            await onRefresh();
+            // Small delay to ensure state updates propagate
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          } catch (refreshError) {
+            console.error("Error refreshing after save:", refreshError);
+            // Don't show error - the save was successful, refresh is just a bonus
+          }
         }
 
-        success("Success! Your changes have been saved.");
+        // Don't show success message here - let handleSaveUser show it
+        // This prevents duplicate success messages
         onClose();
       } catch (error) {
         console.error("Error saving user:", error);
-        // You might want to show an error message here
+        // Error message is already shown by handleSaveUser, so we don't need to show it again
+        // Just keep the modal open so user can see the error and try again
       } finally {
         console.log("Setting isSaving to false...");
         setIsSaving(false);

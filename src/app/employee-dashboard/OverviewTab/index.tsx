@@ -38,7 +38,7 @@ export function OverviewTab({
   onViewEvaluation,
   isActive = false,
 }: OverviewTabProps) {
-  const { profile } = useUser();
+  const { user: profile } = useUser();
   const { success } = useToast();
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,39 +54,38 @@ export function OverviewTab({
   const lastSubmissionsCountRef = useRef<number>(0);
   const lastSubmissionsTimestampRef = useRef<string>("");
 
-  // Load approved evaluations from localStorage
+  // Load approved evaluations from API
   useEffect(() => {
-    if (profile?.email) {
-      const approved = JSON.parse(
-        localStorage.getItem(`approvedEvaluations_${profile.email}`) || "[]"
-      );
-      setApprovedEvaluations(new Set(approved));
-      lastApprovedEvaluationsRef.current = JSON.stringify(approved);
-    }
+    const loadApprovedEvaluations = async () => {
+      if (profile?.email) {
+        try {
+          const userSubmissions = await apiService.getMyEvalAuthEmployee();
+          const approvedIds = userSubmissions
+            .filter((sub: any) => sub.employeeSignature && sub.employeeSignature.trim())
+            .map((sub: any) => sub.id);
+          setApprovedEvaluations(new Set(approvedIds));
+          lastApprovedEvaluationsRef.current = JSON.stringify(approvedIds);
+        } catch (error) {
+          console.error("Error loading approved evaluations:", error);
+        }
+      }
+    };
+    loadApprovedEvaluations();
   }, [profile?.email]);
 
-  // Load submissions data
+  // Load submissions data from API
   const loadSubmissions = async () => {
     try {
       setLoading(true);
-      const allSubmissions = await apiService.getSubmissions();
-      const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
-      const userSubmissions = profile?.email
-        ? allSubmissions.filter(
-            (submission: any) =>
-              submission.employeeName === userFullName ||
-              submission.evaluationData?.employeeEmail === profile.email
-          )
-        : [];
-      const finalSubmissions =
-        userSubmissions.length > 0 ? userSubmissions : allSubmissions;
-      setSubmissions(finalSubmissions);
+      // Use employee-specific endpoint
+      const userSubmissions = await apiService.getMyEvalAuthEmployee();
+      setSubmissions(userSubmissions);
 
       // Update refs to track submissions
-      lastSubmissionsCountRef.current = finalSubmissions.length;
-      if (finalSubmissions.length > 0) {
+      lastSubmissionsCountRef.current = userSubmissions.length;
+      if (userSubmissions.length > 0) {
         // Track the most recent submission timestamp
-        const sortedByDate = [...finalSubmissions].sort(
+        const sortedByDate = [...userSubmissions].sort(
           (a, b) =>
             new Date(b.submittedAt).getTime() -
             new Date(a.submittedAt).getTime()
@@ -118,18 +117,8 @@ export function OverviewTab({
         try {
           // Add delay to show spinner
           await new Promise((resolve) => setTimeout(resolve, 500));
-          const allSubmissions = await apiService.getSubmissions();
-          const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
-          const userSubmissions = profile?.email
-            ? allSubmissions.filter(
-                (submission: any) =>
-                  submission.employeeName === userFullName ||
-                  submission.evaluationData?.employeeEmail === profile.email
-              )
-            : [];
-          const finalSubmissions =
-            userSubmissions.length > 0 ? userSubmissions : allSubmissions;
-          setSubmissions(finalSubmissions);
+          const userSubmissions = await apiService.getMyEvalAuthEmployee();
+          setSubmissions(userSubmissions);
         } catch (error) {
           console.error("Error refreshing on tab click:", error);
         } finally {
@@ -146,23 +135,13 @@ export function OverviewTab({
 
     const refreshSubmissions = async () => {
       try {
-        const allSubmissions = await apiService.getSubmissions();
-        const userFullName = profile ? `${profile.fname} ${profile.lname}`.trim() : '';
-        const userSubmissions = profile?.email
-          ? allSubmissions.filter(
-              (submission: any) =>
-                submission.employeeName === userFullName ||
-                submission.evaluationData?.employeeEmail === profile.email
-            )
-          : [];
-        const finalSubmissions =
-          userSubmissions.length > 0 ? userSubmissions : allSubmissions;
-        setSubmissions(finalSubmissions);
+        const userSubmissions = await apiService.getMyEvalAuthEmployee();
+        setSubmissions(userSubmissions);
 
         // Update refs after refresh
-        lastSubmissionsCountRef.current = finalSubmissions.length;
-        if (finalSubmissions.length > 0) {
-          const sortedByDate = [...finalSubmissions].sort(
+        lastSubmissionsCountRef.current = userSubmissions.length;
+        if (userSubmissions.length > 0) {
+          const sortedByDate = [...userSubmissions].sort(
             (a, b) =>
               new Date(b.submittedAt).getTime() -
               new Date(a.submittedAt).getTime()
@@ -176,9 +155,11 @@ export function OverviewTab({
 
     const checkForApprovalChanges = async () => {
       try {
-        const currentApproved = JSON.parse(
-          localStorage.getItem(`approvedEvaluations_${profile.email}`) || "[]"
-        );
+        // Check approved evaluations from API
+        const userSubmissions = await apiService.getMyEvalAuthEmployee();
+        const currentApproved = userSubmissions
+          .filter((sub: any) => sub.employeeSignature && sub.employeeSignature.trim())
+          .map((sub: any) => sub.id);
         const currentApprovedStr = JSON.stringify(currentApproved);
 
         // Check if approved evaluations have changed
@@ -353,13 +334,22 @@ export function OverviewTab({
     return approvedEvaluations.has(submissionId);
   };
 
-  const getApprovalData = (submissionId: string) => {
+  const getApprovalData = async (submissionId: string) => {
     if (!profile?.email) return null;
-    const approvalData = JSON.parse(
-      localStorage.getItem(`approvalData_${profile.email}`) || "{}"
-    );
-    const key = submissionId.toString();
-    return approvalData[key] || null;
+    try {
+      // Fetch submission from API to get approval data
+      const submission = await apiService.getSubmissionById(Number(submissionId));
+      if (submission && submission.employeeSignature) {
+        return {
+          employeeSignature: submission.employeeSignature,
+          approvedAt: submission.employeeApprovedAt || submission.updatedAt,
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching approval data:", error);
+      return null;
+    }
   };
 
   const getSubmissionHighlight = (
@@ -637,9 +627,23 @@ export function OverviewTab({
             </div>
           ) : filteredSubmissions.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-gray-500 text-lg mb-2">No results found</div>
-              <div className="text-gray-400 text-sm mb-4">
-                No performance reviews match "{overviewSearchTerm}"
+              <div className="flex flex-col items-center justify-center gap-4 mb-4">
+                <img
+                  src="/not-found.gif"
+                  alt="No data"
+                  className="w-25 h-25 object-contain"
+                  style={{
+                    imageRendering: 'auto',
+                    willChange: 'auto',
+                    transform: 'translateZ(0)',
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                  }}
+                />
+                <div className="text-gray-500">
+                  <p className="text-base font-medium mb-1">No results found</p>
+                  <p className="text-sm">No performance reviews match "{overviewSearchTerm}"</p>
+                </div>
               </div>
               <Button
                 variant="outline"
@@ -789,16 +793,16 @@ export function OverviewTab({
                             <Button
                               className="bg-blue-500 text-white hover:bg-green-700 hover:text-white"
                               size="sm"
-                              onClick={() => {
-                                const approvalData = getApprovalData(
-                                  submission.id
+                              onClick={async () => {
+                                const approvalData = await getApprovalData(
+                                  submission.id.toString()
                                 );
                                 const submissionWithApproval = {
                                   ...submission,
                                   employeeSignature:
-                                    approvalData?.employeeSignature || null,
+                                    approvalData?.employeeSignature || submission.employeeSignature || null,
                                   employeeApprovedAt:
-                                    approvalData?.approvedAt || null,
+                                    approvalData?.approvedAt || submission.employeeApprovedAt || null,
                                 };
                                 onViewEvaluation(submissionWithApproval);
                               }}

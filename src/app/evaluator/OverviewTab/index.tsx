@@ -324,11 +324,35 @@ export function OverviewTab({
                       <TableRow key="no-submissions">
                         <TableCell
                           colSpan={5}
-                          className="px-6 py-3 text-center text-gray-500"
+                          className="px-6 py-12 text-center"
                         >
-                          {overviewSearch.trim()
-                            ? "No submissions found matching your search"
-                            : "No recent submissions"}
+                          <div className="flex flex-col items-center justify-center gap-4">
+                            <img
+                              src="/not-found.gif"
+                              alt="No data"
+                              className="w-25 h-25 object-contain"
+                              style={{
+                                imageRendering: 'auto',
+                                willChange: 'auto',
+                                transform: 'translateZ(0)',
+                                backfaceVisibility: 'hidden',
+                                WebkitBackfaceVisibility: 'hidden',
+                              }}
+                            />
+                            <div className="text-gray-500">
+                              {overviewSearch.trim() ? (
+                                <>
+                                  <p className="text-base font-medium mb-1">No submissions found</p>
+                                  <p className="text-sm">Try adjusting your search criteria</p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-base font-medium mb-1">No recent submissions</p>
+                                  <p className="text-sm">Start evaluating employees to see submissions here</p>
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (
