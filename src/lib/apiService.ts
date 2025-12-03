@@ -1043,16 +1043,10 @@ export const apiService = {
   },
 
   // Add new department
-  addDepartment: async (formData: FormData): Promise<any> => {
-    try {
-      const response = await api.post("/addDepartment", formData);
+  addDepartment: async (name: string): Promise<any> => {
+    
+      const response = await api.post("/addDepartment", {department_name: name});
       return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to add department"
-      );
-    }
   },
 
   // Delete department
