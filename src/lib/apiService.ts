@@ -986,7 +986,7 @@ export const apiService = {
   },
 
   // Add new branch
-  addBranch: async (formData: FormData): Promise<any> => {
+  addBranch: async (formData: {}): Promise<any> => {
     try {
       const response = await api.post("/addBranch", formData);
       return response.data;
@@ -1023,11 +1023,9 @@ export const apiService = {
   },
 
   // Add new department
-  addDepartment: async (name: string): Promise<any> => {
+  addDepartment: async (formData: FormData): Promise<any> => {
     try {
-      const response = await api.post("/addDepartment", {
-        department_name: name,
-      });
+      const response = await api.post("/addDepartment", formData);
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;

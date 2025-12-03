@@ -19,6 +19,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2 } from "lucide-react";
@@ -35,6 +43,12 @@ interface Branches {
   acronym: string;
   managers_count: string;
   employees_count: string;
+}
+interface newBranch {
+  branch_code: string;
+  branch_name: string;
+  branch: string;
+  acronym: string;
 }
 
 export default function DepartmentsTab() {
@@ -54,6 +68,64 @@ export default function DepartmentsTab() {
   const [overviewTotal, setOverviewTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
+
+  //add inputs
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formData, setFormData] = useState<newBranch>({
+    branch_code: "",
+    branch_name: "",
+    branch: "",
+    acronym: "",
+  });
+
+  useEffect(() => {
+    if (!isAddModalOpen) {
+      setFormData({
+        branch_code: "",
+        branch_name: "",
+        branch: "",
+        acronym: "",
+      });
+      setErrors({});
+    }
+  }, [isAddModalOpen]);
+
+  const validation = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.branch_code) {
+      newErrors.branch_code = "Branch code required";
+    }
+    if (!formData.branch_name) {
+      newErrors.branch_name = "Branch name required";
+    }
+    if (!formData.branch) {
+      newErrors.branch = "Branch required";
+    }
+    if (!formData.acronym) {
+      newErrors.acronym = "Branch acronym required";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleInputChange = (
+    field: keyof newBranch,
+    value: string | boolean
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: "",
+      }));
+    }
+  };
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -121,25 +193,29 @@ export default function DepartmentsTab() {
   };
 
   // Function to handle adding a new department
-  const handleAddDepartment = async () => {
-    if (!newDepartmentName.trim()) {
-      toastMessages.generic.warning(
-        "Validation Error",
-        "Please enter a branches name."
-      );
-      return;
-    }
-    try {
-      await apiService.addDepartment();
-      loadData(searchTerm);
-      toastMessages.generic.success(
-        "Success " + +" has been added",
-        "A new department has been save."
-      );
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setIsAddModalOpen(false);
+  const handleAddBranch = async () => {
+    if (validation()) {
+      try {
+        await apiService.addBranch(formData);
+        loadData(searchTerm);
+        toastMessages.generic.success(
+          "Success " + formData.branch_name + " has been added",
+          "A new department has been save."
+        );
+        setErrors({});
+        setIsAddModalOpen(false);
+      } catch (error: any) {
+        if (error.response?.data?.errors) {
+          const backendErrors: Record<string, string> = {};
+
+          Object.keys(error.response.data.errors).forEach((field) => {
+            backendErrors[field] = error.response.data.errors[field][0];
+          });
+          setErrors(backendErrors);
+        }
+      } finally {
+        setIsAddModalOpen(false);
+      }
     }
   };
 
@@ -440,7 +516,7 @@ export default function DepartmentsTab() {
         </CardContent>
       </Card>
 
-      {/* Add Department Modal */}
+      {/* Add Branch Modal */}
       <Dialog open={isAddModalOpen} onOpenChangeAction={setIsAddModalOpen}>
         <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
           <DialogHeader className="pb-4">
@@ -452,21 +528,96 @@ export default function DepartmentsTab() {
 
           <div className="space-y-4 px-2">
             <div className="space-y-2">
-              <Label htmlFor="departmentName" className="text-sm font-medium">
-                Department Name <span className="text-red-500">*</span>
+              <Label htmlFor="branchName" className="text-sm font-medium">
+                Branch Name <span className="text-red-500">*</span>
               </Label>
-              {/* <Input
-                id="departmentName"
-                placeholder="Enter department name"
-                value={}
-                onChange={}
+              <Input
+                id="branchName"
+                placeholder="Enter branch name"
+                value={formData.branch_name}
+                onChange={(e) =>
+                  handleInputChange(
+                    "branch_name",
+                    e.target.value.toLocaleUpperCase()
+                  )
+                }
+                style={{ textTransform: "uppercase" }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    handleAddDepartment();
+                    handleAddBranch();
                   }
                 }}
                 autoFocus
-              /> */}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="branchCode" className="text-sm font-medium">
+                Branch Code
+              </Label>
+              <Input
+                id="branchCode"
+                placeholder="Enter branch code (optional)"
+                value={formData.branch_code}
+                onChange={(e) =>
+                  handleInputChange("branch_code", e.target.value.toUpperCase())
+                }
+                style={{ textTransform: "uppercase" }}
+              />
+            </div>
+            <div className="w-full md:w-48 space-y-2">
+              <Label
+                htmlFor="records-approval-status"
+                className="text-sm font-medium"
+              >
+                Branch
+              </Label>
+              <Select
+                value={formData.branch}
+                onValueChange={(value) => handleInputChange("branch", value)}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Des Appliance Plaza, Inc.">
+                    Des Appliance Plaza, Inc.
+                  </SelectItem>
+                  <SelectItem value="Des Strong Motors, Inc.">
+                    Des Strong Motors, Inc.
+                  </SelectItem>
+                  <SelectItem value="Honda Des, Inc.">
+                    Honda Des, Inc.
+                  </SelectItem>
+                  <SelectItem value="Head Office">Head Office</SelectItem>
+                  <SelectItem value="Strong Moto Centrum, Inc.">
+                    Strong Moto Centrum, Inc.
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full md:w-48 space-y-2 mb-2">
+              <Label
+                htmlFor="records-approval-status"
+                className="text-sm font-medium"
+              >
+                Acronym
+              </Label>
+              <Select
+                value={formData.acronym}
+                onValueChange={(value) => handleInputChange("acronym", value)}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DAP">DAP</SelectItem>
+                  <SelectItem value="DSM">DSM</SelectItem>
+                  <SelectItem value="HD">HD</SelectItem>
+                  <SelectItem value="HO">HO</SelectItem>
+                  <SelectItem value="KIA">KIA</SelectItem>
+                  <SelectItem value="SMCT">SMCT</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -475,16 +626,17 @@ export default function DepartmentsTab() {
               <Button
                 variant="outline"
                 onClick={() => {
+                  setErrors({});
                   setIsAddModalOpen(false);
                 }}
               >
                 Cancel
               </Button>
               <Button
-                onClick={handleAddDepartment}
+                onClick={() => await handleAddBranch()}
                 className="bg-green-500 text-white hover:bg-green-600 hover:text-white"
               >
-                Add Department
+                Add Branch
               </Button>
             </div>
           </DialogFooter>
