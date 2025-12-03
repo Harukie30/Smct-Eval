@@ -133,17 +133,53 @@ export default function DepartmentsTab() {
   // Function to load data
   const loadData = async (search: string) => {
     try {
-      const branches = await apiService.getTotalEmployeesBranch(
+      const response = await apiService.getTotalEmployeesBranch(
         search,
         currentPage,
         itemsPerPage
       );
-      setBranches(branches.data);
-      setOverviewTotal(branches.total);
-      setTotalPages(branches.last_page);
-      setPerPage(branches.per_page);
+      
+      // Handle different response structures
+      let branchesData: Branches[] = [];
+      let total = 0;
+      let lastPage = 1;
+      let perPageValue = itemsPerPage;
+      
+      if (response) {
+        // If response has data property (paginated response)
+        if (response.data && Array.isArray(response.data)) {
+          branchesData = response.data;
+          total = response.total || 0;
+          lastPage = response.last_page || 1;
+          perPageValue = response.per_page || itemsPerPage;
+        }
+        // If response is directly an array
+        else if (Array.isArray(response)) {
+          branchesData = response;
+          total = response.length;
+          lastPage = 1;
+          perPageValue = response.length;
+        }
+        // If response has branches property
+        else if (response.branches && Array.isArray(response.branches)) {
+          branchesData = response.branches;
+          total = response.total || response.branches.length;
+          lastPage = response.last_page || 1;
+          perPageValue = response.per_page || itemsPerPage;
+        }
+      }
+      
+      setBranches(branchesData);
+      setOverviewTotal(total);
+      setTotalPages(lastPage);
+      setPerPage(perPageValue);
     } catch (error) {
-      console.error("Error loading departments:", error);
+      console.error("Error loading branches:", error);
+      // Set empty array on error to prevent undefined errors
+      setBranches([]);
+      setOverviewTotal(0);
+      setTotalPages(1);
+      setPerPage(itemsPerPage);
     }
   };
 
@@ -417,8 +453,8 @@ export default function DepartmentsTab() {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {branches.map((branch) => {
-                return (
+              {branches && Array.isArray(branches) && branches.length > 0 ? (
+                branches.map((branch) => (
                   <Card key={branch.id}>
                     <CardHeader>
                       <CardTitle className="flex justify-between items-center">
@@ -462,11 +498,11 @@ export default function DepartmentsTab() {
                       </div>
                     </CardContent>
                   </Card>
-                );
-              })}
+                ))
+              ) : null}
             </div>
           </div>
-          {branches.length === 0 && (
+          {branches && Array.isArray(branches) && branches.length === 0 && (
             <div className="flex flex-col items-center justify-center gap-4">
               <img
                 src="/not-found.gif"

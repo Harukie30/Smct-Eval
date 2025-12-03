@@ -982,12 +982,13 @@ export const apiService = {
           per_page: itemsPerPage,
         },
       });
-      return response.data.branches;
+      // Return the full response data structure (may contain data, total, last_page, per_page)
+      return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw new Error(
         axiosError.response?.data?.message ||
-          "Failed to fetch total employees by department"
+          "Failed to fetch total employees by branch"
       );
     }
   },
@@ -1032,7 +1033,8 @@ export const apiService = {
           per_page: itemsPerPage,
         },
       });
-      return response.data.departments;
+      // Return the full response data structure (may contain data, total, last_page, per_page)
+      return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw new Error(
