@@ -105,8 +105,10 @@ export default function AreaManagersTab() {
       setLoadingAreaManagers(true);
       try {
         const data = await apiService.getAllAreaManager();
+        // Ensure data is an array before mapping
+        const dataArray = Array.isArray(data) ? data : [];
         // Normalize the data format to match Employee interface
-        const normalizedData = data.map((item: any) => ({
+        const normalizedData = dataArray.map((item: any) => ({
           id: item.id || item.employeeId,
           name: item.name || `${item.fname || ""} ${item.lname || ""}`.trim(),
           email: item.email || "",
@@ -862,7 +864,9 @@ export default function AreaManagersTab() {
 
                             // Reload area managers data to update the table
                             const reloadedData = await apiService.getAllAreaManager();
-                            const normalizedData = reloadedData.map((item: any) => ({
+                            // Ensure reloadedData is an array before mapping
+                            const dataArray = Array.isArray(reloadedData) ? reloadedData : [];
+                            const normalizedData = dataArray.map((item: any) => ({
                               id: item.id || item.employeeId,
                               name: item.name || `${item.fname || ""} ${item.lname || ""}`.trim(),
                               email: item.email || "",
@@ -1201,7 +1205,9 @@ export default function AreaManagersTab() {
 
                     // Reload area managers data to update the table
                     const reloadedData = await apiService.getAllAreaManager();
-                    const normalizedData = reloadedData.map((item: any) => ({
+                    // Ensure reloadedData is an array before mapping
+                    const dataArray = Array.isArray(reloadedData) ? reloadedData : [];
+                    const normalizedData = dataArray.map((item: any) => ({
                       id: item.id || item.employeeId,
                       name: item.name || `${item.fname || ""} ${item.lname || ""}`.trim(),
                       email: item.email || "",
@@ -1356,7 +1362,9 @@ export default function AreaManagersTab() {
 
                       // Reload area managers data to update the table
                       const reloadedData = await apiService.getAllAreaManager();
-                      const normalizedData = reloadedData.map((item: any) => ({
+                      // Ensure reloadedData is an array before mapping
+                      const dataArray = Array.isArray(reloadedData) ? reloadedData : [];
+                      const normalizedData = dataArray.map((item: any) => ({
                         id: item.id || item.employeeId,
                         name: item.name || `${item.fname || ""} ${item.lname || ""}`.trim(),
                         email: item.email || "",

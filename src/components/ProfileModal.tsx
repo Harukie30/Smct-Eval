@@ -195,10 +195,16 @@ export default function ProfileModal({
           apiService.getPositions(),
           apiService.getDepartments()
         ]);
-        // Convert from {id, name} to {value, label} format for Combobox
-        const branchesOptions = branchesData.map((b) => ({ value: b.id, label: b.name }));
-        const positionsOptions = positionsData.map((p) => ({ value: p.id, label: p.name }));
-        const departmentsOptions = departmentsData.map((d) => ({ value: d.id, label: d.name }));
+        // API already returns {value, label} format, just filter out items with undefined/null values
+        const branchesOptions = branchesData
+          .filter((b) => b && b.value != null && b.label != null)
+          .map((b) => ({ value: b.value, label: b.label }));
+        const positionsOptions = positionsData
+          .filter((p) => p && p.value != null && p.label != null)
+          .map((p) => ({ value: p.value, label: p.label }));
+        const departmentsOptions = departmentsData
+          .filter((d) => d && d.value != null && d.label != null)
+          .map((d) => ({ value: d.value, label: d.label }));
         
         setBranches(branchesOptions);
         setPositions(positionsOptions);

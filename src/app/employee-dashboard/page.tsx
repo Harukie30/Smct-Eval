@@ -148,9 +148,9 @@ function EmployeeDashboard() {
   // Memoize sidebar items to prevent unnecessary re-renders
   const sidebarItems = useMemo(
     () => [
-      { id: "overview", label: "Overview", icon: "📊" },
-      { id: "reviews", label: "Performance Reviews", icon: "📝" },
-      { id: "history", label: "Evaluation History", icon: "📈" },
+      { id: "overview", label: "Overview", icon: "📊", path: "/employee-dashboard?tab=overview" },
+      { id: "reviews", label: "Performance Reviews", icon: "📝", path: "/employee-dashboard?tab=reviews" },
+      { id: "history", label: "Evaluation History", icon: "📈", path: "/employee-dashboard?tab=history" },
     ],
     []
   );

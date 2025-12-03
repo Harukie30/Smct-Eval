@@ -48,6 +48,7 @@ type DashboardShellProps = {
   children: React.ReactNode;
   profile?: UserProfile | null;
   onSaveProfile?: (updatedProfile: UserProfile) => void;
+  topSummary?: React.ReactNode;
 };
 
 export default function DashboardShell(props: DashboardShellProps) {
@@ -60,6 +61,7 @@ export default function DashboardShell(props: DashboardShellProps) {
     children,
     profile,
     onSaveProfile,
+    topSummary,
   } = props;
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -862,7 +864,14 @@ export default function DashboardShell(props: DashboardShellProps) {
             </Button>
           </div>
         )}
-        <main className="flex-1 p-5">{children}</main>
+        <main className="flex-1 p-5">
+          {topSummary && (
+            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {topSummary}
+            </div>
+          )}
+          {children}
+        </main>
       </div>
 
       {/* Profile Modal */}
