@@ -35,63 +35,61 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, ChevronDown } from "lucide-react";
+import { Plus } from "lucide-react";
 import EditUserModal from "@/components/EditUserModal";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import { toastMessages } from "@/lib/toastMessages";
-import { apiService } from "@/lib/apiService";
+import apiService from "@/lib/apiService";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+
+import accountsDataRaw from "@/data/accounts.json";
+import departmentsData from "@/data/departments.json";
 
 // TypeScript interfaces
 interface Employee {
   id: number;
-  name: string;
+  fname: string;
+  lname: string;
   email: string;
-  position: string;
-  department: string;
-  branch?: string;
-  hireDate: string;
-  role: string;
-  username?: string;
-  password?: string;
-  isActive?: boolean;
+  positions: any;
+  departments: any;
+  branches: any;
+  hireDate: Date;
+  roles: any;
+  username: string;
+  password: string;
+  is_active: string;
   avatar?: string | null;
   bio?: string | null;
   contact?: string;
-  updatedAt?: string;
-  approvedDate?: string;
+  created_at: Date;
+  updated_at?: Date;
 }
 
 interface UserManagementTabProps {
-  branchesData: { value: string; label: string }[];
-  positionsData: { value: string; label: string }[];
+  branchesData: any;
+  departmentData: any;
+  positionsData: any;
   refreshDashboardDataAction: (
     showModal?: boolean,
     isAutoRefresh?: boolean
   ) => Promise<void>;
 }
 
-export function UserManagementTab({
+export default function UserManagementTab({
   branchesData,
+  departmentData,
   positionsData,
   refreshDashboardDataAction: refreshDashboardData,
 }: UserManagementTabProps) {
-  // State management
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [pendingRegistrations, setPendingRegistrations] = useState<any[]>([]);
-  const [departmentsData, setDepartmentsData] = useState<{id: number, name: string}[]>([]);
-  const [userManagementTab, setUserManagementTab] = useState<"active" | "new">(
-    "active"
+  const [pendingRegistrations, setPendingRegistrations] = useState<Employee[]>(
+    []
   );
+
+  const [activeRegistrations, setActiveRegistrations] = useState<Employee[]>(
+    []
+  );
+  const [tab, setTab] = useState<"active" | "new">("active");
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [approvedRegistrations, setApprovedRegistrations] = useState<number[]>(
     []
@@ -102,9 +100,6 @@ export function UserManagementTab({
   const [usersRefreshing, setUsersRefreshing] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeUsersPage, setActiveUsersPage] = useState(1);
-  const [newRegistrationsPage, setNewRegistrationsPage] = useState(1);
-  const itemsPerPage = 8;
 
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -118,228 +113,95 @@ export function UserManagementTab({
     null
   );
 
-  // Function to filter out deleted employees
-  const filterDeletedEmployees = (employeeList: Employee[]) => {
-    const deletedEmployees = JSON.parse(
-      localStorage.getItem("deletedEmployees") || "[]"
-    );
-    return employeeList.filter((emp) => !deletedEmployees.includes(emp.id));
-  };
+  //
+  //
+  //
+  //
+  //
+  //filters and paginations
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(4);
+  const [overviewTotal, setOverviewTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [perPage, setPerPage] = useState(0);
 
-  // Function to load accounts data from API
-  const loadAccountsData = async () => {
+  const loadPendingUsers = async () => {
     try {
-      const accounts = await apiService.getAllUsers();
-      
-      // Debug: Log the first account to see the structure
-      if (accounts.length > 0) {
-        console.log("📊 Sample account data structure:", accounts[0]);
-      }
+      const pendingUsers = await apiService.getPendingRegistrations();
+      setPendingRegistrations(pendingUsers);
 
-      const employees = accounts
-        .filter((account: any) => {
-          const role = account.role || account.roles || account.user_role;
-          return role !== "admin" && role !== "Admin";
-        })
-        .map((account: any) => {
-          // Handle different possible field names from backend
-          const fname = account.fname || account.first_name || account.firstName || "";
-          const lname = account.lname || account.last_name || account.lastName || "";
-          const name = account.name || 
-                      (fname && lname ? `${fname} ${lname}`.trim() : null) ||
-                      account.full_name ||
-                      account.user_name ||
-                      "";
-          
-          const position = account.position || 
-                          account.position_name || 
-                          account.position?.name ||
-                          "";
-          
-          const role = account.role || 
-                      account.roles || 
-                      account.user_role ||
-                      account.role_name ||
-                      "";
+      setLoading(true);
 
-          return {
-            id: account.employeeId || account.id || account.user_id,
-            name: name,
-            fname: fname,
-            lname: lname,
-            email: account.email || account.user_email || "",
-            position: position,
-            department: account.department || account.department_name || account.department?.name || "",
-            branch: account.branch || account.branch_name || account.branch?.name || "",
-            hireDate: account.hireDate || account.hire_date || account.created_at || "",
-            role: String(role || ""), // Ensure role is always a string
-            username: account.username || account.user_name || "",
-            password: account.password || "",
-            isActive: account.isActive !== undefined ? account.isActive : (account.is_active !== undefined ? account.is_active : true),
-            avatar: account.avatar || account.avatar_url || null,
-            bio: account.bio || null,
-            contact: account.contact || account.phone || account.contact_number || "",
-            updatedAt: account.updatedAt || account.updated_at || "",
-            approvedDate: account.approvedDate || account.approved_date || account.created_at || "",
-          };
-        });
-
-      return employees;
+      setOverviewTotal(pendingUsers.total);
+      setTotalPages(pendingUsers.last_page);
+      setPerPage(pendingUsers.per_page);
     } catch (error) {
-      console.error("Error loading accounts data:", error);
-      return [];
+      console.log(error);
+      setLoading(false);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const loadActiveUsers = async () => {
+    try {
+      const activeUsers = await apiService.getActiveRegistrations();
+      setActiveRegistrations(activeUsers);
+
+      setLoading(true);
+
+      setOverviewTotal(activeUsers.total);
+      setTotalPages(activeUsers.last_page);
+      setPerPage(activeUsers.per_page);
+    } catch (error) {
+      console.log(error);
+      setLoading(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === "new") {
+      loadPendingUsers();
+    }
+    if (tab === "active") {
+      loadActiveUsers();
+    }
+  }, []);
 
   // Function to refresh user data
   const refreshUserData = async (showLoading = false) => {
-    console.log("🔄 Starting user data refresh...");
-    if (showLoading) {
-      setUsersRefreshing(true);
-    }
-    setIsRefreshing(true);
-
     try {
-      const employeesData = await loadAccountsData();
-      const filteredEmployees = filterDeletedEmployees(employeesData);
-      setEmployees(filteredEmployees);
+      if (showLoading) {
+        setUsersRefreshing(true);
+        setIsRefreshing(true);
+      }
 
-      await loadPendingRegistrations();
-      console.log("✅ User data refresh completed successfully");
+      if (tab === "new") {
+        loadPendingUsers();
+      }
+      if (tab === "active") {
+        loadActiveUsers();
+      }
 
-      // Keep spinner visible for at least 800ms for better UX (same as tab switching)
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      if (showLoading) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
     } catch (error) {
       console.error("❌ Error refreshing user data:", error);
       toastMessages.generic.error(
         "Refresh Failed",
         "Failed to refresh user data. Please try again."
       );
-      // Even on error, show spinner for minimum duration
-      await new Promise((resolve) => setTimeout(resolve, 800));
     } finally {
-      setIsRefreshing(false);
       if (showLoading) {
         setUsersRefreshing(false);
+        setIsRefreshing(false);
       }
     }
-  };
-
-  // Load initial data
-  useEffect(() => {
-    const loadInitialData = async () => {
-      setLoading(true);
-      setUsersRefreshing(true); // Show spinner on initial load
-      try {
-        // Add a small delay to ensure spinner is visible
-        await new Promise((resolve) => setTimeout(resolve, 300));
-
-        // Load departments from API
-        const departments = await apiService.getDepartments();
-        setDepartmentsData(departments.map((dept: any) => ({
-          id: Number(dept.id),
-          name: dept.name
-        })));
-
-        await refreshUserData(false); // Don't show loading spinner again (we're already showing it)
-
-        // Load approved/rejected registrations from localStorage
-        const approved = JSON.parse(
-          localStorage.getItem("approvedRegistrations") || "[]"
-        );
-        const rejected = JSON.parse(
-          localStorage.getItem("rejectedRegistrations") || "[]"
-        );
-        setApprovedRegistrations(approved);
-        setRejectedRegistrations(rejected);
-      } catch (error) {
-        console.error("Error loading initial data:", error);
-      } finally {
-        setLoading(false);
-        setUsersRefreshing(false);
-      }
-    };
-
-    loadInitialData();
-  }, []);
-
-  // Function to load pending registrations
-  const loadPendingRegistrations = async () => {
-    try {
-      const pendingRegistrations =
-        await apiService.getPendingRegistrations();
-      setPendingRegistrations(pendingRegistrations);
-    } catch (error) {
-      console.error("Error loading pending registrations:", error);
-      setPendingRegistrations([]);
-    }
-  };
-
-  // Function to get active employees
-  const getActiveEmployees = () => {
-    return employees.filter((emp) => emp.isActive !== false);
-  };
-
-  const getFilteredActiveEmployees = () => {
-    const activeEmployees = getActiveEmployees();
-    if (!userSearchTerm) return activeEmployees;
-
-    return activeEmployees.filter(
-      (employee) =>
-        (employee.name || "").toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-        (employee.email || "").toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-        (employee.position || "")
-          .toLowerCase()
-          .includes(userSearchTerm.toLowerCase()) ||
-        (employee.department || "")
-          .toLowerCase()
-          .includes(userSearchTerm.toLowerCase()) ||
-        (employee.branch || "")
-          .toLowerCase()
-          .includes(userSearchTerm.toLowerCase())
-    );
-  };
-
-  // Function to get newly registered accounts from pending registrations
-  const getNewlyRegisteredAccounts = () => {
-    return pendingRegistrations
-      .filter((reg: any) => {
-        const isApproved = approvedRegistrations.includes(reg.id);
-        const isRejected = rejectedRegistrations.includes(reg.id);
-        return !isApproved && !isRejected;
-      })
-      .map((reg: any) => ({
-        id: reg.id,
-        name: reg.name,
-        email: reg.email,
-        position: reg.position,
-        department: reg.department,
-        branch: reg.branch,
-        registrationDate: new Date(
-          reg.submittedAt || reg.createdAt || Date.now()
-        ),
-        status: rejectedRegistrations.includes(reg.id)
-          ? "rejected"
-          : "pending_verification",
-      }));
-  };
-
-  const getFilteredNewAccounts = () => {
-    const newAccounts = getNewlyRegisteredAccounts();
-    if (!userSearchTerm) return newAccounts;
-
-    return newAccounts.filter(
-      (account) =>
-        (account.name || "").toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-        (account.email || "").toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-        (account.position || "").toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-        (account.department || "")
-          .toLowerCase()
-          .includes(userSearchTerm.toLowerCase()) ||
-        (account.branch || "")
-          .toLowerCase()
-          .includes(userSearchTerm.toLowerCase())
-    );
   };
 
   // Handlers
@@ -359,204 +221,62 @@ export function UserManagementTab({
       const formData = new FormData();
       Object.keys(updatedUser).forEach((key) => {
         if (updatedUser[key] !== undefined && updatedUser[key] !== null) {
-          if (key === 'avatar' && updatedUser[key] instanceof File) {
+          if (key === "avatar" && updatedUser[key] instanceof File) {
             formData.append(key, updatedUser[key]);
           } else {
-            // Convert boolean to string, handle empty strings
-            const value = updatedUser[key];
-            if (typeof value === 'boolean') {
-              formData.append(key, value ? '1' : '0');
-            } else if (value !== '') {
-              // Special handling for position - backend expects position_id (ID), not position (name)
-              if (key === 'position') {
-                // Check if value is an ID (numeric string) or name
-                const positionValue = String(value);
-                const position = positionsData.find(p => String(p.value) === positionValue || p.label === positionValue);
-                if (position) {
-                  // Send position_id (ID) to backend, not position name
-                  formData.append('position_id', String(position.value)); // Send position ID
-                } else {
-                  // If not found, try to parse as ID or send as-is
-                  if (/^\d+$/.test(positionValue)) {
-                    formData.append('position_id', positionValue);
-                  } else {
-                    // If it's a name, try to find the ID
-                    const foundPosition = positionsData.find(p => p.label === positionValue);
-                    if (foundPosition) {
-                      formData.append('position_id', String(foundPosition.value));
-                    } else {
-                      // Fallback: send as position_id if it looks like a number
-                      formData.append('position_id', positionValue);
-                    }
-                  }
-                }
-              } else if (key === 'department') {
-                // Backend expects department_id (ID), not department (name)
-                const deptValue = String(value);
-                const dept = departmentsData.find(d => String(d.id) === deptValue || d.name === deptValue);
-                if (dept) {
-                  formData.append('department_id', String(dept.id)); // Send department ID
-                } else {
-                  // If not found, try to parse as ID
-                  if (/^\d+$/.test(deptValue)) {
-                    formData.append('department_id', deptValue);
-                  } else {
-                    // If it's a name, try to find the ID
-                    const foundDept = departmentsData.find(d => d.name === deptValue);
-                    if (foundDept) {
-                      formData.append('department_id', String(foundDept.id));
-                    } else {
-                      // Fallback: send as-is
-                      formData.append('department_id', deptValue);
-                    }
-                  }
-                }
-              } else if (key === 'branch') {
-                // Backend expects branch_id (ID), not branch (name)
-                const branchValue = String(value);
-                const branch = branchesData.find(b => String(b.value) === branchValue || b.label === branchValue);
-                if (branch) {
-                  formData.append('branch_id', String(branch.value)); // Send branch ID
-                } else {
-                  // If not found, try to parse as ID
-                  if (/^\d+$/.test(branchValue)) {
-                    formData.append('branch_id', branchValue);
-                  } else {
-                    // If it's a name, try to find the ID
-                    const foundBranch = branchesData.find(b => b.label === branchValue);
-                    if (foundBranch) {
-                      formData.append('branch_id', String(foundBranch.value));
-                    } else {
-                      // Fallback: send as-is
-                      formData.append('branch_id', branchValue);
-                    }
-                  }
-                }
-              } else {
-                formData.append(key, String(value));
-              }
-            }
+            formData.append(key, String(updatedUser[key]));
           }
         }
       });
-      
-      // Send fname and lname separately if they exist, otherwise use name
-      if (updatedUser.fname || updatedUser.lname) {
-        formData.append('fname', updatedUser.fname || '');
-        formData.append('lname', updatedUser.lname || '');
-        // Also keep name for backward compatibility
-        if (!formData.has('name') || !updatedUser.name) {
-          formData.append('name', `${updatedUser.fname || ''} ${updatedUser.lname || ''}`.trim());
-        }
-      }
-      
-      // Debug: Log what we're sending
-      console.log("📤 Updating user with data:", {
-        id: updatedUser.id,
-        name: updatedUser.name,
-        fname: updatedUser.fname,
-        lname: updatedUser.lname,
-        email: updatedUser.email,
-        position: updatedUser.position,
-        role: updatedUser.role,
-        employeeId: updatedUser.employeeId
-      });
-      
-      // Debug: Log FormData contents
-      console.log("📦 FormData contents:");
-      for (const [key, value] of formData.entries()) {
-        console.log(`  ${key}:`, value);
-      }
-      
-      // Update user via API
+
       await apiService.updateEmployee(formData, updatedUser.id);
 
-      // Small delay to ensure backend has processed the update
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
+      const accountIndex = accounts.findIndex(
+        (acc: any) =>
+          acc.id === updatedUser.id || acc.employeeId === updatedUser.id
+      );
 
-      // Refresh user data from API to update the table immediately
-      // Wrap in try-catch to prevent refresh errors from showing error messages
-      try {
-        await refreshUserData(false);
-      } catch (refreshError) {
-        console.error("Error refreshing user data after update:", refreshError);
-        // Don't show error toast for refresh failures - the update was successful
+      if (accountIndex !== -1) {
+        accounts[accountIndex] = {
+          ...accounts[accountIndex],
+          name: updatedUser.name,
+          email: updatedUser.email,
+          position: updatedUser.position,
+          department: updatedUser.department,
+          branch: updatedUser.branch,
+          role: updatedUser.role,
+          username: updatedUser.username || accounts[accountIndex].username,
+          password: updatedUser.password || accounts[accountIndex].password,
+          contact: updatedUser.contact || accounts[accountIndex].contact,
+          hireDate: updatedUser.hireDate || accounts[accountIndex].hireDate,
+          isActive:
+            updatedUser.isActive !== undefined
+              ? updatedUser.isActive
+              : accounts[accountIndex].isActive,
+          employeeId:
+            updatedUser.employeeId !== undefined
+              ? updatedUser.employeeId
+              : accounts[accountIndex].employeeId,
+          updatedAt: new Date().toISOString(),
+        };
+        localStorage.setItem("accounts", JSON.stringify(accounts));
       }
+
+      // Refresh user data to update the table immediately
+      await refreshUserData(false);
 
       // Refresh dashboard data to get updated information
-      try {
-        await refreshDashboardData(false, false);
-      } catch (refreshError) {
-        console.error("Error refreshing dashboard data after update:", refreshError);
-        // Don't show error toast for refresh failures - the update was successful
-      }
+      await refreshDashboardData(false, false);
 
-      // Show success toast only after successful update
+      // Show success toast
       toastMessages.user.updated(updatedUser.name);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating user:", error);
-      
-      // Extract detailed error message from 422 validation errors
-      // Note: apiService.updateEmployee throws error with response.data spread directly
-      let errorMessage = "Failed to update user information. Please try again.";
-      
-      // Check if error has response.data structure (from axios)
-      if (error?.response?.data) {
-        const errorData = error.response.data;
-        
-        // Handle Laravel validation errors (422)
-        if (errorData.errors && typeof errorData.errors === 'object') {
-          // Format validation errors
-          const validationErrors = Object.entries(errorData.errors)
-            .map(([field, messages]: [string, any]) => {
-              const fieldName = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
-              const messageList = Array.isArray(messages) ? messages.join(', ') : messages;
-              return `${fieldName}: ${messageList}`;
-            })
-            .join('\n');
-          errorMessage = `Validation Error:\n${validationErrors}`;
-        } else if (errorData.message) {
-          errorMessage = errorData.message;
-        }
-      } 
-      // Check if error has errors directly (from apiService which spreads response.data)
-      else if (error?.errors && typeof error.errors === 'object') {
-        const validationErrors = Object.entries(error.errors)
-          .map(([field, messages]: [string, any]) => {
-            const fieldName = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
-            const messageList = Array.isArray(messages) ? messages.join(', ') : messages;
-            return `${fieldName}: ${messageList}`;
-          })
-          .join('\n');
-        errorMessage = `Validation Error:\n${validationErrors}`;
-      }
-      // Check for message directly in error object
-      else if (error?.message) {
-        errorMessage = error.message;
-      }
-      // Check if error is a string
-      else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-      // If error is empty object or has no useful info, provide more context
-      else if (Object.keys(error || {}).length === 0 || (!error?.message && !error?.errors)) {
-        errorMessage = `Failed to update user. ${error?.status ? `Status: ${error.status}` : 'Please check your connection and try again.'}`;
-      }
-      
-      console.error("📛 Detailed error:", {
-        error,
-        status: error?.status || error?.response?.status,
-        data: error?.response?.data || error,
-        message: errorMessage,
-        keys: Object.keys(error || {})
-      });
-      
       toastMessages.generic.error(
         "Update Failed",
-        errorMessage
+        "Failed to update user information. Please try again."
       );
-      // Re-throw error so EditUserModal can handle it
-      throw error;
     }
   };
 
@@ -569,10 +289,7 @@ export function UserManagementTab({
     deletedEmployees.push(employeeToDelete.id);
     localStorage.setItem("deletedEmployees", JSON.stringify(deletedEmployees));
 
-    setEmployees((prev) =>
-      prev.filter((emp) => emp.id !== employeeToDelete.id)
-    );
-    toastMessages.user.deleted(employeeToDelete.name);
+    toastMessages.user.deleted(employeeToDelete.fname);
 
     setIsDeleteModalOpen(false);
     setEmployeeToDelete(null);
@@ -583,12 +300,11 @@ export function UserManagementTab({
     registrationName: string
   ) => {
     try {
-      const result = await apiService.approveRegistration(
-        registrationId
-      );
+      const result = await apiService.approveRegistration(registrationId);
 
       // Handle API response - check for success in various formats
-      const success = result?.success || result?.data?.success || (result && !result.error);
+      const success =
+        result?.success || result?.data?.success || (result && !result.error);
       if (success) {
         const newApproved = [...approvedRegistrations, registrationId];
         setApprovedRegistrations(newApproved);
@@ -606,21 +322,15 @@ export function UserManagementTab({
           JSON.stringify(newRejected)
         );
 
-        await loadPendingRegistrations();
-        // Small delay to ensure backend has processed the approval
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        // Refresh active users list to show the newly approved user
-        await refreshUserData(false);
-        // If user is on "new" tab, switch to "active" tab to show the newly approved user
-        if (userManagementTab === "new") {
-          setUserManagementTab("active");
-        }
+        await loadUsers();
         await refreshDashboardData(false, false);
         toastMessages.user.approved(registrationName);
       } else {
         toastMessages.generic.error(
           "Approval Failed",
-          result?.message || result?.data?.message || "Failed to approve registration. Please try again."
+          result?.message ||
+            result?.data?.message ||
+            "Failed to approve registration. Please try again."
         );
       }
     } catch (error) {
@@ -640,7 +350,8 @@ export function UserManagementTab({
       const result = await apiService.rejectRegistration(registrationId);
 
       // Handle API response - check for success in various formats
-      const success = result?.success || result?.data?.success || (result && !result.error);
+      const success =
+        result?.success || result?.data?.success || (result && !result.error);
       if (success) {
         const newRejected = [...rejectedRegistrations, registrationId];
         setRejectedRegistrations(newRejected);
@@ -658,12 +369,14 @@ export function UserManagementTab({
           JSON.stringify(newApproved)
         );
 
-        await loadPendingRegistrations();
+        await loadUsers();
         toastMessages.user.rejected(registrationName);
       } else {
         toastMessages.generic.error(
           "Rejection Failed",
-          result?.message || result?.data?.message || "Failed to reject registration. Please try again."
+          result?.message ||
+            result?.data?.message ||
+            "Failed to reject registration. Please try again."
         );
       }
     } catch (error) {
@@ -677,49 +390,32 @@ export function UserManagementTab({
 
   const handleAddUser = async (newUser: any) => {
     try {
-      // Create FormData for API call
-      const formData = new FormData();
-      
-      // Handle name - split if needed or use fname/lname if available
-      if (newUser.fname && newUser.lname) {
-        formData.append('fname', newUser.fname);
-        formData.append('lname', newUser.lname);
-        formData.append('name', `${newUser.fname} ${newUser.lname}`.trim());
-      } else if (newUser.name) {
-        const nameParts = newUser.name.split(' ');
-        formData.append('fname', nameParts[0] || '');
-        formData.append('lname', nameParts.slice(1).join(' ') || '');
-        formData.append('name', newUser.name);
-      }
-      
-      // Add other fields
-      if (newUser.email) formData.append('email', newUser.email);
-      if (newUser.position) formData.append('position', newUser.position);
-      if (newUser.department) formData.append('department', newUser.department);
-      if (newUser.branch) formData.append('branch', newUser.branch);
-      if (newUser.role) formData.append('role', newUser.role);
-      if (newUser.password) formData.append('password', newUser.password);
-      if (newUser.contact) formData.append('contact', newUser.contact);
-      if (newUser.hireDate) formData.append('hireDate', newUser.hireDate);
-      formData.append('isActive', String(newUser.isActive !== undefined ? newUser.isActive : true));
+      const newAccount = {
+        name: newUser.name,
+        email: newUser.email,
+        position: newUser.position,
+        department: newUser.department,
+        branch: newUser.branch,
+        role: newUser.role,
+        password: newUser.password,
+        isActive: newUser.isActive !== undefined ? newUser.isActive : true,
+        employeeId: Date.now(), // Temporary ID
+      };
 
-      // Call API to add user
-      const result = await apiService.addUser(formData);
+      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
+      accounts.push(newAccount);
+      localStorage.setItem("accounts", JSON.stringify(accounts));
 
-      if (result.success || result) {
-        await refreshUserData();
-        await refreshDashboardData(false, false);
+      await refreshUserData();
+      await refreshDashboardData(false, false);
 
-        toastMessages.user.created(newUser.name || `${newUser.fname} ${newUser.lname}`.trim());
-        setIsAddUserModalOpen(false);
-      } else {
-        throw new Error(result.message || "Failed to add user");
-      }
-    } catch (error: any) {
+      toastMessages.user.created(newUser.name);
+      setIsAddUserModalOpen(false);
+    } catch (error) {
       console.error("Error adding user:", error);
       toastMessages.generic.error(
         "Add Failed",
-        error.message || "Failed to add user. Please try again."
+        "Failed to add user. Please try again."
       );
       throw error;
     }
@@ -727,86 +423,9 @@ export function UserManagementTab({
 
   // Handle tab change with refresh
   const handleTabChange = async (tab: "active" | "new") => {
-    setUserManagementTab(tab);
-    // Reset to first page when switching tabs
-    setActiveUsersPage(1);
-    setNewRegistrationsPage(1);
-
-    // Refresh data when switching tabs
-    console.log(
-      `🔄 ${
-        tab === "new" ? "New Registrations" : "Active Users"
-      } tab clicked, refreshing user data...`
-    );
+    setTab(tab);
     await refreshUserData(true);
   };
-
-  // Pagination calculations for active users
-  const activeUsersTotal = getFilteredActiveEmployees().length;
-  const activeUsersTotalPages = Math.ceil(activeUsersTotal / itemsPerPage);
-  const activeUsersStartIndex = (activeUsersPage - 1) * itemsPerPage;
-  const activeUsersEndIndex = activeUsersStartIndex + itemsPerPage;
-  const activeUsersPaginated = getFilteredActiveEmployees().slice(
-    activeUsersStartIndex,
-    activeUsersEndIndex
-  );
-
-  // Pagination calculations for new registrations
-  const newRegistrationsTotal = getFilteredNewAccounts().length;
-  const newRegistrationsTotalPages = Math.ceil(
-    newRegistrationsTotal / itemsPerPage
-  );
-  const newRegistrationsStartIndex = (newRegistrationsPage - 1) * itemsPerPage;
-  const newRegistrationsEndIndex = newRegistrationsStartIndex + itemsPerPage;
-  const newRegistrationsPaginated = getFilteredNewAccounts().slice(
-    newRegistrationsStartIndex,
-    newRegistrationsEndIndex
-  );
-
-  // Helper function to generate pagination pages with ellipsis
-  const generatePaginationPages = (
-    currentPage: number,
-    totalPages: number
-  ): (number | "ellipsis")[] => {
-    if (totalPages <= 7) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
-    }
-
-    const pages: (number | "ellipsis")[] = [];
-
-    if (currentPage <= 3) {
-      // Show first 5 pages, ellipsis, last page
-      for (let i = 1; i <= 5; i++) {
-        pages.push(i);
-      }
-      pages.push("ellipsis");
-      pages.push(totalPages);
-    } else if (currentPage >= totalPages - 2) {
-      // Show first page, ellipsis, last 5 pages
-      pages.push(1);
-      pages.push("ellipsis");
-      for (let i = totalPages - 4; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      // Show first page, ellipsis, current-1, current, current+1, ellipsis, last page
-      pages.push(1);
-      pages.push("ellipsis");
-      pages.push(currentPage - 1);
-      pages.push(currentPage);
-      pages.push(currentPage + 1);
-      pages.push("ellipsis");
-      pages.push(totalPages);
-    }
-
-    return pages;
-  };
-
-  // Reset to page 1 when search term changes
-  useEffect(() => {
-    setActiveUsersPage(1);
-    setNewRegistrationsPage(1);
-  }, [userSearchTerm]);
 
   // Show loading skeleton on initial load
   if (loading) {
@@ -882,7 +501,7 @@ export function UserManagementTab({
                 </div>
               </div>
               <p className="text-sm text-gray-600 font-medium">
-                {userManagementTab === "new"
+                {tab === "new"
                   ? "Loading new registrations..."
                   : "Loading users..."}
               </p>
@@ -903,32 +522,32 @@ export function UserManagementTab({
             {/* Tab Navigation */}
             <div className="flex space-x-1 mb-6">
               <Button
-                variant={userManagementTab === "active" ? "default" : "outline"}
+                variant={tab === "active" ? "default" : "outline"}
                 onClick={() => handleTabChange("active")}
                 className="flex items-center gap-2"
               >
                 <span>👥</span>
-                Active Users ({getFilteredActiveEmployees().length})
+                Active Users ({activeRegistrations.length})
               </Button>
               <Button
-                variant={userManagementTab === "new" ? "default" : "outline"}
+                variant={tab === "new" ? "default" : "outline"}
                 onClick={() => handleTabChange("new")}
                 className="flex items-center gap-2"
               >
                 <span>🆕</span>
-                New Registrations ({getFilteredNewAccounts().length})
+                New Registrations ({pendingRegistrations.length})
               </Button>
             </div>
 
             {/* Active Users Tab */}
-            {userManagementTab === "active" && (
+            {tab === "active" && (
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex space-x-4">
                     <Input
                       placeholder="Search users..."
                       className="w-64"
-                      value={userSearchTerm}
+                      value={searchTerm}
                       onChange={(e) => setUserSearchTerm(e.target.value)}
                     />
                     <Select>
@@ -1038,7 +657,7 @@ export function UserManagementTab({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {activeUsersPaginated.length === 0 ? (
+                      {activeRegistrations.length === 0 ? (
                         <TableRow>
                           <TableCell
                             colSpan={7}
@@ -1048,22 +667,20 @@ export function UserManagementTab({
                           </TableCell>
                         </TableRow>
                       ) : (
-                        activeUsersPaginated.map((employee) => (
+                        activeRegistrations.map((employee) => (
                           <TableRow key={employee.id}>
                             <TableCell className="font-medium">
-                              {employee.name}
+                              {employee.fname + " " + employee.lname}
                             </TableCell>
                             <TableCell>{employee.email}</TableCell>
-                            <TableCell>{employee.position}</TableCell>
+                            <TableCell>{employee.positions.label}</TableCell>
                             <TableCell>
-                              {employee.branch
-                                ? employee.branch.includes(",")
-                                  ? employee.branch.split(",")[0].trim()
-                                  : employee.branch
-                                : "N/A"}
+                              {employee.branches[0]?.branch_name}
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">{employee.role}</Badge>
+                              <Badge variant="outline">
+                                {employee.roles[0].name}
+                              </Badge>
                             </TableCell>
                             <TableCell>
                               <Badge className="text-green-600 bg-green-100">
@@ -1096,85 +713,92 @@ export function UserManagementTab({
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* Pagination Controls for Active Users */}
+                {
+                  // activeUsersTotal > itemsPerPage && (
+                  // <div className="flex items-center justify-between mt-4 px-2">
+                  //   <div className="text-sm text-gray-600">
+                  //     Showing {activeUsersStartIndex + 1} to{" "}
+                  //     {Math.min(activeUsersEndIndex, activeUsersTotal)} of{" "}
+                  //     {activeUsersTotal} users
+                  //   </div>
+                  //   <div className="flex items-center gap-2">
+                  //     <Button
+                  //       variant="outline"
+                  //       size="sm"
+                  //       onClick={() =>
+                  //         setActiveUsersPage((prev) => Math.max(1, prev - 1))
+                  //       }
+                  //       disabled={activeUsersPage === 1}
+                  //       className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                  //     >
+                  //       Previous
+                  //     </Button>
+                  //     <div className="flex items-center gap-1">
+                  //       {Array.from(
+                  //         { length: activeUsersTotalPages },
+                  //         (_, i) => i + 1
+                  //       ).map((page) => {
+                  //         if (
+                  //           page === 1 ||
+                  //           page === activeUsersTotalPages ||
+                  //           (page >= activeUsersPage - 1 &&
+                  //             page <= activeUsersPage + 1)
+                  //         ) {
+                  //           return (
+                  //             <Button
+                  //               key={page}
+                  //               variant={
+                  //                 activeUsersPage === page
+                  //                   ? "default"
+                  //                   : "outline"
+                  //               }
+                  //               size="sm"
+                  //               onClick={() => setActiveUsersPage(page)}
+                  //               className="text-xs w-8 h-8 p-0 bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                  //             >
+                  //               {page}
+                  //             </Button>
+                  //           );
+                  //         } else if (
+                  //           page === activeUsersPage - 2 ||
+                  //           page === activeUsersPage + 2
+                  //         ) {
+                  //           return (
+                  //             <span key={page} className="text-gray-400">
+                  //               ...
+                  //             </span>
+                  //           );
+                  //         }
+                  //         return null;
+                  //       })}
+                  //     </div>
+                  //     <Button
+                  //       variant="outline"
+                  //       size="sm"
+                  //       onClick={() =>
+                  //         setActiveUsersPage((prev) =>
+                  //           Math.min(activeUsersTotalPages, prev + 1)
+                  //         )
+                  //       }
+                  //       disabled={activeUsersPage === activeUsersTotalPages}
+                  //       className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                  //     >
+                  //       Next
+                  //     </Button>
+                  //   </div>
+                  // </div>
+                  // )
+                }
               </div>
             )}
           </CardContent>
-          
-          {/* Pagination Controls for Active Users */}
-          {userManagementTab === "active" && activeUsersTotal > itemsPerPage && (
-            <div className="flex items-center justify-end px-6 py-4 border-t">
-              <Pagination className="justify-end">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setActiveUsersPage((prev) => Math.max(1, prev - 1));
-                      }}
-                      className={
-                        activeUsersPage === 1
-                          ? "pointer-events-none opacity-50"
-                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                      }
-                    />
-                  </PaginationItem>
-                  {generatePaginationPages(
-                    activeUsersPage,
-                    activeUsersTotalPages
-                  ).map((page, index) => {
-                    if (page === "ellipsis") {
-                      return (
-                        <PaginationItem key={`ellipsis-${index}`}>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      );
-                    }
-                    return (
-                      <PaginationItem key={page}>
-                        <PaginationLink
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setActiveUsersPage(page);
-                          }}
-                          isActive={activeUsersPage === page}
-                          className={
-                            activeUsersPage === page
-                              ? "cursor-pointer bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
-                              : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                          }
-                        >
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
-                    );
-                  })}
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setActiveUsersPage((prev) =>
-                          Math.min(activeUsersTotalPages, prev + 1)
-                        );
-                      }}
-                      className={
-                        activeUsersPage === activeUsersTotalPages
-                          ? "pointer-events-none opacity-50"
-                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                      }
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
         </Card>
       )}
 
       {/* New Registrations Tab Content */}
-      {userManagementTab === "new" && (
+      {tab === "new" && (
         <div className="relative mt-4">
           <Card className="mt-4">
             <CardHeader>
@@ -1295,7 +919,7 @@ export function UserManagementTab({
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-gray-200">
-                      {newRegistrationsPaginated.length === 0 ? (
+                      {pendingRegistrations.length === 0 ? (
                         <TableRow>
                           <TableCell
                             colSpan={6}
@@ -1307,39 +931,41 @@ export function UserManagementTab({
                           </TableCell>
                         </TableRow>
                       ) : (
-                        newRegistrationsPaginated.map((account) => (
+                        pendingRegistrations.map((account) => (
                           <TableRow
                             key={account.id}
                             className="hover:bg-gray-50"
                           >
                             <TableCell className="px-6 py-3 font-medium">
-                              {account.name}
+                              {account.fname + " " + account.lname}
                             </TableCell>
                             <TableCell className="px-6 py-3">
                               {account.email}
                             </TableCell>
                             <TableCell className="px-6 py-3">
-                              {account.position}
+                              {account.positions.label}
                             </TableCell>
                             <TableCell className="px-6 py-3">
-                              {account.registrationDate.toLocaleDateString()}
+                              {new Date(
+                                account.created_at
+                              ).toLocaleDateString()}
                             </TableCell>
                             <TableCell className="px-6 py-3">
                               <Badge
                                 className={
-                                  account.status === "rejected"
+                                  account.is_active === "declined"
                                     ? "bg-red-100 text-red-800 hover:bg-red-200"
                                     : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
                                 }
                               >
-                                {account.status === "rejected"
+                                {account.is_active === "declined"
                                   ? "REJECTED"
                                   : "PENDING VERIFICATION"}
                               </Badge>
                             </TableCell>
                             <TableCell className="px-6 py-3">
                               <div className="flex space-x-2">
-                                {account.status === "pending_verification" && (
+                                {account.is_active === "pending" && (
                                   <>
                                     <Button
                                       variant="ghost"
@@ -1348,7 +974,7 @@ export function UserManagementTab({
                                       onClick={() =>
                                         handleApproveRegistration(
                                           account.id,
-                                          account.name
+                                          account.fname
                                         )
                                       }
                                     >
@@ -1361,7 +987,7 @@ export function UserManagementTab({
                                       onClick={() =>
                                         handleRejectRegistration(
                                           account.id,
-                                          account.name
+                                          account.fname
                                         )
                                       }
                                     >
@@ -1369,7 +995,7 @@ export function UserManagementTab({
                                     </Button>
                                   </>
                                 )}
-                                {account.status === "rejected" && (
+                                {account.is_active === "declined" && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -1377,7 +1003,7 @@ export function UserManagementTab({
                                     onClick={() =>
                                       handleApproveRegistration(
                                         account.id,
-                                        account.name
+                                        account.fname
                                       )
                                     }
                                   >
@@ -1395,81 +1021,93 @@ export function UserManagementTab({
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* Pagination Controls for New Registrations */}
+                {
+                  // newRegistrationsTotal > itemsPerPage && (
+                  //   <div className="flex items-center justify-between mt-4 px-2">
+                  //     <div className="text-sm text-gray-600">
+                  //       Showing {newRegistrationsStartIndex + 1} to{" "}
+                  //       {Math.min(
+                  //         newRegistrationsEndIndex,
+                  //         newRegistrationsTotal
+                  //       )}{" "}
+                  //       of {newRegistrationsTotal} registrations
+                  //     </div>
+                  //     <div className="flex items-center gap-2">
+                  //       <Button
+                  //         variant="outline"
+                  //         size="sm"
+                  //         onClick={() =>
+                  //           setNewRegistrationsPage((prev) =>
+                  //             Math.max(1, prev - 1)
+                  //           )
+                  //         }
+                  //         disabled={newRegistrationsPage === 1}
+                  //         className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                  //       >
+                  //         Previous
+                  //       </Button>
+                  //       <div className="flex items-center gap-1">
+                  //         {Array.from(
+                  //           { length: newRegistrationsTotalPages },
+                  //           (_, i) => i + 1
+                  //         ).map((page) => {
+                  //           if (
+                  //             page === 1 ||
+                  //             page === newRegistrationsTotalPages ||
+                  //             (page >= newRegistrationsPage - 1 &&
+                  //               page <= newRegistrationsPage + 1)
+                  //           ) {
+                  //             return (
+                  //               <Button
+                  //                 key={page}
+                  //                 variant={
+                  //                   newRegistrationsPage === page
+                  //                     ? "default"
+                  //                     : "outline"
+                  //                 }
+                  //                 size="sm"
+                  //                 onClick={() => setNewRegistrationsPage(page)}
+                  //                 className="text-xs w-8 h-8 p-0 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                  //               >
+                  //                 {page}
+                  //               </Button>
+                  //             );
+                  //           } else if (
+                  //             page === newRegistrationsPage - 2 ||
+                  //             page === newRegistrationsPage + 2
+                  //           ) {
+                  //             return (
+                  //               <span key={page} className="text-gray-400">
+                  //                 ...
+                  //               </span>
+                  //             );
+                  //           }
+                  //           return null;
+                  //         })}
+                  //       </div>
+                  //       <Button
+                  //         variant="outline"
+                  //         size="sm"
+                  //         onClick={() =>
+                  //           setNewRegistrationsPage((prev) =>
+                  //             Math.min(newRegistrationsTotalPages, prev + 1)
+                  //           )
+                  //         }
+                  //         disabled={
+                  //           newRegistrationsPage === newRegistrationsTotalPages
+                  //         }
+                  //         className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                  //       >
+                  //         Next
+                  //       </Button>
+                  //     </div>
+                  //   </div>
+                  // )
+                }
               </div>
             </CardContent>
-            
-            {/* Pagination Controls for New Registrations */}
-            {userManagementTab === "new" && newRegistrationsTotal > itemsPerPage && (
-              <div className="flex items-center justify-end px-6 py-4 border-t">
-                <Pagination className="justify-end">
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setNewRegistrationsPage((prev) =>
-                            Math.max(1, prev - 1)
-                          );
-                        }}
-                        className={
-                          newRegistrationsPage === 1
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                        }
-                      />
-                    </PaginationItem>
-                    {generatePaginationPages(
-                      newRegistrationsPage,
-                      newRegistrationsTotalPages
-                    ).map((page, index) => {
-                      if (page === "ellipsis") {
-                        return (
-                          <PaginationItem key={`ellipsis-${index}`}>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        );
-                      }
-                      return (
-                        <PaginationItem key={page}>
-                          <PaginationLink
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setNewRegistrationsPage(page);
-                            }}
-                            isActive={newRegistrationsPage === page}
-                            className={
-                              newRegistrationsPage === page
-                                ? "cursor-pointer bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
-                                : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                            }
-                          >
-                            {page}
-                          </PaginationLink>
-                        </PaginationItem>
-                      );
-                    })}
-                    <PaginationItem>
-                      <PaginationNext
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setNewRegistrationsPage((prev) =>
-                            Math.min(newRegistrationsTotalPages, prev + 1)
-                          );
-                        }}
-                        className={
-                          newRegistrationsPage === newRegistrationsTotalPages
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                        }
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
           </Card>
         </div>
       )}
@@ -1480,9 +1118,9 @@ export function UserManagementTab({
         onClose={() => setIsEditModalOpen(false)}
         user={userToEdit}
         onSave={handleSaveUser}
-        departments={departmentsData.map((dept) => dept.name)}
-        branches={branchesData.map((branch: { value: string; label: string }) => ({ id: branch.value, name: branch.label }))}
-        positions={positionsData.map((pos: { value: string; label: string }) => ({ id: pos.value, name: pos.label }))}
+        departments={departmentData}
+        branches={branchesData}
+        positions={positionsData}
       />
 
       {/* Delete Confirmation Modal */}
@@ -1503,7 +1141,7 @@ export function UserManagementTab({
             </DialogTitle>
             <DialogDescription className="text-red-700">
               This action cannot be undone. Are you sure you want to permanently
-              delete {employeeToDelete?.name}?
+              delete {employeeToDelete?.fname}?
             </DialogDescription>
           </DialogHeader>
 
@@ -1543,7 +1181,7 @@ export function UserManagementTab({
                 <div className="mt-2 space-y-1">
                   <p>
                     <span className="font-medium">Name:</span>{" "}
-                    {employeeToDelete?.name}
+                    {employeeToDelete?.fname + " " + employeeToDelete?.lname}
                   </p>
                   <p>
                     <span className="font-medium">Email:</span>{" "}
@@ -1551,11 +1189,11 @@ export function UserManagementTab({
                   </p>
                   <p>
                     <span className="font-medium">Position:</span>{" "}
-                    {employeeToDelete?.position}
+                    {employeeToDelete?.positions.label}
                   </p>
                   <p>
                     <span className="font-medium">Department:</span>{" "}
-                    {employeeToDelete?.department}
+                    {employeeToDelete?.departments.department_name}
                   </p>
                 </div>
               </div>
@@ -1592,9 +1230,9 @@ export function UserManagementTab({
           setIsAddUserModalOpen(false);
         }}
         onSave={handleAddUser}
-        departments={departmentsData.map((dept) => dept.name)}
-        branches={branchesData.map((branch: { value: string; label: string }) => ({ id: branch.value, name: branch.label }))}
-        positions={positionsData.map((pos: { value: string; label: string }) => ({ id: pos.value, name: pos.label }))}
+        departments={departmentsData}
+        branches={branchesData}
+        positions={positionsData}
         onRefresh={async () => {
           await refreshUserData();
           await refreshDashboardData(false, false);

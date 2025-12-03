@@ -41,9 +41,9 @@ interface EditUserModalProps {
   onClose: () => void;
   user: User | null;
   onSave: (updatedUser: User) => void;
-  departments: string[];
-  branches: string[] | { id: string; name: string }[];
-  positions: { id: string; name: string }[];
+  departments: any;
+  branches: any;
+  positions: any;
   onRefresh?: () => void | Promise<void>;
 }
 

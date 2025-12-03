@@ -60,10 +60,7 @@ interface AreaManagersTabProps {
   onRefresh?: (showModal?: boolean, isAutoRefresh?: boolean) => Promise<void>;
 }
 
-export function AreaManagersTab({
-  employees,
-  onRefresh,
-}: AreaManagersTabProps) {
+export default function AreaManagersTab() {
   const { withErrorHandling } = useErrorHandler({
     showToast: true,
     logToConsole: true,
@@ -429,7 +426,9 @@ export function AreaManagersTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loadingAreaManagers || (!areaManagersData.length && (!employees || employees.length === 0)) ? (
+                {loadingAreaManagers ||
+                (!areaManagersData.length &&
+                  (!employees || employees.length === 0)) ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
                       <TableCell className="py-4">
@@ -868,8 +867,14 @@ export function AreaManagersTab({
                             // Update using API service
                             const formData = new FormData();
                             formData.append("branch", branchNames);
-                            formData.append("updatedAt", new Date().toISOString());
-                            await apiService.updateEmployee(formData, selectedAreaManager.id);
+                            formData.append(
+                              "updatedAt",
+                              new Date().toISOString()
+                            );
+                            await apiService.updateEmployee(
+                              formData,
+                              selectedAreaManager.id
+                            );
 
                             // Also update accounts in localStorage
                             const accounts = JSON.parse(
@@ -1248,7 +1253,10 @@ export function AreaManagersTab({
                     const formData = new FormData();
                     formData.append("branch", branchNames);
                     formData.append("updatedAt", new Date().toISOString());
-                    await apiService.updateEmployee(formData, areaManagerToEdit.id);
+                    await apiService.updateEmployee(
+                      formData,
+                      areaManagerToEdit.id
+                    );
 
                     // Also update accounts in localStorage
                     const accounts = JSON.parse(
@@ -1418,7 +1426,10 @@ export function AreaManagersTab({
                       const formData = new FormData();
                       formData.append("branch", "");
                       formData.append("updatedAt", new Date().toISOString());
-                      await apiService.updateEmployee(formData, areaManagerToDelete.id);
+                      await apiService.updateEmployee(
+                        formData,
+                        areaManagerToDelete.id
+                      );
 
                       // Also update accounts in localStorage
                       const accounts = JSON.parse(

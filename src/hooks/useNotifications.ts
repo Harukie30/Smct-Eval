@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { apiService } from '@/lib/apiService';
-import { useUser } from '@/contexts/UserContext';
-import { Notification } from '@/lib/types';
+import { useState, useEffect, useCallback } from "react";
+import { apiService } from "@/lib/apiService";
+import { Notification } from "@/lib/types";
 
 interface UseNotificationsReturn {
   notifications: Notification[];
@@ -14,7 +13,6 @@ interface UseNotificationsReturn {
 }
 
 export const useNotifications = (userRole: string): UseNotificationsReturn => {
-  const { user, refreshUser } = useUser();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
@@ -24,79 +22,58 @@ export const useNotifications = (userRole: string): UseNotificationsReturn => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Get notifications from user profile (backend includes them)
-      const notificationsData = (user as any)?.notifications || [];
-      
-      // Calculate unread count from notifications array
-      const unreadCountData = notificationsData.filter((n: Notification) => !n.isRead).length;
-      
+
+      const [notificationsData, unreadCountData] = await Promise.all([]);
+
       setNotifications(notificationsData);
       setUnreadCount(unreadCountData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch notifications');
-      console.error('Error fetching notifications:', err);
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch notifications"
+      );
+      console.error("Error fetching notifications:", err);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [userRole]);
 
   const markAsRead = useCallback(async (notificationId: number) => {
     try {
       await apiService.markNotificationAsRead(notificationId);
-      
-      // Refresh user to get updated notifications
-      await refreshUser();
-      
+
       // Update local state
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.id === notificationId 
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.id === notificationId
             ? { ...notification, isRead: true }
             : notification
         )
       );
-      
-      setUnreadCount(prev => Math.max(0, prev - 1));
+
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
-      console.error('Error marking notification as read:', err);
+      console.error("Error marking notification as read:", err);
     }
-  }, [refreshUser]);
+  }, []);
 
   const markAllAsRead = useCallback(async () => {
     try {
       await apiService.markAllNotificationsAsRead(userRole);
-      
-      // Refresh user to get updated notifications
-      await refreshUser();
-      
+
       // Update local state
-      setNotifications(prev => 
-        prev.map(notification => ({ ...notification, isRead: true }))
+      setNotifications((prev) =>
+        prev.map((notification) => ({ ...notification, isRead: true }))
       );
-      
+
       setUnreadCount(0);
     } catch (err) {
-      console.error('Error marking all notifications as read:', err);
+      console.error("Error marking all notifications as read:", err);
     }
-  }, [userRole, refreshUser]);
+  }, [userRole]);
 
   const refreshNotifications = useCallback(async () => {
     await fetchNotifications();
   }, [fetchNotifications]);
-
-  // Update notifications when user changes
-  useEffect(() => {
-    if (user) {
-      const notificationsData = (user as any)?.notifications || [];
-      setNotifications(notificationsData);
-      
-      // Calculate unread count from notifications
-      const unread = notificationsData.filter((n: Notification) => !n.isRead).length;
-      setUnreadCount(unread);
-      setLoading(false);
-    }
-  }, [user]);
 
   // Initial load
   useEffect(() => {
@@ -106,18 +83,18 @@ export const useNotifications = (userRole: string): UseNotificationsReturn => {
   // Listen for storage events (real-time updates across tabs)
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'authUser' && e.newValue) {
-        // Refresh user (which includes notifications) when authUser changes
-        refreshUser();
+      if (e.key === "notifications" && e.newValue) {
+        // Refresh notifications when storage changes
+        fetchNotifications();
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    
+    window.addEventListener("storage", handleStorageChange);
+
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener("storage", handleStorageChange);
     };
-  }, [refreshUser]);
+  }, [fetchNotifications]);
 
   return {
     notifications,
@@ -126,7 +103,7 @@ export const useNotifications = (userRole: string): UseNotificationsReturn => {
     error,
     markAsRead,
     markAllAsRead,
-    refreshNotifications
+    refreshNotifications,
   };
 };
 
