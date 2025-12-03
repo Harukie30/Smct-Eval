@@ -818,8 +818,15 @@ export const apiService = {
       const response = await api.get("/getAllBranchHeads");
       const data = response.data;
 
+      // Handle different response formats
+      if (data.success && data.branch_heads) {
+        return data.branch_heads;
+      }
       if (data.success && data.users) {
         return data.users;
+      }
+      if (Array.isArray(data.branch_heads)) {
+        return data.branch_heads;
       }
       if (Array.isArray(data.users)) {
         return data.users;
@@ -842,11 +849,24 @@ export const apiService = {
       const response = await api.get("/getAllAreaManager");
       const data = response.data;
 
+      // Handle different response formats
+      if (data.success && data.area_managers) {
+        return data.area_managers;
+      }
       if (data.success && data.users) {
         return data.users;
       }
+      if (data.success && data.branch_heads) {
+        return data.branch_heads;
+      }
+      if (Array.isArray(data.area_managers)) {
+        return data.area_managers;
+      }
       if (Array.isArray(data.users)) {
         return data.users;
+      }
+      if (Array.isArray(data.branch_heads)) {
+        return data.branch_heads;
       }
       if (Array.isArray(data)) {
         return data;

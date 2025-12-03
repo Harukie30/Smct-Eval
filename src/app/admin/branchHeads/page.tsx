@@ -100,23 +100,123 @@ export default function BranchHeadsTab() {
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
+  // Helper function to normalize branch head data
+  const normalizeBranchHeadData = (data: any[]): Employee[] => {
+    if (!Array.isArray(data)) {
+      return [];
+    }
+    
+    return data.map((item: any) => {
+      // Handle branches - API returns branches array
+      let branchValue = "";
+      if (item.branches && Array.isArray(item.branches)) {
+        branchValue = item.branches
+          .map((b: any) => b.name || b.branch_name || b.label || b.code || b)
+          .filter((b: any) => b) // Remove empty values
+          .join(", ");
+      } else if (item.branch) {
+        if (Array.isArray(item.branch)) {
+          branchValue = item.branch.map((b: any) => b.name || b.label || b).join(", ");
+        } else if (typeof item.branch === "object") {
+          branchValue = item.branch.name || item.branch.branch_name || item.branch.label || "";
+        } else {
+          branchValue = String(item.branch);
+        }
+      }
+      
+      // Handle position - API returns positions object with label
+      let positionValue = "";
+      if (item.positions && typeof item.positions === "object") {
+        positionValue = item.positions.label || item.positions.name || item.positions.value || "";
+      } else if (item.position) {
+        if (typeof item.position === "object") {
+          positionValue = item.position.label || item.position.name || item.position.value || "";
+        } else {
+          positionValue = String(item.position);
+        }
+      } else if (item.position_id) {
+        positionValue = String(item.position_id);
+      }
+      
+      // Handle department - API returns departments object with department_name
+      let departmentValue = "";
+      if (item.departments && typeof item.departments === "object") {
+        departmentValue = item.departments.department_name || item.departments.name || item.departments.label || "";
+      } else if (item.department) {
+        if (typeof item.department === "object") {
+          departmentValue = item.department.department_name || item.department.name || item.department.label || "";
+        } else {
+          departmentValue = String(item.department);
+        }
+      } else if (item.department_id) {
+        departmentValue = String(item.department_id);
+      }
+      
+      // Handle role - API returns roles array with name
+      let roleValue = "";
+      if (item.roles && Array.isArray(item.roles)) {
+        roleValue = item.roles
+          .map((r: any) => r.name || r.label || r)
+          .filter((r: any) => r) // Remove empty values
+          .join(", ");
+      } else if (item.role) {
+        if (Array.isArray(item.role)) {
+          roleValue = item.role.map((r: any) => r.name || r.label || r).join(", ");
+        } else if (typeof item.role === "object") {
+          roleValue = item.role.name || item.role.label || "";
+        } else {
+          roleValue = String(item.role);
+        }
+      }
+      
+      // Handle name - use full_name if available, otherwise construct from fname/lname
+      let nameValue = "";
+      if (item.full_name) {
+        nameValue = item.full_name;
+      } else if (item.name) {
+        nameValue = item.name;
+      } else {
+        const fname = item.fname || "";
+        const lname = item.lname || "";
+        nameValue = `${fname} ${lname}`.trim() || item.username || "";
+      }
+      
+      // Handle isActive - API returns is_active as string "active" or boolean
+      let isActiveValue = true;
+      if (item.isActive !== undefined) {
+        isActiveValue = item.isActive;
+      } else if (item.is_active !== undefined) {
+        if (typeof item.is_active === "string") {
+          isActiveValue = item.is_active.toLowerCase() === "active";
+        } else {
+          isActiveValue = Boolean(item.is_active);
+        }
+      } else if (item.status !== undefined) {
+        isActiveValue = item.status !== "inactive";
+      }
+      
+      return {
+        id: item.id || item.employeeId || item.user_id || item.emp_id,
+        name: nameValue,
+        email: item.email || "",
+        position: positionValue,
+        department: departmentValue,
+        branch: branchValue,
+        contact: item.contact || item.phone || item.contact_number || "",
+        role: roleValue,
+        isActive: isActiveValue,
+      };
+    });
+  };
+
   // Load branch heads from API
   useEffect(() => {
     const loadBranchHeads = async () => {
       setLoadingBranchHeads(true);
       try {
         const data = await apiService.getAllBranchHeads();
-        // Normalize the data format to match Employee interface
-        const normalizedData = data.map((item: any) => ({
-          id: item.id || item.employeeId,
-          name: item.name || `${item.fname || ""} ${item.lname || ""}`.trim(),
-          email: item.email || "",
-          position: item.position || "",
-          department: item.department || "",
-          branch: item.branch || "",
-          role: item.role || "",
-          isActive: item.isActive !== undefined ? item.isActive : true,
-        }));
+        // Ensure data is an array before mapping
+        const normalizedData = normalizeBranchHeadData(data);
         setBranchHeadsData(normalizedData);
       } catch (error) {
         console.error("Error loading branch heads:", error);
@@ -376,11 +476,43 @@ export default function BranchHeadsTab() {
                   <TableRow>
                     <TableCell
                       colSpan={3}
-                      className="text-center py-8 text-gray-500"
+                      className="text-center py-12"
                     >
-                      {searchTerm
-                        ? `No branch heads found matching "${searchTerm}"`
-                        : "No branch heads found"}
+                      <div className="flex flex-col items-center justify-center gap-4">
+                        <img
+                          src="/not-found.gif"
+                          alt="No data"
+                          className="w-25 h-25 object-contain"
+                          style={{
+                            imageRendering: 'auto',
+                            willChange: 'auto',
+                            transform: 'translateZ(0)',
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden',
+                          }}
+                        />
+                        <div className="text-gray-500">
+                          {searchTerm ? (
+                            <>
+                              <p className="text-base font-medium mb-1">
+                                No branch heads found matching "{searchTerm}"
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Try adjusting your search term
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-base font-medium mb-1">
+                                No branch heads found
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Branch heads will appear here once added
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -611,8 +743,25 @@ export default function BranchHeadsTab() {
 
           <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
             {branchHeads.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                No branch heads found
+              <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                <img
+                  src="/not-found.gif"
+                  alt="No data"
+                  className="w-25 h-25 object-contain mb-4"
+                  style={{
+                    imageRendering: 'auto',
+                    willChange: 'auto',
+                    transform: 'translateZ(0)',
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                  }}
+                />
+                <p className="text-base font-medium mb-1">
+                  No branch heads found
+                </p>
+                <p className="text-sm text-gray-400">
+                  Branch heads will appear here once added
+                </p>
               </div>
             ) : (
               <div className="border rounded-lg overflow-hidden">
@@ -818,16 +967,7 @@ export default function BranchHeadsTab() {
 
                             // Reload branch heads data to update the table
                             const reloadedData = await apiService.getAllBranchHeads();
-                            const normalizedData = reloadedData.map((item: any) => ({
-                              id: item.id || item.employeeId,
-                              name: item.name || `${item.fname || ""} ${item.lname || ""}`.trim(),
-                              email: item.email || "",
-                              position: item.position || "",
-                              department: item.department || "",
-                              branch: item.branch || "",
-                              role: item.role || "",
-                              isActive: item.isActive !== undefined ? item.isActive : true,
-                            }));
+                            const normalizedData = normalizeBranchHeadData(reloadedData);
                             setBranchHeadsData(normalizedData);
                           },
                           {
@@ -1151,39 +1291,53 @@ export default function BranchHeadsTab() {
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white"
               onClick={async () => {
-                if (!branchHeadToEdit || editSelectedBranches.length === 0) {
+                if (!branchHeadToEdit) {
                   toastMessages.generic.error(
                     "Validation Error",
-                    "Please select at least one branch."
+                    "No branch head selected."
                   );
                   return;
                 }
 
                 await withErrorHandling(
                   async () => {
-                    // Update user branch assignments using dedicated API endpoint
-                    const formData = new FormData();
-                    // Add each branch ID to the form data
-                    editSelectedBranches.forEach((branch) => {
-                      formData.append("branch_ids[]", branch.id);
-                    });
+                    // First, remove all existing branch assignments to ensure clean state
+                    await apiService.removeUserBranches(branchHeadToEdit.id);
                     
-                    // Use updateUserBranch API endpoint for branch assignments
-                    await apiService.updateUserBranch(branchHeadToEdit.id, formData);
+                    // Then, add the selected branches using updateUserBranch API endpoint
+                    if (editSelectedBranches.length > 0) {
+                      const formData = new FormData();
+                      // Add each branch ID to the form data (ensure it's a string)
+                      editSelectedBranches.forEach((branch) => {
+                        formData.append("branch_ids[]", String(branch.id));
+                      });
+                      
+                      // Use updateUserBranch API endpoint to add the selected branches
+                      await apiService.updateUserBranch(branchHeadToEdit.id, formData);
+                    }
 
-                    // Reload branch heads data to update the table
-                    const reloadedData = await apiService.getAllBranchHeads();
-                    const normalizedData = reloadedData.map((item: any) => ({
-                      id: item.id || item.employeeId,
-                      name: item.name || `${item.fname || ""} ${item.lname || ""}`.trim(),
-                      email: item.email || "",
-                      position: item.position || "",
-                      department: item.department || "",
-                      branch: item.branch || "",
-                      role: item.role || "",
-                      isActive: item.isActive !== undefined ? item.isActive : true,
-                    }));
-                    setBranchHeadsData(normalizedData);
+                    // Manually update the state for immediate UI feedback
+                    const branchNames = editSelectedBranches.length > 0 
+                      ? editSelectedBranches.map(b => b.name).join(", ")
+                      : "";
+                    setBranchHeadsData(prevData => 
+                      prevData.map(head => 
+                        head.id === branchHeadToEdit.id
+                          ? { ...head, branch: branchNames }
+                          : head
+                      )
+                    );
+
+                    // Also reload from API to ensure consistency (but don't wait for it)
+                    apiService.getAllBranchHeads()
+                      .then(reloadedData => {
+                        const normalizedData = normalizeBranchHeadData(reloadedData);
+                        setBranchHeadsData(normalizedData);
+                      })
+                      .catch(error => {
+                        console.error("Error reloading branch heads after update:", error);
+                        // Don't show error to user since we already updated the UI
+                      });
 
                     // Store success data
                     setEditSuccessData({
@@ -1327,16 +1481,7 @@ export default function BranchHeadsTab() {
 
                       // Reload branch heads data to update the table
                       const reloadedData = await apiService.getAllBranchHeads();
-                      const normalizedData = reloadedData.map((item: any) => ({
-                        id: item.id || item.employeeId,
-                        name: item.name || `${item.fname || ""} ${item.lname || ""}`.trim(),
-                        email: item.email || "",
-                        position: item.position || "",
-                        department: item.department || "",
-                        branch: item.branch || "",
-                        role: item.role || "",
-                        isActive: item.isActive !== undefined ? item.isActive : true,
-                      }));
+                      const normalizedData = normalizeBranchHeadData(reloadedData);
                       setBranchHeadsData(normalizedData);
 
                       // Show success message
