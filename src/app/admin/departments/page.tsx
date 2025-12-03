@@ -51,7 +51,7 @@ export default function DepartmentsTab() {
   const [overviewTotal, setOverviewTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
-
+  const [errors, setErrors] = useState<Record<string, string>>({});
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
@@ -119,13 +119,6 @@ export default function DepartmentsTab() {
 
   // Function to handle adding a new department
   const handleAddDepartment = async () => {
-    if (!newDepartmentName.trim()) {
-      toastMessages.generic.warning(
-        "Validation Error",
-        "Please enter a department name."
-      );
-      return;
-    }
     try {
       await apiService.addDepartment(newDepartmentName);
       loadData(searchTerm);
@@ -134,10 +127,16 @@ export default function DepartmentsTab() {
         "A new department has been save."
       );
       setNewDepartmentName("");
-    } catch (error) {
-      console.log(error);
-    } finally {
       setIsAddModalOpen(false);
+    } catch (error: any) {
+      if (error.response?.data?.errors) {
+        const backendErrors: Record<string, string> = {};
+
+        Object.keys(error.response.data.errors).forEach((field) => {
+          backendErrors[field] = error.response.data.errors[field][0];
+        });
+        setErrors(backendErrors);
+      }
     }
   };
 
@@ -441,7 +440,7 @@ export default function DepartmentsTab() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 px-2">
+          <div className="space-y-4 px-2 mt-2">
             <div className="space-y-2">
               <Label htmlFor="departmentName" className="text-sm font-medium">
                 Department Name <span className="text-red-500">*</span>
@@ -458,6 +457,9 @@ export default function DepartmentsTab() {
                 }}
                 autoFocus
               />
+              {errors.department_name && (
+                <p className="text-red-500 text-sm">{errors.department_name}</p>
+              )}
             </div>
           </div>
 

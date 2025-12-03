@@ -386,13 +386,15 @@ export default function UserManagementTab() {
 
       toastMessages.user.created(newUser.fname);
       setIsAddUserModalOpen(false);
-    } catch (error) {
-      console.error("Error adding user:", error);
-      toastMessages.generic.error(
-        "Add Failed",
-        "Failed to add user. Please try again."
-      );
-      throw error;
+    } catch (error: any) {
+      if (error.response?.data?.errors) {
+        const backendErrors: Record<string, string> = {};
+
+        Object.keys(error.response.data.errors).forEach((field) => {
+          backendErrors[field] = error.response.data.errors[field][0];
+        });
+        setErrors(backendErrors);
+      }
     }
   };
 

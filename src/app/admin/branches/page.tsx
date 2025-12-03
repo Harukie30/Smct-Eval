@@ -216,8 +216,6 @@ export default function DepartmentsTab() {
           });
           setErrors(backendErrors);
         }
-      } finally {
-        setIsAddModalOpen(false);
       }
     }
   };
