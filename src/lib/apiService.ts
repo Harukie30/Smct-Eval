@@ -130,7 +130,7 @@ export const apiService = {
 
   deleteUser: async (id: string | number): Promise<any> => {
     try {
-      const response = await api.post(`/delete_user/${id}`);
+      const response = await api.post(`/deleteUser/${id}`);
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
@@ -141,9 +141,21 @@ export const apiService = {
     }
   },
 
-  getPendingRegistrations: async (): Promise<any | null> => {
+  getPendingRegistrations: async (
+    searchTerm: string,
+    status: string | number,
+    page: number,
+    perPage: number
+  ): Promise<any | null> => {
     try {
-      const response = await api.get("/getPendingRegistrations");
+      const response = await api.get("/getPendingRegistrations", {
+        params: {
+          search: searchTerm || "",
+          status: status || "",
+          page: page,
+          per_page: perPage,
+        },
+      });
       return response.data.users || [];
     } catch (error) {
       const axiosError = error as AxiosError<any>;
@@ -154,10 +166,22 @@ export const apiService = {
     }
   },
 
-  getActiveRegistrations: async (): Promise<any | null> => {
+  getActiveRegistrations: async (
+    searchTerm: string,
+    role: string | number,
+    page: number,
+    perPage: number
+  ): Promise<any | null> => {
     try {
-      const response = await api.get("/getAllActiveUsers");
-      return response.data.users;
+      const response = await api.get("/getAllActiveUsers", {
+        params: {
+          search: searchTerm || "",
+          role: role || "",
+          page: page,
+          per_page: perPage,
+        },
+      });
+      return response.data.users || [];
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw new Error(
@@ -267,9 +291,12 @@ export const apiService = {
   },
 
   getSubmissions: async (
-    searchTerm: string,
-    page: number,
-    perPage: number
+    searchTerm?: string,
+    page?: number,
+    perPage?: number,
+    status?: string,
+    quarter?: string,
+    year?: string
   ): Promise<any> => {
     try {
       const response = await api.get(`/allEvaluations`, {
@@ -277,6 +304,9 @@ export const apiService = {
           search: searchTerm || "",
           page: page,
           per_page: perPage,
+          status: status || "",
+          quarter: quarter || "",
+          year: year || "",
         },
       });
 
@@ -371,8 +401,8 @@ export const apiService = {
     id: number
   ): Promise<{ success: boolean; message: string }> => {
     try {
-      await api.delete(`/delete_eval/${id}`);
-      return { success: true, message: "Submission deleted successfully" };
+      const delete_eval = await api.post(`/deleteEval/${id}`);
+      return delete_eval.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw new Error(
@@ -918,23 +948,26 @@ export const apiService = {
     }
   },
 
-  // ============================================
-  // BRANCH MANAGEMENT (Missing Endpoints)
-  // ============================================
-
   // Get total employees under a branch
-  getTotalEmployeesBranch: async (branchId?: string | number): Promise<any> => {
+  getTotalEmployeesBranch: async (
+    searchValue: string,
+    currentPage: number,
+    itemsPerPage: number
+  ): Promise<any> => {
     try {
-      const endpoint = branchId
-        ? `/getTotalEmployeesBranch?branch=${branchId}`
-        : "/getTotalEmployeesBranch";
-      const response = await api.get(endpoint);
-      return response.data;
+      const response = await api.get("/getTotalEmployeesBranch", {
+        params: {
+          search: searchValue || "",
+          page: currentPage,
+          per_page: itemsPerPage,
+        },
+      });
+      return response.data.branches;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw new Error(
         axiosError.response?.data?.message ||
-          "Failed to fetch total employees by branch"
+          "Failed to fetch total employees by department"
       );
     }
   },
@@ -953,7 +986,7 @@ export const apiService = {
   },
 
   // Add new branch
-  addBranch: async (formData: FormData): Promise<any> => {
+  addBranch: async (formData: {}): Promise<any> => {
     try {
       const response = await api.post("/addBranch", formData);
       return response.data;
@@ -965,20 +998,21 @@ export const apiService = {
     }
   },
 
-  // ============================================
-  // DEPARTMENT MANAGEMENT (Missing Endpoints)
-  // ============================================
-
   // Get total employees under a department
   getTotalEmployeesDepartments: async (
-    departmentId?: string | number
+    searchValue: string,
+    currentPage: number,
+    itemsPerPage: number
   ): Promise<any> => {
     try {
-      const endpoint = departmentId
-        ? `/getTotalEmployeesDepartments?department=${departmentId}`
-        : "/getTotalEmployeesDepartments";
-      const response = await api.get(endpoint);
-      return response.data;
+      const response = await api.get("/getTotalEmployeesDepartments", {
+        params: {
+          search: searchValue || "",
+          page: currentPage,
+          per_page: itemsPerPage,
+        },
+      });
+      return response.data.departments;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw new Error(
@@ -1004,7 +1038,7 @@ export const apiService = {
   // Delete department
   deleteDepartment: async (departmentId: string | number): Promise<any> => {
     try {
-      const response = await api.delete(`/deleteDepartment/${departmentId}`);
+      const response = await api.post(`/deleteDepartment/${departmentId}`);
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
@@ -1014,6 +1048,18 @@ export const apiService = {
     }
   },
 
+  // Delete department
+  deleteBranches: async (branchId: string | number): Promise<any> => {
+    try {
+      const response = await api.post(`/deleteBranch/${branchId}`);
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw new Error(
+        axiosError.response?.data?.message || "Failed to delete branch"
+      );
+    }
+  },
   // ============================================
   // EVALUATION ENDPOINTS (Missing)
   // ============================================
@@ -1119,17 +1165,7 @@ export const apiService = {
     try {
       const response = await api.get("/getAllRoles");
       const data = response.data;
-
-      if (data.success && data.roles) {
-        return data.roles;
-      }
-      if (Array.isArray(data.roles)) {
-        return data.roles;
-      }
-      if (Array.isArray(data)) {
-        return data;
-      }
-      return [];
+      return data.roles;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw new Error(

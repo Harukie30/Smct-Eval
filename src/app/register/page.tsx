@@ -16,8 +16,6 @@ import SignaturePad from "@/components/SignaturePad";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import PageTransition from "@/components/PageTransition";
-import { CONFIG } from "../../../config/config";
-import { id } from "date-fns/locale";
 import apiService from "@/lib/apiService";
 import { withPublicPage } from "@/hoc";
 import { dataURLtoFile } from "@/utils/data-url-to-file";
@@ -420,7 +418,7 @@ function RegisterPage() {
               email: "",
               contact: "",
               position_id: 0,
-              department_id: 0,
+              department_id: "",
               branch_id: 0,
               password: "",
               password_confirmation: "",
@@ -766,8 +764,12 @@ function RegisterPage() {
                         searchPlaceholder="Search positions..."
                         emptyText="No positions found."
                         className="w-1/2"
-                        error={fieldErrors?.position_id}
                       />
+                      {fieldErrors?.position_id && (
+                        <p className="text-sm text-red-500">
+                          {fieldErrors?.contact}
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -787,8 +789,12 @@ function RegisterPage() {
                         searchPlaceholder="Search branches..."
                         emptyText="No branches found."
                         className="w-1/2"
-                        error={fieldErrors?.branch_id}
                       />
+                      {fieldErrors?.branch_id && (
+                        <p className="text-sm text-red-500">
+                          {fieldErrors?.contact}
+                        </p>
+                      )}
                     </div>
 
                     {/* Department - Show only if branch is HO, Head Office, or none */}
@@ -805,8 +811,12 @@ function RegisterPage() {
                           searchPlaceholder="Search departments..."
                           emptyText="No departments found."
                           className="w-1/2"
-                          error={fieldErrors?.department_id}
                         />
+                        {fieldErrors?.department_id && (
+                          <p className="text-sm text-red-500">
+                            {fieldErrors?.contact}
+                          </p>
+                        )}
                       </div>
                     )}
 
