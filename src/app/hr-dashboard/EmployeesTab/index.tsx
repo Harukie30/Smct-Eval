@@ -359,8 +359,25 @@ export function EmployeesTab({
                           <TableBody>
                             {employeesPaginated.length === 0 ? (
                               <TableRow>
-                                <TableCell colSpan={6} className="text-center py-12 text-gray-500">
-                                  No employees found matching your criteria
+                                <TableCell colSpan={6} className="text-center py-12">
+                                  <div className="flex flex-col items-center justify-center gap-4">
+                                    <img
+                                      src="/not-found.gif"
+                                      alt="No data"
+                                      className="w-25 h-25 object-contain"
+                                      style={{
+                                        imageRendering: 'auto',
+                                        willChange: 'auto',
+                                        transform: 'translateZ(0)',
+                                        backfaceVisibility: 'hidden',
+                                        WebkitBackfaceVisibility: 'hidden',
+                                      }}
+                                    />
+                                    <div className="text-gray-500">
+                                      <p className="text-base font-medium mb-1">No employees found</p>
+                                      <p className="text-sm">Try adjusting your search or filter criteria</p>
+                                    </div>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ) : (

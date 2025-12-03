@@ -36,6 +36,7 @@ interface UserContextType {
   login: (username: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateUserField: (field: keyof AuthenticatedUser, value: any) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -97,6 +98,11 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       // Handle different response structures (res.data or res directly)
       const userData = res?.data || res;
       if (userData) {
+        console.log('🔄 User data refreshed from API:', {
+          hasSignature: !!userData.signature,
+          signatureLength: userData.signature?.length || 0,
+          signaturePreview: userData.signature?.substring(0, 50) || 'none',
+        });
         setUser(userData);
         localStorage.setItem("authUser", JSON.stringify(userData));
       }
@@ -147,6 +153,17 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   };
 
+  // ⬇ Update a specific user field (useful for preserving data not returned by backend)
+  const updateUserField = (field: keyof AuthenticatedUser, value: any) => {
+    setUser((prevUser) => {
+      if (!prevUser) return prevUser;
+      const updatedUser = { ...prevUser, [field]: value };
+      localStorage.setItem("authUser", JSON.stringify(updatedUser));
+      console.log(`💾 Updated user field '${field}' in context and localStorage`);
+      return updatedUser;
+    });
+  };
+
   // ⬇ Logout using Sanctum
   const logout = async () => {
     toastMessages.generic.info("Logging out...", "See you soon!");
@@ -176,6 +193,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     login,
     logout,
     refreshUser,
+    updateUserField,
   };
 
   return (

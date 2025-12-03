@@ -627,9 +627,23 @@ export function OverviewTab({
             </div>
           ) : filteredSubmissions.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-gray-500 text-lg mb-2">No results found</div>
-              <div className="text-gray-400 text-sm mb-4">
-                No performance reviews match "{overviewSearchTerm}"
+              <div className="flex flex-col items-center justify-center gap-4 mb-4">
+                <img
+                  src="/not-found.gif"
+                  alt="No data"
+                  className="w-25 h-25 object-contain"
+                  style={{
+                    imageRendering: 'auto',
+                    willChange: 'auto',
+                    transform: 'translateZ(0)',
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                  }}
+                />
+                <div className="text-gray-500">
+                  <p className="text-base font-medium mb-1">No results found</p>
+                  <p className="text-sm">No performance reviews match "{overviewSearchTerm}"</p>
+                </div>
               </div>
               <Button
                 variant="outline"

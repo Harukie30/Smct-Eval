@@ -62,20 +62,47 @@ export default function WelcomeStep({ employee, onStartAction, onBackAction, cur
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div>
                 <Badge className="bg-blue-100 text-blue-800 mb-1">Position</Badge>
-                <p className="text-sm text-gray-900">{employee.position}</p>
+                <p className="text-sm text-gray-900">{employee.position || 'N/A'}</p>
               </div>
               <div>
                 <Badge className="bg-green-100 text-green-800 mb-1">Department</Badge>
-                <p className="text-sm text-gray-900">{employee.department}</p>
+                <p className="text-sm text-gray-900">{employee.department || 'N/A'}</p>
               </div>
               <div>
                 <Badge className="bg-purple-100 text-purple-800 mb-1">Role</Badge>
-                <p className="text-sm text-gray-900">{employee.role}</p>
+                <p className="text-sm text-gray-900">
+                  {(() => {
+                    if (!employee.role) return 'N/A';
+                    if (typeof employee.role === 'string') return employee.role;
+                    if (Array.isArray(employee.role)) {
+                      const firstRole = employee.role[0];
+                      if (firstRole && typeof firstRole === 'object' && 'name' in firstRole) {
+                        return (firstRole as any).name || String(firstRole);
+                      }
+                      return String(firstRole || 'N/A');
+                    }
+                    if (typeof employee.role === 'object' && 'name' in employee.role) {
+                      return (employee.role as any).name || 'N/A';
+                    }
+                    return String(employee.role);
+                  })()}
+                </p>
               </div>
               <div>
                 <Badge className="bg-orange-100 text-orange-800 mb-1">Hire Date</Badge>
                 <p className="text-sm text-gray-900">
-                  {new Date(employee.hireDate).toLocaleDateString()}
+                  {employee.hireDate 
+                    ? (() => {
+                        try {
+                          const date = new Date(employee.hireDate);
+                          return isNaN(date.getTime()) 
+                            ? employee.hireDate // Return original string if invalid
+                            : date.toLocaleDateString();
+                        } catch (error) {
+                          return employee.hireDate; // Return original string on error
+                        }
+                      })()
+                    : 'N/A'}
                 </p>
               </div>
             </div>

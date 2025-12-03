@@ -10,8 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Combobox } from "@/components/ui/combobox";
 import { useEmployeeFiltering } from '@/hooks/useEmployeeFiltering';
-import accountsData from '@/data/accounts.json';
-import positionsData from '@/data/positions.json';
 
 interface Employee {
   id: number;
@@ -36,6 +34,8 @@ interface EmployeesTabProps {
   hasAvatarUpdate: (employeeId: number) => boolean;
   currentUser?: any; // Add currentUser prop for filtering
   isActive?: boolean;
+  employees?: any[]; // Employees from API
+  positions?: string[]; // Positions from API
 }
 
 export function EmployeesTab({
@@ -48,7 +48,9 @@ export function EmployeesTab({
   getUpdatedAvatar,
   hasAvatarUpdate,
   currentUser,
-  isActive = false
+  isActive = false,
+  employees = [],
+  positions = []
 }: EmployeesTabProps) {
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
@@ -58,68 +60,17 @@ export function EmployeesTab({
 
   const refreshKey = `employees-${employeeDataRefresh}`;
 
-  // Get updated profile data from localStorage with auto-update support
+  // Get updated profile data with real-time avatar updates only
   const getUpdatedEmployeeData = (employee: any) => {
     try {
       const employeeId = employee.employeeId || employee.id;
       
-      // First check for real-time profile updates
+      // Check for real-time profile updates (avatar only)
       const updatedAvatar = getUpdatedAvatar(employeeId, employee.avatar);
       if (hasAvatarUpdate(employeeId) && updatedAvatar) {
         return {
           ...employee,
           avatar: updatedAvatar,
-        };
-      }
-
-      // Check for updated profile data in localStorage
-      const storedUser = localStorage.getItem('authenticatedUser');
-      if (storedUser) {
-        const userData = JSON.parse(storedUser);
-        if (userData.id === employeeId) {
-          return {
-            ...employee,
-            avatar: userData.avatar || employee.avatar,
-            name: userData.name || employee.name,
-            email: userData.email || employee.email,
-            position: userData.position || employee.position,
-            department: userData.department || employee.department,
-            bio: userData.bio || employee.bio
-          };
-        }
-      }
-
-      // Check for other employees' profile updates in localStorage
-      const employeeProfiles = localStorage.getItem('employeeProfiles');
-      if (employeeProfiles) {
-        const profiles = JSON.parse(employeeProfiles);
-        const profileData = profiles[employeeId];
-        
-        if (profileData) {
-          return {
-            ...employee,
-            avatar: profileData.avatar || employee.avatar,
-            name: profileData.name || employee.name,
-            email: profileData.email || employee.email,
-            position: profileData.position || employee.position,
-            department: profileData.department || employee.department,
-            bio: profileData.bio || employee.bio
-          };
-        }
-      }
-
-      // Check accounts localStorage
-      const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-      const accountData = accounts.find((acc: any) => (acc.id === employeeId || acc.employeeId === employeeId));
-      if (accountData && (accountData.avatar || accountData.name !== employee.name)) {
-        return {
-          ...employee,
-          avatar: accountData.avatar || employee.avatar,
-          name: accountData.name || employee.name,
-          email: accountData.email || employee.email,
-          position: accountData.position || employee.position,
-          department: accountData.department || employee.department,
-          bio: accountData.bio || employee.bio
         };
       }
 
@@ -130,21 +81,23 @@ export function EmployeesTab({
     }
   };
 
-  // Get all employees from accounts data
+  // Get all employees from API (passed as prop)
   const allEmployees = useMemo(() => {
-    return (accountsData as any).accounts.map((e: any) => ({
+    if (!employees || employees.length === 0) return [];
+    
+    return employees.map((e: any) => ({
       id: e.employeeId || e.id,
-      name: e.name,
+      name: e.name || `${e.fname || ''} ${e.lname || ''}`.trim(),
       email: e.email,
-      position: e.position,
-      department: e.department,
-      branch: e.branch,
-      role: e.role,
-      isActive: e.isActive,
+      position: e.position?.name || e.position,
+      department: e.department?.name || e.department,
+      branch: e.branch?.name || e.branch,
+      role: e.role?.name || e.roles?.[0]?.name || e.role || e.roles?.[0],
+      isActive: e.isActive !== false,
       hireDate: e.hireDate,
       avatar: e.avatar,
     }));
-  }, []);
+  }, [employees]);
 
   // Use the custom hook for filtering
   const filteredEmployees = useEmployeeFiltering({
@@ -265,7 +218,7 @@ export function EmployeesTab({
           <Combobox
             options={[
               { value: 'all', label: 'All Positions' },
-              ...positionsData.map((pos) => ({ value: pos, label: pos }))
+              ...positions.map((pos: string) => ({ value: pos, label: pos }))
             ]}
             value={selectedPosition || 'all'}
             onValueChangeAction={(value) => {
@@ -372,8 +325,25 @@ export function EmployeesTab({
                 <TableBody>
                   {employeesPaginated.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12 text-gray-500">
-                        No employees found matching your criteria
+                      <TableCell colSpan={6} className="text-center py-12">
+                        <div className="flex flex-col items-center justify-center gap-4">
+                          <img
+                            src="/not-found.gif"
+                            alt="No data"
+                            className="w-25 h-25 object-contain"
+                            style={{
+                              imageRendering: 'auto',
+                              willChange: 'auto',
+                              transform: 'translateZ(0)',
+                              backfaceVisibility: 'hidden',
+                              WebkitBackfaceVisibility: 'hidden',
+                            }}
+                          />
+                          <div className="text-gray-500">
+                            <p className="text-base font-medium mb-1">No employees found</p>
+                            <p className="text-sm">Try adjusting your search or filter criteria</p>
+                          </div>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (

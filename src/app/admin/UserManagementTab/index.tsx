@@ -497,8 +497,10 @@ export function UserManagementTab({
       console.error("Error updating user:", error);
       
       // Extract detailed error message from 422 validation errors
+      // Note: apiService.updateEmployee throws error with response.data spread directly
       let errorMessage = "Failed to update user information. Please try again.";
       
+      // Check if error has response.data structure (from axios)
       if (error?.response?.data) {
         const errorData = error.response.data;
         
@@ -516,14 +518,37 @@ export function UserManagementTab({
         } else if (errorData.message) {
           errorMessage = errorData.message;
         }
-      } else if (error?.message) {
+      } 
+      // Check if error has errors directly (from apiService which spreads response.data)
+      else if (error?.errors && typeof error.errors === 'object') {
+        const validationErrors = Object.entries(error.errors)
+          .map(([field, messages]: [string, any]) => {
+            const fieldName = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ');
+            const messageList = Array.isArray(messages) ? messages.join(', ') : messages;
+            return `${fieldName}: ${messageList}`;
+          })
+          .join('\n');
+        errorMessage = `Validation Error:\n${validationErrors}`;
+      }
+      // Check for message directly in error object
+      else if (error?.message) {
         errorMessage = error.message;
+      }
+      // Check if error is a string
+      else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      // If error is empty object or has no useful info, provide more context
+      else if (Object.keys(error || {}).length === 0 || (!error?.message && !error?.errors)) {
+        errorMessage = `Failed to update user. ${error?.status ? `Status: ${error.status}` : 'Please check your connection and try again.'}`;
       }
       
       console.error("📛 Detailed error:", {
+        error,
         status: error?.status || error?.response?.status,
-        data: error?.response?.data,
-        message: errorMessage
+        data: error?.response?.data || error,
+        message: errorMessage,
+        keys: Object.keys(error || {})
       });
       
       toastMessages.generic.error(

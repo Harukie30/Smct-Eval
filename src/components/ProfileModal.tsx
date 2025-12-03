@@ -260,9 +260,20 @@ export default function ProfileModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = useCallback((field: keyof ProfileFormData, value: string) => {
+  const handleInputChange = useCallback((field: keyof ProfileFormData, value: string | null) => {
     // Update form data - React 18+ batches these automatically
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value || '' };
+      // Debug signature updates
+      if (field === 'signature') {
+        console.log('✍️ Signature updated:', {
+          hasValue: !!value,
+          valueLength: value?.length || 0,
+          isBase64: value?.startsWith('data:image') || false,
+        });
+      }
+      return updated;
+    });
     
     // Reset password saved flag if user starts typing in password fields
     if (field === 'currentPassword' || field === 'newPassword' || field === 'confirmPassword') {
@@ -417,11 +428,111 @@ export default function ProfileModal({
       // Note: Old avatar deletion is handled by the backend
       // No need to delete client-side when using API
 
+      // Create FormData to send profile updates to API (including signature)
+      if (formData.id) {
+        const profileFormData = new FormData();
+        
+        // Add basic profile fields
+        if (formData.fname) profileFormData.append('fname', formData.fname);
+        if (formData.lname) profileFormData.append('lname', formData.lname);
+        if (formData.email) profileFormData.append('email', formData.email);
+        if (formData.bio !== undefined) profileFormData.append('bio', formData.bio || '');
+        
+        // Handle avatar - if it's a URL string, append it; if it's a File, append the file
+        if (formData.avatar) {
+          const avatarValue = formData.avatar as any;
+          if (avatarValue instanceof File) {
+            profileFormData.append('avatar', avatarValue);
+          } else if (typeof avatarValue === 'string') {
+            profileFormData.append('avatar', avatarValue);
+          }
+        }
+        
+        // Add signature (important: must ALWAYS be included)
+        // Signature is a base64 data URL string from SignaturePad (e.g., "data:image/png;base64,...")
+        // Always send signature field, even if empty, to ensure it's saved/cleared properly
+        const signatureValue = formData.signature || '';
+        profileFormData.append('signature', signatureValue);
+        
+        console.log('✍️ Signature being sent:', {
+          hasSignature: !!signatureValue && signatureValue.length > 0,
+          signatureLength: signatureValue.length,
+          signatureType: signatureValue.startsWith('data:image') ? 'base64-data-url' : 'empty',
+          signaturePreview: signatureValue.length > 0 ? signatureValue.substring(0, 60) + '...' : 'empty',
+        });
+        
+        // Add position, department, and branch IDs
+        if (formData.positions?.value) {
+          profileFormData.append('position_id', formData.positions.value.toString());
+        }
+        if (formData.departments?.value) {
+          profileFormData.append('department_id', formData.departments.value.toString());
+        }
+        if (formData.branches?.value) {
+          profileFormData.append('branch_id', formData.branches.value.toString());
+        }
+        
+        // Debug: Log what we're sending
+        console.log('📤 Sending profile update to API:', {
+          fname: formData.fname,
+          lname: formData.lname,
+          email: formData.email,
+          hasSignature: !!formData.signature && formData.signature.length > 0,
+          signatureLength: formData.signature?.length || 0,
+          signatureInFormData: profileFormData.has('signature'),
+          position_id: formData.positions?.value,
+          department_id: formData.departments?.value,
+          branch_id: formData.branches?.value,
+        });
+        
+        // Debug: Log FormData contents to verify signature is included
+        console.log('📦 FormData entries:');
+        for (const [key, value] of profileFormData.entries()) {
+          if (key === 'signature') {
+            const sigValue = value as string;
+            console.log(`  ${key}:`, {
+              type: typeof sigValue,
+              length: sigValue?.length || 0,
+              preview: sigValue?.substring(0, 60) || 'empty',
+              isBase64: sigValue?.startsWith('data:image') || false,
+            });
+          } else {
+            const valStr = typeof value === 'string' ? value : String(value);
+            console.log(`  ${key}:`, valStr.length > 100 ? valStr.substring(0, 50) + '...' : valStr);
+          }
+        }
+        
+        // Send profile update to API
+        try {
+          const response = await apiService.updateEmployee_auth(profileFormData);
+          console.log('✅ Profile update API response:', response);
+          
+          // IMPORTANT: Wait a moment for backend to process, then verify signature was saved
+          // The backend might need a moment to persist the signature
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (apiError: any) {
+          console.error('❌ Profile update API error:', {
+            error: apiError,
+            message: apiError?.message,
+            response: apiError?.response?.data,
+            status: apiError?.status,
+          });
+          throw apiError;
+        }
+      }
+      
       // Convert form data back to UserProfile format (excluding password fields)
       const updatedProfile = formDataToProfile(formData);
       
-      // Call onSave with converted profile
+      // Call onSave with converted profile (for parent component updates)
+      // This will trigger refreshUser() in DashboardShell
       await onSave(updatedProfile);
+      
+      // Additional verification: Check if signature is in the updated profile
+      console.log('🔍 Updated profile signature check:', {
+        hasSignature: !!updatedProfile.signature,
+        signatureLength: updatedProfile.signature?.length || 0,
+      });
       
       // Clear password fields after successful save
       setFormData(prev => ({

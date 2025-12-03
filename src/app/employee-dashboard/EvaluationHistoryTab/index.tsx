@@ -796,13 +796,26 @@ export function EvaluationHistoryTab({
                       <TableRow>
                         <TableCell
                           colSpan={7}
-                          className="text-center py-8 text-gray-500"
+                          className="text-center py-8"
                         >
-                          <p>No quarterly data available</p>
-                          <p className="text-sm">
-                            Evaluations will be grouped by quarter once
-                            available
-                          </p>
+                          <div className="flex flex-col items-center justify-center gap-4">
+                            <img
+                              src="/not-found.gif"
+                              alt="No data"
+                              className="w-25 h-25 object-contain"
+                              style={{
+                                imageRendering: 'auto',
+                                willChange: 'auto',
+                                transform: 'translateZ(0)',
+                                backfaceVisibility: 'hidden',
+                                WebkitBackfaceVisibility: 'hidden',
+                              }}
+                            />
+                            <div className="text-gray-500">
+                              <p className="text-base font-medium mb-1">No quarterly data available</p>
+                              <p className="text-sm">Evaluations will be grouped by quarter once available</p>
+                            </div>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )}

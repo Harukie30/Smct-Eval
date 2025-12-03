@@ -537,19 +537,7 @@ function HRDashboard() {
 
 
 
-  // Real-time data updates via localStorage events
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      // Only refresh if the change is from another tab/window
-      if (e.key === 'submissions' && e.newValue !== e.oldValue) {
-        console.log('📊 Submissions data updated, refreshing HR dashboard...');
-        fetchRecentSubmissions();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  // Removed localStorage event listeners - using API only
 
   // Fetch recent submissions from client data service
   const fetchRecentSubmissions = async () => {
@@ -729,10 +717,35 @@ function HRDashboard() {
       // Get formatted employee_id from account (stored as employee_id in registration)
       const formattedEmployeeId = (account as any)?.employee_id || account?.employeeId;
       
-      setEmployeeToEvaluate({
-        ...employee,
-        employeeId: formattedEmployeeId ? String(formattedEmployeeId) : undefined,
-      });
+      // Fetch fresh employee data from API to ensure we have latest updates (position, department, role, hireDate)
+      try {
+        const freshEmployeeData = await apiService.getEmployee(employee.id);
+        
+        // If API returns fresh data, use it; otherwise fall back to cached employee data
+        const updatedEmployee: Employee = freshEmployeeData ? {
+          id: freshEmployeeData.id || employee.id,
+          name: freshEmployeeData.name || freshEmployeeData.fname + ' ' + freshEmployeeData.lname || employee.name,
+          email: freshEmployeeData.email || employee.email,
+          position: freshEmployeeData.position || employee.position,
+          department: freshEmployeeData.department || employee.department,
+          branch: freshEmployeeData.branch || employee.branch,
+          role: freshEmployeeData.role || freshEmployeeData.roles?.[0]?.name || freshEmployeeData.roles?.[0] || employee.role,
+          hireDate: freshEmployeeData.hireDate || employee.hireDate,
+          ...(freshEmployeeData.avatar || (employee as any).avatar ? { avatar: freshEmployeeData.avatar || (employee as any).avatar } : {}),
+        } as Employee : employee;
+        
+        setEmployeeToEvaluate({
+          ...updatedEmployee,
+          employeeId: formattedEmployeeId ? String(formattedEmployeeId) : undefined,
+        });
+      } catch (freshDataError) {
+        console.error('Error fetching fresh employee data:', freshDataError);
+        // Fallback to cached employee data if API call fails
+        setEmployeeToEvaluate({
+          ...employee,
+          employeeId: formattedEmployeeId ? String(formattedEmployeeId) : undefined,
+        });
+      }
     } catch (error) {
       console.error('Error fetching employee ID:', error);
       setEmployeeToEvaluate(employee);
@@ -763,26 +776,35 @@ function HRDashboard() {
         return;
       }
 
-      // Password is correct, proceed with deletion
-      // Remove employee from local state
-      const updatedEmployees = employees.filter(emp => emp.id !== employeeToDelete.id);
-      setEmployees(updatedEmployees);
-      
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('employees', JSON.stringify(updatedEmployees));
+      // Password is correct, proceed with deletion via API
+      try {
+        await apiService.deleteUser(employeeToDelete.id);
+        
+        // Remove employee from local state
+        const updatedEmployees = employees.filter(emp => emp.id !== employeeToDelete.id);
+        setEmployees(updatedEmployees);
+        
+        // Close modal and reset
+        setIsDeleteModalOpen(false);
+        setEmployeeToDelete(null);
+        setDeleteEmployeePassword('');
+        setDeleteEmployeePasswordError('');
+        
+        // Show success message
+        toastMessages.generic.success(
+          'Employee Deleted',
+          `${employeeToDelete.name} has been successfully deleted.`
+        );
+        
+        // Refresh dashboard data
+        await refreshDashboardData(false, false);
+        
+        console.log('Employee deleted:', employeeToDelete);
+      } catch (deleteError) {
+        console.error('Error deleting employee via API:', deleteError);
+        setDeleteEmployeePasswordError('Failed to delete employee. Please try again.');
+        return;
       }
-      
-      // Close modal and reset
-      setIsDeleteModalOpen(false);
-      setEmployeeToDelete(null);
-      setDeleteEmployeePassword('');
-      setDeleteEmployeePasswordError('');
-      
-      // Refresh dashboard data
-      await refreshDashboardData(false, false);
-      
-      console.log('Employee deleted:', employeeToDelete);
     } catch (error) {
       console.error('Error deleting employee:', error);
       setDeleteEmployeePasswordError('Failed to delete employee. Please try again.');

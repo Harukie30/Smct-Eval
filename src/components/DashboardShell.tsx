@@ -59,7 +59,7 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [isLeadershipOpen, setIsLeadershipOpen] = useState(false);
 
-  const { user, logout, refreshUser } = useUser();
+  const { user, logout, refreshUser, updateUserField } = useUser();
   const router = useRouter();
   
   // Convert user to UserProfile format
@@ -190,7 +190,19 @@ export default function DashboardShell(props: DashboardShellProps) {
       }
       
       // Refresh user data from server to get updated profile
+      console.log('🔄 Refreshing user data after profile save...');
       await refreshUser();
+      
+      // WORKAROUND: Backend /profile endpoint doesn't return signature field
+      // Manually preserve the signature in user context after refresh
+      if (updatedProfile.signature) {
+        console.log('💾 Preserving signature in user context (backend workaround)...');
+        updateUserField('signature', updatedProfile.signature);
+        console.log('✅ Signature preserved:', {
+          hasSignature: !!updatedProfile.signature,
+          signatureLength: updatedProfile.signature.length,
+        });
+      }
       
       setIsProfileModalOpen(false);
     } catch (error) {

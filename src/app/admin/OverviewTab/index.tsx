@@ -153,7 +153,7 @@ export function OverviewTab({ onRefresh, refreshTrigger }: OverviewTabProps = {}
       const stats: DashboardStats = {
         employeeDashboard: {
           activeUsers: activeEmployees.filter((emp: any) => {
-            const role = emp.role?.toLowerCase() || "";
+            const role = String(emp.role || "").toLowerCase();
             return (
               role === "employee" ||
               role.includes("representative") ||
@@ -168,7 +168,7 @@ export function OverviewTab({ onRefresh, refreshTrigger }: OverviewTabProps = {}
         },
         hrDashboard: {
           activeUsers: activeEmployees.filter((emp: any) => {
-            const role = emp.role?.toLowerCase() || "";
+            const role = String(emp.role || "").toLowerCase();
             return (
               role === "hr" ||
               role === "hr-manager" ||
@@ -181,7 +181,7 @@ export function OverviewTab({ onRefresh, refreshTrigger }: OverviewTabProps = {}
         },
         evaluatorDashboard: {
           activeUsers: activeEmployees.filter((emp: any) => {
-            const role = emp.role?.toLowerCase() || "";
+            const role = String(emp.role || "").toLowerCase();
             return (
               role === "evaluator" ||
               role.includes("manager") ||
