@@ -194,6 +194,9 @@ export default function DepartmentsTab() {
 
   // Function to handle adding a new department
   const handleAddBranch = async () => {
+    if (!validation()) {
+      return console.log("nice try");
+    }
     if (validation()) {
       try {
         await apiService.addBranch(formData);
@@ -549,6 +552,9 @@ export default function DepartmentsTab() {
                 }}
                 autoFocus
               />
+              {errors?.branch_name && (
+                <p className="text-sm text-red-500">{errors?.branch_name}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="branchCode" className="text-sm font-medium">
@@ -563,6 +569,9 @@ export default function DepartmentsTab() {
                 }
                 style={{ textTransform: "uppercase" }}
               />
+              {errors?.branch_code && (
+                <p className="text-sm text-red-500">{errors?.branch_code}</p>
+              )}
             </div>
             <div className="w-full md:w-48 space-y-2">
               <Label
@@ -594,6 +603,9 @@ export default function DepartmentsTab() {
                   </SelectItem>
                 </SelectContent>
               </Select>
+              {errors?.branch && (
+                <p className="text-sm text-red-500">{errors?.branch}</p>
+              )}
             </div>
             <div className="w-full md:w-48 space-y-2 mb-2">
               <Label
@@ -618,6 +630,9 @@ export default function DepartmentsTab() {
                   <SelectItem value="SMCT">SMCT</SelectItem>
                 </SelectContent>
               </Select>
+              {errors?.acronym && (
+                <p className="text-sm text-red-500">{errors?.acronym}</p>
+              )}
             </div>
           </div>
 
@@ -633,7 +648,7 @@ export default function DepartmentsTab() {
                 Cancel
               </Button>
               <Button
-                onClick={() => await handleAddBranch()}
+                onClick={() => handleAddBranch()}
                 className="bg-green-500 text-white hover:bg-green-600 hover:text-white"
               >
                 Add Branch
