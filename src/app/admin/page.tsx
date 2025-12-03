@@ -44,9 +44,9 @@ export default function OverviewTab() {
   const [dashboardTotals, setDashboardTotals] =
     useState<DashboardTotals | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(4);
@@ -54,7 +54,6 @@ export default function OverviewTab() {
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
 
-  console.log("currentPage:", currentPage);
   const loadEvaluations = async (searchValue: string) => {
     const response = await clientDataService.getSubmissions(
       searchValue,
@@ -66,6 +65,20 @@ export default function OverviewTab() {
     setTotalPages(response.last_page);
     setPerPage(response.per_page);
   };
+  useEffect(() => {
+    const mount = async () => {
+      setRefreshing(true);
+      try {
+        await loadEvaluations(searchTerm);
+      } catch (error) {
+        console.log(error);
+        setRefreshing(false);
+      } finally {
+        setRefreshing(false);
+      }
+    };
+    mount();
+  }, []);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -79,16 +92,9 @@ export default function OverviewTab() {
   // Fetch API whenever debounced search term changes
   useEffect(() => {
     const fetchData = async () => {
-      setRefreshing(true);
-      try {
-        await loadEvaluations(debouncedSearchTerm);
-        const getTotals = await clientDataService.adminDashboard();
-        setDashboardTotals(getTotals);
-      } catch (error) {
-        console.error("Error refreshing data:", error);
-      } finally {
-        setRefreshing(false);
-      }
+      await loadEvaluations(debouncedSearchTerm);
+      const getTotals = await clientDataService.adminDashboard();
+      setDashboardTotals(getTotals);
     };
 
     fetchData();
@@ -328,7 +334,7 @@ export default function OverviewTab() {
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
                   {refreshing ? (
-                    Array.from({ length: 8 }).map((_, index) => (
+                    Array.from({ length: itemsPerPage }).map((_, index) => (
                       <TableRow key={`skeleton-${index}`}>
                         <TableCell className="px-6 py-3">
                           <Skeleton className="h-4 w-24" />
@@ -359,27 +365,41 @@ export default function OverviewTab() {
                   ) : evaluations.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-12">
-                        <div className="text-gray-500">
-                          {searchTerm ? (
-                            <>
-                              <p className="text-sm font-medium">
-                                No results found
-                              </p>
-                              <p className="text-xs mt-1">
-                                Try adjusting your search or filters
-                              </p>
-                            </>
-                          ) : (
-                            <>
-                              <p className="text-sm">
-                                No evaluation records to display
-                              </p>
-                              <p className="text-xs mt-1">
-                                Records will appear here when evaluations are
-                                submitted
-                              </p>
-                            </>
-                          )}
+                        <div className="flex flex-col items-center justify-center gap-4">
+                          <img
+                            src="/not-found.gif"
+                            alt="No data"
+                            className="w-25 h-25 object-contain"
+                            style={{
+                              imageRendering: "auto",
+                              willChange: "auto",
+                              transform: "translateZ(0)",
+                              backfaceVisibility: "hidden",
+                              WebkitBackfaceVisibility: "hidden",
+                            }}
+                          />
+                          <div className="text-gray-500">
+                            {searchTerm ? (
+                              <>
+                                <p className="text-base font-medium mb-1">
+                                  No results found
+                                </p>
+                                <p className="text-sm text-gray-400">
+                                  Try adjusting your search or filters
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-base font-medium mb-1">
+                                  No evaluation records to display
+                                </p>
+                                <p className="text-sm text-gray-400">
+                                  Records will appear here when evaluations are
+                                  submitted
+                                </p>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>

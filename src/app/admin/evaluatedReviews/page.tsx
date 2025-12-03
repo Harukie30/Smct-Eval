@@ -1,5 +1,8 @@
 "use client";
 
+import { Skeleton } from "@/components/ui/skeleton";
+import clientDataService from "@/lib/apiService";
+import EvaluationsPagination from "@/components/paginationComponent";
 import { useState, useMemo, useEffect } from "react";
 import {
   Card,
@@ -18,9 +21,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import SearchableDropdown from "@/components/ui/searchable-dropdown";
 import {
   Select,
   SelectContent,
@@ -28,595 +38,153 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getQuarterFromDate, getQuarterColor } from "@/lib/quarterUtils";
-import accountsData from "@/data/accounts.json";
-import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
-import { apiService } from "@/lib/apiService";
 
-export default function EvaluatedReviewsTab() {
-  const [recentSubmissions, setRecentSubmissions] = useState<any[]>([]);
-  const [recordsSearchTerm, setRecordsSearchTerm] = useState("");
-  const [recordsApprovalFilter, setRecordsApprovalFilter] = useState("");
-  const [recordsQuarterFilter, setRecordsQuarterFilter] = useState("");
-  const [recordsYearFilter, setRecordsYearFilter] = useState<string>("all");
-  const [recordsRefreshing, setRecordsRefreshing] = useState(false);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [recordsSort, setRecordsSort] = useState<{
-    field: string;
-    direction: "asc" | "desc";
-  }>({ field: "date", direction: "desc" });
+import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import { setQuarter } from "date-fns";
+import { useDialogAnimation } from "@/hooks/useDialogAnimation";
+import { toastMessages } from "@/lib/toastMessages";
+interface Review {
+  id: number;
+  employee: any;
+  evaluator: any;
+  reviewTypeProbationary: number | string;
+  reviewTypeRegular: number | string;
+  created_at: string;
+  rating: number;
+  status: string;
+}
+
+export default function OverviewTab() {
+  const [evaluations, setEvaluations] = useState<Review[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  //filters
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [quarterFilter, setQuarterFilter] = useState("");
+  const [yearFilter, setYearFilter] = useState("");
+  //debounce filters
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  const [debouncedStatusFilter, setDebouncedStatusFilter] =
+    useState(statusFilter);
+  const [debouncedQuarterFilter, setDebouncedQuarterFilter] =
+    useState(quarterFilter);
+  const [debouncedYearFilter, setDebouncedYearFilter] = useState(yearFilter);
+
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
-  const [recordsPage, setRecordsPage] = useState(1);
-  const itemsPerPage = 8;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [overviewTotal, setOverviewTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [perPage, setPerPage] = useState(0);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
+  const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
-  // Get available years from submissions
-  const availableYears = useMemo(() => {
-    const years = new Set<number>();
-    recentSubmissions.forEach((submission) => {
-      if (submission.submittedAt) {
-        const year = new Date(submission.submittedAt).getFullYear();
-        years.add(year);
-      }
-    });
-    return Array.from(years).sort((a, b) => b - a); // Sort descending (newest first)
-  }, [recentSubmissions]);
-
-  // Load submissions data
-  const loadSubmissions = async (showRefreshIndicator: boolean = true) => {
-    try {
-      if (showRefreshIndicator) {
-        setRecordsRefreshing(true);
-      }
-      const submissions = await apiService.getSubmissions();
-      setRecentSubmissions(submissions);
-    } catch (error) {
-      console.error("Error loading submissions:", error);
-      setRecentSubmissions([]);
-    } finally {
-      if (showRefreshIndicator) {
-        setRecordsRefreshing(false);
-      }
-      // Mark initial load as complete
-      if (isInitialLoad) {
-        setIsInitialLoad(false);
-      }
-    }
+  const loadEvaluations = async (
+    searchValue: string,
+    status: string,
+    quarter: string,
+    year: string
+  ) => {
+    const response = await clientDataService.getSubmissions(
+      searchValue,
+      currentPage,
+      itemsPerPage,
+      status,
+      quarter,
+      year
+    );
+    setEvaluations(response.data);
+    setOverviewTotal(response.total);
+    setTotalPages(response.last_page);
+    setPerPage(response.per_page);
   };
-
-  // Load initial data
   useEffect(() => {
-    const loadInitialData = async () => {
+    const mount = async () => {
+      setRefreshing(true);
       try {
-        // Small delay for smooth transition
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        // Don't show refresh indicator on initial load (Suspense already handles it)
-        await loadSubmissions(false);
+        await loadEvaluations(
+          searchTerm,
+          statusFilter,
+          quarterFilter,
+          yearFilter
+        );
       } catch (error) {
-        console.error("Error loading data:", error);
-        setIsInitialLoad(false);
+        console.log(error);
+        setRefreshing(false);
+      } finally {
+        setRefreshing(false);
       }
     };
-
-    loadInitialData();
+    mount();
   }, []);
 
-  // Helper function to calculate score
-  const calculateScore = (scores: (string | number | undefined)[]): number => {
-    const validScores = scores
-      .filter(
-        (score): score is string | number => score !== undefined && score !== ""
-      )
-      .map((score) => (typeof score === "string" ? parseFloat(score) : score))
-      .filter((score) => !isNaN(score));
-
-    if (validScores.length === 0) return 0;
-    return (
-      validScores.reduce((sum, score) => sum + score, 0) / validScores.length
-    );
-  };
-
-  // Helper function to get rating label
-  const getRatingLabel = (score: number): string => {
-    if (score >= 4.5) return "Outstanding";
-    if (score >= 4.0) return "Exceeds Expectations";
-    if (score >= 3.5) return "Meets Expectations";
-    if (score >= 2.5) return "Needs Improvement";
-    return "Unsatisfactory";
-  };
-
-  // Helper function to get rating color
-  const getRatingColor = (rating: number) => {
-    if (rating >= 4.5) return "text-green-600 bg-green-100";
-    if (rating >= 4.0) return "text-blue-600 bg-blue-100";
-    if (rating >= 3.5) return "text-yellow-600 bg-yellow-100";
-    return "text-red-600 bg-red-100";
-  };
-
-  // Helper function to calculate overall rating from submission
-  const calculateOverallRating = (submission: any): number => {
-    if (submission.rating) {
-      return typeof submission.rating === "string"
-        ? parseFloat(submission.rating)
-        : submission.rating;
-    }
-
-    if (submission.evaluationData) {
-      const evalData = submission.evaluationData;
-
-      // Calculate weighted average from all scores
-      const jobKnowledgeScore = calculateScore([
-        evalData.jobKnowledgeScore1,
-        evalData.jobKnowledgeScore2,
-        evalData.jobKnowledgeScore3,
-      ]);
-      const qualityOfWorkScore = calculateScore([
-        evalData.qualityOfWorkScore1,
-        evalData.qualityOfWorkScore2,
-        evalData.qualityOfWorkScore3,
-        evalData.qualityOfWorkScore4,
-        evalData.qualityOfWorkScore5,
-      ]);
-      const adaptabilityScore = calculateScore([
-        evalData.adaptabilityScore1,
-        evalData.adaptabilityScore2,
-        evalData.adaptabilityScore3,
-      ]);
-      const teamworkScore = calculateScore([
-        evalData.teamworkScore1,
-        evalData.teamworkScore2,
-        evalData.teamworkScore3,
-      ]);
-      const reliabilityScore = calculateScore([
-        evalData.reliabilityScore1,
-        evalData.reliabilityScore2,
-        evalData.reliabilityScore3,
-        evalData.reliabilityScore4,
-      ]);
-      const ethicalScore = calculateScore([
-        evalData.ethicalScore1,
-        evalData.ethicalScore2,
-        evalData.ethicalScore3,
-        evalData.ethicalScore4,
-      ]);
-      const customerServiceScore = calculateScore([
-        evalData.customerServiceScore1,
-        evalData.customerServiceScore2,
-        evalData.customerServiceScore3,
-        evalData.customerServiceScore4,
-        evalData.customerServiceScore5,
-      ]);
-
-      // Calculate weighted overall score
-      return (
-        Math.round(
-          (jobKnowledgeScore * 0.2 +
-            qualityOfWorkScore * 0.2 +
-            adaptabilityScore * 0.1 +
-            teamworkScore * 0.1 +
-            reliabilityScore * 0.05 +
-            ethicalScore * 0.05 +
-            customerServiceScore * 0.3) *
-            10
-        ) / 10
-      ); // Round to 1 decimal place
-    }
-
-    return 0;
-  };
-
-  // Print evaluation record
-  const printFeedback = (feedback: any) => {
-    const originalSubmission = recentSubmissions.find(
-      (submission) => submission.id === feedback.id
-    );
-
-    if (!originalSubmission || !originalSubmission.evaluationData) {
-      alert("No evaluation data available for printing");
-      return;
-    }
-
-    const data = originalSubmission.evaluationData;
-
-    // Calculate scores
-    const jobKnowledgeScore = calculateScore([
-      data.jobKnowledgeScore1,
-      data.jobKnowledgeScore2,
-      data.jobKnowledgeScore3,
-    ]);
-    const qualityOfWorkScore = calculateScore([
-      data.qualityOfWorkScore1,
-      data.qualityOfWorkScore2,
-      data.qualityOfWorkScore3,
-      data.qualityOfWorkScore4,
-      data.qualityOfWorkScore5,
-    ]);
-    const adaptabilityScore = calculateScore([
-      data.adaptabilityScore1,
-      data.adaptabilityScore2,
-      data.adaptabilityScore3,
-    ]);
-    const teamworkScore = calculateScore([
-      data.teamworkScore1,
-      data.teamworkScore2,
-      data.teamworkScore3,
-    ]);
-    const reliabilityScore = calculateScore([
-      data.reliabilityScore1,
-      data.reliabilityScore2,
-      data.reliabilityScore3,
-      data.reliabilityScore4,
-    ]);
-    const ethicalScore = calculateScore([
-      data.ethicalScore1,
-      data.ethicalScore2,
-      data.ethicalScore3,
-      data.ethicalScore4,
-    ]);
-    const customerServiceScore = calculateScore([
-      data.customerServiceScore1,
-      data.customerServiceScore2,
-      data.customerServiceScore3,
-      data.customerServiceScore4,
-      data.customerServiceScore5,
-    ]);
-
-    // Calculate weighted scores
-    const jobKnowledgeWeighted = (jobKnowledgeScore * 0.2).toFixed(2);
-    const qualityOfWorkWeighted = (qualityOfWorkScore * 0.2).toFixed(2);
-    const adaptabilityWeighted = (adaptabilityScore * 0.1).toFixed(2);
-    const teamworkWeighted = (teamworkScore * 0.1).toFixed(2);
-    const reliabilityWeighted = (reliabilityScore * 0.05).toFixed(2);
-    const ethicalWeighted = (ethicalScore * 0.05).toFixed(2);
-    const customerServiceWeighted = (customerServiceScore * 0.3).toFixed(2);
-
-    // Calculate overall weighted score
-    const overallWeightedScore = (
-      parseFloat(jobKnowledgeWeighted) +
-      parseFloat(qualityOfWorkWeighted) +
-      parseFloat(adaptabilityWeighted) +
-      parseFloat(teamworkWeighted) +
-      parseFloat(reliabilityWeighted) +
-      parseFloat(ethicalWeighted) +
-      parseFloat(customerServiceWeighted)
-    ).toFixed(2);
-
-    const overallPercentage = (
-      (parseFloat(overallWeightedScore) / 5) *
-      100
-    ).toFixed(2);
-    const isPass = parseFloat(overallWeightedScore) >= 3.0;
-
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      alert("Please allow popups to print the evaluation");
-      return;
-    }
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Evaluation Report - ${data.employeeName}</title>
-        <style>
-          @media print {
-            body { margin: 0; padding: 10px; font-family: Arial, sans-serif; font-size: 10px; }
-            .print-header { text-align: center; margin-bottom: 15px; border-bottom: 1px solid #000; padding-bottom: 10px; }
-            .print-title { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
-            .print-subtitle { font-size: 12px; color: #666; }
-            .print-section { margin-bottom: 12px; page-break-inside: avoid; }
-            .print-section-title { font-size: 14px; font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
-            .print-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 8px; }
-            .print-field { margin-bottom: 5px; }
-            .print-label { font-weight: bold; color: #666; font-size: 9px; }
-            .print-value { font-size: 10px; margin-top: 1px; }
-            .print-results { text-align: center; margin: 8px 0; }
-            .print-percentage { font-size: 20px; font-weight: bold; }
-            .print-status { display: inline-block; padding: 5px 10px; border-radius: 3px; color: white; font-weight: bold; font-size: 12px; }
-            .print-status.pass { background-color: #16a34a; }
-            .print-status.fail { background-color: #dc2626; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="print-header">
-          <div class="print-title">PERFORMANCE EVALUATION REPORT</div>
-          <div class="print-subtitle">Employee Performance Evaluation</div>
-        </div>
-
-        <div class="print-section">
-          <div class="print-section-title">EMPLOYEE INFORMATION</div>
-          <div class="print-grid">
-            <div class="print-field">
-              <div class="print-label">Employee:</div>
-              <div class="print-value">${data.employeeName || "N/A"}</div>
-            </div>
-            <div class="print-field">
-              <div class="print-label">Position:</div>
-              <div class="print-value">${data.position || "N/A"}</div>
-            </div>
-            <div class="print-field">
-              <div class="print-label">Department:</div>
-              <div class="print-value">${data.department || "N/A"}</div>
-            </div>
-            <div class="print-field">
-              <div class="print-label">Evaluator:</div>
-              <div class="print-value">${
-                data.supervisor || originalSubmission.evaluator || "N/A"
-              }</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="print-section">
-          <div class="print-section-title">PERFORMANCE SCORES</div>
-          <div class="print-grid">
-            <div class="print-field">
-              <div class="print-label">Job Knowledge:</div>
-              <div class="print-value">${jobKnowledgeScore.toFixed(
-                2
-              )} (Weighted: ${jobKnowledgeWeighted})</div>
-            </div>
-            <div class="print-field">
-              <div class="print-label">Quality of Work:</div>
-              <div class="print-value">${qualityOfWorkScore.toFixed(
-                2
-              )} (Weighted: ${qualityOfWorkWeighted})</div>
-            </div>
-            <div class="print-field">
-              <div class="print-label">Adaptability:</div>
-              <div class="print-value">${adaptabilityScore.toFixed(
-                2
-              )} (Weighted: ${adaptabilityWeighted})</div>
-            </div>
-            <div class="print-field">
-              <div class="print-label">Teamwork:</div>
-              <div class="print-value">${teamworkScore.toFixed(
-                2
-              )} (Weighted: ${teamworkWeighted})</div>
-            </div>
-            <div class="print-field">
-              <div class="print-label">Reliability:</div>
-              <div class="print-value">${reliabilityScore.toFixed(
-                2
-              )} (Weighted: ${reliabilityWeighted})</div>
-            </div>
-            <div class="print-field">
-              <div class="print-label">Ethical Conduct:</div>
-              <div class="print-value">${ethicalScore.toFixed(
-                2
-              )} (Weighted: ${ethicalWeighted})</div>
-            </div>
-            <div class="print-field">
-              <div class="print-label">Customer Service:</div>
-              <div class="print-value">${customerServiceScore.toFixed(
-                2
-              )} (Weighted: ${customerServiceWeighted})</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="print-results">
-          <div class="print-percentage">${overallPercentage}%</div>
-          <div class="print-status ${isPass ? "pass" : "fail"}">
-            ${isPass ? "PASS" : "FAIL"}
-          </div>
-          <div style="margin-top: 10px;">
-            <strong>Overall Score: ${overallWeightedScore} / 5.00</strong>
-          </div>
-          <div style="margin-top: 5px; font-size: 11px;">
-            ${getRatingLabel(parseFloat(overallWeightedScore))}
-          </div>
-        </div>
-      </body>
-      </html>
-    `);
-
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
-  };
-
-  // Sort handler
-  const sortRecords = (field: string) => {
-    setRecordsSort((prev) => ({
-      field,
-      direction:
-        prev.field === field && prev.direction === "asc" ? "desc" : "asc",
-    }));
-  };
-
-  // Get sort icon
-  const getSortIcon = (field: string) => {
-    if (recordsSort.field !== field) return " ↕️";
-    return recordsSort.direction === "asc" ? " ↑" : " ↓";
-  };
-
-  // Refresh handler
-  const handleRecordsRefresh = async () => {
-    // Show refresh indicator when manually refreshing
-    await loadSubmissions(true);
-  };
-
-  // Filter and sort submissions
-  const filteredAndSortedSubmissions = useMemo(() => {
-    const filtered = recentSubmissions.filter((sub) => {
-      if (recordsSearchTerm) {
-        const searchLower = recordsSearchTerm.toLowerCase();
-        const matches =
-          sub.employeeName?.toLowerCase().includes(searchLower) ||
-          sub.evaluationData?.department?.toLowerCase().includes(searchLower) ||
-          sub.evaluationData?.position?.toLowerCase().includes(searchLower) ||
-          sub.evaluationData?.branch?.toLowerCase().includes(searchLower) ||
-          (sub.evaluationData?.supervisor || sub.evaluator || "")
-            .toLowerCase()
-            .includes(searchLower);
-        if (!matches) return false;
-      }
-      if (recordsApprovalFilter) {
-        const hasEmpSig = !!(
-          sub.employeeSignature && sub.employeeSignature.trim()
-        );
-        const hasEvalSig = !!(
-          (sub.evaluatorSignature && sub.evaluatorSignature.trim()) ||
-          (sub.evaluationData?.evaluatorSignature &&
-            sub.evaluationData?.evaluatorSignature.trim())
-        );
-        let status = "pending";
-        if (hasEmpSig && hasEvalSig) {
-          status = "fully_approved";
-        } else if (hasEmpSig) {
-          status = "employee_approved";
-        } else if (sub.approvalStatus && sub.approvalStatus !== "pending") {
-          status = sub.approvalStatus;
-        }
-        if (status !== recordsApprovalFilter) return false;
-      }
-      if (recordsQuarterFilter) {
-        const itemQuarter = getQuarterFromDate(sub.submittedAt);
-        // Match quarter regardless of year (e.g., "Q1" matches "Q1 2024", "Q1 2025", etc.)
-        if (!itemQuarter.startsWith(recordsQuarterFilter)) return false;
-      }
-      if (recordsYearFilter && recordsYearFilter !== "all") {
-        const year = parseInt(recordsYearFilter);
-        const itemYear = new Date(sub.submittedAt).getFullYear();
-        if (itemYear !== year) return false;
-      }
-      return true;
-    });
-
-    // Sort filtered results
-    const sorted = [...filtered].sort((a, b) => {
-      const { field, direction } = recordsSort;
-      let aVal, bVal;
-
-      switch (field) {
-        case "employeeName":
-          aVal = a.employeeName?.toLowerCase() || "";
-          bVal = b.employeeName?.toLowerCase() || "";
-          break;
-        case "date":
-          aVal = new Date(a.submittedAt).getTime();
-          bVal = new Date(b.submittedAt).getTime();
-          break;
-        case "rating":
-          aVal = calculateOverallRating(a);
-          bVal = calculateOverallRating(b);
-          break;
-        default:
-          return 0;
-      }
-
-      if (aVal < bVal) return direction === "asc" ? -1 : 1;
-      if (aVal > bVal) return direction === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return sorted;
-  }, [
-    recentSubmissions,
-    recordsSearchTerm,
-    recordsApprovalFilter,
-    recordsQuarterFilter,
-    recordsYearFilter,
-    recordsSort,
-  ]);
-
-  // Pagination calculations
-  const recordsTotal = filteredAndSortedSubmissions.length;
-  const recordsTotalPages = Math.ceil(recordsTotal / itemsPerPage);
-  const recordsStartIndex = (recordsPage - 1) * itemsPerPage;
-  const recordsEndIndex = recordsStartIndex + itemsPerPage;
-  const recordsPaginated = filteredAndSortedSubmissions.slice(
-    recordsStartIndex,
-    recordsEndIndex
-  );
-
-  // Reset to page 1 when filters/search change
   useEffect(() => {
-    setRecordsPage(1);
-  }, [
-    recordsSearchTerm,
-    recordsApprovalFilter,
-    recordsQuarterFilter,
-    recordsYearFilter,
-  ]);
+    const handler = setTimeout(() => {
+      searchTerm === "" ? currentPage : setCurrentPage(1);
+      setDebouncedSearchTerm(searchTerm);
+      setDebouncedStatusFilter(statusFilter);
+      setDebouncedQuarterFilter(quarterFilter);
+      setDebouncedYearFilter(yearFilter);
+    }, 500);
 
-  // Add visible scrollbar styling
+    return () => clearTimeout(handler);
+  }, [searchTerm, statusFilter, quarterFilter, yearFilter]);
+
+  // Fetch API whenever debounced search term changes
   useEffect(() => {
-    const style = document.createElement("style");
-    style.textContent = `
-      .evaluation-records-table::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      .evaluation-records-table::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 4px;
-      }
-      .evaluation-records-table::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 4px;
-      }
-      .evaluation-records-table::-webkit-scrollbar-thumb:hover {
-        background: #555;
-      }
-      .evaluation-records-table {
-        scrollbar-width: thin;
-        scrollbar-color: #888 #f1f1f1;
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      document.head.removeChild(style);
+    const fetchData = async () => {
+      await loadEvaluations(
+        debouncedSearchTerm,
+        debouncedStatusFilter,
+        debouncedQuarterFilter,
+        debouncedYearFilter
+      );
     };
-  }, []);
 
-  const handleViewEvaluation = async (submission: any) => {
+    fetchData();
+  }, [
+    debouncedSearchTerm,
+    currentPage,
+    debouncedStatusFilter,
+    debouncedQuarterFilter,
+    debouncedYearFilter,
+  ]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
     try {
-      // Fetch the full submission data
-      const fullSubmission = await apiService.getSubmissionById(submission.id);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await loadEvaluations(
+        debouncedSearchTerm,
+        debouncedStatusFilter,
+        debouncedQuarterFilter,
+        debouncedYearFilter
+      );
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
-      if (fullSubmission) {
-        const ratingValue = calculateOverallRating(fullSubmission);
+  const getQuarterColor = (quarter: string): string => {
+    if (quarter.includes("Q1")) return "bg-blue-100 text-blue-800";
+    if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
+    if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
+    return "bg-purple-100 text-purple-800";
+  };
 
-        // Transform the submission to match ViewResultsModal's expected format
-        const submissionForModal = {
-          id: fullSubmission.id,
-          employeeName: fullSubmission.employeeName || submission.employeeName,
-          category: "Performance Review",
-          rating: ratingValue,
-          submittedAt: fullSubmission.submittedAt || submission.submittedAt,
-          status: fullSubmission.status || "completed",
-          evaluator: fullSubmission.evaluator || submission.evaluator,
-          evaluationData:
-            fullSubmission.evaluationData || submission.evaluationData,
-          employeeId: fullSubmission.employeeId,
-          employeeEmail:
-            fullSubmission.employeeEmail ||
-            submission.evaluationData?.employeeEmail,
-          evaluatorId: fullSubmission.evaluatorId,
-          evaluatorName: fullSubmission.evaluator || submission.evaluator,
-          period: fullSubmission.period,
-          overallRating: ratingValue.toString(),
-          approvalStatus:
-            fullSubmission.approvalStatus || submission.approvalStatus,
-          employeeSignature:
-            fullSubmission.employeeSignature || submission.employeeSignature,
-          employeeApprovedAt:
-            fullSubmission.employeeApprovedAt || submission.employeeApprovedAt,
-          evaluatorSignature:
-            fullSubmission.evaluatorSignature || submission.evaluatorSignature,
-          evaluatorApprovedAt:
-            fullSubmission.evaluatorApprovedAt ||
-            submission.evaluatorApprovedAt,
-        };
+  const handleViewEvaluation = async (review: Review) => {
+    try {
+      const submission = await clientDataService.getSubmissionById(review.id);
 
-        setSelectedSubmission(submissionForModal);
+      if (submission) {
+        setSelectedSubmission(submission);
         setIsViewResultsModalOpen(true);
+      } else {
+        console.error("Submission not found for review ID:", review.id);
       }
     } catch (error) {
       console.error("Error fetching submission details:", error);
@@ -624,432 +192,359 @@ export default function EvaluatedReviewsTab() {
   };
 
   const handleDeleteClick = async (submission: any) => {
-    if (
-      confirm(
-        `Are you sure you want to delete the evaluation for ${submission.employeeName}?`
-      )
-    ) {
-      try {
-        await apiService.deleteSubmission(submission.id);
-        // Don't show refresh indicator when deleting (quick operation)
-        await loadSubmissions(false);
-      } catch (error) {
-        console.error("Error deleting submission:", error);
-      }
+    try {
+      await clientDataService.deleteSubmission(submission.id);
+      await handleRefresh();
+      toastMessages.evaluation.deleted(
+        submission.employee?.fname + " " + submission.employee?.lname
+      );
+    } catch (error) {
+      console.error("Error deleting submission:", error);
+    } finally {
+      setReviewToDelete(null);
+      setIsDeleteModalOpen(false);
     }
   };
 
+  const openDeleteModal = (review: Review) => {
+    setReviewToDelete(review);
+    setIsDeleteModalOpen(true);
+  };
+  const groupedByYear = evaluations.reduce((acc: any, item) => {
+    const year = new Date(item.created_at).getFullYear();
+    acc[year] = acc[year] || [];
+    acc[year].push(item);
+    return acc;
+  }, {});
+
   return (
-    <div className="space-y-6">
-      {/* Search and Filter Controls */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            All Evaluation Records
-            {(() => {
-              const now = new Date();
-              const newCount = recentSubmissions.filter((sub) => {
-                const hoursDiff =
-                  (now.getTime() - new Date(sub.submittedAt).getTime()) /
-                  (1000 * 60 * 60);
-                return hoursDiff <= 24;
-              }).length;
-              return newCount > 0 ? (
-                <Badge className="bg-yellow-500 text-white animate-pulse">
-                  {newCount} NEW
-                </Badge>
-              ) : null;
-            })()}
-            <Badge variant="outline" className="text-xs font-normal">
-              {recentSubmissions.length} Total Records
-            </Badge>
-          </CardTitle>
-          <CardDescription>
-            Complete evaluation history with advanced filtering
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            {/* Search */}
-            <div className="flex-1">
-              <Label htmlFor="records-search" className="text-sm font-medium">
-                Search
-              </Label>
-              <div className="mt-1 relative">
-                <div className="relative w-full">
-                  <Input
-                    id="records-search"
-                    placeholder="Search by employee name, evaluator, department, position, branch..."
-                    className="pr-10"
-                    value={recordsSearchTerm}
-                    onChange={(e) => setRecordsSearchTerm(e.target.value)}
-                  />
-                  {(recordsSearchTerm ||
-                    recordsApprovalFilter ||
-                    recordsQuarterFilter ||
-                    recordsYearFilter !== "all") && (
-                    <button
-                      onClick={() => {
-                        setRecordsSearchTerm("");
-                        setRecordsApprovalFilter("");
-                        setRecordsQuarterFilter("");
-                        setRecordsYearFilter("all");
-                      }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-red-600 hover:text-red-700"
-                      title="Clear all filters"
-                    >
-                      <svg
-                        className="h-4 w-4"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
+    <>
+      <div className="flex w-full gap-4 mb-5">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 w-100">
+              All Evaluation Records
+              <Badge variant="outline" className="text-xs font-normal">
+                {overviewTotal} Total Records
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              Complete evaluation history with advanced filtering
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              {/* Search */}
+              <div className="flex-1">
+                <Label htmlFor="records-search" className="text-sm font-medium">
+                  Search
+                </Label>
+                <div className=" relative ">
+                  <div className="relative ">
+                    <Input
+                      placeholder="Search by employee, evaluator"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pr-10"
+                    />
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
+                        aria-label="Clear search"
                       >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </button>
-                  )}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Approval Status Filter */}
+              <div className="w-full md:w-48">
+                <Label
+                  htmlFor="records-approval-status"
+                  className="text-sm font-medium"
+                >
+                  Approval Status
+                </Label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => setStatusFilter(value)}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">All Status</SelectItem>
+                    <SelectItem value="pending">
+                      Pending Verification
+                    </SelectItem>
+                    <SelectItem value="completed">
+                      All parties approved
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Quarter Filter */}
+              <div className="w-full md:w-48">
+                <Label
+                  htmlFor="records-quarter"
+                  className="text-sm font-medium"
+                >
+                  Quarter
+                </Label>
+                <Select
+                  value={quarterFilter}
+                  onValueChange={(value) => setQuarterFilter(value)}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by quarter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">All Quarter</SelectItem>
+                    <SelectItem value="Q1">Q1</SelectItem>
+                    <SelectItem value="Q2">Q2</SelectItem>
+                    <SelectItem value="Q3">Q3</SelectItem>
+                    <SelectItem value="Q4">Q4</SelectItem>
+                    <SelectItem value="3">M3</SelectItem>
+                    <SelectItem value="5">M5</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Year Filter */}
+              <div className="w-full md:w-48">
+                <Label htmlFor="records-year" className="text-sm font-medium">
+                  Year
+                </Label>
+                <Select
+                  value={yearFilter}
+                  onValueChange={(value) => setYearFilter(value)}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select a year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Years</SelectItem>
+                    {Object.keys(groupedByYear).map((year) => (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Refresh Button */}
+              <div className="w-full md:w-auto flex gap-2">
+                <div className="w-full md:w-32">
+                  <Label className="text-sm font-medium opacity-0">
+                    Refresh
+                  </Label>
+                  {/* Refresh Button */}
+                  <Button
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className="mt-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    title="Refresh evaluation records"
+                  >
+                    {refreshing ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Refreshing...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <span>🔄</span>
+                        <span>Refresh</span>
+                      </div>
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>
-
-            {/* Approval Status Filter */}
-            <div className="w-full md:w-48">
-              <Label
-                htmlFor="records-approval-status"
-                className="text-sm font-medium"
-              >
-                Approval Status
-              </Label>
-              <SearchableDropdown
-                options={["All Statuses", "⏳ Pending", "✓ Fully Approved"]}
-                value={
-                  recordsApprovalFilter === ""
-                    ? "All Statuses"
-                    : recordsApprovalFilter === "pending"
-                    ? "⏳ Pending"
-                    : "✓ Fully Approved"
-                }
-                onValueChangeAction={(value: string) => {
-                  if (value === "All Statuses") {
-                    setRecordsApprovalFilter("");
-                  } else if (value === "⏳ Pending") {
-                    setRecordsApprovalFilter("pending");
-                  } else {
-                    setRecordsApprovalFilter("fully_approved");
-                  }
-                }}
-                placeholder="All Statuses"
-                className="mt-1"
-              />
+          </CardContent>
+        </Card>
+      </div>
+      <div className="space-y-6">
+        {/* Main Container Div (replacing Card) */}
+        <div className="bg-white border rounded-lg p-6">
+          {/* Table Header Section */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              {(() => {
+                const now = new Date();
+                const newCount = evaluations.filter((review) => {
+                  const hoursDiff =
+                    (now.getTime() - new Date(review.created_at).getTime()) /
+                    (1000 * 60 * 60);
+                  return hoursDiff <= 24;
+                }).length;
+                return newCount > 0 ? (
+                  <Badge className="bg-yellow-500 text-white animate-pulse">
+                    {newCount} NEW
+                  </Badge>
+                ) : null;
+              })()}
             </div>
-
-            {/* Quarter Filter */}
-            <div className="w-full md:w-48">
-              <Label htmlFor="records-quarter" className="text-sm font-medium">
-                Quarter
-              </Label>
-              <SearchableDropdown
-                options={["All Quarters", "Q1", "Q2", "Q3", "Q4"]}
-                value={recordsQuarterFilter || "All Quarters"}
-                onValueChangeAction={(value: string) => {
-                  const quarter = value === "All Quarters" ? "" : value;
-                  setRecordsQuarterFilter(quarter);
-                  if (quarter) {
-                    setRecordsYearFilter("all");
-                  }
-                }}
-                placeholder="All Quarters"
-                className="mt-1"
-              />
-            </div>
-
-            {/* Year Filter */}
-            <div className="w-full md:w-48">
-              <Label htmlFor="records-year" className="text-sm font-medium">
-                Year
-              </Label>
-              <Select
-                value={recordsYearFilter}
-                onValueChange={setRecordsYearFilter}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select a year" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
-                  {availableYears.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Refresh Button */}
-            <div className="w-full md:w-auto flex gap-2">
-              <div className="w-full md:w-32">
-                <Label className="text-sm font-medium opacity-0">Refresh</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRecordsRefresh}
-                  disabled={recordsRefreshing}
-                  className="mt-1 w-full text-xs bg-blue-500 hover:bg-green-600 text-white hover:text-white disabled:cursor-not-allowed"
-                  title="Refresh evaluation records data"
-                >
-                  {recordsRefreshing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
-                      Refreshing...
-                    </>
-                  ) : (
-                    <>
-                      Refresh
-                      <svg
-                        className="h-3 w-3 ml-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
+            {/* Search Bar and Refresh Button */}
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Evaluation Records Table */}
-      <Card>
-        <CardContent className="p-0">
-          {/* Color Legend */}
-          <div className="m-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+          {/* Indicator Legend */}
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
             <div className="flex flex-wrap gap-4 text-xs">
-              <span className="font-medium text-gray-700">
-                Status Indicators:
+              <span className="text-sm font-medium text-gray-700 mr-2">
+                Indicators:
               </span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
-                <Badge className="bg-yellow-500 text-white text-xs px-2 py-0.5">
-                  NEW
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
+                <Badge className="bg-yellow-200 text-yellow-800 text-xs">
+                  New
                 </Badge>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
-                <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+                <Badge className="bg-blue-300 text-blue-800 text-xs">
                   Recent
                 </Badge>
               </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
-                <Badge className="bg-green-500 text-white text-xs px-2 py-0.5">
-                  Fully Approved
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-red-50 border-l-2 border-l-red-500 rounded"></div>
+                <Badge className="bg-orange-300 text-orange-800 text-xs">
+                  Pending
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+                <Badge className="bg-green-500 text-white text-xs">
+                  Completed
                 </Badge>
               </div>
             </div>
           </div>
 
-          {recordsRefreshing ? (
-            <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto evaluation-records-table">
-              {/* Centered Loading Spinner with Logo */}
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    {/* Spinning ring */}
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    {/* Logo in center */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img
-                        src="/smct.png"
-                        alt="SMCT Logo"
-                        className="h-10 w-10 object-contain"
-                      />
+          {/* Table Section */}
+          <div className="border rounded-lg overflow-hidden">
+            <div
+              className="relative max-h-[600px] overflow-y-auto overflow-x-auto"
+              style={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "#cbd5e1 #f1f5f9",
+              }}
+            >
+              {refreshing && (
+                <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
+                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                    <div className="relative">
+                      {/* Spinning ring */}
+                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                      {/* Logo in center */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <img
+                          src="/smct.png"
+                          alt="SMCT Logo"
+                          className="h-10 w-10 object-contain"
+                        />
+                      </div>
                     </div>
+                    <p className="text-sm text-gray-600 font-medium">
+                      Refreshing...
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-600 font-medium">
-                    Refreshing evaluation records...
-                  </p>
                 </div>
-              </div>
-
-              {/* Table structure visible in background */}
-              <Table>
-                <TableHeader className="sticky top-0 bg-white z-10">
-                  <TableRow>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => sortRecords("employeeName")}
-                    >
-                      Employee{getSortIcon("employeeName")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => sortRecords("evaluator")}
-                    >
-                      Evaluator/HR{getSortIcon("evaluator")}
-                    </TableHead>
-                    <TableHead>Branch</TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => sortRecords("quarter")}
-                    >
-                      Quarter{getSortIcon("quarter")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => sortRecords("date")}
-                    >
-                      Date{getSortIcon("date")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => sortRecords("rating")}
-                    >
-                      Rating{getSortIcon("rating")}
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-gray-50"
-                      onClick={() => sortRecords("status")}
-                    >
-                      Status{getSortIcon("status")}
-                    </TableHead>
-                    <TableHead>Employee Sign</TableHead>
-                    <TableHead>Evaluator Sign</TableHead>
-                    <TableHead>HR Sign</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {/* Skeleton loading rows */}
-                  {Array.from({ length: 8 }).map((_, index) => (
-                    <TableRow key={`skeleton-${index}`}>
-                      <TableCell className="px-6 py-3">
-                        <div className="space-y-1">
-                          <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
-                          <div className="h-2.5 w-20 bg-gray-200 rounded animate-pulse"></div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-12 bg-gray-200 rounded-full animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-18 rounded-full bg-gray-200 animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="flex gap-2">
-                          <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
-                          <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
-                          <div className="h-6 w-14 bg-gray-200 rounded animate-pulse"></div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto evaluation-records-table">
+              )}
               <Table className="min-w-full">
                 <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                   <TableRow>
-                    <TableHead
-                      className="px-6 py-3 cursor-pointer hover:bg-gray-50"
-                      onClick={() => sortRecords("employeeName")}
-                    >
-                      Employee{getSortIcon("employeeName")}
-                    </TableHead>
-                    <TableHead className="px-6 py-3">Evaluator/HR</TableHead>
+                    <TableHead className="px-6 py-3">Employee</TableHead>
+                    <TableHead className="px-6 py-3">Evaluator</TableHead>
                     <TableHead className="px-6 py-3">Branch</TableHead>
                     <TableHead className="px-6 py-3">Quarter</TableHead>
-                    <TableHead
-                      className="px-6 py-3 cursor-pointer hover:bg-gray-50"
-                      onClick={() => sortRecords("date")}
-                    >
-                      Date{getSortIcon("date")}
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-3 cursor-pointer hover:bg-gray-50"
-                      onClick={() => sortRecords("rating")}
-                    >
-                      Rating{getSortIcon("rating")}
-                    </TableHead>
+                    <TableHead className="px-6 py-3">Date</TableHead>
+                    <TableHead className="px-6 py-3">Rating</TableHead>
                     <TableHead className="px-6 py-3">Status</TableHead>
                     <TableHead className="px-6 py-3">Employee Sign</TableHead>
                     <TableHead className="px-6 py-3">Evaluator Sign</TableHead>
-                    <TableHead className="px-6 py-3">HR signature</TableHead>
                     <TableHead className="px-6 py-3">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
-                  {recordsPaginated.length === 0 ? (
+                  {refreshing ? (
+                    Array.from({ length: itemsPerPage }).map((_, index) => (
+                      <TableRow key={`skeleton-${index}`}>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-4 w-24" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-6 w-16 rounded-full" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-4 w-20" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-4 w-20" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-6 w-16 rounded-full" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-4 w-20" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-6 w-20 rounded-full" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-8 w-16" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : evaluations.length === 0 ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={11}
-                        className="text-center py-12"
-                      >
+                      <TableCell colSpan={10} className="text-center py-12">
                         <div className="flex flex-col items-center justify-center gap-4">
                           <img
                             src="/not-found.gif"
                             alt="No data"
                             className="w-25 h-25 object-contain"
                             style={{
-                              imageRendering: 'auto',
-                              willChange: 'auto',
-                              transform: 'translateZ(0)',
-                              backfaceVisibility: 'hidden',
-                              WebkitBackfaceVisibility: 'hidden',
+                              imageRendering: "auto",
+                              willChange: "auto",
+                              transform: "translateZ(0)",
+                              backfaceVisibility: "hidden",
+                              WebkitBackfaceVisibility: "hidden",
                             }}
                           />
                           <div className="text-gray-500">
-                            {recordsSearchTerm ? (
+                            {searchTerm ? (
                               <>
                                 <p className="text-base font-medium mb-1">
-                                  No evaluation records found matching "{recordsSearchTerm}"
+                                  No results found
                                 </p>
                                 <p className="text-sm text-gray-400">
-                                  Try adjusting your search term
+                                  Try adjusting your search or filters
                                 </p>
                               </>
                             ) : (
                               <>
                                 <p className="text-base font-medium mb-1">
-                                  No evaluation records found
+                                  No evaluation records to display
                                 </p>
                                 <p className="text-sm text-gray-400">
-                                  Evaluation records will appear here once submitted
+                                  Records will appear here when evaluations are
+                                  submitted
                                 </p>
                               </>
                             )}
@@ -1058,151 +553,107 @@ export default function EvaluatedReviewsTab() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    recordsPaginated.map((submission) => {
-                      const quarter = getQuarterFromDate(
-                        submission.submittedAt
-                      );
-
-                      // Check if both parties have signed (handle empty strings too)
-                      const hasEmployeeSignature = !!(
-                        submission.employeeSignature &&
-                        submission.employeeSignature.trim()
-                      );
-                      const hasEvaluatorSignature = !!(
-                        (submission.evaluatorSignature &&
-                          submission.evaluatorSignature.trim()) ||
-                        (submission.evaluationData?.evaluatorSignature &&
-                          submission.evaluationData?.evaluatorSignature.trim())
-                      );
-
-                      // Determine approval status - SIGNATURES HAVE PRIORITY over stored status
-                      let approvalStatus = "pending";
-                      if (hasEmployeeSignature && hasEvaluatorSignature) {
-                        approvalStatus = "fully_approved";
-                      } else if (hasEmployeeSignature) {
-                        approvalStatus = "employee_approved";
-                      } else if (
-                        submission.approvalStatus &&
-                        submission.approvalStatus !== "pending"
-                      ) {
-                        approvalStatus = submission.approvalStatus;
-                      }
-
-                      // Row highlighting logic - Approval status takes priority
+                    evaluations.map((review) => {
+                      const submittedDate = new Date(review.created_at);
+                      const now = new Date();
                       const hoursDiff =
-                        (new Date().getTime() -
-                          new Date(submission.submittedAt).getTime()) /
+                        (now.getTime() - submittedDate.getTime()) /
                         (1000 * 60 * 60);
-                      let rowClassName = "hover:bg-gray-50";
+                      const isNew = hoursDiff <= 24;
+                      const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
+                      const isCompleted = review.status === "completed";
+                      const isPending = review.status === "pending";
 
-                      // Priority 1: Fully approved evaluations are always green
-                      if (approvalStatus === "fully_approved") {
+                      // Determine row background color
+                      let rowClassName = "hover:bg-gray-100 transition-colors";
+                      if (isCompleted) {
                         rowClassName =
-                          "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100";
-                      }
-                      // Priority 2: New evaluations (less than 24 hours, not yet approved)
-                      else if (hoursDiff <= 24) {
+                          "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
+                      } else if (isNew) {
                         rowClassName =
-                          "bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200";
-                      }
-                      // Priority 3: Recent evaluations (24-48 hours, not yet approved)
-                      else if (hoursDiff <= 48) {
+                          "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
+                      } else if (isRecent) {
                         rowClassName =
-                          "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100";
+                          "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
+                      } else if (isPending) {
+                        rowClassName =
+                          "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
                       }
-
-                      // Determine if evaluator is HR or Evaluator
-                      const evaluatorAccount = (
-                        accountsData as any
-                      ).accounts.find(
-                        (acc: any) =>
-                          acc.id === submission.evaluatorId ||
-                          acc.employeeId === submission.evaluatorId
-                      );
-                      const isHR = evaluatorAccount?.role === "hr";
-                      const hasSigned =
-                        submission.evaluatorSignature ||
-                        submission.evaluationData?.evaluatorSignature;
 
                       return (
-                        <TableRow key={submission.id} className={rowClassName}>
+                        <TableRow key={review.id} className={rowClassName}>
                           <TableCell className="px-6 py-3">
                             <div>
-                              <div className="font-medium text-gray-900">
-                                {submission.employeeName}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {submission.evaluationData?.position || "N/A"}
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-gray-900">
+                                  {review.employee?.fname +
+                                    " " +
+                                    review.employee?.lname}
+                                </span>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm">
-                            {submission.evaluationData?.supervisor ||
-                              submission.evaluator ||
-                              "N/A"}
+                          <TableCell className="px-6 py-3">
+                            <div className="font-medium text-gray-900">
+                              {review.evaluator?.fname +
+                                " " +
+                                review.evaluator?.lname}
+                            </div>
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm">
-                            {submission.evaluationData?.branch || "N/A"}
+                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                            {review.employee?.branches[0]?.branch_name}
                           </TableCell>
                           <TableCell className="px-6 py-3">
-                            <Badge className={getQuarterColor(quarter)}>
-                              {quarter}
+                            <Badge
+                              className={getQuarterColor(
+                                String(
+                                  review.reviewTypeRegular ||
+                                    review.reviewTypeProbationary
+                                )
+                              )}
+                            >
+                              {review.reviewTypeRegular ||
+                                "M" + review.reviewTypeProbationary}
                             </Badge>
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
-                            {new Date(
-                              submission.submittedAt
-                            ).toLocaleDateString()}
+                            {new Date(review.created_at).toLocaleString(
+                              undefined,
+                              {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
                           </TableCell>
-                          <TableCell className="px-6 py-3">
-                            {(() => {
-                              const rating = calculateOverallRating(submission);
-                              return (
-                                <div className="flex items-center gap-2">
-                                  <Badge
-                                    className={`text-xs ${getRatingColor(
-                                      rating
-                                    )}`}
-                                  >
-                                    {rating.toFixed(1)}/5
-                                  </Badge>
-                                  <span className="text-xs text-gray-500">
-                                    {getRatingLabel(rating)}
-                                  </span>
-                                </div>
-                              );
-                            })()}
+                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                            {review.rating}
                           </TableCell>
                           <TableCell className="px-6 py-3">
                             <Badge
                               className={
-                                approvalStatus === "fully_approved"
+                                review.status === "completed"
                                   ? "bg-green-100 text-green-800"
-                                  : "bg-gray-100 text-gray-800"
+                                  : review.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-yellow-100 text-yellow-800"
                               }
                             >
-                              {approvalStatus === "fully_approved"
-                                ? "✓ Approved"
-                                : "⏳ Pending"}
+                              {review.status === "completed"
+                                ? `✓ ${review.status}`
+                                : review.status === "pending"
+                                ? `⏳ ${review.status}`
+                                : review.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="px-6 py-3">
-                            {submission.employeeSignature ? (
+                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                            {review.status === "completed" ? (
                               <Badge className="bg-green-100 text-green-800 text-xs">
                                 ✓ Signed
                               </Badge>
-                            ) : (
-                              <Badge className="bg-gray-100 text-gray-600 text-xs">
-                                ⏳ Pending
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="px-6 py-3">
-                            {!isHR && hasSigned ? (
-                              <Badge className="bg-green-100 text-green-800 text-xs">
-                                ✓ Signed
-                              </Badge>
-                            ) : !isHR && !hasSigned ? (
+                            ) : review.status === "pending" ? (
                               <Badge className="bg-gray-100 text-gray-600 text-xs">
                                 ⏳ Pending
                               </Badge>
@@ -1210,25 +661,18 @@ export default function EvaluatedReviewsTab() {
                               <span className="text-xs text-gray-400">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="px-6 py-3">
-                            {isHR && hasSigned ? (
-                              <Badge className="bg-green-100 text-green-800 text-xs">
-                                ✓ Signed
-                              </Badge>
-                            ) : isHR && !hasSigned ? (
-                              <Badge className="bg-gray-100 text-gray-600 text-xs">
-                                ⏳ Pending
-                              </Badge>
-                            ) : (
-                              <span className="text-xs text-gray-400">—</span>
-                            )}
+                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                            <Badge className="bg-green-100 text-green-800 text-xs">
+                              ✓ Signed
+                            </Badge>
                           </TableCell>
+
                           <TableCell className="px-6 py-3">
                             <div className="flex gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleViewEvaluation(submission)}
+                                onClick={() => handleViewEvaluation(review)}
                                 className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white"
                               >
                                 ☰ View
@@ -1236,7 +680,7 @@ export default function EvaluatedReviewsTab() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleDeleteClick(submission)}
+                                onClick={() => openDeleteModal(review)}
                                 className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200"
                                 title="Delete this evaluation record"
                               >
@@ -1251,108 +695,141 @@ export default function EvaluatedReviewsTab() {
                 </TableBody>
               </Table>
             </div>
+          </div>
+
+          {/* Pagination Controls */}
+          {overviewTotal > itemsPerPage && (
+            <EvaluationsPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              total={overviewTotal}
+              perPage={perPage}
+              onPageChange={(page) => {
+                setCurrentPage(page);
+
+                loadEvaluations(
+                  searchTerm,
+                  statusFilter,
+                  quarterFilter,
+                  yearFilter
+                );
+              }}
+            />
           )}
+        </div>
 
-          {/* Results Counter and Pagination */}
-          {!recordsRefreshing && (
-            <div className="m-4">
-              <div className="text-center text-sm text-gray-600 mb-4">
-                Showing {filteredAndSortedSubmissions.length} of{" "}
-                {recentSubmissions.length} evaluation records
-              </div>
+        {/* Delete Confirmation Modal */}
+        <Dialog
+          open={isDeleteModalOpen}
+          onOpenChangeAction={(open) => {
+            setIsDeleteModalOpen(open);
+            if (!open) {
+              setReviewToDelete(null);
+            }
+          }}
+        >
+          <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
+            <DialogHeader className="pb-4 bg-red-50 rounded-lg ">
+              <DialogTitle className="text-red-800 flex items-center gap-2">
+                <span className="text-xl">⚠️</span>
+                Delete Evaluation of{" "}
+                {reviewToDelete?.employee.fname +
+                  " " +
+                  reviewToDelete?.employee.lname}
+              </DialogTitle>
+              <DialogDescription className="text-red-700">
+                This action cannot be undone. Are you sure you want to
+                permanently delete this evaluation?
+              </DialogDescription>
+            </DialogHeader>
 
-              {/* Pagination Controls */}
-              {recordsTotal > itemsPerPage && (
-                <div className="flex items-center justify-between mt-4 px-2">
-                  <div className="text-sm text-gray-600">
-                    Showing {recordsStartIndex + 1} to{" "}
-                    {Math.min(recordsEndIndex, recordsTotal)} of {recordsTotal}{" "}
-                    records
+            <div className="space-y-4 px-2 mt-8">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-5 w-5 text-red-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setRecordsPage((prev) => Math.max(1, prev - 1))
-                      }
-                      disabled={recordsPage === 1}
-                      className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                    >
-                      Previous
-                    </Button>
-                    <div className="flex items-center gap-1">
-                      {Array.from(
-                        { length: recordsTotalPages },
-                        (_, i) => i + 1
-                      ).map((page) => {
-                        if (
-                          page === 1 ||
-                          page === recordsTotalPages ||
-                          (page >= recordsPage - 1 && page <= recordsPage + 1)
-                        ) {
-                          return (
-                            <Button
-                              key={page}
-                              variant={
-                                recordsPage === page ? "default" : "outline"
-                              }
-                              size="sm"
-                              onClick={() => setRecordsPage(page)}
-                              className={`text-xs w-8 h-8 p-0 ${
-                                recordsPage === page
-                                  ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
-                                  : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                              }`}
-                            >
-                              {page}
-                            </Button>
-                          );
-                        } else if (
-                          page === recordsPage - 2 ||
-                          page === recordsPage + 2
-                        ) {
-                          return (
-                            <span key={page} className="text-gray-400">
-                              ...
-                            </span>
-                          );
-                        }
-                        return null;
-                      })}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setRecordsPage((prev) =>
-                          Math.min(recordsTotalPages, prev + 1)
-                        )
-                      }
-                      disabled={recordsPage === recordsTotalPages}
-                      className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                    >
-                      Next
-                    </Button>
+                  <div className="text-sm text-red-700">
+                    <p className="font-medium">
+                      Warning: This will permanently delete:
+                    </p>
+                    <ul className="mt-2 list-disc list-inside space-y-1">
+                      <li>This evaluation record</li>
+                    </ul>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </div>
 
-      {/* View Results Modal */}
-      <ViewResultsModal
-        isOpen={isViewResultsModalOpen}
-        onCloseAction={() => {
-          setIsViewResultsModalOpen(false);
-          setSelectedSubmission(null);
-        }}
-        submission={selectedSubmission}
-        showApprovalButton={false}
-        isEvaluatorView={false}
-      />
-    </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="text-sm text-gray-700">
+                  <p className="font-medium">Evaluation Details:</p>
+                  <div className="mt-2 space-y-1">
+                    <p>
+                      <span className="font-medium">Employee Name:</span>{" "}
+                      {reviewToDelete?.employee.fname +
+                        " " +
+                        reviewToDelete?.employee.lname}
+                    </p>
+                    <p>
+                      <span className="font-medium">Evaluator Name:</span>{" "}
+                      {reviewToDelete?.evaluator.fname +
+                        " " +
+                        reviewToDelete?.evaluator.lname}
+                    </p>
+                    <p>
+                      <span className="font-medium">Branch:</span>{" "}
+                      {reviewToDelete?.employee?.branch_name}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="pt-6 px-2">
+              <div className="flex justify-end space-x-4 w-full">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsDeleteModalOpen(false);
+                    setReviewToDelete(null);
+                  }}
+                  className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  onClick={() => handleDeleteClick(reviewToDelete)}
+                >
+                  ❌ Delete Permanently
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Results Modal */}
+        <ViewResultsModal
+          isOpen={isViewResultsModalOpen}
+          onCloseAction={() => {
+            setIsViewResultsModalOpen(false);
+            setSelectedSubmission(null);
+          }}
+          submission={selectedSubmission}
+          showApprovalButton={false}
+          isEvaluatorView={false}
+        />
+      </div>
+    </>
   );
 }
