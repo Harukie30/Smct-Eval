@@ -73,7 +73,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const { success } = useToast();
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
   // Reset form when modal opens/closes
@@ -156,12 +155,11 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   };
 
   const handleInputChange = (field: keyof User, value: string | boolean) => {
-    // If branch is changed to a regular branch (not HO/none/Head Office), clear department
     if (formData.branch_id !== 126) {
       setFormData((prev) => ({
         ...prev,
         [field]: value,
-        department_id: "", // Clear department when branch is a regular branch (not HO/none)
+        department_id: "",
       }));
     } else {
       setFormData((prev) => ({

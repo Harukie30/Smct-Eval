@@ -22,23 +22,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2 } from "lucide-react";
-import departmentsData from "@/data/departments.json";
-import accountsDataRaw from "@/data/accounts.json";
 import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import apiService from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
-
-interface Employee {
-  id: number;
-  name: string;
-  email: string;
-  position: string;
-  department: string;
-  branch?: string;
-  role: string;
-  isActive?: boolean;
-}
 
 interface Department {
   id: number;
@@ -140,7 +127,7 @@ export default function DepartmentsTab() {
       return;
     }
     try {
-      const add_department = await apiService.addDepartment(newDepartmentName);
+      await apiService.addDepartment(newDepartmentName);
       loadData(searchTerm);
       toastMessages.generic.success(
         "Success " + newDepartmentName + " has been added",
@@ -160,8 +147,9 @@ export default function DepartmentsTab() {
 
     try {
       if (
-        Number(departmentToDelete.employees_count) !== 0 &&
-        Number(departmentToDelete.managers_count) !== 0
+        Number(departmentToDelete.employees_count) +
+          Number(departmentToDelete.managers_count) !==
+        0
       ) {
         toastMessages.generic.warning(
           "Department Deleted revoked",
@@ -169,9 +157,7 @@ export default function DepartmentsTab() {
         );
         return;
       } else {
-        const deleteDepartment = await apiService.deleteDepartment(
-          departmentToDelete.id
-        );
+        await apiService.deleteDepartment(departmentToDelete.id);
         loadData(searchTerm);
         toastMessages.generic.success(
           "Department Deleted",

@@ -948,23 +948,26 @@ export const apiService = {
     }
   },
 
-  // ============================================
-  // BRANCH MANAGEMENT (Missing Endpoints)
-  // ============================================
-
   // Get total employees under a branch
-  getTotalEmployeesBranch: async (branchId?: string | number): Promise<any> => {
+  getTotalEmployeesBranch: async (
+    searchValue: string,
+    currentPage: number,
+    itemsPerPage: number
+  ): Promise<any> => {
     try {
-      const endpoint = branchId
-        ? `/getTotalEmployeesBranch?branch=${branchId}`
-        : "/getTotalEmployeesBranch";
-      const response = await api.get(endpoint);
-      return response.data;
+      const response = await api.get("/getTotalEmployeesBranch", {
+        params: {
+          search: searchValue || "",
+          page: currentPage,
+          per_page: itemsPerPage,
+        },
+      });
+      return response.data.branches;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
       throw new Error(
         axiosError.response?.data?.message ||
-          "Failed to fetch total employees by branch"
+          "Failed to fetch total employees by department"
       );
     }
   },
@@ -1037,7 +1040,7 @@ export const apiService = {
   // Delete department
   deleteDepartment: async (departmentId: string | number): Promise<any> => {
     try {
-      const response = await api.delete(`/deleteDepartment/${departmentId}`);
+      const response = await api.post(`/deleteDepartment/${departmentId}`);
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
@@ -1047,6 +1050,18 @@ export const apiService = {
     }
   },
 
+  // Delete department
+  deleteBranches: async (branchId: string | number): Promise<any> => {
+    try {
+      const response = await api.post(`/deleteBranch/${branchId}`);
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError<any>;
+      throw new Error(
+        axiosError.response?.data?.message || "Failed to delete branch"
+      );
+    }
+  },
   // ============================================
   // EVALUATION ENDPOINTS (Missing)
   // ============================================
