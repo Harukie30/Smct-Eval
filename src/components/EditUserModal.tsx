@@ -90,26 +90,16 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
   // Check if user is admin or HR (handle different role formats)
   const userRole = currentUser?.roles;
-  const isAdmin =
-    userRole === "admin" ||
-    (typeof userRole === "string" && userRole.toLowerCase() === "admin") ||
-    (Array.isArray(userRole) &&
-      userRole.some(
-        (r: any) =>
-          (typeof r === "string" ? r.toLowerCase() : r?.name?.toLowerCase()) ===
-          "admin"
-      ));
-  const isHR =
-    userRole === "hr" ||
-    (typeof userRole === "string" && userRole.toLowerCase() === "hr") ||
-    (Array.isArray(userRole) &&
-      userRole.some(
-        (r: any) =>
-          (typeof r === "string" ? r.toLowerCase() : r?.name?.toLowerCase()) ===
-          "hr"
-      ));
+  const isAdmin = 
+    userRole === "admin" || 
+    (typeof userRole === 'string' && userRole.toLowerCase() === "admin") ||
+    (Array.isArray(userRole) && userRole.some((r: any) => (typeof r === 'string' ? r.toLowerCase() : r?.name?.toLowerCase()) === "admin"));
+  const isHR = 
+    userRole === "hr" || 
+    (typeof userRole === 'string' && userRole.toLowerCase() === "hr") ||
+    (Array.isArray(userRole) && userRole.some((r: any) => (typeof r === 'string' ? r.toLowerCase() : r?.name?.toLowerCase()) === "hr"));
   const canEditEmployeeId = isAdmin || isHR;
-
+  
   // Debug: Log role check
   useEffect(() => {
     if (isOpen && canEditEmployeeId) {
@@ -117,7 +107,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         userRole,
         isAdmin,
         isHR,
-        canEditEmployeeId,
+        canEditEmployeeId
       });
     }
   }, [isOpen, canEditEmployeeId, userRole, isAdmin, isHR]);
@@ -239,7 +229,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       // Use the login endpoint to verify password (handles hashing correctly)
       // This is more secure than comparing plain text passwords
       const userEmail = currentUser.email;
-
+      
       if (!userEmail) {
         console.error("User email not found for password verification");
         return false;
@@ -252,10 +242,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         return true;
       } catch (loginError: any) {
         // Login failed - password is incorrect
-        console.log(
-          "Password verification failed:",
-          loginError?.message || "Invalid password"
-        );
+        console.log("Password verification failed:", loginError?.message || "Invalid password");
         return false;
       }
     } catch (err) {
@@ -400,6 +387,19 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     );
   };
 
+  // Helper function to check if position contains "manager" (case-insensitive)
+  const isManagerPosition = (positionId: string): boolean => {
+    if (!positionId) return false;
+    // Find the position name from the positions array
+    const position = positions.find(
+      (p) => p.id === positionId || p.name === positionId
+    );
+    if (!position) return false;
+    const positionName = position.name.toLowerCase().trim();
+    // Check if position name contains "manager"
+    return positionName.includes("manager");
+  };
+
   // Update form data when user prop changes
   useEffect(() => {
     if (user) {
@@ -409,34 +409,38 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           : user.branch
           ? String(user.branch)
           : "";
-      const userPosition = user.position;
+      const userPosition = user.position || "";
+      // Find position ID if user.position is a name, otherwise use as-is
+      const positionId =
+        positions.find((p) => p.name === userPosition || p.id === userPosition)
+          ?.id || userPosition;
+      // If position contains "manager", role must be evaluator
+      const userRole = isManagerPosition(positionId)
+        ? "evaluator"
+        : user.role || "";
 
       // Fetch employeeId from account data if not already in user object
       const fetchEmployeeId = async () => {
         // Check for employeeId in different possible field names
-        const employeeId =
-          user.employeeId ||
-          (user as any).employee_id ||
-          (user as any).employeeId;
-
+        const employeeId = user.employeeId || (user as any).employee_id || (user as any).employeeId;
+        
         if (!employeeId) {
           try {
             const accounts = await apiService.getAllUsers();
             const account = accounts.find(
-              (acc: any) =>
-                acc.id === user.id ||
+              (acc: any) => 
+                acc.id === user.id || 
                 acc.employeeId === user.id ||
                 acc.employee_id === user.id ||
                 acc.user_id === user.id
             );
-
+            
             // Try different field names for employeeId
-            const foundEmployeeId =
-              account?.employeeId ||
-              account?.employee_id ||
-              account?.emp_id ||
-              account?.id;
-
+            const foundEmployeeId = account?.employeeId || 
+                                   account?.employee_id || 
+                                   account?.emp_id ||
+                                   account?.id;
+            
             if (foundEmployeeId) {
               setFormData((prev) => ({
                 ...prev,
@@ -452,11 +456,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       };
 
       // Get employeeId from user object (check multiple possible field names)
-      const userEmployeeId =
-        user.employeeId ||
-        (user as any).employee_id ||
-        (user as any).emp_id ||
-        undefined;
+      const userEmployeeId = user.employeeId || 
+                            (user as any).employee_id || 
+                            (user as any).emp_id ||
+                            undefined;
 
       // Split name into first and last name if name exists, otherwise use fname/lname
       let fname = "";
@@ -617,7 +620,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       try {
         // Simulate a delay to show the loading animation
         await new Promise((resolve) => setTimeout(resolve, 1000));
-
+        console.log("Calling onSave...");
+        
+        // Combine fname and lname into name for saving (for backward compatibility)
+        const dataToSave = {
+          ...formData,
+          name: `${formData.fname || ""} ${formData.lname || ""}`.trim() || formData.name || "",
+        };
+        
         await onSave(dataToSave);
         console.log("Save completed, refreshing table...");
 
@@ -689,13 +699,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   }
                   disabled={!canEditEmployeeId}
                   readOnly={canEditEmployeeId ? !isEmployeeIdEditable : true}
-                  onFocus={
-                    canEditEmployeeId ? handleEmployeeIdFocus : undefined
-                  }
-                  onClick={
-                    canEditEmployeeId ? handleEmployeeIdFocus : undefined
-                  }
-                  style={canEditEmployeeId ? { cursor: "pointer" } : undefined}
+                  onFocus={canEditEmployeeId ? handleEmployeeIdFocus : undefined}
+                  onClick={canEditEmployeeId ? handleEmployeeIdFocus : undefined}
+                  style={canEditEmployeeId ? { cursor: 'pointer' } : undefined}
                   className={
                     canEditEmployeeId
                       ? "bg-gray-100 cursor-pointer hover:bg-gray-200"
@@ -902,7 +908,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <div className="space-y-2 w-2/3">
               <Label htmlFor="position">Position *</Label>
               <Combobox
-                options={positions}
+                options={positions.map((p) => ({ value: p.id, label: p.name }))}
                 value={formData.position}
                 onValueChangeAction={(value) =>
                   handleInputChange("position", value as string)
