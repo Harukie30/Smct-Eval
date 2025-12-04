@@ -353,7 +353,7 @@ export default function UserManagementTab() {
       Object.keys(updatedUser).forEach((key) => {
         if (updatedUser[key] !== undefined && updatedUser[key] !== null) {
           // Skip these keys - we'll append them with _id suffix separately
-          if (key === "position" || key === "branch" || key === "role") {
+          if (key === "position" || key === "branch" || key === "role" || key === "department") {
             return;
           }
           if (key === "avatar" && updatedUser[key] instanceof File) {
@@ -377,6 +377,11 @@ export default function UserManagementTab() {
       // Append role as roles if it exists
       if (updatedUser.role !== undefined && updatedUser.role !== null) {
         formData.append('roles', String(updatedUser.role));
+      }
+      
+      // Append department as department_id if it exists
+      if (updatedUser.department !== undefined && updatedUser.department !== null) {
+        formData.append('department_id', String(updatedUser.department));
       }
 
       // Log FormData contents for debugging
