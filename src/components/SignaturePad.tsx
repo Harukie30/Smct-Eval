@@ -39,10 +39,12 @@ export default function SignaturePad({
   };
 
   // Helper function to normalize signature URL
+  // Signatures should ideally be stored as base64 data URLs in the database
+  // But we also handle file paths in case backend stores them as files
   const normalizeSignatureUrl = (signature: string): string => {
     if (!signature || typeof signature !== 'string') return '';
     
-    // If it's already a data URL, return as is
+    // ✅ BEST: If it's already a base64 data URL, return as is (no file needed)
     if (signature.startsWith('data:image')) {
       return signature;
     }
@@ -53,27 +55,18 @@ export default function SignaturePad({
     }
     
     // If it's a file path from backend (like "user-signatures/...")
-    // Convert to full API URL or add leading slash for public assets
+    // This requires public storage access - may cause 403 if protected
     if (signature.startsWith('/')) {
       // Already has leading slash - treat as public asset
       return signature;
     } else {
       // File path from backend - construct full URL
-      // If it's in a storage path, use API URL with storage prefix
+      // Note: This may fail with 403 if storage is protected
       if (signature.includes('/') && !signature.startsWith('/')) {
-        // Backend storage path - construct URL using API base URL
-        // Try different URL patterns based on Laravel storage structure
+        // Backend storage path - try to access via public storage route
         const apiUrl = CONFIG.API_URL || 'http://localhost:8000';
-        
-        // Option 1: Try /storage/ route (Laravel public storage symlink)
-        // Option 2: Try via API endpoint if storage requires auth
-        // For now, try the storage route first
         const baseUrl = apiUrl.replace(/\/api$/, '');
-        
-        // Laravel storage files can be accessed via:
-        // - /storage/{path} (if public symlink exists)
-        // - /api/storage/{path} (if protected endpoint exists)
-        // Try public storage first
+        // Try Laravel public storage symlink route
         return `${baseUrl}/storage/${signature}`;
       } else {
         // Simple filename - treat as public asset with leading slash

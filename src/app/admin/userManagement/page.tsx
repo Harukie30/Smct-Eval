@@ -352,12 +352,40 @@ export default function UserManagementTab() {
       const formData = new FormData();
       Object.keys(updatedUser).forEach((key) => {
         if (updatedUser[key] !== undefined && updatedUser[key] !== null) {
+          // Skip these keys - we'll append them with _id suffix separately
+          if (key === "position" || key === "branch" || key === "role") {
+            return;
+          }
           if (key === "avatar" && updatedUser[key] instanceof File) {
             formData.append(key, updatedUser[key]);
           } else {
             formData.append(key, String(updatedUser[key]));
           }
         }
+      });
+      
+      // Append position as position_id if it exists
+      if (updatedUser.position !== undefined && updatedUser.position !== null) {
+        formData.append('position_id', String(updatedUser.position));
+      }
+      
+      // Append branch as branch_id if it exists
+      if (updatedUser.branch !== undefined && updatedUser.branch !== null) {
+        formData.append('branch_id', String(updatedUser.branch));
+      }
+      
+      // Append role as roles if it exists
+      if (updatedUser.role !== undefined && updatedUser.role !== null) {
+        formData.append('roles', String(updatedUser.role));
+      }
+
+      // Log FormData contents for debugging
+      console.log("📤 Sending update request:", {
+        userId: updatedUser.id,
+        formDataKeys: Array.from(formData.keys()),
+        position: updatedUser.position,
+        branch: updatedUser.branch,
+        role: updatedUser.role,
       });
 
       await apiService.updateEmployee(formData, updatedUser.id);
@@ -401,11 +429,24 @@ export default function UserManagementTab() {
 
       // Show success toast
       toastMessages.user.updated(updatedUser.name);
-    } catch (error) {
-      console.error("Error updating user:", error);
+    } catch (error: any) {
+      console.error("❌ Error updating user:", error);
+      console.error("Error details:", {
+        message: error?.message,
+        response: error?.response,
+        status: error?.status,
+        data: error?.data,
+        fullError: JSON.stringify(error, null, 2),
+      });
+      
+      const errorMessage = error?.message || 
+                          error?.response?.data?.message || 
+                          error?.data?.message ||
+                          "Failed to update user information. Please try again.";
+      
       toastMessages.generic.error(
         "Update Failed",
-        "Failed to update user information. Please try again."
+        errorMessage
       );
     }
   };

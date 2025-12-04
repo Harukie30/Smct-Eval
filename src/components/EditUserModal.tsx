@@ -376,9 +376,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   }, [employeeIdInput, isEmployeeIdEditable]);
 
   // Helper function to check if branch is HO, Head Office, or none
-  const isBranchHOOrNone = (branch: string): boolean => {
+  const isBranchHOOrNone = (branch: string | number | undefined): boolean => {
     if (!branch) return false;
-    const branchLower = branch.toLowerCase().trim();
+    // Convert to string if it's not already
+    const branchStr = typeof branch === 'string' ? branch : String(branch);
+    const branchLower = branchStr.toLowerCase().trim();
     return (
       branchLower === "ho" ||
       branchLower === "head office" ||
@@ -390,12 +392,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   // Helper function to check if position contains "manager" (case-insensitive)
   const isManagerPosition = (positionId: string): boolean => {
     if (!positionId) return false;
-    // Find the position name from the positions array
+    // Find the position from the positions array
+    // Positions come as { value: string, label: string } from API
     const position = positions.find(
-      (p) => p.id === positionId || p.name === positionId
+      (p: any) => p.value === positionId || p.id === positionId || p.name === positionId
     );
     if (!position) return false;
-    const positionName = position.name.toLowerCase().trim();
+    // Get position name - could be in label, name, or label property
+    const positionName = (position.label || position.name || '').toLowerCase().trim();
     // Check if position name contains "manager"
     return positionName.includes("manager");
   };
@@ -403,21 +407,74 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   // Update form data when user prop changes
   useEffect(() => {
     if (user) {
-      const branchValue =
-        user.branch && typeof user.branch === "string"
-          ? user.branch
-          : user.branch
-          ? String(user.branch)
-          : "";
-      const userPosition = user.position || "";
+      // Extract branch value - could be string, object, or array
+      // IMPORTANT: We need to find the branch ID (value) not the name (label)
+      let branchValue = "";
+      const userAny = user as any;
+      let branchNameOrId = "";
+      
+      if (user.branch && typeof user.branch === "string") {
+        branchNameOrId = user.branch;
+      } else if (userAny.branches && Array.isArray(userAny.branches) && userAny.branches.length > 0) {
+        // Handle array format: branches[0].branch_name
+        branchNameOrId = userAny.branches[0]?.branch_name || userAny.branches[0]?.name || userAny.branches[0]?.id || "";
+      } else if (user.branch && typeof user.branch === "object") {
+        branchNameOrId = (user.branch as any).branch_name || (user.branch as any).name || (user.branch as any).id || String(user.branch);
+      } else if (user.branch) {
+        branchNameOrId = String(user.branch);
+      }
+      
+      // Find branch ID from branchesData by matching name or ID
+      if (branchNameOrId && branches && branches.length > 0) {
+        const foundBranch = branches.find((b: any) => {
+          const bLabel = b.label || b.name || "";
+          const bValue = b.value || b.id || "";
+          return bLabel === branchNameOrId || 
+                 bValue === branchNameOrId || 
+                 String(bValue) === String(branchNameOrId) ||
+                 bLabel.includes(branchNameOrId) ||
+                 branchNameOrId.includes(bLabel.split(" /")[0]); // Match branch_name part
+        });
+        branchValue = foundBranch?.value || foundBranch?.id || branchNameOrId;
+      } else {
+        branchValue = branchNameOrId;
+      }
+
+      // Extract position value - could be string, object with label/value, or nested in positions object
+      let userPosition = "";
+      if (user.position && typeof user.position === "string") {
+        userPosition = user.position;
+      } else if (userAny.positions) {
+        // Handle object format: positions.label or positions.value
+        if (typeof userAny.positions === "object") {
+          userPosition = userAny.positions.label || userAny.positions.name || userAny.positions.value || "";
+        } else if (typeof userAny.positions === "string") {
+          userPosition = userAny.positions;
+        }
+      }
+      
       // Find position ID if user.position is a name, otherwise use as-is
-      const positionId =
-        positions.find((p) => p.name === userPosition || p.id === userPosition)
-          ?.id || userPosition;
+      // Positions come as { value: string, label: string } from API
+      const foundPosition = positions.find(
+        (p: any) => p.label === userPosition || p.name === userPosition || p.value === userPosition || p.id === userPosition || String(p.value) === String(userPosition)
+      );
+      const positionId = foundPosition?.value || foundPosition?.id || userPosition;
+      
+      // Extract role value - could be string, object, or array
+      let userRole = "";
+      if (user.role && typeof user.role === "string") {
+        userRole = user.role;
+      } else if (userAny.roles && Array.isArray(userAny.roles) && userAny.roles.length > 0) {
+        // Handle array format: roles[0].name
+        userRole = userAny.roles[0]?.name || userAny.roles[0]?.value || "";
+      } else if (user.role && typeof user.role === "object") {
+        userRole = (user.role as any).name || (user.role as any).value || "";
+      }
+      
       // If position contains "manager", role must be evaluator
-      const userRole = isManagerPosition(positionId)
-        ? "evaluator"
-        : user.role || "";
+      if (isManagerPosition(positionId)) {
+        userRole = "evaluator";
+      }
 
       // Fetch employeeId from account data if not already in user object
       const fetchEmployeeId = async () => {
@@ -473,6 +530,16 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         lname = (user as any).lname || user.lname || "";
       }
 
+      // Extract department value - could be string or nested in departments object/array
+      let departmentValue = "";
+      if (user.department && typeof user.department === "string") {
+        departmentValue = user.department;
+      } else if (userAny.departments && Array.isArray(userAny.departments) && userAny.departments.length > 0) {
+        departmentValue = userAny.departments[0]?.name || userAny.departments[0] || "";
+      } else if (userAny.departments && typeof userAny.departments === "object") {
+        departmentValue = userAny.departments.name || "";
+      }
+
       setFormData({
         id: user.id,
         name: user.name || `${fname} ${lname}`.trim() || "",
@@ -481,14 +548,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         email: user.email || "",
         position: positionId,
         // Clear department if branch is NOT HO/none/Head Office (i.e., regular branch)
-        department: isBranchHOOrNone(branchValue) ? user.department || "" : "",
+        department: isBranchHOOrNone(branchValue) ? departmentValue : "",
         branch: branchValue,
         role: userRole,
         username: user.username || "",
         password: user.password || "",
         contact: user.contact || "",
         hireDate: user.hireDate || "",
-        isActive: user.isActive !== undefined ? user.isActive : true,
+        isActive: user.isActive !== undefined ? user.isActive : (userAny.is_active === "active" || userAny.is_active === true),
         signature: user.signature || "",
         employeeId: userEmployeeId,
       });
@@ -525,7 +592,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       newErrors.email = "Please enter a valid email address";
     }
 
-    if (!formData.position.trim()) {
+    // Position can be a number (ID) or string, check if it's truthy
+    const positionValue = formData.position !== undefined && formData.position !== null 
+      ? String(formData.position).trim() 
+      : "";
+    if (!positionValue) {
       newErrors.position = "Position is required";
     }
 
@@ -534,15 +605,19 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       newErrors.department = "Department is required";
     }
 
-    if (
-      formData.branch &&
-      typeof formData.branch === "string" &&
-      !formData.branch.trim()
-    ) {
+    // Branch can be a number (ID) or string, check if it's truthy
+    const branchValue = formData.branch !== undefined && formData.branch !== null
+      ? String(formData.branch).trim()
+      : "";
+    if (!branchValue) {
       newErrors.branch = "Branch is required";
     }
 
-    if (!formData.role?.trim()) {
+    // Role can be a string, check if it's truthy
+    const roleValue = formData.role !== undefined && formData.role !== null
+      ? String(formData.role).trim()
+      : "";
+    if (!roleValue) {
       newErrors.role = "Role is required";
     }
 
@@ -915,7 +990,12 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <div className="space-y-2 w-2/3">
               <Label htmlFor="position">Position *</Label>
               <Combobox
-                options={positions.map((p) => ({ value: p.id, label: p.name }))}
+                options={positions.length > 0 && typeof positions[0] === 'object' && 'value' in positions[0] && 'label' in positions[0]
+                  ? positions // Already in correct format { value, label }
+                  : positions.map((p: any) => ({ 
+                      value: p.value || p.id || p, 
+                      label: p.label || p.name || p 
+                    }))}
                 value={formData.position}
                 onValueChangeAction={(value) =>
                   handleInputChange("position", value as string)
@@ -924,7 +1004,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 searchPlaceholder="Search positions..."
                 emptyText="No positions found."
                 className={errors.position ? "border-red-500" : "bg-white"}
-                error={errors.position || null}
               />
               {errors.position && (
                 <p className="text-sm text-red-500">{errors.position}</p>
@@ -936,7 +1015,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <div className="space-y-2 w-1/2">
                 <Label htmlFor="department">Department *</Label>
                 <Combobox
-                  options={departments.map((dept) => ({
+                  options={departments.map((dept: any) => ({
                     value: dept,
                     label: dept,
                   }))}
@@ -948,7 +1027,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   searchPlaceholder="Search departments..."
                   emptyText="No departments found."
                   className={errors.department ? "border-red-500" : "bg-white"}
-                  error={errors.department || null}
                 />
                 {errors.department && (
                   <p className="text-sm text-red-500">{errors.department}</p>
@@ -979,7 +1057,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 searchPlaceholder="Search branches..."
                 emptyText="No branches found."
                 className={errors.branch ? "border-red-500" : ""}
-                error={errors.branch || null}
               />
               {errors.branch && (
                 <p className="text-sm text-red-500">{errors.branch}</p>
@@ -1004,7 +1081,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 searchPlaceholder="Search roles..."
                 emptyText="No roles found."
                 className={errors.role ? "border-red-500" : ""}
-                error={errors.role || null}
                 disabled={isManagerPosition(formData.position)}
               />
               {errors.role && (

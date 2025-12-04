@@ -91,13 +91,23 @@ export const apiService = {
     id: string | number
   ): Promise<any> => {
     try {
-      const response = await api.post(`/update_user/${id}`, formData);
+      // Use correct endpoint: /updateUser/{id} instead of /update_user/{id}
+      const response = await api.post(`/updateUser/${id}`, formData);
       return response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
+      console.error("❌ API Error in updateEmployee:", {
+        url: `/updateUser/${id}`,
+        status: axiosError.response?.status,
+        statusText: axiosError.response?.statusText,
+        data: axiosError.response?.data,
+        message: axiosError.message,
+      });
       throw {
+        message: axiosError.response?.data?.message || axiosError.message || "Failed to update employee",
         ...axiosError.response?.data,
         status: axiosError.response?.status || 500,
+        response: axiosError.response,
       };
     }
   },
@@ -238,7 +248,7 @@ export const apiService = {
 
   getAccounts: async (): Promise<any> => {
     try {
-      const response = await api.get("/api/accounts");
+      const response = await api.get("/accounts");
       return response.data.accounts || [];
     } catch (error) {
       const axiosError = error as AxiosError<any>;
@@ -263,7 +273,7 @@ export const apiService = {
   // Profile management
   getProfile: async (id: number): Promise<any> => {
     try {
-      const response = await api.get(`/api/profiles/${id}`);
+      const response = await api.get(`/profiles/${id}`);
       return response.data.profile || response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
@@ -277,7 +287,7 @@ export const apiService = {
 
   updateProfile: async (id: number, updates: Partial<any>): Promise<any> => {
     try {
-      const response = await api.put(`/api/profiles/${id}`, updates);
+      const response = await api.put(`/profiles/${id}`, updates);
       return response.data.profile || response.data;
     } catch (error) {
       const axiosError = error as AxiosError<any>;
