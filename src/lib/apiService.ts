@@ -1,7 +1,4 @@
-import { AuthenticatedUser } from "@/contexts/UserContext";
-import { CONFIG } from "../../config/config";
 import { api, sanctum } from "./api";
-import axios, { AxiosError } from "axios";
 
 // Helper function to get CSRF cookie from Sanctum
 export const sanctum_csrf = async () => {
@@ -17,138 +14,53 @@ export const apiService = {
   // Authentication
   login: async (email: string, password: string): Promise<any> => {
     await sanctum_csrf();
-    try {
-      const response = await api.post("/login", { email, password });
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-        message: axiosError.response?.data?.message || "Login failed",
-      };
-    }
+    const response = await api.post("/login", { email, password });
+    return response.data;
   },
 
   logout: async (): Promise<any> => {
-    try {
-      const response = await api.post("/logout");
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-        message: axiosError.response?.data?.message || "Login failed",
-      };
-    }
+    const response = await api.post("/logout");
+    return response.data;
   },
 
   // Get current authenticated user
   authUser: async (): Promise<any> => {
-    try {
-      const response = await api.get("/profile");
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-        message: axiosError.response?.data?.message || "Failed to get user",
-      };
-    }
+    const response = await api.get("/profile");
+    return response.data;
   },
 
   // Registration
   createPendingRegistration: async (formData: FormData): Promise<any> => {
-    try {
-      const response = await api.post("/register", formData);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-      };
-    }
+    const response = await api.post("/register", formData);
+    return response.data;
   },
 
   updateEmployee_auth: async (formData: FormData): Promise<any> => {
-    try {
-      const response = await api.post("/updateProfileUserAuth", formData);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-      };
-    }
+    const response = await api.post("/update_employee_auth", formData);
+    return response.data;
   },
 
   updateEmployee: async (
     formData: FormData,
     id: string | number
   ): Promise<any> => {
-    try {
-      // Use correct endpoint: /updateUser/{id} instead of /update_user/{id}
-      const response = await api.post(`/updateUser/${id}`, formData);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      console.error("❌ API Error in updateEmployee:", {
-        url: `/updateUser/${id}`,
-        status: axiosError.response?.status,
-        statusText: axiosError.response?.statusText,
-        data: axiosError.response?.data,
-        message: axiosError.message,
-      });
-      throw {
-        message: axiosError.response?.data?.message || axiosError.message || "Failed to update employee",
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-        response: axiosError.response,
-      };
-    }
+    const response = await api.post(`/update_user/${id}`, formData);
+    return response.data;
   },
 
   approveRegistration: async (id: string | number): Promise<any> => {
-    try {
-      const response = await api.post(`/approveRegistration/${id}`);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-      };
-    }
+    const response = await api.post(`/approveRegistration/${id}`);
+    return response.data;
   },
 
   rejectRegistration: async (id: string | number): Promise<any> => {
-    try {
-      const response = await api.post(`/rejectRegistration/${id}`);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-      };
-    }
+    const response = await api.post(`/rejectRegistration/${id}`);
+    return response.data;
   },
 
   deleteUser: async (id: string | number): Promise<any> => {
-    try {
-      const response = await api.post(`/deleteUser/${id}`);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-      };
-    }
+    const response = await api.post(`/deleteUser/${id}`);
+    return response.data;
   },
 
   getPendingRegistrations: async (
@@ -157,23 +69,15 @@ export const apiService = {
     page: number,
     perPage: number
   ): Promise<any | null> => {
-    try {
-      const response = await api.get("/getPendingRegistrations", {
-        params: {
-          search: searchTerm || "",
-          status: status || "",
-          page: page,
-          per_page: perPage,
-        },
-      });
-      return response.data.users || [];
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to fetch pending registrations"
-      );
-    }
+    const response = await api.get("/getPendingRegistrations", {
+      params: {
+        search: searchTerm || "",
+        status: status || "",
+        page: page,
+        per_page: perPage,
+      },
+    });
+    return response.data.users || [];
   },
 
   getActiveRegistrations: async (
@@ -182,122 +86,60 @@ export const apiService = {
     page: number,
     perPage: number
   ): Promise<any | null> => {
-    try {
-      const response = await api.get("/getAllActiveUsers", {
-        params: {
-          search: searchTerm || "",
-          role: role || "",
-          page: page,
-          per_page: perPage,
-        },
-      });
-      return response.data.users || [];
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to fetch active registrations"
-      );
-    }
+    const response = await api.get("/getAllActiveUsers", {
+      params: {
+        search: searchTerm || "",
+        role: role || "",
+        page: page,
+        per_page: perPage,
+      },
+    });
+    return response.data.users || [];
   },
 
   getDepartments: async (): Promise<{ label: string; value: string }[]> => {
-    try {
-      const response = await api.get("/departments");
-      return response.data.departments.map((departments: any) => ({
-        value: departments.id,
-        label: departments.department_name,
-      }));
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch departments"
-      );
-    }
+    const response = await api.get("/departments");
+    return response.data.departments.map((departments: any) => ({
+      value: departments.id,
+      label: departments.department_name,
+    }));
   },
 
   getPositions: async (): Promise<{ label: string; value: string }[]> => {
-    try {
-      const response = await api.get("/positions");
-      return response.data.positions.map((position: any) => ({
-        value: position.id,
-        label: position.label,
-      }));
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to get positions"
-      );
-    }
+    const response = await api.get("/positions");
+    return response.data.positions.map((position: any) => ({
+      value: position.id,
+      label: position.label,
+    }));
   },
 
   getBranches: async (): Promise<{ label: string; value: string }[]> => {
-    try {
-      const response = await api.get("/branches");
-      return response.data.branches.map((branches: any) => ({
-        value: branches.id,
-        label: branches.branch_name + " /" + branches.branch_code,
-      }));
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch branches"
-      );
-    }
+    const response = await api.get("/branches");
+    return response.data.branches.map((branches: any) => ({
+      value: branches.id,
+      label: branches.branch_name + " /" + branches.branch_code,
+    }));
   },
 
   getAccounts: async (): Promise<any> => {
-    try {
-      const response = await api.get("/accounts");
-      return response.data.accounts || [];
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch accounts"
-      );
-    }
+    const response = await api.get("/api/accounts");
+    return response.data.accounts || [];
   },
 
   uploadAvatar: async (formData: FormData): Promise<any> => {
-    try {
-      const response = await api.post("/upload_avatar", formData);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Image upload failed"
-      );
-    }
+    const response = await api.post("/uploadAvatar", formData);
+    return response.data;
   },
 
   // Profile management
   getProfile: async (id: number): Promise<any> => {
-    try {
-      const response = await api.get(`/profiles/${id}`);
-      return response.data.profile || response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-        message: axiosError.response?.data?.message || "Failed to get profile",
-      };
-    }
+    const response = await api.get(`/api/profiles/${id}`);
+    return response.data.profile || response.data;
   },
 
   updateProfile: async (id: number, updates: Partial<any>): Promise<any> => {
-    try {
-      const response = await api.put(`/profiles/${id}`, updates);
-      return response.data.profile || response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-        message:
-          axiosError.response?.data?.message || "Failed to update profile",
-      };
-    }
+    const response = await api.put(`/api/profiles/${id}`, updates);
+    return response.data.profile || response.data;
   },
 
   getSubmissions: async (
@@ -308,140 +150,81 @@ export const apiService = {
     quarter?: string,
     year?: string
   ): Promise<any> => {
-    try {
-      const response = await api.get(`/allEvaluations`, {
-        params: {
-          search: searchTerm || "",
-          page: page,
-          per_page: perPage,
-          status: status || "",
-          quarter: quarter || "",
-          year: year || "",
-        },
-      });
+    const response = await api.get(`/allEvaluations`, {
+      params: {
+        search: searchTerm || "",
+        page: page,
+        per_page: perPage,
+        status: status || "",
+        quarter: quarter || "",
+        year: year || "",
+      },
+    });
 
-      return response.data.evaluations;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-        message:
-          axiosError.response?.data?.message || "Failed to fetch evaluations",
-      };
-    }
+    return response.data.evaluations;
   },
 
   getSubmissionById: async (id: number | string): Promise<any> => {
-    try {
-      const response = await api.get(`/submissions/${id}`);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-        message:
-          axiosError.response?.data?.message || "Failed to update profile",
-      };
-    }
+    const response = await api.get(`/submissions/${id}`);
+    return response.data;
   },
 
   adminDashboard: async (): Promise<any> => {
-    try {
-      const response = await api.get(`/adminDashboard`);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw {
-        ...axiosError.response?.data,
-        status: axiosError.response?.status || 500,
-        message:
-          axiosError.response?.data?.message || "Failed to update profile",
-      };
-    }
+    const response = await api.get(`/adminDashboard`);
+    return response.data;
   },
 
   createSubmission: async (
     submission: any,
     userId?: string | number
   ): Promise<any> => {
-    try {
-      // Use /submit/{user} if userId provided, otherwise fallback to /submissions
-      const endpoint = userId ? `/submit/${userId}` : "/submissions";
-      const response = await api.post(endpoint, submission);
-      const data = response.data;
+    // Use /submit/{user} if userId provided, otherwise fallback to /submissions
+    const endpoint = userId ? `/submit/${userId}` : "/submissions";
+    const response = await api.post(endpoint, submission);
+    const data = response.data;
 
-      if (data.success && data.submission) {
-        return data.submission;
-      }
-      if (data.submission) {
-        return data.submission;
-      }
-      return data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to create submission"
-      );
+    if (data.success && data.submission) {
+      return data.submission;
     }
+    if (data.submission) {
+      return data.submission;
+    }
+    return data;
   },
 
   updateSubmission: async (id: number, updates: any): Promise<any> => {
-    try {
-      const response = await api.put(`/submissions/${id}`, updates);
-      const data = response.data;
+    const response = await api.put(`/submissions/${id}`, updates);
+    const data = response.data;
 
-      if (data.success && data.submission) {
-        return data.submission;
-      }
-      if (data.submission) {
-        return data.submission;
-      }
-      return data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to update submission"
-      );
+    if (data.success && data.submission) {
+      return data.submission;
     }
+    if (data.submission) {
+      return data.submission;
+    }
+    return data;
   },
 
   deleteSubmission: async (
     id: number
   ): Promise<{ success: boolean; message: string }> => {
-    try {
-      const delete_eval = await api.post(`/deleteEval/${id}`);
-      return delete_eval.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to delete submission"
-      );
-    }
+    const delete_eval = await api.post(`/deleteEval/${id}`);
+    return delete_eval.data;
   },
 
   updateSubmissionWithEmployeeSignature: async (
     submissionId: number,
     employeeSignature: string
   ): Promise<any> => {
-    try {
-      const response = await api.patch(
-        `/submissions/${submissionId}/employee-approve`,
-        {
-          employeeSignature,
-          employeeApprovedAt: new Date().toISOString(),
-          approvalStatus: "employee_approved",
-        }
-      );
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to update employee signature"
-      );
-    }
+    const response = await api.patch(
+      `/submissions/${submissionId}/employee-approve`,
+      {
+        employeeSignature,
+        employeeApprovedAt: new Date().toISOString(),
+        approvalStatus: "employee_approved",
+      }
+    );
+    return response.data;
   },
 
   // Approve evaluation by employee (matches documentation endpoint)
@@ -449,56 +232,33 @@ export const apiService = {
     evaluationId: number,
     data?: any
   ): Promise<any> => {
-    try {
-      const response = await api.post(
-        `/approvedByEmployee/${evaluationId}`,
-        data || {}
-      );
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to approve evaluation by employee"
-      );
-    }
+    const response = await api.post(
+      `/approvedByEmployee/${evaluationId}`,
+      data || {}
+    );
+    return response.data;
   },
 
   updateSubmissionWithEvaluatorSignature: async (
     submissionId: number,
     evaluatorSignature: string
   ): Promise<any> => {
-    try {
-      const response = await api.patch(
-        `/submissions/${submissionId}/evaluator-approve`,
-        {
-          evaluatorSignature,
-          evaluatorApprovedAt: new Date().toISOString(),
-          approvalStatus: "fully_approved",
-        }
-      );
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to update evaluator signature"
-      );
-    }
+    const response = await api.patch(
+      `/submissions/${submissionId}/evaluator-approve`,
+      {
+        evaluatorSignature,
+        evaluatorApprovedAt: new Date().toISOString(),
+        approvalStatus: "fully_approved",
+      }
+    );
+    return response.data;
   },
 
   bulkApproveSubmissions: async (
     submissionIds: number[]
   ): Promise<{ success: boolean; message: string }> => {
-    try {
-      await api.patch("/submissions/bulk-approve", { submissionIds });
-      return { success: true, message: "Submissions approved successfully" };
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to approve submissions"
-      );
-    }
+    await api.patch("/submissions/bulk-approve", { submissionIds });
+    return { success: true, message: "Submissions approved successfully" };
   },
 
   updateApprovalStatus: async (
@@ -506,292 +266,199 @@ export const apiService = {
     approvalStatus: string,
     additionalData?: any
   ): Promise<any> => {
-    try {
-      const response = await api.patch(
-        `/submissions/${submissionId}/approval-status`,
-        {
-          approvalStatus,
-          ...additionalData,
-        }
-      );
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to update approval status"
-      );
-    }
+    const response = await api.patch(
+      `/submissions/${submissionId}/approval-status`,
+      {
+        approvalStatus,
+        ...additionalData,
+      }
+    );
+    return response.data;
   },
 
   // Employee methods (uses getAllUsers endpoint)
   getEmployees: async (): Promise<any> => {
-    try {
-      const response = await api.get("/getAllActiveUsers");
-      const data = response.data;
+    const response = await api.get("/getAllActiveUsers");
+    const data = response.data;
 
-      if (data.success && data.users) {
-        return data.users;
-      }
-      if (Array.isArray(data.users)) {
-        return data.users;
-      }
-      if (Array.isArray(data)) {
-        return data;
-      }
-
-      return [];
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch employees"
-      );
+    if (data.success && data.users) {
+      return data.users;
     }
+    if (Array.isArray(data.users)) {
+      return data.users;
+    }
+    if (Array.isArray(data)) {
+      return data;
+    }
+
+    return [];
   },
 
   getEmployee: async (id: number): Promise<any> => {
-    try {
-      // First get all users, then filter by id
-      const response = await api.get("/getAllActiveUsers");
-      const data = response.data;
+    // First get all users, then filter by id
+    const response = await api.get("/getAllActiveUsers");
+    const data = response.data;
 
-      let users: any[] = [];
-      if (data.success && data.users) {
-        users = data.users;
-      } else if (Array.isArray(data.users)) {
-        users = data.users;
-      } else if (Array.isArray(data)) {
-        users = data;
-      }
-
-      return (
-        users.find((user: any) => user.id === id || user.employeeId === id) ||
-        null
-      );
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch employee"
-      );
+    let users: any[] = [];
+    if (data.success && data.users) {
+      users = data.users;
+    } else if (Array.isArray(data.users)) {
+      users = data.users;
+    } else if (Array.isArray(data)) {
+      users = data;
     }
+
+    return (
+      users.find((user: any) => user.id === id || user.employeeId === id) ||
+      null
+    );
   },
 
   getEmployeeByEmail: async (email: string): Promise<any> => {
-    try {
-      const response = await api.get("/getAllActiveUsers", {
-        params: { email },
-      });
-      const data = response.data;
+    const response = await api.get("/getAllActiveUsers", {
+      params: { email },
+    });
+    const data = response.data;
 
-      let users: any[] = [];
-      if (data.success && data.users) {
-        users = data.users;
-      } else if (Array.isArray(data.users)) {
-        users = data.users;
-      } else if (Array.isArray(data)) {
-        users = data;
-      }
-
-      // Backend handles filtering, return first result or null
-      return users.length > 0 ? users[0] : null;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to fetch employee by email"
-      );
+    let users: any[] = [];
+    if (data.success && data.users) {
+      users = data.users;
+    } else if (Array.isArray(data.users)) {
+      users = data.users;
+    } else if (Array.isArray(data)) {
+      users = data;
     }
+
+    // Backend handles filtering, return first result or null
+    return users.length > 0 ? users[0] : null;
   },
 
   searchEmployees: async (query: string): Promise<any[]> => {
-    try {
-      const response = await api.get("/getAllActiveUsers", {
-        params: { search: query },
-      });
-      const data = response.data;
+    const response = await api.get("/getAllActiveUsers", {
+      params: { search: query },
+    });
+    const data = response.data;
 
-      let users: any[] = [];
-      if (data.success && data.users) {
-        users = data.users;
-      } else if (Array.isArray(data.users)) {
-        users = data.users;
-      } else if (Array.isArray(data)) {
-        users = data;
-      }
-
-      // Backend handles filtering, return results as-is
-      return users.slice(0, 20); // Limit to 20 results
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to search employees"
-      );
+    let users: any[] = [];
+    if (data.success && data.users) {
+      users = data.users;
+    } else if (Array.isArray(data.users)) {
+      users = data.users;
+    } else if (Array.isArray(data)) {
+      users = data;
     }
+
+    // Backend handles filtering, return results as-is
+    return users.slice(0, 20); // Limit to 20 results
   },
 
   getEmployeesByDepartment: async (department: string): Promise<any[]> => {
-    try {
-      const response = await api.get("/getAllActiveUsers", {
-        params: { department },
-      });
-      const data = response.data;
+    const response = await api.get("/getAllActiveUsers", {
+      params: { department },
+    });
+    const data = response.data;
 
-      let users: any[] = [];
-      if (data.success && data.users) {
-        users = data.users;
-      } else if (Array.isArray(data.users)) {
-        users = data.users;
-      } else if (Array.isArray(data)) {
-        users = data;
-      }
-
-      // Backend handles filtering, return results as-is
-      return users;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to fetch employees by department"
-      );
+    let users: any[] = [];
+    if (data.success && data.users) {
+      users = data.users;
+    } else if (Array.isArray(data.users)) {
+      users = data.users;
+    } else if (Array.isArray(data)) {
+      users = data;
     }
+
+    // Backend handles filtering, return results as-is
+    return users;
   },
 
   getEmployeesByRole: async (role: string): Promise<any[]> => {
-    try {
-      const response = await api.get("/getAllActiveUsers", {
-        params: { role },
-      });
-      const data = response.data;
+    const response = await api.get("/getAllActiveUsers", {
+      params: { role },
+    });
+    const data = response.data;
 
-      let users: any[] = [];
-      if (data.success && data.users) {
-        users = data.users;
-      } else if (Array.isArray(data.users)) {
-        users = data.users;
-      } else if (Array.isArray(data)) {
-        users = data;
-      }
-
-      // Backend handles filtering, return results as-is
-      return users;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to fetch employees by role"
-      );
+    let users: any[] = [];
+    if (data.success && data.users) {
+      users = data.users;
+    } else if (Array.isArray(data.users)) {
+      users = data.users;
+    } else if (Array.isArray(data)) {
+      users = data;
     }
+
+    // Backend handles filtering, return results as-is
+    return users;
   },
 
   getEmployeeStats: async (): Promise<any> => {
-    try {
-      const response = await api.get("/getAllActiveUsers");
-      const data = response.data;
+    const response = await api.get("/getAllActiveUsers");
+    const data = response.data;
 
-      let users: any[] = [];
-      if (data.success && data.users) {
-        users = data.users;
-      } else if (Array.isArray(data.users)) {
-        users = data.users;
-      } else if (Array.isArray(data)) {
-        users = data;
-      }
-
-      // Calculate stats client-side
-      return {
-        total: users.length,
-        active: users.filter((user: any) => user.isActive !== false).length,
-        byRole: users.reduce((acc: any, user: any) => {
-          const role =
-            user.role || user.roles?.[0]?.name || user.roles?.[0] || "unknown";
-          acc[role] = (acc[role] || 0) + 1;
-          return acc;
-        }, {}),
-        byDepartment: users.reduce((acc: any, user: any) => {
-          const dept = user.department || "unknown";
-          acc[dept] = (acc[dept] || 0) + 1;
-          return acc;
-        }, {}),
-      };
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch employee stats"
-      );
+    let users: any[] = [];
+    if (data.success && data.users) {
+      users = data.users;
+    } else if (Array.isArray(data.users)) {
+      users = data.users;
+    } else if (Array.isArray(data)) {
+      users = data;
     }
+
+    // Calculate stats client-side
+    return {
+      total: users.length,
+      active: users.filter((user: any) => user.isActive !== false).length,
+      byRole: users.reduce((acc: any, user: any) => {
+        const role =
+          user.role || user.roles?.[0]?.name || user.roles?.[0] || "unknown";
+        acc[role] = (acc[role] || 0) + 1;
+        return acc;
+      }, {}),
+      byDepartment: users.reduce((acc: any, user: any) => {
+        const dept = user.department || "unknown";
+        acc[dept] = (acc[dept] || 0) + 1;
+        return acc;
+      }, {}),
+    };
   },
 
   markNotificationAsRead: async (notificationId: number): Promise<void> => {
-    try {
-      await api.put(`/notifications/${notificationId}/read`);
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to mark notification as read"
-      );
-    }
+    await api.put(`/notifications/${notificationId}/read`);
   },
 
   markAllNotificationsAsRead: async (userRole: string): Promise<void> => {
-    try {
-      await api.put("/notifications/read-all", null, {
-        params: { role: userRole },
-      });
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to mark all notifications as read"
-      );
-    }
+    await api.put("/notifications/read-all", null, {
+      params: { role: userRole },
+    });
   },
 
   // Utility methods
   getUserById: async (userId: number): Promise<any> => {
-    try {
-      const response = await api.get(`/users/${userId}`);
-      const data = response.data;
+    const response = await api.get(`/users/${userId}`);
+    const data = response.data;
 
-      if (data.success && data.user) {
-        return data.user;
-      }
-      if (data.user) {
-        return data.user;
-      }
-      return data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      // 404 is expected if endpoint doesn't exist yet
-      if (axiosError.response?.status === 404) {
-        throw new Error("User not found");
-      }
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to get user"
-      );
+    if (data.success && data.user) {
+      return data.user;
     }
+    if (data.user) {
+      return data.user;
+    }
+    return data;
   },
 
   getProfiles: async (): Promise<any[]> => {
-    try {
-      const response = await api.get("/profiles");
-      const data = response.data;
+    const response = await api.get("/profiles");
+    const data = response.data;
 
-      if (data.success && data.profiles) {
-        return data.profiles;
-      }
-      if (Array.isArray(data.profiles)) {
-        return data.profiles;
-      }
-      if (Array.isArray(data)) {
-        return data;
-      }
-      return [];
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch profiles"
-      );
+    if (data.success && data.profiles) {
+      return data.profiles;
     }
+    if (Array.isArray(data.profiles)) {
+      return data.profiles;
+    }
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return [];
   },
 
   // ============================================
@@ -800,153 +467,79 @@ export const apiService = {
 
   // Get all users (except authenticated user)
   getAllUsers: async (): Promise<any[]> => {
-    try {
-      const response = await api.get("/getAllUsers");
-      const data = response.data;
+    const response = await api.get("/getAllUsers");
+    const data = response.data;
 
-      if (data.success && data.users) {
-        return data.users;
-      }
-      if (Array.isArray(data.users)) {
-        return data.users;
-      }
-      if (Array.isArray(data)) {
-        return data;
-      }
-      return [];
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch all users"
-      );
+    if (data.success && data.users) {
+      return data.users;
     }
+    if (Array.isArray(data.users)) {
+      return data.users;
+    }
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return [];
   },
 
   // Get all branch heads/supervisors
   getAllBranchHeads: async (): Promise<any[]> => {
-    try {
-      const response = await api.get("/getAllBranchHeads");
-      const data = response.data;
+    const response = await api.get("/getAllBranchHeads");
+    const data = response.data.branch_heads;
 
-      // Handle different response formats
-      if (data.success && data.branch_heads) {
-        return data.branch_heads;
-      }
-      if (data.success && data.users) {
-        return data.users;
-      }
-      if (Array.isArray(data.branch_heads)) {
-        return data.branch_heads;
-      }
-      if (Array.isArray(data.users)) {
-        return data.users;
-      }
-      if (Array.isArray(data)) {
-        return data;
-      }
-      return [];
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch branch heads"
-      );
+    if (data.success && data.users) {
+      return data.users;
     }
+    if (Array.isArray(data.users)) {
+      return data.users;
+    }
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return [];
   },
 
   // Get all area managers
-  getAllAreaManager: async (): Promise<any[]> => {
-    try {
-      const response = await api.get("/getAllAreaManager");
-      const data = response.data;
-
-      // Handle different response formats
-      if (data.success && data.area_managers) {
-        return data.area_managers;
-      }
-      if (data.success && data.users) {
-        return data.users;
-      }
-      if (data.success && data.branch_heads) {
-        return data.branch_heads;
-      }
-      if (Array.isArray(data.area_managers)) {
-        return data.area_managers;
-      }
-      if (Array.isArray(data.users)) {
-        return data.users;
-      }
-      if (Array.isArray(data.branch_heads)) {
-        return data.branch_heads;
-      }
-      if (Array.isArray(data)) {
-        return data;
-      }
-      return [];
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch area managers"
-      );
-    }
+  getAllAreaManager: async (): Promise<any> => {
+    const response = await api.get("/getAllAreaManager");
+    return response.data.branch_heads;
   },
 
   // Get all employees under authenticated user
   getAllEmployeeByAuth: async (): Promise<any[]> => {
-    try {
-      const response = await api.get("/getAllEmployeeByAuth");
-      const data = response.data;
+    const response = await api.get("/getAllEmployeeByAuth");
+    const data = response.data;
 
-      if (data.success && data.users) {
-        return data.users;
-      }
-      if (Array.isArray(data.users)) {
-        return data.users;
-      }
-      if (Array.isArray(data)) {
-        return data;
-      }
-      return [];
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to fetch employees by auth"
-      );
+    if (data.success && data.users) {
+      return data.users;
     }
+    if (Array.isArray(data.users)) {
+      return data.users;
+    }
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return [];
   },
 
   // Get specific user
   showUser: async (userId: string | number): Promise<any> => {
-    try {
-      const response = await api.get(`/showUser/${userId}`);
-      const data = response.data;
+    const response = await api.get(`/showUser/${userId}`);
+    const data = response.data;
 
-      if (data.success && data.user) {
-        return data.user;
-      }
-      if (data.user) {
-        return data.user;
-      }
-      return data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch user"
-      );
+    if (data.success && data.user) {
+      return data.user;
     }
+    if (data.user) {
+      return data.user;
+    }
+    return data;
   },
 
   // Add new user
   addUser: async (formData: FormData): Promise<any> => {
-    try {
-      const response = await api.post("/addUser", formData);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to add user"
-      );
-    }
+    const response = await api.post("/addUser", formData);
+    return response.data;
   },
 
   // Update branches for specific user
@@ -954,28 +547,14 @@ export const apiService = {
     userId: string | number,
     formData: FormData
   ): Promise<any> => {
-    try {
-      const response = await api.post(`/updateUserBranch/${userId}`, formData);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to update user branches"
-      );
-    }
+    const response = await api.post(`/updateUserBranch/${userId}`, formData);
+    return response.data;
   },
 
   // Remove all assigned branches for specific user
   removeUserBranches: async (userId: string | number): Promise<any> => {
-    try {
-      const response = await api.post(`/removeUserBranches/${userId}`);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to remove user branches"
-      );
-    }
+    const response = await api.post(`/removeUserBranches/${userId}`);
+    return response.data;
   },
 
   // Get total employees under a branch
@@ -984,49 +563,26 @@ export const apiService = {
     currentPage: number,
     itemsPerPage: number
   ): Promise<any> => {
-    try {
-      const response = await api.get("/getTotalEmployeesBranch", {
-        params: {
-          search: searchValue || "",
-          page: currentPage,
-          per_page: itemsPerPage,
-        },
-      });
-      // Return the full response data structure (may contain data, total, last_page, per_page)
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to fetch total employees by branch"
-      );
-    }
+    const response = await api.get("/getTotalEmployeesBranch", {
+      params: {
+        search: searchValue || "",
+        page: currentPage,
+        per_page: itemsPerPage,
+      },
+    });
+    return response.data.branches;
   },
 
   // Get specific branch
   getBranch: async (branchId: string | number): Promise<any> => {
-    try {
-      const response = await api.get(`/branch/${branchId}`);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch branch"
-      );
-    }
+    const response = await api.get(`/branch/${branchId}`);
+    return response.data;
   },
 
   // Add new branch
   addBranch: async (formData: {}): Promise<any> => {
-    try {
-      const response = await api.post("/addBranch", formData);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to add branch"
-      );
-    }
+    const response = await api.post("/addBranch", formData);
+    return response.data;
   },
 
   // Get total employees under a department
@@ -1035,151 +591,86 @@ export const apiService = {
     currentPage: number,
     itemsPerPage: number
   ): Promise<any> => {
-    try {
-      const response = await api.get("/getTotalEmployeesDepartments", {
-        params: {
-          search: searchValue || "",
-          page: currentPage,
-          per_page: itemsPerPage,
-        },
-      });
-      // Return the full response data structure (may contain data, total, last_page, per_page)
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to fetch total employees by department"
-      );
-    }
+    const response = await api.get("/getTotalEmployeesDepartments", {
+      params: {
+        search: searchValue || "",
+        page: currentPage,
+        per_page: itemsPerPage,
+      },
+    });
+    return response.data.departments;
   },
 
   // Add new department
   addDepartment: async (name: string): Promise<any> => {
-    
-      const response = await api.post("/addDepartment", {department_name: name});
-      return response.data;
+    const response = await api.post("/addDepartment", {
+      department_name: name,
+    });
+    return response.data;
   },
 
   // Delete department
   deleteDepartment: async (departmentId: string | number): Promise<any> => {
-    try {
-      const response = await api.post(`/deleteDepartment/${departmentId}`);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to delete department"
-      );
-    }
+    const response = await api.post(`/deleteDepartment/${departmentId}`);
+    return response.data;
   },
 
   // Delete department
   deleteBranches: async (branchId: string | number): Promise<any> => {
-    try {
-      const response = await api.post(`/deleteBranch/${branchId}`);
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to delete branch"
-      );
-    }
+    const response = await api.post(`/deleteBranch/${branchId}`);
+    return response.data;
   },
-  // ============================================
-  // EVALUATION ENDPOINTS (Missing)
-  // ============================================
 
   // Get evaluations by authenticated evaluator
   getEvalAuthEvaluator: async (): Promise<any[]> => {
-    try {
-      const response = await api.get("/getEvalAuthEvaluator");
-      const data = response.data;
+    const response = await api.get("/getEvalAuthEvaluator");
+    const data = response.data;
 
-      if (data.success && data.evaluations) {
-        return data.evaluations;
-      }
-      if (Array.isArray(data.evaluations)) {
-        return data.evaluations;
-      }
-      if (Array.isArray(data)) {
-        return data;
-      }
-      return [];
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to fetch evaluator evaluations"
-      );
+    if (data.success && data.evaluations) {
+      return data.evaluations;
     }
+    if (Array.isArray(data.evaluations)) {
+      return data.evaluations;
+    }
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return [];
   },
 
   // Get evaluations by authenticated employee
   getMyEvalAuthEmployee: async (): Promise<any[]> => {
-    try {
-      const response = await api.get("/getMyEvalAuthEmployee");
-      const data = response.data;
+    const response = await api.get("/getMyEvalAuthEmployee");
+    const data = response.data;
 
-      if (data.success && data.evaluations) {
-        return data.evaluations;
-      }
-      if (Array.isArray(data.evaluations)) {
-        return data.evaluations;
-      }
-      if (Array.isArray(data)) {
-        return data;
-      }
-      return [];
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to fetch employee evaluations"
-      );
+    if (data.success && data.evaluations) {
+      return data.evaluations;
     }
+    if (Array.isArray(data.evaluations)) {
+      return data.evaluations;
+    }
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return [];
   },
 
   // Evaluator dashboard total cards
   evaluatorDashboard: async (): Promise<any> => {
-    try {
-      const response = await api.get("/evaluatorDashboard");
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to fetch evaluator dashboard data"
-      );
-    }
+    const response = await api.get("/evaluatorDashboard");
+    return response.data;
   },
 
   // HR dashboard total cards
   hrDashboard: async (): Promise<any> => {
-    try {
-      const response = await api.get("/hrDashboard");
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to fetch HR dashboard data"
-      );
-    }
+    const response = await api.get("/hrDashboard");
+    return response.data;
   },
 
   // Employee dashboard total cards
   employeeDashboard: async (): Promise<any> => {
-    try {
-      const response = await api.get("/employeeDashboard");
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to fetch employee dashboard data"
-      );
-    }
+    const response = await api.get("/employeeDashboard");
+    return response.data;
   },
 
   // ============================================
@@ -1188,32 +679,17 @@ export const apiService = {
 
   // Get all roles
   getAllRoles: async (): Promise<any[]> => {
-    try {
-      const response = await api.get("/getAllRoles");
-      const data = response.data;
-      return data.roles;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message || "Failed to fetch roles"
-      );
-    }
+    const response = await api.get("/getAllRoles");
+    const data = response.data;
+    return data.roles;
   },
 
   // Mark notification as read
   isReadNotification: async (notificationId: number): Promise<any> => {
-    try {
-      const response = await api.post("/isReadNotification", {
-        notificationId,
-      });
-      return response.data;
-    } catch (error) {
-      const axiosError = error as AxiosError<any>;
-      throw new Error(
-        axiosError.response?.data?.message ||
-          "Failed to mark notification as read"
-      );
-    }
+    const response = await api.post("/isReadNotification", {
+      notificationId,
+    });
+    return response.data;
   },
 };
 

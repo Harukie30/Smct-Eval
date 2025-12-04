@@ -183,10 +183,16 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       try {
         await onSave(formData);
         onClose();
-      } catch (error) {
-        console.error("Error adding employee:", error);
-      } finally {
         setIsSaving(false);
+      } catch (error: any) {
+        if (error.response?.data?.errors) {
+          const backendErrors: Record<string, string> = {};
+
+          Object.keys(error.response.data.errors).forEach((field) => {
+            backendErrors[field] = error.response.data.errors[field][0];
+          });
+          setErrors(backendErrors);
+        }
       }
     }
   };

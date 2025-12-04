@@ -4,7 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { dataURLtoFile } from "@/utils/data-url-to-file";
 import Image from "next/image";
-import { CONFIG } from "@/../config/config";
+import { CONFIG } from "../../config/config";
 
 interface SignaturePadProps {
   value: string;
@@ -27,59 +27,27 @@ export default function SignaturePad({
   const [previewImage, setPreviewImage] = useState<string>("");
 
   // Helper function to get coordinates
-  const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>, canvas: HTMLCanvasElement) => {
+  const getCoordinates = (
+    e:
+      | React.MouseEvent<HTMLCanvasElement>
+      | React.TouchEvent<HTMLCanvasElement>,
+    canvas: HTMLCanvasElement
+  ) => {
     const rect = canvas.getBoundingClientRect();
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
     const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-    
+
     return {
       x: clientX - rect.left,
-      y: clientY - rect.top
+      y: clientY - rect.top,
     };
-  };
-
-  // Helper function to normalize signature URL
-  // Signatures should ideally be stored as base64 data URLs in the database
-  // But we also handle file paths in case backend stores them as files
-  const normalizeSignatureUrl = (signature: string): string => {
-    if (!signature || typeof signature !== 'string') return '';
-    
-    // ✅ BEST: If it's already a base64 data URL, return as is (no file needed)
-    if (signature.startsWith('data:image')) {
-      return signature;
-    }
-    
-    // If it's already an absolute URL, return as is
-    if (signature.startsWith('http://') || signature.startsWith('https://')) {
-      return signature;
-    }
-    
-    // If it's a file path from backend (like "user-signatures/...")
-    // This requires public storage access - may cause 403 if protected
-    if (signature.startsWith('/')) {
-      // Already has leading slash - treat as public asset
-      return signature;
-    } else {
-      // File path from backend - construct full URL
-      // Note: This may fail with 403 if storage is protected
-      if (signature.includes('/') && !signature.startsWith('/')) {
-        // Backend storage path - try to access via public storage route
-        const apiUrl = CONFIG.API_URL || 'http://localhost:8000';
-        const baseUrl = apiUrl.replace(/\/api$/, '');
-        // Try Laravel public storage symlink route
-        return `${baseUrl}/storage/${signature}`;
-      } else {
-        // Simple filename - treat as public asset with leading slash
-        return `/${signature}`;
-      }
-    }
   };
 
   // Load existing signature when value changes
   useEffect(() => {
-    if (value && typeof value === 'string' && value.length > 0) {
+    if (value && typeof value === "string" && value.length > 0) {
       setHasSignature(true);
-      setPreviewImage(normalizeSignatureUrl(value));
+      setPreviewImage(value);
     } else {
       setHasSignature(false);
       setPreviewImage("");
@@ -154,7 +122,7 @@ export default function SignaturePad({
   const clearSignature = () => {
     onChangeAction(null);
     setHasSignature(false);
-    
+
     // Small delay to ensure canvas is rendered before resetting
     setTimeout(() => {
       const canvas = canvasRef.current;
@@ -186,29 +154,23 @@ export default function SignaturePad({
         }`}
       >
         {hasSignature ? (
-          // Use regular img tag for all cases to handle authentication cookies properly
-          // For storage URLs, we need to send credentials (cookies) for authentication
-          <img
-            src={previewImage}
-            alt="Signature"
-            className="w-full h-32 object-contain"
-            crossOrigin="use-credentials"
-            onError={(e) => {
-              console.error('Failed to load signature image:', previewImage);
-              // Try to load via API proxy if direct storage access fails
-              if (previewImage.includes('/storage/') && !previewImage.startsWith('data:image')) {
-                console.log('Storage URL failed, signature may need to be loaded differently');
-              }
-              e.currentTarget.style.display = 'none';
-            }}
-          />
+          previewImage.startsWith("data:") ? (
+            <img src={previewImage} alt="Signature" width={700} height={200} />
+          ) : (
+            <img
+              src={CONFIG.API_URL_STORAGE + "/" + previewImage}
+              alt="Signature"
+              width={700}
+              height={200}
+            />
+          )
         ) : (
           <canvas
             ref={canvasRef}
             className={`w-full h-32 cursor-crosshair bg-white rounded border ${
               hasError ? "border-red-300" : "border-gray-200"
             }`}
-            style={{ display: 'block' }}
+            style={{ display: "block" }}
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
@@ -218,6 +180,7 @@ export default function SignaturePad({
             onTouchEnd={stopDrawing}
           />
         )}
+
         <p
           className={`text-sm mt-2 text-center ${
             hasError
