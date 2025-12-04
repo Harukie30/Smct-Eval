@@ -7,13 +7,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { UserProfile } from './ProfileCard';
-import { User, Camera, Save, X, Eye, EyeOff, ChevronDown } from 'lucide-react';
-import { uploadProfileImage } from '@/lib/imageUpload';
+import { User, Save, X, Eye, EyeOff, ChevronDown } from 'lucide-react';
 // Removed profileService import - we'll use UserContext directly
 import SignaturePad from '@/components/SignaturePad';
 import { useToast } from '@/hooks/useToast';
 import LoadingAnimation from '@/components/LoadingAnimation';
 import { apiService } from '@/lib/apiService';
+import { dataURLtoFile } from '@/utils/data-url-to-file';
 
 // Extended form data type for editing
 type ProfileFormData = UserProfile & {
@@ -297,28 +297,6 @@ export default function ProfileModal({
     });
   }, []);
 
-  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        setErrors(prev => ({ ...prev, avatar: 'File size must be less than 5MB' }));
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        // Pass File directly to uploadProfileImage
-        const imageUrl = await uploadProfileImage(file);
-        setFormData(prev => ({ ...prev, avatar: imageUrl }));
-        setErrors(prev => ({ ...prev, avatar: '' }));
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        setErrors(prev => ({ ...prev, avatar: 'Failed to upload image. Please try again.' }));
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
 
   // Separate handler for saving password only
   const handleSavePassword = async () => {
@@ -441,31 +419,62 @@ export default function ProfileModal({
         // Add basic profile fields
         if (formData.fname) profileFormData.append('fname', formData.fname);
         if (formData.lname) profileFormData.append('lname', formData.lname);
-        if (formData.email) profileFormData.append('email', formData.email);
-        if (formData.bio !== undefined) profileFormData.append('bio', formData.bio || '');
         
-        // Handle avatar - if it's a URL string, append it; if it's a File, append the file
-        if (formData.avatar) {
-          const avatarValue = formData.avatar as any;
-          if (avatarValue instanceof File) {
-            profileFormData.append('avatar', avatarValue);
-          } else if (typeof avatarValue === 'string') {
-            profileFormData.append('avatar', avatarValue);
-          }
+        // Only send email if it has changed (to avoid "email already taken" error for current user's email)
+        const originalEmail = profile.email || '';
+        const newEmail = formData.email || '';
+        if (newEmail && newEmail !== originalEmail) {
+          profileFormData.append('email', newEmail);
+          console.log('📧 Email changed, sending new email:', newEmail);
+        } else if (newEmail === originalEmail) {
+          console.log('📧 Email unchanged, not sending to avoid validation error');
         }
         
-        // Add signature (important: must ALWAYS be included)
-        // Signature is a base64 data URL string from SignaturePad (e.g., "data:image/png;base64,...")
-        // Always send signature field, even if empty, to ensure it's saved/cleared properly
-        const signatureValue = formData.signature || '';
-        profileFormData.append('signature', signatureValue);
+        if (formData.bio !== undefined) profileFormData.append('bio', formData.bio || '');
         
-        console.log('✍️ Signature being sent:', {
-          hasSignature: !!signatureValue && signatureValue.length > 0,
-          signatureLength: signatureValue.length,
-          signatureType: signatureValue.startsWith('data:image') ? 'base64-data-url' : 'empty',
-          signaturePreview: signatureValue.length > 0 ? signatureValue.substring(0, 60) + '...' : 'empty',
-        });
+        // Add signature - only send if there's a valid signature
+        // Try sending as File first (binary), fallback to base64 string if needed
+        if (formData.signature && formData.signature.length > 0 && formData.signature.startsWith('data:image')) {
+          try {
+            // Convert base64 data URL to File object (binary) - same as registration
+            const signatureFile = dataURLtoFile(formData.signature, 'signature.png');
+            
+            // Verify file was created correctly
+            if (!signatureFile || !(signatureFile instanceof File)) {
+              throw new Error("Failed to create signature file");
+            }
+
+            // Ensure file has valid size
+            if (signatureFile.size === 0) {
+              throw new Error("Signature file is empty");
+            }
+            
+            // Append signature as File object (binary) - same as registration
+            profileFormData.append('signature', signatureFile);
+            
+            console.log('✍️ Signature being sent (binary File):', {
+              hasSignature: true,
+              fileName: signatureFile.name,
+              fileSize: signatureFile.size,
+              fileType: signatureFile.type,
+              isFile: signatureFile instanceof File,
+            });
+          } catch (error: any) {
+            console.error('❌ Error converting signature to file:', error);
+            console.error('Signature conversion error details:', {
+              errorMessage: error?.message,
+              signatureLength: formData.signature?.length,
+              signaturePreview: formData.signature?.substring(0, 50),
+            });
+            // Fallback: Try sending as base64 string if file conversion fails
+            console.log('⚠️ Falling back to sending signature as base64 string');
+            profileFormData.append('signature', formData.signature);
+          }
+        } else {
+          console.log('ℹ️ No signature to send (empty or missing)');
+        }
+        // If no signature, don't append the field at all
+        // Backend will keep existing signature or handle missing field appropriately
         
         // Add position, department, and branch IDs
         if (formData.positions?.value) {
@@ -495,13 +504,20 @@ export default function ProfileModal({
         console.log('📦 FormData entries:');
         for (const [key, value] of profileFormData.entries()) {
           if (key === 'signature') {
-            const sigValue = value as string;
-            console.log(`  ${key}:`, {
-              type: typeof sigValue,
-              length: sigValue?.length || 0,
-              preview: sigValue?.substring(0, 60) || 'empty',
-              isBase64: sigValue?.startsWith('data:image') || false,
-            });
+            if (value instanceof File) {
+              console.log(`  ${key}:`, {
+                type: 'File (binary)',
+                fileName: value.name,
+                fileSize: value.size,
+                fileType: value.type,
+                isFile: true,
+              });
+            } else {
+              console.log(`  ${key}:`, {
+                type: typeof value,
+                value: value || 'empty',
+              });
+            }
           } else {
             const valStr = typeof value === 'string' ? value : String(value);
             console.log(`  ${key}:`, valStr.length > 100 ? valStr.substring(0, 50) + '...' : valStr);
@@ -510,6 +526,18 @@ export default function ProfileModal({
         
         // Send profile update to API
         try {
+          // Log what we're about to send
+          console.log('📤 About to send profile update:', {
+            hasFname: profileFormData.has('fname'),
+            hasLname: profileFormData.has('lname'),
+            hasEmail: profileFormData.has('email'),
+            hasBio: profileFormData.has('bio'),
+            hasSignature: profileFormData.has('signature'),
+            hasPositionId: profileFormData.has('position_id'),
+            hasDepartmentId: profileFormData.has('department_id'),
+            hasBranchId: profileFormData.has('branch_id'),
+          });
+          
           const response = await apiService.updateEmployee_auth(profileFormData);
           console.log('✅ Profile update API response:', response);
           
@@ -521,8 +549,27 @@ export default function ProfileModal({
             error: apiError,
             message: apiError?.message,
             response: apiError?.response?.data,
+            responseData: apiError?.response?.data,
             status: apiError?.status,
+            statusText: apiError?.response?.statusText,
+            errorMessage: apiError?.response?.data?.message,
+            errorException: apiError?.response?.data?.exception,
+            errorFile: apiError?.response?.data?.file,
+            errorLine: apiError?.response?.data?.line,
           });
+          
+          // Log the actual backend error message if available
+          if (apiError?.response?.data) {
+            console.error('Backend error details:', apiError.response.data);
+            
+            // Show user-friendly error message
+            const errorMessage = apiError?.response?.data?.message || 
+                               apiError?.message || 
+                               'Failed to update profile. Please try again.';
+            
+            setErrors(prev => ({ ...prev, general: errorMessage }));
+          }
+          
           throw apiError;
         }
       }
@@ -581,33 +628,24 @@ export default function ProfileModal({
           {/* Avatar Section */}
           <div className="flex flex-col mt-7 items-center space-y-4">
             <div className="relative">
-              <div className="h-24 w-24 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-2xl">
-                {formData.avatar ? (
-                  <img 
-                    src={formData.avatar} 
-                    alt={formData.name || `${formData.fname} ${formData.lname}`} 
-                    className="h-24 w-24 rounded-full object-cover"
-                  />
-                ) : (
-                  `${formData.fname?.[0] || formData.name?.[0] || ''}${formData.lname?.[0] || formData.name?.split(' ')[1]?.[0] || ''}`.toUpperCase()
-                )}
-              </div>
-              <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
-                <Camera className="w-4 h-4" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  className="hidden"
+              <div className="h-24 w-24 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-2xl overflow-hidden">
+                <img 
+                  src="/profile.png" 
+                  alt={formData.name || `${formData.fname} ${formData.lname}`}
+                  className="h-24 w-24 rounded-full object-cover"
+                  onError={(e) => {
+                    // Fallback to initials if default image doesn't exist
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      parent.innerHTML = `${formData.fname?.[0] || formData.name?.[0] || ''}${formData.lname?.[0] || formData.name?.split(' ')[1]?.[0] || ''}`.toUpperCase();
+                    }
+                  }}
                 />
-              </label>
+              </div>
             </div>
-            {errors.avatar && (
-              <p className="text-sm text-red-600">{errors.avatar}</p>
-            )}
-            <p className="text-sm text-gray-500 text-center">
-              Click the camera icon to change your profile picture
-            </p>
+           
           </div>
 
           {/* Form Fields */}

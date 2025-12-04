@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { dataURLtoFile } from "@/utils/data-url-to-file";
 import Image from "next/image";
+import { CONFIG } from "@/../config/config";
 
 interface SignaturePadProps {
   value: string;
@@ -37,11 +38,55 @@ export default function SignaturePad({
     };
   };
 
+  // Helper function to normalize signature URL
+  const normalizeSignatureUrl = (signature: string): string => {
+    if (!signature || typeof signature !== 'string') return '';
+    
+    // If it's already a data URL, return as is
+    if (signature.startsWith('data:image')) {
+      return signature;
+    }
+    
+    // If it's already an absolute URL, return as is
+    if (signature.startsWith('http://') || signature.startsWith('https://')) {
+      return signature;
+    }
+    
+    // If it's a file path from backend (like "user-signatures/...")
+    // Convert to full API URL or add leading slash for public assets
+    if (signature.startsWith('/')) {
+      // Already has leading slash - treat as public asset
+      return signature;
+    } else {
+      // File path from backend - construct full URL
+      // If it's in a storage path, use API URL with storage prefix
+      if (signature.includes('/') && !signature.startsWith('/')) {
+        // Backend storage path - construct URL using API base URL
+        // Try different URL patterns based on Laravel storage structure
+        const apiUrl = CONFIG.API_URL || 'http://localhost:8000';
+        
+        // Option 1: Try /storage/ route (Laravel public storage symlink)
+        // Option 2: Try via API endpoint if storage requires auth
+        // For now, try the storage route first
+        const baseUrl = apiUrl.replace(/\/api$/, '');
+        
+        // Laravel storage files can be accessed via:
+        // - /storage/{path} (if public symlink exists)
+        // - /api/storage/{path} (if protected endpoint exists)
+        // Try public storage first
+        return `${baseUrl}/storage/${signature}`;
+      } else {
+        // Simple filename - treat as public asset with leading slash
+        return `/${signature}`;
+      }
+    }
+  };
+
   // Load existing signature when value changes
   useEffect(() => {
     if (value && typeof value === 'string' && value.length > 0) {
       setHasSignature(true);
-      setPreviewImage(value);
+      setPreviewImage(normalizeSignatureUrl(value));
     } else {
       setHasSignature(false);
       setPreviewImage("");
@@ -148,11 +193,21 @@ export default function SignaturePad({
         }`}
       >
         {hasSignature ? (
-          <Image
-            src={previewImage ?? ""}
+          // Use regular img tag for all cases to handle authentication cookies properly
+          // For storage URLs, we need to send credentials (cookies) for authentication
+          <img
+            src={previewImage}
             alt="Signature"
-            width={700}
-            height={700}
+            className="w-full h-32 object-contain"
+            crossOrigin="use-credentials"
+            onError={(e) => {
+              console.error('Failed to load signature image:', previewImage);
+              // Try to load via API proxy if direct storage access fails
+              if (previewImage.includes('/storage/') && !previewImage.startsWith('data:image')) {
+                console.log('Storage URL failed, signature may need to be loaded differently');
+              }
+              e.currentTarget.style.display = 'none';
+            }}
           />
         ) : (
           <canvas

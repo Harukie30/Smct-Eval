@@ -71,16 +71,21 @@ export default function ProfileCard({
   if (variant === "header") {
     return (
       <div className={`flex items-center space-x-3 ${className}`}>
-        <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
-          {profile.avatar ? (
-            <img
-              src={profile.avatar}
-              alt={profile.name}
-              className="h-8 w-8 rounded-full"
-            />
-          ) : (
-            getInitials(profile.name)
-          )}
+        <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+          <img
+            src="/profile.png"
+            alt={profile.name}
+            className="h-8 w-8 rounded-full object-cover"
+            onError={(e) => {
+              // Fallback to initials if default image doesn't exist
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              const parent = target.parentElement;
+              if (parent) {
+                parent.innerHTML = getInitials(profile.name);
+              }
+            }}
+          />
         </div>
         <div className="flex flex-col">
           <span className="text-sm font-medium text-gray-900">
@@ -133,16 +138,21 @@ export default function ProfileCard({
       <div
         className={`flex items-center space-x-3 p-3 rounded-lg bg-gray-50 border border-gray-200 ${className}`}
       >
-        <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
-          {profile.avatar ? (
-            <img
-              src={profile.avatar}
-              alt={profile.name}
-              className="h-10 w-10 rounded-full"
-            />
-          ) : (
-            getInitials(profile.name)
-          )}
+        <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold overflow-hidden">
+          <img
+            src="/profile.png"
+            alt={profile.name}
+            className="h-10 w-10 rounded-full object-cover"
+            onError={(e) => {
+              // Fallback to initials if default image doesn't exist
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              const parent = target.parentElement;
+              if (parent) {
+                parent.innerHTML = getInitials(profile.name);
+              }
+            }}
+          />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-900 truncate">
@@ -194,16 +204,21 @@ export default function ProfileCard({
       className={`p-4 rounded-lg bg-white/10 border border-white/20 ${className}`}
     >
       <div className="flex items-center">
-        <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold mr-3">
-          {profile.avatar ? (
-            <img
-              src={profile.avatar}
-              alt={profile.name}
-              className="h-10 w-10 rounded-full"
-            />
-          ) : (
-            getInitials(profile.name)
-          )}
+        <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold mr-3 overflow-hidden">
+          <img
+            src="/profile.png"
+            alt={profile.name}
+            className="h-10 w-10 rounded-full object-cover"
+            onError={(e) => {
+              // Fallback to initials if default image doesn't exist
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              const parent = target.parentElement;
+              if (parent) {
+                parent.innerHTML = getInitials(profile.name);
+              }
+            }}
+          />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-white font-semibold truncate">{profile.name}</p>
