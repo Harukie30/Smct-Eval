@@ -80,23 +80,6 @@ export default function DashboardShell(props: DashboardShellProps) {
   const { user, logout, refreshUser } = useUser();
   const router = useRouter();
 
-  // Convert user to UserProfile format
-  const userProfile: UserProfile | null = useMemo(() => {
-    if (!user) return null;
-    return {
-      id: user.id,
-      name: `${user.fname} ${user.lname}`.trim(),
-      roleOrPosition: user.position,
-      email: user.email,
-      avatar: user.avatar,
-      department: user.department,
-      branch: user.branch,
-      bio: user.bio,
-      signature: user.signature,
-      employeeId: user.id,
-    };
-  }, [user]);
-
   // Get user role for notifications - extract from roles array
   const userRole = useMemo(() => {
     if (!user?.roles) return "employee";
@@ -240,9 +223,14 @@ export default function DashboardShell(props: DashboardShellProps) {
     setIsProfileModalOpen(true);
   };
 
-  const handleSaveProfile = async (updatedProfile: UserProfile) => {
+  const handleSaveProfile = async (updatedProfile: UserProfile | null) => {
     try {
       // Call parent callback if provided
+      if (!updatedProfile) {
+        console.error("No profile to save");
+        return;
+      }
+
       if (onSaveProfile) {
         await onSaveProfile(updatedProfile);
       }
@@ -457,16 +445,14 @@ export default function DashboardShell(props: DashboardShellProps) {
               )}
             </div>
 
-            {userProfile && (
-              <ProfileCard
-                profile={userProfile}
-                variant="header"
-                showLogout={true}
-                showSettings={false}
-                onEditProfile={handleEditProfile}
-                onLogout={handleLogout}
-              />
-            )}
+            <ProfileCard
+              profile={user}
+              variant="header"
+              showLogout={true}
+              showSettings={false}
+              onEditProfile={handleEditProfile}
+              onLogout={handleLogout}
+            />
           </div>
         </div>
       </header>
@@ -866,14 +852,12 @@ export default function DashboardShell(props: DashboardShellProps) {
       </div>
 
       {/* Profile Modal */}
-      {userProfile && (
-        <ProfileModal
-          isOpen={isProfileModalOpen}
-          onClose={() => setIsProfileModalOpen(false)}
-          profile={userProfile}
-          onSave={handleSaveProfile}
-        />
-      )}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        profile={user}
+        onSave={handleSaveProfile}
+      />
 
       {/* Contact Developers Modal */}
       <ContactDevsModal

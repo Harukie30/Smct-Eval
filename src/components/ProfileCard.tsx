@@ -1,22 +1,26 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { LogOut, User, Settings } from "lucide-react";
+import { CONFIG } from "../../config/config";
 
 export type UserProfile = {
   id?: string | number;
-  name: string;
-  roleOrPosition?: string;
+  fname: string;
+  lname: string;
+  roles?: any;
   email?: string;
   avatar?: string;
-  department?: string;
-  branch?: string;
+  position_id: number;
+  department_id?: string;
+  branch_id?: string;
   bio?: string;
   signature?: string;
-  employeeId?: number;
+  emp_id?: string;
+  is_active: string;
 };
 
 interface ProfileCardProps {
-  profile: UserProfile;
+  profile: UserProfile | null;
   variant?: "sidebar" | "header" | "compact";
   showLogout?: boolean;
   showSettings?: boolean;
@@ -58,10 +62,11 @@ export default function ProfileCard({
       // Default logout behavior
       localStorage.removeItem("user");
       sessionStorage.clear();
-      window.location.href = "/";
+      // window.location.href = "/";
     }
   };
 
+  console.log("profile", profile);
   const handleSettings = () => {
     if (onSettings) {
       onSettings();
@@ -72,24 +77,22 @@ export default function ProfileCard({
     return (
       <div className={`flex items-center space-x-3 ${className}`}>
         <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-sm">
-          {profile.avatar ? (
+          {profile?.avatar ? (
             <img
-              src={profile.avatar}
-              alt={profile.name}
+              src={CONFIG.API_URL_STORAGE + "/" + profile.avatar}
+              alt={profile.fname}
               className="h-8 w-8 rounded-full"
             />
           ) : (
-            getInitials(profile.name)
+            getInitials(profile?.fname || "")
           )}
         </div>
         <div className="flex flex-col">
           <span className="text-sm font-medium text-gray-900">
-            {profile.name}
+            {profile?.fname}
           </span>
-          {profile.roleOrPosition && (
-            <span className="text-xs text-gray-500">
-              {profile.roleOrPosition}
-            </span>
+          {profile?.roles?.name && (
+            <span className="text-xs text-gray-500">{profile.roles?.name}</span>
           )}
         </div>
         {onEditProfile && (
@@ -134,32 +137,34 @@ export default function ProfileCard({
         className={`flex items-center space-x-3 p-3 rounded-lg bg-gray-50 border border-gray-200 ${className}`}
       >
         <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
-          {profile.avatar ? (
+          {profile?.avatar ? (
             <img
-              src={profile.avatar}
-              alt={profile.name}
+              src={CONFIG.API_URL_STORAGE + "/" + profile?.avatar}
+              alt={profile?.fname}
               className="h-10 w-10 rounded-full"
             />
           ) : (
-            getInitials(profile.name)
+            getInitials(profile?.fname || "")
           )}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-900 truncate">
-            {profile.name}
+            {profile?.fname}
           </p>
-          {profile.roleOrPosition && (
+          {profile?.roles?.name && (
             <p className="text-xs text-gray-500 truncate">
-              {profile.roleOrPosition}
+              {profile?.roles?.name}
             </p>
           )}
-          {profile.department && (
+          {profile?.department_id && (
             <p className="text-xs text-gray-400 truncate">
-              {profile.department}
+              {profile?.department_id}
             </p>
           )}
-          {profile.branch && (
-            <p className="text-xs text-gray-400 truncate">{profile.branch}</p>
+          {profile?.branch_id && (
+            <p className="text-xs text-gray-400 truncate">
+              {profile?.branch_id}
+            </p>
           )}
         </div>
         <div className="flex space-x-1">
@@ -195,30 +200,32 @@ export default function ProfileCard({
     >
       <div className="flex items-center">
         <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold mr-3">
-          {profile.avatar ? (
+          {profile?.avatar ? (
             <img
-              src={profile.avatar}
-              alt={profile.name}
+              src={CONFIG.API_URL_STORAGE + "/" + profile?.avatar}
+              alt={profile?.fname}
               className="h-10 w-10 rounded-full"
             />
           ) : (
-            getInitials(profile.name)
+            getInitials(profile?.fname || "")
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-white font-semibold truncate">{profile.name}</p>
-          {profile.roleOrPosition && (
+          <p className="text-white font-semibold truncate">{profile?.fname}</p>
+          {profile?.roles?.name && (
             <p className="text-blue-100 text-xs truncate">
-              {profile.roleOrPosition}
+              {profile?.roles?.name}
             </p>
           )}
-          {profile.department && (
+          {profile?.department_id && (
             <p className="text-blue-100 text-xs truncate">
-              {profile.department}
+              {profile?.department_id}
             </p>
           )}
-          {profile.branch && (
-            <p className="text-blue-100 text-xs truncate">{profile.branch}</p>
+          {profile?.branch_id && (
+            <p className="text-blue-100 text-xs truncate">
+              {profile?.branch_id}
+            </p>
           )}
         </div>
       </div>

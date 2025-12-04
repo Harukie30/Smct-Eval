@@ -386,15 +386,13 @@ export default function UserManagementTab() {
 
       toastMessages.user.created(newUser.fname);
       setIsAddUserModalOpen(false);
-    } catch (error: any) {
-      if (error.response?.data?.errors) {
-        const backendErrors: Record<string, string> = {};
-
-        Object.keys(error.response.data.errors).forEach((field) => {
-          backendErrors[field] = error.response.data.errors[field][0];
-        });
-        setErrors(backendErrors);
-      }
+    } catch (error) {
+      console.error("Error adding user:", error);
+      toastMessages.generic.error(
+        "Add Failed",
+        "Failed to add user. Please try again."
+      );
+      throw error;
     }
   };
 
@@ -594,28 +592,25 @@ export default function UserManagementTab() {
                       Array.from({ length: itemsPerPage }).map((_, index) => (
                         <TableRow key={`skeleton-${index}`}>
                           <TableCell className="px-6 py-3">
-                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-6 w-24" />
                           </TableCell>
                           <TableCell className="px-6 py-3">
-                            <Skeleton className="h-6 w-16 rounded-full" />
+                            <Skeleton className="h-6 w-24" />
                           </TableCell>
                           <TableCell className="px-6 py-3">
-                            <Skeleton className="h-4 w-20" />
+                            <Skeleton className="h-6 w-24" />
                           </TableCell>
                           <TableCell className="px-6 py-3">
-                            <Skeleton className="h-4 w-20" />
+                            <Skeleton className="h-6 w-24" />
                           </TableCell>
                           <TableCell className="px-6 py-3">
-                            <Skeleton className="h-6 w-16 rounded-full" />
+                            <Skeleton className="h-6 w-24" />
                           </TableCell>
                           <TableCell className="px-6 py-3">
-                            <Skeleton className="h-4 w-20" />
+                            <Skeleton className="h-6 w-24" />
                           </TableCell>
                           <TableCell className="px-6 py-3">
-                            <Skeleton className="h-6 w-20 rounded-full" />
-                          </TableCell>
-                          <TableCell className="px-6 py-3">
-                            <Skeleton className="h-8 w-16" />
+                            <Skeleton className="h-6 w-24" />
                           </TableCell>
                         </TableRow>
                       ))
@@ -882,28 +877,25 @@ export default function UserManagementTab() {
                         Array.from({ length: itemsPerPage }).map((_, index) => (
                           <TableRow key={`skeleton-${index}`}>
                             <TableCell className="px-6 py-3">
-                              <Skeleton className="h-4 w-24" />
+                              <Skeleton className="h-6 w-24" />
                             </TableCell>
                             <TableCell className="px-6 py-3">
-                              <Skeleton className="h-6 w-16 rounded-full" />
+                              <Skeleton className="h-6 w-24" />
                             </TableCell>
                             <TableCell className="px-6 py-3">
-                              <Skeleton className="h-4 w-20" />
+                              <Skeleton className="h-6 w-24" />
                             </TableCell>
                             <TableCell className="px-6 py-3">
-                              <Skeleton className="h-4 w-20" />
+                              <Skeleton className="h-6 w-24" />
                             </TableCell>
                             <TableCell className="px-6 py-3">
-                              <Skeleton className="h-6 w-16 rounded-full" />
+                              <Skeleton className="h-6 w-24" />
                             </TableCell>
                             <TableCell className="px-6 py-3">
-                              <Skeleton className="h-4 w-20" />
+                              <Skeleton className="h-6 w-24" />
                             </TableCell>
                             <TableCell className="px-6 py-3">
-                              <Skeleton className="h-6 w-20 rounded-full" />
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              <Skeleton className="h-8 w-16" />
+                              <Skeleton className="h-6 w-24" />
                             </TableCell>
                           </TableRow>
                         ))

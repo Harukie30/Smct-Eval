@@ -32,6 +32,16 @@ import { Label } from "@/components/ui/label";
 import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface Employee {
   id: number;
@@ -44,13 +54,11 @@ interface Employee {
   isActive?: boolean;
 }
 
-interface BranchHeadsTabProps {
-  employees: Employee[];
-  onRefresh?: (showModal?: boolean, isAutoRefresh?: boolean) => Promise<void>;
-  isLoading?: boolean;
-}
-
 export default function BranchHeadsTab() {
+  const { withErrorHandling } = useErrorHandler({
+    showToast: true,
+    logToConsole: true,
+  });
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [isBranchesModalOpen, setIsBranchesModalOpen] = useState(false);
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
@@ -92,72 +100,171 @@ export default function BranchHeadsTab() {
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
+  // Helper function to normalize branch head data
+  const normalizeBranchHeadData = (data: any[]): Employee[] => {
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
+    return data.map((item: any) => {
+      // Handle branches - API returns branches array
+      let branchValue = "";
+      if (item.branches && Array.isArray(item.branches)) {
+        branchValue = item.branches
+          .map((b: any) => b.name || b.branch_name || b.label || b.code || b)
+          .filter((b: any) => b) // Remove empty values
+          .join(", ");
+      } else if (item.branch) {
+        if (Array.isArray(item.branch)) {
+          branchValue = item.branch
+            .map((b: any) => b.name || b.label || b)
+            .join(", ");
+        } else if (typeof item.branch === "object") {
+          branchValue =
+            item.branch.name ||
+            item.branch.branch_name ||
+            item.branch.label ||
+            "";
+        } else {
+          branchValue = String(item.branch);
+        }
+      }
+
+      // Handle position - API returns positions object with label
+      let positionValue = "";
+      if (item.positions && typeof item.positions === "object") {
+        positionValue =
+          item.positions.label ||
+          item.positions.name ||
+          item.positions.value ||
+          "";
+      } else if (item.position) {
+        if (typeof item.position === "object") {
+          positionValue =
+            item.position.label ||
+            item.position.name ||
+            item.position.value ||
+            "";
+        } else {
+          positionValue = String(item.position);
+        }
+      } else if (item.position_id) {
+        positionValue = String(item.position_id);
+      }
+
+      // Handle department - API returns departments object with department_name
+      let departmentValue = "";
+      if (item.departments && typeof item.departments === "object") {
+        departmentValue =
+          item.departments.department_name ||
+          item.departments.name ||
+          item.departments.label ||
+          "";
+      } else if (item.department) {
+        if (typeof item.department === "object") {
+          departmentValue =
+            item.department.department_name ||
+            item.department.name ||
+            item.department.label ||
+            "";
+        } else {
+          departmentValue = String(item.department);
+        }
+      } else if (item.department_id) {
+        departmentValue = String(item.department_id);
+      }
+
+      // Handle role - API returns roles array with name
+      let roleValue = "";
+      if (item.roles && Array.isArray(item.roles)) {
+        roleValue = item.roles
+          .map((r: any) => r.name || r.label || r)
+          .filter((r: any) => r) // Remove empty values
+          .join(", ");
+      } else if (item.role) {
+        if (Array.isArray(item.role)) {
+          roleValue = item.role
+            .map((r: any) => r.name || r.label || r)
+            .join(", ");
+        } else if (typeof item.role === "object") {
+          roleValue = item.role.name || item.role.label || "";
+        } else {
+          roleValue = String(item.role);
+        }
+      }
+
+      // Handle name - use full_name if available, otherwise construct from fname/lname
+      let nameValue = "";
+      if (item.full_name) {
+        nameValue = item.full_name;
+      } else if (item.name) {
+        nameValue = item.name;
+      } else {
+        const fname = item.fname || "";
+        const lname = item.lname || "";
+        nameValue = `${fname} ${lname}`.trim() || item.username || "";
+      }
+
+      // Handle isActive - API returns is_active as string "active" or boolean
+      let isActiveValue = true;
+      if (item.isActive !== undefined) {
+        isActiveValue = item.isActive;
+      } else if (item.is_active !== undefined) {
+        if (typeof item.is_active === "string") {
+          isActiveValue = item.is_active.toLowerCase() === "active";
+        } else {
+          isActiveValue = Boolean(item.is_active);
+        }
+      } else if (item.status !== undefined) {
+        isActiveValue = item.status !== "inactive";
+      }
+
+      return {
+        id: item.id || item.employeeId || item.user_id || item.emp_id,
+        name: nameValue,
+        email: item.email || "",
+        position: positionValue,
+        department: departmentValue,
+        branch: branchValue,
+        contact: item.contact || item.phone || item.contact_number || "",
+        role: roleValue,
+        isActive: isActiveValue,
+      };
+    });
+  };
+
   // Load branch heads from API
   useEffect(() => {
     const loadBranchHeads = async () => {
       setLoadingBranchHeads(true);
       try {
         const data = await apiService.getAllBranchHeads();
-        // Normalize the data format to match Employee interface
-        const normalizedData = data.map((item: any) => ({
-          id: item.id || item.employeeId,
-          name: item.name || `${item.fname || ""} ${item.lname || ""}`.trim(),
-          email: item.email || "",
-          position: item.position || "",
-          department: item.department || "",
-          branch: item.branch || "",
-          role: item.role || "",
-          isActive: item.isActive !== undefined ? item.isActive : true,
-        }));
+        // Ensure data is an array before mapping
+        const normalizedData = normalizeBranchHeadData(data);
         setBranchHeadsData(normalizedData);
       } catch (error) {
         console.error("Error loading branch heads:", error);
-        // Fallback to employees prop if API fails
-        if (employees && employees.length > 0) {
-          const filtered = employees.filter((emp) => {
-            const position = emp.position?.toLowerCase() || "";
-            return (
-              position.includes("branch head") ||
-              position.includes("branchhead") ||
-              position.includes("branch manager")
-            );
-          });
-          setBranchHeadsData(filtered);
-        }
+        // Set empty array if API fails - no fallback needed
+        setBranchHeadsData([]);
       } finally {
         setLoadingBranchHeads(false);
       }
     };
 
     loadBranchHeads();
-  }, [employees]);
+  }, []);
 
-  // Memoized branch heads (use API data if available, otherwise fallback to filtered employees)
+  // Memoized branch heads (use API data)
   const branchHeads = useMemo(() => {
-    if (branchHeadsData.length > 0) {
-      return branchHeadsData;
-    }
-    // Fallback to manual filtering if API data not available
-    if (!employees || employees.length === 0) return [];
-
-    return employees.filter((emp) => {
-      const position = emp.position?.toLowerCase() || "";
-
-      // Filter by position only - looking for branch head or branch manager positions
-      return (
-        position.includes("branch head") ||
-        position.includes("branchhead") ||
-        position.includes("branch manager")
-      );
-    });
-  }, [branchHeadsData, employees]);
+    return branchHeadsData;
+  }, [branchHeadsData]);
 
   // Filter branch heads based on search term
   const filteredBranchHeads = useMemo(() => {
     if (!searchTerm) return branchHeads;
 
     const searchLower = searchTerm.toLowerCase();
-    return branchHeads.filter((head) => {
+    return branchHeads.filter((head: Employee) => {
       const nameMatch = head.name?.toLowerCase().includes(searchLower);
       const branchMatch = head.branch?.toLowerCase().includes(searchLower);
       return nameMatch || branchMatch;
@@ -369,10 +476,7 @@ export default function BranchHeadsTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ||
-                loadingBranchHeads ||
-                (!branchHeadsData.length &&
-                  (!employees || employees.length === 0)) ? (
+                {loadingBranchHeads ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
                       <TableCell className="py-4">
@@ -394,20 +498,49 @@ export default function BranchHeadsTab() {
                   ))
                 ) : branchHeadsPaginated.length === 0 ? (
                   <TableRow>
-                    <TableCell
-                      colSpan={3}
-                      className="text-center py-8 text-gray-500"
-                    >
-                      {searchTerm
-                        ? `No branch heads found matching "${searchTerm}"`
-                        : "No branch heads found"}
+                    <TableCell colSpan={3} className="text-center py-12">
+                      <div className="flex flex-col items-center justify-center gap-4">
+                        <img
+                          src="/not-found.gif"
+                          alt="No data"
+                          className="w-25 h-25 object-contain"
+                          style={{
+                            imageRendering: "auto",
+                            willChange: "auto",
+                            transform: "translateZ(0)",
+                            backfaceVisibility: "hidden",
+                            WebkitBackfaceVisibility: "hidden",
+                          }}
+                        />
+                        <div className="text-gray-500">
+                          {searchTerm ? (
+                            <>
+                              <p className="text-base font-medium mb-1">
+                                No branch heads found matching "{searchTerm}"
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Try adjusting your search term
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-base font-medium mb-1">
+                                No branch heads found
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Branch heads will appear here once added
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  branchHeadsPaginated.map((head) => {
+                  branchHeadsPaginated.map((head: Employee) => {
                     // Parse branches from comma-separated string
                     const branchList = head.branch
-                      ? head.branch.split(", ").filter((b) => b.trim())
+                      ? head.branch.split(", ").filter((b: string) => b.trim())
                       : [];
 
                     return (
@@ -418,14 +551,16 @@ export default function BranchHeadsTab() {
                         <TableCell className="py-4 text-center">
                           {branchList.length > 0 ? (
                             <div className="flex flex-wrap justify-center gap-2">
-                              {branchList.map((branch, index) => (
-                                <Badge
-                                  key={index}
-                                  className="bg-blue-600 text-white"
-                                >
-                                  {branch.trim()}
-                                </Badge>
-                              ))}
+                              {branchList.map(
+                                (branch: string, index: number) => (
+                                  <Badge
+                                    key={index}
+                                    className="bg-blue-600 text-white"
+                                  >
+                                    {branch.trim()}
+                                  </Badge>
+                                )
+                              )}
                             </div>
                           ) : (
                             <span className="text-gray-400">N/A</span>
@@ -446,7 +581,7 @@ export default function BranchHeadsTab() {
                                 if (head.branch && loadedBranches) {
                                   const existingBranches = head.branch
                                     .split(", ")
-                                    .map((name) => {
+                                    .map((name: string) => {
                                       // Try to find matching branch from loaded branches
                                       const branch = loadedBranches.find(
                                         (b: { id: string; name: string }) =>
@@ -497,73 +632,102 @@ export default function BranchHeadsTab() {
                 {Math.min(branchHeadsEndIndex, branchHeadsTotal)} of{" "}
                 {branchHeadsTotal} branch heads
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setBranchHeadsPage((prev) => Math.max(1, prev - 1))
-                  }
-                  disabled={branchHeadsPage === 1}
-                  className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                >
-                  Previous
-                </Button>
-                <div className="flex items-center gap-1">
-                  {Array.from(
-                    { length: branchHeadsTotalPages },
-                    (_, i) => i + 1
-                  ).map((page) => {
-                    if (
-                      page === 1 ||
-                      page === branchHeadsTotalPages ||
-                      (page >= branchHeadsPage - 1 &&
-                        page <= branchHeadsPage + 1)
-                    ) {
-                      return (
-                        <Button
-                          key={page}
-                          variant={
-                            branchHeadsPage === page ? "default" : "outline"
-                          }
-                          size="sm"
-                          onClick={() => setBranchHeadsPage(page)}
-                          className={`text-xs w-8 h-8 p-0 ${
-                            branchHeadsPage === page
-                              ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
-                              : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                          }`}
-                        >
-                          {page}
-                        </Button>
-                      );
-                    } else if (
-                      page === branchHeadsPage - 2 ||
-                      page === branchHeadsPage + 2
-                    ) {
-                      return (
-                        <span key={page} className="text-gray-400">
-                          ...
-                        </span>
-                      );
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setBranchHeadsPage((prev) => Math.max(1, prev - 1));
+                      }}
+                      className={
+                        branchHeadsPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      }
+                    />
+                  </PaginationItem>
+                  {(() => {
+                    const pages: (number | "ellipsis")[] = [];
+                    if (branchHeadsTotalPages <= 7) {
+                      for (let i = 1; i <= branchHeadsTotalPages; i++) {
+                        pages.push(i);
+                      }
+                    } else {
+                      if (branchHeadsPage <= 3) {
+                        for (let i = 1; i <= 5; i++) {
+                          pages.push(i);
+                        }
+                        pages.push("ellipsis");
+                        pages.push(branchHeadsTotalPages);
+                      } else if (branchHeadsPage >= branchHeadsTotalPages - 2) {
+                        pages.push(1);
+                        pages.push("ellipsis");
+                        for (
+                          let i = branchHeadsTotalPages - 4;
+                          i <= branchHeadsTotalPages;
+                          i++
+                        ) {
+                          pages.push(i);
+                        }
+                      } else {
+                        pages.push(1);
+                        pages.push("ellipsis");
+                        pages.push(branchHeadsPage - 1);
+                        pages.push(branchHeadsPage);
+                        pages.push(branchHeadsPage + 1);
+                        pages.push("ellipsis");
+                        pages.push(branchHeadsTotalPages);
+                      }
                     }
-                    return null;
-                  })}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setBranchHeadsPage((prev) =>
-                      Math.min(branchHeadsTotalPages, prev + 1)
-                    )
-                  }
-                  disabled={branchHeadsPage === branchHeadsTotalPages}
-                  className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                >
-                  Next
-                </Button>
-              </div>
+                    return pages.map((page, index) => {
+                      if (page === "ellipsis") {
+                        return (
+                          <PaginationItem key={`ellipsis-${index}`}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        );
+                      }
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setBranchHeadsPage(page);
+                            }}
+                            isActive={branchHeadsPage === page}
+                            className={
+                              branchHeadsPage === page
+                                ? "cursor-pointer bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
+                                : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                            }
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    });
+                  })()}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setBranchHeadsPage((prev) =>
+                          Math.min(branchHeadsTotalPages, prev + 1)
+                        );
+                      }}
+                      className={
+                        branchHeadsPage === branchHeadsTotalPages
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </CardContent>
@@ -606,8 +770,25 @@ export default function BranchHeadsTab() {
 
           <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
             {branchHeads.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                No branch heads found
+              <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                <img
+                  src="/not-found.gif"
+                  alt="No data"
+                  className="w-25 h-25 object-contain mb-4"
+                  style={{
+                    imageRendering: "auto",
+                    willChange: "auto",
+                    transform: "translateZ(0)",
+                    backfaceVisibility: "hidden",
+                    WebkitBackfaceVisibility: "hidden",
+                  }}
+                />
+                <p className="text-base font-medium mb-1">
+                  No branch heads found
+                </p>
+                <p className="text-sm text-gray-400">
+                  Branch heads will appear here once added
+                </p>
               </div>
             ) : (
               <div className="border rounded-lg overflow-hidden">
@@ -622,7 +803,7 @@ export default function BranchHeadsTab() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {branchHeads.map((head) => (
+                      {branchHeads.map((head: Employee) => (
                         <TableRow key={head.id} className="hover:bg-gray-50">
                           <TableCell className="font-medium py-3 px-6">
                             {head.name}
@@ -666,7 +847,7 @@ export default function BranchHeadsTab() {
         onOpenChangeAction={setIsBranchesModalOpen}
       >
         <DialogContent
-          className={`max-w-xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}
+          className={`max-w-4xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}
         >
           <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -769,92 +950,65 @@ export default function BranchHeadsTab() {
                         )
                           return;
 
-                        try {
-                          // Store data for success message
-                          setSuccessData({
-                            branchHead: selectedBranchHead,
-                            branches: [...selectedBranches],
-                          });
+                        await withErrorHandling(
+                          async () => {
+                            // Store data for success message
+                            setSuccessData({
+                              branchHead: selectedBranchHead,
+                              branches: [...selectedBranches],
+                            });
 
-                          // Update employee with branch assignments
-                          // If multiple branches, combine them with comma separator
-                          const branchNames = selectedBranches
-                            .map((b) => b.name)
-                            .join(", ");
-                          const branchIds = selectedBranches
-                            .map((b) => b.id)
-                            .join(", ");
+                            // Update user branch assignments using dedicated API endpoint
+                            const formData = new FormData();
+                            // Add each branch ID to the form data
+                            selectedBranches.forEach((branch) => {
+                              formData.append("branch_ids[]", branch.id);
+                            });
 
-                          // Update using API service
-                          const formData = new FormData();
-                          formData.append("branch", branchNames);
-                          formData.append(
-                            "updatedAt",
-                            new Date().toISOString()
-                          );
-                          await apiService.updateEmployee(
-                            formData,
-                            selectedBranchHead.id
-                          );
-
-                          // Also update accounts in localStorage
-                          const accounts = JSON.parse(
-                            localStorage.getItem("accounts") || "[]"
-                          );
-                          const accountIndex = accounts.findIndex(
-                            (acc: any) =>
-                              acc.id === selectedBranchHead.id ||
-                              acc.employeeId === selectedBranchHead.id
-                          );
-
-                          if (accountIndex !== -1) {
-                            accounts[accountIndex] = {
-                              ...accounts[accountIndex],
-                              branch: branchNames,
-                              updatedAt: new Date().toISOString(),
-                            };
-                            localStorage.setItem(
-                              "accounts",
-                              JSON.stringify(accounts)
+                            // Use updateUserBranch API endpoint for branch assignments
+                            await apiService.updateUserBranch(
+                              selectedBranchHead.id,
+                              formData
                             );
+
+                            // Close the branches modal after confirmation
+                            setIsBranchesModalOpen(false);
+                            setShowConfirmation(false);
+                            // Show success dialog
+                            setShowSuccessDialog(true);
+                            // Clear selections after a delay
+                            setTimeout(() => {
+                              setSelectedBranches([]);
+                            }, 100);
+
+                            // Show success toast
+                            toastMessages.generic.success(
+                              "Branch Assignment Successful",
+                              `${
+                                selectedBranchHead.name
+                              } has been assigned to ${
+                                selectedBranches.length
+                              } ${
+                                selectedBranches.length === 1
+                                  ? "branch"
+                                  : "branches"
+                              }.`
+                            );
+
+                            // Reload branch heads data to update the table
+                            const reloadedData =
+                              await apiService.getAllBranchHeads();
+                            const normalizedData =
+                              normalizeBranchHeadData(reloadedData);
+                            setBranchHeadsData(normalizedData);
+                          },
+                          {
+                            errorTitle: "Assignment Failed",
+                            errorMessage:
+                              "Failed to assign branches. Please try again.",
+                            showSuccessToast: false, // We show custom success toast above
                           }
-
-                          // Close the branches modal after confirmation
-                          setIsBranchesModalOpen(false);
-                          setShowConfirmation(false);
-                          // Show success dialog
-                          setShowSuccessDialog(true);
-                          // Clear selections after a delay
-                          setTimeout(() => {
-                            setSelectedBranches([]);
-                          }, 100);
-
-                          // Show success toast
-                          toastMessages.generic.success(
-                            "Branch Assignment Successful",
-                            `${selectedBranchHead.name} has been assigned to ${
-                              selectedBranches.length
-                            } ${
-                              selectedBranches.length === 1
-                                ? "branch"
-                                : "branches"
-                            }.`
-                          );
-
-                          // Refresh parent component data to update the table
-                          if (onRefresh) {
-                            await onRefresh(false, false);
-                          } else {
-                            // Fallback: reload the page if no refresh callback
-                            window.location.reload();
-                          }
-                        } catch (error) {
-                          console.error("Error assigning branches:", error);
-                          toastMessages.generic.error(
-                            "Assignment Failed",
-                            "Failed to assign branches. Please try again."
-                          );
-                        }
+                        );
                       }}
                     >
                       Confirm ({selectedBranches.length})
@@ -1010,7 +1164,7 @@ export default function BranchHeadsTab() {
       {/* Edit Branch Head Modal */}
       <Dialog open={isEditModalOpen} onOpenChangeAction={setIsEditModalOpen}>
         <DialogContent
-          className={`max-w-xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}
+          className={`max-w-4xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}
         >
           <DialogHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -1070,7 +1224,7 @@ export default function BranchHeadsTab() {
               </div>
             ) : (
               <div className="border rounded-lg overflow-hidden">
-                <div className="max-h-[60vh] overflow-y-auto">
+                <div className="max-h-[50vh] overflow-y-auto">
                   <Table>
                     <TableHeader className="bg-gray-50">
                       <TableRow>
@@ -1169,79 +1323,90 @@ export default function BranchHeadsTab() {
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white"
               onClick={async () => {
-                if (!branchHeadToEdit || editSelectedBranches.length === 0) {
+                if (!branchHeadToEdit) {
                   toastMessages.generic.error(
                     "Validation Error",
-                    "Please select at least one branch."
+                    "No branch head selected."
                   );
                   return;
                 }
 
-                try {
-                  // Update employee with branch assignments
-                  const branchNames = editSelectedBranches
-                    .map((b) => b.name)
-                    .join(", ");
+                await withErrorHandling(
+                  async () => {
+                    // First, remove all existing branch assignments to ensure clean state
+                    await apiService.removeUserBranches(branchHeadToEdit.id);
 
-                  // Update using API service
-                  const formData = new FormData();
-                  formData.append("branch", branchNames);
-                  formData.append("updatedAt", new Date().toISOString());
-                  await apiService.updateEmployee(
-                    formData,
-                    branchHeadToEdit.id
-                  );
+                    // Then, add the selected branches using updateUserBranch API endpoint
+                    if (editSelectedBranches.length > 0) {
+                      const formData = new FormData();
+                      // Add each branch ID to the form data (ensure it's a string)
+                      editSelectedBranches.forEach((branch) => {
+                        formData.append("branch_ids[]", String(branch.id));
+                      });
 
-                  // Also update accounts in localStorage
-                  const accounts = JSON.parse(
-                    localStorage.getItem("accounts") || "[]"
-                  );
-                  const accountIndex = accounts.findIndex(
-                    (acc: any) =>
-                      acc.id === branchHeadToEdit.id ||
-                      acc.employeeId === branchHeadToEdit.id
-                  );
+                      // Use updateUserBranch API endpoint to add the selected branches
+                      await apiService.updateUserBranch(
+                        branchHeadToEdit.id,
+                        formData
+                      );
+                    }
 
-                  if (accountIndex !== -1) {
-                    accounts[accountIndex] = {
-                      ...accounts[accountIndex],
-                      branch: branchNames,
-                      updatedAt: new Date().toISOString(),
-                    };
-                    localStorage.setItem("accounts", JSON.stringify(accounts));
+                    // Manually update the state for immediate UI feedback
+                    const branchNames =
+                      editSelectedBranches.length > 0
+                        ? editSelectedBranches.map((b) => b.name).join(", ")
+                        : "";
+                    setBranchHeadsData((prevData) =>
+                      prevData.map((head) =>
+                        head.id === branchHeadToEdit.id
+                          ? { ...head, branch: branchNames }
+                          : head
+                      )
+                    );
+
+                    // Also reload from API to ensure consistency (but don't wait for it)
+                    apiService
+                      .getAllBranchHeads()
+                      .then((reloadedData) => {
+                        const normalizedData =
+                          normalizeBranchHeadData(reloadedData);
+                        setBranchHeadsData(normalizedData);
+                      })
+                      .catch((error) => {
+                        console.error(
+                          "Error reloading branch heads after update:",
+                          error
+                        );
+                        // Don't show error to user since we already updated the UI
+                      });
+
+                    // Store success data
+                    setEditSuccessData({
+                      branchHead: branchHeadToEdit,
+                      branches: [...editSelectedBranches],
+                    });
+
+                    // Close modal
+                    setIsEditModalOpen(false);
+                    setBranchHeadToEdit(null);
+                    setEditSelectedBranches([]);
+
+                    // Show success dialog
+                    setShowEditSuccessDialog(true);
+
+                    // Show success toast
+                    toastMessages.generic.success(
+                      "Branch Assignment Updated",
+                      `${branchHeadToEdit.name}'s branch assignment has been updated.`
+                    );
+                  },
+                  {
+                    errorTitle: "Update Failed",
+                    errorMessage:
+                      "Failed to update branch assignment. Please try again.",
+                    showSuccessToast: false, // We show custom success toast above
                   }
-
-                  // Refresh parent component data
-                  if (onRefresh) {
-                    await onRefresh(false, false);
-                  }
-
-                  // Store success data
-                  setEditSuccessData({
-                    branchHead: branchHeadToEdit,
-                    branches: [...editSelectedBranches],
-                  });
-
-                  // Close modal
-                  setIsEditModalOpen(false);
-                  setBranchHeadToEdit(null);
-                  setEditSelectedBranches([]);
-
-                  // Show success dialog
-                  setShowEditSuccessDialog(true);
-
-                  // Show success toast
-                  toastMessages.generic.success(
-                    "Branch Assignment Updated",
-                    `${branchHeadToEdit.name}'s branch assignment has been updated.`
-                  );
-                } catch (error) {
-                  console.error("Error updating branch assignment:", error);
-                  toastMessages.generic.error(
-                    "Update Failed",
-                    "Failed to update branch assignment. Please try again."
-                  );
-                }
+                );
               }}
             >
               Save Changes
@@ -1349,59 +1514,37 @@ export default function BranchHeadsTab() {
                 onClick={async () => {
                   if (!branchHeadToDelete) return;
 
-                  try {
-                    // Remove branch assignment (set branch to empty)
-                    const formData = new FormData();
-                    formData.append("branch", "");
-                    formData.append("updatedAt", new Date().toISOString());
-                    await apiService.updateEmployee(
-                      formData,
-                      branchHeadToDelete.id
-                    );
-
-                    // Also update accounts in localStorage
-                    const accounts = JSON.parse(
-                      localStorage.getItem("accounts") || "[]"
-                    );
-                    const accountIndex = accounts.findIndex(
-                      (acc: any) =>
-                        acc.id === branchHeadToDelete.id ||
-                        acc.employeeId === branchHeadToDelete.id
-                    );
-
-                    if (accountIndex !== -1) {
-                      accounts[accountIndex] = {
-                        ...accounts[accountIndex],
-                        branch: "",
-                        updatedAt: new Date().toISOString(),
-                      };
-                      localStorage.setItem(
-                        "accounts",
-                        JSON.stringify(accounts)
+                  // Proceed with deletion using error handler
+                  await withErrorHandling(
+                    async () => {
+                      // Remove all branch assignments using dedicated API endpoint
+                      await apiService.removeUserBranches(
+                        branchHeadToDelete.id
                       );
+
+                      // Reload branch heads data to update the table
+                      const reloadedData = await apiService.getAllBranchHeads();
+                      const normalizedData =
+                        normalizeBranchHeadData(reloadedData);
+                      setBranchHeadsData(normalizedData);
+
+                      // Show success message
+                      toastMessages.generic.success(
+                        "Branch Assignment Removed",
+                        `${branchHeadToDelete.name}'s branch assignment has been removed.`
+                      );
+
+                      // Close modal and reset
+                      setIsDeleteModalOpen(false);
+                      setBranchHeadToDelete(null);
+                    },
+                    {
+                      errorTitle: "Delete Failed",
+                      errorMessage:
+                        "Failed to remove branch assignment. Please try again.",
+                      showSuccessToast: false, // We show custom success toast above
                     }
-
-                    // Refresh parent component data
-                    if (onRefresh) {
-                      await onRefresh(false, false);
-                    }
-
-                    // Show success message
-                    toastMessages.generic.success(
-                      "Branch Assignment Removed",
-                      `${branchHeadToDelete.name}'s branch assignment has been removed.`
-                    );
-
-                    // Close modal and reset
-                    setIsDeleteModalOpen(false);
-                    setBranchHeadToDelete(null);
-                  } catch (error) {
-                    console.error("Error deleting branch assignment:", error);
-                    toastMessages.generic.error(
-                      "Delete Failed",
-                      "Failed to remove branch assignment. Please try again."
-                    );
-                  }
+                  );
                 }}
               >
                 🗑️ Delete Permanently

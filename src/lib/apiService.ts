@@ -127,7 +127,7 @@ export const apiService = {
   },
 
   uploadAvatar: async (formData: FormData): Promise<any> => {
-    const response = await api.post("/upload_avatar", formData);
+    const response = await api.post("/uploadAvatar", formData);
     return response.data;
   },
 
@@ -485,7 +485,7 @@ export const apiService = {
   // Get all branch heads/supervisors
   getAllBranchHeads: async (): Promise<any[]> => {
     const response = await api.get("/getAllBranchHeads");
-    const data = response.data;
+    const data = response.data.branch_heads;
 
     if (data.success && data.users) {
       return data.users;

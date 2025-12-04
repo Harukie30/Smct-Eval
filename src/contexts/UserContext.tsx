@@ -13,20 +13,19 @@ import { toastMessages } from "@/lib/toastMessages";
 import { apiService } from "@/lib/apiService";
 
 export interface AuthenticatedUser {
-  id: number;
-  username: string;
+  id?: string | number;
   fname: string;
   lname: string;
-  email: string;
-  roles: any;
-  position: string;
-  department: string;
-  branch?: string;
-  hireDate: string;
+  roles?: any;
+  email?: string;
   avatar?: string;
+  position_id: number;
+  department_id?: string;
+  branch_id?: string;
   bio?: string;
   signature?: string;
-  isActive: boolean;
+  emp_id?: string;
+  is_active: string;
 }
 
 interface UserContextType {
@@ -66,7 +65,12 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
         // First, restore user from localStorage immediately
         // Check if stored value is valid (not "undefined", "null", or empty)
-        if (stored && stored !== "undefined" && stored !== "null" && stored.trim() !== "") {
+        if (
+          stored &&
+          stored !== "undefined" &&
+          stored !== "null" &&
+          stored.trim() !== ""
+        ) {
           try {
             const parsedUser = JSON.parse(stored);
             setUser(parsedUser);
@@ -97,43 +101,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       const res = await apiService.authUser();
       // Handle different response structures (res.data or res directly)
       const userData = res?.data || res;
-      if (userData) {
-        console.log('🔄 User data refreshed from API:', {
-          hasSignature: !!userData.signature,
-          signatureLength: userData.signature?.length || 0,
-          signaturePreview: userData.signature?.substring(0, 50) || 'none',
-        });
-        setUser(userData);
-        localStorage.setItem("authUser", JSON.stringify(userData));
-      }
+      setUser(userData);
     } catch (error: any) {
-      // Only clear session if it's an authentication error (401 Unauthorized)
-      // For other errors (network issues, 500 errors, etc.), keep the user logged in
       const status = error?.status || error?.response?.status;
-      
-      if (status === 401 || status === 403) {
-        // Authentication failed - clear session
-        setUser(null);
-        localStorage.removeItem("authUser");
-      } else {
-        // Network error or server error - keep user logged in with stored session
-        // Don't clear the session, just log the error
-        console.warn("Failed to refresh user from backend, keeping stored session:", error);
-        // Ensure user is set from localStorage if it exists
-        // Use functional update to avoid stale closure issues
-        const stored = localStorage.getItem("authUser");
-        // Check if stored value is valid (not "undefined", "null", or empty)
-        if (stored && stored !== "undefined" && stored !== "null" && stored.trim() !== "") {
-          try {
-            const parsedUser = JSON.parse(stored);
-            // Only update if user is not already set or if stored user is different
-            setUser((prevUser) => prevUser || parsedUser);
-          } catch (e) {
-            console.error("Failed to parse stored user:", e);
-            localStorage.removeItem("authUser");
-          }
-        }
-      }
+      console.log(status);
     }
   };
 
@@ -159,7 +130,9 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       if (!prevUser) return prevUser;
       const updatedUser = { ...prevUser, [field]: value };
       localStorage.setItem("authUser", JSON.stringify(updatedUser));
-      console.log(`💾 Updated user field '${field}' in context and localStorage`);
+      console.log(
+        `💾 Updated user field '${field}' in context and localStorage`
+      );
       return updatedUser;
     });
   };

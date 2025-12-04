@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { dataURLtoFile } from "@/utils/data-url-to-file";
 import Image from "next/image";
+import { CONFIG } from "../../config/config";
 
 interface SignaturePadProps {
   value: string;
@@ -26,20 +27,25 @@ export default function SignaturePad({
   const [previewImage, setPreviewImage] = useState<string>("");
 
   // Helper function to get coordinates
-  const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>, canvas: HTMLCanvasElement) => {
+  const getCoordinates = (
+    e:
+      | React.MouseEvent<HTMLCanvasElement>
+      | React.TouchEvent<HTMLCanvasElement>,
+    canvas: HTMLCanvasElement
+  ) => {
     const rect = canvas.getBoundingClientRect();
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
     const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-    
+
     return {
       x: clientX - rect.left,
-      y: clientY - rect.top
+      y: clientY - rect.top,
     };
   };
 
   // Load existing signature when value changes
   useEffect(() => {
-    if (value && typeof value === 'string' && value.length > 0) {
+    if (value && typeof value === "string" && value.length > 0) {
       setHasSignature(true);
       setPreviewImage(value);
     } else {
@@ -116,7 +122,7 @@ export default function SignaturePad({
   const clearSignature = () => {
     onChangeAction(null);
     setHasSignature(false);
-    
+
     // Small delay to ensure canvas is rendered before resetting
     setTimeout(() => {
       const canvas = canvasRef.current;
@@ -148,19 +154,23 @@ export default function SignaturePad({
         }`}
       >
         {hasSignature ? (
-          <Image
-            src={previewImage ?? ""}
-            alt="Signature"
-            width={700}
-            height={700}
-          />
+          previewImage.startsWith("data:") ? (
+            <img src={previewImage} alt="Signature" width={700} height={200} />
+          ) : (
+            <img
+              src={CONFIG.API_URL_STORAGE + "/" + previewImage}
+              alt="Signature"
+              width={700}
+              height={200}
+            />
+          )
         ) : (
           <canvas
             ref={canvasRef}
             className={`w-full h-32 cursor-crosshair bg-white rounded border ${
               hasError ? "border-red-300" : "border-gray-200"
             }`}
-            style={{ display: 'block' }}
+            style={{ display: "block" }}
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
@@ -170,6 +180,7 @@ export default function SignaturePad({
             onTouchEnd={stopDrawing}
           />
         )}
+
         <p
           className={`text-sm mt-2 text-center ${
             hasError
