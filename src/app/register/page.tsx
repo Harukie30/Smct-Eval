@@ -430,15 +430,15 @@ function RegisterPage() {
           }
         );
       } catch (error: any) {
-        console.error("❌ Signature conversion error:", error);
-        showAlert(
-          "Invalid Signature",
-          error.message ||
-            "Please draw your signature again. The signature format is invalid.",
-          "error"
-        );
+        if (error.response?.data?.errors) {
+          const backendErrors: Record<string, string> = {};
+
+          Object.keys(error.response.data.errors).forEach((field) => {
+            backendErrors[field] = error.response.data.errors[field][0];
+          });
+          setFieldErrors(backendErrors);
+        }
         setIsRegisterButtonClicked(false);
-        return;
       }
     } else {
       console.warn("⚠️ No signature in formData");

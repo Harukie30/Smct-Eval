@@ -148,13 +148,13 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
     try {
       await apiService.logout();
+      refreshUser();
     } catch (e) {
       console.error("Logout failed:", e);
     }
 
     setTimeout(() => {
       setUser(null);
-      localStorage.removeItem("authUser");
       setShowLogoutLoading(false);
 
       if (typeof window !== "undefined") {

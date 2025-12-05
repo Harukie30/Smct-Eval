@@ -13,25 +13,33 @@ import { useUser } from "@/contexts/UserContext";
 
 type Submission = {
   id: number;
-  employeeName: string;
+  employee: any;
+  evaluator: any;
   category?: string;
   rating?: number;
-  submittedAt: string;
   status: string;
-  evaluator?: string;
-  evaluationData?: any;
-  employeeId?: number;
-  employeeEmail?: string;
-  evaluatorId?: number;
-  evaluatorName?: string;
-  period?: string;
-  overallRating?: string;
-  // Approval-related properties
-  approvalStatus?: string;
-  employeeSignature?: string | null;
-  employeeApprovedAt?: string | null;
-  evaluatorSignature?: string | null;
-  evaluatorApprovedAt?: string | null;
+  coverageFrom: string;
+  coverageTo: string;
+  reviewTypeProbationary: number;
+  reviewTypeRegular: string;
+  reviewTypeOthersImprovement: boolean;
+  reviewTypeOthersCustom: string;
+  priorityArea1: string;
+  priorityArea2: string;
+  priorityArea3: string;
+  remarks: string;
+  overallComments: string;
+  evaluatorApprovedAt: string;
+  employeeApprovedAt: string;
+
+  //relations
+  jobKnowledge: any;
+  adaptability: any;
+  qualityOfWorks: any;
+  teamworks: any;
+  reliabilities: any;
+  ethicals: any;
+  customerServices: any;
 };
 
 interface ApprovalData {
@@ -129,7 +137,7 @@ export default function ViewResultsModal({
   showApprovalButton = false,
   isEvaluatorView = false,
 }: ViewResultsModalProps) {
-  const { profile } = useUser();
+  const { user } = useUser();
   const [isApproving, setIsApproving] = useState(false);
   const [approvalError, setApprovalError] = useState("");
   const [currentApprovalData, setCurrentApprovalData] =
@@ -137,6 +145,7 @@ export default function ViewResultsModal({
   const printContentRef = useRef<HTMLDivElement>(null);
   const lastApprovalDataRef = useRef<string>("");
 
+  console.log("submission", submission);
   // Fetch employee signature for this evaluation
   const {
     signature: employeeSignature,
@@ -160,11 +169,11 @@ export default function ViewResultsModal({
 
   // Automatic refresh when approval changes are detected in localStorage
   useEffect(() => {
-    if (!isOpen || !submission?.id || !profile?.email) return;
+    if (!isOpen || !submission?.id || !user?.email) return;
 
     const checkForApprovalChanges = () => {
       try {
-        const approvalDataKey = `approvalData_${profile.email}`;
+        const approvalDataKey = `approvalData_${user.email}`;
         const storedApprovals = JSON.parse(
           localStorage.getItem(approvalDataKey) || "{}"
         );
@@ -184,7 +193,7 @@ export default function ViewResultsModal({
               approvedAt: storedApproval.approvedAt,
               employeeSignature: storedApproval.employeeSignature,
               employeeName: storedApproval.employeeName,
-              employeeEmail: storedApproval.employeeEmail || profile.email,
+              employeeEmail: storedApproval.employeeEmail || user.email,
             });
           }
         }
@@ -202,8 +211,8 @@ export default function ViewResultsModal({
     // Listen for storage events (for cross-tab synchronization)
     const handleStorageChange = (e: StorageEvent) => {
       if (
-        e.key === `approvalData_${profile.email}` ||
-        e.key === `approvedEvaluations_${profile.email}`
+        e.key === `approvalData_${user.email}` ||
+        e.key === `approvedEvaluations_${user.email}`
       ) {
         checkForApprovalChanges();
       }
@@ -215,7 +224,7 @@ export default function ViewResultsModal({
       clearInterval(intervalId);
       window.removeEventListener("storage", handleStorageChange);
     };
-  }, [isOpen, submission?.id, profile?.email]);
+  }, [isOpen, submission?.id, user?.email]);
 
   // Handle print functionality - prints the entire modal content
   const handlePrint = () => {
@@ -1320,11 +1329,12 @@ export default function ViewResultsModal({
             </div>
 
             {/* Review Type Section */}
-            {submission.evaluationData && (
+            {submission && (
               <Card className="shadow-md">
                 <CardContent className="p-4">
                   <div className="space-y-2 print-review-type">
                     {/* Row 1: For Probationary */}
+
                     <div className="flex items-start gap-3">
                       <h5 className="font-medium text-gray-800 min-w-[120px] text-sm">
                         For Probationary
@@ -1333,13 +1343,12 @@ export default function ViewResultsModal({
                         <div className="flex items-center gap-1.5">
                           <div
                             className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                              submission.evaluationData.reviewTypeProbationary3
+                              submission.reviewTypeProbationary === 3
                                 ? "bg-green-500"
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.evaluationData
-                              .reviewTypeProbationary3 && (
+                            {submission.reviewTypeProbationary && (
                               <div className="w-2 h-2 bg-white rounded-full"></div>
                             )}
                           </div>
@@ -1350,13 +1359,12 @@ export default function ViewResultsModal({
                         <div className="flex items-center gap-2">
                           <div
                             className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                              submission.evaluationData.reviewTypeProbationary5
+                              submission.reviewTypeProbationary === 5
                                 ? "bg-green-500"
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.evaluationData
-                              .reviewTypeProbationary5 && (
+                            {submission.reviewTypeProbationary && (
                               <div className="w-2 h-2 bg-white rounded-full"></div>
                             )}
                           </div>
@@ -1376,12 +1384,12 @@ export default function ViewResultsModal({
                         <div className="flex items-center gap-1.5">
                           <div
                             className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                              submission.evaluationData.reviewTypeRegularQ1
+                              submission.reviewTypeRegular === "Q1"
                                 ? "bg-green-500"
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.evaluationData.reviewTypeRegularQ1 && (
+                            {submission.reviewTypeRegular && (
                               <div className="w-2 h-2 bg-white rounded-full"></div>
                             )}
                           </div>
@@ -1392,12 +1400,12 @@ export default function ViewResultsModal({
                         <div className="flex items-center gap-2">
                           <div
                             className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                              submission.evaluationData.reviewTypeRegularQ2
+                              submission.reviewTypeRegular === "Q2"
                                 ? "bg-green-500"
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.evaluationData.reviewTypeRegularQ2 && (
+                            {submission.reviewTypeRegular && (
                               <div className="w-2 h-2 bg-white rounded-full"></div>
                             )}
                           </div>
@@ -1408,12 +1416,12 @@ export default function ViewResultsModal({
                         <div className="flex items-center gap-2">
                           <div
                             className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                              submission.evaluationData.reviewTypeRegularQ3
+                              submission.reviewTypeRegular === "Q3"
                                 ? "bg-green-500"
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.evaluationData.reviewTypeRegularQ3 && (
+                            {submission.reviewTypeRegular && (
                               <div className="w-2 h-2 bg-white rounded-full"></div>
                             )}
                           </div>
@@ -1424,12 +1432,12 @@ export default function ViewResultsModal({
                         <div className="flex items-center gap-2">
                           <div
                             className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                              submission.evaluationData.reviewTypeRegularQ4
+                              submission.reviewTypeRegular === "Q4"
                                 ? "bg-green-500"
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.evaluationData.reviewTypeRegularQ4 && (
+                            {submission.reviewTypeRegular && (
                               <div className="w-2 h-2 bg-white rounded-full"></div>
                             )}
                           </div>
@@ -1449,14 +1457,12 @@ export default function ViewResultsModal({
                         <div className="flex items-center gap-1.5">
                           <div
                             className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                              submission.evaluationData
-                                .reviewTypeOthersImprovement
+                              submission.reviewTypeOthersImprovement
                                 ? "bg-green-500"
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.evaluationData
-                              .reviewTypeOthersImprovement && (
+                            {submission.reviewTypeOthersImprovement && (
                               <div className="w-2 h-2 bg-white rounded-full"></div>
                             )}
                           </div>
@@ -1467,21 +1473,20 @@ export default function ViewResultsModal({
                         <div className="flex items-center gap-2">
                           <div
                             className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                              submission.evaluationData.reviewTypeOthersCustom
+                              submission.reviewTypeOthersCustom
                                 ? "bg-green-500"
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.evaluationData
-                              .reviewTypeOthersCustom && (
+                            {submission.reviewTypeOthersCustom && (
                               <div className="w-2 h-2 bg-white rounded-full"></div>
                             )}
                           </div>
                           <span className="text-sm text-gray-700">Others:</span>
                         </div>
-                        {submission.evaluationData.reviewTypeOthersCustom && (
+                        {submission.reviewTypeOthersCustom && (
                           <div className="ml-2 p-2 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700">
-                            {submission.evaluationData.reviewTypeOthersCustom}
+                            {submission.reviewTypeOthersCustom}
                           </div>
                         )}
                       </div>
@@ -1506,7 +1511,9 @@ export default function ViewResultsModal({
                       className="font-semibold text-gray-900 print-value"
                       style={{ fontSize: "11px" }}
                     >
-                      {submission.employeeName}
+                      {submission.employee.fname +
+                        " " +
+                        submission.employee.lname}
                     </p>
                   </div>
                   <div className="print-info-row">
@@ -1514,15 +1521,13 @@ export default function ViewResultsModal({
                       className="font-medium text-black block mb-1 print-label"
                       style={{ fontSize: "11px" }}
                     >
-                      Employee Number:
+                      Employee Contact:
                     </Label>
                     <p
                       className="text-gray-900 print-value"
                       style={{ fontSize: "11px" }}
                     >
-                      {submission.evaluationData?.employeeId ||
-                        submission.employeeId ||
-                        "N/A"}
+                      {submission.evaluator.contact}
                     </p>
                   </div>
                   <div className="print-info-row">
@@ -1536,7 +1541,7 @@ export default function ViewResultsModal({
                       className="text-gray-900 print-value"
                       style={{ fontSize: "11px" }}
                     >
-                      {submission.evaluationData?.position || "Not specified"}
+                      {submission.employee.positions.label || "Not specified"}
                     </p>
                   </div>
                   <div className="print-info-row">
@@ -1544,16 +1549,13 @@ export default function ViewResultsModal({
                       className="font-medium text-black block mb-1 print-label"
                       style={{ fontSize: "11px" }}
                     >
-                      Department/Branch:
+                      Branch:
                     </Label>
                     <p
                       className="text-gray-900 print-value"
                       style={{ fontSize: "11px" }}
                     >
-                      {submission.evaluationData?.department || "Not specified"}
-                      {submission.evaluationData?.branch
-                        ? ` / ${submission.evaluationData.branch}`
-                        : ""}
+                      {submission.employee.branches.branch_name}
                     </p>
                   </div>
                   <div className="print-info-row">
@@ -1567,9 +1569,9 @@ export default function ViewResultsModal({
                       className="text-gray-900 print-value"
                       style={{ fontSize: "11px" }}
                     >
-                      {submission.evaluationData?.hireDate
+                      {submission.employee.date_hired
                         ? new Date(
-                            submission.evaluationData.hireDate
+                            submission.employee.date_hired
                           ).toLocaleDateString()
                         : "Not specified"}
                     </p>
@@ -1585,7 +1587,9 @@ export default function ViewResultsModal({
                       className="text-gray-900 print-value"
                       style={{ fontSize: "11px" }}
                     >
-                      {submission.evaluationData?.supervisor || "Not specified"}
+                      {submission.evaluator.fname +
+                        " " +
+                        submission.evaluator.lname}
                     </p>
                   </div>
                   <div className="print-info-row">
@@ -1599,18 +1603,17 @@ export default function ViewResultsModal({
                       className="text-gray-900 print-value"
                       style={{ fontSize: "11px" }}
                     >
-                      {submission.evaluationData?.coverageFrom &&
-                      submission.evaluationData?.coverageTo ? (
+                      {submission.coverageFrom && submission.coverageTo ? (
                         <>
                           <span className="screen-date">
                             {`${new Date(
-                              submission.evaluationData.coverageFrom
+                              submission.coverageFrom
                             ).toLocaleDateString("en-US", {
                               year: "numeric",
                               month: "long",
                               day: "numeric",
                             })} - ${new Date(
-                              submission.evaluationData.coverageTo
+                              submission.coverageTo
                             ).toLocaleDateString("en-US", {
                               year: "numeric",
                               month: "long",
@@ -1619,13 +1622,13 @@ export default function ViewResultsModal({
                           </span>
                           <span className="print-date">
                             {`${new Date(
-                              submission.evaluationData.coverageFrom
+                              submission.coverageFrom
                             ).toLocaleDateString("en-US", {
                               month: "short",
                               day: "numeric",
                               year: "numeric",
                             })} - ${new Date(
-                              submission.evaluationData.coverageTo
+                              submission.coverageTo
                             ).toLocaleDateString("en-US", {
                               month: "short",
                               day: "numeric",
@@ -1643,7 +1646,7 @@ export default function ViewResultsModal({
             </Card>
 
             {/* Step 1: Job Knowledge */}
-            {submission.evaluationData && (
+            {submission && (
               <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-blue-50 border-b border-blue-200">
                   <CardTitle className="text-xl font-semibold text-blue-900">

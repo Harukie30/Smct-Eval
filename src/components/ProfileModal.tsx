@@ -317,7 +317,7 @@ export default function ProfileModal({
 
           <div>
             <p
-              className="text-sm text-gray-700 mt-10 cursor-pointer"
+              className="text-sm text-blue-700 mt-10 cursor-pointer"
               onClick={() => setOpen(!open)}
             >
               Edit Account Settings ...
