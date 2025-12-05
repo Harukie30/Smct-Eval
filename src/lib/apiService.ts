@@ -36,7 +36,7 @@ export const apiService = {
   },
 
   updateEmployee_auth: async (formData: FormData): Promise<any> => {
-    const response = await api.post("/update_employee_auth", formData);
+    const response = await api.post("/updateProfileUserAuth", formData);
     return response.data;
   },
 

@@ -2,12 +2,13 @@
 
 import DashboardShell, { SidebarItem } from "@/components/DashboardShell";
 import { withAuth } from "@/hoc";
-import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [active, setActive] = useState("overview");
+  const pathname = usePathname();
+
   const sidebarItems: SidebarItem[] = useMemo(
     () => [
       { id: "overview", label: "Overview", icon: "📊", path: "/admin" },
@@ -51,25 +52,25 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
     []
   );
 
+  // Determine active item based on current URL
+  const active =
+    sidebarItems.find((item) => item.path === pathname)?.id ?? "overview";
+
   const setActiveWithRefresh = (id: string) => {
-    setActive(id);
     const item = sidebarItems.find((item) => item.id === id);
-    if (item) {
-      router.push(item.path);
-    }
+    if (item) router.push(item.path);
   };
+
   return (
-    <>
-      <DashboardShell
-        title="Admin Dashboard"
-        currentPeriod={new Date().toLocaleDateString()}
-        sidebarItems={sidebarItems}
-        activeItemId={active}
-        onChangeActive={setActiveWithRefresh}
-      >
-        {children}
-      </DashboardShell>
-    </>
+    <DashboardShell
+      title="Admin Dashboard"
+      currentPeriod={new Date().toLocaleDateString()}
+      sidebarItems={sidebarItems}
+      activeItemId={active}
+      onChangeActive={setActiveWithRefresh}
+    >
+      {children}
+    </DashboardShell>
   );
 }
 

@@ -16,12 +16,17 @@ export interface AuthenticatedUser {
   id?: string | number;
   fname: string;
   lname: string;
+  username: string;
+  contact: number;
   roles?: any;
   email?: string;
   avatar?: string;
   position_id: number;
+  positions: any;
   department_id?: string;
+  departments: any;
   branch_id?: string;
+  branches: any;
   bio?: string;
   signature?: string;
   emp_id?: string;
@@ -76,7 +81,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
             setUser(parsedUser);
           } catch (e) {
             console.error("Failed to parse stored user:", e);
-            localStorage.removeItem("authUser");
           }
         }
 

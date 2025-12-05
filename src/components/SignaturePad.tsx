@@ -7,7 +7,7 @@ import Image from "next/image";
 import { CONFIG } from "../../config/config";
 
 interface SignaturePadProps {
-  value: string;
+  value: string | null;
   onChangeAction: (signature: File | any) => void;
   className?: string;
   required?: boolean;
@@ -44,15 +44,6 @@ export default function SignaturePad({
   };
 
   // Load existing signature when value changes
-  useEffect(() => {
-    if (value && typeof value === "string" && value.length > 0) {
-      setHasSignature(true);
-      setPreviewImage(value);
-    } else {
-      setHasSignature(false);
-      setPreviewImage("");
-    }
-  }, [value]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -154,16 +145,7 @@ export default function SignaturePad({
         }`}
       >
         {hasSignature ? (
-          previewImage.startsWith("data:") ? (
-            <img src={previewImage} alt="Signature" width={700} height={200} />
-          ) : (
-            <img
-              src={CONFIG.API_URL_STORAGE + "/" + previewImage}
-              alt="Signature"
-              width={700}
-              height={200}
-            />
-          )
+          <img src={previewImage} alt="Signature" width={700} height={200} />
         ) : (
           <canvas
             ref={canvasRef}

@@ -7,12 +7,17 @@ export type UserProfile = {
   id?: string | number;
   fname: string;
   lname: string;
+  username: string;
+  contact: number;
   roles?: any;
   email?: string;
   avatar?: string;
   position_id: number;
+  positions: any;
   department_id?: string;
+  departments: any;
   branch_id?: string;
+  branches: any;
   bio?: string;
   signature?: string;
   emp_id?: string;
@@ -66,7 +71,6 @@ export default function ProfileCard({
     }
   };
 
-  console.log("profile", profile);
   const handleSettings = () => {
     if (onSettings) {
       onSettings();
@@ -89,10 +93,12 @@ export default function ProfileCard({
         </div>
         <div className="flex flex-col">
           <span className="text-sm font-medium text-gray-900">
-            {profile?.fname}
+            {profile?.fname + " " + profile?.lname}
           </span>
-          {profile?.roles?.name && (
-            <span className="text-xs text-gray-500">{profile.roles?.name}</span>
+          {profile?.roles && (
+            <span className="text-xs text-gray-500">
+              {profile.roles[0]?.name}
+            </span>
           )}
         </div>
         {onEditProfile && (
@@ -149,11 +155,11 @@ export default function ProfileCard({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-900 truncate">
-            {profile?.fname}
+            {profile?.fname + " " + profile?.lname}
           </p>
-          {profile?.roles?.name && (
+          {profile?.roles && (
             <p className="text-xs text-gray-500 truncate">
-              {profile?.roles?.name}
+              {profile?.roles[0]?.name}
             </p>
           )}
           {profile?.department_id && (
@@ -211,10 +217,12 @@ export default function ProfileCard({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-white font-semibold truncate">{profile?.fname}</p>
-          {profile?.roles?.name && (
+          <p className="text-white font-semibold truncate">
+            {profile?.fname + " " + profile?.lname}
+          </p>
+          {profile?.roles && (
             <p className="text-blue-100 text-xs truncate">
-              {profile?.roles?.name}
+              {profile?.roles[0]?.name}
             </p>
           )}
           {profile?.department_id && (

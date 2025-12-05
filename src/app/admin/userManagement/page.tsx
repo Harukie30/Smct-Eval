@@ -450,9 +450,21 @@ export default function UserManagementTab() {
               <div className="flex justify-between items-center">
                 <div className="flex space-x-4">
                   <div className="relative flex-1 max-w-md">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <svg
+                        className="h-5 w-5 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                      </svg>
+                    </span>
                     <Input
                       placeholder="Search users..."
-                      className="w-64"
+                      className="w-64 pl-10"
                       value={activeSearchTerm}
                       onChange={(e) => setActiveSearchTerm(e.target.value)}
                     />
@@ -741,9 +753,21 @@ export default function UserManagementTab() {
                 <div className="flex justify-between items-center">
                   <div className="flex space-x-4">
                     <div className="relative flex-1 max-w-md">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <svg
+                          className="h-5 w-5 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle cx="11" cy="11" r="8"></circle>
+                          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                      </span>
                       <Input
                         placeholder="Search new registrations..."
-                        className="w-64"
+                        className="w-64 pl-10"
                         value={pendingSearchTerm}
                         onChange={(e) => setPendingSearchTerm(e.target.value)}
                       />
