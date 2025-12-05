@@ -58,17 +58,53 @@ export default function DepartmentsTab() {
   // Function to load data
   const loadData = async (search: string) => {
     try {
-      const departments = await apiService.getTotalEmployeesDepartments(
+      const response = await apiService.getTotalEmployeesDepartments(
         search,
         currentPage,
         itemsPerPage
       );
-      setDepartments(departments.data);
-      setOverviewTotal(departments.total);
-      setTotalPages(departments.last_page);
-      setPerPage(departments.per_page);
+      
+      // Handle different response structures
+      let departmentsData: Department[] = [];
+      let total = 0;
+      let lastPage = 1;
+      let perPageValue = itemsPerPage;
+      
+      if (response) {
+        // If response has data property (paginated response)
+        if (response.data && Array.isArray(response.data)) {
+          departmentsData = response.data;
+          total = response.total || 0;
+          lastPage = response.last_page || 1;
+          perPageValue = response.per_page || itemsPerPage;
+        }
+        // If response is directly an array
+        else if (Array.isArray(response)) {
+          departmentsData = response;
+          total = response.length;
+          lastPage = 1;
+          perPageValue = response.length;
+        }
+        // If response has departments property
+        else if (response.departments && Array.isArray(response.departments)) {
+          departmentsData = response.departments;
+          total = response.total || response.departments.length;
+          lastPage = response.last_page || 1;
+          perPageValue = response.per_page || itemsPerPage;
+        }
+      }
+      
+      setDepartments(departmentsData);
+      setOverviewTotal(total);
+      setTotalPages(lastPage);
+      setPerPage(perPageValue);
     } catch (error) {
       console.error("Error loading departments:", error);
+      // Set empty array on error to prevent undefined errors
+      setDepartments([]);
+      setOverviewTotal(0);
+      setTotalPages(1);
+      setPerPage(itemsPerPage);
     }
   };
 
@@ -343,8 +379,8 @@ export default function DepartmentsTab() {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {departments.map((dept) => {
-                return (
+              {departments && Array.isArray(departments) && departments.length > 0 ? (
+                departments.map((dept) => (
                   <Card key={dept.id}>
                     <CardHeader>
                       <CardTitle className="flex justify-between items-center">
@@ -385,11 +421,11 @@ export default function DepartmentsTab() {
                       </div>
                     </CardContent>
                   </Card>
-                );
-              })}
+                ))
+              ) : null}
             </div>
           </div>
-          {departments.length === 0 && (
+          {departments && Array.isArray(departments) && departments.length === 0 && (
             <div className="flex flex-col items-center justify-center gap-4">
               <img
                 src="/not-found.gif"

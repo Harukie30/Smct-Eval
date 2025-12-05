@@ -105,7 +105,7 @@ export default function AreaManagersTab() {
     if (!Array.isArray(data)) {
       return [];
     }
-
+    
     return data.map((item: any) => {
       // Handle branches - API returns branches array
       let branchValue = "";
@@ -116,64 +116,42 @@ export default function AreaManagersTab() {
           .join(", ");
       } else if (item.branch) {
         if (Array.isArray(item.branch)) {
-          branchValue = item.branch
-            .map((b: any) => b.name || b.label || b)
-            .join(", ");
+          branchValue = item.branch.map((b: any) => b.name || b.label || b).join(", ");
         } else if (typeof item.branch === "object") {
-          branchValue =
-            item.branch.name ||
-            item.branch.branch_name ||
-            item.branch.label ||
-            "";
+          branchValue = item.branch.name || item.branch.branch_name || item.branch.label || "";
         } else {
           branchValue = String(item.branch);
         }
       }
-
+      
       // Handle position - API returns positions object with label
       let positionValue = "";
       if (item.positions && typeof item.positions === "object") {
-        positionValue =
-          item.positions.label ||
-          item.positions.name ||
-          item.positions.value ||
-          "";
+        positionValue = item.positions.label || item.positions.name || item.positions.value || "";
       } else if (item.position) {
         if (typeof item.position === "object") {
-          positionValue =
-            item.position.label ||
-            item.position.name ||
-            item.position.value ||
-            "";
+          positionValue = item.position.label || item.position.name || item.position.value || "";
         } else {
           positionValue = String(item.position);
         }
       } else if (item.position_id) {
         positionValue = String(item.position_id);
       }
-
+      
       // Handle department - API returns departments object with department_name
       let departmentValue = "";
       if (item.departments && typeof item.departments === "object") {
-        departmentValue =
-          item.departments.department_name ||
-          item.departments.name ||
-          item.departments.label ||
-          "";
+        departmentValue = item.departments.department_name || item.departments.name || item.departments.label || "";
       } else if (item.department) {
         if (typeof item.department === "object") {
-          departmentValue =
-            item.department.department_name ||
-            item.department.name ||
-            item.department.label ||
-            "";
+          departmentValue = item.department.department_name || item.department.name || item.department.label || "";
         } else {
           departmentValue = String(item.department);
         }
       } else if (item.department_id) {
         departmentValue = String(item.department_id);
       }
-
+      
       // Handle role - API returns roles array with name
       let roleValue = "";
       if (item.roles && Array.isArray(item.roles)) {
@@ -183,16 +161,14 @@ export default function AreaManagersTab() {
           .join(", ");
       } else if (item.role) {
         if (Array.isArray(item.role)) {
-          roleValue = item.role
-            .map((r: any) => r.name || r.label || r)
-            .join(", ");
+          roleValue = item.role.map((r: any) => r.name || r.label || r).join(", ");
         } else if (typeof item.role === "object") {
           roleValue = item.role.name || item.role.label || "";
         } else {
           roleValue = String(item.role);
         }
       }
-
+      
       // Handle name - use full_name if available, otherwise construct from fname/lname
       let nameValue = "";
       if (item.full_name) {
@@ -204,7 +180,7 @@ export default function AreaManagersTab() {
         const lname = item.lname || "";
         nameValue = `${fname} ${lname}`.trim() || item.username || "";
       }
-
+      
       // Handle isActive - API returns is_active as string "active" or boolean
       let isActiveValue = true;
       if (item.isActive !== undefined) {
@@ -218,7 +194,7 @@ export default function AreaManagersTab() {
       } else if (item.status !== undefined) {
         isActiveValue = item.status !== "inactive";
       }
-
+      
       return {
         id: item.id || item.employeeId || item.user_id || item.emp_id,
         name: nameValue,
@@ -239,10 +215,10 @@ export default function AreaManagersTab() {
       try {
         const data = await apiService.getAllAreaManager();
         console.log("Area Managers API Response:", data);
-
+        
         const normalizedData = normalizeAreaManagerData(data);
         console.log("Normalized Area Managers Data:", normalizedData);
-
+        
         setAreaManagersData(normalizedData);
       } catch (error) {
         console.error("Error loading area managers:", error);
@@ -550,18 +526,21 @@ export default function AreaManagersTab() {
                   ))
                 ) : areaManagersPaginated.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center py-12">
+                    <TableCell
+                      colSpan={3}
+                      className="text-center py-12"
+                    >
                       <div className="flex flex-col items-center justify-center gap-4">
                         <img
                           src="/not-found.gif"
                           alt="No data"
                           className="w-25 h-25 object-contain"
                           style={{
-                            imageRendering: "auto",
-                            willChange: "auto",
-                            transform: "translateZ(0)",
-                            backfaceVisibility: "hidden",
-                            WebkitBackfaceVisibility: "hidden",
+                            imageRendering: 'auto',
+                            willChange: 'auto',
+                            transform: 'translateZ(0)',
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden',
                           }}
                         />
                         <div className="text-gray-500">
@@ -592,9 +571,7 @@ export default function AreaManagersTab() {
                   areaManagersPaginated.map((manager: Employee) => {
                     // Parse branches - handle both comma-separated string and single branch
                     const branchList = manager.branch
-                      ? manager.branch
-                          .split(", ")
-                          .filter((b: string) => b.trim())
+                      ? manager.branch.split(", ").filter((b: string) => b.trim())
                       : [];
 
                     return (
@@ -605,16 +582,14 @@ export default function AreaManagersTab() {
                         <TableCell className="py-4 text-center">
                           {branchList.length > 0 ? (
                             <div className="flex flex-wrap justify-center gap-2">
-                              {branchList.map(
-                                (branch: string, index: number) => (
-                                  <Badge
-                                    key={index}
-                                    className="bg-blue-600 text-white"
-                                  >
-                                    {branch}
-                                  </Badge>
-                                )
-                              )}
+                              {branchList.map((branch: string, index: number) => (
+                                <Badge
+                                  key={index}
+                                  className="bg-blue-600 text-white"
+                                >
+                                  {branch}
+                                </Badge>
+                              ))}
                             </div>
                           ) : (
                             <span className="text-gray-400">N/A</span>
@@ -971,12 +946,9 @@ export default function AreaManagersTab() {
                             selectedBranches.forEach((branch) => {
                               formData.append("branch_ids[]", branch.id);
                             });
-
+                            
                             // Use updateUserBranch API endpoint for branch assignments
-                            await apiService.updateUserBranch(
-                              selectedAreaManager.id,
-                              formData
-                            );
+                            await apiService.updateUserBranch(selectedAreaManager.id, formData);
 
                             // Close the branches modal after confirmation
                             setIsBranchesModalOpen(false);
@@ -1003,10 +975,8 @@ export default function AreaManagersTab() {
                             );
 
                             // Reload area managers data to update the table
-                            const reloadedData =
-                              await apiService.getAllAreaManager();
-                            const normalizedData =
-                              normalizeAreaManagerData(reloadedData);
+                            const reloadedData = await apiService.getAllAreaManager();
+                            const normalizedData = normalizeAreaManagerData(reloadedData);
                             setAreaManagersData(normalizedData);
                           },
                           {
@@ -1214,7 +1184,7 @@ export default function AreaManagersTab() {
               </div>
             ) : (
               <div className="border rounded-lg overflow-hidden">
-                <div className="max-h-[50vh] overflow-y-auto">
+                <div className="max-h-[60vh] overflow-y-auto">
                   <Table>
                     <TableHeader className="bg-gray-50">
                       <TableRow>
@@ -1325,7 +1295,7 @@ export default function AreaManagersTab() {
                   async () => {
                     // First, remove all existing branch assignments to ensure clean state
                     await apiService.removeUserBranches(areaManagerToEdit.id);
-
+                    
                     // Then, add the selected branches using updateUserBranch API endpoint
                     if (editSelectedBranches.length > 0) {
                       const formData = new FormData();
@@ -1333,21 +1303,17 @@ export default function AreaManagersTab() {
                       editSelectedBranches.forEach((branch) => {
                         formData.append("branch_ids[]", String(branch.id));
                       });
-
+                      
                       // Use updateUserBranch API endpoint to add the selected branches
-                      await apiService.updateUserBranch(
-                        areaManagerToEdit.id,
-                        formData
-                      );
+                      await apiService.updateUserBranch(areaManagerToEdit.id, formData);
                     }
 
                     // Manually update the state for immediate UI feedback
-                    const branchNames =
-                      editSelectedBranches.length > 0
-                        ? editSelectedBranches.map((b) => b.name).join(", ")
-                        : "";
-                    setAreaManagersData((prevData) =>
-                      prevData.map((manager) =>
+                    const branchNames = editSelectedBranches.length > 0 
+                      ? editSelectedBranches.map(b => b.name).join(", ")
+                      : "";
+                    setAreaManagersData(prevData => 
+                      prevData.map(manager => 
                         manager.id === areaManagerToEdit.id
                           ? { ...manager, branch: branchNames }
                           : manager
@@ -1355,18 +1321,13 @@ export default function AreaManagersTab() {
                     );
 
                     // Also reload from API to ensure consistency (but don't wait for it)
-                    apiService
-                      .getAllAreaManager()
-                      .then((reloadedData) => {
-                        const normalizedData =
-                          normalizeAreaManagerData(reloadedData);
+                    apiService.getAllAreaManager()
+                      .then(reloadedData => {
+                        const normalizedData = normalizeAreaManagerData(reloadedData);
                         setAreaManagersData(normalizedData);
                       })
-                      .catch((error) => {
-                        console.error(
-                          "Error reloading area managers after update:",
-                          error
-                        );
+                      .catch(error => {
+                        console.error("Error reloading area managers after update:", error);
                         // Don't show error to user since we already updated the UI
                       });
 
@@ -1508,14 +1469,11 @@ export default function AreaManagersTab() {
                   await withErrorHandling(
                     async () => {
                       // Remove all branch assignments using dedicated API endpoint
-                      await apiService.removeUserBranches(
-                        areaManagerToDelete.id
-                      );
+                      await apiService.removeUserBranches(areaManagerToDelete.id);
 
                       // Reload area managers data to update the table
                       const reloadedData = await apiService.getAllAreaManager();
-                      const normalizedData =
-                        normalizeAreaManagerData(reloadedData);
+                      const normalizedData = normalizeAreaManagerData(reloadedData);
                       setAreaManagersData(normalizedData);
 
                       // Show success message

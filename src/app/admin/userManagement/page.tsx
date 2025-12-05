@@ -123,33 +123,113 @@ export default function UserManagementTab() {
     searchValue: string,
     statusFilter: string
   ) => {
-    const pendingUsers = await apiService.getPendingRegistrations(
-      searchValue,
-      statusFilter,
-      currentPage,
-      itemsPerPage
-    );
-    setPendingRegistrations(pendingUsers.data);
-
-    setTotalItems(pendingUsers.total);
-    setPendingTotalItems(pendingUsers.total);
-    setTotalPages(pendingUsers.last_page);
-    setPerPage(pendingUsers.per_page);
+    try {
+      const response = await apiService.getPendingRegistrations(
+        searchValue,
+        statusFilter,
+        currentPage,
+        itemsPerPage
+      );
+      
+      // Handle different response structures
+      let pendingUsersData: Employee[] = [];
+      let total = 0;
+      let lastPage = 1;
+      let perPageValue = itemsPerPage;
+      
+      if (response) {
+        // If response has data property (paginated response)
+        if (response.data && Array.isArray(response.data)) {
+          pendingUsersData = response.data;
+          total = response.total || 0;
+          lastPage = response.last_page || 1;
+          perPageValue = response.per_page || itemsPerPage;
+        }
+        // If response is directly an array
+        else if (Array.isArray(response)) {
+          pendingUsersData = response;
+          total = response.length;
+          lastPage = 1;
+          perPageValue = response.length;
+        }
+        // If response has users property
+        else if (response.users && Array.isArray(response.users)) {
+          pendingUsersData = response.users;
+          total = response.total || response.users.length;
+          lastPage = response.last_page || 1;
+          perPageValue = response.per_page || itemsPerPage;
+        }
+      }
+      
+      setPendingRegistrations(pendingUsersData);
+      setTotalItems(total);
+      setPendingTotalItems(total);
+      setTotalPages(lastPage);
+      setPerPage(perPageValue);
+    } catch (error) {
+      console.error("Error loading pending users:", error);
+      // Set empty array on error to prevent undefined errors
+      setPendingRegistrations([]);
+      setTotalItems(0);
+      setPendingTotalItems(0);
+      setTotalPages(1);
+      setPerPage(itemsPerPage);
+    }
   };
 
   const loadActiveUsers = async (searchValue: string, roleFilter: string) => {
-    const activeUsers = await apiService.getActiveRegistrations(
-      searchValue,
-      roleFilter,
-      currentPage,
-      itemsPerPage
-    );
-    setActiveRegistrations(activeUsers.data);
-
-    setTotalItems(activeUsers.total);
-    setActiveTotalItems(activeUsers.total);
-    setTotalPages(activeUsers.last_page);
-    setPerPage(activeUsers.per_page);
+    try {
+      const response = await apiService.getActiveRegistrations(
+        searchValue,
+        roleFilter,
+        currentPage,
+        itemsPerPage
+      );
+      
+      // Handle different response structures
+      let activeUsersData: Employee[] = [];
+      let total = 0;
+      let lastPage = 1;
+      let perPageValue = itemsPerPage;
+      
+      if (response) {
+        // If response has data property (paginated response)
+        if (response.data && Array.isArray(response.data)) {
+          activeUsersData = response.data;
+          total = response.total || 0;
+          lastPage = response.last_page || 1;
+          perPageValue = response.per_page || itemsPerPage;
+        }
+        // If response is directly an array
+        else if (Array.isArray(response)) {
+          activeUsersData = response;
+          total = response.length;
+          lastPage = 1;
+          perPageValue = response.length;
+        }
+        // If response has users property
+        else if (response.users && Array.isArray(response.users)) {
+          activeUsersData = response.users;
+          total = response.total || response.users.length;
+          lastPage = response.last_page || 1;
+          perPageValue = response.per_page || itemsPerPage;
+        }
+      }
+      
+      setActiveRegistrations(activeUsersData);
+      setTotalItems(total);
+      setActiveTotalItems(total);
+      setTotalPages(lastPage);
+      setPerPage(perPageValue);
+    } catch (error) {
+      console.error("Error loading active users:", error);
+      // Set empty array on error to prevent undefined errors
+      setActiveRegistrations([]);
+      setTotalItems(0);
+      setActiveTotalItems(0);
+      setTotalPages(1);
+      setPerPage(itemsPerPage);
+    }
   };
 
   //render when page reload not loading not everySearch or Filters
@@ -272,12 +352,45 @@ export default function UserManagementTab() {
       const formData = new FormData();
       Object.keys(updatedUser).forEach((key) => {
         if (updatedUser[key] !== undefined && updatedUser[key] !== null) {
+          // Skip these keys - we'll append them with _id suffix separately
+          if (key === "position" || key === "branch" || key === "role" || key === "department") {
+            return;
+          }
           if (key === "avatar" && updatedUser[key] instanceof File) {
             formData.append(key, updatedUser[key]);
           } else {
             formData.append(key, String(updatedUser[key]));
           }
         }
+      });
+      
+      // Append position as position_id if it exists
+      if (updatedUser.position !== undefined && updatedUser.position !== null) {
+        formData.append('position_id', String(updatedUser.position));
+      }
+      
+      // Append branch as branch_id if it exists
+      if (updatedUser.branch !== undefined && updatedUser.branch !== null) {
+        formData.append('branch_id', String(updatedUser.branch));
+      }
+      
+      // Append role as roles if it exists
+      if (updatedUser.role !== undefined && updatedUser.role !== null) {
+        formData.append('roles', String(updatedUser.role));
+      }
+      
+      // Append department as department_id if it exists
+      if (updatedUser.department !== undefined && updatedUser.department !== null) {
+        formData.append('department_id', String(updatedUser.department));
+      }
+
+      // Log FormData contents for debugging
+      console.log("📤 Sending update request:", {
+        userId: updatedUser.id,
+        formDataKeys: Array.from(formData.keys()),
+        position: updatedUser.position,
+        branch: updatedUser.branch,
+        role: updatedUser.role,
       });
 
       await apiService.updateEmployee(formData, updatedUser.id);
@@ -321,11 +434,24 @@ export default function UserManagementTab() {
 
       // Show success toast
       toastMessages.user.updated(updatedUser.name);
-    } catch (error) {
-      console.error("Error updating user:", error);
+    } catch (error: any) {
+      console.error("❌ Error updating user:", error);
+      console.error("Error details:", {
+        message: error?.message,
+        response: error?.response,
+        status: error?.status,
+        data: error?.data,
+        fullError: JSON.stringify(error, null, 2),
+      });
+      
+      const errorMessage = error?.message || 
+                          error?.response?.data?.message || 
+                          error?.data?.message ||
+                          "Failed to update user information. Please try again.";
+      
       toastMessages.generic.error(
         "Update Failed",
-        "Failed to update user information. Please try again."
+        errorMessage
       );
     }
   };
@@ -498,7 +624,7 @@ export default function UserManagementTab() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="0">All Roles</SelectItem>
-                      {roles.map((role) => (
+                      {roles && Array.isArray(roles) && roles.map((role) => (
                         <SelectItem key={role.id} value={role.id}>
                           {role.name}
                         </SelectItem>
@@ -626,7 +752,7 @@ export default function UserManagementTab() {
                           </TableCell>
                         </TableRow>
                       ))
-                    ) : activeRegistrations.length === 0 ? (
+                    ) : activeRegistrations && Array.isArray(activeRegistrations) && activeRegistrations.length === 0 ? (
                       <TableRow>
                         <TableCell
                           colSpan={7}
@@ -670,20 +796,20 @@ export default function UserManagementTab() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ) : (
+                    ) : activeRegistrations && Array.isArray(activeRegistrations) && activeRegistrations.length > 0 ? (
                       activeRegistrations.map((employee) => (
                         <TableRow key={employee.id}>
                           <TableCell className="font-medium">
                             {employee.fname + " " + employee.lname}
                           </TableCell>
                           <TableCell>{employee.email}</TableCell>
-                          <TableCell>{employee.positions.label}</TableCell>
+                          <TableCell>{employee.positions?.label || "N/A"}</TableCell>
                           <TableCell>
-                            {employee.branches[0]?.branch_name}
+                            {employee.branches && Array.isArray(employee.branches) && employee.branches[0]?.branch_name || "N/A"}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {employee.roles[0]?.name}
+                              {employee.roles && Array.isArray(employee.roles) && employee.roles[0]?.name || "N/A"}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -713,7 +839,7 @@ export default function UserManagementTab() {
                           </TableCell>
                         </TableRow>
                       ))
-                    )}
+                    ) : null}
                   </TableBody>
                 </Table>
               </div>
@@ -967,7 +1093,7 @@ export default function UserManagementTab() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ) : (
+                      ) : pendingRegistrations && Array.isArray(pendingRegistrations) && pendingRegistrations.length > 0 ? (
                         pendingRegistrations.map((account) => (
                           <TableRow
                             key={account.id}
@@ -1051,7 +1177,7 @@ export default function UserManagementTab() {
                             </TableCell>
                           </TableRow>
                         ))
-                      )}
+                      ) : null}
                     </TableBody>
                   </Table>
                 </div>
