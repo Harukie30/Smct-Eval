@@ -86,6 +86,7 @@ export default function UserManagementTab() {
   const [positionsData, setPositionData] = useState<any[]>([]);
   const [branchesData, setBranchesData] = useState<any[]>([]);
   const [refresh, setRefresh] = useState(true);
+  const [isPageLoading, setIsPageLoading] = useState(false);
 
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -103,7 +104,7 @@ export default function UserManagementTab() {
   const [activeSearchTerm, setActiveSearchTerm] = useState("");
   const [debouncedActiveSearchTerm, setDebouncedActiveSearchTerm] =
     useState(activeSearchTerm);
-  const [roleFilter, setRoleFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("0"); // Default to "All Roles"
   const [debouncedRoleFilter, setDebouncedRoleFilter] = useState(roleFilter);
   //filters for pending users
   const [pendingSearchTerm, setPendingSearchTerm] = useState("");
@@ -114,16 +115,20 @@ export default function UserManagementTab() {
     useState(statusFilter);
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(6);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
 
   const loadPendingUsers = async (
     searchValue: string,
-    statusFilter: string
+    statusFilter: string,
+    isPageChange: boolean = false
   ) => {
     try {
+      if (isPageChange) {
+        setIsPageLoading(true);
+      }
       const response = await apiService.getPendingRegistrations(
         searchValue,
         statusFilter,
@@ -145,19 +150,33 @@ export default function UserManagementTab() {
           lastPage = response.last_page || 1;
           perPageValue = response.per_page || itemsPerPage;
         }
-        // If response is directly an array
+        // If response is directly an array - apply client-side pagination
         else if (Array.isArray(response)) {
-          pendingUsersData = response;
           total = response.length;
-          lastPage = 1;
-          perPageValue = response.length;
+          lastPage = Math.ceil(response.length / itemsPerPage);
+          perPageValue = itemsPerPage;
+          // Slice the array to show only items for current page
+          const startIndex = (currentPage - 1) * itemsPerPage;
+          const endIndex = startIndex + itemsPerPage;
+          pendingUsersData = response.slice(startIndex, endIndex);
         }
         // If response has users property
         else if (response.users && Array.isArray(response.users)) {
-          pendingUsersData = response.users;
-          total = response.total || response.users.length;
-          lastPage = response.last_page || 1;
-          perPageValue = response.per_page || itemsPerPage;
+          // Check if it's already paginated
+          if (response.total && response.last_page) {
+            pendingUsersData = response.users;
+            total = response.total;
+            lastPage = response.last_page;
+            perPageValue = response.per_page || itemsPerPage;
+          } else {
+            // Apply client-side pagination
+            total = response.users.length;
+            lastPage = Math.ceil(response.users.length / itemsPerPage);
+            perPageValue = itemsPerPage;
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            pendingUsersData = response.users.slice(startIndex, endIndex);
+          }
         }
       }
       
@@ -174,14 +193,27 @@ export default function UserManagementTab() {
       setPendingTotalItems(0);
       setTotalPages(1);
       setPerPage(itemsPerPage);
+    } finally {
+      if (isPageChange) {
+        setIsPageLoading(false);
+      }
     }
   };
 
-  const loadActiveUsers = async (searchValue: string, roleFilter: string) => {
+  const loadActiveUsers = async (
+    searchValue: string,
+    roleFilter: string,
+    isPageChange: boolean = false
+  ) => {
     try {
+      if (isPageChange) {
+        setIsPageLoading(true);
+      }
+      // Convert "0" (All Roles) to empty string for API call
+      const roleFilterForAPI = roleFilter === "0" ? "" : roleFilter;
       const response = await apiService.getActiveRegistrations(
         searchValue,
-        roleFilter,
+        roleFilterForAPI,
         currentPage,
         itemsPerPage
       );
@@ -200,19 +232,33 @@ export default function UserManagementTab() {
           lastPage = response.last_page || 1;
           perPageValue = response.per_page || itemsPerPage;
         }
-        // If response is directly an array
+        // If response is directly an array - apply client-side pagination
         else if (Array.isArray(response)) {
-          activeUsersData = response;
           total = response.length;
-          lastPage = 1;
-          perPageValue = response.length;
+          lastPage = Math.ceil(response.length / itemsPerPage);
+          perPageValue = itemsPerPage;
+          // Slice the array to show only items for current page
+          const startIndex = (currentPage - 1) * itemsPerPage;
+          const endIndex = startIndex + itemsPerPage;
+          activeUsersData = response.slice(startIndex, endIndex);
         }
         // If response has users property
         else if (response.users && Array.isArray(response.users)) {
-          activeUsersData = response.users;
-          total = response.total || response.users.length;
-          lastPage = response.last_page || 1;
-          perPageValue = response.per_page || itemsPerPage;
+          // Check if it's already paginated
+          if (response.total && response.last_page) {
+            activeUsersData = response.users;
+            total = response.total;
+            lastPage = response.last_page;
+            perPageValue = response.per_page || itemsPerPage;
+          } else {
+            // Apply client-side pagination
+            total = response.users.length;
+            lastPage = Math.ceil(response.users.length / itemsPerPage);
+            perPageValue = itemsPerPage;
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            activeUsersData = response.users.slice(startIndex, endIndex);
+          }
         }
       }
       
@@ -229,6 +275,10 @@ export default function UserManagementTab() {
       setActiveTotalItems(0);
       setTotalPages(1);
       setPerPage(itemsPerPage);
+    } finally {
+      if (isPageChange) {
+        setIsPageLoading(false);
+      }
     }
   };
 
@@ -274,7 +324,9 @@ export default function UserManagementTab() {
   useEffect(() => {
     const fetchData = async () => {
       if (tab === "active") {
-        await loadActiveUsers(debouncedActiveSearchTerm, debouncedRoleFilter);
+        // Only show page loading if currentPage changed (not search/filter term)
+        const isPageChange = debouncedActiveSearchTerm === activeSearchTerm && debouncedRoleFilter === roleFilter;
+        await loadActiveUsers(debouncedActiveSearchTerm, debouncedRoleFilter, isPageChange);
       }
     };
 
@@ -296,9 +348,12 @@ export default function UserManagementTab() {
   useEffect(() => {
     const fetchData = async () => {
       if (tab === "new") {
+        // Only show page loading if currentPage changed (not search/filter term)
+        const isPageChange = debouncedPendingSearchTerm === pendingSearchTerm && debouncedStatusFilter === statusFilter;
         await loadPendingUsers(
           debouncedPendingSearchTerm,
-          debouncedStatusFilter
+          debouncedStatusFilter,
+          isPageChange
         );
       }
     };
@@ -680,27 +735,6 @@ export default function UserManagementTab() {
               </div>
 
               <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                {refresh && (
-                  <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                    <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                      <div className="relative">
-                        {/* Spinning ring */}
-                        <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                        {/* Logo in center */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <img
-                            src="/smct.png"
-                            alt="SMCT Logo"
-                            className="h-10 w-10 object-contain"
-                          />
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-600 font-medium">
-                        Loading Users....
-                      </p>
-                    </div>
-                  </div>
-                )}
                 <Table>
                   <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                     <TableRow>
@@ -714,7 +748,7 @@ export default function UserManagementTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {refresh ? (
+                    {(refresh || isPageLoading) ? (
                       Array.from({ length: itemsPerPage }).map((_, index) => (
                         <TableRow key={`skeleton-${index}`}>
                           <TableCell className="px-6 py-3">
@@ -841,7 +875,7 @@ export default function UserManagementTab() {
                       perPage={perPage}
                       onPageChange={(page) => {
                         setCurrentPage(page);
-                        loadActiveUsers(activeSearchTerm, roleFilter);
+                        loadActiveUsers(activeSearchTerm, roleFilter, true);
                       }}
                     />
                   </div>
@@ -964,27 +998,6 @@ export default function UserManagementTab() {
                 </div>
 
                 <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                  {refresh && (
-                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                      <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                        <div className="relative">
-                          {/* Spinning ring */}
-                          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                          {/* Logo in center */}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <img
-                              src="/smct.png"
-                              alt="SMCT Logo"
-                              className="h-10 w-10 object-contain"
-                            />
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-600 font-medium">
-                          Loading Users....
-                        </p>
-                      </div>
-                    </div>
-                  )}
                   <Table>
                     <TableHeader className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-200">
                       <TableRow>
@@ -999,7 +1012,7 @@ export default function UserManagementTab() {
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-gray-200">
-                      {refresh ? (
+                      {(refresh || isPageLoading) ? (
                         Array.from({ length: itemsPerPage }).map((_, index) => (
                           <TableRow key={`skeleton-${index}`}>
                             <TableCell className="px-6 py-3">
@@ -1167,7 +1180,7 @@ export default function UserManagementTab() {
                         perPage={perPage}
                         onPageChange={(page) => {
                           setCurrentPage(page);
-                          loadPendingUsers(pendingSearchTerm, statusFilter);
+                          loadPendingUsers(pendingSearchTerm, statusFilter, true);
                         }}
                       />
                     </div>

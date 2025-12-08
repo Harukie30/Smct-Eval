@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import SearchableDropdown from "@/components/ui/searchable-dropdown";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getQuarterFromDate, getQuarterColor } from '@/lib/quarterUtils';
@@ -42,6 +43,7 @@ export function EvaluationRecordsTab({
   const [recordsQuarterFilter, setRecordsQuarterFilter] = useState('');
   const [recordsYearFilter, setRecordsYearFilter] = useState<string>('all');
   const [recordsRefreshing, setRecordsRefreshing] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(false);
   const [recordsSort, setRecordsSort] = useState<{ field: string; direction: 'asc' | 'desc' }>({ field: 'date', direction: 'desc' });
   const [recordsPage, setRecordsPage] = useState(1);
   const itemsPerPage = 8;
@@ -61,16 +63,21 @@ export function EvaluationRecordsTab({
   // Refresh when component mounts (tab clicked - due to key prop remounting)
   useEffect(() => {
     const refreshOnMount = async () => {
+      // Set loading state first to show skeleton
       setRecordsRefreshing(true);
       try {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        await onRefresh();
+        // Add minimum delay to ensure skeleton is visible
+        await Promise.all([
+          onRefresh(),
+          new Promise(resolve => setTimeout(resolve, 500))
+        ]);
       } catch (error) {
         console.error('Error refreshing on tab click:', error);
       } finally {
         setRecordsRefreshing(false);
       }
     };
+    // Always run on mount since component remounts with key prop
     refreshOnMount();
   }, []); // Empty dependency - runs on mount/remount
 
@@ -312,9 +319,17 @@ export function EvaluationRecordsTab({
   // Refresh handler
   const handleRecordsRefresh = async () => {
     setRecordsRefreshing(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    await onRefresh();
-    setRecordsRefreshing(false);
+    try {
+      // Add minimum delay to ensure skeleton is visible
+      await Promise.all([
+        onRefresh(),
+        new Promise(resolve => setTimeout(resolve, 500))
+      ]);
+    } catch (error) {
+      console.error('Error refreshing records:', error);
+    } finally {
+      setRecordsRefreshing(false);
+    }
   };
 
   // Filter and sort submissions
@@ -397,6 +412,27 @@ export function EvaluationRecordsTab({
   useEffect(() => {
     setRecordsPage(1);
   }, [recordsSearchTerm, recordsApprovalFilter, recordsQuarterFilter, recordsYearFilter]);
+
+  // Handle page change - following admin overview pattern
+  const handlePageChange = (page: number, isPageChange: boolean = false) => {
+    if (isPageChange) {
+      // Set loading state first, before changing page
+      setIsPageLoading(true);
+      
+      // Use a small delay to ensure React processes the loading state
+      // before the page change triggers a re-render
+      setTimeout(() => {
+        setRecordsPage(page);
+        
+        // Simulate loading delay for better UX
+        setTimeout(() => {
+          setIsPageLoading(false);
+        }, 500);
+      }, 10); // Small delay to ensure loading state is set first
+    } else {
+      setRecordsPage(page);
+    }
+  };
 
   // Add visible scrollbar styling
   useEffect(() => {
@@ -557,7 +593,6 @@ export function EvaluationRecordsTab({
                 >
                   {recordsRefreshing ? (
                     <>
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
                       Refreshing...
                     </>
                   ) : (
@@ -597,139 +632,85 @@ export function EvaluationRecordsTab({
             </div>
           </div>
 
-          {recordsRefreshing ? (
-            <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto evaluation-records-table">
-              {/* Centered Loading Spinner with Logo */}
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    {/* Spinning ring */}
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    {/* Logo in center */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 font-medium">Refreshing evaluation records...</p>
-                </div>
-              </div>
-              
-              {/* Table structure visible in background */}
-              <Table>
-                <TableHeader className="sticky top-0 bg-white z-10">
-                  <TableRow>
-                    <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('employeeName')}>
-                      Employee{getSortIcon('employeeName')}
-                    </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('evaluator')}>
-                      Evaluator/HR{getSortIcon('evaluator')}
-                    </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('quarter')}>
-                      Quarter{getSortIcon('quarter')}
-                    </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('date')}>
-                      Date{getSortIcon('date')}
-                    </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('rating')}>
-                      Rating{getSortIcon('rating')}
-                    </TableHead>
-                    <TableHead className="cursor-pointer hover:bg-gray-50" onClick={() => sortRecords('status')}>
-                      Status{getSortIcon('status')}
-                    </TableHead>
-                    <TableHead>Employee Sign</TableHead>
-                    <TableHead>Evaluator Sign</TableHead>
-                    <TableHead>HR Sign</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {/* Skeleton loading rows */}
-                  {Array.from({ length: 8 }).map((_, index) => (
+          <div className="relative max-h-[50vh] lg:max-h-[60vh] xl:max-h-[65vh] 2xl:max-h-[70vh] overflow-y-auto overflow-x-auto evaluation-records-table w-full">
+            <Table className="min-w-full w-full">
+              <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                <TableRow>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 cursor-pointer hover:bg-gray-50 min-w-[140px] md:min-w-[160px] lg:min-w-[180px] xl:min-w-[200px]" onClick={() => sortRecords('employeeName')}>
+                    <span className="text-xs md:text-sm lg:text-base">Employee{getSortIcon('employeeName')}</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[100px] md:min-w-[120px] lg:min-w-[140px] xl:min-w-[160px]">
+                    <span className="text-xs md:text-sm lg:text-base">Evaluator/HR</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[80px] md:min-w-[90px] lg:min-w-[100px]">
+                    <span className="text-xs md:text-sm lg:text-base">Quarter</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 cursor-pointer hover:bg-gray-50 min-w-[90px] md:min-w-[100px] lg:min-w-[110px]" onClick={() => sortRecords('date')}>
+                    <span className="text-xs md:text-sm lg:text-base">Date{getSortIcon('date')}</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 cursor-pointer hover:bg-gray-50 min-w-[120px] md:min-w-[140px] lg:min-w-[160px]" onClick={() => sortRecords('rating')}>
+                    <span className="text-xs md:text-sm lg:text-base">Rating{getSortIcon('rating')}</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[90px] md:min-w-[100px] lg:min-w-[110px]">
+                    <span className="text-xs md:text-sm lg:text-base">Status</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[100px] md:min-w-[110px] lg:min-w-[120px] hidden lg:table-cell">
+                    <span className="text-xs md:text-sm lg:text-base">Employee Sign</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[110px] md:min-w-[120px] lg:min-w-[130px] hidden xl:table-cell">
+                    <span className="text-xs md:text-sm lg:text-base">Evaluator Sign</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[100px] md:min-w-[110px] lg:min-w-[120px] hidden xl:table-cell">
+                    <span className="text-xs md:text-sm lg:text-base">HR signature</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[140px] md:min-w-[160px] lg:min-w-[180px]">
+                    <span className="text-xs md:text-sm lg:text-base">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-gray-200">
+                {(recordsRefreshing || isPageLoading) ? (
+                  Array.from({ length: itemsPerPage }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
-                      <TableCell className="px-6 py-3">
+                      <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
                         <div className="space-y-1">
-                          <div className="h-3 w-24 bg-gray-200 rounded animate-pulse"></div>
-                          <div className="h-2.5 w-20 bg-gray-200 rounded animate-pulse"></div>
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-3 w-24" />
                         </div>
                       </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div>
+                      <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                        <Skeleton className="h-4 w-28" />
                       </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                      <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                        <Skeleton className="h-6 w-16 rounded-full" />
                       </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+                      <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                        <Skeleton className="h-4 w-24" />
                       </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                        <Skeleton className="h-6 w-20 rounded-full" />
                       </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-18 rounded-full bg-gray-200 animate-pulse"></div>
+                      <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                        <Skeleton className="h-6 w-24 rounded-full" />
                       </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+                      <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 hidden lg:table-cell">
+                        <Skeleton className="h-6 w-20 rounded-full" />
                       </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                      <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 hidden xl:table-cell">
+                        <Skeleton className="h-6 w-20 rounded-full" />
                       </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                      <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 hidden xl:table-cell">
+                        <Skeleton className="h-6 w-20 rounded-full" />
                       </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
+                      <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
                         <div className="flex gap-2">
-                          <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
-                          <div className="h-6 w-12 bg-gray-200 rounded animate-pulse"></div>
-                          <div className="h-6 w-14 bg-gray-200 rounded animate-pulse"></div>
+                          <Skeleton className="h-8 w-16" />
+                          <Skeleton className="h-8 w-16" />
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="relative max-h-[50vh] lg:max-h-[60vh] xl:max-h-[65vh] 2xl:max-h-[70vh] overflow-y-auto overflow-x-auto evaluation-records-table w-full">
-              <Table className="min-w-full w-full">
-                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
-                  <TableRow>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 cursor-pointer hover:bg-gray-50 min-w-[140px] md:min-w-[160px] lg:min-w-[180px] xl:min-w-[200px]" onClick={() => sortRecords('employeeName')}>
-                      <span className="text-xs md:text-sm lg:text-base">Employee{getSortIcon('employeeName')}</span>
-                    </TableHead>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[100px] md:min-w-[120px] lg:min-w-[140px] xl:min-w-[160px]">
-                      <span className="text-xs md:text-sm lg:text-base">Evaluator/HR</span>
-                    </TableHead>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[80px] md:min-w-[90px] lg:min-w-[100px]">
-                      <span className="text-xs md:text-sm lg:text-base">Quarter</span>
-                    </TableHead>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 cursor-pointer hover:bg-gray-50 min-w-[90px] md:min-w-[100px] lg:min-w-[110px]" onClick={() => sortRecords('date')}>
-                      <span className="text-xs md:text-sm lg:text-base">Date{getSortIcon('date')}</span>
-                    </TableHead>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 cursor-pointer hover:bg-gray-50 min-w-[120px] md:min-w-[140px] lg:min-w-[160px]" onClick={() => sortRecords('rating')}>
-                      <span className="text-xs md:text-sm lg:text-base">Rating{getSortIcon('rating')}</span>
-                    </TableHead>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[90px] md:min-w-[100px] lg:min-w-[110px]">
-                      <span className="text-xs md:text-sm lg:text-base">Status</span>
-                    </TableHead>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[100px] md:min-w-[110px] lg:min-w-[120px] hidden lg:table-cell">
-                      <span className="text-xs md:text-sm lg:text-base">Employee Sign</span>
-                    </TableHead>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[110px] md:min-w-[120px] lg:min-w-[130px] hidden xl:table-cell">
-                      <span className="text-xs md:text-sm lg:text-base">Evaluator Sign</span>
-                    </TableHead>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[100px] md:min-w-[110px] lg:min-w-[120px] hidden xl:table-cell">
-                      <span className="text-xs md:text-sm lg:text-base">HR signature</span>
-                    </TableHead>
-                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[140px] md:min-w-[160px] lg:min-w-[180px]">
-                      <span className="text-xs md:text-sm lg:text-base">Actions</span>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="divide-y divide-gray-200">
-                  {recordsPaginated.length === 0 ? (
+                  ))
+                ) : recordsPaginated.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={11} className="text-center py-8 md:py-12">
                         <div className="flex flex-col items-center justify-center gap-4">
@@ -887,13 +868,12 @@ export function EvaluationRecordsTab({
                       );
                     })
                   )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Results Counter and Pagination */}
-          {!recordsRefreshing && (
+          {!recordsRefreshing && !isPageLoading && (
             <div className="m-3 md:m-4 p-2 md:p-0">
               <div className="text-center text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
                 Showing {filteredAndSortedSubmissions.length} of {recentSubmissions.length} evaluation records
@@ -909,8 +889,11 @@ export function EvaluationRecordsTab({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setRecordsPage(prev => Math.max(1, prev - 1))}
-                      disabled={recordsPage === 1}
+                      onClick={() => {
+                        const newPage = Math.max(1, recordsPage - 1);
+                        handlePageChange(newPage, true);
+                      }}
+                      disabled={recordsPage === 1 || isPageLoading}
                       className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
                     >
                       Previous
@@ -927,7 +910,10 @@ export function EvaluationRecordsTab({
                               key={page}
                               variant={recordsPage === page ? "default" : "outline"}
                               size="sm"
-                              onClick={() => setRecordsPage(page)}
+                              onClick={() => {
+                                handlePageChange(page, true);
+                              }}
+                              disabled={isPageLoading}
                               className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
                                 recordsPage === page
                                   ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
@@ -946,8 +932,11 @@ export function EvaluationRecordsTab({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setRecordsPage(prev => Math.min(recordsTotalPages, prev + 1))}
-                      disabled={recordsPage === recordsTotalPages}
+                      onClick={() => {
+                        const newPage = Math.min(recordsTotalPages, recordsPage + 1);
+                        handlePageChange(newPage, true);
+                      }}
+                      disabled={recordsPage === recordsTotalPages || isPageLoading}
                       className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
                     >
                       Next

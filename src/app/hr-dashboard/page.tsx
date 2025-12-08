@@ -23,7 +23,6 @@ import { toastMessages } from '@/lib/toastMessages';
 import EditUserModal from '@/components/EditUserModal';
 import AddEmployeeModal from '@/components/AddEmployeeModal';
 import { useDialogAnimation } from '@/hooks/useDialogAnimation';
-import { HRDashboardGuideModal } from '@/components/HRDashboardGuideModal';
 
 // Removed static JSON imports - using API only
 
@@ -33,8 +32,8 @@ const EvaluationRecordsTab = lazy(() => import('./EvaluationRecordsTab').then(m 
 const EmployeesTab = lazy(() => import('./EmployeesTab').then(m => ({ default: m.EmployeesTab })));
 const DepartmentsTab = lazy(() => import('./DepartmentsTab').then(m => ({ default: m.DepartmentsTab })));
 const BranchesTab = lazy(() => import('./BranchesTab').then(m => ({ default: m.BranchesTab })));
-const BranchHeadsTab = lazy(() => import('../admin/BranchHeadsTab').then(m => ({ default: m.BranchHeadsTab })));
-const AreaManagersTab = lazy(() => import('../admin/AreaManagersTab').then(m => ({ default: m.AreaManagersTab })));
+const BranchHeadsTab = lazy(() => import('../admin/branchHeads/page'));
+const AreaManagersTab = lazy(() => import('../admin/areaManagers/page'));
 const PerformanceReviewsTab = lazy(() => import('./PerformanceReviewsTab').then(m => ({ default: m.PerformanceReviewsTab })));
 const EvaluationHistoryTab = lazy(() => import('./EvaluationHistoryTab').then(m => ({ default: m.EvaluationHistoryTab })));
 
@@ -208,7 +207,6 @@ function HRDashboard() {
   const [positionsData, setPositionsData] = useState<{id: string, name: string}[]>([]);
   const [hrMetrics, setHrMetrics] = useState<HRMetrics | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   
   // Initialize active tab from URL parameter or default to 'overview'
   const tabParam = searchParams.get('tab');
@@ -295,7 +293,10 @@ function HRDashboard() {
         await new Promise(resolve => setTimeout(resolve, 800));
         // Refresh branches data
         const branchesData = await apiService.getBranches();
-        setBranches(branchesData);
+        setBranches(branchesData.map((branch: {label: string, value: string}) => ({
+          id: branch.value,
+          name: branch.label
+        })));
         setBranchesRefreshing(false);
       } else if (tabId === 'branch-heads' || tabId === 'area-managers') {
         // Refresh employee data for branch heads and area managers
@@ -492,17 +493,27 @@ function HRDashboard() {
       
       // Load branches from API
       const branchesData = await apiService.getBranches();
-      setBranches(branchesData);
+      setBranches(branchesData.map((branch: {label: string, value: string}) => ({
+        id: branch.value,
+        name: branch.label
+      })));
       
       // Load positions from API
       const positions = await apiService.getPositions();
-      setPositionsData(positions);
+      setPositionsData(positions.map((pos: {label: string, value: string}) => ({
+        id: pos.value,
+        name: pos.label
+      })));
 
       // Load dashboard data from API (replaces manual calculation)
       await loadDashboardData();
 
       // Fallback: Calculate HR metrics manually if API didn't provide all data
-      await calculateHRMetrics(branchesData);
+      const convertedBranchesData = branchesData.map((branch: {label: string, value: string}) => ({
+        id: branch.value,
+        name: branch.label
+      }));
+      await calculateHRMetrics(convertedBranchesData);
       
       // Refresh recent submissions
       await fetchRecentSubmissions();
@@ -544,9 +555,11 @@ function HRDashboard() {
     try {
       setSubmissionsLoading(true); // Set loading to true when starting fetch
       const submissions = await apiService.getSubmissions();
-      setRecentSubmissions(submissions);
+      // Ensure submissions is always an array
+      setRecentSubmissions(Array.isArray(submissions) ? submissions : []);
     } catch (error) {
       console.error('Error fetching submissions:', error);
+      setRecentSubmissions([]); // Set to empty array on error
     } finally {
       setSubmissionsLoading(false);
     }
@@ -587,17 +600,27 @@ function HRDashboard() {
         
         // Load branches from API
         const branchesData = await apiService.getBranches();
-        setBranches(branchesData);
+        setBranches(branchesData.map((branch: {label: string, value: string}) => ({
+          id: branch.value,
+          name: branch.label
+        })));
         
         // Load positions from API
         const positions = await apiService.getPositions();
-        setPositionsData(positions);
+        setPositionsData(positions.map((pos: {label: string, value: string}) => ({
+          id: pos.value,
+          name: pos.label
+        })));
 
         // Load dashboard data from API (replaces manual calculation)
         await loadDashboardData();
 
         // Fallback: Calculate HR metrics manually if API didn't provide all data
-        await calculateHRMetrics(branchesData);
+        const convertedBranchesData = branchesData.map((branch: {label: string, value: string}) => ({
+          id: branch.value,
+          name: branch.label
+        }));
+        await calculateHRMetrics(convertedBranchesData);
 
         setLoading(false);
       } catch (error) {
@@ -942,15 +965,15 @@ function HRDashboard() {
   };
 
   const sidebarItems: SidebarItem[] = [
-    { id: 'overview', label: 'Overview', icon: '📊' },
-    { id: 'evaluation-records', label: 'Evaluation Records', icon: '🗂️' },
-    { id: 'employees', label: 'Employees', icon: '👥' },
-    { id: 'departments', label: 'Departments', icon: '🏢' },
-    { id: 'branches', label: 'Branches', icon: '📍' },
-    { id: 'branch-heads', label: 'Branch Heads', icon: '👔' },
-    { id: 'area-managers', label: 'Area Managers', icon: '🎯' },
-    { id: 'reviews', label: 'Performance Reviews', icon: '📝' },
-    { id: 'history', label: 'Evaluation History', icon: '📈' },
+    { id: 'overview', label: 'Overview', icon: '📊', path: '/hr-dashboard?tab=overview' },
+    { id: 'evaluation-records', label: 'Evaluation Records', icon: '🗂️', path: '/hr-dashboard?tab=evaluation-records' },
+    { id: 'employees', label: 'Employees', icon: '👥', path: '/hr-dashboard?tab=employees' },
+    { id: 'departments', label: 'Departments', icon: '🏢', path: '/hr-dashboard?tab=departments' },
+    { id: 'branches', label: 'Branches', icon: '📍', path: '/hr-dashboard?tab=branches' },
+    { id: 'branch-heads', label: 'Branch Heads', icon: '👔', path: '/hr-dashboard?tab=branch-heads' },
+    { id: 'area-managers', label: 'Area Managers', icon: '🎯', path: '/hr-dashboard?tab=area-managers' },
+    { id: 'reviews', label: 'Performance Reviews', icon: '📝', path: '/hr-dashboard?tab=reviews' },
+    { id: 'history', label: 'Evaluation History', icon: '📈', path: '/hr-dashboard?tab=history' },
   ];
 
   const topSummary = (
@@ -1177,7 +1200,10 @@ function HRDashboard() {
             onBranchesUpdate={async () => {
               // Refresh branches from API
               const branchesData = await apiService.getBranches();
-              setBranches(branchesData);
+              setBranches(branchesData.map((branch: {label: string, value: string}) => ({
+                id: branch.value,
+                name: branch.label
+              })));
             }}
           />
         </Suspense>
@@ -1199,13 +1225,7 @@ function HRDashboard() {
               </div>
                       </div>
         }>
-          <BranchHeadsTab
-            employees={employees}
-            onRefresh={async () => {
-              await refreshEmployeeData();
-            }}
-            isLoading={employeesRefreshing}
-          />
+          <BranchHeadsTab />
         </Suspense>
       )}
 
@@ -1225,12 +1245,7 @@ function HRDashboard() {
               </div>
                       </div>
         }>
-          <AreaManagersTab
-            employees={employees}
-            onRefresh={async () => {
-              await refreshEmployeeData();
-            }}
-          />
+          <AreaManagersTab />
         </Suspense>
       )}
 
@@ -1428,7 +1443,7 @@ function HRDashboard() {
         departments={departments.map(dept => dept.name)}
         branches={branches}
         positions={positionsData}
-        onRefresh={refreshDashboardData}
+        roles={[]}
       />
 
       {/* Edit User Modal */}
@@ -1677,12 +1692,12 @@ function HRDashboard() {
                   employeeId: employeeToEvaluate.employeeId || undefined,
                 }}
                 currentUser={{
-                  id: currentUser.id,
+                  id: typeof currentUser.id === 'number' ? currentUser.id : Number(currentUser.id) || 0,
                   name: currentUser.fname + ' ' + currentUser.lname,
-                  email: currentUser.email,
-                  position: currentUser.position || 'HR Manager',
-                  department: currentUser.department || 'Human Resources',
-                  role: currentUser.roles[0]?.name || currentUser.roles[0] || 'employee',
+                  email: currentUser.email || '',
+                  position: 'HR Manager',
+                  department: 'Human Resources',
+                  role: currentUser.roles?.[0]?.name || currentUser.roles?.[0] || 'employee',
                   signature: currentUser.signature,
                 }}
                 onCloseAction={async () => {
@@ -1716,12 +1731,12 @@ function HRDashboard() {
                   employeeId: employeeToEvaluate.employeeId || undefined,
                 }}
                 currentUser={{
-                  id: currentUser.id,
+                  id: typeof currentUser.id === 'number' ? currentUser.id : Number(currentUser.id) || 0,
                   name: currentUser.fname + ' ' + currentUser.lname,
-                  email: currentUser.email,
-                  position: currentUser.position || 'HR Manager',
-                  department: currentUser.department || 'Human Resources',
-                  role: currentUser.roles[0]?.name || currentUser.roles[0] || 'employee',
+                  email: currentUser.email || '',
+                  position: 'HR Manager',
+                  department: 'Human Resources',
+                  role: currentUser.roles?.[0]?.name || currentUser.roles?.[0] || 'employee',
                   signature: currentUser.signature,
                 }}
                   onCloseAction={async () => {
@@ -1816,24 +1831,7 @@ function HRDashboard() {
           </DialogContent>
         </Dialog>
 
-        {/* Floating Help Button */}
-        <Button
-          onClick={() => setIsGuideModalOpen(true)}
-          className="fixed bottom-8 right-8 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0"
-          title="Dashboard Guide"
-        >
-          <img 
-            src="/faq.png" 
-            alt="Help" 
-            className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
-          />
-        </Button>
-
-        {/* HR Dashboard Guide Modal */}
-        <HRDashboardGuideModal
-          isOpen={isGuideModalOpen}
-          onCloseAction={() => setIsGuideModalOpen(false)}
-        />
+        {/* Guide modal is now handled in DashboardShell */}
       </DashboardShell>
     </>
   );

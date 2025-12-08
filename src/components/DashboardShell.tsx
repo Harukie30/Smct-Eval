@@ -11,6 +11,8 @@ import {
   Trash2,
   MessageCircle,
   ChevronDown,
+  HelpCircle,
+  ChevronUp,
 } from "lucide-react";
 import {
   Collapsible,
@@ -23,9 +25,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import ProfileCard, { UserProfile } from "./ProfileCard";
 import ProfileModal from "./ProfileModal";
 import ContactDevsModal from "./ContactDevsModal";
+import { HRDashboardGuideModal } from "./HRDashboardGuideModal";
+import { EmployeeDashboardGuideModal } from "./EmployeeDashboardGuideModal";
+import { EvaluatorDashboardGuideModal } from "./EvaluatorDashboardGuideModal";
 import { useUser } from "@/contexts/UserContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Notification } from "@/lib/types";
@@ -78,6 +88,10 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [isManagementOpen, setIsManagementOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [isLeadershipOpen, setIsLeadershipOpen] = useState(false);
+  
+  // Toggle state for help buttons (Contact Devs & Dashboard Guide)
+  const [isHelpButtonsVisible, setIsHelpButtonsVisible] = useState(true);
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
 
   const { user, logout, refreshUser } = useUser();
   const router = useRouter();
@@ -1034,16 +1048,83 @@ export default function DashboardShell(props: DashboardShellProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Floating Contact Developers Button - Bottom Right */}
-      <Button
-        variant="ghost"
-        size="lg"
-        onClick={() => setIsContactDevsModalOpen(true)}
-        className="fixed bottom-24 right-6 z-50 p-4 hover:bg-blue-700 bg-blue-500 border rounded-full shadow-lg transition-all hover:scale-110"
-        title="Contact Developers"
-      >
-        <MessageCircle className="h-6 w-6 text-white" />
-      </Button>
+      {/* Toggle Button for Help Buttons - Bottom Right */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="lg"
+            onClick={() => setIsHelpButtonsVisible(!isHelpButtonsVisible)}
+            className="fixed bottom-6 right-6 z-50 p-3 hover:bg-blue-700 bg-blue-600 border rounded-full shadow-lg transition-all hover:scale-110"
+          >
+            {isHelpButtonsVisible ? (
+              <ChevronDown className="h-5 w-5 text-white" />
+            ) : (
+              <ChevronUp className="h-5 w-5 text-white" />
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent 
+          side="left" 
+          sideOffset={10}
+          className="bg-blue-600 text-white border-blue-500"
+        >
+          <p className="font-medium">
+            {isHelpButtonsVisible ? "Hide Help Buttons" : "Show Help Buttons"}
+          </p>
+        </TooltipContent>
+      </Tooltip>
+
+      {/* Floating Help Buttons - Toggleable */}
+      {isHelpButtonsVisible && (
+        <>
+          {/* Dashboard Guide Button */}
+          <Button
+            variant="ghost"
+            size="lg"
+            onClick={() => setIsGuideModalOpen(true)}
+            className="fixed bottom-32 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0"
+            title="Dashboard Guide"
+          >
+            <img 
+              src="/faq.png" 
+              alt="Help" 
+              className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
+            />
+          </Button>
+
+          {/* Contact Developers Button */}
+          <Button
+            variant="ghost"
+            size="lg"
+            onClick={() => setIsContactDevsModalOpen(true)}
+            className="fixed bottom-48 right-6 z-50 p-4 hover:bg-blue-700 bg-blue-500 border rounded-full shadow-lg transition-all hover:scale-110"
+            title="Contact Developers"
+          >
+            <MessageCircle className="h-6 w-6 text-white" />
+          </Button>
+        </>
+      )}
+
+      {/* Dashboard Guide Modal - Conditionally rendered based on dashboard type */}
+      {isGuideModalOpen && dashboardType === "hr" && (
+        <HRDashboardGuideModal
+          isOpen={isGuideModalOpen}
+          onCloseAction={() => setIsGuideModalOpen(false)}
+        />
+      )}
+      {isGuideModalOpen && dashboardType === "employee" && (
+        <EmployeeDashboardGuideModal
+          isOpen={isGuideModalOpen}
+          onCloseAction={() => setIsGuideModalOpen(false)}
+        />
+      )}
+      {isGuideModalOpen && dashboardType === "evaluator" && (
+        <EvaluatorDashboardGuideModal
+          isOpen={isGuideModalOpen}
+          onCloseAction={() => setIsGuideModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

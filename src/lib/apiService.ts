@@ -44,7 +44,7 @@ export const apiService = {
     formData: FormData,
     id: string | number
   ): Promise<any> => {
-    const response = await api.post(`/update_user/${id}`, formData);
+    const response = await api.post(`/updateUser/${id}`, formData);
     return response.data;
   },
 

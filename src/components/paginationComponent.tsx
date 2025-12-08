@@ -84,7 +84,7 @@ export default function EvaluationsPagination({
   const endIndex = currentPage * perPage;
 
   return (
-    <div className=" flex flex-1 justify-between w-full p-2 mt-4">
+    <div className="flex flex-col items-center justify-center gap-3 w-full p-2 mt-4">
       <div className="text-sm text-gray-600">
         Showing {startIndex + 1} to {Math.min(endIndex, total)} of {total}{" "}
         records
