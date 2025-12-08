@@ -48,6 +48,12 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
         icon: "🎯",
         path: "/admin/areaManagers",
       },
+      {
+        id: "signature-reset",
+        label: "Signature Reset Requests",
+        icon: "✍️",
+        path: "/admin/signatureResetRequests",
+      },
     ],
     []
   );
