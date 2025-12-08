@@ -33,7 +33,7 @@ interface Account {
   current_password?: string;
   new_password?: string;
   confirm_password?: string;
-  signature?: string;
+  signature?: string | null;
 }
 
 export default function ProfileModal({
@@ -55,13 +55,16 @@ export default function ProfileModal({
   const { success } = useToast();
   const { refreshUser } = useAuth();
   const [open, setOpen] = useState(false);
-  // Reset form data when profile changes
+  const [isSignatureSaved, setIsSignatureSaved] = useState(false); // Track if signature is saved
 
+  // Reset form data when profile changes
   useEffect(() => {
     setFormData({
       username: profile?.username,
       email: profile?.email,
     });
+    // If profile has a signature, it's saved
+    setIsSignatureSaved(!!(profile?.signature && profile.signature !== ''));
   }, [profile]);
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -159,16 +162,28 @@ export default function ProfileModal({
         formData?.confirm_password || ""
       );
 
-      const signature =
-        formData?.signature &&
-        formData?.signature !== "" &&
-        dataURLtoFile(formData.signature, "signature.png");
-
-      if (signature) {
-        formDataToUpload.append("signature", signature);
+      // Handle signature: if null or empty, send empty string to delete it from server
+      // If it's a data URL, convert to file and upload
+      if (formData?.signature && formData?.signature !== "" && formData?.signature !== null) {
+        const signature = dataURLtoFile(formData.signature, "signature.png");
+        if (signature) {
+          formDataToUpload.append("signature", signature);
+        }
+      } else if (formData?.signature === null || formData?.signature === "") {
+        // Explicitly send empty string to delete signature from server
+        formDataToUpload.append("signature", "");
       }
 
       await apiService.updateEmployee_auth(formDataToUpload);
+      
+      // If signature was included in the save, mark it as saved
+      if (formData?.signature && formData?.signature !== "" && formData?.signature !== null) {
+        setIsSignatureSaved(true);
+      } else if (formData?.signature === null || formData?.signature === "") {
+        // Signature was deleted
+        setIsSignatureSaved(false);
+      }
+      
       // Show success toast
       success("Profile updated successfully!");
       refreshUser();
@@ -191,6 +206,25 @@ export default function ProfileModal({
     setFormData(null); // Reset to original data
     setErrors({});
     onClose();
+  };
+
+  const handleRequestReset = async () => {
+    try {
+      setIsLoading(true);
+      await apiService.requestSignatureReset();
+      // After successful reset request, enable the Clear Signature button
+      setIsSignatureSaved(false);
+      success("Signature reset request submitted successfully! You can now clear your signature.");
+    } catch (error: any) {
+      console.error("Error requesting signature reset:", error);
+      const errorMessage = error.response?.data?.message || "Failed to request signature reset. Please try again.";
+      setErrors((prev) => ({
+        ...prev,
+        general: errorMessage,
+      }));
+    } finally {
+      setIsLoading(false);
+    }
   };
   return (
     <Dialog open={isOpen} onOpenChangeAction={onClose}>
@@ -443,33 +477,29 @@ export default function ProfileModal({
           <Label htmlFor="signature" className="text-sm font-medium">
             Digital Signature{" "}
           </Label>
-          {profile?.signature !== null && profile?.signature !== "" ? (
-            <div className="space-y-2">
-              <div className="border p-4 rounded-md">
-                <img
-                  src={CONFIG.API_URL_STORAGE + "/" + profile?.signature}
-                  alt="Signature"
-                  width={700}
-                  height={200}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <SignaturePad
-                value={profile?.signature || null}
-                onChangeAction={(signature) => {
+          <div className="space-y-2">
+            <SignaturePad
+              value={profile?.signature || formData?.signature || null}
+              onChangeAction={(signature) => {
+                // If signature is null, permanently delete it
+                if (signature === null) {
+                  setFormData({ ...formData, signature: null });
+                  setIsSignatureSaved(false);
+                } else {
                   setFormData({ ...formData, signature });
-                }}
-                className="w-full"
-                required={true}
-                hasError={false}
-              />
-              {errors.signature && (
-                <p className="text-sm text-red-500">{errors.signature}</p>
-              )}
-            </div>
-          )}
+                  setIsSignatureSaved(false); // New signature drawn, not saved yet
+                }
+              }}
+              className="w-full"
+              required={true}
+              hasError={false}
+              onRequestReset={handleRequestReset}
+              isSaved={isSignatureSaved}
+            />
+            {errors.signature && (
+              <p className="text-sm text-red-500">{errors.signature}</p>
+            )}
+          </div>
           <p className="text-sm text-gray-500">
             Update your digital signature for official documents and approvals.
           </p>

@@ -12,6 +12,8 @@ interface SignaturePadProps {
   className?: string;
   required?: boolean;
   hasError?: boolean;
+  onRequestReset?: () => void;
+  isSaved?: boolean; // Indicates if the signature has been saved to the server
 }
 
 export default function SignaturePad({
@@ -20,11 +22,15 @@ export default function SignaturePad({
   className = "",
   required = false,
   hasError = false,
+  onRequestReset,
+  isSaved = false,
 }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
   const [previewImage, setPreviewImage] = useState<string>("");
+  const [isSavedSignature, setIsSavedSignature] = useState(false); // Track if signature is from server (saved)
+  const [lastDrawnSignature, setLastDrawnSignature] = useState<string | null>(null); // Track the last drawn signature (data URL)
 
   // Helper function to get coordinates
   const getCoordinates = (
@@ -44,6 +50,53 @@ export default function SignaturePad({
   };
 
   // Load existing signature when value changes
+  useEffect(() => {
+    console.log("SignaturePad value changed:", value);
+    if (value && typeof value === 'string' && value.trim() !== '') {
+      let imageUrl = '';
+      let isFromServer = false;
+      
+      // Check if it's a URL path (from server) or data URL (base64)
+      if (value.startsWith('http://') || value.startsWith('https://')) {
+        // It's a full URL - from server (saved)
+        imageUrl = value;
+        isFromServer = true;
+      } else if (value.startsWith('/')) {
+        // It's a path starting with / - from server (saved)
+        imageUrl = CONFIG.API_URL_STORAGE + value;
+        isFromServer = true;
+      } else if (value.startsWith('data:')) {
+        // It's a data URL (base64) - newly drawn, not saved yet
+        imageUrl = value;
+        isFromServer = false;
+        setLastDrawnSignature(value); // Track this as the drawn signature
+      } else {
+        // It's likely a file path without leading slash - from server (saved)
+        imageUrl = CONFIG.API_URL_STORAGE + "/" + value;
+        isFromServer = true;
+      }
+      
+      // If value changed from data URL to server path, it means it was just saved
+      if (isFromServer && lastDrawnSignature && lastDrawnSignature.startsWith('data:')) {
+        console.log("Signature was just saved! Marking as saved.");
+        setIsSavedSignature(true);
+        setLastDrawnSignature(null); // Clear the drawn signature since it's now saved
+      } else {
+        setIsSavedSignature(isFromServer);
+      }
+      
+      console.log("Setting signature image URL:", imageUrl, "isSaved:", isFromServer);
+      setPreviewImage(imageUrl);
+      setHasSignature(true);
+    } else if (!value || value === null || value === '') {
+      // No signature, reset state
+      console.log("No signature value, resetting");
+      setHasSignature(false);
+      setPreviewImage("");
+      setIsSavedSignature(false);
+      setLastDrawnSignature(null);
+    }
+  }, [value, lastDrawnSignature]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -98,6 +151,7 @@ export default function SignaturePad({
     if (!isDrawing) return;
     setIsDrawing(false);
     setHasSignature(true);
+    setIsSavedSignature(false); // Newly drawn signature, not saved yet
 
     // Convert canvas to data URL and call onChange
     const canvas = canvasRef.current;
@@ -113,6 +167,8 @@ export default function SignaturePad({
   const clearSignature = () => {
     onChangeAction(null);
     setHasSignature(false);
+    setIsSavedSignature(false);
+    setPreviewImage("");
 
     // Small delay to ensure canvas is rendered before resetting
     setTimeout(() => {
@@ -144,8 +200,20 @@ export default function SignaturePad({
           hasError ? "border-red-300 bg-red-50" : "border-gray-300"
         }`}
       >
-        {hasSignature ? (
-          <img src={previewImage} alt="Signature" width={700} height={200} />
+        {hasSignature && previewImage ? (
+          <div className="w-full h-32 bg-white rounded border border-gray-200 flex items-center justify-center overflow-hidden">
+            <img 
+              src={previewImage} 
+              alt="Signature" 
+              className="max-w-full max-h-full object-contain"
+              onError={(e) => {
+                console.error("Signature image failed to load:", previewImage);
+                // If image fails to load, reset signature state
+                setHasSignature(false);
+                setPreviewImage("");
+              }}
+            />
+          </div>
         ) : (
           <canvas
             ref={canvasRef}
@@ -182,17 +250,29 @@ export default function SignaturePad({
         </p>
       </div>
 
-      <div className="flex justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={clearSignature}
-          disabled={!hasSignature}
-          className="text-red-600 border-red-300 hover:bg-red-50"
-        >
-          Clear Signature
-        </Button>
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={clearSignature}
+            disabled={isSaved}
+            className="text-red-600 border-red-300 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Clear Signature
+          </Button>
+          
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onRequestReset || (() => {})}
+            className="text-orange-600 border-orange-300 hover:bg-orange-50"
+          >
+            Request Reset
+          </Button>
+        </div>
 
         {hasSignature && (
           <div className="text-sm text-green-600 flex items-center">

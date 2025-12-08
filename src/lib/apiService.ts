@@ -40,6 +40,26 @@ export const apiService = {
     return response.data;
   },
 
+  requestSignatureReset: async (): Promise<any> => {
+    const response = await api.post("/requestSignatureReset");
+    return response.data;
+  },
+
+  getSignatureResetRequests: async (): Promise<any> => {
+    const response = await api.get("/getSignatureResetRequests");
+    return response.data;
+  },
+
+  approveSignatureReset: async (userId: number | string): Promise<any> => {
+    const response = await api.post(`/approveSignatureReset/${userId}`);
+    return response.data;
+  },
+
+  rejectSignatureReset: async (userId: number | string): Promise<any> => {
+    const response = await api.post(`/rejectSignatureReset/${userId}`);
+    return response.data;
+  },
+
   updateEmployee: async (
     formData: FormData,
     id: string | number
