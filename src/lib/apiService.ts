@@ -46,8 +46,8 @@ export const apiService = {
   },
 
   getSignatureResetRequests: async (): Promise<any> => {
-    const response = await api.get("/getSignatureResetRequests");
-    return response.data;
+    const response = await api.get("/getAllSignatureReset");
+    return response.data.users;
   },
 
   approveSignatureReset: async (userId: number | string): Promise<any> => {
