@@ -115,7 +115,7 @@ export default function UserManagementTab() {
     useState(statusFilter);
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
@@ -325,8 +325,14 @@ export default function UserManagementTab() {
     const fetchData = async () => {
       if (tab === "active") {
         // Only show page loading if currentPage changed (not search/filter term)
-        const isPageChange = debouncedActiveSearchTerm === activeSearchTerm && debouncedRoleFilter === roleFilter;
-        await loadActiveUsers(debouncedActiveSearchTerm, debouncedRoleFilter, isPageChange);
+        const isPageChange =
+          debouncedActiveSearchTerm === activeSearchTerm &&
+          debouncedRoleFilter === roleFilter;
+        await loadActiveUsers(
+          debouncedActiveSearchTerm,
+          debouncedRoleFilter,
+          isPageChange
+        );
       }
     };
 
@@ -349,7 +355,9 @@ export default function UserManagementTab() {
     const fetchData = async () => {
       if (tab === "new") {
         // Only show page loading if currentPage changed (not search/filter term)
-        const isPageChange = debouncedPendingSearchTerm === pendingSearchTerm && debouncedStatusFilter === statusFilter;
+        const isPageChange =
+          debouncedPendingSearchTerm === pendingSearchTerm &&
+          debouncedStatusFilter === statusFilter;
         await loadPendingUsers(
           debouncedPendingSearchTerm,
           debouncedStatusFilter,
@@ -719,7 +727,7 @@ export default function UserManagementTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(refresh || isPageLoading) ? (
+                    {refresh || isPageLoading ? (
                       Array.from({ length: itemsPerPage }).map((_, index) => (
                         <TableRow key={`skeleton-${index}`}>
                           <TableCell className="px-6 py-3">
@@ -1007,7 +1015,7 @@ export default function UserManagementTab() {
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-gray-200">
-                      {(refresh || isPageLoading) ? (
+                      {refresh || isPageLoading ? (
                         Array.from({ length: itemsPerPage }).map((_, index) => (
                           <TableRow key={`skeleton-${index}`}>
                             <TableCell className="px-6 py-3">
@@ -1177,7 +1185,11 @@ export default function UserManagementTab() {
                         perPage={perPage}
                         onPageChange={(page) => {
                           setCurrentPage(page);
-                          loadPendingUsers(pendingSearchTerm, statusFilter, true);
+                          loadPendingUsers(
+                            pendingSearchTerm,
+                            statusFilter,
+                            true
+                          );
                         }}
                       />
                     </div>

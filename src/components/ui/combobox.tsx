@@ -44,8 +44,11 @@ export function Combobox({
   const [searchTerm, setSearchTerm] = React.useState("");
 
   // Helper function to get option display text
-  const getOptionText = (option: string | ComboboxOption): string => {
-    return typeof option === "string" ? option : option.label;
+  const getOptionText = (option: any) => {
+    if (!option) return "";
+    return typeof option === "string"
+      ? option
+      : option.label || option.text || "";
   };
 
   // Helper function to get option value
@@ -84,7 +87,11 @@ export function Combobox({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" sideOffset={4}>
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] p-0"
+          align="start"
+          sideOffset={4}
+        >
           <div className="p-2">
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />

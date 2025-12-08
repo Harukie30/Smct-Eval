@@ -25,7 +25,7 @@ interface User {
   email: string;
   position: string;
   department: string;
-  branch: string;
+  branch: string | number;
   role?: string;
   username?: string;
   password?: string;
@@ -396,7 +396,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     const branchLower = branchStr.toLowerCase().trim();
     return (
       branchLower === "ho" ||
-      branchLower === "head office" ||
+      branchLower === "head office /ho" ||
       branchLower === "none" ||
       branchLower === "none ho"
     );
@@ -1097,7 +1097,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             </div>
 
             {/* Department - Show only if branch is HO, Head Office, or none */}
-            {isBranchHOOrNone(formData.branch) && (
+            {formData.branch === 126 && (
               <div className="space-y-2 w-1/2">
                 <Label htmlFor="department">Department *</Label>
                 <Combobox
