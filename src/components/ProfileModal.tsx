@@ -317,7 +317,7 @@ export default function ProfileModal({
                     >
                       Position
                     </Label>
-                    <Input value={profile?.positions.label} readOnly />
+                    <Input value={profile?.positions?.label || "Not Assigned Yet"} readOnly />
                   </div>
 
                   <div className="space-y-1.5">
@@ -326,7 +326,7 @@ export default function ProfileModal({
                     </Label>
                     <Input
                       value={
-                        profile?.departments.department_name ||
+                        profile?.departments?.department_name ||
                         "Not Assigned Yet"
                       }
                       readOnly
