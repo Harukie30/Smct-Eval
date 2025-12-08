@@ -51,7 +51,7 @@ export const apiService = {
   },
 
   approveSignatureReset: async (userId: number | string): Promise<any> => {
-    const response = await api.post(`/approveSignatureReset/${userId}`);
+    const response = await api.post(`/approvedSignatureReset/${userId}`);
     return response.data;
   },
 

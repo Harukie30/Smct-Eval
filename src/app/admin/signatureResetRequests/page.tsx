@@ -36,9 +36,9 @@ import EvaluationsPagination from "@/components/paginationComponent";
 
 interface SignatureResetRequest {
   id: number;
-  user_id: number;
+  user_id?: number;
   user: {
-    id: number;
+    id?: number;
     fname: string;
     lname: string;
     email: string;
@@ -219,8 +219,19 @@ export default function SignatureResetRequestsTab() {
   const handleApprove = async () => {
     if (!selectedRequest) return;
 
+    // The API returns user objects directly, so the user ID is in the id field
+    const userId = (selectedRequest as any).id || 
+                   selectedRequest.user_id || 
+                   selectedRequest.user?.id;
+    
+    if (!userId) {
+      console.error("User ID not found. Full request object:", JSON.stringify(selectedRequest, null, 2));
+      showError("User ID not found in request data.");
+      return;
+    }
+
     try {
-      await apiService.approveSignatureReset(selectedRequest.user_id);
+      await apiService.approveSignatureReset(userId);
       success("Signature reset request approved successfully!");
       setIsApproveModalOpen(false);
       setSelectedRequest(null);
@@ -234,8 +245,19 @@ export default function SignatureResetRequestsTab() {
   const handleReject = async () => {
     if (!selectedRequest) return;
 
+    // The API returns user objects directly, so the user ID is in the id field
+    const userId = (selectedRequest as any).id || 
+                   selectedRequest.user_id || 
+                   selectedRequest.user?.id;
+    
+    if (!userId) {
+      console.error("User ID not found. Full request object:", JSON.stringify(selectedRequest, null, 2));
+      showError("User ID not found in request data.");
+      return;
+    }
+
     try {
-      await apiService.rejectSignatureReset(selectedRequest.user_id);
+      await apiService.rejectSignatureReset(userId);
       success("Signature reset request rejected successfully!");
       setIsRejectModalOpen(false);
       setSelectedRequest(null);
@@ -394,22 +416,22 @@ export default function SignatureResetRequestsTab() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  requests.map((request) => (
+                  requests.map((request: any) => (
                     <TableRow key={request.id}>
                       <TableCell>
                         <div>
                           <div className="font-medium">
-                            {request.user?.fname} {request.user?.lname}
+                            {request.fname} {request.lname}
                           </div>
                           <div className="text-sm text-gray-500">
-                            @{request.user?.username}
+                            @{request.username}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{request.user?.email}</TableCell>
-                      <TableCell>{request.user?.position || "N/A"}</TableCell>
-                      <TableCell>{request.user?.department || "N/A"}</TableCell>
-                      <TableCell>{request.user?.branch || "N/A"}</TableCell>
+                      <TableCell>{request.email}</TableCell>
+                      <TableCell>{request.positions?.label || request.position || "N/A"}</TableCell>
+                      <TableCell>{request.departments?.department_name || request.department || "N/A"}</TableCell>
+                      <TableCell>{request.branches?.length > 0 ? request.branches.map((b: any) => b.branch_name || b.name).join(", ") : "N/A"}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
