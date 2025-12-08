@@ -814,7 +814,7 @@ function RegisterPage() {
                         />
                         {fieldErrors?.department_id && (
                           <p className="text-sm text-red-500">
-                            {fieldErrors?.contact}
+                            {fieldErrors?.department_id}
                           </p>
                         )}
                       </div>

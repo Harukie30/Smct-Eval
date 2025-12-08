@@ -24,7 +24,7 @@ interface User {
   lname?: string;
   email: string;
   position: string;
-  department: string;
+  department: string | number;
   branch: string | number;
   role?: string;
   username?: string;
@@ -662,7 +662,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     }
 
     // Department is only required if branch IS HO/none/Head Office
-    if (isBranchHOOrNone(formData.branch) && !formData.department.trim()) {
+    if (isBranchHOOrNone(formData.branch) && !formData.department) {
       newErrors.department = "Department is required";
     }
 
@@ -1097,25 +1097,22 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             </div>
 
             {/* Department - Show only if branch is HO, Head Office, or none */}
-            {formData.branch === 126 && (
-              <div className="space-y-2 w-1/2">
-                <Label htmlFor="department">Department *</Label>
+            {isBranchHOOrNone(formData.branch) && (
+              <div className="space-y-2">
+                <Label htmlFor="department">Department</Label>
                 <Combobox
-                  options={departments.map((dept: any) => ({
-                    value: dept,
-                    label: dept,
-                  }))}
-                  value={formData.department}
+                  options={departments}
+                  value={String(formData.department)}
                   onValueChangeAction={(value) =>
-                    handleInputChange("department", value as string)
+                    setFormData({ ...formData, department: value })
                   }
-                  placeholder="Select department"
+                  placeholder="Select your department"
                   searchPlaceholder="Search departments..."
                   emptyText="No departments found."
-                  className={errors.department ? "border-red-500" : "bg-white"}
+                  className="w-1/2"
                 />
-                {errors.department && (
-                  <p className="text-sm text-red-500">{errors.department}</p>
+                {errors?.department && (
+                  <p className="text-sm text-red-500">{errors?.department}</p>
                 )}
               </div>
             )}
