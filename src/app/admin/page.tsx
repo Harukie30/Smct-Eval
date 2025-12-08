@@ -44,6 +44,7 @@ export default function OverviewTab() {
   const [dashboardTotals, setDashboardTotals] =
     useState<DashboardTotals | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(false);
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -54,16 +55,27 @@ export default function OverviewTab() {
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
 
-  const loadEvaluations = async (searchValue: string) => {
-    const response = await clientDataService.getSubmissions(
-      searchValue,
-      currentPage,
-      itemsPerPage
-    );
-    setEvaluations(response.data);
-    setOverviewTotal(response.total);
-    setTotalPages(response.last_page);
-    setPerPage(response.per_page);
+  const loadEvaluations = async (searchValue: string, isPageChange: boolean = false) => {
+    try {
+      if (isPageChange) {
+        setIsPageLoading(true);
+      }
+      const response = await clientDataService.getSubmissions(
+        searchValue,
+        currentPage,
+        itemsPerPage
+      );
+      setEvaluations(response.data);
+      setOverviewTotal(response.total);
+      setTotalPages(response.last_page);
+      setPerPage(response.per_page);
+    } catch (error) {
+      console.error("Error loading evaluations:", error);
+    } finally {
+      if (isPageChange) {
+        setIsPageLoading(false);
+      }
+    }
   };
   useEffect(() => {
     const mount = async () => {
@@ -92,7 +104,9 @@ export default function OverviewTab() {
   // Fetch API whenever debounced search term changes
   useEffect(() => {
     const fetchData = async () => {
-      await loadEvaluations(debouncedSearchTerm);
+      // Only show page loading if currentPage changed (not search term)
+      const isPageChange = debouncedSearchTerm === searchTerm;
+      await loadEvaluations(debouncedSearchTerm, isPageChange);
       const getTotals = await clientDataService.adminDashboard();
       setDashboardTotals(getTotals);
     };
@@ -311,27 +325,6 @@ export default function OverviewTab() {
                 scrollbarColor: "#cbd5e1 #f1f5f9",
               }}
             >
-              {refreshing && (
-                <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
-                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                    <div className="relative">
-                      {/* Spinning ring */}
-                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                      {/* Logo in center */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <img
-                          src="/smct.png"
-                          alt="SMCT Logo"
-                          className="h-10 w-10 object-contain"
-                        />
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 font-medium">
-                      Refreshing...
-                    </p>
-                  </div>
-                </div>
-              )}
               <Table className="min-w-full">
                 <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                   <TableRow>
@@ -345,26 +338,23 @@ export default function OverviewTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
-                  {refreshing ? (
+                  {(refreshing || isPageLoading) ? (
                     Array.from({ length: itemsPerPage }).map((_, index) => (
                       <TableRow key={`skeleton-${index}`}>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-4 w-32" />
+                        </TableCell>
                         <TableCell className="px-6 py-3">
                           <Skeleton className="h-4 w-24" />
                         </TableCell>
                         <TableCell className="px-6 py-3">
-                          <Skeleton className="h-6 w-16 rounded-full" />
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Skeleton className="h-4 w-20" />
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-4 w-28" />
                         </TableCell>
                         <TableCell className="px-6 py-3">
                           <Skeleton className="h-6 w-16 rounded-full" />
                         </TableCell>
                         <TableCell className="px-6 py-3">
-                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-4 w-32" />
                         </TableCell>
                         <TableCell className="px-6 py-3">
                           <Skeleton className="h-6 w-20 rounded-full" />
@@ -455,17 +445,17 @@ export default function OverviewTab() {
                                 </span>
                                 {isNew && (
                                   <Badge className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 font-semibold">
-                                    ⚡ NEW
+                                    ⚡ New
                                   </Badge>
                                 )}
                                 {!isNew && isRecent && (
                                   <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 font-semibold">
-                                    🕐 RECENT
+                                    🕐 Recent
                                   </Badge>
                                 )}
                                 {isPending && (
                                   <Badge className="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 font-semibold">
-                                    🕐 PENDING
+                                    🕐 Pending
                                   </Badge>
                                 )}
 
@@ -557,8 +547,7 @@ export default function OverviewTab() {
               perPage={perPage}
               onPageChange={(page) => {
                 setCurrentPage(page);
-
-                loadEvaluations(searchTerm);
+                loadEvaluations(searchTerm, true);
               }}
             />
           )}

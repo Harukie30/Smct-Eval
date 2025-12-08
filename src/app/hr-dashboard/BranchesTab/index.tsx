@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { toastMessages } from '@/lib/toastMessages';
 import { useDialogAnimation } from '@/hooks/useDialogAnimation';
 import { apiService } from '@/lib/apiService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import EvaluationsPagination from "@/components/paginationComponent";
 
 interface Employee {
   id: number;
@@ -25,9 +26,13 @@ interface Employee {
 }
 
 interface Branch {
-  id: string;
-  name: string;
-  branchCode?: string;
+  id: number;
+  branch_code: string;
+  branch_name: string;
+  branch: string;
+  acronym: string;
+  managers_count: string;
+  employees_count: string;
 }
 
 interface BranchesTabProps {
@@ -45,19 +50,110 @@ export function BranchesTab({
   isActive = false,
   onBranchesUpdate
 }: BranchesTabProps) {
-  const [branches, setBranches] = useState<Branch[]>(initialBranches.map(b => ({ id: b.id, name: b.name })));
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
   const [newBranchName, setNewBranchName] = useState('');
   const [newBranchCode, setNewBranchCode] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(6);
+  const [overviewTotal, setOverviewTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [perPage, setPerPage] = useState(0);
   
   // Use dialog animation hook
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
-  // Update branches when prop changes
+  // Load branches data with pagination
+  const loadData = async (search: string) => {
+    try {
+      const response = await apiService.getTotalEmployeesBranch(
+        search,
+        currentPage,
+        itemsPerPage
+      );
+      
+      // Handle different response structures
+      let branchesData: Branch[] = [];
+      let total = 0;
+      let lastPage = 1;
+      let perPageValue = itemsPerPage;
+      
+      if (response) {
+        // If response has data property (paginated response)
+        if (response.data && Array.isArray(response.data)) {
+          branchesData = response.data;
+          total = response.total || 0;
+          lastPage = response.last_page || 1;
+          perPageValue = response.per_page || itemsPerPage;
+        }
+        // If response is directly an array
+        else if (Array.isArray(response)) {
+          branchesData = response;
+          total = response.length;
+          lastPage = 1;
+          perPageValue = response.length;
+        }
+        // If response has branches property
+        else if (response.branches && Array.isArray(response.branches)) {
+          branchesData = response.branches;
+          total = response.total || response.branches.length;
+          lastPage = response.last_page || 1;
+          perPageValue = response.per_page || itemsPerPage;
+        }
+      }
+      
+      setBranches(branchesData);
+      setOverviewTotal(total);
+      setTotalPages(lastPage);
+      setPerPage(perPageValue);
+    } catch (error) {
+      console.error("Error loading branches:", error);
+      setBranches([]);
+      setOverviewTotal(0);
+      setTotalPages(1);
+      setPerPage(itemsPerPage);
+    }
+  };
+
+  // Load branches when component mounts
   useEffect(() => {
-    setBranches(initialBranches.map(b => ({ id: b.id, name: b.name })));
-  }, [initialBranches]);
+    const initializeData = async () => {
+      setLoading(true);
+      try {
+        await loadData(searchTerm);
+      } catch (error) {
+        console.error("Error initializing branches:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeData();
+  }, []);
+
+  // Debounce search term
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      searchTerm === "" ? currentPage : setCurrentPage(1);
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // Reload data when search term or page changes
+  useEffect(() => {
+    const fetchData = async () => {
+      await loadData(debouncedSearchTerm);
+    };
+
+    fetchData();
+  }, [debouncedSearchTerm, currentPage]);
 
   // Function to handle adding a new branch
   const handleAddBranch = async () => {
@@ -68,7 +164,7 @@ export function BranchesTab({
 
     // Check if branch already exists
     const branchExists = branches.some(
-      branch => branch.name.toLowerCase().trim() === newBranchName.toLowerCase().trim()
+      branch => branch.branch_name.toLowerCase().trim() === newBranchName.toLowerCase().trim()
     );
 
     if (branchExists) {
@@ -88,8 +184,7 @@ export function BranchesTab({
       await apiService.addBranch(formData);
 
       // Refresh branches from API
-      const updatedBranches = await apiService.getBranches();
-      setBranches(updatedBranches.map(b => ({ id: b.id, name: b.name })));
+      await loadData(debouncedSearchTerm);
 
       // Notify parent to refresh branches
       if (onBranchesUpdate) {
@@ -112,22 +207,61 @@ export function BranchesTab({
     }
   };
 
-  // Get branch statistics
-  const getBranchStats = (branchName: string) => {
-    const branchEmployees = employees.filter(emp => emp.branch === branchName);
+  // Get branch statistics from branch data
+  const getBranchStats = (branch: Branch) => {
     return {
-      count: branchEmployees.length,
-      managers: branchEmployees.filter(emp => emp.role === 'Manager').length
+      count: Number(branch.employees_count) || 0,
+      managers: Number(branch.managers_count) || 0
     };
   };
 
-  // Filter branches based on search term
-  const filteredBranches = branches.filter(branch => {
-    if (!searchTerm) return true;
-    const searchLower = searchTerm.toLowerCase();
-    return branch.name.toLowerCase().includes(searchLower) ||
-           (branch.branchCode && branch.branchCode.toLowerCase().includes(searchLower));
-  });
+  // Function to handle deleting a branch
+  const handleDeleteBranch = async () => {
+    if (!branchToDelete) return;
+
+    try {
+      // Check if branch has employees
+      const totalEmployees = Number(branchToDelete.employees_count) + Number(branchToDelete.managers_count);
+
+      if (totalEmployees > 0) {
+        toastMessages.generic.warning(
+          'Branch Deletion Revoked',
+          `Deletion failed: "${branchToDelete.branch_name + "/ " + branchToDelete.branch_code}" has ${totalEmployees} employee${totalEmployees !== 1 ? 's' : ''} linked to it.`
+        );
+        setIsDeleteModalOpen(false);
+        setBranchToDelete(null);
+        return;
+      }
+
+      // Delete branch via API
+      await apiService.deleteBranches(branchToDelete.id);
+
+      // Refresh branches from API
+      await loadData(debouncedSearchTerm);
+
+      // Notify parent to refresh branches
+      if (onBranchesUpdate) {
+        onBranchesUpdate();
+      }
+
+      // Show success toast
+      toastMessages.generic.success(
+        'Branch Deleted',
+        `"${branchToDelete.branch_name + "/ " + branchToDelete.branch_code}" has been deleted successfully.`
+      );
+
+      setIsDeleteModalOpen(false);
+      setBranchToDelete(null);
+    } catch (error: any) {
+      console.error('Error deleting branch:', error);
+      toastMessages.generic.error(
+        'Error',
+        error.message || 'Failed to delete branch. Please try again.'
+      );
+      setIsDeleteModalOpen(false);
+      setBranchToDelete(null);
+    }
+  };
 
   return (
     <div className="relative h-[calc(100vh-200px)] overflow-y-auto pr-2 min-h-[400px]">
@@ -172,67 +306,59 @@ export function BranchesTab({
           </div>
 
           <div className="relative">
-            {branchesRefreshing ? (
-              <>
-                {/* Centered Loading Spinner with Logo */}
-                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                    <div className="relative">
-                      {/* Spinning ring */}
-                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                      {/* Logo in center */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+            {(branchesRefreshing || loading) ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Card key={`skeleton-branch-${index}`} className="animate-pulse">
+                    <CardHeader>
+                      <div className="flex justify-between items-center">
+                        <div className="h-6 w-32 bg-gray-200 rounded"></div>
+                        <div className="h-5 w-20 bg-gray-200 rounded-full"></div>
                       </div>
-                    </div>
-                    <p className="text-sm text-gray-600 font-medium">Loading branches...</p>
-                  </div>
-                </div>
-                
-                {/* Grid structure visible in background */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <Card key={`skeleton-branch-${index}`} className="animate-pulse">
-                      <CardHeader>
-                        <div className="flex justify-between items-center">
-                          <div className="h-6 w-32 bg-gray-200 rounded"></div>
-                          <div className="h-5 w-20 bg-gray-200 rounded-full"></div>
+                      <div className="h-4 w-40 bg-gray-200 rounded mt-2"></div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-4 bg-gray-100 rounded-lg">
+                          <div className="h-7 w-16 bg-gray-200 rounded mx-auto mb-2"></div>
+                          <div className="h-4 w-24 bg-gray-200 rounded mx-auto"></div>
                         </div>
-                        <div className="h-4 w-40 bg-gray-200 rounded mt-2"></div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="text-center p-4 bg-gray-100 rounded-lg">
-                            <div className="h-7 w-16 bg-gray-200 rounded mx-auto mb-2"></div>
-                            <div className="h-4 w-24 bg-gray-200 rounded mx-auto"></div>
-                          </div>
-                          <div className="text-center p-4 bg-gray-100 rounded-lg">
-                            <div className="h-7 w-16 bg-gray-200 rounded mx-auto mb-2"></div>
-                            <div className="h-4 w-16 bg-gray-200 rounded mx-auto"></div>
-                          </div>
+                        <div className="text-center p-4 bg-gray-100 rounded-lg">
+                          <div className="h-7 w-16 bg-gray-200 rounded mx-auto mb-2"></div>
+                          <div className="h-4 w-16 bg-gray-200 rounded mx-auto"></div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {filteredBranches.length === 0 ? (
-                  <div className="col-span-2 text-center py-12 text-gray-500">
-                    {searchTerm ? `No branches found matching "${searchTerm}"` : 'No branches found'}
-                  </div>
-                ) : (
-                  filteredBranches.map((branch) => {
-                  const stats = getBranchStats(branch.name);
+                {branches && Array.isArray(branches) && branches.length > 0 ? (
+                  branches.map((branch) => {
+                  const stats = getBranchStats(branch);
                   return (
                     <Card key={branch.id}>
                       <CardHeader>
                         <CardTitle className="flex justify-between items-center">
-                          {branch.name}
-                          <Badge variant="outline">{stats.count} employees</Badge>
+                          {branch.branch_name + " /" + branch.branch_code}
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{stats.count} employees</Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setBranchToDelete(branch);
+                                setIsDeleteModalOpen(true);
+                              }}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </CardTitle>
-                        <CardDescription>Branch Location</CardDescription>
+                        <CardDescription>Branch: {branch.branch}</CardDescription>
+                        <CardDescription>Acronym: {branch.acronym}</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
@@ -242,17 +368,34 @@ export function BranchesTab({
                           </div>
                           <div className="text-center p-4 bg-green-50 rounded-lg">
                             <div className="text-2xl font-bold text-green-600">{stats.managers}</div>
-                            <div className="text-sm text-gray-600">Manager</div>
+                            <div className="text-sm text-gray-600">Managers</div>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
                   );
                   })
+                ) : (
+                  <div className="col-span-2 text-center py-12 text-gray-500">
+                    {searchTerm ? `No branches found matching "${searchTerm}"` : 'No branches found'}
+                  </div>
                 )}
               </div>
             )}
           </div>
+          {/* Pagination Controls */}
+          {overviewTotal > itemsPerPage && (
+            <EvaluationsPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              total={overviewTotal}
+              perPage={perPage}
+              onPageChange={(page) => {
+                setCurrentPage(page);
+                loadData(debouncedSearchTerm);
+              }}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -283,22 +426,29 @@ export function BranchesTab({
                 }}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="branchCode" className="text-sm font-medium">
+            <div className="w-full md:w-48 space-y-2">
+              <Label
+                htmlFor="branchCode"
+                className="text-sm font-medium"
+              >
                 Branch Code
               </Label>
-              <Input
-                id="branchCode"
-                placeholder="Enter branch code (optional)"
-                value={newBranchCode}
-                onChange={(e) => setNewBranchCode(e.target.value.toUpperCase())}
-                style={{ textTransform: 'uppercase' }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleAddBranch();
-                  }
-                }}
-              />
+              <Select
+                value={newBranchCode || undefined}
+                onValueChange={(value) => setNewBranchCode(value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select branch code (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DAP">DAP</SelectItem>
+                  <SelectItem value="DSM">DSM</SelectItem>
+                  <SelectItem value="HD">HD</SelectItem>
+                  <SelectItem value="HO">HO</SelectItem>
+                  <SelectItem value="KIA">KIA</SelectItem>
+                  <SelectItem value="SMCT">SMCT</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -319,6 +469,96 @@ export function BranchesTab({
                 className="bg-green-500 text-white hover:bg-green-600 hover:text-white"
               >
                 Add Branch
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog
+        open={isDeleteModalOpen}
+        onOpenChangeAction={(open) => {
+          setIsDeleteModalOpen(open);
+          if (!open) {
+            setBranchToDelete(null);
+          }
+        }}
+      >
+        <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
+          <DialogHeader className="pb-4 bg-red-50 rounded-lg">
+            <DialogTitle className="text-red-800 flex items-center gap-2">
+              <span className="text-xl">⚠️</span>
+              Delete {branchToDelete?.branch_name} Branch
+            </DialogTitle>
+            <DialogDescription className="text-red-700">
+              This action cannot be undone. Are you sure you want to permanently
+              delete this branch?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 px-2 mt-8">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="h-5 w-5 text-red-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="text-sm text-red-700">
+                  <p className="font-medium">
+                    Warning: This will permanently delete:
+                  </p>
+                  <ul className="mt-2 list-disc list-inside space-y-1">
+                    <li>This branch record</li>
+                    <li>All associations with this branch</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <div className="text-sm text-gray-700">
+                <p className="font-medium">Branch Details:</p>
+                <div className="mt-2 space-y-1">
+                  <p>
+                    <span className="font-medium">Branch Name:</span>{" "}
+                    {branchToDelete?.branch_name + "/ " + branchToDelete?.branch_code}
+                  </p>
+                  <p>
+                    <span className="font-medium">No. of employees:</span>{" "}
+                    {branchToDelete ? Number(branchToDelete.employees_count) + Number(branchToDelete.managers_count) : 0}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="pt-6 px-2">
+            <div className="flex justify-end space-x-4 w-full">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setBranchToDelete(null);
+                }}
+                className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleDeleteBranch}
+              >
+                ❌ Delete Permanently
               </Button>
             </div>
           </DialogFooter>

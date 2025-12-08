@@ -34,7 +34,6 @@ import { useToast } from "@/hooks/useToast";
 import { Skeleton } from "@/components/ui/skeleton";
 // Removed notification imports - backend handles notification creation automatically
 import { useProfilePictureUpdates } from "@/hooks/useProfileUpdates";
-import { EvaluatorDashboardGuideModal } from "@/components/EvaluatorDashboardGuideModal";
 
 // Lazy load tab components for better performance
 const OverviewTab = lazy(() =>
@@ -389,13 +388,13 @@ function EvaluatorDashboard() {
   // Helper function to map user data to currentUser format
   const getCurrentUserData = () => {
     if (user) {
-      // AuthenticatedUser type
+      // AuthenticatedUser type - handle optional properties
       return {
-        id: user.id,
+        id: Number(user.id) || 0,
         name: `${user.fname} ${user.lname}`.trim(),
-        email: user.email,
-        position: user.position,
-        department: user.department,
+        email: user.email || "",
+        position: (user as any).position || "Evaluator",
+        department: (user as any).department || "Evaluation",
         role: user.roles?.[0]?.name || "",
         signature: user.signature, // Include signature from user
       };
@@ -542,7 +541,6 @@ function EvaluatorDashboard() {
   const [currentPeriod, setCurrentPeriod] = useState("");
   const [data, setData] = useState<PerformanceData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   // Note: employeeSearch, selectedDepartment, and employeeSort are now managed inside EmployeesTab component
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
@@ -2159,11 +2157,11 @@ function EvaluatorDashboard() {
   }, []);
 
   const sidebarItems: SidebarItem[] = [
-    { id: "overview", label: "Overview", icon: "📊" },
-    { id: "employees", label: "Employees", icon: "👥" },
-    { id: "feedback", label: "Evaluation Records", icon: "🗂️" },
-    { id: "reviews", label: "Performance Reviews", icon: "📝" },
-    { id: "history", label: "Evaluation History", icon: "📈" },
+    { id: "overview", label: "Overview", icon: "📊", path: "/evaluator?tab=overview" },
+    { id: "employees", label: "Employees", icon: "👥", path: "/evaluator?tab=employees" },
+    { id: "feedback", label: "Evaluation Records", icon: "🗂️", path: "/evaluator?tab=feedback" },
+    { id: "reviews", label: "Performance Reviews", icon: "📝", path: "/evaluator?tab=reviews" },
+    { id: "history", label: "Evaluation History", icon: "📈", path: "/evaluator?tab=history" },
   ];
 
   // Loading state is now handled in the main return statement
@@ -3050,24 +3048,7 @@ function EvaluatorDashboard() {
           }}
         />
 
-        {/* Floating Help Button */}
-        <Button
-          onClick={() => setIsGuideModalOpen(true)}
-          className="fixed bottom-8 right-8 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0"
-          title="Dashboard Guide"
-        >
-          <img
-            src="/faq.png"
-            alt="Help"
-            className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
-          />
-        </Button>
-
-        {/* Evaluator Dashboard Guide Modal */}
-        <EvaluatorDashboardGuideModal
-          isOpen={isGuideModalOpen}
-          onCloseAction={() => setIsGuideModalOpen(false)}
-        />
+        {/* Guide modal is now handled in DashboardShell */}
       </PageTransition>
     </>
   );

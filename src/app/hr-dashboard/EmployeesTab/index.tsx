@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Eye, FileText, Pencil, Trash2 } from "lucide-react";
+import EvaluationsPagination from "@/components/paginationComponent";
 
 interface Employee {
   id: number;
@@ -498,54 +499,15 @@ export function EmployeesTab({
           </CardContent>
         </Card>
 
-        {/* Pagination Controls - Outside Card, bottom right aligned */}
+        {/* Pagination Controls */}
         {employeeViewMode === 'directory' && employeesTotal > itemsPerPage && (
-          <div className="flex items-center justify-end mt-4 px-2">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEmployeesPage(prev => Math.max(1, prev - 1))}
-                disabled={employeesPage === 1}
-                className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-              >
-                Previous
-              </Button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: employeesTotalPages }, (_, i) => i + 1).map((page) => {
-                  if (
-                    page === 1 ||
-                    page === employeesTotalPages ||
-                    (page >= employeesPage - 1 && page <= employeesPage + 1)
-                  ) {
-                    return (
-                      <Button
-                        key={page}
-                        variant={employeesPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setEmployeesPage(page)}
-                        className="text-xs w-8 h-8 p-0 bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
-                      >
-                        {page}
-                      </Button>
-                    );
-                  } else if (page === employeesPage - 2 || page === employeesPage + 2) {
-                    return <span key={page} className="text-gray-400">...</span>;
-                  }
-                  return null;
-                })}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEmployeesPage(prev => Math.min(employeesTotalPages, prev + 1))}
-                disabled={employeesPage === employeesTotalPages}
-                className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          <EvaluationsPagination
+            currentPage={employeesPage}
+            totalPages={employeesTotalPages}
+            total={employeesTotal}
+            perPage={itemsPerPage}
+            onPageChange={(page) => setEmployeesPage(page)}
+          />
         )}
       </>
     </div>

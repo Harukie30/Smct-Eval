@@ -34,8 +34,6 @@ import { useToast } from "@/hooks/useToast";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
-import { EmployeeDashboardGuideModal } from "@/components/EmployeeDashboardGuideModal";
-import { HelpCircle } from "lucide-react";
 
 // Lazy load tab components
 const OverviewTab = lazy(() =>
@@ -84,8 +82,6 @@ function EmployeeDashboard() {
   const [showRefreshingDialog, setShowRefreshingDialog] = useState(false);
   const [refreshingMessage, setRefreshingMessage] = useState("");
 
-  // Guide modal state
-  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
 
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [evaluationResults, setEvaluationResults] = useState<any[]>([]);
@@ -1195,26 +1191,7 @@ function EmployeeDashboard() {
         </DashboardShell>
       </PageTransition>
 
-      {/* Floating Help Button */}
-      <Button
-        onClick={() => setIsGuideModalOpen(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 text-white shadow-lg hover:shadow-xl transition-all duration-300 z-50 flex items-center justify-center p-0 hover:scale-110 hover:rotate-12 active:scale-95"
-        title="Dashboard Guide"
-      >
-        {/* Replace "/help-icon.png" with your custom icon path (PNG, SVG, etc.) */}
-        {/* If you don't have a custom icon, change the src back to use HelpCircle component */}
-        <img
-          src="/faq.png"
-          alt="Help"
-          className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
-        />
-      </Button>
-
-      {/* Employee Dashboard Guide Modal */}
-      <EmployeeDashboardGuideModal
-        isOpen={isGuideModalOpen}
-        onCloseAction={() => setIsGuideModalOpen(false)}
-      />
+      {/* Guide modal is now handled in DashboardShell */}
 
       {/* View Results Modal */}
       <ViewResultsModal

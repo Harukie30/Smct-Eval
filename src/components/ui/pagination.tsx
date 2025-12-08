@@ -39,29 +39,64 @@ function PaginationItem({ ...props }: React.ComponentProps<"li">) {
 
 type PaginationLinkProps = {
   isActive?: boolean;
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => void;
+  href?: string;
 } & Pick<React.ComponentProps<typeof Button>, "size"> &
-  React.ComponentProps<"a">;
+  Omit<React.ComponentProps<"a">, "onClick" | "href"> &
+  Omit<React.ComponentProps<"button">, "onClick">;
 
 function PaginationLink({
   className,
   isActive,
   size = "icon",
+  onClick,
+  href,
+  children,
   ...props
 }: PaginationLinkProps) {
+  // If onClick is provided, use button; otherwise use anchor
+  const isButton = onClick !== undefined;
+  
+  const baseProps = {
+    "aria-current": (isActive ? "page" : undefined) as "page" | undefined,
+    "data-slot": "pagination-link",
+    "data-active": isActive,
+    className: cn(
+      buttonVariants({
+        variant: isActive ? "outline" : "ghost",
+        size,
+      }),
+      "cursor-pointer",
+      className
+    ),
+    onClick: onClick
+      ? (e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
+          e.preventDefault();
+          onClick(e);
+        }
+      : undefined,
+  };
+
+  if (isButton) {
+    return (
+      <button
+        type="button"
+        {...baseProps}
+        {...(props as React.ComponentProps<"button">)}
+      >
+        {children}
+      </button>
+    );
+  }
+
   return (
     <a
-      aria-current={isActive ? "page" : undefined}
-      data-slot="pagination-link"
-      data-active={isActive}
-      className={cn(
-        buttonVariants({
-          variant: isActive ? "outline" : "ghost",
-          size,
-        }),
-        className
-      )}
-      {...props}
-    />
+      href={href || "#"}
+      {...baseProps}
+      {...(props as React.ComponentProps<"a">)}
+    >
+      {children}
+    </a>
   );
 }
 
