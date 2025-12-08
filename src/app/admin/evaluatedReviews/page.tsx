@@ -1,7 +1,7 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import clientDataService from "@/lib/apiService";
+import clientDataService, { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { useState, useMemo, useEffect } from "react";
 import {
@@ -80,6 +80,7 @@ export default function OverviewTab() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
+  const [years, setYears] = useState<any[]>([]);
 
   const loadEvaluations = async (
     searchValue: string,
@@ -100,10 +101,13 @@ export default function OverviewTab() {
     setTotalPages(response.last_page);
     setPerPage(response.per_page);
   };
+
   useEffect(() => {
     const mount = async () => {
       setRefreshing(true);
       try {
+        const years = await apiService.getAllYears();
+        setYears(years);
         await loadEvaluations(
           searchTerm,
           statusFilter,
@@ -350,10 +354,10 @@ export default function OverviewTab() {
                     <SelectValue placeholder="Select a year" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Years</SelectItem>
-                    {Object.keys(groupedByYear).map((year) => (
-                      <SelectItem key={year} value={year}>
-                        {year}
+                    <SelectItem value="0">All Years</SelectItem>
+                    {years.map((year: any) => (
+                      <SelectItem key={year.year} value={year.year}>
+                        {year.year}
                       </SelectItem>
                     ))}
                   </SelectContent>

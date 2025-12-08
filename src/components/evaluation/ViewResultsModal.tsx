@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Printer, X } from "lucide-react";
 import { approveEvaluation } from "@/lib/approvalService";
-import { useEmployeeSignatureByEvaluation } from "@/hooks/useEmployeeSignature";
+import { useEmployeeSignaturesByEmployee } from "@/hooks/useEmployeeSignature";
 import { useUser } from "@/contexts/UserContext";
+import { CONFIG } from "../../../config/config";
 
 type Submission = {
   id: number;
@@ -31,15 +32,16 @@ type Submission = {
   overallComments: string;
   evaluatorApprovedAt: string;
   employeeApprovedAt: string;
+  created_at: string;
 
   //relations
-  jobKnowledge: any;
+  job_knowledge: any;
   adaptability: any;
-  qualityOfWorks: any;
+  quality_of_works: any;
   teamworks: any;
   reliabilities: any;
   ethicals: any;
-  customerServices: any;
+  customer_services: any;
 };
 
 interface ApprovalData {
@@ -144,14 +146,15 @@ export default function ViewResultsModal({
     useState<ApprovalData | null>(approvalData);
   const printContentRef = useRef<HTMLDivElement>(null);
   const lastApprovalDataRef = useRef<string>("");
+  const [signatureLoading, setSignatureLoading] = useState(false);
+  const [signatureError, setSignatureError] = useState(false);
 
-  console.log("submission", submission);
   // Fetch employee signature for this evaluation
-  const {
-    signature: employeeSignature,
-    loading: signatureLoading,
-    error: signatureError,
-  } = useEmployeeSignatureByEvaluation(submission?.id || null);
+  // const {
+  //   signature: employeeSignature,
+  //   loading: signatureLoading,
+  //   error: signatureError,
+  // } = useemployee.signatureByEvaluation(submission?.id || null);
 
   // Update currentApprovalData when approvalData prop changes
   useEffect(() => {
@@ -162,10 +165,7 @@ export default function ViewResultsModal({
   }, [approvalData]);
 
   // Compute isApproved status based on current approval data
-  const computedIsApproved =
-    isApproved ||
-    !!currentApprovalData?.employeeSignature ||
-    !!submission?.employeeSignature;
+  const computedIsApproved = isApproved || !!submission?.employee.signature;
 
   // Automatic refresh when approval changes are detected in localStorage
   useEffect(() => {
@@ -191,7 +191,7 @@ export default function ViewResultsModal({
             setCurrentApprovalData({
               id: storedApproval.id || submissionId,
               approvedAt: storedApproval.approvedAt,
-              employeeSignature: storedApproval.employeeSignature,
+              employeeSignature: submission.employee.signature,
               employeeName: storedApproval.employeeName,
               employeeEmail: storedApproval.employeeEmail || user.email,
             });
@@ -264,7 +264,9 @@ export default function ViewResultsModal({
           <head>
             <title>${
               submission
-                ? `Evaluation Details - ${submission.employeeName}`
+                ? `Evaluation Details - ${
+                    submission.employee.fname + " " + submission.employee.lname
+                  }`
                 : "Evaluation Details"
             }</title>
             ${styles}
@@ -1234,9 +1236,11 @@ export default function ViewResultsModal({
       // For production: Replace with actual API call
       const result = await approveEvaluation({
         submissionId: submission.id,
-        employeeId: submission.employeeId || 0,
+        employeeId: submission.employee.emp_id || 0,
         approvedAt: new Date().toISOString(),
-        employeeName: currentUserName || submission.employeeName,
+        employeeName:
+          currentUserName ||
+          submission.employee.fname + " " + submission.employee.lname,
       });
 
       // Call the parent component's onApprove callback if provided
@@ -1245,8 +1249,6 @@ export default function ViewResultsModal({
       }
 
       // Show success message
-      console.log("✅ Evaluation approved successfully:", result);
-
       // TODO: Replace with actual API call when backend is ready:
       /*
       const response = await fetch('/api/evaluations/approve', {
@@ -1274,6 +1276,189 @@ export default function ViewResultsModal({
     } finally {
       setIsApproving(false);
     }
+  };
+
+  const ratingBG = (value: number) => {
+    switch (value) {
+      case 1:
+        return "bg-red-100 text-red-800";
+      case 2:
+        return "bg-orange-100 text-orange-800";
+      case 3:
+        return "bg-yellow-100 text-yellow-800";
+      case 4:
+        return "bg-blue-100 text-blue-800";
+      case 5:
+        return "bg-green-100 text-green-800";
+      default:
+        return "";
+    }
+  };
+  const rating = (value: number) => {
+    switch (value) {
+      case 1:
+        return "Unsatisfactory";
+      case 2:
+        return "Needs Improvement";
+      case 3:
+        return "Meets Expectations";
+      case 4:
+        return "Exceeds Expectation";
+      case 5:
+        return "Outstanding";
+      default:
+        return "Not Rated";
+    }
+  };
+
+  const JOB_KNOWLEDGE = {
+    1: {
+      indicator:
+        "  Mastery in Core Competencies and Job Functions  (L.E.A.D.E.R.)",
+      example:
+        " Demonstrates comprehensive understanding of job requirements and applies knowledge effectively.",
+    },
+    2: {
+      indicator: "  Keeps Documentation Updated",
+      example:
+        "  Maintains current and accurate documentation for projects and processes.",
+    },
+    3: {
+      indicator: " Problem Solving",
+      example:
+        " Effectively identifies and resolves work-related challenges using job knowledge.",
+    },
+  };
+
+  const QUALITY_OF_WORK = {
+    1: {
+      indicator: "Meets Standards and Requirements",
+      example:
+        "  Consistently delivers work that meets or exceeds established standards and requirements.",
+    },
+    2: {
+      indicator: " Work Output Volume (L.E.A.D.E.R.)",
+      example:
+        "Produces an appropriate volume of work output relative to role expectations.",
+    },
+    3: {
+      indicator: "Consistency in Performance (L.E.A.D.E.R.)",
+      example:
+        "Maintains consistent quality and performance standards across all tasks and projects.",
+    },
+    4: {
+      indicator: " Attention to Detail",
+      example:
+        "Demonstrates thoroughness and accuracy in work, catching and correcting errors.",
+    },
+  };
+
+  const ADAPTABILITY = {
+    1: {
+      indicator: " Openness to Change (attitude towards change)",
+      example:
+        " Demonstrates a positive attitude and openness to new ideas and major changes at work",
+    },
+    2: {
+      indicator: " Flexibility in Job Role (ability to adapt to changes)",
+      example:
+        "Adapts to changes in job responsibilities and willingly takes on new tasks",
+    },
+    3: {
+      indicator: "Resilience in the Face of Challenges",
+      example:
+        " Maintains a positive attitude and performance under challenging or difficult conditions",
+    },
+  };
+
+  const TEAMWORK = {
+    1: {
+      indicator: "Active Participation in Team Activities",
+      example:
+        "  Actively participates in team meetings and projects. Contributes ideas and feedback during discussions. Engages in team tasks to achieve group goals.",
+    },
+    2: {
+      indicator: "Promotion of a Positive Team Culture",
+      example:
+        "  Interacts positively with coworkers. Fosters inclusive team culture. Provides support and constructive feedback. Promotes teamwork and camaraderie.",
+    },
+    3: {
+      indicator: "  Effective Communication",
+      example:
+        " Communicates openly and clearly with team members. Shares information and updates in a timely manner. Ensures important details are communicated clearly.",
+    },
+  };
+
+  const RELIABILITY = {
+    1: {
+      indicator: " Consistent Attendance",
+      example:
+        "  Demonstrates regular attendance by being present at work as scheduled",
+    },
+    2: {
+      indicator: " Punctuality",
+      example:
+        "Arrives at work and meetings on time or before the scheduled time",
+    },
+    3: {
+      indicator: "Follows Through on Commitments",
+      example:
+        " Follows through on assignments from and commitments made to coworkers or superiors",
+    },
+    4: {
+      indicator: "Reliable Handling of Routine Tasks",
+      example:
+        " Demonstrates reliability in completing routine tasks without oversight",
+    },
+  };
+
+  const ETHICAL = {
+    1: {
+      indicator: " Follows Company Policies",
+      example: " Complies with company rules, regulations, and memorandums",
+    },
+    2: {
+      indicator: "Professionalism (L.E.A.D.E.R.)",
+      example:
+        "Maintains a high level of professionalism in all work interactions",
+    },
+    3: {
+      indicator: "Accountability for Mistakes (L.E.A.D.E.R.)",
+      example:
+        " Takes responsibility for errors and actively works to correct mistakes",
+    },
+    4: {
+      indicator: "Respect for Others (L.E.A.D.E.R.)",
+      example:
+        " Treats all individuals fairly and with respect, regardless of background or position",
+    },
+  };
+
+  const CUSTOMER_SERVICE = {
+    1: {
+      indicator: "Listening & Understanding",
+      example:
+        "Listens to customers and displays understanding of customer needs and concerns",
+    },
+    2: {
+      indicator: "Problem-Solving for Customer Satisfaction",
+      example:
+        "Proactively identifies and solves customer problems to ensure satisfaction",
+    },
+    3: {
+      indicator: " Product Knowledge for Customer Support (L.E.A.D.E.R.)",
+      example:
+        " Possesses comprehensive product knowledge to assist customers effectively",
+    },
+    4: {
+      indicator: "Positive and Professional Attitude (L.E.A.D.E.R.)",
+      example:
+        " Maintains a positive and professional demeanor, particularly during customer interactions",
+    },
+    5: {
+      indicator: "Timely Resolution of Customer Issues (L.E.A.D.E.R.)",
+      example: "Resolves customer issues promptly and efficiently",
+    },
   };
 
   return (
@@ -1463,7 +1648,9 @@ export default function ViewResultsModal({
                             }`}
                           >
                             {submission.reviewTypeOthersImprovement && (
-                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                              <div className="w-2 h-2 bg-white rounded-full">
+                                {" "}
+                              </div>
                             )}
                           </div>
                           <span className="text-sm text-gray-700">
@@ -1555,7 +1742,7 @@ export default function ViewResultsModal({
                       className="text-gray-900 print-value"
                       style={{ fontSize: "11px" }}
                     >
-                      {submission.employee.branches.branch_name}
+                      {submission.employee.branches[0]?.branch_name}
                     </p>
                   </div>
                   <div className="print-info-row">
@@ -1569,9 +1756,9 @@ export default function ViewResultsModal({
                       className="text-gray-900 print-value"
                       style={{ fontSize: "11px" }}
                     >
-                      {submission.employee.date_hired
+                      {submission.employee?.date_hired
                         ? new Date(
-                            submission.employee.date_hired
+                            submission.employee?.date_hired
                           ).toLocaleDateString()
                         : "Not specified"}
                     </p>
@@ -1681,172 +1868,42 @@ export default function ViewResultsModal({
                         </tr>
                       </thead>
                       <tbody>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Mastery in Core Competencies and Job Functions
-                            (L.E.A.D.E.R.)
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Demonstrates comprehensive understanding of job
-                            requirements and applies knowledge effectively.
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.jobKnowledgeScore1 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.jobKnowledgeScore1 ===
-                                "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .jobKnowledgeScore1 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .jobKnowledgeScore1 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .jobKnowledgeScore1 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .jobKnowledgeScore1 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.jobKnowledgeScore1 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .jobKnowledgeScore1 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .jobKnowledgeScore1 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .jobKnowledgeScore1 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .jobKnowledgeScore1 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.jobKnowledgeComments1 ||
-                              ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Keeps Documentation Updated
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Maintains current and accurate documentation for
-                            projects and processes.
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.jobKnowledgeScore2 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.jobKnowledgeScore2 ===
-                                "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .jobKnowledgeScore2 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .jobKnowledgeScore2 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .jobKnowledgeScore2 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .jobKnowledgeScore2 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.jobKnowledgeScore2 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .jobKnowledgeScore2 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .jobKnowledgeScore2 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .jobKnowledgeScore2 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .jobKnowledgeScore2 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.jobKnowledgeComments2 ||
-                              ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Problem Solving
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Effectively identifies and resolves work-related
-                            challenges using job knowledge.
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.jobKnowledgeScore3 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.jobKnowledgeScore3 ===
-                                "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .jobKnowledgeScore3 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .jobKnowledgeScore3 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .jobKnowledgeScore3 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .jobKnowledgeScore3 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.jobKnowledgeScore3 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .jobKnowledgeScore3 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .jobKnowledgeScore3 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .jobKnowledgeScore3 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .jobKnowledgeScore3 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.jobKnowledgeComments3 ||
-                              ""}
-                          </td>
-                        </tr>
+                        {submission.job_knowledge.map(
+                          (item: {
+                            question_number: 1 | 2 | 3;
+                            score: number;
+                            comment: string;
+                          }) => {
+                            const indicators =
+                              JOB_KNOWLEDGE[item.question_number];
+
+                            return (
+                              <tr key={item.question_number}>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.indicator}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.example}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                                  {item.score}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center">
+                                  <div
+                                    className={`px-2 py-1 rounded text-sm font-medium ${rating(
+                                      item.score
+                                    )}`}
+                                  >
+                                    {ratingBG(item.score)}
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
+                                  {item.comment || ""}
+                                </td>
+                              </tr>
+                            );
+                          }
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -1855,7 +1912,7 @@ export default function ViewResultsModal({
             )}
 
             {/* Step 2: Quality of Work */}
-            {submission.evaluationData && (
+            {submission.quality_of_works && (
               <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-green-50 border-b border-green-200">
                   <CardTitle className="text-xl font-semibold text-green-900">
@@ -1891,286 +1948,42 @@ export default function ViewResultsModal({
                         </tr>
                       </thead>
                       <tbody>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Meets Standards and Requirements
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Consistently delivers work that meets or exceeds
-                            established standards and requirements.
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.qualityOfWorkScore1 ||
-                              ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData
-                                  .qualityOfWorkScore1 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore1 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore1 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore1 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore1 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.qualityOfWorkScore1 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore1 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore1 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore1 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore1 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.qualityOfWorkComments1 ||
-                              ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Timeliness (L.E.A.D.E.R.)
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Completes tasks and projects within established
-                            deadlines and timeframes.
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.qualityOfWorkScore2 ||
-                              ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData
-                                  .qualityOfWorkScore2 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore2 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore2 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore2 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore2 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.qualityOfWorkScore2 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore2 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore2 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore2 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore2 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.qualityOfWorkComments2 ||
-                              ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Work Output Volume (L.E.A.D.E.R.)
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Produces an appropriate volume of work output
-                            relative to role expectations.
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.qualityOfWorkScore3 ||
-                              ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData
-                                  .qualityOfWorkScore3 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore3 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore3 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore3 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore3 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.qualityOfWorkScore3 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore3 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore3 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore3 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore3 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.qualityOfWorkComments3 ||
-                              ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Consistency in Performance (L.E.A.D.E.R.)
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Maintains consistent quality and performance
-                            standards across all tasks and projects.
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.qualityOfWorkScore4 ||
-                              ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData
-                                  .qualityOfWorkScore4 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore4 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore4 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore4 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore4 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.qualityOfWorkScore4 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore4 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore4 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore4 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore4 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.qualityOfWorkComments4 ||
-                              ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Attention to Detail
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Demonstrates thoroughness and accuracy in work,
-                            catching and correcting errors.
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.qualityOfWorkScore5 ||
-                              ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData
-                                  .qualityOfWorkScore5 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore5 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore5 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore5 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .qualityOfWorkScore5 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.qualityOfWorkScore5 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore5 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore5 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore5 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .qualityOfWorkScore5 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.qualityOfWorkComments5 ||
-                              ""}
-                          </td>
-                        </tr>
+                        {submission.quality_of_works.map(
+                          (item: {
+                            question_number: 1 | 2 | 3 | 4;
+                            score: number;
+                            comment: string;
+                          }) => {
+                            const indicators =
+                              QUALITY_OF_WORK[item.question_number];
+
+                            return (
+                              <tr key={item.question_number}>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.indicator}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.example}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                                  {item.score}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center">
+                                  <div
+                                    className={`px-2 py-1 rounded text-sm font-medium ${rating(
+                                      item.score
+                                    )}`}
+                                  >
+                                    {ratingBG(item.score)}
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
+                                  {item.comment || ""}
+                                </td>
+                              </tr>
+                            );
+                          }
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -2179,7 +1992,7 @@ export default function ViewResultsModal({
             )}
 
             {/* Step 3: Adaptability */}
-            {submission.evaluationData && (
+            {submission.adaptability && (
               <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-yellow-50 border-b border-yellow-200">
                   <CardTitle className="text-xl font-semibold text-yellow-900">
@@ -2213,172 +2026,42 @@ export default function ViewResultsModal({
                         </tr>
                       </thead>
                       <tbody>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Openness to Change (attitude towards change)
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Demonstrates a positive attitude and openness to new
-                            ideas and major changes at work
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.adaptabilityScore1 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.adaptabilityScore1 ===
-                                "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .adaptabilityScore1 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .adaptabilityScore1 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .adaptabilityScore1 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .adaptabilityScore1 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.adaptabilityScore1 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .adaptabilityScore1 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .adaptabilityScore1 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .adaptabilityScore1 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .adaptabilityScore1 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.adaptabilityComments1 ||
-                              ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Flexibility in Job Role (ability to adapt to
-                            changes)
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Adapts to changes in job responsibilities and
-                            willingly takes on new tasks
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.adaptabilityScore2 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.adaptabilityScore2 ===
-                                "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .adaptabilityScore2 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .adaptabilityScore2 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .adaptabilityScore2 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .adaptabilityScore2 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.adaptabilityScore2 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .adaptabilityScore2 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .adaptabilityScore2 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .adaptabilityScore2 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .adaptabilityScore2 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.adaptabilityComments2 ||
-                              ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Resilience in the Face of Challenges
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Maintains a positive attitude and performance under
-                            challenging or difficult conditions
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.adaptabilityScore3 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.adaptabilityScore3 ===
-                                "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .adaptabilityScore3 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .adaptabilityScore3 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .adaptabilityScore3 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .adaptabilityScore3 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.adaptabilityScore3 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .adaptabilityScore3 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .adaptabilityScore3 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .adaptabilityScore3 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .adaptabilityScore3 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.adaptabilityComments3 ||
-                              ""}
-                          </td>
-                        </tr>
+                        {submission.adaptability.map(
+                          (item: {
+                            question_number: 1 | 2 | 3;
+                            score: number;
+                            comment: string;
+                          }) => {
+                            const indicators =
+                              ADAPTABILITY[item.question_number];
+
+                            return (
+                              <tr key={item.question_number}>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.indicator}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.example}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                                  {item.score}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center">
+                                  <div
+                                    className={`px-2 py-1 rounded text-sm font-medium ${rating(
+                                      item.score
+                                    )}`}
+                                  >
+                                    {ratingBG(item.score)}
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
+                                  {item.comment || ""}
+                                </td>
+                              </tr>
+                            );
+                          }
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -2387,7 +2070,7 @@ export default function ViewResultsModal({
             )}
 
             {/* Step 4: Teamwork */}
-            {submission.evaluationData && (
+            {submission.teamworks && (
               <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-purple-50 border-b border-purple-200">
                   <CardTitle className="text-xl font-semibold text-purple-900">
@@ -2421,166 +2104,41 @@ export default function ViewResultsModal({
                         </tr>
                       </thead>
                       <tbody>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Active Participation in Team Activities
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Actively participates in team meetings and projects.
-                            Contributes ideas and feedback during discussions.
-                            Engages in team tasks to achieve group goals.
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.teamworkScore1 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.teamworkScore1 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData.teamworkScore1 ===
-                                    "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData.teamworkScore1 ===
-                                    "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData.teamworkScore1 ===
-                                    "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData.teamworkScore1 ===
-                                    "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.teamworkScore1 === "5"
-                                ? "Outstanding"
-                                : submission.evaluationData.teamworkScore1 ===
-                                  "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData.teamworkScore1 ===
-                                  "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData.teamworkScore1 ===
-                                  "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData.teamworkScore1 ===
-                                  "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.teamworkComments1 || ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Promotion of a Positive Team Culture
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Interacts positively with coworkers. Fosters
-                            inclusive team culture. Provides support and
-                            constructive feedback. Promotes teamwork and
-                            camaraderie.
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.teamworkScore2 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.teamworkScore2 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData.teamworkScore2 ===
-                                    "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData.teamworkScore2 ===
-                                    "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData.teamworkScore2 ===
-                                    "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData.teamworkScore2 ===
-                                    "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.teamworkScore2 === "5"
-                                ? "Outstanding"
-                                : submission.evaluationData.teamworkScore2 ===
-                                  "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData.teamworkScore2 ===
-                                  "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData.teamworkScore2 ===
-                                  "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData.teamworkScore2 ===
-                                  "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.teamworkComments2 || ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Effective Communication
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Communicates openly and clearly with team members.
-                            Shares information and updates in a timely manner.
-                            Ensures important details are communicated clearly.
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.teamworkScore3 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.teamworkScore3 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData.teamworkScore3 ===
-                                    "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData.teamworkScore3 ===
-                                    "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData.teamworkScore3 ===
-                                    "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData.teamworkScore3 ===
-                                    "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.teamworkScore3 === "5"
-                                ? "Outstanding"
-                                : submission.evaluationData.teamworkScore3 ===
-                                  "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData.teamworkScore3 ===
-                                  "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData.teamworkScore3 ===
-                                  "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData.teamworkScore3 ===
-                                  "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.teamworkComments3 || ""}
-                          </td>
-                        </tr>
+                        {submission.teamworks.map(
+                          (item: {
+                            question_number: 1 | 2 | 3;
+                            score: number;
+                            comment: string;
+                          }) => {
+                            const indicators = TEAMWORK[item.question_number];
+
+                            return (
+                              <tr key={item.question_number}>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.indicator}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.example}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                                  {item.score}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center">
+                                  <div
+                                    className={`px-2 py-1 rounded text-sm font-medium ${rating(
+                                      item.score
+                                    )}`}
+                                  >
+                                    {ratingBG(item.score)}
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
+                                  {item.comment || ""}
+                                </td>
+                              </tr>
+                            );
+                          }
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -2589,7 +2147,7 @@ export default function ViewResultsModal({
             )}
 
             {/* Step 5: Reliability */}
-            {submission.evaluationData && (
+            {submission.reliabilities && (
               <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-indigo-50 border-b border-indigo-200">
                   <CardTitle className="text-xl font-semibold text-indigo-900">
@@ -2623,226 +2181,42 @@ export default function ViewResultsModal({
                         </tr>
                       </thead>
                       <tbody>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Consistent Attendance
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Demonstrates regular attendance by being present at
-                            work as scheduled
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.reliabilityScore1 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.reliabilityScore1 ===
-                                "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore1 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore1 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore1 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore1 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.reliabilityScore1 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .reliabilityScore1 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .reliabilityScore1 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .reliabilityScore1 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .reliabilityScore1 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.reliabilityComments1 ||
-                              ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Punctuality
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Arrives at work and meetings on time or before the
-                            scheduled time
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.reliabilityScore2 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.reliabilityScore2 ===
-                                "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore2 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore2 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore2 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore2 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.reliabilityScore2 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .reliabilityScore2 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .reliabilityScore2 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .reliabilityScore2 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .reliabilityScore2 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.reliabilityComments2 ||
-                              ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Follows Through on Commitments
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Follows through on assignments from and commitments
-                            made to coworkers or superiors
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.reliabilityScore3 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.reliabilityScore3 ===
-                                "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore3 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore3 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore3 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore3 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.reliabilityScore3 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .reliabilityScore3 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .reliabilityScore3 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .reliabilityScore3 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .reliabilityScore3 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.reliabilityComments3 ||
-                              ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Reliable Handling of Routine Tasks
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Demonstrates reliability in completing routine tasks
-                            without oversight
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.reliabilityScore4 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.reliabilityScore4 ===
-                                "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore4 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore4 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore4 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .reliabilityScore4 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.reliabilityScore4 ===
-                              "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .reliabilityScore4 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .reliabilityScore4 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .reliabilityScore4 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .reliabilityScore4 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.reliabilityComments4 ||
-                              ""}
-                          </td>
-                        </tr>
+                        {submission.reliabilities.map(
+                          (item: {
+                            question_number: 1 | 2 | 3 | 4;
+                            score: number;
+                            comment: string;
+                          }) => {
+                            const indicators =
+                              RELIABILITY[item.question_number];
+
+                            return (
+                              <tr key={item.question_number}>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.indicator}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.example}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                                  {item.score}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center">
+                                  <div
+                                    className={`px-2 py-1 rounded text-sm font-medium ${rating(
+                                      item.score
+                                    )}`}
+                                  >
+                                    {ratingBG(item.score)}
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
+                                  {item.comment || ""}
+                                </td>
+                              </tr>
+                            );
+                          }
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -2851,7 +2225,7 @@ export default function ViewResultsModal({
             )}
 
             {/* Step 6: Ethical & Professional Behavior */}
-            {submission.evaluationData && (
+            {submission.ethicals && (
               <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-red-50 border-b border-red-200">
                   <CardTitle className="text-xl font-semibold text-red-900">
@@ -2886,218 +2260,41 @@ export default function ViewResultsModal({
                         </tr>
                       </thead>
                       <tbody>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Follows Company Policies
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Complies with company rules, regulations, and
-                            memorandums
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.ethicalScore1 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.ethicalScore1 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData.ethicalScore1 ===
-                                    "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData.ethicalScore1 ===
-                                    "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData.ethicalScore1 ===
-                                    "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData.ethicalScore1 ===
-                                    "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.ethicalScore1 === "5"
-                                ? "Outstanding"
-                                : submission.evaluationData.ethicalScore1 ===
-                                  "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData.ethicalScore1 ===
-                                  "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData.ethicalScore1 ===
-                                  "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData.ethicalScore1 ===
-                                  "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.ethicalExplanation1 ||
-                              ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Professionalism (L.E.A.D.E.R.)
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Maintains a high level of professionalism in all
-                            work interactions
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.ethicalScore2 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.ethicalScore2 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData.ethicalScore2 ===
-                                    "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData.ethicalScore2 ===
-                                    "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData.ethicalScore2 ===
-                                    "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData.ethicalScore2 ===
-                                    "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.ethicalScore2 === "5"
-                                ? "Outstanding"
-                                : submission.evaluationData.ethicalScore2 ===
-                                  "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData.ethicalScore2 ===
-                                  "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData.ethicalScore2 ===
-                                  "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData.ethicalScore2 ===
-                                  "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.ethicalExplanation2 ||
-                              ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Accountability for Mistakes (L.E.A.D.E.R.)
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Takes responsibility for errors and actively works
-                            to correct mistakes
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.ethicalScore3 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.ethicalScore3 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData.ethicalScore3 ===
-                                    "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData.ethicalScore3 ===
-                                    "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData.ethicalScore3 ===
-                                    "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData.ethicalScore3 ===
-                                    "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.ethicalScore3 === "5"
-                                ? "Outstanding"
-                                : submission.evaluationData.ethicalScore3 ===
-                                  "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData.ethicalScore3 ===
-                                  "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData.ethicalScore3 ===
-                                  "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData.ethicalScore3 ===
-                                  "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.ethicalExplanation3 ||
-                              ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Respect for Others (L.E.A.D.E.R.)
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Treats all individuals fairly and with respect,
-                            regardless of background or position
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.ethicalScore4 || ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData.ethicalScore4 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData.ethicalScore4 ===
-                                    "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData.ethicalScore4 ===
-                                    "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData.ethicalScore4 ===
-                                    "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData.ethicalScore4 ===
-                                    "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData.ethicalScore4 === "5"
-                                ? "Outstanding"
-                                : submission.evaluationData.ethicalScore4 ===
-                                  "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData.ethicalScore4 ===
-                                  "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData.ethicalScore4 ===
-                                  "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData.ethicalScore4 ===
-                                  "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData.ethicalExplanation4 ||
-                              ""}
-                          </td>
-                        </tr>
+                        {submission.ethicals.map(
+                          (item: {
+                            question_number: 1 | 2 | 3 | 4;
+                            score: number;
+                            explanation: string;
+                          }) => {
+                            const indicators = ETHICAL[item.question_number];
+
+                            return (
+                              <tr key={item.question_number}>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.indicator}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.example}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                                  {item.score}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center">
+                                  <div
+                                    className={`px-2 py-1 rounded text-sm font-medium ${rating(
+                                      item.score
+                                    )}`}
+                                  >
+                                    {ratingBG(item.score)}
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
+                                  {item.explanation || ""}
+                                </td>
+                              </tr>
+                            );
+                          }
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -3106,7 +2303,7 @@ export default function ViewResultsModal({
             )}
 
             {/* Step 7: Customer Service */}
-            {submission.evaluationData && (
+            {submission.customer_services && (
               <Card className="shadow-md hide-in-print">
                 <CardHeader className="bg-teal-50 border-b border-teal-200">
                   <CardTitle className="text-xl font-semibold text-teal-900">
@@ -3140,286 +2337,42 @@ export default function ViewResultsModal({
                         </tr>
                       </thead>
                       <tbody>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Listening & Understanding
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Listens to customers and displays understanding of
-                            customer needs and concerns
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.customerServiceScore1 ||
-                              ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData
-                                  .customerServiceScore1 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore1 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore1 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore1 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore1 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData
-                                .customerServiceScore1 === "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .customerServiceScore1 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .customerServiceScore1 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .customerServiceScore1 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .customerServiceScore1 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData
-                              .customerServiceExplanation1 || ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Problem-Solving for Customer Satisfaction
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Proactively identifies and solves customer problems
-                            to ensure satisfaction
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.customerServiceScore2 ||
-                              ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData
-                                  .customerServiceScore2 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore2 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore2 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore2 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore2 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData
-                                .customerServiceScore2 === "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .customerServiceScore2 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .customerServiceScore2 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .customerServiceScore2 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .customerServiceScore2 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData
-                              .customerServiceExplanation2 || ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Product Knowledge for Customer Support
-                            (L.E.A.D.E.R.)
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Possesses comprehensive product knowledge to assist
-                            customers effectively
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.customerServiceScore3 ||
-                              ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData
-                                  .customerServiceScore3 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore3 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore3 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore3 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore3 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData
-                                .customerServiceScore3 === "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .customerServiceScore3 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .customerServiceScore3 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .customerServiceScore3 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .customerServiceScore3 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData
-                              .customerServiceExplanation3 || ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Positive and Professional Attitude (L.E.A.D.E.R.)
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Maintains a positive and professional demeanor,
-                            particularly during customer interactions
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.customerServiceScore4 ||
-                              ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData
-                                  .customerServiceScore4 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore4 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore4 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore4 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore4 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData
-                                .customerServiceScore4 === "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .customerServiceScore4 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .customerServiceScore4 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .customerServiceScore4 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .customerServiceScore4 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData
-                              .customerServiceExplanation4 || ""}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Timely Resolution of Customer Issues (L.E.A.D.E.R.)
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                            Resolves customer issues promptly and efficiently
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                            {submission.evaluationData.customerServiceScore5 ||
-                              ""}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-center">
-                            <div
-                              className={`px-2 py-1 rounded text-sm font-medium ${
-                                submission.evaluationData
-                                  .customerServiceScore5 === "5"
-                                  ? "bg-green-100 text-green-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore5 === "4"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore5 === "3"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore5 === "2"
-                                  ? "bg-orange-100 text-orange-800"
-                                  : submission.evaluationData
-                                      .customerServiceScore5 === "1"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-500"
-                              }`}
-                            >
-                              {submission.evaluationData
-                                .customerServiceScore5 === "5"
-                                ? "Outstanding"
-                                : submission.evaluationData
-                                    .customerServiceScore5 === "4"
-                                ? "Exceeds Expectation"
-                                : submission.evaluationData
-                                    .customerServiceScore5 === "3"
-                                ? "Meets Expectations"
-                                : submission.evaluationData
-                                    .customerServiceScore5 === "2"
-                                ? "Needs Improvement"
-                                : submission.evaluationData
-                                    .customerServiceScore5 === "1"
-                                ? "Unsatisfactory"
-                                : "Not Rated"}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                            {submission.evaluationData
-                              .customerServiceExplanation5 || ""}
-                          </td>
-                        </tr>
+                        {submission.customer_services.map(
+                          (item: {
+                            question_number: 1 | 2 | 3 | 4 | 5;
+                            score: number;
+                            explanation: string;
+                          }) => {
+                            const indicators =
+                              CUSTOMER_SERVICE[item.question_number];
+
+                            return (
+                              <tr key={item.question_number}>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.indicator}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.example}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                                  {item.score}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-center">
+                                  <div
+                                    className={`px-2 py-1 rounded text-sm font-medium ${rating(
+                                      item.score
+                                    )}`}
+                                  >
+                                    {ratingBG(item.score)}
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
+                                  {item.explanation || ""}
+                                </td>
+                              </tr>
+                            );
+                          }
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -3428,7 +2381,7 @@ export default function ViewResultsModal({
             )}
 
             {/* Performance Assessment Table */}
-            {submission.evaluationData && (
+            {submission && (
               <div className="print-overall-assessment-wrapper">
                 <Card className="shadow-md">
                   <CardContent className="p-6">
@@ -3468,52 +2421,48 @@ export default function ViewResultsModal({
                                   <span
                                     className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(
                                       getRatingLabel(
-                                        calculateScore([
-                                          submission.evaluationData
-                                            .jobKnowledgeScore1,
-                                          submission.evaluationData
-                                            .jobKnowledgeScore2,
-                                          submission.evaluationData
-                                            .jobKnowledgeScore3,
-                                        ])
+                                        calculateScore(
+                                          submission.job_knowledge.map(
+                                            (item: any) => {
+                                              return item.score;
+                                            }
+                                          )
+                                        )
                                       )
                                     )}`}
                                   >
                                     {getRatingLabel(
-                                      calculateScore([
-                                        submission.evaluationData
-                                          .jobKnowledgeScore1,
-                                        submission.evaluationData
-                                          .jobKnowledgeScore2,
-                                        submission.evaluationData
-                                          .jobKnowledgeScore3,
-                                      ])
+                                      calculateScore(
+                                        submission.job_knowledge.map(
+                                          (item: any) => {
+                                            return item.score;
+                                          }
+                                        )
+                                      )
                                     )}
                                   </span>
                                   <span className="print-rating-text">
                                     {getRatingLabel(
-                                      calculateScore([
-                                        submission.evaluationData
-                                          .jobKnowledgeScore1,
-                                        submission.evaluationData
-                                          .jobKnowledgeScore2,
-                                        submission.evaluationData
-                                          .jobKnowledgeScore3,
-                                      ])
+                                      calculateScore(
+                                        submission.job_knowledge.map(
+                                          (item: any) => {
+                                            return item.score;
+                                          }
+                                        )
+                                      )
                                     )}
                                   </span>
                                 </div>
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                 {Math.round(
-                                  calculateScore([
-                                    submission.evaluationData
-                                      .jobKnowledgeScore1,
-                                    submission.evaluationData
-                                      .jobKnowledgeScore2,
-                                    submission.evaluationData
-                                      .jobKnowledgeScore3,
-                                  ]) * 10
+                                  calculateScore(
+                                    submission.job_knowledge.map(
+                                      (item: any) => {
+                                        return item.score;
+                                      }
+                                    )
+                                  ) * 10
                                 ) / 10}
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
@@ -3521,14 +2470,13 @@ export default function ViewResultsModal({
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                 {Math.round(
-                                  calculateScore([
-                                    submission.evaluationData
-                                      .jobKnowledgeScore1,
-                                    submission.evaluationData
-                                      .jobKnowledgeScore2,
-                                    submission.evaluationData
-                                      .jobKnowledgeScore3,
-                                  ]) *
+                                  calculateScore(
+                                    submission.job_knowledge.map(
+                                      (item: any) => {
+                                        return item.score;
+                                      }
+                                    )
+                                  ) *
                                     0.2 *
                                     10
                                 ) / 10}
@@ -3545,80 +2493,60 @@ export default function ViewResultsModal({
                                   <span
                                     className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(
                                       getRatingLabel(
-                                        calculateScore([
-                                          submission.evaluationData
-                                            .qualityOfWorkScore1,
-                                          submission.evaluationData
-                                            .qualityOfWorkScore2,
-                                          submission.evaluationData
-                                            .qualityOfWorkScore3,
-                                          submission.evaluationData
-                                            .qualityOfWorkScore4,
-                                          submission.evaluationData
-                                            .qualityOfWorkScore5,
-                                        ])
+                                        calculateScore(
+                                          submission.quality_of_works.map(
+                                            (item: any) => {
+                                              return item.score;
+                                            }
+                                          )
+                                        )
                                       )
                                     )}`}
                                   >
                                     {getRatingLabel(
-                                      calculateScore([
-                                        submission.evaluationData
-                                          .qualityOfWorkScore1,
-                                        submission.evaluationData
-                                          .qualityOfWorkScore2,
-                                        submission.evaluationData
-                                          .qualityOfWorkScore3,
-                                        submission.evaluationData
-                                          .qualityOfWorkScore4,
-                                        submission.evaluationData
-                                          .qualityOfWorkScore5,
-                                      ])
+                                      calculateScore(
+                                        submission.quality_of_works.map(
+                                          (item: any) => {
+                                            return item.score;
+                                          }
+                                        )
+                                      )
                                     )}
                                   </span>
                                   <span className="print-rating-text">
                                     {getRatingLabel(
-                                      calculateScore([
-                                        submission.evaluationData
-                                          .qualityOfWorkScore1,
-                                        submission.evaluationData
-                                          .qualityOfWorkScore2,
-                                        submission.evaluationData
-                                          .qualityOfWorkScore3,
-                                        submission.evaluationData
-                                          .qualityOfWorkScore4,
-                                        submission.evaluationData
-                                          .qualityOfWorkScore5,
-                                      ])
+                                      calculateScore(
+                                        submission.quality_of_works.map(
+                                          (item: any) => {
+                                            return item.score;
+                                          }
+                                        )
+                                      )
                                     )}
                                   </span>
                                 </div>
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                {calculateScore([
-                                  submission.evaluationData.qualityOfWorkScore1,
-                                  submission.evaluationData.qualityOfWorkScore2,
-                                  submission.evaluationData.qualityOfWorkScore3,
-                                  submission.evaluationData.qualityOfWorkScore4,
-                                  submission.evaluationData.qualityOfWorkScore5,
-                                ]).toFixed(2)}
+                                {calculateScore(
+                                  submission.quality_of_works.map(
+                                    (item: any) => {
+                                      return item.score;
+                                    }
+                                  )
+                                ).toFixed(2)}
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                 20%
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                 {(
-                                  calculateScore([
-                                    submission.evaluationData
-                                      .qualityOfWorkScore1,
-                                    submission.evaluationData
-                                      .qualityOfWorkScore2,
-                                    submission.evaluationData
-                                      .qualityOfWorkScore3,
-                                    submission.evaluationData
-                                      .qualityOfWorkScore4,
-                                    submission.evaluationData
-                                      .qualityOfWorkScore5,
-                                  ]) * 0.2
+                                  calculateScore(
+                                    submission.quality_of_works.map(
+                                      (item: any) => {
+                                        return item.score;
+                                      }
+                                    )
+                                  ) * 0.2
                                 ).toFixed(2)}
                               </td>
                             </tr>
@@ -3633,62 +2561,56 @@ export default function ViewResultsModal({
                                   <span
                                     className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(
                                       getRatingLabel(
-                                        calculateScore([
-                                          submission.evaluationData
-                                            .adaptabilityScore1,
-                                          submission.evaluationData
-                                            .adaptabilityScore2,
-                                          submission.evaluationData
-                                            .adaptabilityScore3,
-                                        ])
+                                        calculateScore(
+                                          submission.adaptability.map(
+                                            (item: any) => {
+                                              return item.score;
+                                            }
+                                          )
+                                        )
                                       )
                                     )}`}
                                   >
                                     {getRatingLabel(
-                                      calculateScore([
-                                        submission.evaluationData
-                                          .adaptabilityScore1,
-                                        submission.evaluationData
-                                          .adaptabilityScore2,
-                                        submission.evaluationData
-                                          .adaptabilityScore3,
-                                      ])
+                                      calculateScore(
+                                        submission.adaptability.map(
+                                          (item: any) => {
+                                            return item.score;
+                                          }
+                                        )
+                                      )
                                     )}
                                   </span>
                                   <span className="print-rating-text">
                                     {getRatingLabel(
-                                      calculateScore([
-                                        submission.evaluationData
-                                          .adaptabilityScore1,
-                                        submission.evaluationData
-                                          .adaptabilityScore2,
-                                        submission.evaluationData
-                                          .adaptabilityScore3,
-                                      ])
+                                      calculateScore(
+                                        submission.adaptability.map(
+                                          (item: any) => {
+                                            return item.score;
+                                          }
+                                        )
+                                      )
                                     )}
                                   </span>
                                 </div>
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                {calculateScore([
-                                  submission.evaluationData.adaptabilityScore1,
-                                  submission.evaluationData.adaptabilityScore2,
-                                  submission.evaluationData.adaptabilityScore3,
-                                ]).toFixed(2)}
+                                {calculateScore(
+                                  submission.adaptability.map((item: any) => {
+                                    return item.score;
+                                  })
+                                ).toFixed(2)}
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                 10%
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                 {(
-                                  calculateScore([
-                                    submission.evaluationData
-                                      .adaptabilityScore1,
-                                    submission.evaluationData
-                                      .adaptabilityScore2,
-                                    submission.evaluationData
-                                      .adaptabilityScore3,
-                                  ]) * 0.1
+                                  calculateScore(
+                                    submission.adaptability.map((item: any) => {
+                                      return item.score;
+                                    })
+                                  ) * 0.1
                                 ).toFixed(2)}
                               </td>
                             </tr>
@@ -3703,59 +2625,56 @@ export default function ViewResultsModal({
                                   <span
                                     className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(
                                       getRatingLabel(
-                                        calculateScore([
-                                          submission.evaluationData
-                                            .teamworkScore1,
-                                          submission.evaluationData
-                                            .teamworkScore2,
-                                          submission.evaluationData
-                                            .teamworkScore3,
-                                        ])
+                                        calculateScore(
+                                          submission.teamworks.map(
+                                            (item: any) => {
+                                              return item.score;
+                                            }
+                                          )
+                                        )
                                       )
                                     )}`}
                                   >
                                     {getRatingLabel(
-                                      calculateScore([
-                                        submission.evaluationData
-                                          .teamworkScore1,
-                                        submission.evaluationData
-                                          .teamworkScore2,
-                                        submission.evaluationData
-                                          .teamworkScore3,
-                                      ])
+                                      calculateScore(
+                                        submission.teamworks.map(
+                                          (item: any) => {
+                                            return item.score;
+                                          }
+                                        )
+                                      )
                                     )}
                                   </span>
                                   <span className="print-rating-text">
                                     {getRatingLabel(
-                                      calculateScore([
-                                        submission.evaluationData
-                                          .teamworkScore1,
-                                        submission.evaluationData
-                                          .teamworkScore2,
-                                        submission.evaluationData
-                                          .teamworkScore3,
-                                      ])
+                                      calculateScore(
+                                        submission.teamworks.map(
+                                          (item: any) => {
+                                            return item.score;
+                                          }
+                                        )
+                                      )
                                     )}
                                   </span>
                                 </div>
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                {calculateScore([
-                                  submission.evaluationData.teamworkScore1,
-                                  submission.evaluationData.teamworkScore2,
-                                  submission.evaluationData.teamworkScore3,
-                                ]).toFixed(2)}
+                                {calculateScore(
+                                  submission.teamworks.map((item: any) => {
+                                    return item.score;
+                                  })
+                                ).toFixed(2)}
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                 10%
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                 {(
-                                  calculateScore([
-                                    submission.evaluationData.teamworkScore1,
-                                    submission.evaluationData.teamworkScore2,
-                                    submission.evaluationData.teamworkScore3,
-                                  ]) * 0.1
+                                  calculateScore(
+                                    submission.teamworks.map((item: any) => {
+                                      return item.score;
+                                    })
+                                  ) * 0.1
                                 ).toFixed(2)}
                               </td>
                             </tr>
@@ -3770,67 +2689,58 @@ export default function ViewResultsModal({
                                   <span
                                     className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(
                                       getRatingLabel(
-                                        calculateScore([
-                                          submission.evaluationData
-                                            .reliabilityScore1,
-                                          submission.evaluationData
-                                            .reliabilityScore2,
-                                          submission.evaluationData
-                                            .reliabilityScore3,
-                                          submission.evaluationData
-                                            .reliabilityScore4,
-                                        ])
+                                        calculateScore(
+                                          submission.reliabilities.map(
+                                            (item: any) => {
+                                              return item.score;
+                                            }
+                                          )
+                                        )
                                       )
                                     )}`}
                                   >
                                     {getRatingLabel(
-                                      calculateScore([
-                                        submission.evaluationData
-                                          .reliabilityScore1,
-                                        submission.evaluationData
-                                          .reliabilityScore2,
-                                        submission.evaluationData
-                                          .reliabilityScore3,
-                                        submission.evaluationData
-                                          .reliabilityScore4,
-                                      ])
+                                      calculateScore(
+                                        submission.reliabilities.map(
+                                          (item: any) => {
+                                            return item.score;
+                                          }
+                                        )
+                                      )
                                     )}
                                   </span>
                                   <span className="print-rating-text">
                                     {getRatingLabel(
-                                      calculateScore([
-                                        submission.evaluationData
-                                          .reliabilityScore1,
-                                        submission.evaluationData
-                                          .reliabilityScore2,
-                                        submission.evaluationData
-                                          .reliabilityScore3,
-                                        submission.evaluationData
-                                          .reliabilityScore4,
-                                      ])
+                                      calculateScore(
+                                        submission.reliabilities.map(
+                                          (item: any) => {
+                                            return item.score;
+                                          }
+                                        )
+                                      )
                                     )}
                                   </span>
                                 </div>
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                {calculateScore([
-                                  submission.evaluationData.reliabilityScore1,
-                                  submission.evaluationData.reliabilityScore2,
-                                  submission.evaluationData.reliabilityScore3,
-                                  submission.evaluationData.reliabilityScore4,
-                                ]).toFixed(2)}
+                                {calculateScore(
+                                  submission.reliabilities.map((item: any) => {
+                                    return item.score;
+                                  })
+                                ).toFixed(2)}
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                 5%
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                 {(
-                                  calculateScore([
-                                    submission.evaluationData.reliabilityScore1,
-                                    submission.evaluationData.reliabilityScore2,
-                                    submission.evaluationData.reliabilityScore3,
-                                    submission.evaluationData.reliabilityScore4,
-                                  ]) * 0.05
+                                  calculateScore(
+                                    submission.reliabilities.map(
+                                      (item: any) => {
+                                        return item.score;
+                                      }
+                                    )
+                                  ) * 0.05
                                 ).toFixed(2)}
                               </td>
                             </tr>
@@ -3845,59 +2755,52 @@ export default function ViewResultsModal({
                                   <span
                                     className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(
                                       getRatingLabel(
-                                        calculateScore([
-                                          submission.evaluationData
-                                            .ethicalScore1,
-                                          submission.evaluationData
-                                            .ethicalScore2,
-                                          submission.evaluationData
-                                            .ethicalScore3,
-                                          submission.evaluationData
-                                            .ethicalScore4,
-                                        ])
+                                        calculateScore(
+                                          submission.ethicals.map(
+                                            (item: any) => {
+                                              return item.score;
+                                            }
+                                          )
+                                        )
                                       )
                                     )}`}
                                   >
                                     {getRatingLabel(
-                                      calculateScore([
-                                        submission.evaluationData.ethicalScore1,
-                                        submission.evaluationData.ethicalScore2,
-                                        submission.evaluationData.ethicalScore3,
-                                        submission.evaluationData.ethicalScore4,
-                                      ])
+                                      calculateScore(
+                                        submission.ethicals.map((item: any) => {
+                                          return item.score;
+                                        })
+                                      )
                                     )}
                                   </span>
                                   <span className="print-rating-text">
                                     {getRatingLabel(
-                                      calculateScore([
-                                        submission.evaluationData.ethicalScore1,
-                                        submission.evaluationData.ethicalScore2,
-                                        submission.evaluationData.ethicalScore3,
-                                        submission.evaluationData.ethicalScore4,
-                                      ])
+                                      calculateScore(
+                                        submission.ethicals.map((item: any) => {
+                                          return item.score;
+                                        })
+                                      )
                                     )}
                                   </span>
                                 </div>
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                {calculateScore([
-                                  submission.evaluationData.ethicalScore1,
-                                  submission.evaluationData.ethicalScore2,
-                                  submission.evaluationData.ethicalScore3,
-                                  submission.evaluationData.ethicalScore4,
-                                ]).toFixed(2)}
+                                {calculateScore(
+                                  submission.ethicals.map((item: any) => {
+                                    return item.score;
+                                  })
+                                ).toFixed(2)}
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                 5%
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                 {(
-                                  calculateScore([
-                                    submission.evaluationData.ethicalScore1,
-                                    submission.evaluationData.ethicalScore2,
-                                    submission.evaluationData.ethicalScore3,
-                                    submission.evaluationData.ethicalScore4,
-                                  ]) * 0.05
+                                  calculateScore(
+                                    submission.ethicals.map((item: any) => {
+                                      return item.score;
+                                    })
+                                  ) * 0.05
                                 ).toFixed(2)}
                               </td>
                             </tr>
@@ -3912,85 +2815,60 @@ export default function ViewResultsModal({
                                   <span
                                     className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(
                                       getRatingLabel(
-                                        calculateScore([
-                                          submission.evaluationData
-                                            .customerServiceScore1,
-                                          submission.evaluationData
-                                            .customerServiceScore2,
-                                          submission.evaluationData
-                                            .customerServiceScore3,
-                                          submission.evaluationData
-                                            .customerServiceScore4,
-                                          submission.evaluationData
-                                            .customerServiceScore5,
-                                        ])
+                                        calculateScore(
+                                          submission.customer_services.map(
+                                            (item: any) => {
+                                              return item.score;
+                                            }
+                                          )
+                                        )
                                       )
                                     )}`}
                                   >
                                     {getRatingLabel(
-                                      calculateScore([
-                                        submission.evaluationData
-                                          .customerServiceScore1,
-                                        submission.evaluationData
-                                          .customerServiceScore2,
-                                        submission.evaluationData
-                                          .customerServiceScore3,
-                                        submission.evaluationData
-                                          .customerServiceScore4,
-                                        submission.evaluationData
-                                          .customerServiceScore5,
-                                      ])
+                                      calculateScore(
+                                        submission.customer_services.map(
+                                          (item: any) => {
+                                            return item.score;
+                                          }
+                                        )
+                                      )
                                     )}
                                   </span>
                                   <span className="print-rating-text">
                                     {getRatingLabel(
-                                      calculateScore([
-                                        submission.evaluationData
-                                          .customerServiceScore1,
-                                        submission.evaluationData
-                                          .customerServiceScore2,
-                                        submission.evaluationData
-                                          .customerServiceScore3,
-                                        submission.evaluationData
-                                          .customerServiceScore4,
-                                        submission.evaluationData
-                                          .customerServiceScore5,
-                                      ])
+                                      calculateScore(
+                                        submission.customer_services.map(
+                                          (item: any) => {
+                                            return item.score;
+                                          }
+                                        )
+                                      )
                                     )}
                                   </span>
                                 </div>
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                {calculateScore([
-                                  submission.evaluationData
-                                    .customerServiceScore1,
-                                  submission.evaluationData
-                                    .customerServiceScore2,
-                                  submission.evaluationData
-                                    .customerServiceScore3,
-                                  submission.evaluationData
-                                    .customerServiceScore4,
-                                  submission.evaluationData
-                                    .customerServiceScore5,
-                                ]).toFixed(2)}
+                                {calculateScore(
+                                  submission.customer_services.map(
+                                    (item: any) => {
+                                      return item.score;
+                                    }
+                                  )
+                                ).toFixed(2)}
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                 30%
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                 {(
-                                  calculateScore([
-                                    submission.evaluationData
-                                      .customerServiceScore1,
-                                    submission.evaluationData
-                                      .customerServiceScore2,
-                                    submission.evaluationData
-                                      .customerServiceScore3,
-                                    submission.evaluationData
-                                      .customerServiceScore4,
-                                    submission.evaluationData
-                                      .customerServiceScore5,
-                                  ]) * 0.3
+                                  calculateScore(
+                                    submission.customer_services.map(
+                                      (item: any) => {
+                                        return item.score;
+                                      }
+                                    )
+                                  ) * 0.3
                                 ).toFixed(2)}
                               </td>
                             </tr>
@@ -4005,72 +2883,58 @@ export default function ViewResultsModal({
                               </td>
                               <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-lg">
                                 {(() => {
-                                  const jobKnowledgeScore = calculateScore([
-                                    submission.evaluationData
-                                      .jobKnowledgeScore1,
-                                    submission.evaluationData
-                                      .jobKnowledgeScore2,
-                                    submission.evaluationData
-                                      .jobKnowledgeScore3,
-                                  ]);
-                                  const qualityOfWorkScore = calculateScore([
-                                    submission.evaluationData
-                                      .qualityOfWorkScore1,
-                                    submission.evaluationData
-                                      .qualityOfWorkScore2,
-                                    submission.evaluationData
-                                      .qualityOfWorkScore3,
-                                    submission.evaluationData
-                                      .qualityOfWorkScore4,
-                                    submission.evaluationData
-                                      .qualityOfWorkScore5,
-                                  ]);
-                                  const adaptabilityScore = calculateScore([
-                                    submission.evaluationData
-                                      .adaptabilityScore1,
-                                    submission.evaluationData
-                                      .adaptabilityScore2,
-                                    submission.evaluationData
-                                      .adaptabilityScore3,
-                                  ]);
-                                  const teamworkScore = calculateScore([
-                                    submission.evaluationData.teamworkScore1,
-                                    submission.evaluationData.teamworkScore2,
-                                    submission.evaluationData.teamworkScore3,
-                                  ]);
-                                  const reliabilityScore = calculateScore([
-                                    submission.evaluationData.reliabilityScore1,
-                                    submission.evaluationData.reliabilityScore2,
-                                    submission.evaluationData.reliabilityScore3,
-                                    submission.evaluationData.reliabilityScore4,
-                                  ]);
-                                  const ethicalScore = calculateScore([
-                                    submission.evaluationData.ethicalScore1,
-                                    submission.evaluationData.ethicalScore2,
-                                    submission.evaluationData.ethicalScore3,
-                                    submission.evaluationData.ethicalScore4,
-                                  ]);
-                                  const customerServiceScore = calculateScore([
-                                    submission.evaluationData
-                                      .customerServiceScore1,
-                                    submission.evaluationData
-                                      .customerServiceScore2,
-                                    submission.evaluationData
-                                      .customerServiceScore3,
-                                    submission.evaluationData
-                                      .customerServiceScore4,
-                                    submission.evaluationData
-                                      .customerServiceScore5,
-                                  ]);
+                                  const job_knowledgeScore = calculateScore(
+                                    submission.job_knowledge.map(
+                                      (item: any) => {
+                                        return item.score;
+                                      }
+                                    )
+                                  );
+                                  const quality_of_workScore = calculateScore(
+                                    submission.quality_of_works.map(
+                                      (item: any) => {
+                                        return item.score;
+                                      }
+                                    )
+                                  );
+                                  const adaptabilityScore = calculateScore(
+                                    submission.adaptability.map((item: any) => {
+                                      return item.score;
+                                    })
+                                  );
+                                  const teamworkScore = calculateScore(
+                                    submission.teamworks.map((item: any) => {
+                                      return item.score;
+                                    })
+                                  );
+                                  const reliabilityScore = calculateScore(
+                                    submission.reliabilities.map(
+                                      (item: any) => {
+                                        return item.score;
+                                      }
+                                    )
+                                  );
+                                  const ethicalScore = calculateScore(
+                                    submission.ethicals.map((item: any) => {
+                                      return item.score;
+                                    })
+                                  );
+                                  const customer_serviceScore = calculateScore(
+                                    submission.customer_services.map(
+                                      (item: any) => {
+                                        return item.score;
+                                      }
+                                    )
+                                  );
 
                                   const overallWeightedScore = (
-                                    jobKnowledgeScore * 0.2 +
-                                    qualityOfWorkScore * 0.2 +
+                                    job_knowledgeScore * 0.2 +
+                                    quality_of_workScore * 0.2 +
                                     adaptabilityScore * 0.1 +
                                     teamworkScore * 0.1 +
                                     reliabilityScore * 0.05 +
                                     ethicalScore * 0.05 +
-                                    customerServiceScore * 0.3
+                                    customer_serviceScore * 0.3
                                   ).toFixed(2);
 
                                   return overallWeightedScore;
@@ -4086,56 +2950,48 @@ export default function ViewResultsModal({
                         <div className="text-center">
                           <div className="text-4xl font-bold text-gray-700">
                             {(() => {
-                              const jobKnowledgeScore = calculateScore([
-                                submission.evaluationData.jobKnowledgeScore1,
-                                submission.evaluationData.jobKnowledgeScore2,
-                                submission.evaluationData.jobKnowledgeScore3,
-                              ]);
-                              const qualityOfWorkScore = calculateScore([
-                                submission.evaluationData.qualityOfWorkScore1,
-                                submission.evaluationData.qualityOfWorkScore2,
-                                submission.evaluationData.qualityOfWorkScore3,
-                                submission.evaluationData.qualityOfWorkScore4,
-                                submission.evaluationData.qualityOfWorkScore5,
-                              ]);
-                              const adaptabilityScore = calculateScore([
-                                submission.evaluationData.adaptabilityScore1,
-                                submission.evaluationData.adaptabilityScore2,
-                                submission.evaluationData.adaptabilityScore3,
-                              ]);
-                              const teamworkScore = calculateScore([
-                                submission.evaluationData.teamworkScore1,
-                                submission.evaluationData.teamworkScore2,
-                                submission.evaluationData.teamworkScore3,
-                              ]);
-                              const reliabilityScore = calculateScore([
-                                submission.evaluationData.reliabilityScore1,
-                                submission.evaluationData.reliabilityScore2,
-                                submission.evaluationData.reliabilityScore3,
-                                submission.evaluationData.reliabilityScore4,
-                              ]);
-                              const ethicalScore = calculateScore([
-                                submission.evaluationData.ethicalScore1,
-                                submission.evaluationData.ethicalScore2,
-                                submission.evaluationData.ethicalScore3,
-                                submission.evaluationData.ethicalScore4,
-                              ]);
-                              const customerServiceScore = calculateScore([
-                                submission.evaluationData.customerServiceScore1,
-                                submission.evaluationData.customerServiceScore2,
-                                submission.evaluationData.customerServiceScore3,
-                                submission.evaluationData.customerServiceScore4,
-                                submission.evaluationData.customerServiceScore5,
+                              const job_knowledgeScore = calculateScore(
+                                submission.job_knowledge.map((item: any) => {
+                                  return item.score;
+                                })
+                              );
+                              const quality_of_workScore = calculateScore(
+                                submission.quality_of_works.map((item: any) => {
+                                  return item.score;
+                                })
+                              );
+                              const adaptabilityScore = calculateScore(
+                                submission.adaptability.map((item: any) => {
+                                  return item.score;
+                                })
+                              );
+                              const teamworkScore = calculateScore(
+                                submission.teamworks.map((item: any) => {
+                                  return item.score;
+                                })
+                              );
+                              const reliabilityScore = calculateScore(
+                                submission.reliabilities.map((item: any) => {
+                                  return item.score;
+                                })
+                              );
+                              const ethicalScore = calculateScore(
+                                submission.ethicals.map((item: any) => {
+                                  return item.score;
+                                })
+                              );
+                              const customer_serviceScore = calculateScore([
+                                submission.customer_services.score,
                               ]);
 
                               const overallWeightedScore =
-                                jobKnowledgeScore * 0.2 +
-                                qualityOfWorkScore * 0.2 +
+                                job_knowledgeScore * 0.2 +
+                                quality_of_workScore * 0.2 +
                                 adaptabilityScore * 0.1 +
                                 teamworkScore * 0.1 +
                                 reliabilityScore * 0.05 +
                                 ethicalScore * 0.05 +
-                                customerServiceScore * 0.3;
+                                customer_serviceScore * 0.3;
 
                               return ((overallWeightedScore / 5) * 100).toFixed(
                                 2
@@ -4149,56 +3005,48 @@ export default function ViewResultsModal({
                         </div>
                         <div
                           className={`px-8 py-4 rounded-lg font-bold text-white text-xl ${(() => {
-                            const jobKnowledgeScore = calculateScore([
-                              submission.evaluationData.jobKnowledgeScore1,
-                              submission.evaluationData.jobKnowledgeScore2,
-                              submission.evaluationData.jobKnowledgeScore3,
-                            ]);
-                            const qualityOfWorkScore = calculateScore([
-                              submission.evaluationData.qualityOfWorkScore1,
-                              submission.evaluationData.qualityOfWorkScore2,
-                              submission.evaluationData.qualityOfWorkScore3,
-                              submission.evaluationData.qualityOfWorkScore4,
-                              submission.evaluationData.qualityOfWorkScore5,
-                            ]);
-                            const adaptabilityScore = calculateScore([
-                              submission.evaluationData.adaptabilityScore1,
-                              submission.evaluationData.adaptabilityScore2,
-                              submission.evaluationData.adaptabilityScore3,
-                            ]);
-                            const teamworkScore = calculateScore([
-                              submission.evaluationData.teamworkScore1,
-                              submission.evaluationData.teamworkScore2,
-                              submission.evaluationData.teamworkScore3,
-                            ]);
-                            const reliabilityScore = calculateScore([
-                              submission.evaluationData.reliabilityScore1,
-                              submission.evaluationData.reliabilityScore2,
-                              submission.evaluationData.reliabilityScore3,
-                              submission.evaluationData.reliabilityScore4,
-                            ]);
-                            const ethicalScore = calculateScore([
-                              submission.evaluationData.ethicalScore1,
-                              submission.evaluationData.ethicalScore2,
-                              submission.evaluationData.ethicalScore3,
-                              submission.evaluationData.ethicalScore4,
-                            ]);
-                            const customerServiceScore = calculateScore([
-                              submission.evaluationData.customerServiceScore1,
-                              submission.evaluationData.customerServiceScore2,
-                              submission.evaluationData.customerServiceScore3,
-                              submission.evaluationData.customerServiceScore4,
-                              submission.evaluationData.customerServiceScore5,
+                            const job_knowledgeScore = calculateScore(
+                              submission.job_knowledge.map((item: any) => {
+                                return item.score;
+                              })
+                            );
+                            const quality_of_workScore = calculateScore(
+                              submission.quality_of_works.map((item: any) => {
+                                return item.score;
+                              })
+                            );
+                            const adaptabilityScore = calculateScore(
+                              submission.quality_of_works.map((item: any) => {
+                                return item.score;
+                              })
+                            );
+                            const teamworkScore = calculateScore(
+                              submission.teamworks.map((item: any) => {
+                                return item.score;
+                              })
+                            );
+                            const reliabilityScore = calculateScore(
+                              submission.reliabilities.map((item: any) => {
+                                return item.score;
+                              })
+                            );
+                            const ethicalScore = calculateScore(
+                              submission.ethicals.map((item: any) => {
+                                return item.score;
+                              })
+                            );
+                            const customer_serviceScore = calculateScore([
+                              submission.customer_services.score,
                             ]);
 
                             const overallWeightedScore =
-                              jobKnowledgeScore * 0.2 +
-                              qualityOfWorkScore * 0.2 +
+                              job_knowledgeScore * 0.2 +
+                              quality_of_workScore * 0.2 +
                               adaptabilityScore * 0.1 +
                               teamworkScore * 0.1 +
                               reliabilityScore * 0.05 +
                               ethicalScore * 0.05 +
-                              customerServiceScore * 0.3;
+                              customer_serviceScore * 0.3;
 
                             return overallWeightedScore >= 3.0
                               ? "bg-green-600"
@@ -4206,56 +3054,50 @@ export default function ViewResultsModal({
                           })()}`}
                         >
                           {(() => {
-                            const jobKnowledgeScore = calculateScore([
-                              submission.evaluationData.jobKnowledgeScore1,
-                              submission.evaluationData.jobKnowledgeScore2,
-                              submission.evaluationData.jobKnowledgeScore3,
-                            ]);
-                            const qualityOfWorkScore = calculateScore([
-                              submission.evaluationData.qualityOfWorkScore1,
-                              submission.evaluationData.qualityOfWorkScore2,
-                              submission.evaluationData.qualityOfWorkScore3,
-                              submission.evaluationData.qualityOfWorkScore4,
-                              submission.evaluationData.qualityOfWorkScore5,
-                            ]);
-                            const adaptabilityScore = calculateScore([
-                              submission.evaluationData.adaptabilityScore1,
-                              submission.evaluationData.adaptabilityScore2,
-                              submission.evaluationData.adaptabilityScore3,
-                            ]);
-                            const teamworkScore = calculateScore([
-                              submission.evaluationData.teamworkScore1,
-                              submission.evaluationData.teamworkScore2,
-                              submission.evaluationData.teamworkScore3,
-                            ]);
-                            const reliabilityScore = calculateScore([
-                              submission.evaluationData.reliabilityScore1,
-                              submission.evaluationData.reliabilityScore2,
-                              submission.evaluationData.reliabilityScore3,
-                              submission.evaluationData.reliabilityScore4,
-                            ]);
-                            const ethicalScore = calculateScore([
-                              submission.evaluationData.ethicalScore1,
-                              submission.evaluationData.ethicalScore2,
-                              submission.evaluationData.ethicalScore3,
-                              submission.evaluationData.ethicalScore4,
-                            ]);
-                            const customerServiceScore = calculateScore([
-                              submission.evaluationData.customerServiceScore1,
-                              submission.evaluationData.customerServiceScore2,
-                              submission.evaluationData.customerServiceScore3,
-                              submission.evaluationData.customerServiceScore4,
-                              submission.evaluationData.customerServiceScore5,
-                            ]);
+                            const job_knowledgeScore = calculateScore(
+                              submission.job_knowledge.map((item: any) => {
+                                return item.score;
+                              })
+                            );
+                            const quality_of_workScore = calculateScore(
+                              submission.quality_of_works.map((item: any) => {
+                                return item.score;
+                              })
+                            );
+                            const adaptabilityScore = calculateScore(
+                              submission.adaptability.map((item: any) => {
+                                return item.score;
+                              })
+                            );
+                            const teamworkScore = calculateScore(
+                              submission.teamworks.map((item: any) => {
+                                return item.score;
+                              })
+                            );
+                            const reliabilityScore = calculateScore(
+                              submission.reliabilities.map((item: any) => {
+                                return item.score;
+                              })
+                            );
+                            const ethicalScore = calculateScore(
+                              submission.ethicals.map((item: any) => {
+                                return item.score;
+                              })
+                            );
+                            const customer_serviceScore = calculateScore(
+                              submission.customer_services.map((item: any) => {
+                                return item.score;
+                              })
+                            );
 
                             const overallWeightedScore =
-                              jobKnowledgeScore * 0.2 +
-                              qualityOfWorkScore * 0.2 +
+                              job_knowledgeScore * 0.2 +
+                              quality_of_workScore * 0.2 +
                               adaptabilityScore * 0.1 +
                               teamworkScore * 0.1 +
                               reliabilityScore * 0.05 +
                               ethicalScore * 0.05 +
-                              customerServiceScore * 0.3;
+                              customer_serviceScore * 0.3;
 
                             return overallWeightedScore >= 3.0
                               ? "PASS"
@@ -4270,10 +3112,10 @@ export default function ViewResultsModal({
             )}
 
             {/* Priority Areas for Improvement */}
-            {submission.evaluationData &&
-              (submission.evaluationData.priorityArea1 ||
-                submission.evaluationData.priorityArea2 ||
-                submission.evaluationData.priorityArea3) && (
+            {submission &&
+              (submission.priorityArea1 ||
+                submission.priorityArea2 ||
+                submission.priorityArea3) && (
                 <Card>
                   <CardContent className="pt-6 pb-4">
                     <h4 className="font-semibold text-lg text-gray-900 mb-4 print-priority-header">
@@ -4288,38 +3130,38 @@ export default function ViewResultsModal({
                       and easy to act on.
                     </p>
                     <div className="space-y-3">
-                      {submission.evaluationData.priorityArea1 && (
+                      {submission.priorityArea1 && (
                         <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-priority-item">
                           <div className="print-priority-row">
                             <span className="font-medium text-sm print-priority-label">
                               1.{" "}
                             </span>
                             <p className="text-sm text-gray-700 print-priority-value">
-                              {submission.evaluationData.priorityArea1}
+                              {submission.priorityArea1}
                             </p>
                           </div>
                         </div>
                       )}
-                      {submission.evaluationData.priorityArea2 && (
+                      {submission.priorityArea2 && (
                         <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-priority-item">
                           <div className="print-priority-row">
                             <span className="font-medium text-sm print-priority-label">
                               2.{" "}
                             </span>
                             <p className="text-sm text-gray-700 print-priority-value">
-                              {submission.evaluationData.priorityArea2}
+                              {submission.priorityArea2}
                             </p>
                           </div>
                         </div>
                       )}
-                      {submission.evaluationData.priorityArea3 && (
+                      {submission.priorityArea3 && (
                         <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-priority-item">
                           <div className="print-priority-row">
                             <span className="font-medium text-sm print-priority-label">
                               3.{" "}
                             </span>
                             <p className="text-sm text-gray-700 print-priority-value">
-                              {submission.evaluationData.priorityArea3}
+                              {submission.priorityArea3}
                             </p>
                           </div>
                         </div>
@@ -4330,7 +3172,7 @@ export default function ViewResultsModal({
               )}
 
             {/* Remarks */}
-            {submission.evaluationData && submission.evaluationData.remarks && (
+            {submission && submission.remarks && (
               <Card>
                 <CardContent className="pt-6 pb-4">
                   <h4 className="font-semibold text-lg text-gray-900 mb-4 print-remarks-header">
@@ -4338,7 +3180,7 @@ export default function ViewResultsModal({
                   </h4>
                   <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-remarks-box">
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                      {submission.evaluationData.remarks}
+                      {submission.remarks}
                     </p>
                   </div>
                 </CardContent>
@@ -4346,7 +3188,7 @@ export default function ViewResultsModal({
             )}
 
             {/* Acknowledgement */}
-            {submission.evaluationData && (
+            {submission && (
               <Card>
                 <CardContent className="pt-6 pb-4">
                   <h4 className="font-semibold text-lg text-gray-900 mb-4 print-acknowledgement-header">
@@ -4368,7 +3210,9 @@ export default function ViewResultsModal({
                           <div className="print-signature-line"></div>
                           {/* Name as background text - always show */}
                           <span className="text-md text-gray-900 font-bold">
-                            {submission.employeeName || "Employee Name"}
+                            {submission.employee.fname +
+                              " " +
+                              submission.employee.lname || "Employee Name"}
                           </span>
                           {/* Signature overlay - centered and overlapping */}
                           {signatureLoading ? (
@@ -4380,16 +3224,12 @@ export default function ViewResultsModal({
                               Error loading signature
                             </div>
                           ) : (
-                            computedIsApproved &&
-                            (employeeSignature?.signature ||
-                              currentApprovalData?.employeeSignature ||
-                              submission.employeeSignature) && (
+                            submission.employee?.signature && (
                               <img
                                 src={
-                                  employeeSignature?.signature ||
-                                  currentApprovalData?.employeeSignature ||
-                                  submission.employeeSignature ||
-                                  ""
+                                  CONFIG.API_URL_STORAGE +
+                                    "/" +
+                                    submission.employee?.signature || ""
                                 }
                                 alt="Employee Signature"
                                 className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-16 max-w-full object-contain"
@@ -4491,21 +3331,17 @@ export default function ViewResultsModal({
                           <div className="print-signature-line"></div>
                           {/* Name as background text - always show */}
                           <span className="text-md text-gray-900 font-bold">
-                            {submission.evaluator ||
-                              submission.evaluationData?.evaluatorSignature ||
-                              submission.evaluationData?.evaluatorName ||
-                              "Evaluator Name"}
+                            {submission?.evaluator.fname +
+                              " " +
+                              submission.evaluator.lname || "Evaluator Name"}
                           </span>
                           {/* Signature overlay - automatically show when signature exists */}
-                          {submission.evaluatorSignature ||
-                          submission.evaluationData?.evaluatorSignatureImage ||
-                          submission.evaluationData?.evaluatorSignature ? (
+                          {submission.evaluator.signature ? (
                             <img
                               src={
-                                submission.evaluatorSignature ||
-                                submission.evaluationData
-                                  ?.evaluatorSignatureImage ||
-                                submission.evaluationData?.evaluatorSignature
+                                CONFIG.API_URL_STORAGE +
+                                "/" +
+                                submission.evaluator.signature
                               }
                               alt="Evaluator Signature"
                               className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-16 max-w-full object-contain"
@@ -4528,11 +3364,10 @@ export default function ViewResultsModal({
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mt-1">
                           {submission.evaluatorApprovedAt ||
-                          submission.evaluationData?.evaluatorSignatureDate
+                          submission?.evaluator.signatureDate
                             ? new Date(
                                 submission.evaluatorApprovedAt ||
-                                  submission.evaluationData
-                                    ?.evaluatorSignatureDate
+                                  submission?.evaluator.signatureDate
                               ).toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "long",
@@ -4565,11 +3400,11 @@ export default function ViewResultsModal({
                     <span className="print-date-box">
                       {submission.employeeApprovedAt ||
                       submission.evaluatorApprovedAt ||
-                      submission.submittedAt
+                      submission.created_at
                         ? new Date(
                             submission.employeeApprovedAt ||
                               submission.evaluatorApprovedAt ||
-                              submission.submittedAt
+                              submission.created_at
                           ).toLocaleDateString("en-GB", {
                             day: "2-digit",
                             month: "2-digit",

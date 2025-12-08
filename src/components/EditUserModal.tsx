@@ -90,16 +90,26 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
 
   // Check if user is admin or HR (handle different role formats)
   const userRole = currentUser?.roles;
-  const isAdmin = 
-    userRole === "admin" || 
-    (typeof userRole === 'string' && userRole.toLowerCase() === "admin") ||
-    (Array.isArray(userRole) && userRole.some((r: any) => (typeof r === 'string' ? r.toLowerCase() : r?.name?.toLowerCase()) === "admin"));
-  const isHR = 
-    userRole === "hr" || 
-    (typeof userRole === 'string' && userRole.toLowerCase() === "hr") ||
-    (Array.isArray(userRole) && userRole.some((r: any) => (typeof r === 'string' ? r.toLowerCase() : r?.name?.toLowerCase()) === "hr"));
+  const isAdmin =
+    userRole === "admin" ||
+    (typeof userRole === "string" && userRole.toLowerCase() === "admin") ||
+    (Array.isArray(userRole) &&
+      userRole.some(
+        (r: any) =>
+          (typeof r === "string" ? r.toLowerCase() : r?.name?.toLowerCase()) ===
+          "admin"
+      ));
+  const isHR =
+    userRole === "hr" ||
+    (typeof userRole === "string" && userRole.toLowerCase() === "hr") ||
+    (Array.isArray(userRole) &&
+      userRole.some(
+        (r: any) =>
+          (typeof r === "string" ? r.toLowerCase() : r?.name?.toLowerCase()) ===
+          "hr"
+      ));
   const canEditEmployeeId = isAdmin || isHR;
-  
+
   // Debug: Log role check
   useEffect(() => {
     if (isOpen && canEditEmployeeId) {
@@ -107,7 +117,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         userRole,
         isAdmin,
         isHR,
-        canEditEmployeeId
+        canEditEmployeeId,
       });
     }
   }, [isOpen, canEditEmployeeId, userRole, isAdmin, isHR]);
@@ -229,7 +239,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       // Use the login endpoint to verify password (handles hashing correctly)
       // This is more secure than comparing plain text passwords
       const userEmail = currentUser.email;
-      
+
       if (!userEmail) {
         console.error("User email not found for password verification");
         return false;
@@ -242,7 +252,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         return true;
       } catch (loginError: any) {
         // Login failed - password is incorrect
-        console.log("Password verification failed:", loginError?.message || "Invalid password");
+        console.log(
+          "Password verification failed:",
+          loginError?.message || "Invalid password"
+        );
         return false;
       }
     } catch (err) {
@@ -379,7 +392,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const isBranchHOOrNone = (branch: string | number | undefined): boolean => {
     if (!branch) return false;
     // Convert to string if it's not already
-    const branchStr = typeof branch === 'string' ? branch : String(branch);
+    const branchStr = typeof branch === "string" ? branch : String(branch);
     const branchLower = branchStr.toLowerCase().trim();
     return (
       branchLower === "ho" ||
@@ -395,11 +408,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     // Find the position from the positions array
     // Positions come as { value: string, label: string } from API
     const position = positions.find(
-      (p: any) => p.value === positionId || p.id === positionId || p.name === positionId
+      (p: any) =>
+        p.value === positionId || p.id === positionId || p.name === positionId
     );
     if (!position) return false;
     // Get position name - could be in label, name, or label property
-    const positionName = (position.label || position.name || '').toLowerCase().trim();
+    const positionName = (position.label || position.name || "")
+      .toLowerCase()
+      .trim();
     // Check if position name contains "manager"
     return positionName.includes("manager");
   };
@@ -412,28 +428,42 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       let branchValue = "";
       const userAny = user as any;
       let branchNameOrId = "";
-      
+
       if (user.branch && typeof user.branch === "string") {
         branchNameOrId = user.branch;
-      } else if (userAny.branches && Array.isArray(userAny.branches) && userAny.branches.length > 0) {
+      } else if (
+        userAny.branches &&
+        Array.isArray(userAny.branches) &&
+        userAny.branches.length > 0
+      ) {
         // Handle array format: branches[0].branch_name
-        branchNameOrId = userAny.branches[0]?.branch_name || userAny.branches[0]?.name || userAny.branches[0]?.id || "";
+        branchNameOrId =
+          userAny.branches[0]?.branch_name ||
+          userAny.branches[0]?.name ||
+          userAny.branches[0]?.id ||
+          "";
       } else if (user.branch && typeof user.branch === "object") {
-        branchNameOrId = (user.branch as any).branch_name || (user.branch as any).name || (user.branch as any).id || String(user.branch);
+        branchNameOrId =
+          (user.branch as any).branch_name ||
+          (user.branch as any).name ||
+          (user.branch as any).id ||
+          String(user.branch);
       } else if (user.branch) {
         branchNameOrId = String(user.branch);
       }
-      
+
       // Find branch ID from branchesData by matching name or ID
       if (branchNameOrId && branches && branches.length > 0) {
         const foundBranch = branches.find((b: any) => {
           const bLabel = b.label || b.name || "";
           const bValue = b.value || b.id || "";
-          return bLabel === branchNameOrId || 
-                 bValue === branchNameOrId || 
-                 String(bValue) === String(branchNameOrId) ||
-                 bLabel.includes(branchNameOrId) ||
-                 branchNameOrId.includes(bLabel.split(" /")[0]); // Match branch_name part
+          return (
+            bLabel === branchNameOrId ||
+            bValue === branchNameOrId ||
+            String(bValue) === String(branchNameOrId) ||
+            bLabel.includes(branchNameOrId) ||
+            branchNameOrId.includes(bLabel.split(" /")[0])
+          ); // Match branch_name part
         });
         branchValue = foundBranch?.value || foundBranch?.id || branchNameOrId;
       } else {
@@ -447,30 +477,44 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       } else if (userAny.positions) {
         // Handle object format: positions.label or positions.value
         if (typeof userAny.positions === "object") {
-          userPosition = userAny.positions.label || userAny.positions.name || userAny.positions.value || "";
+          userPosition =
+            userAny.positions.label ||
+            userAny.positions.name ||
+            userAny.positions.value ||
+            "";
         } else if (typeof userAny.positions === "string") {
           userPosition = userAny.positions;
         }
       }
-      
+
       // Find position ID if user.position is a name, otherwise use as-is
       // Positions come as { value: string, label: string } from API
       const foundPosition = positions.find(
-        (p: any) => p.label === userPosition || p.name === userPosition || p.value === userPosition || p.id === userPosition || String(p.value) === String(userPosition)
+        (p: any) =>
+          p.label === userPosition ||
+          p.name === userPosition ||
+          p.value === userPosition ||
+          p.id === userPosition ||
+          String(p.value) === String(userPosition)
       );
-      const positionId = foundPosition?.value || foundPosition?.id || userPosition;
-      
+      const positionId =
+        foundPosition?.value || foundPosition?.id || userPosition;
+
       // Extract role value - could be string, object, or array
       let userRole = "";
       if (user.role && typeof user.role === "string") {
         userRole = user.role;
-      } else if (userAny.roles && Array.isArray(userAny.roles) && userAny.roles.length > 0) {
+      } else if (
+        userAny.roles &&
+        Array.isArray(userAny.roles) &&
+        userAny.roles.length > 0
+      ) {
         // Handle array format: roles[0].name
         userRole = userAny.roles[0]?.name || userAny.roles[0]?.value || "";
       } else if (user.role && typeof user.role === "object") {
         userRole = (user.role as any).name || (user.role as any).value || "";
       }
-      
+
       // If position contains "manager", role must be evaluator
       if (isManagerPosition(positionId)) {
         userRole = "evaluator";
@@ -479,25 +523,29 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       // Fetch employeeId from account data if not already in user object
       const fetchEmployeeId = async () => {
         // Check for employeeId in different possible field names
-        const employeeId = user.employeeId || (user as any).employee_id || (user as any).employeeId;
-        
+        const employeeId =
+          user.employeeId ||
+          (user as any).employee_id ||
+          (user as any).employeeId;
+
         if (!employeeId) {
           try {
             const accounts = await apiService.getAllUsers();
             const account = accounts.find(
-              (acc: any) => 
-                acc.id === user.id || 
+              (acc: any) =>
+                acc.id === user.id ||
                 acc.employeeId === user.id ||
                 acc.employee_id === user.id ||
                 acc.user_id === user.id
             );
-            
+
             // Try different field names for employeeId
-            const foundEmployeeId = account?.employeeId || 
-                                   account?.employee_id || 
-                                   account?.emp_id ||
-                                   account?.id;
-            
+            const foundEmployeeId =
+              account?.employeeId ||
+              account?.employee_id ||
+              account?.emp_id ||
+              account?.id;
+
             if (foundEmployeeId) {
               setFormData((prev) => ({
                 ...prev,
@@ -513,10 +561,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       };
 
       // Get employeeId from user object (check multiple possible field names)
-      const userEmployeeId = user.employeeId || 
-                            (user as any).employee_id || 
-                            (user as any).emp_id ||
-                            undefined;
+      const userEmployeeId =
+        user.employeeId ||
+        (user as any).employee_id ||
+        (user as any).emp_id ||
+        undefined;
 
       // Split name into first and last name if name exists, otherwise use fname/lname
       let fname = "";
@@ -534,9 +583,17 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       let departmentValue = "";
       if (user.department && typeof user.department === "string") {
         departmentValue = user.department;
-      } else if (userAny.departments && Array.isArray(userAny.departments) && userAny.departments.length > 0) {
-        departmentValue = userAny.departments[0]?.name || userAny.departments[0] || "";
-      } else if (userAny.departments && typeof userAny.departments === "object") {
+      } else if (
+        userAny.departments &&
+        Array.isArray(userAny.departments) &&
+        userAny.departments.length > 0
+      ) {
+        departmentValue =
+          userAny.departments[0]?.name || userAny.departments[0] || "";
+      } else if (
+        userAny.departments &&
+        typeof userAny.departments === "object"
+      ) {
         departmentValue = userAny.departments.name || "";
       }
 
@@ -555,7 +612,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         password: user.password || "",
         contact: user.contact || "",
         hireDate: user.hireDate || "",
-        isActive: user.isActive !== undefined ? user.isActive : (userAny.is_active === "active" || userAny.is_active === true),
+        isActive:
+          user.isActive !== undefined
+            ? user.isActive
+            : userAny.is_active === "active" || userAny.is_active === true,
         signature: user.signature || "",
         employeeId: userEmployeeId,
       });
@@ -593,9 +653,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     }
 
     // Position can be a number (ID) or string, check if it's truthy
-    const positionValue = formData.position !== undefined && formData.position !== null 
-      ? String(formData.position).trim() 
-      : "";
+    const positionValue =
+      formData.position !== undefined && formData.position !== null
+        ? String(formData.position).trim()
+        : "";
     if (!positionValue) {
       newErrors.position = "Position is required";
     }
@@ -606,17 +667,19 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     }
 
     // Branch can be a number (ID) or string, check if it's truthy
-    const branchValue = formData.branch !== undefined && formData.branch !== null
-      ? String(formData.branch).trim()
-      : "";
+    const branchValue =
+      formData.branch !== undefined && formData.branch !== null
+        ? String(formData.branch).trim()
+        : "";
     if (!branchValue) {
       newErrors.branch = "Branch is required";
     }
 
     // Role can be a string, check if it's truthy
-    const roleValue = formData.role !== undefined && formData.role !== null
-      ? String(formData.role).trim()
-      : "";
+    const roleValue =
+      formData.role !== undefined && formData.role !== null
+        ? String(formData.role).trim()
+        : "";
     if (!roleValue) {
       newErrors.role = "Role is required";
     }
@@ -696,13 +759,16 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         // Simulate a delay to show the loading animation
         await new Promise((resolve) => setTimeout(resolve, 1000));
         console.log("Calling onSave...");
-        
+
         // Combine fname and lname into name for saving (for backward compatibility)
         const dataToSave = {
           ...formData,
-          name: `${formData.fname || ""} ${formData.lname || ""}`.trim() || formData.name || "",
+          name:
+            `${formData.fname || ""} ${formData.lname || ""}`.trim() ||
+            formData.name ||
+            "",
         };
-        
+
         await onSave(dataToSave);
         console.log("Save completed, refreshing table...");
 
@@ -713,19 +779,30 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             await onRefresh();
             // Small delay to ensure state updates propagate
             await new Promise((resolve) => setTimeout(resolve, 100));
-          } catch (refreshError) {
-            console.error("Error refreshing after save:", refreshError);
-            // Don't show error - the save was successful, refresh is just a bonus
+          } catch (error: any) {
+            if (error.response?.data?.errors) {
+              const backendErrors: Record<string, string> = {};
+
+              Object.keys(error.response.data.errors).forEach((field) => {
+                backendErrors[field] = error.response.data.errors[field][0];
+              });
+              setErrors(backendErrors);
+            }
           }
         }
 
         // Don't show success message here - let handleSaveUser show it
         // This prevents duplicate success messages
         onClose();
-      } catch (error) {
-        console.error("Error saving user:", error);
-        // Error message is already shown by handleSaveUser, so we don't need to show it again
-        // Just keep the modal open so user can see the error and try again
+      } catch (error: any) {
+        if (error.response?.data?.errors) {
+          const backendErrors: Record<string, string> = {};
+
+          Object.keys(error.response.data.errors).forEach((field) => {
+            backendErrors[field] = error.response.data.errors[field][0];
+          });
+          setErrors(backendErrors);
+        }
       } finally {
         console.log("Setting isSaving to false...");
         setIsSaving(false);
@@ -781,9 +858,13 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   }
                   disabled={!canEditEmployeeId}
                   readOnly={canEditEmployeeId ? !isEmployeeIdEditable : true}
-                  onFocus={canEditEmployeeId ? handleEmployeeIdFocus : undefined}
-                  onClick={canEditEmployeeId ? handleEmployeeIdFocus : undefined}
-                  style={canEditEmployeeId ? { cursor: 'pointer' } : undefined}
+                  onFocus={
+                    canEditEmployeeId ? handleEmployeeIdFocus : undefined
+                  }
+                  onClick={
+                    canEditEmployeeId ? handleEmployeeIdFocus : undefined
+                  }
+                  style={canEditEmployeeId ? { cursor: "pointer" } : undefined}
                   className={
                     canEditEmployeeId
                       ? "bg-gray-100 cursor-pointer hover:bg-gray-200"
@@ -990,12 +1071,17 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <div className="space-y-2 w-2/3">
               <Label htmlFor="position">Position *</Label>
               <Combobox
-                options={positions.length > 0 && typeof positions[0] === 'object' && 'value' in positions[0] && 'label' in positions[0]
-                  ? positions // Already in correct format { value, label }
-                  : positions.map((p: any) => ({ 
-                      value: p.value || p.id || p, 
-                      label: p.label || p.name || p 
-                    }))}
+                options={
+                  positions.length > 0 &&
+                  typeof positions[0] === "object" &&
+                  "value" in positions[0] &&
+                  "label" in positions[0]
+                    ? positions // Already in correct format { value, label }
+                    : positions.map((p: any) => ({
+                        value: p.value || p.id || p,
+                        label: p.label || p.name || p,
+                      }))
+                }
                 value={formData.position}
                 onValueChangeAction={(value) =>
                   handleInputChange("position", value as string)

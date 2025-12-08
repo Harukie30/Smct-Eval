@@ -169,6 +169,11 @@ export const apiService = {
     return response.data.user_eval;
   },
 
+  getAllYears: async (): Promise<any> => {
+    const response = await api.get(`getAllYears`);
+    return response.data.years;
+  },
+
   adminDashboard: async (): Promise<any> => {
     const response = await api.get(`/adminDashboard`);
     return response.data;

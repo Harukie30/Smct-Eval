@@ -130,13 +130,13 @@ export default function UserManagementTab() {
         currentPage,
         itemsPerPage
       );
-      
+
       // Handle different response structures
       let pendingUsersData: Employee[] = [];
       let total = 0;
       let lastPage = 1;
       let perPageValue = itemsPerPage;
-      
+
       if (response) {
         // If response has data property (paginated response)
         if (response.data && Array.isArray(response.data)) {
@@ -160,7 +160,7 @@ export default function UserManagementTab() {
           perPageValue = response.per_page || itemsPerPage;
         }
       }
-      
+
       setPendingRegistrations(pendingUsersData);
       setTotalItems(total);
       setPendingTotalItems(total);
@@ -185,13 +185,13 @@ export default function UserManagementTab() {
         currentPage,
         itemsPerPage
       );
-      
+
       // Handle different response structures
       let activeUsersData: Employee[] = [];
       let total = 0;
       let lastPage = 1;
       let perPageValue = itemsPerPage;
-      
+
       if (response) {
         // If response has data property (paginated response)
         if (response.data && Array.isArray(response.data)) {
@@ -215,7 +215,7 @@ export default function UserManagementTab() {
           perPageValue = response.per_page || itemsPerPage;
         }
       }
-      
+
       setActiveRegistrations(activeUsersData);
       setTotalItems(total);
       setActiveTotalItems(total);
@@ -353,7 +353,12 @@ export default function UserManagementTab() {
       Object.keys(updatedUser).forEach((key) => {
         if (updatedUser[key] !== undefined && updatedUser[key] !== null) {
           // Skip these keys - we'll append them with _id suffix separately
-          if (key === "position" || key === "branch" || key === "role" || key === "department") {
+          if (
+            key === "position" ||
+            key === "branch" ||
+            key === "role" ||
+            key === "department"
+          ) {
             return;
           }
           if (key === "avatar" && updatedUser[key] instanceof File) {
@@ -363,69 +368,31 @@ export default function UserManagementTab() {
           }
         }
       });
-      
+
       // Append position as position_id if it exists
       if (updatedUser.position !== undefined && updatedUser.position !== null) {
-        formData.append('position_id', String(updatedUser.position));
+        formData.append("position_id", String(updatedUser.position));
       }
-      
+
       // Append branch as branch_id if it exists
       if (updatedUser.branch !== undefined && updatedUser.branch !== null) {
-        formData.append('branch_id', String(updatedUser.branch));
+        formData.append("branch_id", String(updatedUser.branch));
       }
-      
+
       // Append role as roles if it exists
       if (updatedUser.role !== undefined && updatedUser.role !== null) {
-        formData.append('roles', String(updatedUser.role));
-      }
-      
-      // Append department as department_id if it exists
-      if (updatedUser.department !== undefined && updatedUser.department !== null) {
-        formData.append('department_id', String(updatedUser.department));
+        formData.append("roles", String(updatedUser.role));
       }
 
-      // Log FormData contents for debugging
-      console.log("📤 Sending update request:", {
-        userId: updatedUser.id,
-        formDataKeys: Array.from(formData.keys()),
-        position: updatedUser.position,
-        branch: updatedUser.branch,
-        role: updatedUser.role,
-      });
+      // Append department as department_id if it exists
+      if (
+        updatedUser.department !== undefined &&
+        updatedUser.department !== null
+      ) {
+        formData.append("department_id", String(updatedUser.department));
+      }
 
       await apiService.updateEmployee(formData, updatedUser.id);
-
-      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
-      const accountIndex = accounts.findIndex(
-        (acc: any) =>
-          acc.id === updatedUser.id || acc.employeeId === updatedUser.id
-      );
-
-      if (accountIndex !== -1) {
-        accounts[accountIndex] = {
-          ...accounts[accountIndex],
-          name: updatedUser.name,
-          email: updatedUser.email,
-          position: updatedUser.position,
-          department: updatedUser.department,
-          branch: updatedUser.branch,
-          role: updatedUser.role,
-          username: updatedUser.username || accounts[accountIndex].username,
-          password: updatedUser.password || accounts[accountIndex].password,
-          contact: updatedUser.contact || accounts[accountIndex].contact,
-          hireDate: updatedUser.hireDate || accounts[accountIndex].hireDate,
-          isActive:
-            updatedUser.isActive !== undefined
-              ? updatedUser.isActive
-              : accounts[accountIndex].isActive,
-          employeeId:
-            updatedUser.employeeId !== undefined
-              ? updatedUser.employeeId
-              : accounts[accountIndex].employeeId,
-          updatedAt: new Date().toISOString(),
-        };
-        localStorage.setItem("accounts", JSON.stringify(accounts));
-      }
 
       // Refresh user data to update the table immediately
       await refreshUserData(false);
@@ -435,24 +402,14 @@ export default function UserManagementTab() {
       // Show success toast
       toastMessages.user.updated(updatedUser.name);
     } catch (error: any) {
-      console.error("❌ Error updating user:", error);
-      console.error("Error details:", {
-        message: error?.message,
-        response: error?.response,
-        status: error?.status,
-        data: error?.data,
-        fullError: JSON.stringify(error, null, 2),
-      });
-      
-      const errorMessage = error?.message || 
-                          error?.response?.data?.message || 
-                          error?.data?.message ||
-                          "Failed to update user information. Please try again.";
-      
-      toastMessages.generic.error(
-        "Update Failed",
-        errorMessage
-      );
+      if (error.response?.data?.errors) {
+        Object.keys(error.response.data.errors).forEach((field) => {
+          toastMessages.generic.error(
+            "Update Failed",
+            error.response.data.errors[field][0]
+          );
+        });
+      }
     }
   };
 
@@ -624,11 +581,13 @@ export default function UserManagementTab() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="0">All Roles</SelectItem>
-                      {roles && Array.isArray(roles) && roles.map((role) => (
-                        <SelectItem key={role.id} value={role.id}>
-                          {role.name}
-                        </SelectItem>
-                      ))}
+                      {roles &&
+                        Array.isArray(roles) &&
+                        roles.map((role) => (
+                          <SelectItem key={role.id} value={role.id}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -752,7 +711,9 @@ export default function UserManagementTab() {
                           </TableCell>
                         </TableRow>
                       ))
-                    ) : activeRegistrations && Array.isArray(activeRegistrations) && activeRegistrations.length === 0 ? (
+                    ) : activeRegistrations &&
+                      Array.isArray(activeRegistrations) &&
+                      activeRegistrations.length === 0 ? (
                       <TableRow>
                         <TableCell
                           colSpan={7}
@@ -796,20 +757,30 @@ export default function UserManagementTab() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ) : activeRegistrations && Array.isArray(activeRegistrations) && activeRegistrations.length > 0 ? (
+                    ) : activeRegistrations &&
+                      Array.isArray(activeRegistrations) &&
+                      activeRegistrations.length > 0 ? (
                       activeRegistrations.map((employee) => (
                         <TableRow key={employee.id}>
                           <TableCell className="font-medium">
                             {employee.fname + " " + employee.lname}
                           </TableCell>
                           <TableCell>{employee.email}</TableCell>
-                          <TableCell>{employee.positions?.label || "N/A"}</TableCell>
                           <TableCell>
-                            {employee.branches && Array.isArray(employee.branches) && employee.branches[0]?.branch_name || "N/A"}
+                            {employee.positions?.label || "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            {(employee.branches &&
+                              Array.isArray(employee.branches) &&
+                              employee.branches[0]?.branch_name) ||
+                              "N/A"}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {employee.roles && Array.isArray(employee.roles) && employee.roles[0]?.name || "N/A"}
+                              {(employee.roles &&
+                                Array.isArray(employee.roles) &&
+                                employee.roles[0]?.name) ||
+                                "N/A"}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -1093,7 +1064,9 @@ export default function UserManagementTab() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ) : pendingRegistrations && Array.isArray(pendingRegistrations) && pendingRegistrations.length > 0 ? (
+                      ) : pendingRegistrations &&
+                        Array.isArray(pendingRegistrations) &&
+                        pendingRegistrations.length > 0 ? (
                         pendingRegistrations.map((account) => (
                           <TableRow
                             key={account.id}
