@@ -56,16 +56,53 @@ export default function ProfileModal({
   const { refreshUser } = useAuth();
   const [open, setOpen] = useState(false);
   const [isSignatureSaved, setIsSignatureSaved] = useState(false); // Track if signature is saved
+  const [hasApprovedReset, setHasApprovedReset] = useState(false); // Track if user has approved reset request
 
   // Reset form data when profile changes
   useEffect(() => {
-    setFormData({
+    setFormData((prev) => ({
+      ...prev,
       username: profile?.username,
       email: profile?.email,
-    });
-    // If profile has a signature, it's saved
-    setIsSignatureSaved(!!(profile?.signature && profile.signature !== ''));
+      // Only update signature from profile if formData doesn't have a local change (data URL)
+      signature: (prev?.signature && typeof prev.signature === 'string' && prev.signature.startsWith('data:')) 
+        ? prev.signature 
+        : (profile?.signature || null),
+    }));
+    
+    // Determine if signature is saved:
+    // - If profile has signature AND formData doesn't have a new data URL, it's saved
+    // - If formData has a data URL (starts with 'data:'), it's a newly drawn signature - not saved yet
+    const hasProfileSignature = !!(profile?.signature && profile.signature !== '');
+    const hasFormDataDataURL = formData?.signature && 
+                               typeof formData.signature === 'string' && 
+                               formData.signature.startsWith('data:');
+    
+    if (hasProfileSignature && !hasFormDataDataURL) {
+      // Profile has signature and formData doesn't have a new data URL - signature is saved
+      setIsSignatureSaved(true);
+    } else if (hasFormDataDataURL) {
+      // FormData has a data URL - this is a newly drawn signature, not saved yet
+      setIsSignatureSaved(false);
+    } else if (!hasProfileSignature) {
+      // No profile signature - signature is not saved (or was deleted)
+      setIsSignatureSaved(false);
+    }
+    
+    // Check if user has an approved signature reset request
+    // This would typically come from the profile or a separate API call
+    // For now, we'll check if approvedSignatureReset is 1 (approved)
+    const approvedReset = (profile as any)?.approvedSignatureReset === 1 || 
+                          (profile as any)?.approvedSignatureReset === true;
+    setHasApprovedReset(approvedReset);
   }, [profile]);
+
+  // Refresh user profile when modal opens to check for approved reset requests
+  useEffect(() => {
+    if (isOpen) {
+      refreshUser();
+    }
+  }, [isOpen, refreshUser]);
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -176,18 +213,35 @@ export default function ProfileModal({
 
       await apiService.updateEmployee_auth(formDataToUpload);
       
-      // If signature was included in the save, mark it as saved
+      // If signature was included in the save, mark it as saved and update formData
       if (formData?.signature && formData?.signature !== "" && formData?.signature !== null) {
+        // Update formData to use profile signature (remove data URL) so useEffect detects it as saved
+        setFormData((prev) => ({
+          ...prev,
+          signature: profile?.signature || prev?.signature, // Use profile signature if available, otherwise keep current
+        }));
         setIsSignatureSaved(true);
+        setHasApprovedReset(false); // Reset approval status after saving new signature
       } else if (formData?.signature === null || formData?.signature === "") {
         // Signature was deleted
+        setFormData((prev) => ({
+          ...prev,
+          signature: null,
+        }));
         setIsSignatureSaved(false);
+        setHasApprovedReset(false); // Reset approval status after clearing signature
       }
       
       // Show success toast
       success("Profile updated successfully!");
+      
+      // Refresh user profile to get updated data
       refreshUser();
-      onClose();
+      
+      // Close modal after a brief delay to ensure state is updated
+      setTimeout(() => {
+        onClose();
+      }, 100);
     } catch (error: any) {
       if (error.response?.data?.errors) {
         const backendErrors: Record<string, string> = {};
@@ -212,9 +266,10 @@ export default function ProfileModal({
     try {
       setIsLoading(true);
       await apiService.requestSignatureReset();
-      // After successful reset request, enable the Clear Signature button
-      setIsSignatureSaved(false);
-      success("Signature reset request submitted successfully! You can now clear your signature.");
+      // After successful reset request, wait for admin approval
+      // Don't enable Clear Signature yet - user must wait for approval
+      setHasApprovedReset(false); // Reset to false until approved
+      success("Signature reset request submitted successfully! Please wait for admin approval. You will be able to clear your signature once approved.");
     } catch (error: any) {
       console.error("Error requesting signature reset:", error);
       const errorMessage = error.response?.data?.message || "Failed to request signature reset. Please try again.";
@@ -317,7 +372,7 @@ export default function ProfileModal({
                     >
                       Position
                     </Label>
-                    <Input value={profile?.positions?.label || "Not Assigned Yet"} readOnly />
+                    <Input value={profile?.positions?.label || "Not Assigned "} readOnly />
                   </div>
 
                   <div className="space-y-1.5">
@@ -327,7 +382,7 @@ export default function ProfileModal({
                     <Input
                       value={
                         profile?.departments?.department_name ||
-                        "Not Assigned Yet"
+                        "Not Assigned "
                       }
                       readOnly
                     />
@@ -339,7 +394,7 @@ export default function ProfileModal({
                     </Label>
                     <Input
                       value={
-                        profile?.branches[0]?.branch_name || "Not Assigned Yet"
+                        profile?.branches[0]?.branch_name || "Not Assigned "
                       }
                       readOnly
                     />
@@ -485,6 +540,7 @@ export default function ProfileModal({
                 if (signature === null) {
                   setFormData({ ...formData, signature: null });
                   setIsSignatureSaved(false);
+                  setHasApprovedReset(false); // Reset approval status after clearing
                 } else {
                   setFormData({ ...formData, signature });
                   setIsSignatureSaved(false); // New signature drawn, not saved yet
@@ -494,7 +550,7 @@ export default function ProfileModal({
               required={true}
               hasError={false}
               onRequestReset={handleRequestReset}
-              isSaved={isSignatureSaved}
+              isSaved={isSignatureSaved && !hasApprovedReset} // Disable if saved AND no approved reset
             />
             {errors.signature && (
               <p className="text-sm text-red-500">{errors.signature}</p>
