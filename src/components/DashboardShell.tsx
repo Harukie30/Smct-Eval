@@ -864,7 +864,7 @@ export default function DashboardShell(props: DashboardShellProps) {
             </Button>
           </div>
         )}
-        <main className="flex-1 p-5">
+        <main className="flex-1 pt-5 px-5">
           {topSummary && (
             <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {topSummary}
@@ -1048,7 +1048,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Toggle Button for Help Buttons - Bottom Right */}
+      {/* Toggle Button for Help Buttons - Fixed Bottom Right (Always visible) */}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -1075,7 +1075,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         </TooltipContent>
       </Tooltip>
 
-      {/* Floating Help Buttons - Toggleable */}
+      {/* Floating Help Buttons - Toggleable (Fixed to viewport) */}
       {isHelpButtonsVisible && (
         <>
           {/* Dashboard Guide Button */}
