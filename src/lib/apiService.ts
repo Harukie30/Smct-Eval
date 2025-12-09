@@ -666,18 +666,7 @@ export const apiService = {
   // Get evaluations by authenticated employee
   getMyEvalAuthEmployee: async (): Promise<any[]> => {
     const response = await api.get("/getMyEvalAuthEmployee");
-    const data = response.data;
-
-    if (data.success && data.evaluations) {
-      return data.evaluations;
-    }
-    if (Array.isArray(data.evaluations)) {
-      return data.evaluations;
-    }
-    if (Array.isArray(data)) {
-      return data;
-    }
-    return [];
+    return response.data.myEval_as_Employee;
   },
 
   // Evaluator dashboard total cards
