@@ -34,15 +34,7 @@ import {
 } from "@/lib/quarterUtils";
 import { apiService } from "@/lib/apiService";
 
-interface PerformanceReviewsTabProps {
-  isActive?: boolean;
-  onViewEvaluationAction: (submission: any) => void;
-}
-
-export function PerformanceReviewsTab({
-  isActive = false,
-  onViewEvaluationAction,
-}: PerformanceReviewsTabProps) {
+export default function performanceReviews() {
   const { user } = useUser();
   const { success } = useToast();
   const [submissions, setSubmissions] = useState<any[]>([]);
@@ -62,7 +54,10 @@ export function PerformanceReviewsTab({
         try {
           const userSubmissions = await apiService.getMyEvalAuthEmployee();
           const approvedIds = userSubmissions
-            .filter((sub: any) => sub.employeeSignature && sub.employeeSignature.trim())
+            .filter(
+              (sub: any) =>
+                sub.employeeSignature && sub.employeeSignature.trim()
+            )
             .map((sub: any) => sub.id);
           setApprovedEvaluations(new Set(approvedIds));
         } catch (error) {
@@ -221,7 +216,9 @@ export function PerformanceReviewsTab({
     if (!user?.email) return null;
     try {
       // Fetch submission from API to get approval data
-      const submission = await apiService.getSubmissionById(Number(submissionId));
+      const submission = await apiService.getSubmissionById(
+        Number(submissionId)
+      );
       if (submission && submission.employeeSignature) {
         return {
           employeeSignature: submission.employeeSignature,
@@ -511,16 +508,20 @@ export function PerformanceReviewsTab({
                           alt="No data"
                           className="w-25 h-25 object-contain"
                           style={{
-                            imageRendering: 'auto',
-                            willChange: 'auto',
-                            transform: 'translateZ(0)',
-                            backfaceVisibility: 'hidden',
-                            WebkitBackfaceVisibility: 'hidden',
+                            imageRendering: "auto",
+                            willChange: "auto",
+                            transform: "translateZ(0)",
+                            backfaceVisibility: "hidden",
+                            WebkitBackfaceVisibility: "hidden",
                           }}
                         />
                         <div className="text-gray-500 text-center">
-                          <p className="text-base font-medium mb-1">No data available</p>
-                          <p className="text-sm">Complete your first evaluation to see trends</p>
+                          <p className="text-base font-medium mb-1">
+                            No data available
+                          </p>
+                          <p className="text-sm">
+                            Complete your first evaluation to see trends
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -923,11 +924,17 @@ export function PerformanceReviewsTab({
                                     const submissionWithApproval = {
                                       ...submission,
                                       employeeSignature:
-                                        approvalData?.employeeSignature || submission.employeeSignature || null,
+                                        approvalData?.employeeSignature ||
+                                        submission.employeeSignature ||
+                                        null,
                                       employeeApprovedAt:
-                                        approvalData?.approvedAt || submission.employeeApprovedAt || null,
+                                        approvalData?.approvedAt ||
+                                        submission.employeeApprovedAt ||
+                                        null,
                                     };
-                                    onViewEvaluationAction(submissionWithApproval);
+                                    onViewEvaluationAction(
+                                      submissionWithApproval
+                                    );
                                   }}
                                   className="text-white bg-blue-500 hover:text-white hover:bg-blue-600"
                                 >

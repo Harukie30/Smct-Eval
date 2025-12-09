@@ -664,8 +664,18 @@ export const apiService = {
   },
 
   // Get evaluations by authenticated employee
-  getMyEvalAuthEmployee: async (): Promise<any[]> => {
-    const response = await api.get("/getMyEvalAuthEmployee");
+  getMyEvalAuthEmployee: async (
+    searchTerm?: string,
+    page?: number,
+    perPage?: number
+  ): Promise<any> => {
+    const response = await api.get("/getMyEvalAuthEmployee", {
+      params: {
+        search: searchTerm || "",
+        page: page,
+        per_page: perPage,
+      },
+    });
     return response.data.myEval_as_Employee;
   },
 

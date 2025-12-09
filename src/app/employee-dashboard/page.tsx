@@ -38,28 +38,38 @@ interface Review {
   status: string;
 }
 
+type EvalApiResponse = {
+  data: any[];
+  total: number;
+  last_page: number;
+  per_page: number;
+};
+
 export default function OverviewTab() {
-  const { user: profile } = useUser();
   const [isRefreshingOverview, setIsRefreshingOverview] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(1);
   const [overviewTotal, setOverviewTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
 
-  const [myEvaluations, setMyEvaluations] = useState<any[]>([]);
-  const [totalEvaluations, setTotalEvaluations] = useState<any[]>([]);
-  const [average, setAverage] = useState<any[]>([]);
+  const [myEvaluations, setMyEvaluations] = useState<any>([]);
+  const [totalEvaluations, setTotalEvaluations] = useState<any>(0);
+  const [average, setAverage] = useState<any>(0);
   const [recentEvaluation, setRecentEvaluation] = useState<any>([]);
 
   // Load approved evaluations from API
-  const loadApprovedEvaluations = async () => {
+  const loadApprovedEvaluations = async (searchValue: string) => {
     try {
-      const response = await apiService.getMyEvalAuthEmployee();
+      const response = await apiService.getMyEvalAuthEmployee(
+        searchValue,
+        currentPage,
+        itemsPerPage
+      );
       setMyEvaluations(response.data);
       setOverviewTotal(response.total);
       setTotalPages(response.last_page);
@@ -75,15 +85,32 @@ export default function OverviewTab() {
   };
 
   useEffect(() => {
-    loadApprovedEvaluations();
+    loadApprovedEvaluations(searchTerm);
   }, []);
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      searchTerm === "" ? currentPage : setCurrentPage(1);
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // Fetch API whenever debounced search term changes
+  useEffect(() => {
+    const fetchData = async () => {
+      await loadApprovedEvaluations(debouncedSearchTerm);
+    };
+
+    fetchData();
+  }, [debouncedSearchTerm, currentPage]);
   const refresh = async () => {
     setIsRefreshingOverview(true);
     try {
       // Add delay to show spinner
       await new Promise((resolve) => setTimeout(resolve, 500));
-      loadApprovedEvaluations();
+      loadApprovedEvaluations(searchTerm);
     } catch (error) {
       console.error("Error refreshing on tab click:", error);
     } finally {
@@ -193,70 +220,6 @@ export default function OverviewTab() {
       customerServiceScore * 0.3;
 
     return Math.round(overallWeightedScore * 10) / 10;
-  };
-
-  const getApprovalData = async (submissionId: string) => {
-    if (!profile?.email) return null;
-    try {
-      // Fetch submission from API to get approval data
-      const submission = await apiService.getSubmissionById(
-        Number(submissionId)
-      );
-      if (submission && submission.employeeSignature) {
-        return {
-          employeeSignature: submission.employeeSignature,
-          approvedAt: submission.employeeApprovedAt || submission.updatedAt,
-        };
-      }
-      return null;
-    } catch (error) {
-      console.error("Error fetching approval data:", error);
-      return null;
-    }
-  };
-
-  const getSubmissionHighlight = (
-    submittedAt: string,
-    allSubmissions: any[] = [],
-    submissionId?: string
-  ) => {
-    if (submissionId) {
-      return {
-        className:
-          "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100",
-        badge: { text: "Approved", className: "bg-green-200 text-green-800" },
-        priority: "approved",
-      };
-    }
-
-    const sortedSubmissions = [...allSubmissions].sort(
-      (a, b) =>
-        new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-    );
-    const currentIndex = sortedSubmissions.findIndex(
-      (sub) => sub.submittedAt === submittedAt
-    );
-
-    if (currentIndex === 0) {
-      return {
-        className:
-          "bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200",
-        badge: { text: "New", className: "bg-yellow-200 text-yellow-800" },
-        priority: "new",
-      };
-    } else if (currentIndex === 1) {
-      return {
-        className: "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100",
-        badge: { text: "Recent", className: "bg-blue-100 text-blue-800" },
-        priority: "recent",
-      };
-    } else {
-      return {
-        className: "hover:bg-gray-50",
-        badge: null,
-        priority: "old",
-      };
-    }
   };
 
   return (
@@ -687,7 +650,7 @@ export default function OverviewTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {myEvaluations.map((submission) => {
+                    {myEvaluations.map((submission: any) => {
                       const submittedDate = new Date(submission.created_at);
                       const now = new Date();
                       const hoursDiff =
@@ -814,7 +777,7 @@ export default function OverviewTab() {
                   perPage={perPage}
                   onPageChange={(page) => {
                     setCurrentPage(page);
-                    loadEvaluations(searchTerm, true);
+                    refresh();
                   }}
                 />
               )}

@@ -35,15 +35,7 @@ import {
 } from "@/lib/quarterUtils";
 import { apiService } from "@/lib/apiService";
 
-interface EvaluationHistoryTabProps {
-  isActive?: boolean;
-  onViewEvaluationAction: (submission: any) => void;
-}
-
-export function EvaluationHistoryTab({
-  isActive = false,
-  onViewEvaluationAction: onViewEvaluation,
-}: EvaluationHistoryTabProps) {
+export default function evaluationHistory() {
   const { user } = useUser();
   const { success } = useToast();
   const [submissions, setSubmissions] = useState<any[]>([]);
@@ -67,7 +59,10 @@ export function EvaluationHistoryTab({
         try {
           const userSubmissions = await apiService.getMyEvalAuthEmployee();
           const approvedIds = userSubmissions
-            .filter((sub: any) => sub.employeeSignature && sub.employeeSignature.trim())
+            .filter(
+              (sub: any) =>
+                sub.employeeSignature && sub.employeeSignature.trim()
+            )
             .map((sub: any) => sub.id);
           setApprovedEvaluations(new Set(approvedIds));
         } catch (error) {
@@ -213,7 +208,9 @@ export function EvaluationHistoryTab({
     if (!user?.email) return null;
     try {
       // Fetch submission from API to get approval data
-      const submission = await apiService.getSubmissionById(Number(submissionId));
+      const submission = await apiService.getSubmissionById(
+        Number(submissionId)
+      );
       if (submission && submission.employeeSignature) {
         return {
           employeeSignature: submission.employeeSignature,
@@ -776,9 +773,15 @@ export function EvaluationHistoryTab({
                                     const submissionWithApproval = {
                                       ...quarterSubmissions[0],
                                       employeeSignature:
-                                        approvalData?.employeeSignature || quarterSubmissions[0].employeeSignature || null,
+                                        approvalData?.employeeSignature ||
+                                        quarterSubmissions[0]
+                                          .employeeSignature ||
+                                        null,
                                       employeeApprovedAt:
-                                        approvalData?.approvedAt || quarterSubmissions[0].employeeApprovedAt || null,
+                                        approvalData?.approvedAt ||
+                                        quarterSubmissions[0]
+                                          .employeeApprovedAt ||
+                                        null,
                                     };
                                     onViewEvaluation(submissionWithApproval);
                                   }
@@ -794,26 +797,28 @@ export function EvaluationHistoryTab({
                       })
                     ) : (
                       <TableRow>
-                        <TableCell
-                          colSpan={7}
-                          className="text-center py-8"
-                        >
+                        <TableCell colSpan={7} className="text-center py-8">
                           <div className="flex flex-col items-center justify-center gap-4">
                             <img
                               src="/not-found.gif"
                               alt="No data"
                               className="w-25 h-25 object-contain"
                               style={{
-                                imageRendering: 'auto',
-                                willChange: 'auto',
-                                transform: 'translateZ(0)',
-                                backfaceVisibility: 'hidden',
-                                WebkitBackfaceVisibility: 'hidden',
+                                imageRendering: "auto",
+                                willChange: "auto",
+                                transform: "translateZ(0)",
+                                backfaceVisibility: "hidden",
+                                WebkitBackfaceVisibility: "hidden",
                               }}
                             />
                             <div className="text-gray-500">
-                              <p className="text-base font-medium mb-1">No quarterly data available</p>
-                              <p className="text-sm">Evaluations will be grouped by quarter once available</p>
+                              <p className="text-base font-medium mb-1">
+                                No quarterly data available
+                              </p>
+                              <p className="text-sm">
+                                Evaluations will be grouped by quarter once
+                                available
+                              </p>
                             </div>
                           </div>
                         </TableCell>
