@@ -368,7 +368,8 @@ function RegisterPage() {
     formDataToUpload.append("fname", formData?.fname);
     formDataToUpload.append("lname", formData.lname);
     formDataToUpload.append("username", formData.username);
-    formDataToUpload.append("employee_id", formData.employee_id);
+    // Remove dash from employee_id before sending (keep only numbers)
+    formDataToUpload.append("employee_id", formData.employee_id.replace(/-/g, ""));
     formDataToUpload.append("email", formData.email);
     formDataToUpload.append("contact", formData.contact);
     formDataToUpload.append("position_id", String(formData.position_id));
@@ -882,14 +883,22 @@ function RegisterPage() {
                       <SignaturePad
                         value={formData.signature}
                         onChangeAction={(signature) => {
-                          setFormData({ ...formData, signature });
+                          // Clear signature when null is passed (from Clear button)
+                          setFormData({ 
+                            ...formData, 
+                            signature: signature || "" 
+                          });
                           if (signature && signatureError) {
+                            setSignatureError(false);
+                          } else if (!signature) {
+                            // Clear signature error when signature is cleared
                             setSignatureError(false);
                           }
                         }}
                         className="w-full"
                         required={true}
                         hasError={signatureError}
+                        hideRequestReset={true}
                       />
                       <p className="text-sm text-gray-500">
                         By drawing your signature above, you agree to the terms

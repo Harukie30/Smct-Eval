@@ -15,6 +15,7 @@ interface SignaturePadProps {
   hasError?: boolean;
   onRequestReset?: () => void;
   isSaved?: boolean; // Indicates if the signature has been saved to the server
+  hideRequestReset?: boolean; // Hide the "Request Reset" button
 }
 
 export default function SignaturePad({
@@ -25,6 +26,7 @@ export default function SignaturePad({
   hasError = false,
   onRequestReset,
   isSaved = false,
+  hideRequestReset = false,
 }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -275,15 +277,17 @@ export default function SignaturePad({
             )}
           </Tooltip>
           
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onRequestReset || (() => {})}
-            className="text-orange-600 border-orange-300 hover:bg-orange-50"
-          >
-            Request Reset
-          </Button>
+          {!hideRequestReset && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onRequestReset || (() => {})}
+              className="text-orange-600 border-orange-300 hover:bg-orange-50"
+            >
+              Request Reset
+            </Button>
+          )}
         </div>
 
         {hasSignature && (
