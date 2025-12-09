@@ -23,32 +23,52 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/useToast";
-import {
-  getQuarterFromEvaluationData,
-  getQuarterColor,
-} from "@/lib/quarterUtils";
 import { apiService } from "@/lib/apiService";
+import EvaluationsPagination from "@/components/paginationComponent";
+import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+
+interface Review {
+  id: number;
+  employee: any;
+  evaluator: any;
+  reviewTypeProbationary: number | string;
+  reviewTypeRegular: number | string;
+  created_at: string;
+  rating: number;
+  status: string;
+}
 
 export default function OverviewTab() {
   const { user: profile } = useUser();
-  const { success } = useToast();
-  const [loading, setLoading] = useState(true);
   const [isRefreshingOverview, setIsRefreshingOverview] = useState(false);
-  const [overviewSearchTerm, setOverviewSearchTerm] = useState("");
-  const [overviewPage, setOverviewPage] = useState(1);
-  const itemsPerPage = 4;
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [overviewTotal, setOverviewTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [perPage, setPerPage] = useState(0);
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
+
   const [myEvaluations, setMyEvaluations] = useState<any[]>([]);
-  const isFirstMount = useRef(true);
-  const lastApprovedEvaluationsRef = useRef<string>("[]");
-  const lastSubmissionsCountRef = useRef<number>(0);
-  const lastSubmissionsTimestampRef = useRef<string>("");
+  const [totalEvaluations, setTotalEvaluations] = useState<any[]>([]);
+  const [average, setAverage] = useState<any[]>([]);
+  const [recentEvaluation, setRecentEvaluation] = useState<any>([]);
 
   // Load approved evaluations from API
   const loadApprovedEvaluations = async () => {
     try {
-      const userSubmissions = await apiService.getMyEvalAuthEmployee();
-      console.log("test", userSubmissions);
-      setMyEvaluations(userSubmissions);
+      const response = await apiService.getMyEvalAuthEmployee();
+      setMyEvaluations(response.data);
+      setOverviewTotal(response.total);
+      setTotalPages(response.last_page);
+      setPerPage(response.per_page);
+
+      const dashboard = await apiService.employeeDashboard();
+      setTotalEvaluations(dashboard.total_evaluations);
+      setAverage(dashboard.average);
+      setRecentEvaluation(dashboard.recent_evaluation);
     } catch (error) {
       console.error("Error loading approved evaluations:", error);
     }
@@ -71,6 +91,21 @@ export default function OverviewTab() {
     }
   };
 
+  const handleViewEvaluation = async (review: Review) => {
+    try {
+      const submission = await apiService.getSubmissionById(review.id);
+
+      if (submission) {
+        setSelectedSubmission(submission);
+        setIsViewResultsModalOpen(true);
+      } else {
+        console.error("Submission not found for review ID:", review.id);
+      }
+    } catch (error) {
+      console.error("Error fetching submission details:", error);
+    }
+  };
+
   // Helper functions
   const getTimeAgo = (submittedAt: string) => {
     const submissionDate = new Date(submittedAt);
@@ -85,6 +120,13 @@ export default function OverviewTab() {
     if (diffInHours < 24) return `${diffInHours}h ago`;
     if (diffInDays < 7) return `${diffInDays}d ago`;
     return new Date(submittedAt).toLocaleDateString();
+  };
+
+  const getQuarterColor = (quarter: string): string => {
+    if (quarter.includes("Q1")) return "bg-blue-100 text-blue-800";
+    if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
+    if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
+    return "bg-purple-100 text-purple-800";
   };
 
   const calculateOverallRating = (evaluationData: any) => {
@@ -178,7 +220,7 @@ export default function OverviewTab() {
     allSubmissions: any[] = [],
     submissionId?: string
   ) => {
-    if (submissionId && isEvaluationApproved(submissionId)) {
+    if (submissionId) {
       return {
         className:
           "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100",
@@ -219,6 +261,197 @@ export default function OverviewTab() {
 
   return (
     <>
+      <div className="flex flex-row gap-4 space-around mb-5">
+        <Card className="w-1/4 h-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Overall Rating
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isRefreshingOverview ? (
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-6 w-16" />
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center space-x-2">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {average}
+                  </span>
+                  <span className="text-sm text-gray-500">/ 5.0</span>
+                </div>
+                <Badge
+                  className={`mt-2 ${
+                    Number(average) > 0
+                      ? (() => {
+                          const avgScore = Number(average);
+                          if (avgScore >= 4.5)
+                            return "text-green-600 bg-green-100";
+                          if (avgScore >= 4.0)
+                            return "text-blue-600 bg-blue-100";
+                          if (avgScore >= 3.5)
+                            return "text-yellow-600 bg-yellow-100";
+                          return "text-red-600 bg-red-100";
+                        })()
+                      : "text-gray-600 bg-gray-100"
+                  }`}
+                >
+                  {Number(average) > 0
+                    ? (() => {
+                        const avgScore = Number(average);
+                        if (avgScore >= 4.5) return "Outstanding";
+                        if (avgScore >= 4.0) return "Good";
+                        if (avgScore >= 3.5) return "Average";
+                        return "Needs Improvement";
+                      })()
+                    : "No Data"}
+                </Badge>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="w-1/4 h-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Reviews Received
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isRefreshingOverview ? (
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-8" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+            ) : (
+              <>
+                <div className="text-3xl font-bold text-gray-900">
+                  {totalEvaluations}
+                </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  {Number(totalEvaluations) === 1 ? "Review" : "Reviews"} total
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="w-1/4 h-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Evaluation Score
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isRefreshingOverview ? (
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-6 w-24" />
+              </div>
+            ) : (
+              <>
+                <div className="text-3xl font-bold text-blue-600">
+                  {recentEvaluation.rating}
+                  /5.00
+                </div>
+                <p className="text-sm text-gray-500 mt-1">Latest evaluation</p>
+                <div className="mt-2">
+                  <Badge
+                    className={`text-xs ${
+                      Number(recentEvaluation.rating) > 0
+                        ? (() => {
+                            const score = Number(recentEvaluation.rating);
+                            if (score >= 4.5)
+                              return "bg-green-100 text-green-800";
+                            if (score >= 4.0)
+                              return "bg-blue-100 text-blue-800";
+                            if (score >= 3.5)
+                              return "bg-yellow-100 text-yellow-800";
+                            return "bg-red-100 text-red-800";
+                          })()
+                        : "bg-gray-100 text-gray-800"
+                    }`}
+                  >
+                    {Number(recentEvaluation.rating) > 0
+                      ? (() => {
+                          const score = Number(recentEvaluation.rating);
+                          if (score >= 4.5) return "Outstanding";
+                          if (score >= 4.0) return "Exceeds Expectations";
+                          if (score >= 3.5) return "Meets Expectations";
+                          return "Needs Improvement";
+                        })()
+                      : "No Data"}
+                  </Badge>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="w-1/4 h-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Performance Rating
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isRefreshingOverview ? (
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-4 w-32" />
+                <div className="flex items-center space-x-1">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-20 ml-1" />
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="text-3xl font-bold text-orange-600">
+                  {average}
+                  /5.0
+                </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  Average across all evaluations
+                </p>
+                <div className="mt-2 flex items-center space-x-1">
+                  <div className="flex space-x-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <svg
+                        key={star}
+                        className={`w-4 h-4 ${(() => {
+                          return Number(average) >= star
+                            ? "text-yellow-400"
+                            : "text-gray-300";
+                        })()}`}
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
+                  </div>
+                  <span className="text-xs text-gray-600 ml-1">
+                    {Number(totalEvaluations) > 0
+                      ? `${totalEvaluations} review${
+                          Number(totalEvaluations) !== 1 ? "s" : ""
+                        }`
+                      : "No reviews"}
+                  </span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <div className="flex justify-between items-start">
@@ -272,13 +505,13 @@ export default function OverviewTab() {
             <Input
               type="text"
               placeholder="Search by supervisor, rating, date."
-              value={overviewSearchTerm}
-              onChange={(e) => setOverviewSearchTerm(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-2 w-full border-gray-300 focus:border-blue-500 focus:ring-blue-500"
             />
-            {overviewSearchTerm && (
+            {searchTerm && (
               <button
-                onClick={() => setOverviewSearchTerm("")}
+                onClick={() => setSearchTerm("")}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
               >
                 <X className="h-5 w-5 text-lg" />
@@ -287,7 +520,7 @@ export default function OverviewTab() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {isRefreshingOverview || loading ? (
+          {isRefreshingOverview ? (
             <div className="relative max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table mx-4">
               <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                 <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
@@ -359,7 +592,7 @@ export default function OverviewTab() {
                 </TableBody>
               </Table>
             </div>
-          ) : submissions.length === 0 ? (
+          ) : myEvaluations.length === 0 && searchTerm === "" ? (
             <div className="text-center py-8">
               <div className="text-gray-500 text-lg mb-2">
                 No performance reviews yet
@@ -369,7 +602,7 @@ export default function OverviewTab() {
                 your manager.
               </div>
             </div>
-          ) : myEvaluations.length === 0 ? (
+          ) : myEvaluations.length === 0 && searchTerm !== "" ? (
             <div className="text-center py-8">
               <div className="flex flex-col items-center justify-center gap-4 mb-4">
                 <img
@@ -387,29 +620,21 @@ export default function OverviewTab() {
                 <div className="text-gray-500">
                   <p className="text-base font-medium mb-1">No results found</p>
                   <p className="text-sm">
-                    No performance reviews match "{overviewSearchTerm}"
+                    No performance reviews match "{searchTerm}"
                   </p>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setOverviewSearchTerm("")}
-                className="text-white hover:text-white bg-blue-500 hover:bg-blue-600"
-              >
-                Clear search
-              </Button>
             </div>
           ) : (
             <>
-              {overviewSearchTerm && (
+              {searchTerm && (
                 <div className="mb-3 mx-4 text-sm text-gray-600">
                   Found{" "}
                   <span className="font-semibold text-blue-600">
                     {myEvaluations.length}
                   </span>{" "}
                   result{myEvaluations.length !== 1 ? "s" : ""} for "
-                  {overviewSearchTerm}"
+                  {searchTerm}"
                 </div>
               )}
 
@@ -463,47 +688,74 @@ export default function OverviewTab() {
                   </TableHeader>
                   <TableBody>
                     {myEvaluations.map((submission) => {
-                      const highlight = getSubmissionHighlight(
-                        submission.created_at,
-                        submissions,
-                        submission.id
-                      );
+                      const submittedDate = new Date(submission.created_at);
+                      const now = new Date();
+                      const hoursDiff =
+                        (now.getTime() - submittedDate.getTime()) /
+                        (1000 * 60 * 60);
+                      const isNew = hoursDiff <= 24;
+                      const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
+                      const isCompleted = submission.status === "completed";
+                      const isPending = submission.status === "pending";
+
+                      // Determine row background color
+                      let rowClassName = "hover:bg-gray-100 transition-colors";
+                      if (isCompleted) {
+                        rowClassName =
+                          "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
+                      } else if (isNew) {
+                        rowClassName =
+                          "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
+                      } else if (isRecent) {
+                        rowClassName =
+                          "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
+                      } else if (isPending) {
+                        rowClassName =
+                          "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
+                      }
                       return (
-                        <TableRow
-                          key={submission.id}
-                          className={highlight.className}
-                        >
+                        <TableRow key={submission.id} className={rowClassName}>
                           <TableCell className="w-1/6 font-medium pl-4">
                             <div className="flex items-center gap-2">
-                              {submission.evaluationData?.supervisor ||
-                                "Not specified"}
-                              {highlight.badge && (
-                                <Badge
-                                  variant="secondary"
-                                  className={`${highlight.badge.className} text-xs`}
-                                >
-                                  {highlight.badge.text}
+                              {submission.evaluator.fname +
+                                " " +
+                                submission.evaluator.lname || "Not specified"}
+                              {isNew && (
+                                <Badge className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 font-semibold">
+                                  ⚡ New
+                                </Badge>
+                              )}
+                              {!isNew && isRecent && (
+                                <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 font-semibold">
+                                  🕐 Recent
+                                </Badge>
+                              )}
+                              {isPending && (
+                                <Badge className="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 font-semibold">
+                                  🕐 Pending
+                                </Badge>
+                              )}
+
+                              {isCompleted && (
+                                <Badge className="bg-green-100 text-green-800 text-xs px-2 py-0.5 font-semibold">
+                                  ✓ COMPLETED
                                 </Badge>
                               )}
                             </div>
                           </TableCell>
                           <TableCell className="w-1/6 text-right font-semibold pr-25">
-                            {submission.evaluationData
-                              ? calculateOverallRating(
-                                  submission.evaluationData
-                                )
-                              : submission.rating}
+                            {submission.rating}
                             /5
                           </TableCell>
                           <TableCell className="w-1/6 pl-6">
                             <div className="flex flex-col">
                               <span className="font-medium">
                                 {new Date(
-                                  submission.submittedAt
+                                  submission.created_at
                                 ).toLocaleDateString()}
                               </span>
                               <span className="text-xs text-gray-500">
-                                {getTimeAgo(submission.submittedAt)}
+                                {getTimeAgo(submission.created_at)}
                               </span>
                             </div>
                           </TableCell>
@@ -511,20 +763,20 @@ export default function OverviewTab() {
                             <div className="flex justify-center">
                               <Badge
                                 className={getQuarterColor(
-                                  getQuarterFromEvaluationData(
-                                    submission.evaluationData || submission
+                                  String(
+                                    submission.reviewTypeProbationary ||
+                                      submission.reviewTypeRegular
                                   )
                                 )}
                               >
-                                {getQuarterFromEvaluationData(
-                                  submission.evaluationData || submission
-                                )}
+                                {submission.reviewTypeRegular ||
+                                  "M" + submission.reviewTypeProbationary}
                               </Badge>
                             </div>
                           </TableCell>
                           <TableCell className="w-1/6">
                             <div className="flex justify-center">
-                              {isEvaluationApproved(submission.id) ? (
+                              {submission.status === "completed" ? (
                                 <Badge className="bg-green-100 text-green-800">
                                   ✓ Approved
                                 </Badge>
@@ -539,23 +791,7 @@ export default function OverviewTab() {
                             <Button
                               className="bg-blue-500 text-white hover:bg-green-700 hover:text-white"
                               size="sm"
-                              onClick={async () => {
-                                const approvalData = await getApprovalData(
-                                  submission.id.toString()
-                                );
-                                const submissionWithApproval = {
-                                  ...submission,
-                                  employeeSignature:
-                                    approvalData?.employeeSignature ||
-                                    submission.employeeSignature ||
-                                    null,
-                                  employeeApprovedAt:
-                                    approvalData?.approvedAt ||
-                                    submission.employeeApprovedAt ||
-                                    null,
-                                };
-                                onViewEvaluation(submissionWithApproval);
-                              }}
+                              onClick={() => handleViewEvaluation(submission)}
                             >
                               <Eye className="w-4 h-4" />
                               View
@@ -569,84 +805,31 @@ export default function OverviewTab() {
               </div>
 
               {/* Pagination Controls - Show when more than 4 items */}
-              {myEvaluations.length > 4 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-0 mt-3 md:mt-4 px-4">
-                  <div className="text-xs md:text-sm text-gray-600 order-2 sm:order-1">
-                    Showing {overviewStartIndex + 1} to{" "}
-                    {Math.min(overviewEndIndex, myEvaluations.length)} of{" "}
-                    {myEvaluations.length} records
-                  </div>
-                  <div className="flex items-center gap-1.5 md:gap-2 order-1 sm:order-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setOverviewPage((prev) => Math.max(1, prev - 1))
-                      }
-                      disabled={overviewPage === 1}
-                      className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                    >
-                      Previous
-                    </Button>
-                    <div className="flex items-center gap-0.5 md:gap-1">
-                      {Array.from(
-                        { length: overviewTotalPages },
-                        (_, i) => i + 1
-                      ).map((page) => {
-                        if (
-                          page === 1 ||
-                          page === overviewTotalPages ||
-                          (page >= overviewPage - 1 && page <= overviewPage + 1)
-                        ) {
-                          return (
-                            <Button
-                              key={page}
-                              variant={
-                                overviewPage === page ? "default" : "outline"
-                              }
-                              size="sm"
-                              onClick={() => setOverviewPage(page)}
-                              className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
-                                overviewPage === page
-                                  ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
-                                  : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                              }`}
-                            >
-                              {page}
-                            </Button>
-                          );
-                        } else if (
-                          page === overviewPage - 2 ||
-                          page === overviewPage + 2
-                        ) {
-                          return (
-                            <span
-                              key={page}
-                              className="text-gray-400 text-xs md:text-sm"
-                            >
-                              ...
-                            </span>
-                          );
-                        }
-                        return null;
-                      })}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setOverviewPage((prev) =>
-                          Math.min(overviewTotalPages, prev + 1)
-                        )
-                      }
-                      disabled={overviewPage === overviewTotalPages}
-                      className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
+              {/* Pagination Controls */}
+              {overviewTotal > itemsPerPage && (
+                <EvaluationsPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  total={overviewTotal}
+                  perPage={perPage}
+                  onPageChange={(page) => {
+                    setCurrentPage(page);
+                    loadEvaluations(searchTerm, true);
+                  }}
+                />
               )}
+
+              {/* View Results Modal */}
+              <ViewResultsModal
+                isOpen={isViewResultsModalOpen}
+                onCloseAction={() => {
+                  setIsViewResultsModalOpen(false);
+                  setSelectedSubmission(null);
+                }}
+                submission={selectedSubmission}
+                showApprovalButton={false}
+                isEvaluatorView={false}
+              />
             </>
           )}
         </CardContent>
