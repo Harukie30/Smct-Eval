@@ -94,6 +94,7 @@ export default function AreaManagersTab() {
   const [areaManagersPage, setAreaManagersPage] = useState(1);
   const [areaManagersData, setAreaManagersData] = useState<Employee[]>([]);
   const [loadingAreaManagers, setLoadingAreaManagers] = useState(true);
+  const [areaManagersRefreshing, setAreaManagersRefreshing] = useState(false);
   const itemsPerPage = 8;
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
@@ -209,28 +210,40 @@ export default function AreaManagersTab() {
     });
   };
 
-  useEffect(() => {
-    const loadAreaManagers = async () => {
-      setLoadingAreaManagers(true);
-      try {
-        const data = await apiService.getAllAreaManager();
-        console.log("Area Managers API Response:", data);
-        
-        const normalizedData = normalizeAreaManagerData(data);
-        console.log("Normalized Area Managers Data:", normalizedData);
-        
-        setAreaManagersData(normalizedData);
-      } catch (error) {
-        console.error("Error loading area managers:", error);
-        // Set empty array if API fails - no fallback needed
-        setAreaManagersData([]);
-      } finally {
-        setLoadingAreaManagers(false);
-      }
-    };
+  // Load area managers from API
+  const loadAreaManagers = async () => {
+    setLoadingAreaManagers(true);
+    try {
+      const data = await apiService.getAllAreaManager();
+      console.log("Area Managers API Response:", data);
+      
+      const normalizedData = normalizeAreaManagerData(data);
+      console.log("Normalized Area Managers Data:", normalizedData);
+      
+      setAreaManagersData(normalizedData);
+    } catch (error) {
+      console.error("Error loading area managers:", error);
+      // Set empty array if API fails - no fallback needed
+      setAreaManagersData([]);
+    } finally {
+      setLoadingAreaManagers(false);
+    }
+  };
 
+  // Load area managers on mount
+  useEffect(() => {
     loadAreaManagers();
   }, []);
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    setAreaManagersRefreshing(true);
+    try {
+      await loadAreaManagers();
+    } finally {
+      setAreaManagersRefreshing(false);
+    }
+  };
 
   // Memoized area managers (use API data)
   const areaManagers = useMemo(() => {
@@ -439,11 +452,31 @@ export default function AreaManagersTab() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div>
-            <CardTitle>Area Managers</CardTitle>
-            <CardDescription>
-              List of all area managers in the organization
-            </CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Area Managers</CardTitle>
+              <CardDescription>
+                List of all area managers in the organization
+              </CardDescription>
+            </div>
+            <Button
+              onClick={handleRefresh}
+              disabled={areaManagersRefreshing || loadingAreaManagers}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+              title="Refresh area managers data"
+            >
+              {areaManagersRefreshing ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Refreshing...</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <span>🔄</span>
+                  <span>Refresh</span>
+                </div>
+              )}
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
