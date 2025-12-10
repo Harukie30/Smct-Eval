@@ -74,11 +74,6 @@ export default function OverviewTab() {
       setOverviewTotal(response.total);
       setTotalPages(response.last_page);
       setPerPage(response.per_page);
-
-      const dashboard = await apiService.employeeDashboard();
-      setTotalEvaluations(dashboard.total_evaluations);
-      setAverage(dashboard.average);
-      setRecentEvaluation(dashboard.recent_evaluation);
     } catch (error) {
       console.error("Error loading approved evaluations:", error);
     }
@@ -86,11 +81,22 @@ export default function OverviewTab() {
 
   useEffect(() => {
     loadApprovedEvaluations(searchTerm);
+    const loadDashboard = async () => {
+      const dashboard = await apiService.employeeDashboard();
+      setTotalEvaluations(dashboard.total_evaluations);
+      setAverage(dashboard.average);
+      setRecentEvaluation(dashboard.recent_evaluation);
+    };
+    loadDashboard();
   }, []);
 
   useEffect(() => {
+    console.log("test");
     const handler = setTimeout(() => {
-      searchTerm === "" ? currentPage : setCurrentPage(1);
+      if (searchTerm !== "" && currentPage !== 1) {
+        setCurrentPage(1);
+      }
+
       setDebouncedSearchTerm(searchTerm);
     }, 500);
 
@@ -99,12 +105,9 @@ export default function OverviewTab() {
 
   // Fetch API whenever debounced search term changes
   useEffect(() => {
-    const fetchData = async () => {
-      await loadApprovedEvaluations(debouncedSearchTerm);
-    };
-
-    fetchData();
+    loadApprovedEvaluations(debouncedSearchTerm);
   }, [debouncedSearchTerm, currentPage]);
+
   const refresh = async () => {
     setIsRefreshingOverview(true);
     try {

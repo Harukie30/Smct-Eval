@@ -88,7 +88,7 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [isManagementOpen, setIsManagementOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [isLeadershipOpen, setIsLeadershipOpen] = useState(false);
-  
+
   // Toggle state for help buttons (Contact Devs & Dashboard Guide)
   const [isHelpButtonsVisible, setIsHelpButtonsVisible] = useState(true);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
@@ -474,10 +474,10 @@ export default function DashboardShell(props: DashboardShellProps) {
       </header>
 
       {/* Main Layout with Sidebar */}
-      <div className="flex overflow-hidden">
+      <div className="flex overflow-y-hidden">
         {/* Sidebar */}
         <div
-          className={`relative overflow-hidden bg-blue-600 transition-all duration-400 ${
+          className={`relative overflow-hidden bg-blue-600 transition-all duration-400  ${
             isSidebarOpen ? "w-64" : "w-0"
           }`}
         >
@@ -1064,8 +1064,8 @@ export default function DashboardShell(props: DashboardShellProps) {
             )}
           </Button>
         </TooltipTrigger>
-        <TooltipContent 
-          side="left" 
+        <TooltipContent
+          side="left"
           sideOffset={10}
           className="bg-blue-600 text-white border-blue-500"
         >
@@ -1086,9 +1086,9 @@ export default function DashboardShell(props: DashboardShellProps) {
             className="fixed bottom-32 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0"
             title="Dashboard Guide"
           >
-            <img 
-              src="/faq.png" 
-              alt="Help" 
+            <img
+              src="/faq.png"
+              alt="Help"
               className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
             />
           </Button>

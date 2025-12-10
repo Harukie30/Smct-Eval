@@ -41,32 +41,10 @@ export default function performanceReviews() {
   const [loading, setLoading] = useState(true);
   const [isRefreshingReviews, setIsRefreshingReviews] = useState(false);
   const [reviewsPage, setReviewsPage] = useState(1);
-  const itemsPerPage = 4;
-  const [approvedEvaluations, setApprovedEvaluations] = useState<Set<string>>(
-    new Set()
-  );
-  const isFirstMount = useRef(true);
 
-  // Load approved evaluations from API
-  useEffect(() => {
-    const loadApprovedEvaluations = async () => {
-      if (user?.email) {
-        try {
-          const userSubmissions = await apiService.getMyEvalAuthEmployee();
-          const approvedIds = userSubmissions
-            .filter(
-              (sub: any) =>
-                sub.employeeSignature && sub.employeeSignature.trim()
-            )
-            .map((sub: any) => sub.id);
-          setApprovedEvaluations(new Set(approvedIds));
-        } catch (error) {
-          console.error("Error loading approved evaluations:", error);
-        }
-      }
-    };
-    loadApprovedEvaluations();
-  }, [user?.email]);
+  const [totalEvaluations, setTotalEvaluations] = useState<any>(0);
+  const [average, setAverage] = useState<any>(0);
+  const [recentEvaluation, setRecentEvaluation] = useState<any>([]);
 
   // Load submissions data from API
   const loadSubmissions = async () => {
@@ -74,7 +52,7 @@ export default function performanceReviews() {
       setLoading(true);
       // Use employee-specific endpoint
       const userSubmissions = await apiService.getMyEvalAuthEmployee();
-      setSubmissions(userSubmissions);
+      setSubmissions(userSubmissions.data);
     } catch (error) {
       console.error("Error loading submissions:", error);
     } finally {
@@ -85,30 +63,16 @@ export default function performanceReviews() {
   // Initial load
   useEffect(() => {
     loadSubmissions();
+    const loadDashboard = async () => {
+      const dashboard = await apiService.employeeDashboard();
+      setTotalEvaluations(dashboard.total_evaluations);
+      setAverage(dashboard.average);
+      setRecentEvaluation(dashboard.recent_evaluation);
+    };
+    loadDashboard();
   }, [user]);
 
   // Refresh when tab becomes active
-  useEffect(() => {
-    if (isFirstMount.current) {
-      isFirstMount.current = false;
-      return;
-    }
-
-    if (isActive && user) {
-      const refreshOnTabClick = async () => {
-        setIsRefreshingReviews(true);
-        try {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          await loadSubmissions();
-        } catch (error) {
-          console.error("Error refreshing on tab click:", error);
-        } finally {
-          setIsRefreshingReviews(false);
-        }
-      };
-      refreshOnTabClick();
-    }
-  }, [isActive, user]);
 
   const handleRefreshSubmissions = async () => {
     setIsRefreshingReviews(true);
@@ -208,74 +172,6 @@ export default function performanceReviews() {
     return Math.round(overallWeightedScore * 10) / 10;
   };
 
-  const isEvaluationApproved = (submissionId: string) => {
-    return approvedEvaluations.has(submissionId);
-  };
-
-  const getApprovalData = async (submissionId: string) => {
-    if (!user?.email) return null;
-    try {
-      // Fetch submission from API to get approval data
-      const submission = await apiService.getSubmissionById(
-        Number(submissionId)
-      );
-      if (submission && submission.employeeSignature) {
-        return {
-          employeeSignature: submission.employeeSignature,
-          approvedAt: submission.employeeApprovedAt || submission.updatedAt,
-        };
-      }
-      return null;
-    } catch (error) {
-      console.error("Error fetching approval data:", error);
-      return null;
-    }
-  };
-
-  const getSubmissionHighlight = (
-    submittedAt: string,
-    allSubmissions: any[] = [],
-    submissionId?: string
-  ) => {
-    if (submissionId && isEvaluationApproved(submissionId)) {
-      return {
-        className:
-          "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100",
-        badge: { text: "Approved", className: "bg-green-200 text-green-800" },
-        priority: "approved",
-      };
-    }
-
-    const sortedSubmissions = [...allSubmissions].sort(
-      (a, b) =>
-        new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-    );
-    const currentIndex = sortedSubmissions.findIndex(
-      (sub) => sub.submittedAt === submittedAt
-    );
-
-    if (currentIndex === 0) {
-      return {
-        className:
-          "bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200",
-        badge: { text: "New", className: "bg-yellow-200 text-yellow-800" },
-        priority: "new",
-      };
-    } else if (currentIndex === 1) {
-      return {
-        className: "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100",
-        badge: { text: "Recent", className: "bg-blue-100 text-blue-800" },
-        priority: "recent",
-      };
-    } else {
-      return {
-        className: "hover:bg-gray-50",
-        badge: null,
-        priority: "old",
-      };
-    }
-  };
-
   // Chart data
   const chartData = useMemo(() => {
     return submissions
@@ -290,61 +186,20 @@ export default function performanceReviews() {
         rating: submission.evaluationData
           ? calculateOverallRating(submission.evaluationData)
           : submission.rating,
-        date: new Date(submission.submittedAt).toLocaleDateString("en-US", {
+        date: new Date(submission.created_at).toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
         }),
-        fullDate: new Date(submission.submittedAt).toLocaleDateString(),
+        fullDate: new Date(submission.created_at).toLocaleDateString(),
       }))
       .reverse();
   }, [submissions]);
 
-  // Performance metrics
-  const performanceMetrics = useMemo(() => {
-    const ratings = submissions
-      .map((s) =>
-        s.evaluationData ? calculateOverallRating(s.evaluationData) : s.rating
-      )
-      .filter((r) => r > 0);
-    const averageRating =
-      ratings.length > 0
-        ? (ratings.reduce((sum, r) => sum + r, 0) / ratings.length).toFixed(1)
-        : "0.0";
-    const latestRating = ratings.length > 0 ? ratings[0] : 0;
-    const trend = ratings.length > 1 ? latestRating - ratings[1] : 0;
-
-    return { ratings, averageRating, latestRating, trend };
-  }, [submissions]);
-
-  // Pagination calculations
-  const sortedSubmissionsForPagination = useMemo(() => {
-    return [...submissions].sort(
-      (a, b) =>
-        new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-    );
-  }, [submissions]);
-
-  const reviewsTotalPages = Math.ceil(
-    sortedSubmissionsForPagination.length / itemsPerPage
-  );
-  const reviewsStartIndex = (reviewsPage - 1) * itemsPerPage;
-  const reviewsEndIndex = reviewsStartIndex + itemsPerPage;
-  const reviewsPaginated = sortedSubmissionsForPagination.slice(
-    reviewsStartIndex,
-    reviewsEndIndex
-  );
-
-  // Reset to page 1 when submissions change
-  useEffect(() => {
-    setReviewsPage(1);
-  }, [submissions.length]);
-
   // Performance insights
   const insights = useMemo(() => {
-    const { averageRating, trend } = performanceMetrics;
     const insightsList: any[] = [];
 
-    if (parseFloat(averageRating) >= 4.5) {
+    if (parseFloat(average) >= 4.5) {
       insightsList.push({
         type: "excellent",
         icon: "🏆",
@@ -352,7 +207,7 @@ export default function performanceReviews() {
         message:
           "You're performing exceptionally well! Consider mentoring others or taking on leadership opportunities.",
       });
-    } else if (parseFloat(averageRating) >= 4.0) {
+    } else if (parseFloat(average) >= 4.0) {
       insightsList.push({
         type: "good",
         icon: "⭐",
@@ -360,7 +215,7 @@ export default function performanceReviews() {
         message:
           "You're exceeding expectations. Focus on maintaining this level and identifying areas for continued growth.",
       });
-    } else if (parseFloat(averageRating) >= 3.5) {
+    } else if (parseFloat(average) >= 3.5) {
       insightsList.push({
         type: "average",
         icon: "📈",
@@ -378,24 +233,6 @@ export default function performanceReviews() {
       });
     }
 
-    if (trend > 0.2) {
-      insightsList.push({
-        type: "improving",
-        icon: "🚀",
-        title: "Improving Trend",
-        message:
-          "Great job! Your performance is trending upward. Keep up the momentum!",
-      });
-    } else if (trend < -0.2) {
-      insightsList.push({
-        type: "declining",
-        icon: "⚠️",
-        title: "Performance Dip",
-        message:
-          "Your recent performance has declined. Consider discussing challenges with your manager.",
-      });
-    }
-
     if (submissions.length >= 3) {
       insightsList.push({
         type: "consistency",
@@ -407,7 +244,7 @@ export default function performanceReviews() {
     }
 
     return insightsList;
-  }, [performanceMetrics, submissions.length]);
+  }, [submissions.length]);
 
   const chartConfig = {
     rating: {
@@ -417,7 +254,7 @@ export default function performanceReviews() {
   };
 
   return (
-    <div className="relative h-[calc(100vh-200px)] overflow-y-auto">
+    <div className="relative h-[calc(85vh)] overflow-y-auto">
       {isRefreshingReviews || loading ? (
         <div className="relative space-y-6 min-h-[500px]">
           <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
@@ -653,9 +490,7 @@ export default function performanceReviews() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Average Rating</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold">
-                        {performanceMetrics.averageRating}
-                      </span>
+                      <span className="text-2xl font-bold">{average}</span>
                       <span className="text-sm text-gray-500">/5.0</span>
                     </div>
                   </div>
@@ -664,19 +499,19 @@ export default function performanceReviews() {
                     <span className="text-sm font-medium">Latest Rating</span>
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-semibold">
-                        {performanceMetrics.latestRating}
+                        {recentEvaluation.rating}
                       </span>
                       <span className="text-sm text-gray-500">/5.0</span>
-                      {performanceMetrics.trend !== 0 && (
+                      {Number(recentEvaluation.rating) !== 0 && (
                         <Badge
                           className={
-                            performanceMetrics.trend > 0
+                            Number(recentEvaluation.rating) > 0
                               ? "bg-green-100 text-green-800"
                               : "bg-red-100 text-red-800"
                           }
                         >
-                          {performanceMetrics.trend > 0 ? "↗" : "↘"}{" "}
-                          {Math.abs(performanceMetrics.trend).toFixed(1)}
+                          {Number(recentEvaluation.rating) > 0 ? "↗" : "↘"}{" "}
+                          {Math.abs(Number(recentEvaluation.rating)).toFixed(1)}
                         </Badge>
                       )}
                     </div>
@@ -684,7 +519,7 @@ export default function performanceReviews() {
 
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Total Reviews</span>
-                    <Badge variant="outline">{submissions.length}</Badge>
+                    <Badge variant="outline">{totalEvaluations}</Badge>
                   </div>
 
                   <div className="pt-2 border-t">
@@ -693,20 +528,20 @@ export default function performanceReviews() {
                     </div>
                     <Badge
                       className={
-                        parseFloat(performanceMetrics.averageRating) >= 4.5
+                        parseFloat(average) >= 4.5
                           ? "bg-green-100 text-green-800"
-                          : parseFloat(performanceMetrics.averageRating) >= 4.0
+                          : parseFloat(average) >= 4.0
                           ? "bg-blue-100 text-blue-800"
-                          : parseFloat(performanceMetrics.averageRating) >= 3.5
+                          : parseFloat(average) >= 3.5
                           ? "bg-yellow-100 text-yellow-800"
                           : "bg-red-100 text-red-800"
                       }
                     >
-                      {parseFloat(performanceMetrics.averageRating) >= 4.5
+                      {parseFloat(average) >= 4.5
                         ? "Outstanding"
-                        : parseFloat(performanceMetrics.averageRating) >= 4.0
+                        : parseFloat(average) >= 4.0
                         ? "Exceeds Expectations"
-                        : parseFloat(performanceMetrics.averageRating) >= 3.5
+                        : parseFloat(average) >= 3.5
                         ? "Meets Expectations"
                         : "Needs Improvement"}
                     </Badge>
@@ -813,15 +648,8 @@ export default function performanceReviews() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {reviewsPaginated.map((submission) => {
-                          const highlight = getSubmissionHighlight(
-                            submission.submittedAt,
-                            submissions,
-                            submission.id
-                          );
-                          const rating = submission.evaluationData
-                            ? calculateOverallRating(submission.evaluationData)
-                            : submission.rating;
+                        {submissions.map((submission) => {
+                          const rating = submission.rating;
                           const isLowPerformance = rating < 3.0;
                           const isPoorPerformance = rating < 2.5;
 
