@@ -656,7 +656,11 @@ export default function performanceReviews() {
                           return (
                             <TableRow
                               key={submission.id}
-                              className={`${highlight.className} ${
+                              className={`${
+                                submission.status === "completed"
+                                  ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100"
+                                  : ""
+                              } ${
                                 isPoorPerformance
                                   ? "bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100"
                                   : isLowPerformance
@@ -666,14 +670,19 @@ export default function performanceReviews() {
                             >
                               <TableCell className="w-1/5 font-medium pl-4">
                                 <div className="flex items-center gap-2">
-                                  {submission.evaluationData?.supervisor ||
-                                    "Not specified"}
-                                  {highlight.badge && (
+                                  {submission.status && (
                                     <Badge
                                       variant="secondary"
-                                      className={`${highlight.badge.className} text-xs`}
+                                      className={`${
+                                        submission.status === "completed"
+                                          ? "bg-green-200 text-green-800"
+                                          : ""
+                                      } text-xs`}
                                     >
-                                      {highlight.badge.text}
+                                      $
+                                      {submission.status === "completed"
+                                        ? "approved"
+                                        : "pending"}
                                     </Badge>
                                   )}
                                 </div>
@@ -745,24 +754,10 @@ export default function performanceReviews() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={async () => {
-                                    const approvalData = await getApprovalData(
-                                      submission.id.toString()
-                                    );
-                                    const submissionWithApproval = {
-                                      ...submission,
-                                      employeeSignature:
-                                        approvalData?.employeeSignature ||
-                                        submission.employeeSignature ||
-                                        null,
-                                      employeeApprovedAt:
-                                        approvalData?.approvedAt ||
-                                        submission.employeeApprovedAt ||
-                                        null,
-                                    };
-                                    onViewEvaluationAction(
-                                      submissionWithApproval
-                                    );
+                                  onClick={() => {
+                                    getApprovalData(submission.id);
+
+                                    onViewEvaluationAction(submission.id);
                                   }}
                                   className="text-white bg-blue-500 hover:text-white hover:bg-blue-600"
                                 >
