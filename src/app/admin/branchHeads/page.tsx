@@ -95,6 +95,7 @@ export default function BranchHeadsTab() {
   const [branchHeadsPage, setBranchHeadsPage] = useState(1);
   const [branchHeadsData, setBranchHeadsData] = useState<Employee[]>([]);
   const [loadingBranchHeads, setLoadingBranchHeads] = useState(true);
+  const [branchHeadsRefreshing, setBranchHeadsRefreshing] = useState(false);
   const itemsPerPage = 8;
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
@@ -210,25 +211,36 @@ export default function BranchHeadsTab() {
   };
 
   // Load branch heads from API
-  useEffect(() => {
-    const loadBranchHeads = async () => {
-      setLoadingBranchHeads(true);
-      try {
-        const data = await apiService.getAllBranchHeads();
-        // Ensure data is an array before mapping
-        const normalizedData = normalizeBranchHeadData(data);
-        setBranchHeadsData(normalizedData);
-      } catch (error) {
-        console.error("Error loading branch heads:", error);
-        // Set empty array if API fails - no fallback needed
-        setBranchHeadsData([]);
-      } finally {
-        setLoadingBranchHeads(false);
-      }
-    };
+  const loadBranchHeads = async () => {
+    setLoadingBranchHeads(true);
+    try {
+      const data = await apiService.getAllBranchHeads();
+      // Ensure data is an array before mapping
+      const normalizedData = normalizeBranchHeadData(data);
+      setBranchHeadsData(normalizedData);
+    } catch (error) {
+      console.error("Error loading branch heads:", error);
+      // Set empty array if API fails - no fallback needed
+      setBranchHeadsData([]);
+    } finally {
+      setLoadingBranchHeads(false);
+    }
+  };
 
+  // Load branch heads on mount
+  useEffect(() => {
     loadBranchHeads();
   }, []);
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    setBranchHeadsRefreshing(true);
+    try {
+      await loadBranchHeads();
+    } finally {
+      setBranchHeadsRefreshing(false);
+    }
+  };
 
   // Memoized branch heads (use API data)
   const branchHeads = useMemo(() => {
@@ -393,11 +405,31 @@ export default function BranchHeadsTab() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div>
-            <CardTitle>Branch Heads</CardTitle>
-            <CardDescription>
-              List of all branch heads in the organization
-            </CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Branch Heads</CardTitle>
+              <CardDescription>
+                List of all branch heads in the organization
+              </CardDescription>
+            </div>
+            <Button
+              onClick={handleRefresh}
+              disabled={branchHeadsRefreshing || loadingBranchHeads}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+              title="Refresh branch heads data"
+            >
+              {branchHeadsRefreshing ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Refreshing...</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <span>🔄</span>
+                  <span>Refresh</span>
+                </div>
+              )}
+            </Button>
           </div>
         </CardHeader>
         <CardContent>

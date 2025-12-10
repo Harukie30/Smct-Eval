@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { dataURLtoFile } from "@/utils/data-url-to-file";
 import Image from "next/image";
 import { CONFIG } from "../../config/config";
@@ -14,6 +15,7 @@ interface SignaturePadProps {
   hasError?: boolean;
   onRequestReset?: () => void;
   isSaved?: boolean; // Indicates if the signature has been saved to the server
+  hideRequestReset?: boolean; // Hide the "Request Reset" button
 }
 
 export default function SignaturePad({
@@ -24,6 +26,7 @@ export default function SignaturePad({
   hasError = false,
   onRequestReset,
   isSaved = false,
+  hideRequestReset = false,
 }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -252,26 +255,39 @@ export default function SignaturePad({
 
       <div className="flex flex-col gap-3">
         <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={clearSignature}
-            disabled={isSaved}
-            className="text-red-600 border-red-300 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Clear Signature
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-block">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={clearSignature}
+                  disabled={isSaved}
+                  className="text-red-600 border-red-300 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Clear Signature
+                </Button>
+              </span>
+            </TooltipTrigger>
+            {isSaved && (
+              <TooltipContent>
+                <p>Needs request for reset</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
           
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onRequestReset || (() => {})}
-            className="text-orange-600 border-orange-300 hover:bg-orange-50"
-          >
-            Request Reset
-          </Button>
+          {!hideRequestReset && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onRequestReset || (() => {})}
+              className="text-orange-600 border-orange-300 hover:bg-orange-50"
+            >
+              Request Reset
+            </Button>
+          )}
         </div>
 
         {hasSignature && (

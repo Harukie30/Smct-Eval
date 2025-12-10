@@ -36,6 +36,7 @@ const BranchHeadsTab = lazy(() => import('../admin/branchHeads/page'));
 const AreaManagersTab = lazy(() => import('../admin/areaManagers/page'));
 const PerformanceReviewsTab = lazy(() => import('./PerformanceReviewsTab').then(m => ({ default: m.PerformanceReviewsTab })));
 const EvaluationHistoryTab = lazy(() => import('./EvaluationHistoryTab').then(m => ({ default: m.EvaluationHistoryTab })));
+const SignatureResetRequestsTab = lazy(() => import('../admin/signatureResetRequests/page'));
 
 // TypeScript interfaces
 interface Employee {
@@ -974,6 +975,7 @@ function HRDashboard() {
     { id: 'area-managers', label: 'Area Managers', icon: '🎯', path: '/hr-dashboard?tab=area-managers' },
     { id: 'reviews', label: 'Performance Reviews', icon: '📝', path: '/hr-dashboard?tab=reviews' },
     { id: 'history', label: 'Evaluation History', icon: '📈', path: '/hr-dashboard?tab=history' },
+    { id: 'signature-reset', label: 'Signature Reset Requests', icon: '✍️', path: '/hr-dashboard?tab=signature-reset' },
   ];
 
   const topSummary = (
@@ -1309,6 +1311,26 @@ function HRDashboard() {
             onViewSubmission={viewSubmissionDetails}
             isActive={active === 'history'}
           />
+        </Suspense>
+      )}
+
+      {active === 'signature-reset' && (
+        <Suspense fallback={
+          <div className="relative min-h-[500px]">
+            <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+              <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                <div className="relative">
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 font-medium">Loading signature reset requests...</p>
+              </div>
+            </div>
+          </div>
+        }>
+          <SignatureResetRequestsTab />
         </Suspense>
       )}
 

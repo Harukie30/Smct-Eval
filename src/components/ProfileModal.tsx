@@ -9,13 +9,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UserProfile } from "./ProfileCard";
-import { User, Camera, Save, X } from "lucide-react";
+import { User, Save, X } from "lucide-react";
 // Removed profileService import - we'll use UserContext directly
 import SignaturePad from "@/components/SignaturePad";
 import { useToast } from "@/hooks/useToast";
 import LoadingAnimation from "@/components/LoadingAnimation";
 import apiService from "@/lib/apiService";
-import { CONFIG } from "../../config/config";
 import { dataURLtoFile } from "../utils/data-url-to-file";
 
 import { useAuth } from "@/contexts/UserContext";
@@ -153,26 +152,6 @@ export default function ProfileModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleAvatarChange = async (avatar: any) => {
-    const formData = new FormData();
-    formData.append("file", avatar);
-
-    try {
-      setIsLoading(true);
-      const imageUrl = await apiService.uploadAvatar(formData);
-      setFormData((prev) => ({ ...prev, avatar: imageUrl } as UserProfile));
-      refreshUser();
-      setErrors((prev) => ({ ...prev, avatar: "" }));
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      setErrors((prev) => ({
-        ...prev,
-        avatar: "Failed to upload image. Please try again.",
-      }));
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -295,38 +274,14 @@ export default function ProfileModal({
           {/* Avatar Section */}
           <div className="flex flex-col mt-7 items-center space-y-4">
             <div className="relative">
-              <div className="h-24 w-24 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold text-2xl">
-                {profile?.avatar ? (
-                  <img
-                    src={CONFIG.API_URL_STORAGE + "/" + profile?.avatar}
-                    alt={profile?.fname}
-                    className="h-24 w-24 rounded-full object-cover"
-                  />
-                ) : (
-                  profile?.fname
-                    .split(" ")
-                    .map((n) => n[0])
-                    .slice(0, 2)
-                    .join("")
-                    .toUpperCase()
-                )}
-              </div>
-              <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
-                <Camera className="w-4 h-4" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleAvatarChange(e.target.files?.[0])}
-                  className="hidden"
+              <div className="h-24 w-24 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
+                <img
+                  src="/profile.png"
+                  alt={profile?.fname || "Profile"}
+                  className="h-24 w-24 rounded-full object-cover"
                 />
-              </label>
+              </div>
             </div>
-            {errors.avatar && (
-              <p className="text-sm text-red-600">{errors.avatar}</p>
-            )}
-            <p className="text-sm text-gray-500 text-center">
-              Click the camera icon to change your profile picture
-            </p>
           </div>
 
           <div>

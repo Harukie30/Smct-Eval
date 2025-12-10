@@ -92,6 +92,7 @@ export function EmployeesTab({
   const [selectedBranch, setSelectedBranch] = useState('all');
   const [employeeViewMode, setEmployeeViewMode] = useState<'directory' | 'performance'>('directory');
   const [employeesPage, setEmployeesPage] = useState(1);
+  const [isPageChanging, setIsPageChanging] = useState(false);
   const itemsPerPage = 8;
 
   // Filter employees
@@ -358,7 +359,39 @@ export function EmployeesTab({
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {employeesPaginated.length === 0 ? (
+                            {isPageChanging ? (
+                              // Skeleton loading rows for page changes
+                              Array.from({ length: itemsPerPage }).map((_, index) => (
+                                <TableRow key={`skeleton-page-${index}`}>
+                                  <TableCell className="px-6 py-3">
+                                    <div className="space-y-1">
+                                      <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                                      <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="px-6 py-3">
+                                    <div className="h-4 w-40 bg-gray-200 rounded animate-pulse"></div>
+                                  </TableCell>
+                                  <TableCell className="px-6 py-3">
+                                    <div className="h-4 w-28 bg-gray-200 rounded animate-pulse"></div>
+                                  </TableCell>
+                                  <TableCell className="px-6 py-3">
+                                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                                  </TableCell>
+                                  <TableCell className="px-6 py-3">
+                                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                                  </TableCell>
+                                  <TableCell className="px-6 py-3 text-right">
+                                    <div className="flex justify-end gap-2">
+                                      <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                                      <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                                      <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                                      <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            ) : employeesPaginated.length === 0 ? (
                               <TableRow>
                                 <TableCell colSpan={6} className="text-center py-12">
                                   <div className="flex flex-col items-center justify-center gap-4">
@@ -506,7 +539,14 @@ export function EmployeesTab({
             totalPages={employeesTotalPages}
             total={employeesTotal}
             perPage={itemsPerPage}
-            onPageChange={(page) => setEmployeesPage(page)}
+            onPageChange={(page) => {
+              setIsPageChanging(true);
+              setEmployeesPage(page);
+              // Simulate a brief loading delay for smooth transition
+              setTimeout(() => {
+                setIsPageChanging(false);
+              }, 300);
+            }}
           />
         )}
       </>

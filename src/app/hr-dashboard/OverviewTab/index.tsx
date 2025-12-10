@@ -25,6 +25,7 @@ export function OverviewTab({
 }: OverviewTabProps) {
   const [overviewSearchTerm, setOverviewSearchTerm] = useState('');
   const [overviewPage, setOverviewPage] = useState(1);
+  const [isPageChanging, setIsPageChanging] = useState(false);
   const itemsPerPage = 8;
 
   // Helper function to calculate overall rating
@@ -285,6 +286,33 @@ export function OverviewTab({
                       </TableCell>
                     </TableRow>
                   ))
+                ) : isPageChanging ? (
+                  // Skeleton loading rows for page changes
+                  Array.from({ length: itemsPerPage }).map((_, index) => (
+                    <TableRow key={`skeleton-page-${index}`}>
+                      <TableCell className="px-6 py-3">
+                        <div className="space-y-1">
+                          <div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-2.5 w-24 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3 text-left pl-0">
+                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-5 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 ) : overviewPaginated.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-12">
@@ -447,8 +475,14 @@ export function OverviewTab({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setOverviewPage(prev => Math.max(1, prev - 1))}
-                  disabled={overviewPage === 1}
+                  onClick={() => {
+                    setIsPageChanging(true);
+                    setOverviewPage(prev => Math.max(1, prev - 1));
+                    setTimeout(() => {
+                      setIsPageChanging(false);
+                    }, 300);
+                  }}
+                  disabled={overviewPage === 1 || isPageChanging}
                   className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
                 >
                   Previous
@@ -465,7 +499,14 @@ export function OverviewTab({
                           key={page}
                           variant={overviewPage === page ? "default" : "outline"}
                           size="sm"
-                          onClick={() => setOverviewPage(page)}
+                          onClick={() => {
+                            setIsPageChanging(true);
+                            setOverviewPage(page);
+                            setTimeout(() => {
+                              setIsPageChanging(false);
+                            }, 300);
+                          }}
+                          disabled={isPageChanging}
                           className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
                             overviewPage === page
                               ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
@@ -484,8 +525,14 @@ export function OverviewTab({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setOverviewPage(prev => Math.min(overviewTotalPages, prev + 1))}
-                  disabled={overviewPage === overviewTotalPages}
+                  onClick={() => {
+                    setIsPageChanging(true);
+                    setOverviewPage(prev => Math.min(overviewTotalPages, prev + 1));
+                    setTimeout(() => {
+                      setIsPageChanging(false);
+                    }, 300);
+                  }}
+                  disabled={overviewPage === overviewTotalPages || isPageChanging}
                   className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
                 >
                   Next

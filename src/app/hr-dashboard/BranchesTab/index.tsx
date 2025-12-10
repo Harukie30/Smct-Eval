@@ -64,6 +64,7 @@ export function BranchesTab({
   const [overviewTotal, setOverviewTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
+  const [isPageChanging, setIsPageChanging] = useState(false);
   
   // Use dialog animation hook
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -306,9 +307,9 @@ export function BranchesTab({
           </div>
 
           <div className="relative">
-            {(branchesRefreshing || loading) ? (
+            {(branchesRefreshing || loading || isPageChanging) ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {Array.from({ length: 4 }).map((_, index) => (
+                {Array.from({ length: itemsPerPage }).map((_, index) => (
                   <Card key={`skeleton-branch-${index}`} className="animate-pulse">
                     <CardHeader>
                       <div className="flex justify-between items-center">
@@ -390,9 +391,21 @@ export function BranchesTab({
               totalPages={totalPages}
               total={overviewTotal}
               perPage={perPage}
-              onPageChange={(page) => {
+              onPageChange={async (page) => {
+                setIsPageChanging(true);
                 setCurrentPage(page);
-                loadData(debouncedSearchTerm);
+                // Wait for state update, then load data
+                setTimeout(async () => {
+                  try {
+                    await loadData(debouncedSearchTerm);
+                    // Small delay for smooth transition
+                    setTimeout(() => {
+                      setIsPageChanging(false);
+                    }, 300);
+                  } catch (error) {
+                    setIsPageChanging(false);
+                  }
+                }, 10);
               }}
             />
           )}

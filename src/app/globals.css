@@ -273,6 +273,20 @@
   animation: bounceGentle 2s ease-in-out infinite;
 }
 
+/* Small bounce animation for toggle button */
+@keyframes bounceSmall {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-bounce-small {
+  animation: bounceSmall 2s ease-in-out infinite;
+}
+
 /* Date input styling for better cross-browser compatibility */
 input[type="date"] {
   position: relative;

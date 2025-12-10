@@ -9,7 +9,6 @@ import {
   Bell,
   X,
   Trash2,
-  MessageCircle,
   ChevronDown,
   HelpCircle,
   ChevronUp,
@@ -864,7 +863,7 @@ export default function DashboardShell(props: DashboardShellProps) {
             </Button>
           </div>
         )}
-        <main className="flex-1 p-5">
+        <main className="flex-1 pt-5 px-5">
           {topSummary && (
             <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {topSummary}
@@ -1048,20 +1047,20 @@ export default function DashboardShell(props: DashboardShellProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Toggle Button for Help Buttons - Bottom Right */}
+      {/* Toggle Button for Help Buttons - Fixed Bottom Right (Always visible) */}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
             size="lg"
             onClick={() => setIsHelpButtonsVisible(!isHelpButtonsVisible)}
-            className="fixed bottom-6 right-6 z-50 p-3 hover:bg-blue-700 bg-blue-600 border rounded-full shadow-lg transition-all hover:scale-110"
+            className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0 animate-bounce-small"
           >
-            {isHelpButtonsVisible ? (
-              <ChevronDown className="h-5 w-5 text-white" />
-            ) : (
-              <ChevronUp className="h-5 w-5 text-white" />
-            )}
+            <img
+              src="/question.png"
+              alt="Toggle Help"
+              className="h-10 w-10 object-contain"
+            />
           </Button>
         </TooltipTrigger>
         <TooltipContent
@@ -1075,36 +1074,44 @@ export default function DashboardShell(props: DashboardShellProps) {
         </TooltipContent>
       </Tooltip>
 
-      {/* Floating Help Buttons - Toggleable */}
-      {isHelpButtonsVisible && (
-        <>
-          {/* Dashboard Guide Button */}
-          <Button
-            variant="ghost"
-            size="lg"
-            onClick={() => setIsGuideModalOpen(true)}
-            className="fixed bottom-32 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0"
-            title="Dashboard Guide"
-          >
-            <img
-              src="/faq.png"
-              alt="Help"
-              className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
-            />
-          </Button>
+      {/* Floating Help Buttons - Toggleable (Fixed to viewport) */}
+      {/* Dashboard Guide Button */}
+      <Button
+        variant="ghost"
+        size="lg"
+        onClick={() => setIsGuideModalOpen(true)}
+        className={`fixed bottom-32 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+          isHelpButtonsVisible
+            ? "opacity-100 translate-y-0 pointer-events-auto delay-0"
+            : "opacity-0 translate-y-4 pointer-events-none delay-0"
+        }`}
+        title="Dashboard Guide"
+      >
+        <img
+          src="/faq.png"
+          alt="Help"
+          className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
+        />
+      </Button>
 
-          {/* Contact Developers Button */}
-          <Button
-            variant="ghost"
-            size="lg"
-            onClick={() => setIsContactDevsModalOpen(true)}
-            className="fixed bottom-48 right-6 z-50 p-4 hover:bg-blue-700 bg-blue-500 border rounded-full shadow-lg transition-all hover:scale-110"
-            title="Contact Developers"
-          >
-            <MessageCircle className="h-6 w-6 text-white" />
-          </Button>
-        </>
-      )}
+      {/* Contact Developers Button */}
+      <Button
+        variant="ghost"
+        size="lg"
+        onClick={() => setIsContactDevsModalOpen(true)}
+        className={`fixed bottom-48 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+          isHelpButtonsVisible
+            ? "opacity-100 translate-y-0 pointer-events-auto delay-100"
+            : "opacity-0 translate-y-4 pointer-events-none delay-0"
+        }`}
+        title="Contact Developers"
+      >
+        <img
+          src="/code.png"
+          alt="Contact Developers"
+          className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
+        />
+      </Button>
 
       {/* Dashboard Guide Modal - Conditionally rendered based on dashboard type */}
       {isGuideModalOpen && dashboardType === "hr" && (
