@@ -1890,11 +1890,11 @@ export default function ViewResultsModal({
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-center">
                                   <div
-                                    className={`px-2 py-1 rounded text-sm font-medium ${rating(
+                                    className={`px-2 py-1 rounded text-sm font-medium ${ratingBG(
                                       item.score
                                     )}`}
                                   >
-                                    {ratingBG(item.score)}
+                                    {rating(item.score)}
                                   </div>
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
@@ -1970,11 +1970,11 @@ export default function ViewResultsModal({
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-center">
                                   <div
-                                    className={`px-2 py-1 rounded text-sm font-medium ${rating(
+                                    className={`px-2 py-1 rounded text-sm font-medium ${ratingBG(
                                       item.score
                                     )}`}
                                   >
-                                    {ratingBG(item.score)}
+                                    {rating(item.score)}
                                   </div>
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
@@ -2048,11 +2048,11 @@ export default function ViewResultsModal({
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-center">
                                   <div
-                                    className={`px-2 py-1 rounded text-sm font-medium ${rating(
+                                    className={`px-2 py-1 rounded text-sm font-medium ${ratingBG(
                                       item.score
                                     )}`}
                                   >
-                                    {ratingBG(item.score)}
+                                    {rating(item.score)}
                                   </div>
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
@@ -2125,11 +2125,11 @@ export default function ViewResultsModal({
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-center">
                                   <div
-                                    className={`px-2 py-1 rounded text-sm font-medium ${rating(
+                                    className={`px-2 py-1 rounded text-sm font-medium ${ratingBG(
                                       item.score
                                     )}`}
                                   >
-                                    {ratingBG(item.score)}
+                                    {rating(item.score)}
                                   </div>
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
@@ -2203,11 +2203,11 @@ export default function ViewResultsModal({
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-center">
                                   <div
-                                    className={`px-2 py-1 rounded text-sm font-medium ${rating(
+                                    className={`px-2 py-1 rounded text-sm font-medium ${ratingBG(
                                       item.score
                                     )}`}
                                   >
-                                    {ratingBG(item.score)}
+                                    {rating(item.score)}
                                   </div>
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
@@ -2281,11 +2281,11 @@ export default function ViewResultsModal({
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-center">
                                   <div
-                                    className={`px-2 py-1 rounded text-sm font-medium ${rating(
+                                    className={`px-2 py-1 rounded text-sm font-medium ${ratingBG(
                                       item.score
                                     )}`}
                                   >
-                                    {ratingBG(item.score)}
+                                    {rating(item.score)}
                                   </div>
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
@@ -2359,11 +2359,11 @@ export default function ViewResultsModal({
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-center">
                                   <div
-                                    className={`px-2 py-1 rounded text-sm font-medium ${rating(
+                                    className={`px-2 py-1 rounded text-sm font-medium ${ratingBG(
                                       item.score
                                     )}`}
                                   >
-                                    {ratingBG(item.score)}
+                                    {rating(item.score)}
                                   </div>
                                 </td>
                                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">

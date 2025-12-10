@@ -33,26 +33,56 @@ import {
   getQuarterColor,
 } from "@/lib/quarterUtils";
 import { apiService } from "@/lib/apiService";
+import EvaluationsPagination from "@/components/paginationComponent";
+import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+
+interface Review {
+  id: number;
+  employee: any;
+  evaluator: any;
+  reviewTypeProbationary: number | string;
+  reviewTypeRegular: number | string;
+  created_at: string;
+  rating: number;
+  status: string;
+}
 
 export default function performanceReviews() {
   const { user } = useUser();
   const { success } = useToast();
-  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<any>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshingReviews, setIsRefreshingReviews] = useState(false);
   const [reviewsPage, setReviewsPage] = useState(1);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(4);
+  const [overviewTotal, setOverviewTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [perPage, setPerPage] = useState(0);
+
   const [totalEvaluations, setTotalEvaluations] = useState<any>(0);
   const [average, setAverage] = useState<any>(0);
   const [recentEvaluation, setRecentEvaluation] = useState<any>([]);
+  const [userEval, setUserEval] = useState<any>([]);
+
+  const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
 
   // Load submissions data from API
   const loadSubmissions = async () => {
     try {
       setLoading(true);
       // Use employee-specific endpoint
-      const userSubmissions = await apiService.getMyEvalAuthEmployee();
-      setSubmissions(userSubmissions.data);
+      const response = await apiService.getMyEvalAuthEmployee(
+        "",
+        currentPage,
+        itemsPerPage
+      );
+      setSubmissions(response.data);
+      setOverviewTotal(response.total);
+      setTotalPages(response.last_page);
+      setPerPage(response.per_page);
     } catch (error) {
       console.error("Error loading submissions:", error);
     } finally {
@@ -68,25 +98,27 @@ export default function performanceReviews() {
       setTotalEvaluations(dashboard.total_evaluations);
       setAverage(dashboard.average);
       setRecentEvaluation(dashboard.recent_evaluation);
+      setUserEval(dashboard.user_eval);
     };
     loadDashboard();
   }, [user]);
 
-  // Refresh when tab becomes active
+  useEffect(() => {
+    loadSubmissions();
+  }, [currentPage]);
 
-  const handleRefreshSubmissions = async () => {
-    setIsRefreshingReviews(true);
+  const handleViewEvaluation = async (review: Review) => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      await loadSubmissions();
-      success(
-        "Performance reviews refreshed successfully",
-        "All performance data has been updated"
-      );
+      const submission = await apiService.getSubmissionById(review.id);
+
+      if (submission) {
+        setSelectedSubmission(submission);
+        setIsViewResultsModalOpen(true);
+      } else {
+        console.error("Submission not found for review ID:", review.id);
+      }
     } catch (error) {
-      console.error("Error refreshing submissions:", error);
-    } finally {
-      setIsRefreshingReviews(false);
+      console.error("Error fetching submission details:", error);
     }
   };
 
@@ -106,86 +138,14 @@ export default function performanceReviews() {
     return new Date(submittedAt).toLocaleDateString();
   };
 
-  const calculateOverallRating = (evaluationData: any) => {
-    if (!evaluationData) return 0;
-    const calculateScore = (scores: string[]) => {
-      const validScores = scores
-        .filter((score) => score && score !== "")
-        .map((score) => parseFloat(score));
-      if (validScores.length === 0) return 0;
-      return (
-        validScores.reduce((sum, score) => sum + score, 0) / validScores.length
-      );
-    };
-
-    const jobKnowledgeScore = calculateScore([
-      evaluationData.jobKnowledgeScore1,
-      evaluationData.jobKnowledgeScore2,
-      evaluationData.jobKnowledgeScore3,
-    ]);
-    const qualityOfWorkScore = calculateScore([
-      evaluationData.qualityOfWorkScore1,
-      evaluationData.qualityOfWorkScore2,
-      evaluationData.qualityOfWorkScore3,
-      evaluationData.qualityOfWorkScore4,
-      evaluationData.qualityOfWorkScore5,
-    ]);
-    const adaptabilityScore = calculateScore([
-      evaluationData.adaptabilityScore1,
-      evaluationData.adaptabilityScore2,
-      evaluationData.adaptabilityScore3,
-    ]);
-    const teamworkScore = calculateScore([
-      evaluationData.teamworkScore1,
-      evaluationData.teamworkScore2,
-      evaluationData.teamworkScore3,
-    ]);
-    const reliabilityScore = calculateScore([
-      evaluationData.reliabilityScore1,
-      evaluationData.reliabilityScore2,
-      evaluationData.reliabilityScore3,
-      evaluationData.reliabilityScore4,
-    ]);
-    const ethicalScore = calculateScore([
-      evaluationData.ethicalScore1,
-      evaluationData.ethicalScore2,
-      evaluationData.ethicalScore3,
-      evaluationData.ethicalScore4,
-    ]);
-    const customerServiceScore = calculateScore([
-      evaluationData.customerServiceScore1,
-      evaluationData.customerServiceScore2,
-      evaluationData.customerServiceScore3,
-      evaluationData.customerServiceScore4,
-      evaluationData.customerServiceScore5,
-    ]);
-
-    const overallWeightedScore =
-      jobKnowledgeScore * 0.2 +
-      qualityOfWorkScore * 0.2 +
-      adaptabilityScore * 0.1 +
-      teamworkScore * 0.1 +
-      reliabilityScore * 0.05 +
-      ethicalScore * 0.05 +
-      customerServiceScore * 0.3;
-
-    return Math.round(overallWeightedScore * 10) / 10;
-  };
-
   // Chart data
+
   const chartData = useMemo(() => {
-    return submissions
-      .filter(
-        (s) =>
-          (s.evaluationData
-            ? calculateOverallRating(s.evaluationData)
-            : s.rating) > 0
-      )
-      .map((submission, index) => ({
-        review: `Review ${submissions.length - index}`,
-        rating: submission.evaluationData
-          ? calculateOverallRating(submission.evaluationData)
-          : submission.rating,
+    return userEval
+
+      .map((submission: any, index: any) => ({
+        review: `Review ${userEval.length - index}`,
+        rating: submission.rating,
         date: new Date(submission.created_at).toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
@@ -193,7 +153,7 @@ export default function performanceReviews() {
         fullDate: new Date(submission.created_at).toLocaleDateString(),
       }))
       .reverse();
-  }, [submissions]);
+  }, [userEval]);
 
   // Performance insights
   const insights = useMemo(() => {
@@ -244,7 +204,7 @@ export default function performanceReviews() {
     }
 
     return insightsList;
-  }, [submissions.length]);
+  }, [average, submissions]);
 
   const chartConfig = {
     rating: {
@@ -253,8 +213,16 @@ export default function performanceReviews() {
     },
   };
 
+  const getQuarterColor = (quarter: string) => {
+    if (quarter === "Q1") return "bg-blue-100 text-blue-800";
+    if (quarter === "Q2") return "bg-green-100 text-green-800";
+    if (quarter === "Q3") return "bg-yellow-100 text-yellow-800";
+    if (quarter === "Q4") return "bg-purple-100 text-purple-800";
+    return "bg-purple-100 text-purple-800";
+  };
+
   return (
-    <div className="relative h-[calc(85vh)] overflow-y-auto">
+    <div className="relative">
       {isRefreshingReviews || loading ? (
         <div className="relative space-y-6 min-h-[500px]">
           <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
@@ -450,26 +418,9 @@ export default function performanceReviews() {
                         </span>
                       </div>
                       <div className="text-sm text-gray-600 bg-white px-3 py-1 rounded-md border">
-                        <span className="font-medium">
-                          {
-                            submissions.filter(
-                              (s) =>
-                                (s.evaluationData
-                                  ? calculateOverallRating(s.evaluationData)
-                                  : s.rating) > 0
-                            ).length
-                          }
-                        </span>{" "}
+                        <span className="font-medium">{totalEvaluations}</span>{" "}
                         evaluation
-                        {submissions.filter(
-                          (s) =>
-                            (s.evaluationData
-                              ? calculateOverallRating(s.evaluationData)
-                              : s.rating) > 0
-                        ).length !== 1
-                          ? "s"
-                          : ""}{" "}
-                        tracked
+                        {Number(totalEvaluations) === 1 ? "s" : ""} tracked
                       </div>
                     </div>
                   </div>
@@ -572,11 +523,13 @@ export default function performanceReviews() {
                           ? "bg-green-50 border-green-200"
                           : insight.type === "good"
                           ? "bg-blue-50 border-blue-200"
-                          : insight.type === "improving"
-                          ? "bg-emerald-50 border-emerald-200"
-                          : insight.type === "declining"
+                          : insight.type === "average"
+                          ? "bg-yellow-50 border-yellow-200"
+                          : insight.type === "improvement"
                           ? "bg-red-50 border-red-200"
-                          : "bg-yellow-50 border-yellow-200"
+                          : insight.type === "consistency"
+                          ? "bg-emerald-50 border-emerald-200"
+                          : "bg-gray-50 border-gray-200"
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -648,7 +601,7 @@ export default function performanceReviews() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {submissions.map((submission) => {
+                        {submissions.map((submission: any) => {
                           const rating = submission.rating;
                           const isLowPerformance = rating < 3.0;
                           const isPoorPerformance = rating < 2.5;
@@ -670,16 +623,18 @@ export default function performanceReviews() {
                             >
                               <TableCell className="w-1/5 font-medium pl-4">
                                 <div className="flex items-center gap-2">
+                                  {submission.evaluator.fname +
+                                    " " +
+                                    submission.evaluator.lname}
                                   {submission.status && (
                                     <Badge
                                       variant="secondary"
                                       className={`${
                                         submission.status === "completed"
                                           ? "bg-green-200 text-green-800"
-                                          : ""
+                                          : "bg-amber-100 text-orange-800"
                                       } text-xs`}
                                     >
-                                      $
                                       {submission.status === "completed"
                                         ? "approved"
                                         : "pending"}
@@ -727,11 +682,11 @@ export default function performanceReviews() {
                                 <div className="flex flex-col items-center">
                                   <span className="font-medium">
                                     {new Date(
-                                      submission.submittedAt
+                                      submission.created_at
                                     ).toLocaleDateString()}
                                   </span>
                                   <span className="text-xs text-gray-500">
-                                    {getTimeAgo(submission.submittedAt)}
+                                    {getTimeAgo(submission.created_at)}
                                   </span>
                                 </div>
                               </TableCell>
@@ -739,14 +694,12 @@ export default function performanceReviews() {
                                 <div className="flex justify-center">
                                   <Badge
                                     className={getQuarterColor(
-                                      getQuarterFromEvaluationData(
-                                        submission.evaluationData || submission
-                                      )
+                                      submission.reviewTypeRegular ||
+                                        submission.reviewTypeProbationary
                                     )}
                                   >
-                                    {getQuarterFromEvaluationData(
-                                      submission.evaluationData || submission
-                                    )}
+                                    {submission.reviewTypeRegular ||
+                                      "M" + submission.reviewTypeProbationary}
                                   </Badge>
                                 </div>
                               </TableCell>
@@ -754,11 +707,9 @@ export default function performanceReviews() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => {
-                                    getApprovalData(submission.id);
-
-                                    onViewEvaluationAction(submission.id);
-                                  }}
+                                  onClick={() =>
+                                    handleViewEvaluation(submission)
+                                  }
                                   className="text-white bg-blue-500 hover:text-white hover:bg-blue-600"
                                 >
                                   <Eye className="w-4 h-4" />
@@ -772,89 +723,31 @@ export default function performanceReviews() {
                     </Table>
                   </div>
 
-                  {/* Pagination Controls - Show when more than 4 items */}
-                  {sortedSubmissionsForPagination.length > 4 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-0 mt-3 md:mt-4 px-4">
-                      <div className="text-xs md:text-sm text-gray-600 order-2 sm:order-1">
-                        Showing {reviewsStartIndex + 1} to{" "}
-                        {Math.min(
-                          reviewsEndIndex,
-                          sortedSubmissionsForPagination.length
-                        )}{" "}
-                        of {sortedSubmissionsForPagination.length} records
-                      </div>
-                      <div className="flex items-center gap-1.5 md:gap-2 order-1 sm:order-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setReviewsPage((prev) => Math.max(1, prev - 1))
-                          }
-                          disabled={reviewsPage === 1}
-                          className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                        >
-                          Previous
-                        </Button>
-                        <div className="flex items-center gap-0.5 md:gap-1">
-                          {Array.from(
-                            { length: reviewsTotalPages },
-                            (_, i) => i + 1
-                          ).map((page) => {
-                            if (
-                              page === 1 ||
-                              page === reviewsTotalPages ||
-                              (page >= reviewsPage - 1 &&
-                                page <= reviewsPage + 1)
-                            ) {
-                              return (
-                                <Button
-                                  key={page}
-                                  variant={
-                                    reviewsPage === page ? "default" : "outline"
-                                  }
-                                  size="sm"
-                                  onClick={() => setReviewsPage(page)}
-                                  className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
-                                    reviewsPage === page
-                                      ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
-                                      : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                                  }`}
-                                >
-                                  {page}
-                                </Button>
-                              );
-                            } else if (
-                              page === reviewsPage - 2 ||
-                              page === reviewsPage + 2
-                            ) {
-                              return (
-                                <span
-                                  key={page}
-                                  className="text-gray-400 text-xs md:text-sm"
-                                >
-                                  ...
-                                </span>
-                              );
-                            }
-                            return null;
-                          })}
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setReviewsPage((prev) =>
-                              Math.min(reviewsTotalPages, prev + 1)
-                            )
-                          }
-                          disabled={reviewsPage === reviewsTotalPages}
-                          className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    </div>
+                  {/* Pagination Controls */}
+                  {userEval.length > itemsPerPage && (
+                    <EvaluationsPagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      total={overviewTotal}
+                      perPage={perPage}
+                      onPageChange={(page) => {
+                        setCurrentPage(page);
+                        loadSubmissions();
+                      }}
+                    />
                   )}
+
+                  {/* View Results Modal */}
+                  <ViewResultsModal
+                    isOpen={isViewResultsModalOpen}
+                    onCloseAction={() => {
+                      setIsViewResultsModalOpen(false);
+                      setSelectedSubmission(null);
+                    }}
+                    submission={selectedSubmission}
+                    showApprovalButton={false}
+                    isEvaluatorView={false}
+                  />
                 </>
               ) : (
                 <div className="text-center py-12 px-6">

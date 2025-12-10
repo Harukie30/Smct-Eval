@@ -474,7 +474,7 @@ export default function DashboardShell(props: DashboardShellProps) {
       </header>
 
       {/* Main Layout with Sidebar */}
-      <div className="flex overflow-y-hidden">
+      <div className="flex">
         {/* Sidebar */}
         <div
           className={`relative overflow-hidden bg-blue-600 transition-all duration-400  ${

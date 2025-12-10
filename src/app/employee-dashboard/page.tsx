@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Eye, X } from "lucide-react";
 import {
   Card,
@@ -21,8 +21,6 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useUser } from "@/contexts/UserContext";
-import { useToast } from "@/hooks/useToast";
 import { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
@@ -37,13 +35,6 @@ interface Review {
   rating: number;
   status: string;
 }
-
-type EvalApiResponse = {
-  data: any[];
-  total: number;
-  last_page: number;
-  per_page: number;
-};
 
 export default function OverviewTab() {
   const [isRefreshingOverview, setIsRefreshingOverview] = useState(false);
@@ -770,7 +761,6 @@ export default function OverviewTab() {
                 </Table>
               </div>
 
-              {/* Pagination Controls - Show when more than 4 items */}
               {/* Pagination Controls */}
               {overviewTotal > itemsPerPage && (
                 <EvaluationsPagination
