@@ -5,18 +5,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { X } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { X, Mail, Briefcase, Building2, User, Hash, Phone, Shield } from 'lucide-react';
 
 interface Employee {
   id: number;
-  name: string;
-  email: string;
-  position: string;
-  department: string;
-  role: string;
-  hireDate: string;
+  name?: string;
+  email?: string;
+  position?: string;
+  department?: string;
+  role?: string;
 }
 
 interface ViewEmployeeModalProps {
@@ -138,7 +136,7 @@ export default function ViewEmployeeModal({
   // Fetch data when modal opens
   useEffect(() => {
     if (isOpen && employee) {
-      fetchEmployeeEvaluationHistory(employee.id, employee.name);
+      fetchEmployeeEvaluationHistory(employee.id, employee.name || '');
     }
   }, [isOpen, employee]);
 
@@ -146,125 +144,162 @@ export default function ViewEmployeeModal({
 
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
-    <DialogContent className="max-w-7xl mx-8 my-8 max-h-[90vh] overflow-hidden p-6 animate-popup">
-
-
-     <div className="px-6">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-gray-900">
-            Employee Details & Evaluation History
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-6 bg-gradient-to-br from-blue-50 to-indigo-50 animate-popup">
+        <DialogHeader className="pb-6 border-b border-gray-200">
+          <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <User className="w-6 h-6 text-blue-600" />
+            Employee Profile
           </DialogTitle>
-          <DialogDescription>
-            Comprehensive view of employee information and their evaluation history
+          <DialogDescription className="text-base text-gray-600 mt-2">
+            Complete employee information and evaluation history
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-6 overflow-y-auto max-h-[70vh]">
-          {/* Employee Header */}
-          <div className="flex items-center space-x-4 pb-4 border-b border-gray-200">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
-              {employee.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-gray-900">{employee.name}</h3>
-              <p className="text-lg text-gray-600">{employee.position}</p>
-              <p className="text-sm text-gray-500">{employee.department}</p>
-            </div>
-          </div>
+        <div className="space-y-6 mt-6">
+          {/* Employee Header Card */}
+          <Card className="bg-white border-2 border-blue-200 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-6">
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md">
+                  {(employee.name || 'N/A').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'N/A'}
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-3xl font-bold text-black mb-2">{employee.name || 'Not Assigned'}</h2>
+                  <div className="flex flex-wrap gap-3 mt-3">
+                    <Badge variant="outline" className="text-base px-3 py-1 bg-blue-50 text-blue-700 border-blue-300">
+                      <Briefcase className="w-4 h-4 mr-1.5" />
+                      {employee.position || 'Not Assigned'}
+                    </Badge>
+                    <Badge variant="outline" className="text-base px-3 py-1 bg-purple-50 text-purple-700 border-purple-300">
+                      <Building2 className="w-4 h-4 mr-1.5" />
+                      {employee.department || 'Not Assigned'}
+                    </Badge>
+                    <Badge variant="outline" className="text-base px-3 py-1 bg-green-50 text-green-700 border-green-300">
+                      <Shield className="w-4 h-4 mr-1.5" />
+                      {employee.role || 'Not Assigned'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Employee Information Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Employee ID</Label>
-                <p className="text-lg font-semibold text-gray-900">#{employee.id}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Email Address</Label>
-                <p className="text-lg text-gray-900">{employee.email}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Role</Label>
-                <Badge className="bg-blue-100 text-blue-800 text-sm">
-                  {employee.role}
-                </Badge>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Department</Label>
-                <p className="text-lg text-gray-900">{employee.department}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Position</Label>
-                <p className="text-lg text-gray-900">{employee.position}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Hire Date</Label>
-                <p className="text-lg text-gray-900">
-                  {new Date(employee.hireDate).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </p>
-              </div>
-            </div>
+          {/* Employee Information Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Employee ID Card */}
+            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Hash className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Employee ID</Label>
+                    <p className="text-lg font-semibold text-black mt-1">#{employee.id || 'N/A'}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Email Card */}
+            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Email Address</Label>
+                    <p className="text-sm font-medium text-black mt-1 truncate">{employee.email || 'Not Assigned'}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Position Card */}
+            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <Briefcase className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Position</Label>
+                    <p className="text-sm font-medium text-black mt-1">{employee.position || 'Not Assigned'}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Department Card */}
+            <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Building2 className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Department</Label>
+                    <p className="text-sm font-medium text-black mt-1">{employee.department || 'Not Assigned'}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Performance Metrics Section */}
           {employeeEvaluationData.length > 0 && (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Performance Overview</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {(() => {
-                  const metrics = getEmployeePerformanceMetrics(employeeEvaluationData);
-                  return (
-                    <>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{metrics.totalEvaluations}</div>
-                        <div className="text-sm text-gray-600">Total Evaluations</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">{metrics.averageRating}</div>
-                        <div className="text-sm text-gray-600">Average Rating</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-purple-600">{metrics.highestRating}</div>
-                        <div className="text-sm text-gray-600">Highest Rating</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-orange-600">
-                          {metrics.performanceTrend === 'improving' ? '↗' : 
-                           metrics.performanceTrend === 'declining' ? '↘' : '→'}
+            <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 shadow-lg">
+              <CardContent className="p-6">
+                <h4 className="text-xl font-bold text-black mb-6 flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-blue-600" />
+                  Performance Overview
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {(() => {
+                    const metrics = getEmployeePerformanceMetrics(employeeEvaluationData);
+                    return (
+                      <>
+                        <div className="bg-white rounded-lg p-4 text-center shadow-sm border border-gray-200">
+                          <div className="text-3xl font-bold text-blue-600 mb-1">{metrics.totalEvaluations}</div>
+                          <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Total Evaluations</div>
                         </div>
-                        <div className="text-sm text-gray-600 capitalize">{metrics.performanceTrend}</div>
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-            </div>
+                        <div className="bg-white rounded-lg p-4 text-center shadow-sm border border-gray-200">
+                          <div className="text-3xl font-bold text-green-600 mb-1">{metrics.averageRating}</div>
+                          <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Average Rating</div>
+                        </div>
+                        <div className="bg-white rounded-lg p-4 text-center shadow-sm border border-gray-200">
+                          <div className="text-3xl font-bold text-purple-600 mb-1">{metrics.highestRating}</div>
+                          <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Highest Rating</div>
+                        </div>
+                        <div className="bg-white rounded-lg p-4 text-center shadow-sm border border-gray-200">
+                          <div className="text-3xl font-bold text-orange-600 mb-1">
+                            {metrics.performanceTrend === 'improving' ? '↗' : 
+                             metrics.performanceTrend === 'declining' ? '↘' : '→'}
+                          </div>
+                          <div className="text-xs font-medium text-gray-600 uppercase tracking-wide capitalize">{metrics.performanceTrend}</div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
-          
-
-            
-          
-
           {/* Action Buttons */}
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <Button
               variant="outline"
               onClick={onCloseAction}
-              className="px-6 py-2 bg-blue-500 hover:bg-white hover:text-red-500 text-white"
+              className="px-6 py-2 border-gray-300 hover:bg-gray-50"
             >
-              <X className="w-4 h-4 mr-0" />
+              <X className="w-4 h-4 mr-2" />
               Close
             </Button>
             <Button
               onClick={() => onStartEvaluationAction(employee)}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white hover:text-white"
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all"
             >
               <svg
                 className="w-4 h-4 mr-2"
@@ -283,7 +318,6 @@ export default function ViewEmployeeModal({
               Evaluate Employee
             </Button>
           </div>
-        </div>
         </div>
       </DialogContent>
     </Dialog>

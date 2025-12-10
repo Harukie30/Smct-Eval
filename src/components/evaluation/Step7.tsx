@@ -18,7 +18,7 @@ interface Step7Props {
     position: string;
     department: string;
     role: string;
-    hireDate: string;
+    hireDate?: string;
   };
   onNextAction?: () => void;
 }

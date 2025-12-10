@@ -19,7 +19,6 @@ interface Employee {
   department: string;
   branch?: string;
   role: string;
-  hireDate: string;
   avatar?: string;
 }
 
@@ -94,7 +93,6 @@ export function EmployeesTab({
       branch: e.branch?.name || e.branch,
       role: e.role?.name || e.roles?.[0]?.name || e.role || e.roles?.[0],
       isActive: e.isActive !== false,
-      hireDate: e.hireDate,
       avatar: e.avatar,
     }));
   }, [employees]);
@@ -126,7 +124,6 @@ export function EmployeesTab({
           position: updatedEmployee.position,
           department: updatedEmployee.department,
           role: updatedEmployee.role,
-          hireDate: updatedEmployee.hireDate,
           avatar: updatedEmployee.avatar,
           branch: updatedEmployee.branch || 'N/A'
         };
@@ -148,12 +145,8 @@ export function EmployeesTab({
   // Calculate new hires this month
   const newHiresThisMonth = (() => {
     const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    return filtered.filter((emp: any) => {
-      const hireDate = new Date(emp.hireDate);
-      return hireDate.getMonth() === currentMonth && hireDate.getFullYear() === currentYear;
-    }).length;
+    // Hire date removed - return 0 for new hires this month
+    return 0;
   })();
 
   return (
@@ -354,7 +347,7 @@ export function EmployeesTab({
                         <TableCell>{employee.position}</TableCell>
                         <TableCell>{employee.branch}</TableCell>
                         <TableCell>
-                          {new Date(employee.hireDate).toLocaleDateString()}
+                          N/A
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-2">

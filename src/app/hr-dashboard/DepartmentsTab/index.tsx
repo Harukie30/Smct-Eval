@@ -20,7 +20,7 @@ interface Employee {
   position: string;
   department: string;
   branch: string;
-  hireDate: string;
+  hireDate?: string; // Optional - hire date removed from forms
   role: string;
 }
 

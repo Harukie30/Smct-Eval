@@ -21,7 +21,7 @@ interface Step5Props {
     position: string;
     department: string;
     role: string;
-    hireDate: string;
+    hireDate?: string;
   };
 }
 

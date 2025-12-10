@@ -30,7 +30,6 @@ interface User {
   username?: string;
   password?: string;
   contact?: string;
-  hireDate?: string;
   isActive?: boolean;
   signature?: string;
   employeeId?: number;
@@ -70,7 +69,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     username: "",
     password: "",
     contact: "",
-    hireDate: "",
     isActive: true,
     signature: "",
     employeeId: undefined,
@@ -611,7 +609,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         username: user.username || "",
         password: user.password || "",
         contact: user.contact || "",
-        hireDate: user.hireDate || "",
         isActive:
           user.isActive !== undefined
             ? user.isActive
@@ -754,6 +751,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const handleSave = async () => {
     if (validateForm()) {
       console.log("Starting save process...");
+      console.log("FormData before save:", formData);
       setIsSaving(true);
       try {
         // Simulate a delay to show the loading animation
@@ -769,6 +767,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             "",
         };
 
+        console.log("Data to save:", dataToSave);
         await onSave(dataToSave);
         console.log("Save completed, refreshing table...");
 
@@ -1179,35 +1178,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               )}
             </div>
 
-            {/* Hire Date */}
-            <div className="space-y-2 w-1/2">
-              <Label htmlFor="hireDate">Hire Date</Label>
-              <Input
-                id="hireDate"
-                type="date"
-                value={formData.hireDate || ""}
-                onChange={(e) => handleInputChange("hireDate", e.target.value)}
-                placeholder="Select hire date"
-              />
-            </div>
-
-            {/* Active Status */}
-            <div className="space-y-2 w-1/2">
-              <Label htmlFor="isActive">Status</Label>
-              <Combobox
-                options={[
-                  { value: "active", label: "Active" },
-                  { value: "inactive", label: "Inactive" },
-                ]}
-                value={formData.isActive ? "active" : "inactive"}
-                onValueChangeAction={(value) =>
-                  handleInputChange("isActive", value === "active")
-                }
-                placeholder="Select status"
-                searchPlaceholder="Search status..."
-                emptyText="No status found."
-              />
-            </div>
           </div>
 
           <DialogFooter className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">

@@ -106,13 +106,12 @@ type PerformanceData = {
 
 type Employee = {
   id: number;
-  name: string;
-  email: string;
-  position: string;
-  department: string;
+  name?: string;
+  email?: string;
+  position?: string;
+  department?: string;
   branch?: string;
-  role: string;
-  hireDate: string;
+  role?: string;
   avatar?: string;
   employeeId?: string; // Formatted employee ID from registration (e.g., "1234-567890")
 };
@@ -1305,8 +1304,8 @@ function EvaluatorDashboard() {
     }</div>
           </div>
           <div class="print-field">
-            <div class="print-label">Hire Date & Coverage:</div>
-            <div class="print-value">${data.hireDate || "Hire: N/A"} | ${
+            <div class="print-label">Coverage:</div>
+            <div class="print-value">${
       data.coverageFrom && data.coverageTo
         ? `${new Date(data.coverageFrom).toLocaleDateString()} - ${new Date(
             data.coverageTo
@@ -2406,7 +2405,7 @@ function EvaluatorDashboard() {
                 setIsViewEmployeeModalOpen(true);
               }}
               onEvaluateEmployee={async (employee) => {
-                // Fetch fresh employee data from API to ensure we have latest updates (position, department, role, hireDate)
+                // Fetch fresh employee data from API to ensure we have latest updates (position, department, role)
                 try {
                   // Fetch latest employee data from API
                   const freshEmployeeData = await apiService.getEmployee(employee.id);
@@ -2420,7 +2419,6 @@ function EvaluatorDashboard() {
                     department: freshEmployeeData.department || employee.department,
                     branch: freshEmployeeData.branch || employee.branch,
                     role: freshEmployeeData.role || freshEmployeeData.roles?.[0]?.name || freshEmployeeData.roles?.[0] || employee.role,
-                    hireDate: freshEmployeeData.hireDate || employee.hireDate,
                     ...(freshEmployeeData.avatar || (employee as any).avatar ? { avatar: freshEmployeeData.avatar || (employee as any).avatar } : {}),
                   } as Employee : employee;
                   
@@ -2667,7 +2665,14 @@ function EvaluatorDashboard() {
             {selectedEmployee && evaluationType === "employee" && (
               <EvaluationForm
                 key={`employee-eval-${selectedEmployee.id}-${evaluationType}`}
-                employee={selectedEmployee}
+                employee={{
+                  ...selectedEmployee,
+                  name: selectedEmployee.name || '',
+                  email: selectedEmployee.email || '',
+                  position: selectedEmployee.position || '',
+                  department: selectedEmployee.department || '',
+                  role: selectedEmployee.role || '',
+                }}
                 currentUser={getCurrentUserData()}
                 onCloseAction={() => {
                   setIsEvaluationModalOpen(false);
@@ -2679,7 +2684,14 @@ function EvaluatorDashboard() {
             {selectedEmployee && evaluationType === "manager" && (
               <ManagerEvaluationForm
                 key={`manager-eval-${selectedEmployee.id}-${evaluationType}`}
-                employee={selectedEmployee}
+                employee={{
+                  ...selectedEmployee,
+                  name: selectedEmployee.name || '',
+                  email: selectedEmployee.email || '',
+                  position: selectedEmployee.position || '',
+                  department: selectedEmployee.department || '',
+                  role: selectedEmployee.role || '',
+                }}
                 currentUser={getCurrentUserData()}
                 onCloseAction={() => {
                   setIsEvaluationModalOpen(false);
@@ -2896,7 +2908,7 @@ function EvaluatorDashboard() {
         <ViewResultsModal
           isOpen={isViewResultsModalOpen}
           onCloseAction={() => setIsViewResultsModalOpen(false)}
-          submission={selectedEvaluationSubmission}
+          submission={selectedEvaluationSubmission as any}
           currentUserName={getCurrentUserData()?.name}
           currentUserSignature={getCurrentUserData()?.signature}
           isEvaluatorView={true}
@@ -3013,34 +3025,34 @@ function EvaluatorDashboard() {
           isOpen={isViewEmployeeModalOpen}
           onCloseAction={() => setIsViewEmployeeModalOpen(false)}
           employee={selectedEmployeeForView}
-          onStartEvaluationAction={async (employee: Employee) => {
+          onStartEvaluationAction={(employee: Employee) => {
             setIsViewEmployeeModalOpen(false);
             
-            // Fetch fresh employee data from API to ensure we have latest updates (position, department, role, hireDate)
-            try {
-              const freshEmployeeData = await apiService.getEmployee(employee.id);
-              
-              // If API returns fresh data, use it; otherwise fall back to cached employee data
-              const updatedEmployee: Employee = freshEmployeeData ? {
-                id: freshEmployeeData.id || employee.id,
-                name: freshEmployeeData.name || freshEmployeeData.fname + ' ' + freshEmployeeData.lname || employee.name,
-                email: freshEmployeeData.email || employee.email,
-                position: freshEmployeeData.position || employee.position,
-                department: freshEmployeeData.department || employee.department,
-                branch: freshEmployeeData.branch || employee.branch,
-                role: freshEmployeeData.role || freshEmployeeData.roles?.[0]?.name || freshEmployeeData.roles?.[0] || employee.role,
-                hireDate: freshEmployeeData.hireDate || employee.hireDate,
-                ...(freshEmployeeData.avatar || (employee as any).avatar ? { avatar: freshEmployeeData.avatar || (employee as any).avatar } : {}),
-              } as Employee : employee;
-              
-              setSelectedEmployee(updatedEmployee);
-            } catch (error) {
-              console.error('Error fetching fresh employee data:', error);
-              // Fallback to cached employee data if API call fails
-              setSelectedEmployee(employee);
-            }
-            
-            setIsEvaluationTypeModalOpen(true);
+            // Fetch fresh employee data from API to ensure we have latest updates (position, department, role)
+            // Handle async operation without making the function async
+            apiService.getEmployee(employee.id)
+              .then((freshEmployeeData) => {
+                // If API returns fresh data, use it; otherwise fall back to cached employee data
+                const updatedEmployee: Employee = freshEmployeeData ? {
+                  id: freshEmployeeData.id || employee.id,
+                  name: freshEmployeeData.name || (freshEmployeeData.fname && freshEmployeeData.lname ? `${freshEmployeeData.fname} ${freshEmployeeData.lname}` : '') || employee.name || '',
+                  email: freshEmployeeData.email || employee.email,
+                  position: freshEmployeeData.position || employee.position,
+                  department: freshEmployeeData.department || employee.department,
+                  branch: freshEmployeeData.branch || employee.branch,
+                  role: freshEmployeeData.role || freshEmployeeData.roles?.[0]?.name || freshEmployeeData.roles?.[0] || employee.role,
+                  ...(freshEmployeeData.avatar || (employee as any).avatar ? { avatar: freshEmployeeData.avatar || (employee as any).avatar } : {}),
+                } as Employee : employee;
+                
+                setSelectedEmployee(updatedEmployee);
+                setIsEvaluationTypeModalOpen(true);
+              })
+              .catch((error) => {
+                console.error('Error fetching fresh employee data:', error);
+                // Fallback to cached employee data if API call fails
+                setSelectedEmployee(employee);
+                setIsEvaluationTypeModalOpen(true);
+              });
           }}
           onViewSubmissionAction={(submission: any) => {
             setSelectedSubmission(submission);

@@ -40,7 +40,6 @@ interface EvaluationFormProps {
     department: string;
     branch?: string;
     role: string;
-    hireDate: string;
     signature?: string;
     employeeId?: string; // Formatted employee ID from registration (e.g., "1234-567890")
   };
@@ -85,7 +84,6 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
     department: employee?.department || '',
     branch: employee?.branch || '',
     role: employee?.role || '',
-    hireDate: employee?.hireDate || '',
     supervisor: '',
     coverageFrom: '',
     coverageTo: '',
@@ -188,7 +186,6 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
     position: evaluationData.position,
     department: evaluationData.department,
     branch: evaluationData.branch,
-    hireDate: evaluationData.hireDate,
   }); // Debug log
   const [isEvaluatorApproved, setIsEvaluatorApproved] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -206,7 +203,6 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
         department: employee.department,
         branch: employee.branch || '',
         role: employee.role,
-        hireDate: employee.hireDate,
       }));
     }
   }, [employee]);

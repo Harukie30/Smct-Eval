@@ -22,7 +22,6 @@ interface OverallAssessmentProps {
         position: string;
         department: string;
         role: string;
-        hireDate: string;
         signature?: string;
     };
     currentUser?: {
@@ -217,8 +216,8 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                         <div class="print-value">${data.branch || 'Branch: N/A'} | ${data.supervisor || 'Sup: N/A'}</div>
                     </div>
                     <div class="print-field">
-                        <div class="print-label">Hire Date & Coverage:</div>
-                        <div class="print-value">${data.hireDate || 'Hire: N/A'} | ${data.coverageFrom && data.coverageTo ? `${format(new Date(data.coverageFrom), 'MMM dd, yyyy')} - ${format(new Date(data.coverageTo), 'MMM dd, yyyy')}` : 'Coverage: N/A'}</div>
+                        <div class="print-label">Coverage:</div>
+                        <div class="print-value">${data.coverageFrom && data.coverageTo ? `${format(new Date(data.coverageFrom), 'MMM dd, yyyy')} - ${format(new Date(data.coverageTo), 'MMM dd, yyyy')}` : 'Coverage: N/A'}</div>
                     </div>
                 </div>
             </div>
@@ -683,10 +682,6 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                             <div>
                                 <Label className="font-medium">Branch:</Label>
                                 <Input value={data.branch || ''} readOnly className="mt-1 bg-gray-50" disabled />
-                            </div>
-                            <div>
-                                <Label className="font-medium">Date Hired:</Label>
-                                <Input value={data.hireDate || ''} readOnly className="mt-1 bg-gray-50" disabled />
                             </div>
                             <div>
                                 <Label className="font-medium">Immediate Supervisor:</Label>

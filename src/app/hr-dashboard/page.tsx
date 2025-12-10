@@ -46,8 +46,8 @@ interface Employee {
   position: string;
   department: string;
   branch: string;
-  hireDate: string;
   role: string;
+  hireDate?: string; // Optional - hire date removed from forms
   employeeId?: string; // Formatted employee ID from registration (e.g., "1234-567890")
 }
 
@@ -232,6 +232,95 @@ function HRDashboard() {
   const [isEvaluationTypeModalOpen, setIsEvaluationTypeModalOpen] = useState(false);
   const [evaluationType, setEvaluationType] = useState<'employee' | 'manager' | null>(null);
   const [employeeToEvaluate, setEmployeeToEvaluate] = useState<Employee | null>(null);
+  const [employeeDetailsId, setEmployeeDetailsId] = useState<string>("");
+  const [isLoadingEmployeeDetailsId, setIsLoadingEmployeeDetailsId] = useState(false);
+
+  // Format employee ID helper function
+  const formatEmployeeId = (employeeId: number | string | undefined): string => {
+    if (!employeeId) return "Not Assigned";
+    const idString = String(employeeId).replace(/-/g, "").padStart(10, "0");
+    if (idString.length >= 10) {
+      return `${idString.slice(0, 4)}-${idString.slice(4, 10)}`;
+    }
+    return idString;
+  };
+
+  // Helper to check if branch is HO, Head Office, or none
+  const isBranchHOOrNone = (branch: string | undefined): boolean => {
+    if (!branch) return false;
+    const branchLower = String(branch).toLowerCase().trim();
+    return branchLower === "ho" || branchLower === "head office" || branchLower === "none" || branchLower === "none ho";
+  };
+
+  // Get position label
+  const getPositionLabel = (positionId: string | undefined): string => {
+    if (!positionId) return "Not Assigned";
+    const position = positionsData.find((p: any) => 
+      p.id === positionId || p.value === positionId || p.name === positionId
+    );
+    return position?.name || (position as any)?.label || String(positionId);
+  };
+
+  // Get branch label
+  const getBranchLabel = (branchId: string | undefined): string => {
+    if (!branchId) return "Not Assigned";
+    const branch = branches.find((b: any) => 
+      b.id === branchId || b.name === branchId || (b as any).value === branchId
+    );
+    return branch?.name || (branch as any)?.label || String(branchId);
+  };
+
+  // Fetch employee ID when modal opens (same approach as EditUserModal)
+  useEffect(() => {
+    const fetchEmployeeDetailsId = async () => {
+      if (!isEmployeeModalOpen || !selectedEmployee) {
+        setEmployeeDetailsId("");
+        return;
+      }
+      setIsLoadingEmployeeDetailsId(true);
+      try {
+        // First check if employeeId is already in the selectedEmployee object
+        const employeeId = (selectedEmployee as any).employeeId ||
+          (selectedEmployee as any).employee_id ||
+          (selectedEmployee as any).emp_id;
+
+        if (employeeId) {
+          setEmployeeDetailsId(formatEmployeeId(employeeId));
+          setIsLoadingEmployeeDetailsId(false);
+          return;
+        }
+
+        // If not found, try to get it from getAllUsers (same as EditUserModal)
+        const accounts = await apiService.getAllUsers();
+        const account = accounts.find((acc: any) =>
+          acc.id === selectedEmployee.id ||
+          acc.employeeId === selectedEmployee.id ||
+          acc.employee_id === selectedEmployee.id ||
+          acc.user_id === selectedEmployee.id ||
+          acc.email === selectedEmployee.email
+        );
+
+        // Try different field names for employeeId (same as EditUserModal)
+        const foundEmployeeId =
+          account?.employeeId ||
+          account?.employee_id ||
+          account?.emp_id ||
+          account?.id;
+
+        if (foundEmployeeId) {
+          setEmployeeDetailsId(formatEmployeeId(foundEmployeeId));
+        } else {
+          setEmployeeDetailsId("Not Assigned");
+        }
+      } catch (error) {
+        console.error("Error fetching employeeId:", error);
+        setEmployeeDetailsId("Not Assigned");
+      } finally {
+        setIsLoadingEmployeeDetailsId(false);
+      }
+    };
+    fetchEmployeeDetailsId();
+  }, [isEmployeeModalOpen, selectedEmployee]);
 
   // Note: Evaluation Records tab state is now managed inside EvaluationRecordsTab component
   const [employeesRefreshing, setEmployeesRefreshing] = useState(false);
@@ -425,13 +514,7 @@ function HRDashboard() {
       const metrics: HRMetrics = {
         totalEmployees: employees.length,
         activeEmployees: employees.filter((emp: any) => emp.isActive !== false).length,
-        newHires: employees.filter((emp: any) => {
-          if (!emp.hireDate) return false;
-          const hireDate = new Date(emp.hireDate);
-          const sixMonthsAgo = new Date();
-          sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-          return hireDate > sixMonthsAgo;
-        }).length,
+        newHires: 0, // Hire date removed, set to 0
         turnoverRate: 5.2, // Mock data
         averageTenure: 2.8, // Mock data
         departmentsCount: departments.length,
@@ -473,12 +556,16 @@ function HRDashboard() {
           fname: user.fname,
           lname: user.lname,
           email: user.email,
-          position: user.position,
-          department: user.department,
-          branch: user.branch,
-          hireDate: user.hireDate,
-          role: user.role,
-          isActive: user.isActive
+          position: user.positions?.label || user.position || 'N/A',
+          department: user.departments?.department_name || user.department || 'N/A',
+          branch: (user.branches && Array.isArray(user.branches) && user.branches[0]?.branch_name) || user.branch || 'N/A',
+          role: (user.roles && Array.isArray(user.roles) && user.roles[0]?.name) || user.role || 'N/A',
+          isActive: user.isActive,
+          // Keep full nested structures for EditUserModal
+          positions: user.positions,
+          departments: user.departments,
+          branches: user.branches,
+          roles: user.roles
         }));
       setEmployees(employeesList);
       
@@ -580,12 +667,16 @@ function HRDashboard() {
             fname: user.fname,
             lname: user.lname,
             email: user.email,
-            position: user.position,
-            department: user.department,
-            branch: user.branch,
-            hireDate: user.hireDate,
-            role: user.role,
-            isActive: user.isActive
+            position: user.positions?.label || user.position || 'N/A',
+            department: user.departments?.department_name || user.department || 'N/A',
+            branch: (user.branches && Array.isArray(user.branches) && user.branches[0]?.branch_name) || user.branch || 'N/A',
+            role: (user.roles && Array.isArray(user.roles) && user.roles[0]?.name) || user.role || 'N/A',
+            isActive: user.isActive,
+            // Keep full nested structures for EditUserModal
+            positions: user.positions,
+            departments: user.departments,
+            branches: user.branches,
+            roles: user.roles
           }));
         setEmployees(employeesList);
         
@@ -636,16 +727,87 @@ function HRDashboard() {
 
 
 
-  const handleEditEmployee = (employee: Employee) => {
-    setSelectedEmployee({
-      ...employee,
-      username: (employee as any).username || '',
-      password: (employee as any).password || '',
-      contact: (employee as any).contact || '',
-      isActive: (employee as any).isActive !== undefined ? (employee as any).isActive : true,
-      signature: (employee as any).signature || ''
-    } as any);
-    setIsEditModalOpen(true);
+
+  const handleViewEmployee = async (employee: Employee) => {
+    try {
+      // Fetch the full user data from API to get all nested structures (positions, departments, branches, roles, contact, etc.)
+      const allUsers = await apiService.getAllUsers();
+      const fullUserData = allUsers.find((user: any) => 
+        user.id === employee.id || 
+        user.email === employee.email ||
+        (user.employeeId && user.employeeId === employee.id)
+      );
+      
+      if (fullUserData) {
+        // Use the full user data from API which has all nested structures
+        setSelectedEmployee(fullUserData as any);
+      } else {
+        // Fallback to the employee object if not found in API
+        setSelectedEmployee({
+          ...employee,
+          username: (employee as any).username || '',
+          password: (employee as any).password || '',
+          contact: (employee as any).contact || '',
+          isActive: (employee as any).isActive !== undefined ? (employee as any).isActive : true,
+          signature: (employee as any).signature || ''
+        } as any);
+      }
+      setIsEmployeeModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching full user data for view:", error);
+      // Fallback to the employee object on error
+      setSelectedEmployee({
+        ...employee,
+        username: (employee as any).username || '',
+        password: (employee as any).password || '',
+        contact: (employee as any).contact || '',
+        isActive: (employee as any).isActive !== undefined ? (employee as any).isActive : true,
+        signature: (employee as any).signature || ''
+      } as any);
+      setIsEmployeeModalOpen(true);
+    }
+  };
+
+  const handleEditEmployee = async (employee: Employee) => {
+    console.log("handleEditEmployee - Full employee object:", employee);
+    
+    try {
+      // Fetch the full user data from API to get all nested structures (positions, departments, branches, roles, contact, etc.)
+      const allUsers = await apiService.getAllUsers();
+      const fullUserData = allUsers.find((user: any) => 
+        user.id === employee.id || 
+        user.email === employee.email ||
+        (user.employeeId && user.employeeId === employee.id)
+      );
+      
+      if (fullUserData) {
+        // Use the full user data from API which has all nested structures
+        setSelectedEmployee(fullUserData as any);
+      } else {
+        // Fallback to the employee object if not found in API
+        setSelectedEmployee({
+          ...employee,
+          username: (employee as any).username || '',
+          password: (employee as any).password || '',
+          contact: (employee as any).contact || '',
+          isActive: (employee as any).isActive !== undefined ? (employee as any).isActive : true,
+          signature: (employee as any).signature || ''
+        } as any);
+      }
+      setIsEditModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching full user data:", error);
+      // Fallback to the employee object on error
+      setSelectedEmployee({
+        ...employee,
+        username: (employee as any).username || '',
+        password: (employee as any).password || '',
+        contact: (employee as any).contact || '',
+        isActive: (employee as any).isActive !== undefined ? (employee as any).isActive : true,
+        signature: (employee as any).signature || ''
+      } as any);
+      setIsEditModalOpen(true);
+    }
   };
 
   const handleAddEmployee = async (newUser: any) => {
@@ -662,7 +824,6 @@ function HRDashboard() {
       formData.append('branch_id', String(newUser.branch_id || newUser.branch || ''));
       formData.append('role', newUser.role || 'employee');
       formData.append('isActive', String(newUser.isActive !== undefined ? newUser.isActive : true));
-      if (newUser.hireDate) formData.append('hireDate', newUser.hireDate);
       if (newUser.contact) formData.append('contact', newUser.contact);
 
       // Add user via API
@@ -685,14 +846,60 @@ function HRDashboard() {
 
   const handleSaveEmployee = async (updatedUser: any) => {
     try {
-      // Update existing employee using API service
+      // Convert user object to FormData for API
       const formData = new FormData();
       Object.keys(updatedUser).forEach((key) => {
-        const value = updatedUser[key as keyof typeof updatedUser];
-        if (value !== null && value !== undefined) {
-          formData.append(key, String(value));
+        if (updatedUser[key] !== undefined && updatedUser[key] !== null) {
+          // Skip these keys - we'll append them with _id suffix separately
+          if (
+            key === "position" ||
+            key === "branch" ||
+            key === "role" ||
+            key === "department" ||
+            key === "employeeId"
+          ) {
+            return;
+          }
+          if (key === "avatar" && updatedUser[key] instanceof File) {
+            formData.append(key, updatedUser[key]);
+          } else {
+            formData.append(key, String(updatedUser[key]));
+          }
         }
       });
+
+      // Append position as position_id if it exists
+      if (updatedUser.position !== undefined && updatedUser.position !== null) {
+        formData.append("position_id", String(updatedUser.position));
+      }
+
+      // Append branch as branch_id if it exists
+      if (updatedUser.branch !== undefined && updatedUser.branch !== null) {
+        formData.append("branch_id", String(updatedUser.branch));
+      }
+
+      // Append role as roles if it exists
+      if (updatedUser.role !== undefined && updatedUser.role !== null) {
+        formData.append("roles", String(updatedUser.role));
+      }
+
+      // Append department as department_id if it exists
+      if (
+        updatedUser.department !== undefined &&
+        updatedUser.department !== null
+      ) {
+        formData.append("department_id", String(updatedUser.department));
+      }
+
+
+      // Append employeeId (remove dashes before sending, like in registration)
+      if (updatedUser.employeeId !== undefined && updatedUser.employeeId !== null) {
+        const employeeIdString = String(updatedUser.employeeId);
+        // Remove dashes from employee ID before sending
+        const employeeIdWithoutDashes = employeeIdString.replace(/-/g, "");
+        formData.append("employee_id", employeeIdWithoutDashes);
+      }
+
       await apiService.updateEmployee(formData, updatedUser.id);
 
       // Refresh employee data to update the table immediately
@@ -741,7 +948,7 @@ function HRDashboard() {
       // Get formatted employee_id from account (stored as employee_id in registration)
       const formattedEmployeeId = (account as any)?.employee_id || account?.employeeId;
       
-      // Fetch fresh employee data from API to ensure we have latest updates (position, department, role, hireDate)
+      // Fetch fresh employee data from API to ensure we have latest updates (position, department, role)
       try {
         const freshEmployeeData = await apiService.getEmployee(employee.id);
         
@@ -754,7 +961,6 @@ function HRDashboard() {
           department: freshEmployeeData.department || employee.department,
           branch: freshEmployeeData.branch || employee.branch,
           role: freshEmployeeData.role || freshEmployeeData.roles?.[0]?.name || freshEmployeeData.roles?.[0] || employee.role,
-          hireDate: freshEmployeeData.hireDate || employee.hireDate,
           ...(freshEmployeeData.avatar || (employee as any).avatar ? { avatar: freshEmployeeData.avatar || (employee as any).avatar } : {}),
         } as Employee : employee;
         
@@ -903,31 +1109,32 @@ function HRDashboard() {
       const allUsers = await apiService.getAllUsers();
       const employeesList = allUsers
         .filter((user: any) => user.role !== 'admin')
-        .map((user: any) => ({
-          id: user.employeeId || user.id,
-          name: user.name || `${user.fname || ''} ${user.lname || ''}`.trim(),
-          fname: user.fname,
-          lname: user.lname,
-          email: user.email,
-          position: user.position,
-          department: user.department,
-          branch: user.branch,
-          hireDate: user.hireDate,
-          role: user.role,
-          isActive: user.isActive
-        }));
+        .map((user: any) => {
+          return {
+            id: user.employeeId || user.id,
+            name: user.name || `${user.fname || ''} ${user.lname || ''}`.trim(),
+            fname: user.fname,
+            lname: user.lname,
+            email: user.email,
+            position: user.positions?.label || user.position || 'N/A',
+            department: user.departments?.department_name || user.department || 'N/A',
+            branch: (user.branches && Array.isArray(user.branches) && user.branches[0]?.branch_name) || user.branch || 'N/A',
+            role: (user.roles && Array.isArray(user.roles) && user.roles[0]?.name) || user.role || 'N/A',
+            isActive: user.isActive,
+            // Keep full nested structures for EditUserModal
+            positions: user.positions,
+            departments: user.departments,
+            branches: user.branches,
+            roles: user.roles
+          };
+        });
       setEmployees(employeesList);
       
       // Recalculate HR metrics
       const metrics: HRMetrics = {
         totalEmployees: employeesList.length,
         activeEmployees: employeesList.length,
-        newHires: employeesList.filter((emp: any) => {
-          const hireDate = new Date(emp.hireDate);
-          const sixMonthsAgo = new Date();
-          sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-          return hireDate > sixMonthsAgo;
-        }).length,
+        newHires: 0, // Hire date removed, set to 0
         turnoverRate: 5.2, // Mock data
         averageTenure: 2.8, // Mock data
         departmentsCount: departments.length,
@@ -1137,10 +1344,7 @@ function HRDashboard() {
             hrMetrics={hrMetrics}
             employeesRefreshing={employeesRefreshing}
             onRefresh={refreshEmployeeData}
-            onViewEmployee={(employee) => {
-                                  setSelectedEmployee(employee);
-                                  setIsEmployeeModalOpen(true);
-                                }}
+            onViewEmployee={handleViewEmployee}
             onEditEmployee={handleEditEmployee}
             onDeleteEmployee={handleDeleteEmployee}
             onEvaluateEmployee={handleEvaluateEmployee}
@@ -1337,121 +1541,294 @@ function HRDashboard() {
 
       {/* Employee Details Modal */}
       <Dialog open={isEmployeeModalOpen} onOpenChangeAction={setIsEmployeeModalOpen}>
-        <DialogContent className={`max-w-4xl max-h-[95vh] overflow-y-auto ${dialogAnimationClass}`} key={isEmployeeModalOpen ? 'open' : 'closed'}>
-          {selectedEmployee && (
-            <>
-              <DialogHeader className="pb-6">
-                <DialogTitle className="text-2xl font-bold text-gray-900">Employee Details</DialogTitle>
-                <DialogDescription className="text-base text-gray-600 mt-2">
-                  Complete employee information and profile
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-6">
-                {/* Personal Information */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                    <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-blue-600 text-sm font-bold">👤</span>
-                    </span>
-                    Personal Information
-                  </h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-gray-700">Full Name</Label>
-                      <p className="text-lg text-gray-900 font-medium">{selectedEmployee.name}</p>
+        <DialogContent className={`max-w-3xl max-h-[90vh] overflow-y-auto p-6 bg-blue-100 animate-popup ${dialogAnimationClass}`} key={isEmployeeModalOpen ? 'open' : 'closed'}>
+          {selectedEmployee && (() => {
+            const userAny = selectedEmployee as any;
+            
+            // Extract branch value - could be string, object, or array (same as EditUserModal)
+            let branchValue = "";
+            let branchNameOrId = "";
+            if (selectedEmployee.branch && typeof selectedEmployee.branch === "string") {
+              branchNameOrId = selectedEmployee.branch;
+            } else if (userAny.branches && Array.isArray(userAny.branches) && userAny.branches.length > 0) {
+              branchNameOrId = userAny.branches[0]?.branch_name || userAny.branches[0]?.name || userAny.branches[0]?.id || "";
+            } else if (selectedEmployee.branch && typeof selectedEmployee.branch === "object") {
+              branchNameOrId = (selectedEmployee.branch as any).branch_name || (selectedEmployee.branch as any).name || (selectedEmployee.branch as any).id || String(selectedEmployee.branch);
+            } else if (selectedEmployee.branch) {
+              branchNameOrId = String(selectedEmployee.branch);
+            }
+            
+            // Find branch label from branches array
+            if (branchNameOrId && branches && branches.length > 0) {
+              const foundBranch = branches.find((b: any) => {
+                const bLabel = (b as any).label || b.name || "";
+                const bValue = (b as any).value || b.id || "";
+                return (
+                  bLabel === branchNameOrId ||
+                  bValue === branchNameOrId ||
+                  String(bValue) === String(branchNameOrId) ||
+                  bLabel.includes(branchNameOrId) ||
+                  branchNameOrId.includes(bLabel.split(" /")[0])
+                );
+              });
+              branchValue = foundBranch?.name || (foundBranch as any)?.label || branchNameOrId;
+            } else {
+              branchValue = branchNameOrId;
+            }
+
+            // Extract position value - could be string, object with label/value, or nested in positions object
+            let userPosition = "";
+            if (selectedEmployee.position && typeof selectedEmployee.position === "string") {
+              userPosition = selectedEmployee.position;
+            } else if (userAny.positions) {
+              if (typeof userAny.positions === "object" && !Array.isArray(userAny.positions)) {
+                userPosition = userAny.positions.label || userAny.positions.name || userAny.positions.value || "";
+              } else if (typeof userAny.positions === "string") {
+                userPosition = userAny.positions;
+              }
+            }
+            
+            // Find position label from positionsData array
+            const foundPosition = positionsData.find((p: any) => 
+              (p as any).label === userPosition ||
+              p.name === userPosition ||
+              (p as any).value === userPosition ||
+              p.id === userPosition ||
+              String((p as any).value) === String(userPosition)
+            );
+            const positionLabel = foundPosition?.name || (foundPosition as any)?.label || userPosition || "Not Assigned";
+
+            // Extract role value - could be string, object, or array
+            let userRole = "";
+            if (selectedEmployee.role && typeof selectedEmployee.role === "string") {
+              userRole = selectedEmployee.role;
+            } else if (userAny.roles && Array.isArray(userAny.roles) && userAny.roles.length > 0) {
+              userRole = userAny.roles[0]?.name || userAny.roles[0]?.value || "";
+            } else if (selectedEmployee.role && typeof selectedEmployee.role === "object") {
+              userRole = (selectedEmployee.role as any).name || (selectedEmployee.role as any).value || "";
+            }
+
+            // Extract department value - could be string or nested in departments object/array
+            let departmentValue = "";
+            if (selectedEmployee.department && typeof selectedEmployee.department === "string") {
+              departmentValue = selectedEmployee.department;
+            } else if (userAny.departments && Array.isArray(userAny.departments) && userAny.departments.length > 0) {
+              departmentValue = userAny.departments[0]?.name || userAny.departments[0] || "";
+            } else if (userAny.departments && typeof userAny.departments === "object") {
+              departmentValue = userAny.departments.name || "";
+            }
+
+            // Split name into first and last name
+            const fname = userAny.fname || selectedEmployee.name?.split(/\s+/)[0] || "";
+            const lname = userAny.lname || selectedEmployee.name?.split(/\s+/).slice(1).join(" ") || "";
+
+            return (
+              <>
+                <DialogHeader className="pb-6">
+                  <DialogTitle className="text-xl font-semibold">
+                    Employee Details
+                  </DialogTitle>
+                  <DialogDescription className="text-gray-600">
+                    View complete employee information and profile
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+                  {/* Employee ID */}
+                  <div className="space-y-2">
+                    <Label htmlFor="employeeId" className="text-base font-medium text-gray-900">
+                      Employee ID
+                    </Label>
+                    {isLoadingEmployeeDetailsId ? (
+                      <p className="text-sm text-gray-500">Loading...</p>
+                    ) : (
+                      <Input
+                        id="employeeId"
+                        value={employeeDetailsId}
+                        readOnly
+                        disabled
+                        className="bg-gray-100 border-gray-300 cursor-not-allowed"
+                      />
+                    )}
+                  </div>
+
+                  {/* First Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="fname" className="text-base font-medium text-gray-900">
+                      First Name
+                    </Label>
+                    <Input
+                      id="fname"
+                      value={fname}
+                      readOnly
+                      disabled
+                      className="bg-gray-100 border-gray-300 cursor-not-allowed"
+                    />
+                  </div>
+
+                  {/* Last Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="lname" className="text-base font-medium text-gray-900">
+                      Last Name
+                    </Label>
+                    <Input
+                      id="lname"
+                      value={lname}
+                      readOnly
+                      disabled
+                      className="bg-gray-100 border-gray-300 cursor-not-allowed"
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-base font-medium text-gray-900">
+                      Email Address
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={selectedEmployee.email || ""}
+                      readOnly
+                      disabled
+                      className="bg-gray-100 border-gray-300 cursor-not-allowed"
+                    />
+                  </div>
+
+                  {/* Username */}
+                  <div className="space-y-2">
+                    <Label htmlFor="username" className="text-base font-medium text-gray-900">
+                      Username
+                    </Label>
+                    <Input
+                      id="username"
+                      value={(selectedEmployee as any).username || "Not Set"}
+                      readOnly
+                      disabled
+                      className="bg-gray-100 border-gray-300 cursor-not-allowed"
+                    />
+                  </div>
+
+                  {/* Password */}
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-base font-medium text-gray-900">
+                      Password
+                    </Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value="••••••••"
+                      readOnly
+                      disabled
+                      className="bg-gray-100 border-gray-300 cursor-not-allowed"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Password is hidden for security
+                    </p>
+                  </div>
+
+                  {/* Contact */}
+                  <div className="space-y-2">
+                    <Label htmlFor="contact" className="text-base font-medium text-gray-900">
+                      Contact Number
+                    </Label>
+                    <Input
+                      id="contact"
+                      type="tel"
+                      value={(selectedEmployee as any).contact || "Not Set"}
+                      readOnly
+                      disabled
+                      className="bg-gray-100 border-gray-300 cursor-not-allowed"
+                    />
+                  </div>
+
+                  {/* Position */}
+                  <div className="space-y-2 w-2/3">
+                    <Label htmlFor="position" className="text-base font-medium text-gray-900">
+                      Position
+                    </Label>
+                    <Input
+                      id="position"
+                      value={positionLabel}
+                      readOnly
+                      disabled
+                      className="bg-gray-100 border-gray-300 cursor-not-allowed"
+                    />
+                  </div>
+
+                  {/* Department - Show only if branch is HO, Head Office, or none */}
+                  {isBranchHOOrNone(branchValue) && (
+                    <div className="space-y-2 w-1/2">
+                      <Label htmlFor="department" className="text-base font-medium text-gray-900">
+                        Department
+                      </Label>
+                      <Input
+                        id="department"
+                        value={departmentValue || "Not Assigned"}
+                        readOnly
+                        disabled
+                        className="bg-gray-100 border-gray-300 cursor-not-allowed"
+                      />
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-gray-700">Email Address</Label>
-                      <p className="text-lg text-gray-900 font-medium">{selectedEmployee.email}</p>
-                    </div>
+                  )}
+
+                  {/* Branch */}
+                  <div className="space-y-2 w-1/2">
+                    <Label htmlFor="branch" className="text-base font-medium text-gray-900">
+                      Branch
+                    </Label>
+                    <Input
+                      id="branch"
+                      value={branchValue || "Not Assigned"}
+                      readOnly
+                      disabled
+                      className="bg-gray-100 border-gray-300 cursor-not-allowed"
+                    />
+                  </div>
+
+                  {/* Role */}
+                  <div className="space-y-2 w-1/2">
+                    <Label htmlFor="role" className="text-base font-medium text-gray-900">
+                      Role
+                    </Label>
+                    <Input
+                      id="role"
+                      value={userRole || "Not Assigned"}
+                      readOnly
+                      disabled
+                      className="bg-gray-100 border-gray-300 cursor-not-allowed"
+                    />
+                  </div>
+
+                  {/* Active Status */}
+                  <div className="space-y-2 w-1/2">
+                    <Label htmlFor="isActive" className="text-base font-medium text-gray-900">
+                      Status
+                    </Label>
+                    <Input
+                      id="isActive"
+                      value={(selectedEmployee as any).isActive !== undefined 
+                        ? ((selectedEmployee as any).isActive ? "Active" : "Inactive")
+                        : "Active"}
+                      readOnly
+                      disabled
+                      className="bg-gray-100 border-gray-300 cursor-not-allowed"
+                    />
                   </div>
                 </div>
 
-                {/* Job Information */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                    <span className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-green-600 text-sm font-bold">💼</span>
-                    </span>
-                    Job Information
-                  </h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-gray-700">Position</Label>
-                      <p className="text-lg text-gray-900 font-medium">{selectedEmployee.position}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-gray-700">Role</Label>
-                      <Badge variant="secondary" className="text-base px-3 py-1">
-                        {selectedEmployee.role}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Organization Information */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                    <span className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-purple-600 text-sm font-bold">🏢</span>
-                    </span>
-                    Organization
-                  </h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-gray-700">Department</Label>
-                      <Badge variant="outline" className="text-base px-3 py-1">
-                        {selectedEmployee.department}
-                      </Badge>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-gray-700">Branch</Label>
-                      <p className="text-lg text-gray-900 font-medium">{selectedEmployee.branch}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Employment Details */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                    <span className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-orange-600 text-sm font-bold">📅</span>
-                    </span>
-                    Employment Details
-                  </h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-gray-700">Hire Date</Label>
-                      <p className="text-lg text-gray-900 font-medium">
-                        {new Date(selectedEmployee.hireDate).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold text-gray-700">Employee ID</Label>
-                      <p className="text-lg text-gray-900 font-medium">#{selectedEmployee.id}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <DialogFooter className="pt-4 border-t border-gray-200 mt-4">
-                <div className="flex justify-end space-x-4 w-full">
-                  <Button 
-                    variant="outline" 
+                <DialogFooter className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
+                  <Button
+                    variant="outline"
                     onClick={() => setIsEmployeeModalOpen(false)}
-                    className="px-8 py-3 text-white font-medium bg-blue-600 hover:bg-blue-700 hover:text-black hover:bg-yellow-500"
+                    className="px-6"
                   >
                     Close
                   </Button>
-                </div>
-              </DialogFooter>
-            </>
-          )}
+                </DialogFooter>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -1476,26 +1853,11 @@ function HRDashboard() {
             setIsEditModalOpen(false);
             setSelectedEmployee(null);
           }}
-          user={{
-            id: selectedEmployee.id,
-            name: selectedEmployee.name,
-            email: selectedEmployee.email,
-            position: selectedEmployee.position,
-            department: selectedEmployee.department,
-            branch: selectedEmployee.branch,
-            role: selectedEmployee.role,
-            username: (selectedEmployee as any).username || '',
-            password: (selectedEmployee as any).password || '',
-            contact: (selectedEmployee as any).contact || '',
-            hireDate: selectedEmployee.hireDate || '',
-            isActive: (selectedEmployee as any).isActive !== undefined ? (selectedEmployee as any).isActive : true,
-            signature: (selectedEmployee as any).signature || ''
-            // Note: employeeId is fetched by EditUserModal from accounts, not passed here
-          }}
+          user={selectedEmployee as any}
           onSave={handleSaveEmployee}
           departments={departments.map(dept => dept.name)}
-          branches={branches}
-          positions={positionsData}
+          branches={branches.map(branch => ({ value: branch.id, label: branch.name }))}
+          positions={positionsData.map(pos => ({ value: pos.id, label: pos.name }))}
           onRefresh={refreshDashboardData}
         />
       )}
@@ -1539,9 +1901,6 @@ function HRDashboard() {
                    </div>
                    <div className="mt-3 flex items-center justify-between text-sm">
                      <span className="text-gray-600">Employee ID: #{employee.id}</span>
-                     <span className="text-gray-600">
-                       Hired: {new Date(employee.hireDate).toLocaleDateString()}
-                     </span>
                    </div>
                  </div>
                ))
@@ -1710,7 +2069,6 @@ function HRDashboard() {
                   department: employeeToEvaluate.department,
                   branch: employeeToEvaluate.branch,
                   role: employeeToEvaluate.role,
-                  hireDate: employeeToEvaluate.hireDate,
                   employeeId: employeeToEvaluate.employeeId || undefined,
                 }}
                 currentUser={{
@@ -1749,7 +2107,6 @@ function HRDashboard() {
                   department: employeeToEvaluate.department,
                   branch: employeeToEvaluate.branch,
                   role: employeeToEvaluate.role,
-                  hireDate: employeeToEvaluate.hireDate,
                   employeeId: employeeToEvaluate.employeeId || undefined,
                 }}
                 currentUser={{

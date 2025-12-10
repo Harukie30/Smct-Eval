@@ -29,7 +29,6 @@ interface Step1Props {
     department: string;
     branch?: string;
     role: string;
-    hireDate: string;
   };
   currentUser?: {
     id: number;
@@ -151,7 +150,6 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
         position: employee.position,
         department: employee.department,
         branch: employee.branch || '',
-        hireDate: employee.hireDate,
       };
       console.log('Updating evaluation data with:', employeeData); // Debug log
       updateDataAction(employeeData);
@@ -201,9 +199,8 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
       position: data.position,
       department: data.department,
       branch: data.branch,
-      hireDate: data.hireDate,
     });
-  }, [data.employeeName, data.employeeId, data.position, data.department, data.branch, data.hireDate]);
+  }, [data.employeeName, data.employeeId, data.position, data.department, data.branch]);
 
   // Calculate average score for Job Knowledge
   const calculateAverageScore = () => {
@@ -639,18 +636,6 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
 
         {/* Right Column */}
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="hireDate" className="text-base font-medium text-gray-900">
-              Date Hired:
-            </Label>
-            <Input
-              id="hireDate"
-              value={data.hireDate || ''}
-              readOnly
-              className="bg-gray-100 border-gray-300 cursor-not-allowed"
-            />
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="supervisor" className="text-base font-medium text-gray-900">
               Immediate Supervisor:

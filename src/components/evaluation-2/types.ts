@@ -6,7 +6,6 @@ export type EvaluationData = {
   department: string;
   branch: string;
   role: string;
-  hireDate: string;
   supervisor: string;
   coverageFrom: string;
   coverageTo: string;

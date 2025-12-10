@@ -40,7 +40,7 @@ interface EvaluationFormProps {
     department: string;
     branch?: string;
     role: string;
-    hireDate: string;
+    hireDate?: string; // Optional - can be input in evaluation form
     signature?: string;
     employeeId?: string; // Formatted employee ID from registration (e.g., "1234-567890")
   };
@@ -188,7 +188,6 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
     position: evaluationData.position,
     department: evaluationData.department,
     branch: evaluationData.branch,
-    hireDate: evaluationData.hireDate,
   }); // Debug log
   const [isEvaluatorApproved, setIsEvaluatorApproved] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -206,7 +205,7 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
         department: employee.department,
         branch: employee.branch || '',
         role: employee.role,
-        hireDate: employee.hireDate,
+        hireDate: employee.hireDate || '',
       }));
     }
   }, [employee]);
@@ -422,6 +421,11 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
         evaluatorName: currentUser?.name || 'Evaluator',
         evaluationData: {
           ...evaluationData,
+          // Explicitly ensure position, department, and branch are included
+          position: evaluationData.position || employee?.position || '',
+          department: evaluationData.department || employee?.department || '',
+          branch: evaluationData.branch || employee?.branch || '',
+          role: evaluationData.role || employee?.role || '',
           overallRating,
           // Ensure evaluator signature is included
           evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',
@@ -445,6 +449,11 @@ export default function EvaluationForm({ employee, currentUser, onCloseAction, o
           evaluatorName: currentUser?.name || 'Evaluator',
           evaluationData: {
             ...evaluationData,
+            // Explicitly ensure position, department, and branch are included
+            position: evaluationData.position || employee?.position || '',
+            department: evaluationData.department || employee?.department || '',
+            branch: evaluationData.branch || employee?.branch || '',
+            role: evaluationData.role || employee?.role || '',
             overallRating,
             // Ensure evaluator signature is included
             evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',

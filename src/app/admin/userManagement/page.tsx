@@ -51,7 +51,6 @@ interface Employee {
   positions: any;
   departments: any;
   branches: any;
-  hireDate: Date;
   roles: any;
   username: string;
   password: string;
@@ -115,7 +114,8 @@ export default function UserManagementTab() {
     useState(statusFilter);
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(10); // For Active Users
+  const [pendingItemsPerPage, setPendingItemsPerPage] = useState(8); // For New Registrations
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
@@ -133,14 +133,14 @@ export default function UserManagementTab() {
         searchValue,
         statusFilter,
         currentPage,
-        itemsPerPage
+        pendingItemsPerPage
       );
 
       // Handle different response structures
       let pendingUsersData: Employee[] = [];
       let total = 0;
       let lastPage = 1;
-      let perPageValue = itemsPerPage;
+      let perPageValue = pendingItemsPerPage;
 
       if (response) {
         // If response has data property (paginated response)
@@ -148,16 +148,16 @@ export default function UserManagementTab() {
           pendingUsersData = response.data;
           total = response.total || 0;
           lastPage = response.last_page || 1;
-          perPageValue = response.per_page || itemsPerPage;
+          perPageValue = response.per_page || pendingItemsPerPage;
         }
         // If response is directly an array - apply client-side pagination
         else if (Array.isArray(response)) {
           total = response.length;
-          lastPage = Math.ceil(response.length / itemsPerPage);
-          perPageValue = itemsPerPage;
+          lastPage = Math.ceil(response.length / pendingItemsPerPage);
+          perPageValue = pendingItemsPerPage;
           // Slice the array to show only items for current page
-          const startIndex = (currentPage - 1) * itemsPerPage;
-          const endIndex = startIndex + itemsPerPage;
+          const startIndex = (currentPage - 1) * pendingItemsPerPage;
+          const endIndex = startIndex + pendingItemsPerPage;
           pendingUsersData = response.slice(startIndex, endIndex);
         }
         // If response has users property
@@ -167,14 +167,14 @@ export default function UserManagementTab() {
             pendingUsersData = response.users;
             total = response.total;
             lastPage = response.last_page;
-            perPageValue = response.per_page || itemsPerPage;
+            perPageValue = response.per_page || pendingItemsPerPage;
           } else {
             // Apply client-side pagination
             total = response.users.length;
-            lastPage = Math.ceil(response.users.length / itemsPerPage);
-            perPageValue = itemsPerPage;
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
+            lastPage = Math.ceil(response.users.length / pendingItemsPerPage);
+            perPageValue = pendingItemsPerPage;
+            const startIndex = (currentPage - 1) * pendingItemsPerPage;
+            const endIndex = startIndex + pendingItemsPerPage;
             pendingUsersData = response.users.slice(startIndex, endIndex);
           }
         }
@@ -192,7 +192,7 @@ export default function UserManagementTab() {
       setTotalItems(0);
       setPendingTotalItems(0);
       setTotalPages(1);
-      setPerPage(itemsPerPage);
+      setPerPage(pendingItemsPerPage);
     } finally {
       if (isPageChange) {
         setIsPageLoading(false);
@@ -405,6 +405,14 @@ export default function UserManagementTab() {
     try {
       // Convert user object to FormData for API
       const formData = new FormData();
+      
+      // Handle isActive separately - always include it if it exists (even if false)
+      if (updatedUser.hasOwnProperty("isActive") && typeof updatedUser.isActive === "boolean") {
+        const statusValue = updatedUser.isActive ? "active" : "inactive";
+        formData.append("is_active", statusValue);
+        console.log("🔄 Status update:", { isActive: updatedUser.isActive, is_active: statusValue });
+      }
+      
       Object.keys(updatedUser).forEach((key) => {
         if (updatedUser[key] !== undefined && updatedUser[key] !== null) {
           // Skip these keys - we'll append them with _id suffix separately
@@ -412,7 +420,8 @@ export default function UserManagementTab() {
             key === "position" ||
             key === "branch" ||
             key === "role" ||
-            key === "department"
+            key === "department" ||
+            key === "isActive" // Skip isActive here since we handle it above
           ) {
             return;
           }
@@ -447,10 +456,31 @@ export default function UserManagementTab() {
         formData.append("department_id", String(updatedUser.department));
       }
 
+      // Optimistic update: Update the status in the table immediately
+      if (updatedUser.hasOwnProperty("isActive") && typeof updatedUser.isActive === "boolean") {
+        const newStatus = updatedUser.isActive ? "active" : "inactive";
+        setActiveRegistrations((prev) =>
+          prev.map((user) =>
+            user.id === updatedUser.id
+              ? { ...user, is_active: newStatus }
+              : user
+          )
+        );
+        console.log("✨ Optimistic update: Status changed to", newStatus);
+      }
+
+      // Log FormData contents for debugging
+      console.log("📤 Sending update with FormData:");
+      for (const [key, value] of formData.entries()) {
+        console.log(`  ${key}:`, value);
+      }
+
       await apiService.updateEmployee(formData, updatedUser.id);
 
-      // Refresh user data to update the table immediately
+      // Refresh user data to sync with server (in case of any differences)
+      console.log("🔄 Refreshing user data after update...");
       await refreshUserData(false);
+      console.log("✅ User data refreshed");
 
       // Refresh dashboard data to get updated information
 
@@ -714,7 +744,6 @@ export default function UserManagementTab() {
                       <TableHead>Position</TableHead>
                       <TableHead>Branch</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -740,9 +769,6 @@ export default function UserManagementTab() {
                           <TableCell className="px-6 py-3">
                             <Skeleton className="h-6 w-24" />
                           </TableCell>
-                          <TableCell className="px-6 py-3">
-                            <Skeleton className="h-6 w-24" />
-                          </TableCell>
                         </TableRow>
                       ))
                     ) : activeRegistrations &&
@@ -750,7 +776,7 @@ export default function UserManagementTab() {
                       activeRegistrations.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={7}
+                          colSpan={6}
                           className="text-center py-8 text-gray-500"
                         >
                           <div className="flex flex-col items-center justify-center gap-4">
@@ -815,11 +841,6 @@ export default function UserManagementTab() {
                                 Array.isArray(employee.roles) &&
                                 employee.roles[0]?.name) ||
                                 "N/A"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className="text-green-600 bg-green-100">
-                              Active
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -992,7 +1013,7 @@ export default function UserManagementTab() {
                   </div>
                 </div>
 
-                <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   <Table>
                     <TableHeader className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-200">
                       <TableRow>
@@ -1008,7 +1029,7 @@ export default function UserManagementTab() {
                     </TableHeader>
                     <TableBody className="divide-y divide-gray-200">
                       {(refresh || isPageLoading) ? (
-                        Array.from({ length: itemsPerPage }).map((_, index) => (
+                        Array.from({ length: pendingItemsPerPage }).map((_, index) => (
                           <TableRow key={`skeleton-${index}`}>
                             <TableCell className="px-6 py-3">
                               <Skeleton className="h-6 w-24" />

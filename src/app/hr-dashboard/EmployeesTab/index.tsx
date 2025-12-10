@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Eye, FileText, Pencil, Trash2 } from "lucide-react";
@@ -18,8 +19,9 @@ interface Employee {
   position: string;
   department: string;
   branch: string;
-  hireDate: string;
+  hireDate?: string; // Optional - hire date removed from forms
   role: string;
+  is_active?: string; // For status display
 }
 
 interface Department {
@@ -98,9 +100,10 @@ export function EmployeesTab({
   // Filter employees
   const filteredEmployees = useMemo(() => {
     return employees.filter(employee => {
-      const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           employee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           employee.position.toLowerCase().includes(searchTerm.toLowerCase());
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = (employee.name?.toLowerCase() || '').includes(searchLower) ||
+                           (employee.email?.toLowerCase() || '').includes(searchLower) ||
+                           (employee.position?.toLowerCase() || '').includes(searchLower);
       const matchesDepartment = selectedDepartment === 'all' || employee.department === selectedDepartment;
       const matchesBranch = selectedBranch === 'all' || employee.branch === selectedBranch;
       
@@ -132,8 +135,8 @@ export function EmployeesTab({
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     return employees.filter(emp => {
-      const hireDate = new Date(emp.hireDate);
-      return hireDate.getMonth() === currentMonth && hireDate.getFullYear() === currentYear;
+      // Hire date removed - return false
+      return false;
     }).length;
   })();
 
@@ -296,47 +299,39 @@ export function EmployeesTab({
                       </div>
                       
                       {/* Table structure visible in background */}
-                      <div className="relative max-h-[450px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                        <Table className="w-full">
-                          <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                      <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                        <Table>
+                          <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                             <TableRow>
-                              <TableHead className="w-auto">Name</TableHead>
-                              <TableHead className="w-auto">Email</TableHead>
-                              <TableHead className="w-auto">Position</TableHead>
-                              <TableHead className="w-auto">Branch</TableHead>
-                              <TableHead className="w-auto">Hire Date</TableHead>
-                              <TableHead className="w-auto text-right">Actions</TableHead>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Email</TableHead>
+                              <TableHead>Position</TableHead>
+                              <TableHead>Branch</TableHead>
+                              <TableHead>Role</TableHead>
+                              <TableHead>Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {/* Skeleton loading rows */}
-                            {Array.from({ length: 8 }).map((_, index) => (
+                            {Array.from({ length: itemsPerPage }).map((_, index) => (
                               <TableRow key={`skeleton-employee-${index}`}>
                                 <TableCell className="px-6 py-3">
-                                  <div className="space-y-1">
-                                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                                    <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
-                                  </div>
+                                  <Skeleton className="h-6 w-24" />
                                 </TableCell>
                                 <TableCell className="px-6 py-3">
-                                  <div className="h-4 w-40 bg-gray-200 rounded animate-pulse"></div>
+                                  <Skeleton className="h-6 w-24" />
                                 </TableCell>
                                 <TableCell className="px-6 py-3">
-                                  <div className="h-4 w-28 bg-gray-200 rounded animate-pulse"></div>
+                                  <Skeleton className="h-6 w-24" />
                                 </TableCell>
                                 <TableCell className="px-6 py-3">
-                                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                                  <Skeleton className="h-6 w-24" />
                                 </TableCell>
                                 <TableCell className="px-6 py-3">
-                                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                                  <Skeleton className="h-6 w-24" />
                                 </TableCell>
-                                <TableCell className="px-6 py-3 text-right">
-                                  <div className="flex justify-end gap-2">
-                                    <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                                    <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                                    <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                                    <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                                  </div>
+                                <TableCell className="px-6 py-3">
+                                  <Skeleton className="h-6 w-24" />
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -346,127 +341,147 @@ export function EmployeesTab({
                     </>
                   ) : (
                     <>
-                      <div className="relative max-h-[450px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                        <Table className="w-full">
-                          <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                      <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                        <Table>
+                          <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                             <TableRow>
-                              <TableHead className="w-auto">Name</TableHead>
-                              <TableHead className="w-auto">Email</TableHead>
-                              <TableHead className="w-auto">Position</TableHead>
-                              <TableHead className="w-auto">Branch</TableHead>
-                              <TableHead className="w-auto">Hire Date</TableHead>
-                              <TableHead className="w-auto text-right">Actions</TableHead>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Email</TableHead>
+                              <TableHead>Position</TableHead>
+                              <TableHead>Branch</TableHead>
+                              <TableHead>Role</TableHead>
+                              <TableHead>Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {isPageChanging ? (
-                              // Skeleton loading rows for page changes
+                            {(employeesRefreshing || isPageChanging) ? (
                               Array.from({ length: itemsPerPage }).map((_, index) => (
-                                <TableRow key={`skeleton-page-${index}`}>
+                                <TableRow key={`skeleton-${index}`}>
                                   <TableCell className="px-6 py-3">
-                                    <div className="space-y-1">
-                                      <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                                      <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
-                                    </div>
+                                    <Skeleton className="h-6 w-24" />
                                   </TableCell>
                                   <TableCell className="px-6 py-3">
-                                    <div className="h-4 w-40 bg-gray-200 rounded animate-pulse"></div>
+                                    <Skeleton className="h-6 w-24" />
                                   </TableCell>
                                   <TableCell className="px-6 py-3">
-                                    <div className="h-4 w-28 bg-gray-200 rounded animate-pulse"></div>
+                                    <Skeleton className="h-6 w-24" />
                                   </TableCell>
                                   <TableCell className="px-6 py-3">
-                                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                                    <Skeleton className="h-6 w-24" />
                                   </TableCell>
                                   <TableCell className="px-6 py-3">
-                                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                                    <Skeleton className="h-6 w-24" />
                                   </TableCell>
-                                  <TableCell className="px-6 py-3 text-right">
-                                    <div className="flex justify-end gap-2">
-                                      <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                                      <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                                      <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                                      <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                                    </div>
+                                  <TableCell className="px-6 py-3">
+                                    <Skeleton className="h-6 w-24" />
                                   </TableCell>
                                 </TableRow>
                               ))
-                            ) : employeesPaginated.length === 0 ? (
+                            ) : employeesPaginated && Array.isArray(employeesPaginated) && employeesPaginated.length === 0 ? (
                               <TableRow>
-                                <TableCell colSpan={6} className="text-center py-12">
+                                <TableCell
+                                  colSpan={6}
+                                  className="text-center py-8 text-gray-500"
+                                >
                                   <div className="flex flex-col items-center justify-center gap-4">
                                     <img
                                       src="/not-found.gif"
                                       alt="No data"
                                       className="w-25 h-25 object-contain"
                                       style={{
-                                        imageRendering: 'auto',
-                                        willChange: 'auto',
-                                        transform: 'translateZ(0)',
-                                        backfaceVisibility: 'hidden',
-                                        WebkitBackfaceVisibility: 'hidden',
+                                        imageRendering: "auto",
+                                        willChange: "auto",
+                                        transform: "translateZ(0)",
+                                        backfaceVisibility: "hidden",
+                                        WebkitBackfaceVisibility: "hidden",
                                       }}
                                     />
                                     <div className="text-gray-500">
-                                      <p className="text-base font-medium mb-1">No employees found</p>
-                                      <p className="text-sm">Try adjusting your search or filter criteria</p>
+                                      {searchTerm ? (
+                                        <>
+                                          <p className="text-base font-medium mb-1">
+                                            No results found
+                                          </p>
+                                          <p className="text-sm text-gray-400">
+                                            Try adjusting your search or filters
+                                          </p>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <p className="text-base font-medium mb-1">
+                                            No evaluation records to display
+                                          </p>
+                                          <p className="text-sm text-gray-400">
+                                            Records will appear here when evaluations
+                                            are submitted
+                                          </p>
+                                        </>
+                                      )}
                                     </div>
                                   </div>
                                 </TableCell>
                               </TableRow>
-                            ) : (
+                            ) : employeesPaginated && Array.isArray(employeesPaginated) && employeesPaginated.length > 0 ? (
                               employeesPaginated.map((employee) => (
                                 <TableRow key={employee.id}>
-                                  <TableCell className="font-medium">{employee.name}</TableCell>
-                                  <TableCell className="text-sm text-gray-600">{employee.email}</TableCell>
-                                  <TableCell>{employee.position}</TableCell>
-                                  <TableCell>{employee.branch}</TableCell>
-                                  <TableCell>
-                                    {new Date(employee.hireDate).toLocaleDateString()}
+                                  <TableCell className="font-medium">
+                                    {employee.name}
                                   </TableCell>
-                                  <TableCell className="text-right">
-                                    <div className="flex justify-end space-x-2">
+                                  <TableCell>{employee.email}</TableCell>
+                                  <TableCell>
+                                    {employee.position || "N/A"}
+                                  </TableCell>
+                                  <TableCell>
+                                    {employee.branch || "N/A"}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline">
+                                      {employee.role || "N/A"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex space-x-2">
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700"
+                                        className="text-blue-600 hover:text-blue-700"
                                         onClick={() => onViewEmployee(employee)}
                                         title="View employee details"
                                       >
-                                        <Eye className="h-4 w-4 text-white" />
+                                        <Eye className="h-4 w-4" />
                                       </Button>
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700"
+                                        className="text-green-600 hover:text-green-700"
                                         onClick={() => onEvaluateEmployee(employee)}
                                         title="Evaluate employee performance"
                                       >
-                                        <FileText className="h-4 w-4 text-white" />
+                                        <FileText className="h-4 w-4" />
                                       </Button>
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-8 w-8 p-0 bg-blue-800 hover:bg-blue-900"
+                                        className="text-blue-600 hover:text-blue-700"
                                         onClick={() => onEditEmployee(employee)}
                                         title="Edit employee"
                                       >
-                                        <Pencil className="h-4 w-4 text-white" />
+                                        <Pencil className="h-4 w-4" />
                                       </Button>
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-8 w-8 p-0 bg-red-600 hover:bg-red-700"
+                                        className="text-red-600 hover:text-red-700"
                                         onClick={() => onDeleteEmployee(employee)}
                                         title="Delete employee"
                                       >
-                                        <Trash2 className="h-4 w-4 text-white" />
+                                        <Trash2 className="h-4 w-4" />
                                       </Button>
                                     </div>
                                   </TableCell>
                                 </TableRow>
                               ))
-                            )}
+                            ) : null}
                           </TableBody>
                         </Table>
                       </div>

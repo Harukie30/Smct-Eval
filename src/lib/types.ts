@@ -19,7 +19,7 @@ export interface Employee {
   department: string;
   branch?: string;
   role: string;
-  hireDate: string;
+  hireDate?: string; // Optional - hire date removed from forms
   avatar?: string | null;
   bio?: string | null;
   contact?: string;
@@ -40,7 +40,7 @@ export interface EmployeeSearchResult {
   department: string;
   branch?: string;
   role: string;
-  hireDate: string;
+  hireDate?: string; // Optional - hire date removed from forms
   isActive: boolean;
 }
 
@@ -74,7 +74,6 @@ export interface PendingRegistration {
   position: string;
   department: string; // Required field
   branch?: string; // Made optional
-  hireDate: string;
   role: string;
   status: 'pending' | 'approved' | 'rejected';
   submittedAt: string;
@@ -112,7 +111,6 @@ export interface Account {
   isActive?: boolean;
   lastLogin?: string | null;
   contact?: string;
-  hireDate?: string;
   isSuspended?: boolean;
   suspensionReason?: string;
   suspendedAt?: string;

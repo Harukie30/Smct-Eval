@@ -16,7 +16,6 @@ interface WelcomeStepProps {
     position: string;
     department: string;
     role: string;
-    hireDate: string;
   };
   onStartAction: () => void;
   onBackAction?: () => void;
@@ -86,23 +85,6 @@ export default function WelcomeStep({ employee, onStartAction, onBackAction, cur
                     }
                     return String(employee.role);
                   })()}
-                </p>
-              </div>
-              <div>
-                <Badge className="bg-orange-100 text-orange-800 mb-1">Hire Date</Badge>
-                <p className="text-sm text-gray-900">
-                  {employee.hireDate 
-                    ? (() => {
-                        try {
-                          const date = new Date(employee.hireDate);
-                          return isNaN(date.getTime()) 
-                            ? employee.hireDate // Return original string if invalid
-                            : date.toLocaleDateString();
-                        } catch (error) {
-                          return employee.hireDate; // Return original string on error
-                        }
-                      })()
-                    : 'N/A'}
                 </p>
               </div>
             </div>
