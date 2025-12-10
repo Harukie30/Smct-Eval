@@ -369,7 +369,10 @@ function RegisterPage() {
     formDataToUpload.append("lname", formData.lname);
     formDataToUpload.append("username", formData.username);
     // Remove dash from employee_id before sending (keep only numbers)
-    formDataToUpload.append("employee_id", formData.employee_id.replace(/-/g, ""));
+    formDataToUpload.append(
+      "employee_id",
+      formData.employee_id.replace(/-/g, "")
+    );
     formDataToUpload.append("email", formData.email);
     formDataToUpload.append("contact", formData.contact);
     formDataToUpload.append("position_id", String(formData.position_id));
@@ -884,9 +887,9 @@ function RegisterPage() {
                         value={formData.signature}
                         onChangeAction={(signature) => {
                           // Clear signature when null is passed (from Clear button)
-                          setFormData({ 
-                            ...formData, 
-                            signature: signature || "" 
+                          setFormData({
+                            ...formData,
+                            signature: signature || "",
                           });
                           if (signature && signatureError) {
                             setSignatureError(false);

@@ -151,17 +151,6 @@ export const apiService = {
     return response.data;
   },
 
-  // Profile management
-  getProfile: async (id: number): Promise<any> => {
-    const response = await api.get(`/api/profiles/${id}`);
-    return response.data.profile || response.data;
-  },
-
-  updateProfile: async (id: number, updates: Partial<any>): Promise<any> => {
-    const response = await api.put(`/api/profiles/${id}`, updates);
-    return response.data.profile || response.data;
-  },
-
   getSubmissions: async (
     searchTerm?: string,
     page?: number,
@@ -469,26 +458,6 @@ export const apiService = {
     }
     return data;
   },
-
-  getProfiles: async (): Promise<any[]> => {
-    const response = await api.get("/profiles");
-    const data = response.data;
-
-    if (data.success && data.profiles) {
-      return data.profiles;
-    }
-    if (Array.isArray(data.profiles)) {
-      return data.profiles;
-    }
-    if (Array.isArray(data)) {
-      return data;
-    }
-    return [];
-  },
-
-  // ============================================
-  // USER MANAGEMENT (Missing Endpoints)
-  // ============================================
 
   // Get all users (except authenticated user)
   getAllUsers: async (): Promise<any[]> => {

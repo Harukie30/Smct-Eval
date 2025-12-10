@@ -11,6 +11,7 @@ import React, {
 import RealLoadingScreen from "@/components/RealLoadingScreen";
 import { toastMessages } from "@/lib/toastMessages";
 import { apiService } from "@/lib/apiService";
+import { useRouter } from "next/navigation";
 
 export interface AuthenticatedUser {
   id?: string | number;
@@ -40,7 +41,6 @@ interface UserContextType {
   login: (username: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
-  updateUserField: (field: keyof AuthenticatedUser, value: any) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -61,56 +61,32 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showLogoutLoading, setShowLogoutLoading] = useState(false);
-
+  const router = useRouter();
   // Restore session on mount
-  useEffect(() => {
-    const restoreSession = async () => {
-      try {
-        const stored = localStorage.getItem("authUser");
-
-        // First, restore user from localStorage immediately
-        // Check if stored value is valid (not "undefined", "null", or empty)
-        if (
-          stored &&
-          stored !== "undefined" &&
-          stored !== "null" &&
-          stored.trim() !== ""
-        ) {
-          try {
-            const parsedUser = JSON.parse(stored);
-            setUser(parsedUser);
-          } catch (e) {
-            console.error("Failed to parse stored user:", e);
-          }
-        }
-
-        // Then verify with backend (this will update user if successful, or keep existing if network error)
-        await refreshUser();
-      } catch (error) {
-        // If refreshUser throws an error, we still want to keep the stored user
-        console.error("Error during session restoration:", error);
-        // The user should already be set from localStorage above
-        // refreshUser() handles clearing session only on 401/403 errors
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    restoreSession();
-  }, []);
-
   // ⬇ Fetch authenticated user from Sanctum
-  const refreshUser = async () => {
+  async function refreshUser() {
     try {
       const res = await apiService.authUser();
-      // Handle different response structures (res.data or res directly)
       const userData = res?.data || res;
       setUser(userData);
     } catch (error: any) {
       const status = error?.status || error?.response?.status;
       console.log(status);
     }
-  };
+  }
+
+  useEffect(() => {
+    const loadUserAuth = async () => {
+      try {
+        await refreshUser();
+      } catch (error) {
+        console.error("Error during session restoration:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadUserAuth();
+  }, []);
 
   // ⬇ Login using Sanctum
   const login = async (username: string, password: string) => {
@@ -121,24 +97,10 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       await refreshUser();
       return res;
     } catch (err: any) {
-      toastMessages.generic.error("Login failed", "Invalid credentials");
-      return false;
+      return { error: err.response?.data?.message || "Login failed" };
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // ⬇ Update a specific user field (useful for preserving data not returned by backend)
-  const updateUserField = (field: keyof AuthenticatedUser, value: any) => {
-    setUser((prevUser) => {
-      if (!prevUser) return prevUser;
-      const updatedUser = { ...prevUser, [field]: value };
-      localStorage.setItem("authUser", JSON.stringify(updatedUser));
-      console.log(
-        `💾 Updated user field '${field}' in context and localStorage`
-      );
-      return updatedUser;
-    });
   };
 
   // ⬇ Logout using Sanctum
@@ -148,19 +110,13 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
     try {
       await apiService.logout();
-      refreshUser();
+      await refreshUser();
+      router.push("/");
     } catch (e) {
       console.error("Logout failed:", e);
-    }
-
-    setTimeout(() => {
-      setUser(null);
+    } finally {
       setShowLogoutLoading(false);
-
-      if (typeof window !== "undefined") {
-        window.location.href = "/";
-      }
-    }, 300);
+    }
   };
 
   const value: UserContextType = {
@@ -170,7 +126,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     login,
     logout,
     refreshUser,
-    updateUserField,
   };
 
   return (

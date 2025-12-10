@@ -64,19 +64,25 @@ export default function ProfileModal({
       username: profile?.username,
       email: profile?.email,
       // Only update signature from profile if formData doesn't have a local change (data URL)
-      signature: (prev?.signature && typeof prev.signature === 'string' && prev.signature.startsWith('data:')) 
-        ? prev.signature 
-        : (profile?.signature || null),
+      signature:
+        prev?.signature &&
+        typeof prev.signature === "string" &&
+        prev.signature.startsWith("data:")
+          ? prev.signature
+          : profile?.signature || null,
     }));
-    
+
     // Determine if signature is saved:
     // - If profile has signature AND formData doesn't have a new data URL, it's saved
     // - If formData has a data URL (starts with 'data:'), it's a newly drawn signature - not saved yet
-    const hasProfileSignature = !!(profile?.signature && profile.signature !== '');
-    const hasFormDataDataURL = formData?.signature && 
-                               typeof formData.signature === 'string' && 
-                               formData.signature.startsWith('data:');
-    
+    const hasProfileSignature = !!(
+      profile?.signature && profile.signature !== ""
+    );
+    const hasFormDataDataURL =
+      formData?.signature &&
+      typeof formData.signature === "string" &&
+      formData.signature.startsWith("data:");
+
     if (hasProfileSignature && !hasFormDataDataURL) {
       // Profile has signature and formData doesn't have a new data URL - signature is saved
       setIsSignatureSaved(true);
@@ -87,14 +93,15 @@ export default function ProfileModal({
       // No profile signature - signature is not saved (or was deleted)
       setIsSignatureSaved(false);
     }
-    
+
     // Check if user has an approved signature reset request
     // This would typically come from the profile or a separate API call
     // For now, we'll check if approvedSignatureReset is 1 (approved)
-    const approvedReset = (profile as any)?.approvedSignatureReset === 1 || 
-                          (profile as any)?.approvedSignatureReset === true;
+    const approvedReset =
+      (profile as any)?.approvedSignatureReset === 1 ||
+      (profile as any)?.approvedSignatureReset === true;
     setHasApprovedReset(approvedReset);
-  }, [profile]);
+  }, []);
 
   // Refresh user profile when modal opens to check for approved reset requests
   useEffect(() => {
@@ -152,7 +159,6 @@ export default function ProfileModal({
     return Object.keys(newErrors).length === 0;
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -180,7 +186,11 @@ export default function ProfileModal({
 
       // Handle signature: if null or empty, send empty string to delete it from server
       // If it's a data URL, convert to file and upload
-      if (formData?.signature && formData?.signature !== "" && formData?.signature !== null) {
+      if (
+        formData?.signature &&
+        formData?.signature !== "" &&
+        formData?.signature !== null
+      ) {
         const signature = dataURLtoFile(formData.signature, "signature.png");
         if (signature) {
           formDataToUpload.append("signature", signature);
@@ -191,9 +201,13 @@ export default function ProfileModal({
       }
 
       await apiService.updateEmployee_auth(formDataToUpload);
-      
+
       // If signature was included in the save, mark it as saved and update formData
-      if (formData?.signature && formData?.signature !== "" && formData?.signature !== null) {
+      if (
+        formData?.signature &&
+        formData?.signature !== "" &&
+        formData?.signature !== null
+      ) {
         // Update formData to use profile signature (remove data URL) so useEffect detects it as saved
         setFormData((prev) => ({
           ...prev,
@@ -210,13 +224,13 @@ export default function ProfileModal({
         setIsSignatureSaved(false);
         setHasApprovedReset(false); // Reset approval status after clearing signature
       }
-      
+
       // Show success toast
       success("Profile updated successfully!");
-      
+
       // Refresh user profile to get updated data
       refreshUser();
-      
+
       // Close modal after a brief delay to ensure state is updated
       setTimeout(() => {
         onClose();
@@ -248,10 +262,14 @@ export default function ProfileModal({
       // After successful reset request, wait for admin approval
       // Don't enable Clear Signature yet - user must wait for approval
       setHasApprovedReset(false); // Reset to false until approved
-      success("Signature reset request submitted successfully! Please wait for admin approval. You will be able to clear your signature once approved.");
+      success(
+        "Signature reset request submitted successfully! Please wait for admin approval. You will be able to clear your signature once approved."
+      );
     } catch (error: any) {
       console.error("Error requesting signature reset:", error);
-      const errorMessage = error.response?.data?.message || "Failed to request signature reset. Please try again.";
+      const errorMessage =
+        error.response?.data?.message ||
+        "Failed to request signature reset. Please try again.";
       setErrors((prev) => ({
         ...prev,
         general: errorMessage,
@@ -327,7 +345,10 @@ export default function ProfileModal({
                     >
                       Position
                     </Label>
-                    <Input value={profile?.positions?.label || "Not Assigned "} readOnly />
+                    <Input
+                      value={profile?.positions?.label || "Not Assigned "}
+                      readOnly
+                    />
                   </div>
 
                   <div className="space-y-1.5">
@@ -336,8 +357,7 @@ export default function ProfileModal({
                     </Label>
                     <Input
                       value={
-                        profile?.departments?.department_name ||
-                        "Not Assigned "
+                        profile?.departments?.department_name || "Not Assigned "
                       }
                       readOnly
                     />

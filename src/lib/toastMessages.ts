@@ -9,9 +9,9 @@ export const toastMessages = {
         description: `Welcome back, ${username}!`,
         duration: 3000,
       }),
-    error: () =>
+    error: (message: string) =>
       toast.error("Login Failed", {
-        description: "Invalid username or password. Please try again.",
+        description: message,
         duration: 4000,
       }),
     networkError: () =>

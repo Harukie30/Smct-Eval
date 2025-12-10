@@ -70,26 +70,25 @@ function LandingLoginPage() {
   const handleLogin = async (e: any) => {
     e.preventDefault();
     setLoginError("");
-
-    // Show loading screen immediately - use flushSync for instant rendering
     setShowLoadingScreen(true);
 
     try {
-      // Simulate real authentication steps with actual processing
-      await new Promise((resolve) => setTimeout(resolve, 1200)); // Initial validation delay
+      await new Promise((resolve) => setTimeout(resolve, 1200)); // Initial delay
 
       const result = await login(username, password);
 
+      if (result?.error) {
+        // Show backend error
+        setLoginError(result.error);
+        toastMessages.login.error(result.error);
+        setShowLoadingScreen(false);
+        return;
+      }
+
       if (result) {
-        // Simulate additional authentication steps
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // Session creation
-        await new Promise((resolve) => setTimeout(resolve, 800)); // Permission loading
-        await new Promise((resolve) => setTimeout(resolve, 600)); // Final setup
-
-        // Show success toast
+        // All your success flow
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         toastMessages.login.success(username);
-
-        await new Promise((resolve) => setTimeout(resolve, 500));
 
         const roleDashboards: Record<string, string> = {
           admin: "/admin",
@@ -100,27 +99,18 @@ function LandingLoginPage() {
 
         const dashboardPath = roleDashboards[result?.role] || "";
         console.log("🚀 Redirecting to:", dashboardPath);
-        console.log("🚀 Redirecting to:", result);
-
-        // Wait to ensure authentication state is propagated
-        console.log("⏳ Waiting for authentication state to propagate...");
         await new Promise((resolve) => setTimeout(resolve, 300));
-
-        console.log("🔄 Executing redirect now...");
         router.push(dashboardPath);
       } else {
-        setShowLoadingScreen(false);
+        // fallback
         setLoginError("Invalid Credentials");
+        setShowLoadingScreen(false);
       }
     } catch (error: any) {
-      // const errorMessage = 'Invalid username or password. Please try again.';
       console.log(error);
-      setLoginError(error.message);
-      toastMessages.login.error();
-      setShowLoadingScreen(false); // Hide loading screen
-      // Show incorrect password dialog
-      setShowIncorrectPasswordDialog(true);
-      setTimeout(() => setShowIncorrectPasswordDialog(false), 1400);
+      setLoginError(error.message || "Something went wrong");
+      toastMessages.login.error(error.message);
+      setShowLoadingScreen(false);
     }
   };
 
@@ -413,9 +403,9 @@ function LandingLoginPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-end pr-8">
+          <div className="flex items-center justify-end pr-8 ">
             <PageTransition>
-              <Card className="w-full max-w-md shadow-lg hover:shadow-xl transition-shadow duration-300 backdrop-blur-sm bg-white border-gray-500/20">
+              <Card className="w-full max-w-xs shadow-lg hover:shadow-xl transition-shadow duration-300 backdrop-blur-sm bg-white border-gray-500/20">
                 <CardHeader className="space-y-1">
                   <CardTitle className="text-2xl text-center text-gray-900">
                     Sign in to your account
@@ -468,21 +458,7 @@ function LandingLoginPage() {
                           required
                         />
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          id="remember-me"
-                          type="checkbox"
-                          checked={rememberMe}
-                          onChange={(e) => setRememberMe(e.target.checked)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <Label
-                          htmlFor="remember-me"
-                          className="text-sm text-gray-600"
-                        >
-                          Remember me
-                        </Label>
-                      </div>
+
                       {loginError && (
                         <div className="text-red-600 text-sm text-center bg-red-50 p-2 rounded">
                           {loginError}

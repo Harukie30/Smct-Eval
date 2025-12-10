@@ -49,11 +49,10 @@ interface Review {
 
 export default function performanceReviews() {
   const { user } = useUser();
-  const { success } = useToast();
   const [submissions, setSubmissions] = useState<any>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshingReviews, setIsRefreshingReviews] = useState(false);
-  const [reviewsPage, setReviewsPage] = useState(1);
+  const [isPaginate, setIsPaginate] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(4);
@@ -72,7 +71,7 @@ export default function performanceReviews() {
   // Load submissions data from API
   const loadSubmissions = async () => {
     try {
-      setLoading(true);
+      setIsPaginate(true);
       // Use employee-specific endpoint
       const response = await apiService.getMyEvalAuthEmployee(
         "",
@@ -86,6 +85,7 @@ export default function performanceReviews() {
     } catch (error) {
       console.error("Error loading submissions:", error);
     } finally {
+      setIsPaginate(false);
       setLoading(false);
     }
   };
@@ -580,147 +580,200 @@ export default function performanceReviews() {
               {submissions.length > 0 ? (
                 <>
                   <div className="max-h-[500px] overflow-y-auto overflow-x-hidden rounded-lg border mx-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                    <Table className="table-fixed w-full">
-                      <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
-                        <TableRow>
-                          <TableHead className="w-1/5 pl-4">
-                            Immediate Supervisor
-                          </TableHead>
-                          <TableHead className="w-1/5 text-right pr-25">
-                            Rating
-                          </TableHead>
-                          <TableHead className="w-1/5 text-center">
-                            Date
-                          </TableHead>
-                          <TableHead className="w-1/5 px-4 pr-23 text-center">
-                            Quarter
-                          </TableHead>
-                          <TableHead className="w-1/5 text-right pl-1 pr-4">
-                            Actions
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {submissions.map((submission: any) => {
-                          const rating = submission.rating;
-                          const isLowPerformance = rating < 3.0;
-                          const isPoorPerformance = rating < 2.5;
-
-                          return (
-                            <TableRow
-                              key={submission.id}
-                              className={`${
-                                submission.status === "completed"
-                                  ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100"
-                                  : ""
-                              } ${
-                                isPoorPerformance
-                                  ? "bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100"
-                                  : isLowPerformance
-                                  ? "bg-orange-50 border-l-4 border-l-orange-400 hover:bg-orange-100"
-                                  : ""
-                              }`}
-                            >
-                              <TableCell className="w-1/5 font-medium pl-4">
+                    {isPaginate ? (
+                      <Table className="table-fixed w-full">
+                        <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                          <TableRow>
+                            <TableHead className="w-1/5 pl-4">
+                              Immediate Supervisor
+                            </TableHead>
+                            <TableHead className="w-1/5 text-right pr-25">
+                              Rating
+                            </TableHead>
+                            <TableHead className="w-1/5 text-center">
+                              Date
+                            </TableHead>
+                            <TableHead className="w-1/5 px-4 pr-23 text-center">
+                              Quarter
+                            </TableHead>
+                            <TableHead className="w-1/5 text-right pl-1 pr-4">
+                              Actions
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {Array.from({ length: itemsPerPage }).map((_, i) => (
+                            <TableRow key={i}>
+                              <TableCell className="w-1/5 pl-4">
                                 <div className="flex items-center gap-2">
-                                  {submission.evaluator.fname +
-                                    " " +
-                                    submission.evaluator.lname}
-                                  {submission.status && (
-                                    <Badge
-                                      variant="secondary"
-                                      className={`${
-                                        submission.status === "completed"
-                                          ? "bg-green-200 text-green-800"
-                                          : "bg-amber-100 text-orange-800"
-                                      } text-xs`}
-                                    >
-                                      {submission.status === "completed"
-                                        ? "approved"
-                                        : "pending"}
-                                    </Badge>
-                                  )}
+                                  <Skeleton className="h-4 w-24" />
+                                  <Skeleton className="h-5 w-12 rounded-full" />
                                 </div>
                               </TableCell>
-                              <TableCell className="w-1/5 text-right font-semibold pr-25">
-                                <div
-                                  className={`flex items-center justify-end gap-2 ${
-                                    isPoorPerformance
-                                      ? "text-red-700"
-                                      : isLowPerformance
-                                      ? "text-orange-600"
-                                      : "text-gray-900"
-                                  }`}
-                                >
-                                  <span
-                                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                      isPoorPerformance
-                                        ? "bg-red-100 text-red-800"
-                                        : isLowPerformance
-                                        ? "bg-orange-100 text-orange-800"
-                                        : rating >= 4.0
-                                        ? "bg-green-100 text-green-800"
-                                        : rating >= 3.5
-                                        ? "bg-blue-100 text-blue-800"
-                                        : "bg-blue-100 text-blue-800"
-                                    }`}
-                                  >
-                                    {isPoorPerformance
-                                      ? "POOR"
-                                      : isLowPerformance
-                                      ? "LOW"
-                                      : rating >= 4.0
-                                      ? "EXCELLENT"
-                                      : rating >= 3.5
-                                      ? "GOOD"
-                                      : "FAIR"}
-                                  </span>
-                                  <span className="font-bold">{rating}/5</span>
+                              <TableCell className="w-1/5 text-right pr-25">
+                                <Skeleton className="h-4 w-12" />
+                              </TableCell>
+                              <TableCell className="w-1/5 text-center">
+                                <div className="flex flex-col gap-1">
+                                  <Skeleton className="h-4 w-20" />
+                                  <Skeleton className="h-3 w-16" />
                                 </div>
                               </TableCell>
-                              <TableCell className="w-1/5">
-                                <div className="flex flex-col items-center">
-                                  <span className="font-medium">
-                                    {new Date(
-                                      submission.created_at
-                                    ).toLocaleDateString()}
-                                  </span>
-                                  <span className="text-xs text-gray-500">
-                                    {getTimeAgo(submission.created_at)}
-                                  </span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="w-1/5 px-4 pr-23">
-                                <div className="flex justify-center">
-                                  <Badge
-                                    className={getQuarterColor(
-                                      submission.reviewTypeRegular ||
-                                        submission.reviewTypeProbationary
-                                    )}
-                                  >
-                                    {submission.reviewTypeRegular ||
-                                      "M" + submission.reviewTypeProbationary}
-                                  </Badge>
-                                </div>
+                              <TableCell className="w-1/5 px-4 pr-23 text-center">
+                                <Skeleton className="h-5 w-16 rounded-full mx-auto" />
                               </TableCell>
                               <TableCell className="w-1/5 text-right pl-1 pr-4">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleViewEvaluation(submission)
-                                  }
-                                  className="text-white bg-blue-500 hover:text-white hover:bg-blue-600"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                  View
-                                </Button>
+                                <Skeleton className="h-5 w-20 rounded-full mx-auto" />
                               </TableCell>
                             </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <Table className="table-fixed w-full">
+                        <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                          <TableRow>
+                            <TableHead className="w-1/5 pl-4">
+                              Immediate Supervisor
+                            </TableHead>
+                            <TableHead className="w-1/5 text-right pr-25">
+                              Rating
+                            </TableHead>
+                            <TableHead className="w-1/5 text-center">
+                              Date
+                            </TableHead>
+                            <TableHead className="w-1/5 px-4 pr-23 text-center">
+                              Quarter
+                            </TableHead>
+                            <TableHead className="w-1/5 text-right pl-1 pr-4">
+                              Actions
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {submissions.map((submission: any) => {
+                            const rating = submission.rating;
+                            const isLowPerformance = rating < 3.0;
+                            const isPoorPerformance = rating < 2.5;
+
+                            return (
+                              <TableRow
+                                key={submission.id}
+                                className={`${
+                                  submission.status === "completed"
+                                    ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100"
+                                    : ""
+                                } ${
+                                  isPoorPerformance
+                                    ? "bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100"
+                                    : isLowPerformance
+                                    ? "bg-orange-50 border-l-4 border-l-orange-400 hover:bg-orange-100"
+                                    : ""
+                                }`}
+                              >
+                                <TableCell className="w-1/5 font-medium pl-4">
+                                  <div className="flex items-center gap-2">
+                                    {submission.evaluator.fname +
+                                      " " +
+                                      submission.evaluator.lname}
+                                    {submission.status && (
+                                      <Badge
+                                        variant="secondary"
+                                        className={`${
+                                          submission.status === "completed"
+                                            ? "bg-green-200 text-green-800"
+                                            : "bg-amber-100 text-orange-800"
+                                        } text-xs`}
+                                      >
+                                        {submission.status === "completed"
+                                          ? "approved"
+                                          : "pending"}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="w-1/5 text-right font-semibold pr-25">
+                                  <div
+                                    className={`flex items-center justify-end gap-2 ${
+                                      isPoorPerformance
+                                        ? "text-red-700"
+                                        : isLowPerformance
+                                        ? "text-orange-600"
+                                        : "text-gray-900"
+                                    }`}
+                                  >
+                                    <span
+                                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                        isPoorPerformance
+                                          ? "bg-red-100 text-red-800"
+                                          : isLowPerformance
+                                          ? "bg-orange-100 text-orange-800"
+                                          : rating >= 4.0
+                                          ? "bg-green-100 text-green-800"
+                                          : rating >= 3.5
+                                          ? "bg-blue-100 text-blue-800"
+                                          : "bg-blue-100 text-blue-800"
+                                      }`}
+                                    >
+                                      {isPoorPerformance
+                                        ? "POOR"
+                                        : isLowPerformance
+                                        ? "LOW"
+                                        : rating >= 4.0
+                                        ? "EXCELLENT"
+                                        : rating >= 3.5
+                                        ? "GOOD"
+                                        : "FAIR"}
+                                    </span>
+                                    <span className="font-bold">
+                                      {rating}/5
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="w-1/5">
+                                  <div className="flex flex-col items-center">
+                                    <span className="font-medium">
+                                      {new Date(
+                                        submission.created_at
+                                      ).toLocaleDateString()}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      {getTimeAgo(submission.created_at)}
+                                    </span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="w-1/5 px-4 pr-23">
+                                  <div className="flex justify-center">
+                                    <Badge
+                                      className={getQuarterColor(
+                                        submission.reviewTypeRegular ||
+                                          submission.reviewTypeProbationary
+                                      )}
+                                    >
+                                      {submission.reviewTypeRegular ||
+                                        "M" + submission.reviewTypeProbationary}
+                                    </Badge>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="w-1/5 text-right pl-1 pr-4">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleViewEvaluation(submission)
+                                    }
+                                    className="text-white bg-blue-500 hover:text-white hover:bg-blue-600"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                    View
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    )}
                   </div>
 
                   {/* Pagination Controls */}
@@ -732,7 +785,6 @@ export default function performanceReviews() {
                       perPage={perPage}
                       onPageChange={(page) => {
                         setCurrentPage(page);
-                        loadSubmissions();
                       }}
                     />
                   )}

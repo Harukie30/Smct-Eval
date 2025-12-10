@@ -38,6 +38,8 @@ interface Review {
 
 export default function OverviewTab() {
   const [isRefreshingOverview, setIsRefreshingOverview] = useState(false);
+  const [isPaginate, setIsPaginate] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,6 +58,7 @@ export default function OverviewTab() {
   // Load approved evaluations from API
   const loadApprovedEvaluations = async (searchValue: string) => {
     try {
+      setIsPaginate(true);
       const response = await apiService.getMyEvalAuthEmployee(
         searchValue,
         currentPage,
@@ -65,8 +68,10 @@ export default function OverviewTab() {
       setOverviewTotal(response.total);
       setTotalPages(response.last_page);
       setPerPage(response.per_page);
+      setIsPaginate(false);
     } catch (error) {
       console.error("Error loading approved evaluations:", error);
+      setIsPaginate(false);
     }
   };
 
@@ -82,7 +87,6 @@ export default function OverviewTab() {
   }, []);
 
   useEffect(() => {
-    console.log("test");
     const handler = setTimeout(() => {
       if (searchTerm !== "" && currentPage !== 1) {
         setCurrentPage(1);
@@ -96,7 +100,10 @@ export default function OverviewTab() {
 
   // Fetch API whenever debounced search term changes
   useEffect(() => {
-    loadApprovedEvaluations(debouncedSearchTerm);
+    const debounceData = async () => {
+      await loadApprovedEvaluations(debouncedSearchTerm);
+    };
+    debounceData();
   }, [debouncedSearchTerm, currentPage]);
 
   const refresh = async () => {
@@ -148,72 +155,6 @@ export default function OverviewTab() {
     if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
     if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
     return "bg-purple-100 text-purple-800";
-  };
-
-  const calculateOverallRating = (evaluationData: any) => {
-    if (!evaluationData) return 0;
-    const calculateScore = (scores: string[]) => {
-      const validScores = scores
-        .filter((score) => score && score !== "")
-        .map((score) => parseFloat(score));
-      if (validScores.length === 0) return 0;
-      return (
-        validScores.reduce((sum, score) => sum + score, 0) / validScores.length
-      );
-    };
-
-    const jobKnowledgeScore = calculateScore([
-      evaluationData.jobKnowledgeScore1,
-      evaluationData.jobKnowledgeScore2,
-      evaluationData.jobKnowledgeScore3,
-    ]);
-    const qualityOfWorkScore = calculateScore([
-      evaluationData.qualityOfWorkScore1,
-      evaluationData.qualityOfWorkScore2,
-      evaluationData.qualityOfWorkScore3,
-      evaluationData.qualityOfWorkScore4,
-      evaluationData.qualityOfWorkScore5,
-    ]);
-    const adaptabilityScore = calculateScore([
-      evaluationData.adaptabilityScore1,
-      evaluationData.adaptabilityScore2,
-      evaluationData.adaptabilityScore3,
-    ]);
-    const teamworkScore = calculateScore([
-      evaluationData.teamworkScore1,
-      evaluationData.teamworkScore2,
-      evaluationData.teamworkScore3,
-    ]);
-    const reliabilityScore = calculateScore([
-      evaluationData.reliabilityScore1,
-      evaluationData.reliabilityScore2,
-      evaluationData.reliabilityScore3,
-      evaluationData.reliabilityScore4,
-    ]);
-    const ethicalScore = calculateScore([
-      evaluationData.ethicalScore1,
-      evaluationData.ethicalScore2,
-      evaluationData.ethicalScore3,
-      evaluationData.ethicalScore4,
-    ]);
-    const customerServiceScore = calculateScore([
-      evaluationData.customerServiceScore1,
-      evaluationData.customerServiceScore2,
-      evaluationData.customerServiceScore3,
-      evaluationData.customerServiceScore4,
-      evaluationData.customerServiceScore5,
-    ]);
-
-    const overallWeightedScore =
-      jobKnowledgeScore * 0.2 +
-      qualityOfWorkScore * 0.2 +
-      adaptabilityScore * 0.1 +
-      teamworkScore * 0.1 +
-      reliabilityScore * 0.05 +
-      ethicalScore * 0.05 +
-      customerServiceScore * 0.3;
-
-    return Math.round(overallWeightedScore * 10) / 10;
   };
 
   return (
@@ -312,16 +253,16 @@ export default function OverviewTab() {
             ) : (
               <>
                 <div className="text-3xl font-bold text-blue-600">
-                  {recentEvaluation.rating}
+                  {recentEvaluation?.rating || 0}
                   /5.00
                 </div>
                 <p className="text-sm text-gray-500 mt-1">Latest evaluation</p>
                 <div className="mt-2">
                   <Badge
                     className={`text-xs ${
-                      Number(recentEvaluation.rating) > 0
+                      Number(recentEvaluation?.rating) > 0
                         ? (() => {
-                            const score = Number(recentEvaluation.rating);
+                            const score = Number(recentEvaluation?.rating);
                             if (score >= 4.5)
                               return "bg-green-100 text-green-800";
                             if (score >= 4.0)
@@ -333,9 +274,9 @@ export default function OverviewTab() {
                         : "bg-gray-100 text-gray-800"
                     }`}
                   >
-                    {Number(recentEvaluation.rating) > 0
+                    {Number(recentEvaluation?.rating) > 0
                       ? (() => {
-                          const score = Number(recentEvaluation.rating);
+                          const score = Number(recentEvaluation?.rating);
                           if (score >= 4.5) return "Outstanding";
                           if (score >= 4.0) return "Exceeds Expectations";
                           if (score >= 3.5) return "Meets Expectations";
@@ -477,7 +418,7 @@ export default function OverviewTab() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {isRefreshingOverview ? (
+          {isRefreshingOverview || isPaginate ? (
             <div className="relative max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table mx-4">
               <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                 <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
@@ -518,7 +459,7 @@ export default function OverviewTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {Array.from({ length: 5 }).map((_, i) => (
+                  {Array.from({ length: itemsPerPage }).map((_, i) => (
                     <TableRow key={i}>
                       <TableCell className="w-1/6 pl-4">
                         <div className="flex items-center gap-2">
@@ -770,7 +711,6 @@ export default function OverviewTab() {
                   perPage={perPage}
                   onPageChange={(page) => {
                     setCurrentPage(page);
-                    refresh();
                   }}
                 />
               )}
