@@ -67,6 +67,26 @@ interface RoleType {
   name: string;
 }
 
+// Helper function to get role badge styling
+const getRoleBadgeStyle = (roleName: string | undefined | null) => {
+  if (!roleName) return "bg-gray-100 text-gray-800 hover:bg-gray-200";
+  
+  const role = roleName.toLowerCase();
+  
+  switch (role) {
+    case "admin":
+      return "bg-red-100 text-red-800 hover:bg-red-200 border-red-300";
+    case "hr":
+      return "bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300";
+    case "evaluator":
+      return "bg-green-100 text-green-800 hover:bg-green-200 border-green-300";
+    case "employee":
+      return "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300";
+    default:
+      return "bg-purple-100 text-purple-800 hover:bg-purple-200 border-purple-300";
+  }
+};
+
 export default function UserManagementTab() {
   const [pendingRegistrations, setPendingRegistrations] = useState<Employee[]>(
     []
@@ -469,6 +489,24 @@ export default function UserManagementTab() {
         console.log("✨ Optimistic update: Status changed to", newStatus);
       }
 
+      // Optimistic update: Update the role in the table immediately
+      if (updatedUser.role !== undefined && updatedUser.role !== null) {
+        const newRole = String(updatedUser.role);
+        // Capitalize first letter for display
+        const roleName = newRole.charAt(0).toUpperCase() + newRole.slice(1).toLowerCase();
+        setActiveRegistrations((prev) =>
+          prev.map((user) =>
+            user.id === updatedUser.id
+              ? { 
+                  ...user, 
+                  roles: [{ name: newRole, id: newRole }] // Format as array to match table expectations
+                }
+              : user
+          )
+        );
+        console.log("✨ Optimistic update: Role changed to", newRole);
+      }
+
       // Log FormData contents for debugging
       console.log("📤 Sending update with FormData:");
       for (const [key, value] of formData.entries()) {
@@ -735,6 +773,25 @@ export default function UserManagementTab() {
                 </div>
               </div>
 
+              {/* Role Color Indicator */}
+              <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <span className="text-sm font-medium text-gray-700">Role Indicators:</span>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 border-red-300">
+                    Admin
+                  </Badge>
+                  <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300">
+                    HR
+                  </Badge>
+                  <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300">
+                    Evaluator
+                  </Badge>
+                  <Badge variant="outline" className="bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300">
+                    Employee
+                  </Badge>
+                </div>
+              </div>
+
               <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 <Table>
                   <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
@@ -836,7 +893,14 @@ export default function UserManagementTab() {
                               "N/A"}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">
+                            <Badge 
+                              variant="outline"
+                              className={getRoleBadgeStyle(
+                                employee.roles &&
+                                Array.isArray(employee.roles) &&
+                                employee.roles[0]?.name
+                              )}
+                            >
                               {(employee.roles &&
                                 Array.isArray(employee.roles) &&
                                 employee.roles[0]?.name) ||
