@@ -56,7 +56,7 @@ interface ViewResultsModalProps {
   isOpen: boolean;
   onCloseAction: () => void;
   submission: Submission | null;
-  onApprove?: (submissionId: string) => void;
+  onApprove?: (submissionId: number) => void;
   isApproved?: boolean;
   approvalData?: ApprovalData | null;
   currentUserName?: string;
@@ -119,14 +119,6 @@ const getQuarterFromDate = (dateString: string): string => {
   }
 };
 
-const getQuarterColor = (quarter: string) => {
-  if (quarter.includes("Q1")) return "bg-blue-100 text-blue-800";
-  if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
-  if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
-  if (quarter.includes("Q4")) return "bg-purple-100 text-purple-800";
-  return "bg-gray-100 text-gray-800";
-};
-
 export default function ViewResultsModal({
   isOpen,
   onCloseAction,
@@ -134,10 +126,7 @@ export default function ViewResultsModal({
   onApprove,
   isApproved = false,
   approvalData = null,
-  currentUserName,
-  currentUserSignature,
   showApprovalButton = false,
-  isEvaluatorView = false,
 }: ViewResultsModalProps) {
   const { user } = useUser();
   const [isApproving, setIsApproving] = useState(false);
@@ -1227,49 +1216,18 @@ export default function ViewResultsModal({
       setApprovalError("Invalid submission ID");
       return;
     }
+    if (!submission.employee.signature) {
+      setApprovalError("Signature required");
+      return;
+    }
 
     setIsApproving(true);
     setApprovalError("");
 
     try {
-      // For development: Use mock service
-      // For production: Replace with actual API call
-      const result = await approveEvaluation({
-        submissionId: submission.id,
-        employeeId: submission.employee.emp_id || 0,
-        approvedAt: new Date().toISOString(),
-        employeeName:
-          currentUserName ||
-          submission.employee.fname + " " + submission.employee.lname,
-      });
-
-      // Call the parent component's onApprove callback if provided
       if (onApprove) {
-        onApprove(submission.id.toString());
+        onApprove(submission.id);
       }
-
-      // Show success message
-      // TODO: Replace with actual API call when backend is ready:
-      /*
-      const response = await fetch('/api/evaluations/approve', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          submissionId: submission.id,
-          employeeId: submission.employeeId,
-          approvedAt: new Date().toISOString(),
-          employeeName: currentUserName || submission.employeeName
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      */
     } catch (error) {
       console.error("❌ Error approving evaluation:", error);
       setApprovalError("Failed to approve evaluation. Please try again.");
@@ -3249,7 +3207,7 @@ export default function ViewResultsModal({
                       {showApprovalButton && (
                         <div className="mt-6 space-y-4 no-print">
                           {/* Approve Button - Only show if not approved */}
-                          {!computedIsApproved && (
+                          {submission.status === "pending" && (
                             <div className="space-y-3">
                               <div className="flex justify-center">
                                 <Button
@@ -3279,27 +3237,28 @@ export default function ViewResultsModal({
                           )}
 
                           {/* Approved Status - Only show if approved */}
-                          {computedIsApproved && (
-                            <div className="space-y-3 px-4 md:px-0">
-                              <div className="flex items-center justify-center space-x-2">
-                                <Badge className="bg-green-100 text-green-800 px-4 py-2 text-sm font-medium">
-                                  ✓ Evaluation Approved
-                                </Badge>
+                          {computedIsApproved &&
+                            submission.status === "completed" && (
+                              <div className="space-y-3 px-4 md:px-0">
+                                <div className="flex items-center justify-center space-x-2">
+                                  <Badge className="bg-green-100 text-green-800 px-4 py-2 text-sm font-medium">
+                                    ✓ Evaluation Approved
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-gray-500 text-center">
+                                  Approved on{" "}
+                                  {submission.employeeApprovedAt
+                                    ? new Date(
+                                        submission.employeeApprovedAt
+                                      ).toLocaleDateString("en-US", {
+                                        year: "numeric",
+                                        month: "long",
+                                        day: "numeric",
+                                      })
+                                    : "Unknown date"}
+                                </p>
                               </div>
-                              <p className="text-xs text-gray-500 text-center">
-                                Approved on{" "}
-                                {currentApprovalData?.approvedAt
-                                  ? new Date(
-                                      currentApprovalData.approvedAt
-                                    ).toLocaleDateString("en-US", {
-                                      year: "numeric",
-                                      month: "long",
-                                      day: "numeric",
-                                    })
-                                  : "Unknown date"}
-                              </p>
-                            </div>
-                          )}
+                            )}
                         </div>
                       )}
 
@@ -3307,11 +3266,9 @@ export default function ViewResultsModal({
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mt-1 print-date-value">
                           {submission.employeeApprovedAt ||
-                          currentApprovalData?.approvedAt
+                          submission.employeeApprovedAt
                             ? new Date(
-                                submission.employeeApprovedAt ||
-                                  currentApprovalData?.approvedAt ||
-                                  ""
+                                submission.employeeApprovedAt
                               ).toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "long",
@@ -3363,11 +3320,9 @@ export default function ViewResultsModal({
                       {/* Evaluator Date */}
                       <div className="text-center">
                         <p className="text-xs text-gray-500 mt-1">
-                          {submission.evaluatorApprovedAt ||
-                          submission?.evaluator.signatureDate
+                          {submission.evaluatorApprovedAt
                             ? new Date(
-                                submission.evaluatorApprovedAt ||
-                                  submission?.evaluator.signatureDate
+                                submission.evaluatorApprovedAt
                               ).toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "long",

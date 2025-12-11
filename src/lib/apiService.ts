@@ -242,14 +242,8 @@ export const apiService = {
   },
 
   // Approve evaluation by employee (matches documentation endpoint)
-  approvedByEmployee: async (
-    evaluationId: number,
-    data?: any
-  ): Promise<any> => {
-    const response = await api.post(
-      `/approvedByEmployee/${evaluationId}`,
-      data || {}
-    );
+  approvedByEmployee: async (evaluationId: number): Promise<any> => {
+    const response = await api.post(`/approvedByEmployee/${evaluationId}`);
     return response.data;
   },
 
@@ -636,16 +630,20 @@ export const apiService = {
   getMyEvalAuthEmployee: async (
     searchTerm?: string,
     page?: number,
-    perPage?: number
+    perPage?: number,
+    year?: string,
+    quarter?: string
   ): Promise<any> => {
     const response = await api.get("/getMyEvalAuthEmployee", {
       params: {
         search: searchTerm || "",
         page: page,
         per_page: perPage,
+        year: year,
+        quarter: quarter,
       },
     });
-    return response.data.myEval_as_Employee;
+    return response.data;
   },
 
   // Evaluator dashboard total cards

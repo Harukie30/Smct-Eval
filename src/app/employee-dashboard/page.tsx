@@ -64,10 +64,10 @@ export default function OverviewTab() {
         currentPage,
         itemsPerPage
       );
-      setMyEvaluations(response.data);
-      setOverviewTotal(response.total);
-      setTotalPages(response.last_page);
-      setPerPage(response.per_page);
+      setMyEvaluations(response.myEval_as_Employee.data);
+      setOverviewTotal(response.myEval_as_Employee.total);
+      setTotalPages(response.myEval_as_Employee.last_page);
+      setPerPage(response.myEval_as_Employee.per_page);
       setIsPaginate(false);
     } catch (error) {
       console.error("Error loading approved evaluations:", error);
@@ -131,6 +131,36 @@ export default function OverviewTab() {
       }
     } catch (error) {
       console.error("Error fetching submission details:", error);
+    }
+  };
+
+  const handleApprove = async (id: number) => {
+    try {
+      await apiService.approvedByEmployee(id);
+      const submission = await apiService.getSubmissionById(id);
+
+      if (submission) {
+        setSelectedSubmission(submission);
+        setIsViewResultsModalOpen(true);
+      } else {
+        console.error("Submission not found for ID:", id);
+      }
+    } catch (error) {
+      console.error("Error approving submission:", error);
+    }
+  };
+
+  const handleClose = async () => {
+    try {
+      let search =
+        debouncedSearchTerm !== "" ? debouncedSearchTerm : searchTerm;
+      loadApprovedEvaluations(search);
+      setIsViewResultsModalOpen(false);
+      setSelectedSubmission(null);
+    } catch (error) {
+      console.log(error);
+      setIsViewResultsModalOpen(false);
+      setSelectedSubmission(null);
     }
   };
 
@@ -402,7 +432,7 @@ export default function OverviewTab() {
             </div>
             <Input
               type="text"
-              placeholder="Search by supervisor, rating, date."
+              placeholder="Search by supervisor/ evaluator"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-2 w-full border-gray-300 focus:border-blue-500 focus:ring-blue-500"
@@ -719,12 +749,12 @@ export default function OverviewTab() {
               <ViewResultsModal
                 isOpen={isViewResultsModalOpen}
                 onCloseAction={() => {
-                  setIsViewResultsModalOpen(false);
-                  setSelectedSubmission(null);
+                  handleClose();
                 }}
                 submission={selectedSubmission}
-                showApprovalButton={false}
+                showApprovalButton={true}
                 isEvaluatorView={false}
+                onApprove={(id) => handleApprove(id)}
               />
             </>
           )}

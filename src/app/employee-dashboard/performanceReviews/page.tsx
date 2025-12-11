@@ -78,10 +78,11 @@ export default function performanceReviews() {
         currentPage,
         itemsPerPage
       );
-      setSubmissions(response.data);
-      setOverviewTotal(response.total);
-      setTotalPages(response.last_page);
-      setPerPage(response.per_page);
+      setSubmissions(response.myEval_as_Employee.data);
+      setOverviewTotal(response.myEval_as_Employee.total);
+      setTotalPages(response.myEval_as_Employee.last_page);
+      setPerPage(response.myEval_as_Employee.per_page);
+      setIsPaginate(false);
     } catch (error) {
       console.error("Error loading submissions:", error);
     } finally {
