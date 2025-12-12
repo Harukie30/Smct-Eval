@@ -138,13 +138,13 @@ export default function DepartmentsTab() {
         currentPage,
         itemsPerPage
       );
-      
+
       // Handle different response structures
       let branchesData: Branches[] = [];
       let total = 0;
       let lastPage = 1;
       let perPageValue = itemsPerPage;
-      
+
       if (response) {
         // If response has data property (paginated response)
         if (response.data && Array.isArray(response.data)) {
@@ -168,7 +168,7 @@ export default function DepartmentsTab() {
           perPageValue = response.per_page || itemsPerPage;
         }
       }
-      
+
       setBranches(branchesData);
       setOverviewTotal(total);
       setTotalPages(lastPage);
@@ -463,53 +463,59 @@ export default function DepartmentsTab() {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {branches && Array.isArray(branches) && branches.length > 0 ? (
-                branches.map((branch) => (
-                  <Card key={branch.id}>
-                    <CardHeader>
-                      <CardTitle className="flex justify-between items-center">
-                        {branch.branch_name + " /" + branch.branch_code}
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">
-                            {branch.employees_count} employees
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setBranchesToDelete(branch);
-                              setIsDeleteModalOpen(true);
-                            }}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardTitle>
-                      <CardDescription>Branch: {branch.branch}</CardDescription>
-                      <CardDescription>
-                        Acronym: {branch.acronym}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-blue-50 rounded-lg">
-                          <div className="text-lg font-bold text-blue-600">
-                            {branch.employees_count}
+              {branches && Array.isArray(branches) && branches.length > 0
+                ? branches.map((branch) => (
+                    <Card key={branch.id}>
+                      <CardHeader>
+                        <CardTitle className="flex justify-between items-center">
+                          {branch.branch_name + " /" + branch.branch_code}
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">
+                              {branch.employees_count} employees
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setBranchesToDelete(branch);
+                                setIsDeleteModalOpen(true);
+                              }}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <div className="text-xs text-gray-600">Employees</div>
-                        </div>
-                        <div className="text-center p-3 bg-green-50 rounded-lg">
-                          <div className="text-lg font-bold text-green-600">
-                            {branch.managers_count}
+                        </CardTitle>
+                        <CardDescription>
+                          Branch: {branch.branch}
+                        </CardDescription>
+                        <CardDescription>
+                          Acronym: {branch.acronym}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="text-center p-3 bg-blue-50 rounded-lg">
+                            <div className="text-lg font-bold text-blue-600">
+                              {branch.employees_count}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              Employees
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-600">Managers</div>
+                          <div className="text-center p-3 bg-green-50 rounded-lg">
+                            <div className="text-lg font-bold text-green-600">
+                              {branch.managers_count}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              Managers
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : null}
+                      </CardContent>
+                    </Card>
+                  ))
+                : null}
             </div>
           </div>
           {branches && Array.isArray(branches) && branches.length === 0 && (
@@ -558,7 +564,6 @@ export default function DepartmentsTab() {
               perPage={perPage}
               onPageChange={(page) => {
                 setCurrentPage(page);
-                loadData(searchTerm);
               }}
             />
           )}

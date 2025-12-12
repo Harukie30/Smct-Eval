@@ -19,7 +19,11 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import { Skeleton, SkeletonButton, SkeletonBadge } from "@/components/ui/skeleton";
+import {
+  Skeleton,
+  SkeletonButton,
+  SkeletonBadge,
+} from "@/components/ui/skeleton";
 import { Combobox } from "@/components/ui/combobox";
 import {
   Dialog,
@@ -60,7 +64,8 @@ export default function SignatureResetRequestsTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
   const [statusFilter, setStatusFilter] = useState("0"); // Default to "All Requests"
-  const [debouncedStatusFilter, setDebouncedStatusFilter] = useState(statusFilter);
+  const [debouncedStatusFilter, setDebouncedStatusFilter] =
+    useState(statusFilter);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
@@ -70,7 +75,8 @@ export default function SignatureResetRequestsTab() {
   // Modal states
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<SignatureResetRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] =
+    useState<SignatureResetRequest | null>(null);
 
   const { success, error: showError } = useToast();
 
@@ -95,7 +101,7 @@ export default function SignatureResetRequestsTab() {
 
       // Handle different response structures
       let allRequests: SignatureResetRequest[] = [];
-      
+
       if (response) {
         // If response has data property (paginated response)
         if (response.data && Array.isArray(response.data)) {
@@ -108,31 +114,46 @@ export default function SignatureResetRequestsTab() {
 
       // Apply client-side filtering
       let filteredRequests = allRequests;
-      
+
       // Filter by search term
       if (searchValue) {
         const searchLower = searchValue.toLowerCase();
         filteredRequests = filteredRequests.filter((request) => {
-          const fullName = `${request.user?.fname || ""} ${request.user?.lname || ""}`.toLowerCase();
+          const fullName = `${request.user?.fname || ""} ${
+            request.user?.lname || ""
+          }`.toLowerCase();
           const email = request.user?.email?.toLowerCase() || "";
           const username = request.user?.username?.toLowerCase() || "";
-          return fullName.includes(searchLower) || email.includes(searchLower) || username.includes(searchLower);
+          return (
+            fullName.includes(searchLower) ||
+            email.includes(searchLower) ||
+            username.includes(searchLower)
+          );
         });
       }
 
       // Filter by date (convert "0" to empty string for "All Requests")
-      const dateFilterForFiltering = statusFilterValue === "0" ? "" : statusFilterValue;
+      const dateFilterForFiltering =
+        statusFilterValue === "0" ? "" : statusFilterValue;
       if (dateFilterForFiltering) {
         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const today = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        );
         const oneWeekAgo = new Date(today);
         oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        
+
         filteredRequests = filteredRequests.filter((request) => {
           if (!request.requested_at) return false;
           const requestDate = new Date(request.requested_at);
-          const requestDateOnly = new Date(requestDate.getFullYear(), requestDate.getMonth(), requestDate.getDate());
-          
+          const requestDateOnly = new Date(
+            requestDate.getFullYear(),
+            requestDate.getMonth(),
+            requestDate.getDate()
+          );
+
           switch (dateFilterForFiltering) {
             case "new":
               // New: Today's requests
@@ -205,8 +226,14 @@ export default function SignatureResetRequestsTab() {
   // Load data when filters or page changes
   useEffect(() => {
     const fetchData = async () => {
-      const isPageChange = debouncedSearchTerm === searchTerm && debouncedStatusFilter === statusFilter;
-      await loadRequests(debouncedSearchTerm, debouncedStatusFilter, isPageChange);
+      const isPageChange =
+        debouncedSearchTerm === searchTerm &&
+        debouncedStatusFilter === statusFilter;
+      await loadRequests(
+        debouncedSearchTerm,
+        debouncedStatusFilter,
+        isPageChange
+      );
     };
     fetchData();
   }, [debouncedSearchTerm, debouncedStatusFilter, currentPage]);
@@ -220,12 +247,16 @@ export default function SignatureResetRequestsTab() {
     if (!selectedRequest) return;
 
     // The API returns user objects directly, so the user ID is in the id field
-    const userId = (selectedRequest as any).id || 
-                   selectedRequest.user_id || 
-                   selectedRequest.user?.id;
-    
+    const userId =
+      (selectedRequest as any).id ||
+      selectedRequest.user_id ||
+      selectedRequest.user?.id;
+
     if (!userId) {
-      console.error("User ID not found. Full request object:", JSON.stringify(selectedRequest, null, 2));
+      console.error(
+        "User ID not found. Full request object:",
+        JSON.stringify(selectedRequest, null, 2)
+      );
       showError("User ID not found in request data.");
       return;
     }
@@ -246,12 +277,16 @@ export default function SignatureResetRequestsTab() {
     if (!selectedRequest) return;
 
     // The API returns user objects directly, so the user ID is in the id field
-    const userId = (selectedRequest as any).id || 
-                   selectedRequest.user_id || 
-                   selectedRequest.user?.id;
-    
+    const userId =
+      (selectedRequest as any).id ||
+      selectedRequest.user_id ||
+      selectedRequest.user?.id;
+
     if (!userId) {
-      console.error("User ID not found. Full request object:", JSON.stringify(selectedRequest, null, 2));
+      console.error(
+        "User ID not found. Full request object:",
+        JSON.stringify(selectedRequest, null, 2)
+      );
       showError("User ID not found in request data.");
       return;
     }
@@ -321,7 +356,9 @@ export default function SignatureResetRequestsTab() {
               disabled={refresh}
               className="flex items-center gap-2"
             >
-              <RefreshCw className={`h-4 w-4 ${refresh ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${refresh ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
           </div>
@@ -362,7 +399,7 @@ export default function SignatureResetRequestsTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(refresh || isPageLoading) ? (
+                {refresh || isPageLoading ? (
                   Array.from({ length: itemsPerPage }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
                       <TableCell>
@@ -371,10 +408,18 @@ export default function SignatureResetRequestsTab() {
                           <Skeleton className="h-3 w-24" />
                         </div>
                       </TableCell>
-                      <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-40" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-28" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-28" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-32" />
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <SkeletonButton size="sm" className="w-24" />
@@ -392,23 +437,33 @@ export default function SignatureResetRequestsTab() {
                           alt="No data"
                           className="w-25 h-25 object-contain"
                           style={{
-                            imageRendering: 'auto',
-                            willChange: 'auto',
-                            transform: 'translateZ(0)',
-                            backfaceVisibility: 'hidden',
-                            WebkitBackfaceVisibility: 'hidden',
+                            imageRendering: "auto",
+                            willChange: "auto",
+                            transform: "translateZ(0)",
+                            backfaceVisibility: "hidden",
+                            WebkitBackfaceVisibility: "hidden",
                           }}
                         />
                         <div className="text-gray-500">
                           {searchTerm || statusFilter !== "0" ? (
                             <>
-                              <p className="text-base font-medium mb-1">No signature reset requests found</p>
-                              <p className="text-sm">Try adjusting your search or date filter criteria</p>
+                              <p className="text-base font-medium mb-1">
+                                No signature reset requests found
+                              </p>
+                              <p className="text-sm">
+                                Try adjusting your search or date filter
+                                criteria
+                              </p>
                             </>
                           ) : (
                             <>
-                              <p className="text-base font-medium mb-1">No signature reset requests</p>
-                              <p className="text-sm">Requests will appear here when users request signature resets</p>
+                              <p className="text-base font-medium mb-1">
+                                No signature reset requests
+                              </p>
+                              <p className="text-sm">
+                                Requests will appear here when users request
+                                signature resets
+                              </p>
                             </>
                           )}
                         </div>
@@ -429,9 +484,21 @@ export default function SignatureResetRequestsTab() {
                         </div>
                       </TableCell>
                       <TableCell>{request.email}</TableCell>
-                      <TableCell>{request.positions?.label || request.position || "N/A"}</TableCell>
-                      <TableCell>{request.departments?.department_name || request.department || "N/A"}</TableCell>
-                      <TableCell>{request.branches?.length > 0 ? request.branches.map((b: any) => b.branch_name || b.name).join(", ") : "N/A"}</TableCell>
+                      <TableCell>
+                        {request.positions?.label || request.position || "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        {request.departments?.department_name ||
+                          request.department ||
+                          "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        {request.branches?.length > 0
+                          ? request.branches
+                              .map((b: any) => b.branch_name || b.name)
+                              .join(", ")
+                          : "N/A"}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -471,7 +538,6 @@ export default function SignatureResetRequestsTab() {
                 perPage={perPage}
                 onPageChange={(page) => {
                   setCurrentPage(page);
-                  loadRequests(debouncedSearchTerm, debouncedStatusFilter, true);
                 }}
               />
             </div>
@@ -480,7 +546,10 @@ export default function SignatureResetRequestsTab() {
       </Card>
 
       {/* Approve Confirmation Modal */}
-      <Dialog open={isApproveModalOpen} onOpenChangeAction={setIsApproveModalOpen}>
+      <Dialog
+        open={isApproveModalOpen}
+        onOpenChangeAction={setIsApproveModalOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Approve Signature Reset Request</DialogTitle>
@@ -493,10 +562,16 @@ export default function SignatureResetRequestsTab() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsApproveModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsApproveModalOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700">
+            <Button
+              onClick={handleApprove}
+              className="bg-green-600 hover:bg-green-700"
+            >
               <Check className="h-4 w-4 mr-2" />
               Approve
             </Button>
@@ -505,7 +580,10 @@ export default function SignatureResetRequestsTab() {
       </Dialog>
 
       {/* Reject Confirmation Modal */}
-      <Dialog open={isRejectModalOpen} onOpenChangeAction={setIsRejectModalOpen}>
+      <Dialog
+        open={isRejectModalOpen}
+        onOpenChangeAction={setIsRejectModalOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Reject Signature Reset Request</DialogTitle>
@@ -518,13 +596,13 @@ export default function SignatureResetRequestsTab() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRejectModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsRejectModalOpen(false)}
+            >
               Cancel
             </Button>
-            <Button
-              onClick={handleReject}
-              variant="destructive"
-            >
+            <Button onClick={handleReject} variant="destructive">
               <X className="h-4 w-4 mr-2" />
               Reject
             </Button>
@@ -534,4 +612,3 @@ export default function SignatureResetRequestsTab() {
     </div>
   );
 }
-

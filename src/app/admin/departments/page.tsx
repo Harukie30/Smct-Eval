@@ -63,13 +63,13 @@ export default function DepartmentsTab() {
         currentPage,
         itemsPerPage
       );
-      
+
       // Handle different response structures
       let departmentsData: Department[] = [];
       let total = 0;
       let lastPage = 1;
       let perPageValue = itemsPerPage;
-      
+
       if (response) {
         // If response has data property (paginated response)
         if (response.data && Array.isArray(response.data)) {
@@ -93,7 +93,7 @@ export default function DepartmentsTab() {
           perPageValue = response.per_page || itemsPerPage;
         }
       }
-      
+
       setDepartments(departmentsData);
       setOverviewTotal(total);
       setTotalPages(lastPage);
@@ -379,89 +379,97 @@ export default function DepartmentsTab() {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {departments && Array.isArray(departments) && departments.length > 0 ? (
-                departments.map((dept) => (
-                  <Card key={dept.id}>
-                    <CardHeader>
-                      <CardTitle className="flex justify-between items-center">
-                        {dept.department_name}
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">
-                            {dept.employees_count} employees
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setDepartmentToDelete(dept);
-                              setIsDeleteModalOpen(true);
-                            }}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardTitle>
-                      <CardDescription>Department Manager</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center p-3 bg-blue-50 rounded-lg">
-                          <div className="text-lg font-bold text-blue-600">
-                            {dept.employees_count}
+              {departments &&
+              Array.isArray(departments) &&
+              departments.length > 0
+                ? departments.map((dept) => (
+                    <Card key={dept.id}>
+                      <CardHeader>
+                        <CardTitle className="flex justify-between items-center">
+                          {dept.department_name}
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">
+                              {dept.employees_count} employees
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setDepartmentToDelete(dept);
+                                setIsDeleteModalOpen(true);
+                              }}
+                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <div className="text-xs text-gray-600">Employees</div>
-                        </div>
-                        <div className="text-center p-3 bg-green-50 rounded-lg">
-                          <div className="text-lg font-bold text-green-600">
-                            {dept.managers_count}
+                        </CardTitle>
+                        <CardDescription>Department Manager</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="text-center p-3 bg-blue-50 rounded-lg">
+                            <div className="text-lg font-bold text-blue-600">
+                              {dept.employees_count}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              Employees
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-600">Managers</div>
+                          <div className="text-center p-3 bg-green-50 rounded-lg">
+                            <div className="text-lg font-bold text-green-600">
+                              {dept.managers_count}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              Managers
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : null}
+                      </CardContent>
+                    </Card>
+                  ))
+                : null}
             </div>
           </div>
-          {departments && Array.isArray(departments) && departments.length === 0 && (
-            <div className="flex flex-col items-center justify-center gap-4">
-              <img
-                src="/not-found.gif"
-                alt="No data"
-                className="w-25 h-25 object-contain"
-                style={{
-                  imageRendering: "auto",
-                  willChange: "auto",
-                  transform: "translateZ(0)",
-                  backfaceVisibility: "hidden",
-                  WebkitBackfaceVisibility: "hidden",
-                }}
-              />
-              <div className="text-gray-500 text-center">
-                {searchTerm ? (
-                  <>
-                    <p className="text-base font-medium mb-1">
-                      No results found
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      Try adjusting your search or filters
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-base font-medium mb-1">
-                      No evaluation records to display
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      Records will appear here when evaluations are submitted
-                    </p>
-                  </>
-                )}
+          {departments &&
+            Array.isArray(departments) &&
+            departments.length === 0 && (
+              <div className="flex flex-col items-center justify-center gap-4">
+                <img
+                  src="/not-found.gif"
+                  alt="No data"
+                  className="w-25 h-25 object-contain"
+                  style={{
+                    imageRendering: "auto",
+                    willChange: "auto",
+                    transform: "translateZ(0)",
+                    backfaceVisibility: "hidden",
+                    WebkitBackfaceVisibility: "hidden",
+                  }}
+                />
+                <div className="text-gray-500 text-center">
+                  {searchTerm ? (
+                    <>
+                      <p className="text-base font-medium mb-1">
+                        No results found
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        Try adjusting your search or filters
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-base font-medium mb-1">
+                        No evaluation records to display
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        Records will appear here when evaluations are submitted
+                      </p>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
           {/* Pagination Controls */}
           {overviewTotal > itemsPerPage && (
             <EvaluationsPagination
@@ -471,7 +479,6 @@ export default function DepartmentsTab() {
               perPage={perPage}
               onPageChange={(page) => {
                 setCurrentPage(page);
-                loadData(searchTerm);
               }}
             />
           )}

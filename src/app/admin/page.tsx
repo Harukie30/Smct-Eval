@@ -55,7 +55,10 @@ export default function OverviewTab() {
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
 
-  const loadEvaluations = async (searchValue: string, isPageChange: boolean = false) => {
+  const loadEvaluations = async (
+    searchValue: string,
+    isPageChange: boolean = false
+  ) => {
     try {
       if (isPageChange) {
         setIsPageLoading(true);
@@ -338,7 +341,7 @@ export default function OverviewTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
-                  {(refreshing || isPageLoading) ? (
+                  {refreshing || isPageLoading ? (
                     Array.from({ length: itemsPerPage }).map((_, index) => (
                       <TableRow key={`skeleton-${index}`}>
                         <TableCell className="px-6 py-3">
@@ -547,7 +550,6 @@ export default function OverviewTab() {
               perPage={perPage}
               onPageChange={(page) => {
                 setCurrentPage(page);
-                loadEvaluations(searchTerm, true);
               }}
             />
           )}

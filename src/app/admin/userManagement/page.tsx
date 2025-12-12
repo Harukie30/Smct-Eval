@@ -866,7 +866,6 @@ export default function UserManagementTab() {
                       perPage={perPage}
                       onPageChange={(page) => {
                         setCurrentPage(page);
-                        loadActiveUsers(activeSearchTerm, roleFilter, true);
                       }}
                     />
                   </div>
@@ -1185,11 +1184,6 @@ export default function UserManagementTab() {
                         perPage={perPage}
                         onPageChange={(page) => {
                           setCurrentPage(page);
-                          loadPendingUsers(
-                            pendingSearchTerm,
-                            statusFilter,
-                            true
-                          );
                         }}
                       />
                     </div>
