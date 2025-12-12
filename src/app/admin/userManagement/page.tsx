@@ -38,6 +38,7 @@ import {
 import { Plus } from "lucide-react";
 import EditUserModal from "@/components/EditUserModal";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
+import ViewEmployeeModal from "@/components/ViewEmployeeModal";
 import { toastMessages } from "@/lib/toastMessages";
 import apiService from "@/lib/apiService";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
@@ -111,6 +112,49 @@ export default function UserManagementTab() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
+  const [employeeToView, setEmployeeToView] = useState<Employee | null>(null);
+  const [viewEmployeeId, setViewEmployeeId] = useState<number | undefined>(undefined);
+
+  // Fetch Employee ID when modal opens (same as EditUserModal does)
+  useEffect(() => {
+    const fetchEmployeeId = async () => {
+      if (employeeToView && isViewEmployeeModalOpen && !viewEmployeeId) {
+        try {
+          // First check if it's already in the employee object
+          const existingId = (employeeToView as any).employeeId || (employeeToView as any).employee_id;
+          if (existingId) {
+            setViewEmployeeId(existingId);
+            return;
+          }
+
+          // Otherwise fetch from accounts API
+          const accounts = await apiService.getAllUsers();
+          const account = accounts.find(
+            (acc: any) =>
+              acc.id === employeeToView.id ||
+              acc.employeeId === employeeToView.id ||
+              acc.employee_id === employeeToView.id ||
+              acc.user_id === employeeToView.id
+          );
+
+          const foundEmployeeId =
+            account?.employeeId ||
+            account?.employee_id ||
+            account?.emp_id ||
+            undefined;
+
+          if (foundEmployeeId) {
+            setViewEmployeeId(foundEmployeeId);
+          }
+        } catch (error) {
+          console.error('Error fetching employeeId:', error);
+        }
+      }
+    };
+
+    fetchEmployeeId();
+  }, [employeeToView, isViewEmployeeModalOpen, viewEmployeeId]);
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -773,22 +817,35 @@ export default function UserManagementTab() {
                 </div>
               </div>
 
-              {/* Role Color Indicator */}
-              <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <span className="text-sm font-medium text-gray-700">Role Indicators:</span>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 border-red-300">
-                    Admin
-                  </Badge>
-                  <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300">
-                    HR
-                  </Badge>
-                  <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300">
-                    Evaluator
-                  </Badge>
-                  <Badge variant="outline" className="bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300">
-                    Employee
-                  </Badge>
+              {/* Role and Status Color Indicators */}
+              <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-gray-700">Role Indicators:</span>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 border-red-300">
+                      Admin
+                    </Badge>
+                    <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300">
+                      HR
+                    </Badge>
+                    <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300">
+                      Evaluator
+                    </Badge>
+                    <Badge variant="outline" className="bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300">
+                      Employee
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-gray-700">Status Indicators:</span>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300">
+                      ✨ New Added (≤30min)
+                    </Badge>
+                    <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300">
+                      🕐 Recently Added (&gt;30min)
+                    </Badge>
+                  </div>
                 </div>
               </div>
 
@@ -877,10 +934,45 @@ export default function UserManagementTab() {
                     ) : activeRegistrations &&
                       Array.isArray(activeRegistrations) &&
                       activeRegistrations.length > 0 ? (
-                      activeRegistrations.map((employee) => (
-                        <TableRow key={employee.id}>
+                      activeRegistrations.map((employee) => {
+                        // Check if user is new (within 30 minutes) or recently added (after 30 minutes, within 48 hours)
+                        const createdDate = employee.created_at ? new Date(employee.created_at) : null;
+                        let isNew = false;
+                        let isRecentlyAdded = false;
+                        
+                        if (createdDate) {
+                          const now = new Date();
+                          const minutesDiff = (now.getTime() - createdDate.getTime()) / (1000 * 60);
+                          const hoursDiff = minutesDiff / 60;
+                          isNew = minutesDiff <= 30;
+                          isRecentlyAdded = minutesDiff > 30 && hoursDiff <= 48;
+                        }
+                        
+                        return (
+                        <TableRow 
+                          key={employee.id}
+                          className={
+                            isNew
+                              ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100"
+                              : isRecentlyAdded
+                              ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
+                              : "hover:bg-gray-50"
+                          }
+                        >
                           <TableCell className="font-medium">
-                            {employee.fname + " " + employee.lname}
+                            <div className="flex items-center gap-2">
+                              <span>{employee.fname + " " + employee.lname}</span>
+                              {isNew && (
+                                <Badge className="bg-green-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                  ✨ New
+                                </Badge>
+                              )}
+                              {isRecentlyAdded && !isNew && (
+                                <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                  🕐 Recent
+                                </Badge>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>{employee.email}</TableCell>
                           <TableCell>
@@ -912,6 +1004,17 @@ export default function UserManagementTab() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                className="text-green-600 hover:text-green-700"
+                                onClick={() => {
+                                  setEmployeeToView(employee);
+                                  setIsViewEmployeeModalOpen(true);
+                                }}
+                              >
+                                View
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 className="text-blue-600 hover:text-blue-700"
                                 onClick={() => openEditModal(employee)}
                               >
@@ -928,7 +1031,8 @@ export default function UserManagementTab() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))
+                        );
+                      })
                     ) : null}
                   </TableBody>
                 </Table>
@@ -1027,10 +1131,9 @@ export default function UserManagementTab() {
                   </div>
                   <div className="flex space-x-2">
                     <Button
-                      variant="outline"
                       onClick={() => refreshUserData(true)}
                       disabled={refresh}
-                      className="flex items-center gap-2"
+                      className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
                     >
                       {refresh ? (
                         <>
@@ -1074,6 +1177,22 @@ export default function UserManagementTab() {
                         </>
                       )}
                     </Button>
+                  </div>
+                </div>
+
+                {/* Status Color Indicator */}
+                <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <span className="text-sm font-medium text-gray-700">Status Indicators:</span>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300">
+                      ⚡ New (≤24h)
+                    </Badge>
+                    <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300">
+                      🕐 Recent (24-48h)
+                    </Badge>
+                    <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 border-red-300">
+                      ✗ Rejected
+                    </Badge>
                   </div>
                 </div>
 
@@ -1165,13 +1284,42 @@ export default function UserManagementTab() {
                       ) : pendingRegistrations &&
                         Array.isArray(pendingRegistrations) &&
                         pendingRegistrations.length > 0 ? (
-                        pendingRegistrations.map((account) => (
+                        pendingRegistrations.map((account) => {
+                          // Check if registration is new (within 24 hours) or recent (24-48 hours)
+                          const registrationDate = new Date(account.created_at);
+                          const now = new Date();
+                          const hoursDiff = (now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60);
+                          const isNew = hoursDiff <= 24;
+                          const isRecent = hoursDiff > 24 && hoursDiff <= 48;
+                          const isRejected = account.is_active === "declined";
+                          
+                          return (
                           <TableRow
                             key={account.id}
-                            className="hover:bg-gray-50"
+                            className={
+                              isRejected
+                                ? "bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100"
+                                : isNew 
+                                ? "bg-yellow-50 border-l-4 border-l-yellow-500 hover:bg-yellow-100" 
+                                : isRecent
+                                ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
+                                : "hover:bg-gray-50"
+                            }
                           >
                             <TableCell className="px-6 py-3 font-medium">
-                              {account.fname + " " + account.lname}
+                              <div className="flex items-center gap-2">
+                                <span>{account.fname + " " + account.lname}</span>
+                                {!isRejected && isNew && (
+                                  <Badge className="bg-yellow-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                    ⚡ New
+                                  </Badge>
+                                )}
+                                {!isRejected && isRecent && !isNew && (
+                                  <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                    🕐 Recent
+                                  </Badge>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="px-6 py-3">
                               {account.email}
@@ -1247,7 +1395,8 @@ export default function UserManagementTab() {
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))
+                          );
+                        })
                       ) : null}
                     </TableBody>
                   </Table>
@@ -1273,6 +1422,97 @@ export default function UserManagementTab() {
           </Card>
         </div>
       )}
+
+      {/* View Employee Modal */}
+      {employeeToView && (
+        <ViewEmployeeModal
+          isOpen={isViewEmployeeModalOpen}
+          onCloseAction={() => {
+            setIsViewEmployeeModalOpen(false);
+            setEmployeeToView(null);
+            setViewEmployeeId(undefined);
+          }}
+          employee={{
+            id: employeeToView.id,
+            name: `${employeeToView.fname || ''} ${employeeToView.lname || ''}`.trim() || 'N/A',
+            email: employeeToView.email || '',
+            username: employeeToView.username || undefined,
+            contact: employeeToView.contact || undefined,
+            position: (() => {
+              const pos = employeeToView.positions;
+              if (!pos) return 'N/A';
+              if (typeof pos === 'string') return pos;
+              if (typeof pos === 'object') {
+                return pos.label || pos.name || pos.value || 'N/A';
+              }
+              return 'N/A';
+            })(),
+            department: (() => {
+              const dept = employeeToView.departments;
+              if (!dept) return 'N/A';
+              if (typeof dept === 'string') return dept;
+              if (typeof dept === 'object') {
+                return dept.label || dept.name || dept.department_name || dept.value || 'N/A';
+              }
+              return 'N/A';
+            })(),
+            branch: (() => {
+              const branch = employeeToView.branches;
+              if (!branch) return undefined;
+              if (typeof branch === 'string') return branch;
+              if (Array.isArray(branch) && branch.length > 0) {
+                const firstBranch = branch[0];
+                if (typeof firstBranch === 'string') return firstBranch;
+                if (typeof firstBranch === 'object') {
+                  return firstBranch.branch_name || firstBranch.name || firstBranch.label || undefined;
+                }
+              }
+              if (typeof branch === 'object') {
+                return branch.branch_name || branch.name || branch.label || undefined;
+              }
+              return undefined;
+            })(),
+            role: (() => {
+              const role = employeeToView.roles;
+              if (!role) return 'N/A';
+              if (typeof role === 'string') return role;
+              if (Array.isArray(role) && role.length > 0) {
+                const firstRole = role[0];
+                if (typeof firstRole === 'string') return firstRole;
+                if (typeof firstRole === 'object') {
+                  return firstRole.name || firstRole.label || firstRole.value || 'N/A';
+                }
+              }
+              if (typeof role === 'object') {
+                return role.name || role.label || role.value || 'N/A';
+              }
+              return 'N/A';
+            })(),
+            employeeId: viewEmployeeId || (employeeToView as any).employeeId || (employeeToView as any).employee_id || undefined,
+            bio: employeeToView.bio || undefined,
+            isActive: (() => {
+              const isActive = employeeToView.is_active;
+              if (typeof isActive === 'string' && isActive === 'active') return true;
+              if (typeof isActive === 'boolean' && isActive === true) return true;
+              if ((employeeToView as any).isActive === true) return true;
+              return false;
+            })(),
+            created_at: employeeToView.created_at || undefined,
+            updated_at: employeeToView.updated_at || undefined,
+          }}
+          onStartEvaluationAction={() => {
+            // Not used in admin, but required by component
+            setIsViewEmployeeModalOpen(false);
+            setEmployeeToView(null);
+            setViewEmployeeId(undefined);
+          }}
+          onViewSubmissionAction={() => {
+            // Not used in admin, but required by component
+          }}
+          designVariant="admin"
+        />
+      )}
+
 
       {/* Edit User Modal */}
       <EditUserModal

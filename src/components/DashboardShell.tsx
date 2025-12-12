@@ -325,9 +325,9 @@ export default function DashboardShell(props: DashboardShellProps) {
   };
 
   return (
-    <div className="flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b rounded-t-lg">
+    <div className="flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+      {/* Header - Fixed */}
+      <header className="fixed top-0 left-0 right-0 bg-white shadow-sm border-b z-50">
         <div className="flex justify-between items-center px-6 py-4">
           <div className="flex items-center space-x-3">
             <img
@@ -372,7 +372,7 @@ export default function DashboardShell(props: DashboardShellProps) {
 
               {/* Notification Panel */}
               {isNotificationPanelOpen && (
-                <div className="absolute right-0 top-12 w-80 bg-white rounded-lg shadow-lg border z-50">
+                <div className="absolute right-0 top-12 w-80 bg-white rounded-lg shadow-lg border z-[60]">
                   <div className="p-4 border-b">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900">
@@ -473,14 +473,14 @@ export default function DashboardShell(props: DashboardShellProps) {
       </header>
 
       {/* Main Layout with Sidebar */}
-      <div className="flex overflow-hidden">
+      <div className="flex overflow-hidden mt-20">
         {/* Sidebar */}
         <div
           className={`relative overflow-hidden bg-blue-600 transition-all duration-400 ${
             isSidebarOpen ? "w-64" : "w-0"
           }`}
         >
-          <aside className="bg-blue-600 text-blue-50 min-h-screen w-64 rounded-bl-lg">
+          <aside className="bg-blue-600 text-blue-50 min-h-[calc(100vh-5rem)] w-64 rounded-bl-lg">
             <div
               className={`p-6 transition-opacity duration-400 ${
                 isSidebarOpen ? "opacity-100" : "opacity-0"
@@ -863,8 +863,8 @@ export default function DashboardShell(props: DashboardShellProps) {
             </Button>
           </div>
         )}
-        <main className="flex-1 pt-5 px-5">
-          {topSummary && (
+        <main className="flex-1 pt-5 px-5 overflow-y-auto max-h-[calc(100vh-5rem)]">
+          {topSummary && activeItemId === "overview" && (
             <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {topSummary}
             </div>

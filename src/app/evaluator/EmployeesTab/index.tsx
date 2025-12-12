@@ -10,6 +10,15 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Combobox } from "@/components/ui/combobox";
 import { useEmployeeFiltering } from '@/hooks/useEmployeeFiltering';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface Employee {
   id: number;
@@ -88,14 +97,34 @@ export function EmployeesTab({
       id: e.employeeId || e.id,
       name: e.name || `${e.fname || ''} ${e.lname || ''}`.trim(),
       email: e.email,
-      position: e.position?.name || e.position,
-      department: e.department?.name || e.department,
-      branch: e.branch?.name || e.branch,
-      role: e.role?.name || e.roles?.[0]?.name || e.role || e.roles?.[0],
+      position: e.positions?.label || e.position?.name || e.position || 'N/A',
+      department: e.departments?.department_name || e.department?.name || e.department || 'N/A',
+      branch: (e.branches && Array.isArray(e.branches) && e.branches[0]?.branch_name) || e.branch?.name || e.branch || 'N/A',
+      role: (e.roles && Array.isArray(e.roles) && e.roles[0]?.name) || e.role?.name || e.role || 'N/A',
       isActive: e.isActive !== false,
       avatar: e.avatar,
+      created_at: e.created_at, // Include created_at for highlighting
     }));
   }, [employees]);
+
+  // Extract unique positions from employees
+  const uniquePositions = useMemo(() => {
+    const positionSet = new Set<string>();
+    allEmployees.forEach((e: any) => {
+      const pos = e.position;
+      if (pos && typeof pos === 'string' && pos.trim() !== '') {
+        positionSet.add(pos);
+      }
+    });
+    // Also add positions from the positions prop if they're strings
+    positions.forEach((pos: any) => {
+      const posName = typeof pos === 'string' ? pos : (pos?.name || String(pos || ''));
+      if (posName && typeof posName === 'string' && posName.trim() !== '') {
+        positionSet.add(posName);
+      }
+    });
+    return Array.from(positionSet).sort();
+  }, [allEmployees, positions]);
 
   // Use the custom hook for filtering
   const filteredEmployees = useEmployeeFiltering({
@@ -125,7 +154,8 @@ export function EmployeesTab({
           department: updatedEmployee.department,
           role: updatedEmployee.role,
           avatar: updatedEmployee.avatar,
-          branch: updatedEmployee.branch || 'N/A'
+          branch: updatedEmployee.branch || 'N/A',
+          created_at: updatedEmployee.created_at, // Include created_at for highlighting
         };
       });
   }, [filteredEmployees, selectedPosition, getUpdatedEmployeeData]);
@@ -211,7 +241,7 @@ export function EmployeesTab({
           <Combobox
             options={[
               { value: 'all', label: 'All Positions' },
-              ...positions.map((pos: string) => ({ value: pos, label: pos }))
+              ...uniquePositions.map((pos: string) => ({ value: pos, label: pos }))
             ]}
             value={selectedPosition || 'all'}
             onValueChangeAction={(value) => {
@@ -237,6 +267,22 @@ export function EmployeesTab({
             </Button>
           )}
         </div>
+
+        {/* Status Indicators */}
+        <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200 flex-wrap mb-4">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-gray-700">Status Indicators:</span>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300">
+                ✨ New Added (≤30min)
+              </Badge>
+              <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300">
+                🕐 Recently Added (&gt;30min)
+              </Badge>
+            </div>
+          </div>
+        </div>
+
         {isEmployeesRefreshing ? (
           <div className="relative max-h-[500px] overflow-y-auto">
             {/* Centered Loading Spinner with Logo */}
@@ -255,16 +301,16 @@ export function EmployeesTab({
             </div>
             
             {/* Table structure visible in background */}
-            <div className="relative max-h-[450px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-              <Table className="w-full">
-                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+            <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              <Table>
+                <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                   <TableRow>
-                    <TableHead className="w-auto">Name</TableHead>
-                    <TableHead className="w-auto">Email</TableHead>
-                    <TableHead className="w-auto">Position</TableHead>
-                    <TableHead className="w-auto">Branch</TableHead>
-                    <TableHead className="w-auto">Hire Date</TableHead>
-                    <TableHead className="w-auto text-right">Actions</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Position</TableHead>
+                    <TableHead>Branch</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -272,28 +318,22 @@ export function EmployeesTab({
                   {Array.from({ length: 8 }).map((_, index) => (
                     <TableRow key={`skeleton-employee-${index}`}>
                       <TableCell className="px-6 py-3">
-                        <div className="space-y-1">
-                          <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                          <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
-                        </div>
+                        <Skeleton className="h-6 w-24" />
                       </TableCell>
                       <TableCell className="px-6 py-3">
-                        <div className="h-4 w-40 bg-gray-200 rounded animate-pulse"></div>
+                        <Skeleton className="h-6 w-24" />
                       </TableCell>
                       <TableCell className="px-6 py-3">
-                        <div className="h-4 w-28 bg-gray-200 rounded animate-pulse"></div>
+                        <Skeleton className="h-6 w-24" />
                       </TableCell>
                       <TableCell className="px-6 py-3">
-                        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                        <Skeleton className="h-6 w-24" />
                       </TableCell>
                       <TableCell className="px-6 py-3">
-                        <div className="h-4 w-20 bg-gray-200 rounded animate-pulse"></div>
+                        <Skeleton className="h-6 w-24" />
                       </TableCell>
-                      <TableCell className="px-6 py-3 text-right">
-                        <div className="flex justify-end gap-2">
-                          <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                          <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
-                        </div>
+                      <TableCell className="px-6 py-3">
+                        <Skeleton className="h-6 w-24" />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -303,76 +343,127 @@ export function EmployeesTab({
           </div>
         ) : (
           <>
-            <div className="relative max-h-[450px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-              <Table className="w-full">
-                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+            <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              <Table>
+                <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                   <TableRow>
-                    <TableHead className="w-auto">Name</TableHead>
-                    <TableHead className="w-auto">Email</TableHead>
-                    <TableHead className="w-auto">Position</TableHead>
-                    <TableHead className="w-auto">Branch</TableHead>
-                    <TableHead className="w-auto">Hire Date</TableHead>
-                    <TableHead className="w-auto text-right">Actions</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Position</TableHead>
+                    <TableHead>Branch</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {employeesPaginated.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12">
+                      <TableCell
+                        colSpan={6}
+                        className="text-center py-8 text-gray-500"
+                      >
                         <div className="flex flex-col items-center justify-center gap-4">
                           <img
                             src="/not-found.gif"
                             alt="No data"
                             className="w-25 h-25 object-contain"
                             style={{
-                              imageRendering: 'auto',
-                              willChange: 'auto',
-                              transform: 'translateZ(0)',
-                              backfaceVisibility: 'hidden',
-                              WebkitBackfaceVisibility: 'hidden',
+                              imageRendering: "auto",
+                              willChange: "auto",
+                              transform: "translateZ(0)",
+                              backfaceVisibility: "hidden",
+                              WebkitBackfaceVisibility: "hidden",
                             }}
                           />
                           <div className="text-gray-500">
-                            <p className="text-base font-medium mb-1">No employees found</p>
-                            <p className="text-sm">Try adjusting your search or filter criteria</p>
+                            <p className="text-base font-medium mb-1">
+                              No employees found
+                            </p>
+                            <p className="text-sm text-gray-400">
+                              Try adjusting your search or filter criteria
+                            </p>
                           </div>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    employeesPaginated.map((employee: any) => (
-                      <TableRow key={employee.id}>
-                        <TableCell className="font-medium">{employee.name}</TableCell>
-                        <TableCell className="text-sm text-gray-600">{employee.email}</TableCell>
-                        <TableCell>{employee.position}</TableCell>
-                        <TableCell>{employee.branch}</TableCell>
-                        <TableCell>
-                          N/A
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700"
-                              onClick={() => onViewEmployee(employee)}
-                              title="View employee details"
-                            >
-                              <Eye className="h-4 w-4 text-white" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700"
-                              onClick={() => onEvaluateEmployee(employee)}
-                              title="Evaluate employee performance"
-                            >
-                              <FileText className="h-4 w-4 text-white" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    employeesPaginated.map((employee: any) => {
+                      // Check if user is new (within 30 minutes) or recently added (after 30 minutes, within 48 hours)
+                      const createdDate = employee.created_at ? new Date(employee.created_at) : null;
+                      let isNew = false;
+                      let isRecentlyAdded = false;
+
+                      if (createdDate) {
+                        const now = new Date();
+                        const minutesDiff = (now.getTime() - createdDate.getTime()) / (1000 * 60);
+                        const hoursDiff = minutesDiff / 60;
+                        isNew = minutesDiff <= 30;
+                        isRecentlyAdded = minutesDiff > 30 && hoursDiff <= 48;
+                      }
+
+                      return (
+                        <TableRow
+                          key={employee.id}
+                          className={
+                            isNew
+                              ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100"
+                              : isRecentlyAdded
+                                ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
+                                : "hover:bg-gray-50"
+                          }
+                        >
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <span>{employee.name}</span>
+                              {isNew && (
+                                <Badge className="bg-green-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                  ✨
+                                </Badge>
+                              )}
+                              {isRecentlyAdded && !isNew && (
+                                <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                  🕐
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{employee.email}</TableCell>
+                          <TableCell>
+                            {employee.position || "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            {employee.branch || "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {employee.role || "N/A"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-600 hover:text-blue-700"
+                                onClick={() => onViewEmployee(employee)}
+                                title="View employee details"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-green-600 hover:text-green-700"
+                                onClick={() => onEvaluateEmployee(employee)}
+                                title="Evaluate employee performance"
+                              >
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -380,55 +471,114 @@ export function EmployeesTab({
           </>
         )}
 
-        {/* Pagination Controls - Outside Card, bottom right aligned */}
-        {employeesTotal > itemsPerPage && (
-          <div className="flex items-center justify-end mt-4 px-2">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEmployeesPage(prev => Math.max(1, prev - 1))}
-                disabled={employeesPage === 1}
-                className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-              >
-                Previous
-              </Button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: employeesTotalPages }, (_, i) => i + 1).map((page) => {
-                  if (
-                    page === 1 ||
-                    page === employeesTotalPages ||
-                    (page >= employeesPage - 1 && page <= employeesPage + 1)
-                  ) {
-                    return (
-                      <Button
-                        key={page}
-                        variant={employeesPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setEmployeesPage(page)}
-                        className="text-xs w-8 h-8 p-0 bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
-                      >
-                        {page}
-                      </Button>
-                    );
-                  } else if (page === employeesPage - 2 || page === employeesPage + 2) {
-                    return <span key={page} className="text-gray-400">...</span>;
-                  }
-                  return null;
-                })}
+        {/* Pagination Controls - Centered (matching admin style) */}
+        {employeesTotal > itemsPerPage && (() => {
+          // Function to render page buttons with ellipses (matching admin style)
+          const renderPages = () => {
+            let pages: (number | "...")[] = [];
+
+            // Always show first page
+            pages.push(1);
+
+            // Insert ellipsis after first page if needed
+            if (employeesPage > 3) {
+              pages.push("...");
+            }
+
+            // Show pages around current (employeesPage - 1, employeesPage, employeesPage + 1)
+            for (let i = employeesPage - 1; i <= employeesPage + 1; i++) {
+              if (i > 1 && i < employeesTotalPages) {
+                pages.push(i);
+              }
+            }
+
+            // Insert ellipsis before last page if needed
+            if (employeesPage < employeesTotalPages - 2) {
+              pages.push("...");
+            }
+
+            // Always show last page
+            if (employeesTotalPages > 1) {
+              pages.push(employeesTotalPages);
+            }
+
+            return pages.map((p, index) => {
+              if (p === "...") {
+                return (
+                  <PaginationItem key={`ellipsis-${index}`}>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                );
+              }
+
+              return (
+                <PaginationItem key={p}>
+                  <PaginationLink
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setEmployeesPage(Number(p));
+                    }}
+                    className={
+                      p === employeesPage ? "bg-blue-400 text-white rounded-xl" : ""
+                    }
+                  >
+                    {p}
+                  </PaginationLink>
+                </PaginationItem>
+              );
+            });
+          };
+
+          const startIndex = (employeesPage - 1) * itemsPerPage;
+          const endIndex = employeesPage * itemsPerPage;
+
+          return (
+            <div className="flex flex-col items-center justify-center gap-3 w-full p-2 mt-4">
+              <div className="text-sm text-gray-600">
+                Showing {startIndex + 1} to {Math.min(endIndex, employeesTotal)} of {employeesTotal}{" "}
+                records
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEmployeesPage(prev => Math.min(employeesTotalPages, prev + 1))}
-                disabled={employeesPage === employeesTotalPages}
-                className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-              >
-                Next
-              </Button>
+              <div>
+                <Pagination>
+                  <PaginationContent>
+                    {/* PREVIOUS */}
+                    <PaginationItem>
+                      <PaginationPrevious
+                        className={
+                          employeesPage === 1
+                            ? "hover:pointer-events-none bg-blue-100 opacity-50"
+                            : "hover:bg-blue-400 bg-blue-200"
+                        }
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (employeesPage > 1) setEmployeesPage(employeesPage - 1);
+                        }}
+                      />
+                    </PaginationItem>
+
+                    {/* PAGE NUMBERS WITH ELLIPSES */}
+                    {renderPages()}
+
+                    {/* NEXT */}
+                    <PaginationItem>
+                      <PaginationNext
+                        className={
+                          employeesPage === employeesTotalPages
+                            ? "hover:pointer-events-none bg-blue-100 opacity-50"
+                            : "hover:bg-blue-400 bg-blue-200"
+                        }
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (employeesPage < employeesTotalPages) setEmployeesPage(employeesPage + 1);
+                        }}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </CardContent>
     </Card>
   );

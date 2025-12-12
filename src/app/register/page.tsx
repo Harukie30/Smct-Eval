@@ -19,6 +19,7 @@ import PageTransition from "@/components/PageTransition";
 import apiService from "@/lib/apiService";
 import { withPublicPage } from "@/hoc";
 import { dataURLtoFile } from "@/utils/data-url-to-file";
+import { Eye, EyeOff } from "lucide-react";
 // Mock data for testing
 import branchCodes from "@/data/branch-code.json";
 import positionsData from "@/data/positions.json";
@@ -75,6 +76,8 @@ function RegisterPage() {
     signature: "",
   });
   const [signatureError, setSignatureError] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     [key: string]: any;
   }>({});
@@ -823,22 +826,36 @@ function RegisterPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="registerPassword">Password</Label>
-                      <Input
-                        id="registerPassword"
-                        type="password"
-                        placeholder="••••••••"
-                        value={formData.password}
-                        onChange={(e) => {
-                          setFormData({
-                            ...formData,
-                            password: e.target.value,
-                          });
-                          validateField("password", e.target.value);
-                        }}
-                        className={
-                          fieldErrors?.password ? "border-red-500" : ""
-                        }
-                      />
+                      <div className="relative">
+                        <Input
+                          id="registerPassword"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          value={formData.password}
+                          onChange={(e) => {
+                            setFormData({
+                              ...formData,
+                              password: e.target.value,
+                            });
+                            validateField("password", e.target.value);
+                          }}
+                          className={
+                            fieldErrors?.password ? "border-red-500 pr-10" : "pr-10"
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-5 w-5" />
+                          ) : (
+                            <Eye className="h-5 w-5" />
+                          )}
+                        </button>
+                      </div>
                       {fieldErrors?.password && (
                         <p className="text-sm text-red-500">
                           {fieldErrors?.password}
@@ -850,27 +867,41 @@ function RegisterPage() {
                       <Label htmlFor="password_confirmation">
                         Confirm password
                       </Label>
-                      <Input
-                        id="password_confirmation"
-                        type="password"
-                        placeholder="••••••••"
-                        value={formData.password_confirmation}
-                        onChange={(e) => {
-                          setFormData({
-                            ...formData,
-                            password_confirmation: e.target.value,
-                          });
-                          validateField(
-                            "password_confirmation",
-                            e.target.value
-                          );
-                        }}
-                        className={
-                          fieldErrors?.password_confirmation
-                            ? "border-red-500"
-                            : ""
-                        }
-                      />
+                      <div className="relative">
+                        <Input
+                          id="password_confirmation"
+                          type={showPasswordConfirmation ? "text" : "password"}
+                          placeholder="••••••••"
+                          value={formData.password_confirmation}
+                          onChange={(e) => {
+                            setFormData({
+                              ...formData,
+                              password_confirmation: e.target.value,
+                            });
+                            validateField(
+                              "password_confirmation",
+                              e.target.value
+                            );
+                          }}
+                          className={
+                            fieldErrors?.password_confirmation
+                              ? "border-red-500 pr-10"
+                              : "pr-10"
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                          aria-label={showPasswordConfirmation ? "Hide password" : "Show password"}
+                        >
+                          {showPasswordConfirmation ? (
+                            <EyeOff className="h-5 w-5" />
+                          ) : (
+                            <Eye className="h-5 w-5" />
+                          )}
+                        </button>
+                      </div>
                       {fieldErrors?.password_confirmation && (
                         <p className="text-sm text-red-500">
                           {fieldErrors?.password_confirmation}

@@ -45,7 +45,12 @@ export function Combobox({
 
   // Helper function to get option display text
   const getOptionText = (option: string | ComboboxOption): string => {
-    return typeof option === "string" ? option : option.label;
+    if (typeof option === "string") {
+      return option || "";
+    }
+    // Handle case where option.label might be null, undefined, or not a string
+    const label = option?.label;
+    return typeof label === "string" ? label : String(label || "");
   };
 
   // Helper function to get option value
@@ -54,9 +59,10 @@ export function Combobox({
   };
 
   // Filter options based on search term
-  const filteredOptions = options?.filter((option) =>
-    getOptionText(option)?.toLowerCase()?.includes(searchTerm.toLowerCase())
-  );
+  const filteredOptions = options?.filter((option) => {
+    const optionText = getOptionText(option);
+    return typeof optionText === "string" && optionText.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   return (
     <>
