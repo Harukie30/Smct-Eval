@@ -40,6 +40,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { Notification } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
 import { useRouter } from "next/navigation";
+import { toastMessages } from "@/lib/toastMessages";
 
 export type SidebarItem = {
   id: string;
@@ -93,7 +94,8 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
 
   const { user, logout, refreshUser } = useUser();
-  const router = useRouter();
+
+  const notificationCount = user?.notification_counts ?? 0;
 
   // Get user role for notifications - extract from roles array
   const userRole = useMemo(() => {
@@ -214,26 +216,6 @@ export default function DashboardShell(props: DashboardShellProps) {
     isAdminDashboard,
   ]);
 
-  // Close notification panel when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target as Node)
-      ) {
-        setIsNotificationPanelOpen(false);
-      }
-    };
-
-    if (isNotificationPanelOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isNotificationPanelOpen]);
-
   const handleEditProfile = () => {
     setIsProfileModalOpen(true);
   };
@@ -265,62 +247,55 @@ export default function DashboardShell(props: DashboardShellProps) {
 
   const handleNotificationClick = async (notification: Notification) => {
     // Mark as read
-    if (!notification.isRead) {
-      await markAsRead(notification.id);
+    if (notification) {
+      try {
+        await apiService.markNotificationAsRead(notification.id);
+      } catch (error: any) {
+        toastMessages.generic.error(
+          "isRead Failed : ",
+          error?.response?.data?.message || error?.message || "Unknown error"
+        );
+      }
     }
 
     // Close the notification panel
-    setIsNotificationPanelOpen(false);
+    setIsNotificationPanelOpen(true);
 
-    // Navigate to the action URL if it exists
-    if (notification.actionUrl) {
-      router.push(notification.actionUrl);
-    } else {
-      // If no actionUrl, show the notification details modal as fallback
-      setSelectedNotification(notification);
-      setIsNotificationDetailOpen(true);
-    }
+    // If no actionUrl, show the notification details modal as fallback
+    setSelectedNotification(notification);
+    setIsNotificationDetailOpen(true);
   };
 
   const handleMarkAllAsRead = async () => {
-    await markAllAsRead();
+    // Mark as read
+    try {
+      await apiService.markAllNotificationAsRead();
+      await refreshUser();
+    } catch (error: any) {
+      alert("test");
+      // toastMessages.generic.error(
+      //   "Mark All asRead Failed : ",
+      //   error?.response?.data?.message || error?.message || "Unknown error"
+      // );
+    }
+
+    // Close the notification panel
+    setIsNotificationPanelOpen(true);
   };
 
   const handleDeleteNotification = async (
-    notificationId: number,
+    notification: Notification,
     e: React.MouseEvent
   ) => {
     e.stopPropagation(); // Prevent triggering the notification click
     try {
-      // Use clientDataService to delete notification properly
-    } catch (error) {
-      console.error("Failed to delete notification:", error);
-    }
-  };
-
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case "success":
-        return "✅";
-      case "warning":
-        return "⚠️";
-      case "error":
-        return "❌";
-      default:
-        return "ℹ️";
-    }
-  };
-
-  const getNotificationColor = (type: string) => {
-    switch (type) {
-      case "success":
-        return "text-green-600 bg-green-50";
-      case "warning":
-        return "text-yellow-600 bg-yellow-50";
-      case "error":
-        return "text-red-600 bg-red-50";
-      default:
-        return "text-blue-600 bg-blue-50";
+      await apiService.deleteNotification(notification.id);
+      refreshUser();
+    } catch (error: any) {
+      toastMessages.generic.error(
+        "isRead Failed : ",
+        error?.response?.data?.message || error?.message || "Unknown error"
+      );
     }
   };
 
@@ -360,12 +335,12 @@ export default function DashboardShell(props: DashboardShellProps) {
                 className="relative p-2 hover:bg-gray-100"
               >
                 <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
+                {notificationCount > 0 && (
                   <Badge
                     variant="destructive"
                     className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs"
                   >
-                    {unreadCount > 99 ? "99+" : unreadCount}
+                    {notificationCount > 10 ? "10+" : notificationCount}
                   </Badge>
                 )}
               </Button>
@@ -379,7 +354,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         Notifications
                       </h3>
                       <div className="flex items-center space-x-2">
-                        {unreadCount > 0 && (
+                        {user?.notification_counts !== 0 && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -402,23 +377,27 @@ export default function DashboardShell(props: DashboardShellProps) {
                   </div>
 
                   <div className="h-[270px] overflow-y-auto">
-                    {notifications.length === 0 ? (
+                    {user?.notifications === 0 ? (
                       <div className="p-4 text-center text-gray-500">
                         No notifications
                       </div>
                     ) : (
-                      notifications.map((notification) => (
+                      user?.notifications.map((notification: any) => (
                         <div
                           key={notification.id}
                           className={`p-4 border-b hover:bg-gray-50 ${
-                            !notification.isRead
+                            notification.read_at === "" ||
+                            notification.read_at === null
                               ? "bg-blue-50 border-l-4 border-l-blue-500"
                               : ""
                           }`}
                         >
                           <div className="flex items-start space-x-3">
-                            <span className="text-lg">
-                              {getNotificationIcon(notification.type)}
+                            <span className="text-sm opacity-50">
+                              {notification.read_at === "" ||
+                              notification.read_at === null
+                                ? "✅"
+                                : ""}{" "}
                             </span>
                             <div
                               className="flex-1 min-w-0 cursor-pointer"
@@ -427,23 +406,27 @@ export default function DashboardShell(props: DashboardShellProps) {
                               }
                             >
                               <p className="text-sm text-gray-900">
-                                {notification.message}
+                                {notification.data.message.length > 50
+                                  ? notification.data.message.slice(0, 50) +
+                                    "  . . ."
+                                  : notification.data.message}
                               </p>
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className="text-xs text-gray-500 mt-2">
                                 {new Date(
-                                  notification.timestamp
+                                  notification.created_at
                                 ).toLocaleString()}
                               </p>
                             </div>
                             <div className="flex items-center space-x-2">
-                              {!notification.isRead && (
-                                <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-                              )}
+                              {notification.read_at === "" ||
+                                (notification.read_at === null && (
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                                ))}
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={(e) =>
-                                  handleDeleteNotification(notification.id, e)
+                                  handleDeleteNotification(notification, e)
                                 }
                                 className="p-1 h-6 w-6 text-gray-400 hover:text-red-500 hover:bg-red-50"
                                 title="Delete notification"
@@ -912,98 +895,19 @@ export default function DashboardShell(props: DashboardShellProps) {
           `}</style>
           <DialogHeader className="pb-4 border-b mb-2">
             <DialogTitle className="flex items-center gap-3 text-xl">
-              <span className="text-3xl">
-                {selectedNotification &&
-                  getNotificationIcon(selectedNotification.type)}
-              </span>
               Notification Details
             </DialogTitle>
           </DialogHeader>
 
           {selectedNotification && (
             <div className="space-y-6 py-4">
-              {/* Notification Type Badge */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-semibold text-gray-700 w-24">
-                  Type:
-                </span>
-                <Badge
-                  className={`px-3 py-1 text-sm font-medium ${
-                    selectedNotification.type === "success"
-                      ? "bg-green-100 text-green-800"
-                      : selectedNotification.type === "warning"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : selectedNotification.type === "error"
-                      ? "bg-red-100 text-red-800"
-                      : "bg-blue-100 text-blue-800"
-                  }`}
-                >
-                  {selectedNotification.type.toUpperCase()}
-                </Badge>
-              </div>
-
-              {/* Location/Destination (Where notification points to) */}
-              {selectedNotification.actionUrl && (
-                <div className="space-y-2">
-                  <span className="text-sm font-semibold text-gray-700 block">
-                    📍 Navigate To:
-                  </span>
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">
-                        {selectedNotification.actionUrl.includes("reviews")
-                          ? "📝"
-                          : selectedNotification.actionUrl.includes(
-                              "history"
-                            ) &&
-                            selectedNotification.actionUrl.includes("account")
-                          ? "📋"
-                          : selectedNotification.actionUrl.includes("history")
-                          ? "📈"
-                          : selectedNotification.actionUrl.includes("overview")
-                          ? "📊"
-                          : "🔗"}
-                      </span>
-                      <div>
-                        <div className="text-blue-900 text-sm font-bold">
-                          {(() => {
-                            const url = selectedNotification.actionUrl;
-                            // Match employee dashboard sidebar tabs
-                            if (
-                              url.includes("tab=overview") ||
-                              url.includes("overview")
-                            )
-                              return "Overview";
-                            if (
-                              url.includes("tab=reviews") ||
-                              url.includes("reviews")
-                            )
-                              return "Performance Reviews";
-                            if (
-                              url.includes("tab=history") ||
-                              url.includes("history")
-                            )
-                              return "Evaluation History";
-                            // Fallback
-                            return "Dashboard";
-                          })()}
-                        </div>
-                        <div className="text-blue-600 text-xs mt-1">
-                          Click notification to go there
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Message */}
               <div className="space-y-2">
                 <span className="text-sm font-semibold text-gray-700 block">
                   Message:
                 </span>
                 <p className="text-base text-gray-900 bg-gray-50 p-4 rounded-lg border border-gray-200 leading-relaxed">
-                  {selectedNotification.message}
+                  {selectedNotification.data.message}
                 </p>
               </div>
 
@@ -1013,30 +917,17 @@ export default function DashboardShell(props: DashboardShellProps) {
                   Received:
                 </span>
                 <span className="text-gray-600">
-                  {new Date(selectedNotification.timestamp).toLocaleString()}
+                  {new Date(selectedNotification.created_at).toLocaleString()}
                 </span>
-              </div>
-
-              {/* Status */}
-              <div className="flex items-center gap-3 text-sm">
-                <span className="font-semibold text-gray-700 w-24">
-                  Status:
-                </span>
-                {selectedNotification.isRead ? (
-                  <Badge className="bg-gray-100 text-gray-800 px-3 py-1">
-                    Read
-                  </Badge>
-                ) : (
-                  <Badge className="bg-blue-100 text-blue-800 px-3 py-1">
-                    Unread
-                  </Badge>
-                )}
               </div>
 
               {/* Close Button */}
               <div className="pt-6 border-t flex justify-end">
                 <Button
-                  onClick={() => setIsNotificationDetailOpen(false)}
+                  onClick={async () => {
+                    setIsNotificationDetailOpen(false);
+                    refreshUser();
+                  }}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
                 >
                   Close

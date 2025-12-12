@@ -3,12 +3,9 @@
 
 export interface Notification {
   id: number;
-  message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  roles: string[];
-  timestamp: string;
-  isRead: boolean;
-  actionUrl?: string; // Optional URL for clickable notifications
+  notifiable_id: number;
+  data: any;
+  created_at: string;
 }
 
 export interface Employee {
@@ -52,7 +49,7 @@ export interface Submission {
   evaluatorId: number;
   evaluatorName: string;
   evaluationData: any;
-  status: 'pending' | 'completed' | 'approved';
+  status: "pending" | "completed" | "approved";
   period: string;
   overallRating: string;
   submittedAt: string;
@@ -76,7 +73,7 @@ export interface PendingRegistration {
   branch?: string; // Made optional
   hireDate: string;
   role: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "pending" | "approved" | "rejected";
   submittedAt: string;
   signature?: string; // Digital signature as base64 image
   username?: string;
@@ -120,4 +117,3 @@ export interface Account {
   signature?: string; // Digital signature as base64 or URL
   availableRoles?: string[]; // Added for role selection modal
 }
-

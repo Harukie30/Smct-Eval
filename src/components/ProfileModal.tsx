@@ -103,12 +103,6 @@ export default function ProfileModal({
     setHasApprovedReset(approvedReset);
   }, []);
 
-  // Refresh user profile when modal opens to check for approved reset requests
-  useEffect(() => {
-    if (isOpen) {
-      refreshUser();
-    }
-  }, [isOpen, refreshUser]);
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -232,9 +226,6 @@ export default function ProfileModal({
       refreshUser();
 
       // Close modal after a brief delay to ensure state is updated
-      setTimeout(() => {
-        onClose();
-      }, 100);
     } catch (error: any) {
       if (error.response?.data?.errors) {
         const backendErrors: Record<string, string> = {};

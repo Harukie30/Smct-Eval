@@ -32,6 +32,8 @@ export interface AuthenticatedUser {
   signature?: string;
   emp_id?: string;
   is_active: string;
+  notifications: any;
+  notification_counts: number;
 }
 
 interface UserContextType {
@@ -76,15 +78,14 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   }
 
   useEffect(() => {
-    const loadUserAuth = async () => {
-      try {
-        await refreshUser();
-      } catch (error) {
-        console.error("Error during session restoration:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    const loadUserAuth = async () => {};
+    try {
+      refreshUser();
+    } catch (error) {
+      console.error("Error during session restoration:", error);
+    } finally {
+      setIsLoading(false);
+    }
     loadUserAuth();
   }, []);
 
