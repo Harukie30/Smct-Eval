@@ -2,10 +2,17 @@
 
 import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { dataURLtoFile } from "@/utils/data-url-to-file";
 import Image from "next/image";
 import { CONFIG } from "../../config/config";
+import { profile } from "console";
+import { User } from "lucide-react";
+import { useAuth } from "@/contexts/UserContext";
 
 interface SignaturePadProps {
   value: string | null;
@@ -14,7 +21,6 @@ interface SignaturePadProps {
   required?: boolean;
   hasError?: boolean;
   onRequestReset?: () => void;
-  isSaved?: boolean; // Indicates if the signature has been saved to the server
   hideRequestReset?: boolean; // Hide the "Request Reset" button
 }
 
@@ -25,7 +31,6 @@ export default function SignaturePad({
   required = false,
   hasError = false,
   onRequestReset,
-  isSaved = false,
   hideRequestReset = false,
 }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -33,8 +38,11 @@ export default function SignaturePad({
   const [hasSignature, setHasSignature] = useState(false);
   const [previewImage, setPreviewImage] = useState<string>("");
   const [isSavedSignature, setIsSavedSignature] = useState(false); // Track if signature is from server (saved)
-  const [lastDrawnSignature, setLastDrawnSignature] = useState<string | null>(null); // Track the last drawn signature (data URL)
-
+  const [lastDrawnSignature, setLastDrawnSignature] = useState<string | null>(
+    null
+  ); // Track the last drawn signature (data URL)
+  const { user } = useAuth();
+  console.log("test", user?.approvedSignatureReset);
   // Helper function to get coordinates
   const getCoordinates = (
     e:
@@ -55,20 +63,20 @@ export default function SignaturePad({
   // Load existing signature when value changes
   useEffect(() => {
     console.log("SignaturePad value changed:", value);
-    if (value && typeof value === 'string' && value.trim() !== '') {
-      let imageUrl = '';
+    if (value && typeof value === "string" && value.trim() !== "") {
+      let imageUrl = "";
       let isFromServer = false;
-      
+
       // Check if it's a URL path (from server) or data URL (base64)
-      if (value.startsWith('http://') || value.startsWith('https://')) {
+      if (value.startsWith("http://") || value.startsWith("https://")) {
         // It's a full URL - from server (saved)
         imageUrl = value;
         isFromServer = true;
-      } else if (value.startsWith('/')) {
+      } else if (value.startsWith("/")) {
         // It's a path starting with / - from server (saved)
         imageUrl = CONFIG.API_URL_STORAGE + value;
         isFromServer = true;
-      } else if (value.startsWith('data:')) {
+      } else if (value.startsWith("data:")) {
         // It's a data URL (base64) - newly drawn, not saved yet
         imageUrl = value;
         isFromServer = false;
@@ -78,20 +86,29 @@ export default function SignaturePad({
         imageUrl = CONFIG.API_URL_STORAGE + "/" + value;
         isFromServer = true;
       }
-      
+
       // If value changed from data URL to server path, it means it was just saved
-      if (isFromServer && lastDrawnSignature && lastDrawnSignature.startsWith('data:')) {
+      if (
+        isFromServer &&
+        lastDrawnSignature &&
+        lastDrawnSignature.startsWith("data:")
+      ) {
         console.log("Signature was just saved! Marking as saved.");
         setIsSavedSignature(true);
         setLastDrawnSignature(null); // Clear the drawn signature since it's now saved
       } else {
         setIsSavedSignature(isFromServer);
       }
-      
-      console.log("Setting signature image URL:", imageUrl, "isSaved:", isFromServer);
+
+      console.log(
+        "Setting signature image URL:",
+        imageUrl,
+        "isSaved:",
+        isFromServer
+      );
       setPreviewImage(imageUrl);
       setHasSignature(true);
-    } else if (!value || value === null || value === '') {
+    } else if (!value || value === null || value === "") {
       // No signature, reset state
       console.log("No signature value, resetting");
       setHasSignature(false);
@@ -205,9 +222,9 @@ export default function SignaturePad({
       >
         {hasSignature && previewImage ? (
           <div className="w-full h-32 bg-white rounded border border-gray-200 flex items-center justify-center overflow-hidden">
-            <img 
-              src={previewImage} 
-              alt="Signature" 
+            <img
+              src={previewImage}
+              alt="Signature"
               className="max-w-full max-h-full object-contain"
               onError={(e) => {
                 console.error("Signature image failed to load:", previewImage);
@@ -263,31 +280,41 @@ export default function SignaturePad({
                   variant="outline"
                   size="sm"
                   onClick={clearSignature}
-                  disabled={isSaved}
+                  disabled={user?.approvedSignatureReset === 0}
                   className="text-red-600 border-red-300 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Clear Signature
                 </Button>
               </span>
             </TooltipTrigger>
-            {isSaved && (
+            {user?.approvedSignatureReset === 0 && (
               <TooltipContent>
                 <p>Needs request for reset</p>
               </TooltipContent>
             )}
           </Tooltip>
-          
-          {!hideRequestReset && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onRequestReset || (() => {})}
-              className="text-orange-600 border-orange-300 hover:bg-orange-50"
-            >
-              Request Reset
-            </Button>
-          )}
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-block">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={user?.requestSignatureReset !== 0}
+                  size="sm"
+                  onClick={onRequestReset}
+                  className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                >
+                  Request Reset
+                </Button>
+              </span>
+            </TooltipTrigger>
+            {user?.requestSignatureReset !== 0 && (
+              <TooltipContent>
+                <p>Wait for admin to approve</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
         </div>
 
         {hasSignature && (

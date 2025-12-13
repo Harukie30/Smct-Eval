@@ -34,6 +34,8 @@ export interface AuthenticatedUser {
   is_active: string;
   notifications: any;
   notification_counts: number;
+  approvedSignatureReset: number;
+  requestSignatureReset: number;
 }
 
 interface UserContextType {
