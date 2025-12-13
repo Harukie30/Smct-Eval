@@ -5,18 +5,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { X } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { X, Mail, Briefcase, Building2, User, Hash, Phone, Shield, UserCircle, Calendar, MapPin, FileText } from 'lucide-react';
 
 interface Employee {
   id: number;
-  name: string;
-  email: string;
-  position: string;
-  department: string;
-  role: string;
-  hireDate: string;
+  name?: string;
+  email?: string;
+  position?: string;
+  department?: string;
+  role?: string;
+  username?: string;
+  contact?: string;
+  branch?: string;
+  employeeId?: number;
+  bio?: string | null;
+  isActive?: boolean;
+  created_at?: Date | string;
+  updated_at?: Date | string;
 }
 
 interface ViewEmployeeModalProps {
@@ -25,6 +31,7 @@ interface ViewEmployeeModalProps {
   employee: Employee | null;
   onStartEvaluationAction: (employee: Employee) => void;
   onViewSubmissionAction: (submission: any) => void;
+  designVariant?: 'default' | 'admin'; // New prop for design variant
 }
 
 export default function ViewEmployeeModal({
@@ -32,7 +39,8 @@ export default function ViewEmployeeModal({
   onCloseAction,
   employee,
   onStartEvaluationAction,
-  onViewSubmissionAction
+  onViewSubmissionAction,
+  designVariant = 'default'
 }: ViewEmployeeModalProps) {
   const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
   const [employeeEvaluationData, setEmployeeEvaluationData] = useState<any[]>([]);
@@ -43,25 +51,25 @@ export default function ViewEmployeeModal({
   const fetchEmployeeEvaluationHistory = async (employeeId: number, employeeName: string) => {
     setIsLoadingEmployeeData(true);
     setEmployeeDataError(null);
-    
+
     try {
       console.log('Fetching evaluation history for employee:', { employeeId, employeeName });
-      
+
       // Get all submissions from localStorage
       const allSubmissions = JSON.parse(localStorage.getItem('evaluationSubmissions') || '[]');
-      
+
       // Filter submissions for this specific employee
-      const employeeSubmissions = allSubmissions.filter((submission: any) => 
-        submission.employeeId === employeeId || 
+      const employeeSubmissions = allSubmissions.filter((submission: any) =>
+        submission.employeeId === employeeId ||
         submission.employeeName === employeeName ||
         submission.employeeEmail === employee?.email
       );
-      
+
       console.log('Found submissions for employee:', employeeSubmissions.length);
-      
+
       setEmployeeEvaluationData(employeeSubmissions);
       console.log('Employee evaluation data loaded:', employeeSubmissions);
-      
+
       return employeeSubmissions;
     } catch (err) {
       console.error('Error fetching employee evaluation history:', err);
@@ -87,37 +95,37 @@ export default function ViewEmployeeModal({
 
     const ratings = employeeData.map(sub => sub.rating || 0).filter(r => r > 0);
     const categories = [...new Set(employeeData.map(sub => sub.category).filter(Boolean))];
-    
+
     // Calculate quarterly breakdown
     const quarterlyBreakdown = employeeData.reduce((acc, submission) => {
       const date = new Date(submission.submittedAt);
       const quarter = `Q${Math.ceil((date.getMonth() + 1) / 3)} ${date.getFullYear()}`;
-      
+
       if (!acc[quarter]) {
         acc[quarter] = { count: 0, totalRating: 0, submissions: [] };
       }
-      
+
       acc[quarter].count += 1;
       acc[quarter].totalRating += submission.rating || 0;
       acc[quarter].submissions.push(submission);
-      
+
       return acc;
     }, {});
 
     // Calculate performance trend
-    const sortedByDate = employeeData.sort((a, b) => 
+    const sortedByDate = employeeData.sort((a, b) =>
       new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime()
     );
-    
+
     let performanceTrend = 'stable';
     if (sortedByDate.length >= 2) {
       const recent = sortedByDate.slice(-3).map(s => s.rating || 0);
       const older = sortedByDate.slice(0, -3).map(s => s.rating || 0);
-      
+
       if (recent.length > 0 && older.length > 0) {
         const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
         const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
-        
+
         if (recentAvg > olderAvg + 0.5) performanceTrend = 'improving';
         else if (recentAvg < olderAvg - 0.5) performanceTrend = 'declining';
       }
@@ -138,152 +146,417 @@ export default function ViewEmployeeModal({
   // Fetch data when modal opens
   useEffect(() => {
     if (isOpen && employee) {
-      fetchEmployeeEvaluationHistory(employee.id, employee.name);
+      fetchEmployeeEvaluationHistory(employee.id, employee.name || '');
     }
   }, [isOpen, employee]);
 
   if (!employee) return null;
 
+  // Design variant styles
+  const isAdminVariant = designVariant === 'admin';
+
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
-    <DialogContent className="max-w-7xl mx-8 my-8 max-h-[90vh] overflow-hidden p-6 animate-popup">
-
-
-     <div className="px-6">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-gray-900">
-            Employee Details & Evaluation History
+      <DialogContent className={`max-w-3xl max-h-[80vh] overflow-y-auto p-6 animate-popup ${isAdminVariant
+          ? 'bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100'
+          : 'bg-gradient-to-br from-blue-50 to-indigo-50'
+        }`}>
+        <DialogHeader className={`pb-6 ${isAdminVariant ? 'border-b-2 border-slate-300' : 'border-b border-gray-200'}`}>
+          <DialogTitle className={`text-2xl font-bold flex items-center gap-2 ${isAdminVariant ? 'text-slate-800' : 'text-gray-900'
+            }`}>
+            <User className={`w-6 h-6 ${isAdminVariant ? 'text-slate-700' : 'text-blue-600'}`} />
+            Employee Profile
           </DialogTitle>
-          <DialogDescription>
-            Comprehensive view of employee information and their evaluation history
+          <DialogDescription className={`text-base mt-2 ${isAdminVariant ? 'text-slate-600' : 'text-gray-600'
+            }`}>
+            Complete employee information and evaluation history
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="space-y-6 overflow-y-auto max-h-[70vh]">
-          {/* Employee Header */}
-          <div className="flex items-center space-x-4 pb-4 border-b border-gray-200">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
-              {employee.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-gray-900">{employee.name}</h3>
-              <p className="text-lg text-gray-600">{employee.position}</p>
-              <p className="text-sm text-gray-500">{employee.department}</p>
-            </div>
+
+        <div className="space-y-6 mt-6">
+          {/* Employee Header Card */}
+          <Card className={`${isAdminVariant
+            ? 'bg-gradient-to-br from-slate-100 to-slate-200 border-2 border-slate-400 shadow-xl'
+            : 'bg-white border-2 border-blue-200 shadow-lg'
+            }`}>
+            <CardContent className="p-6">
+              <div className="flex items-start gap-6">
+                <div className="flex-1">
+                  <h2 className={`text-3xl font-bold mb-2 ${isAdminVariant ? 'text-slate-800' : 'text-black'}`}>
+                    {employee.name || 'Not Assigned'}
+                  </h2>
+                  <div className="flex flex-wrap gap-3 mt-3">
+                    <Badge variant="outline" className={`text-base px-3 py-1 ${isAdminVariant
+                        ? 'bg-slate-100 text-slate-800 border-slate-400'
+                        : 'bg-blue-50 text-blue-700 border-blue-300'
+                      }`}>
+                      <Briefcase className="w-4 h-4 mr-1.5" />
+                      {employee.position || 'Not Assigned'}
+                    </Badge>
+                    <Badge variant="outline" className={`text-base px-3 py-1 ${isAdminVariant
+                        ? 'bg-slate-200 text-slate-800 border-slate-500'
+                        : 'bg-purple-50 text-purple-700 border-purple-300'
+                      }`}>
+                      <Building2 className="w-4 h-4 mr-1.5" />
+                      {employee.department || 'Not Assigned'}
+                    </Badge>
+                    <Badge variant="outline" className={`text-base px-3 py-1 ${isAdminVariant
+                        ? 'bg-slate-300 text-slate-900 border-slate-600'
+                        : 'bg-green-50 text-green-700 border-green-300'
+                      }`}>
+                      <Shield className="w-4 h-4 mr-1.5" />
+                      {employee.role || 'Not Assigned'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Employee Information Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Employee ID Card */}
+            <Card className={`${isAdminVariant
+              ? 'bg-slate-50 border-2 border-slate-300 shadow-md hover:shadow-lg'
+              : 'bg-white border border-gray-200 shadow-sm hover:shadow-md'
+              } transition-shadow`}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAdminVariant
+                      ? 'bg-slate-200'
+                      : 'bg-blue-100'
+                    }`}>
+                    <Hash className={`w-5 h-5 ${isAdminVariant ? 'text-slate-700' : 'text-blue-600'}`} />
+                  </div>
+                  <div>
+                    <Label className={`text-xs font-medium uppercase tracking-wide ${isAdminVariant ? 'text-slate-600' : 'text-gray-500'
+                      }`}>Employee ID</Label>
+                    <p className={`text-lg font-semibold mt-1 ${isAdminVariant ? 'text-slate-800' : 'text-black'}`}>
+                      {(() => {
+                        // Format Employee ID the same way as EditUserModal
+                        const formatEmployeeId = (employeeId: number | undefined): string => {
+                          if (!employeeId) return 'N/A';
+                          // Convert to string and pad to 10 digits if needed
+                          const idString = employeeId.toString().padStart(10, '0');
+                          // Format as 1234-567890 (4 digits, dash, 6 digits)
+                          if (idString.length >= 10) {
+                            return `${idString.slice(0, 4)}-${idString.slice(4, 10)}`;
+                          }
+                          return idString;
+                        };
+
+                        return formatEmployeeId(employee.employeeId) || formatEmployeeId(employee.id) || 'N/A';
+                      })()}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Email Card */}
+            <Card className={`${isAdminVariant
+              ? 'bg-slate-50 border-2 border-slate-300 shadow-md hover:shadow-lg'
+              : 'bg-white border border-gray-200 shadow-sm hover:shadow-md'
+              } transition-shadow`}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAdminVariant
+                      ? 'bg-slate-200'
+                      : 'bg-green-100'
+                    }`}>
+                    <Mail className={`w-5 h-5 ${isAdminVariant ? 'text-slate-700' : 'text-green-600'}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Label className={`text-xs font-medium uppercase tracking-wide ${isAdminVariant ? 'text-slate-600' : 'text-gray-500'
+                      }`}>Email Address</Label>
+                    <p className={`text-sm font-medium mt-1 truncate ${isAdminVariant ? 'text-slate-800' : 'text-black'}`}>
+                      {employee.email || 'Not Assigned'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Username Card */}
+            {employee.username && (
+              <Card className={`${isAdminVariant
+                ? 'bg-slate-50 border-2 border-slate-300 shadow-md hover:shadow-lg'
+                : 'bg-white border border-gray-200 shadow-sm hover:shadow-md'
+                } transition-shadow`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAdminVariant
+                        ? 'bg-slate-200'
+                        : 'bg-indigo-100'
+                      }`}>
+                      <UserCircle className={`w-5 h-5 ${isAdminVariant ? 'text-slate-700' : 'text-indigo-600'}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Label className={`text-xs font-medium uppercase tracking-wide ${isAdminVariant ? 'text-slate-600' : 'text-gray-500'
+                        }`}>Username</Label>
+                      <p className={`text-sm font-medium mt-1 ${isAdminVariant ? 'text-slate-800' : 'text-black'}`}>
+                        {employee.username}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Contact Card */}
+            {employee.contact && (
+              <Card className={`${isAdminVariant
+                ? 'bg-slate-50 border-2 border-slate-300 shadow-md hover:shadow-lg'
+                : 'bg-white border border-gray-200 shadow-sm hover:shadow-md'
+                } transition-shadow`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAdminVariant
+                        ? 'bg-slate-200'
+                        : 'bg-teal-100'
+                      }`}>
+                      <Phone className={`w-5 h-5 ${isAdminVariant ? 'text-slate-700' : 'text-teal-600'}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Label className={`text-xs font-medium uppercase tracking-wide ${isAdminVariant ? 'text-slate-600' : 'text-gray-500'
+                        }`}>Contact Number</Label>
+                      <p className={`text-sm font-medium mt-1 ${isAdminVariant ? 'text-slate-800' : 'text-black'}`}>
+                        {employee.contact}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Position Card */}
+            <Card className={`${isAdminVariant
+              ? 'bg-slate-50 border-2 border-slate-300 shadow-md hover:shadow-lg'
+              : 'bg-white border border-gray-200 shadow-sm hover:shadow-md'
+              } transition-shadow`}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAdminVariant
+                      ? 'bg-slate-200'
+                      : 'bg-orange-100'
+                    }`}>
+                    <Briefcase className={`w-5 h-5 ${isAdminVariant ? 'text-slate-700' : 'text-orange-600'}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Label className={`text-xs font-medium uppercase tracking-wide ${isAdminVariant ? 'text-slate-600' : 'text-gray-500'
+                      }`}>Position</Label>
+                    <p className={`text-sm font-medium mt-1 ${isAdminVariant ? 'text-slate-800' : 'text-black'}`}>
+                      {employee.position || 'Not Assigned'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Department Card */}
+            <Card className={`${isAdminVariant
+              ? 'bg-slate-50 border-2 border-slate-300 shadow-md hover:shadow-lg'
+              : 'bg-white border border-gray-200 shadow-sm hover:shadow-md'
+              } transition-shadow`}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAdminVariant
+                      ? 'bg-slate-200'
+                      : 'bg-purple-100'
+                    }`}>
+                    <Building2 className={`w-5 h-5 ${isAdminVariant ? 'text-slate-700' : 'text-purple-600'}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Label className={`text-xs font-medium uppercase tracking-wide ${isAdminVariant ? 'text-slate-600' : 'text-gray-500'
+                      }`}>Department</Label>
+                    <p className={`text-sm font-medium mt-1 ${isAdminVariant ? 'text-slate-800' : 'text-black'}`}>
+                      {employee.department || 'Not Assigned'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Branch Card */}
+            {employee.branch && (
+              <Card className={`${isAdminVariant
+                ? 'bg-slate-50 border-2 border-slate-300 shadow-md hover:shadow-lg'
+                : 'bg-white border border-gray-200 shadow-sm hover:shadow-md'
+                } transition-shadow`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAdminVariant
+                        ? 'bg-slate-200'
+                        : 'bg-cyan-100'
+                      }`}>
+                      <MapPin className={`w-5 h-5 ${isAdminVariant ? 'text-slate-700' : 'text-cyan-600'}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Label className={`text-xs font-medium uppercase tracking-wide ${isAdminVariant ? 'text-slate-600' : 'text-gray-500'
+                        }`}>Branch</Label>
+                      <p className={`text-sm font-medium mt-1 ${isAdminVariant ? 'text-slate-800' : 'text-black'}`}>
+                        {employee.branch}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Created Date Card */}
+            {employee.created_at && (
+              <Card className={`${isAdminVariant
+                ? 'bg-slate-50 border-2 border-slate-300 shadow-md hover:shadow-lg'
+                : 'bg-white border border-gray-200 shadow-sm hover:shadow-md'
+                } transition-shadow`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAdminVariant
+                        ? 'bg-slate-200'
+                        : 'bg-pink-100'
+                      }`}>
+                      <Calendar className={`w-5 h-5 ${isAdminVariant ? 'text-slate-700' : 'text-pink-600'}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Label className={`text-xs font-medium uppercase tracking-wide ${isAdminVariant ? 'text-slate-600' : 'text-gray-500'
+                        }`}>Created Date</Label>
+                      <p className={`text-sm font-medium mt-1 ${isAdminVariant ? 'text-slate-800' : 'text-black'}`}>
+                        {new Date(employee.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          {/* Employee Information Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Employee ID</Label>
-                <p className="text-lg font-semibold text-gray-900">#{employee.id}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Email Address</Label>
-                <p className="text-lg text-gray-900">{employee.email}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Role</Label>
-                <Badge className="bg-blue-100 text-blue-800 text-sm">
-                  {employee.role}
-                </Badge>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Department</Label>
-                <p className="text-lg text-gray-900">{employee.department}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Position</Label>
-                <p className="text-lg text-gray-900">{employee.position}</p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-gray-500">Hire Date</Label>
-                <p className="text-lg text-gray-900">
-                  {new Date(employee.hireDate).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* Bio Section */}
+          {employee.bio && (
+            <Card className={`${isAdminVariant
+              ? 'bg-slate-50 border-2 border-slate-300 shadow-md'
+              : 'bg-white border border-gray-200 shadow-sm'
+              }`}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isAdminVariant
+                      ? 'bg-slate-200'
+                      : 'bg-amber-100'
+                    }`}>
+                    <FileText className={`w-5 h-5 ${isAdminVariant ? 'text-slate-700' : 'text-amber-600'}`} />
+                  </div>
+                  <div className="flex-1">
+                    <Label className={`text-xs font-medium uppercase tracking-wide ${isAdminVariant ? 'text-slate-600' : 'text-gray-500'
+                      }`}>Bio</Label>
+                    <p className={`text-sm mt-1 ${isAdminVariant ? 'text-slate-800' : 'text-black'}`}>
+                      {employee.bio}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Performance Metrics Section */}
           {employeeEvaluationData.length > 0 && (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Performance Overview</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {(() => {
-                  const metrics = getEmployeePerformanceMetrics(employeeEvaluationData);
-                  return (
-                    <>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{metrics.totalEvaluations}</div>
-                        <div className="text-sm text-gray-600">Total Evaluations</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">{metrics.averageRating}</div>
-                        <div className="text-sm text-gray-600">Average Rating</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-purple-600">{metrics.highestRating}</div>
-                        <div className="text-sm text-gray-600">Highest Rating</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-orange-600">
-                          {metrics.performanceTrend === 'improving' ? '↗' : 
-                           metrics.performanceTrend === 'declining' ? '↘' : '→'}
+            <Card className={`${isAdminVariant
+              ? 'bg-gradient-to-br from-slate-100 to-slate-200 border-2 border-slate-400 shadow-xl'
+              : 'bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 shadow-lg'
+              }`}>
+              <CardContent className="p-6">
+                <h4 className={`text-xl font-bold mb-6 flex items-center gap-2 ${isAdminVariant ? 'text-slate-800' : 'text-black'
+                  }`}>
+                  <Briefcase className={`w-5 h-5 ${isAdminVariant ? 'text-slate-700' : 'text-blue-600'}`} />
+                  Performance Overview
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {(() => {
+                    const metrics = getEmployeePerformanceMetrics(employeeEvaluationData);
+                    return (
+                      <>
+                        <div className={`rounded-lg p-4 text-center shadow-md border-2 ${isAdminVariant
+                            ? 'bg-slate-50 border-slate-300'
+                            : 'bg-white border border-gray-200'
+                          }`}>
+                          <div className={`text-3xl font-bold mb-1 ${isAdminVariant ? 'text-slate-700' : 'text-blue-600'
+                            }`}>{metrics.totalEvaluations}</div>
+                          <div className={`text-xs font-medium uppercase tracking-wide ${isAdminVariant ? 'text-slate-600' : 'text-gray-600'
+                            }`}>Total Evaluations</div>
                         </div>
-                        <div className="text-sm text-gray-600 capitalize">{metrics.performanceTrend}</div>
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-            </div>
+                        <div className={`rounded-lg p-4 text-center shadow-md border-2 ${isAdminVariant
+                            ? 'bg-slate-50 border-slate-300'
+                            : 'bg-white border border-gray-200'
+                          }`}>
+                          <div className={`text-3xl font-bold mb-1 ${isAdminVariant ? 'text-slate-700' : 'text-green-600'
+                            }`}>{metrics.averageRating}</div>
+                          <div className={`text-xs font-medium uppercase tracking-wide ${isAdminVariant ? 'text-slate-600' : 'text-gray-600'
+                            }`}>Average Rating</div>
+                        </div>
+                        <div className={`rounded-lg p-4 text-center shadow-md border-2 ${isAdminVariant
+                            ? 'bg-slate-50 border-slate-300'
+                            : 'bg-white border border-gray-200'
+                          }`}>
+                          <div className={`text-3xl font-bold mb-1 ${isAdminVariant ? 'text-slate-700' : 'text-purple-600'
+                            }`}>{metrics.highestRating}</div>
+                          <div className={`text-xs font-medium uppercase tracking-wide ${isAdminVariant ? 'text-slate-600' : 'text-gray-600'
+                            }`}>Highest Rating</div>
+                        </div>
+                        <div className={`rounded-lg p-4 text-center shadow-md border-2 ${isAdminVariant
+                            ? 'bg-slate-50 border-slate-300'
+                            : 'bg-white border border-gray-200'
+                          }`}>
+                          <div className={`text-3xl font-bold mb-1 ${isAdminVariant ? 'text-slate-700' : 'text-orange-600'
+                            }`}>
+                            {metrics.performanceTrend === 'improving' ? '↗' :
+                              metrics.performanceTrend === 'declining' ? '↘' : '→'}
+                          </div>
+                          <div className={`text-xs font-medium uppercase tracking-wide capitalize ${isAdminVariant ? 'text-slate-600' : 'text-gray-600'
+                            }`}>{metrics.performanceTrend}</div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
-          
-
-            
-          
-
           {/* Action Buttons */}
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+          <div className={`flex justify-end gap-3 pt-4 ${isAdminVariant ? 'border-t-2 border-slate-300' : 'border-t border-gray-200'}`}>
             <Button
-              variant="outline"
+
               onClick={onCloseAction}
-              className="px-6 py-2 bg-blue-500 hover:bg-white hover:text-red-500 text-white"
+              className="bg-blue-600 hover:bg-red-700 text-white"
             >
-              <X className="w-4 h-4 mr-0" />
+              <X className="w-4 h-4 mr-2 " />
               Close
             </Button>
-            <Button
-              onClick={() => onStartEvaluationAction(employee)}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white hover:text-white"
-            >
-              <svg
-                className="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
+            {!isAdminVariant && (
+              <Button
+                onClick={() => onStartEvaluationAction(employee)}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              Evaluate Employee
-            </Button>
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Evaluate Employee
+              </Button>
+            )}
           </div>
-        </div>
         </div>
       </DialogContent>
     </Dialog>

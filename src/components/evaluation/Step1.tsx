@@ -29,7 +29,7 @@ interface Step1Props {
     department: string;
     branch?: string;
     role: string;
-    hireDate: string;
+    hireDate?: string; // Optional - can be input in evaluation form
   };
   currentUser?: {
     id: number;
@@ -149,10 +149,11 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
       const employeeData = {
         employeeName: employee.name,
         employeeId: employee.id.toString(),
-        position: employee.position,
-        department: employee.department,
+        position: employee.position || '',
+        department: employee.department || '',
         branch: employee.branch || '',
-        hireDate: employee.hireDate,
+        role: employee.role || '',
+        hireDate: employee.hireDate || '',
       };
       console.log('Updating evaluation data with:', employeeData); // Debug log
       updateDataAction(employeeData);
@@ -662,9 +663,10 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
             </Label>
             <Input
               id="hireDate"
+              type="date"
               value={data.hireDate || ''}
-              readOnly
-              className="bg-gray-100 border-gray-300 cursor-not-allowed"
+              onChange={(e) => updateDataAction({ hireDate: e.target.value })}
+              className="bg-white"
             />
           </div>
 

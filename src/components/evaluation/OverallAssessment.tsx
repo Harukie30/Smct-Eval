@@ -22,7 +22,6 @@ interface OverallAssessmentProps {
         position: string;
         department: string;
         role: string;
-        hireDate: string;
         signature?: string;
     };
     currentUser?: {

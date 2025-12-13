@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UserProfile } from "./ProfileCard";
-import { User, Save, X } from "lucide-react";
+import { User, Save, X, Eye, EyeOff } from "lucide-react";
 // Removed profileService import - we'll use UserContext directly
 import SignaturePad from "@/components/SignaturePad";
 import { useToast } from "@/hooks/useToast";
@@ -41,6 +41,36 @@ export default function ProfileModal({
   profile,
   onSave,
 }: ProfileModalProps) {
+  // Format employee ID as 10-digit number with dash (e.g., 1234-567890)
+  const formatEmployeeId = (
+    employeeId: string | number | undefined
+  ): string => {
+    if (!employeeId) return "N/A";
+
+    // Convert to string
+    let idString = String(employeeId);
+
+    // If it already has a dash, return as is
+    if (idString.includes("-")) {
+      return idString;
+    }
+
+    // Remove any non-numeric characters
+    idString = idString.replace(/\D/g, "");
+
+    // Pad to 10 digits if needed
+    if (idString.length < 10) {
+      idString = idString.padStart(10, "0");
+    }
+
+    // Format as 1234-567890 (4 digits, dash, 6 digits)
+    if (idString.length >= 10) {
+      return `${idString.slice(0, 4)}-${idString.slice(4, 10)}`;
+    }
+
+    return idString;
+  };
+
   const [formData, setFormData] = useState<Account | null>({
     username: "",
     email: "",
@@ -56,6 +86,9 @@ export default function ProfileModal({
   const [open, setOpen] = useState(false);
   const [isSignatureSaved, setIsSignatureSaved] = useState(false); // Track if signature is saved
   const [hasApprovedReset, setHasApprovedReset] = useState(false); // Track if user has approved reset request
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Reset form data when profile changes
   useEffect(() => {
@@ -105,6 +138,14 @@ export default function ProfileModal({
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+
+    // Require current password if username or email has changed
+    const usernameChanged = formData?.username !== profile?.username;
+    const emailChanged = formData?.email !== profile?.email;
+    if ((usernameChanged || emailChanged) && !formData?.current_password) {
+      newErrors.current_password =
+        "Current password is required to change username or email";
+    }
 
     if (
       formData?.current_password &&
@@ -285,7 +326,7 @@ export default function ProfileModal({
             <div className="relative">
               <div className="h-24 w-24 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
                 <img
-                  src="/profile.png"
+                  src="/user.png"
                   alt={profile?.fname || "Profile"}
                   className="h-24 w-24 rounded-full object-cover"
                 />
@@ -322,6 +363,22 @@ export default function ProfileModal({
                   id="contact"
                   type="number"
                   value={profile?.contact || ""}
+                  readOnly
+                />
+              </div>
+
+              {/* Employee ID */}
+              <div className="space-y-1.5">
+                <Label htmlFor="employeeId" className="text-sm font-medium">
+                  Employee ID
+                </Label>
+                <Input
+                  id="employeeId"
+                  value={formatEmployeeId(
+                    profile?.emp_id ||
+                      (profile as any)?.employeeId ||
+                      (profile as any)?.employee_id
+                  )}
                   readOnly
                 />
               </div>
@@ -392,12 +449,7 @@ export default function ProfileModal({
                   <Input
                     id="username"
                     value={formData?.username || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        username: e.target.value,
-                      })
-                    }
+                    readOnly
                   />
                   {errors.username && (
                     <p className="text-sm text-red-500">{errors.username}</p>
@@ -409,16 +461,7 @@ export default function ProfileModal({
                   <Label htmlFor="email" className="text-sm font-medium">
                     Email Address
                   </Label>
-                  <Input
-                    id="email"
-                    value={formData?.email || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        email: e.target.value,
-                      })
-                    }
-                  />
+                  <Input id="email" value={formData?.email || ""} readOnly />
                   {errors.email && (
                     <p className="text-sm text-red-500">{errors.email}</p>
                   )}
@@ -429,17 +472,36 @@ export default function ProfileModal({
                   <Label className="text-sm font-medium">
                     Current Password
                   </Label>
-                  <Input
-                    id="current_password"
-                    type="password"
-                    placeholder="******"
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        current_password: e.target.value,
-                      })
-                    }
-                  />
+                  <div className="relative">
+                    <Input
+                      id="current_password"
+                      type={showCurrentPassword ? "text" : "password"}
+                      placeholder="******"
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          current_password: e.target.value,
+                        })
+                      }
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowCurrentPassword(!showCurrentPassword)
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                      aria-label={
+                        showCurrentPassword ? "Hide password" : "Show password"
+                      }
+                    >
+                      {showCurrentPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
                   {errors.current_password && (
                     <p className="text-sm text-red-500">
                       {errors.current_password}
@@ -452,17 +514,34 @@ export default function ProfileModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">New Password</Label>
-                  <Input
-                    id="new_password"
-                    type="password"
-                    placeholder="******"
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        new_password: e.target.value,
-                      })
-                    }
-                  />
+                  <div className="relative">
+                    <Input
+                      id="new_password"
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="******"
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          new_password: e.target.value,
+                        })
+                      }
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                      aria-label={
+                        showNewPassword ? "Hide password" : "Show password"
+                      }
+                    >
+                      {showNewPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
                   {errors.new_password && (
                     <p className="text-sm text-red-500">
                       {errors.new_password}
@@ -473,17 +552,36 @@ export default function ProfileModal({
                   <Label className="text-sm font-medium">
                     Confirm Password
                   </Label>
-                  <Input
-                    id="confirm_password"
-                    type="password"
-                    placeholder="******"
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        confirm_password: e.target.value,
-                      })
-                    }
-                  />
+                  <div className="relative">
+                    <Input
+                      id="confirm_password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="******"
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          confirm_password: e.target.value,
+                        })
+                      }
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                      aria-label={
+                        showConfirmPassword ? "Hide password" : "Show password"
+                      }
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
                   {errors.confirm_password && (
                     <p className="text-sm text-red-500">
                       {errors.confirm_password}

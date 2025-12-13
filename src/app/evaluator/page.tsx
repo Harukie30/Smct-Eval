@@ -106,13 +106,12 @@ type PerformanceData = {
 
 type Employee = {
   id: number;
-  name: string;
-  email: string;
-  position: string;
-  department: string;
+  name?: string;
+  email?: string;
+  position?: string;
+  department?: string;
   branch?: string;
-  role: string;
-  hireDate: string;
+  role?: string;
   avatar?: string;
   employeeId?: string; // Formatted employee ID from registration (e.g., "1234-567890")
 };
@@ -570,6 +569,7 @@ function EvaluatorDashboard() {
   const [selectedEmployeeForView, setSelectedEmployeeForView] =
     useState<Employee | null>(null);
   const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
+  const [viewEmployeeId, setViewEmployeeId] = useState<number | undefined>(undefined);
 
   // ViewResultsModal state
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
@@ -742,6 +742,65 @@ function EvaluatorDashboard() {
     }
   }, [user]);
 
+  // Fetch Employee ID when modal opens (same as admin/HR)
+  useEffect(() => {
+    const fetchEmployeeId = async () => {
+      if (selectedEmployeeForView && isViewEmployeeModalOpen && !viewEmployeeId) {
+        try {
+          // First check if it's already in the employee object
+          const existingId = (selectedEmployeeForView as any).employeeId || (selectedEmployeeForView as any).employee_id;
+          if (existingId) {
+            // Convert string employeeId to number if it's a formatted string like "1234-567890"
+            if (typeof existingId === 'string') {
+              const idStr = existingId.replace(/-/g, '');
+              const numId = parseInt(idStr, 10);
+              if (!isNaN(numId)) {
+                setViewEmployeeId(numId);
+                return;
+              }
+            } else if (typeof existingId === 'number') {
+              setViewEmployeeId(existingId);
+              return;
+            }
+          }
+
+          // Otherwise fetch from accounts API
+          const accounts = await apiService.getAllUsers();
+          const account = accounts.find(
+            (acc: any) =>
+              acc.id === selectedEmployeeForView.id ||
+              acc.employeeId === selectedEmployeeForView.id ||
+              acc.employee_id === selectedEmployeeForView.id ||
+              acc.user_id === selectedEmployeeForView.id
+          );
+
+          const foundEmployeeId =
+            account?.employeeId ||
+            account?.employee_id ||
+            account?.emp_id ||
+            undefined;
+
+          if (foundEmployeeId) {
+            // Convert string employeeId to number if it's a formatted string
+            if (typeof foundEmployeeId === 'string') {
+              const idStr = foundEmployeeId.replace(/-/g, '');
+              const numId = parseInt(idStr, 10);
+              if (!isNaN(numId)) {
+                setViewEmployeeId(numId);
+              }
+            } else if (typeof foundEmployeeId === 'number') {
+              setViewEmployeeId(foundEmployeeId);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching employeeId:', error);
+        }
+      }
+    };
+
+    fetchEmployeeId();
+  }, [selectedEmployeeForView, isViewEmployeeModalOpen, viewEmployeeId]);
+
   // Real-time data updates via localStorage events
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -797,7 +856,12 @@ function EvaluatorDashboard() {
 
       // Load positions
       const positionsData = await apiService.getPositions();
-      const positionNames = positionsData.map((pos: any) => pos.name || pos);
+      const positionNames = positionsData
+        .map((pos: any) => {
+          const name = pos?.name || pos;
+          return typeof name === 'string' ? name : String(name || '');
+        })
+        .filter((name: string) => name.trim() !== '');
       setPositions(positionNames);
     } catch (err) {
       console.error("Error loading employees and positions:", err);
@@ -1305,8 +1369,8 @@ function EvaluatorDashboard() {
     }</div>
           </div>
           <div class="print-field">
-            <div class="print-label">Hire Date & Coverage:</div>
-            <div class="print-value">${data.hireDate || "Hire: N/A"} | ${
+            <div class="print-label">Coverage:</div>
+            <div class="print-value">${
       data.coverageFrom && data.coverageTo
         ? `${new Date(data.coverageFrom).toLocaleDateString()} - ${new Date(
             data.coverageTo
@@ -2406,7 +2470,7 @@ function EvaluatorDashboard() {
                 setIsViewEmployeeModalOpen(true);
               }}
               onEvaluateEmployee={async (employee) => {
-                // Fetch fresh employee data from API to ensure we have latest updates (position, department, role, hireDate)
+                // Fetch fresh employee data from API to ensure we have latest updates (position, department, role)
                 try {
                   // Fetch latest employee data from API
                   const freshEmployeeData = await apiService.getEmployee(employee.id);
@@ -2420,7 +2484,6 @@ function EvaluatorDashboard() {
                     department: freshEmployeeData.department || employee.department,
                     branch: freshEmployeeData.branch || employee.branch,
                     role: freshEmployeeData.role || freshEmployeeData.roles?.[0]?.name || freshEmployeeData.roles?.[0] || employee.role,
-                    hireDate: freshEmployeeData.hireDate || employee.hireDate,
                     ...(freshEmployeeData.avatar || (employee as any).avatar ? { avatar: freshEmployeeData.avatar || (employee as any).avatar } : {}),
                   } as Employee : employee;
                   
@@ -2667,7 +2730,14 @@ function EvaluatorDashboard() {
             {selectedEmployee && evaluationType === "employee" && (
               <EvaluationForm
                 key={`employee-eval-${selectedEmployee.id}-${evaluationType}`}
-                employee={selectedEmployee}
+                employee={{
+                  ...selectedEmployee,
+                  name: selectedEmployee.name || '',
+                  email: selectedEmployee.email || '',
+                  position: selectedEmployee.position || '',
+                  department: selectedEmployee.department || '',
+                  role: selectedEmployee.role || '',
+                }}
                 currentUser={getCurrentUserData()}
                 onCloseAction={() => {
                   setIsEvaluationModalOpen(false);
@@ -2679,7 +2749,14 @@ function EvaluatorDashboard() {
             {selectedEmployee && evaluationType === "manager" && (
               <ManagerEvaluationForm
                 key={`manager-eval-${selectedEmployee.id}-${evaluationType}`}
-                employee={selectedEmployee}
+                employee={{
+                  ...selectedEmployee,
+                  name: selectedEmployee.name || '',
+                  email: selectedEmployee.email || '',
+                  position: selectedEmployee.position || '',
+                  department: selectedEmployee.department || '',
+                  role: selectedEmployee.role || '',
+                }}
                 currentUser={getCurrentUserData()}
                 onCloseAction={() => {
                   setIsEvaluationModalOpen(false);
@@ -2896,7 +2973,7 @@ function EvaluatorDashboard() {
         <ViewResultsModal
           isOpen={isViewResultsModalOpen}
           onCloseAction={() => setIsViewResultsModalOpen(false)}
-          submission={selectedEvaluationSubmission}
+          submission={selectedEvaluationSubmission as any}
           currentUserName={getCurrentUserData()?.name}
           currentUserSignature={getCurrentUserData()?.signature}
           isEvaluatorView={true}
@@ -3011,36 +3088,130 @@ function EvaluatorDashboard() {
         {/* View Employee Modal Component */}
         <ViewEmployeeModal
           isOpen={isViewEmployeeModalOpen}
-          onCloseAction={() => setIsViewEmployeeModalOpen(false)}
-          employee={selectedEmployeeForView}
-          onStartEvaluationAction={async (employee: Employee) => {
+          onCloseAction={() => {
+            setIsViewEmployeeModalOpen(false);
+            setSelectedEmployeeForView(null);
+            setViewEmployeeId(undefined);
+          }}
+          employee={selectedEmployeeForView ? {
+            id: selectedEmployeeForView.id,
+            name: (() => {
+              const empAny = selectedEmployeeForView as any;
+              if (empAny.fname || empAny.lname) {
+                return `${empAny.fname || ''} ${empAny.lname || ''}`.trim() || selectedEmployeeForView.name || 'N/A';
+              }
+              return selectedEmployeeForView.name || 'N/A';
+            })(),
+            email: selectedEmployeeForView.email || '',
+            username: (selectedEmployeeForView as any).username || undefined,
+            contact: (selectedEmployeeForView as any).contact || undefined,
+            position: (() => {
+              const empAny = selectedEmployeeForView as any;
+              const pos = selectedEmployeeForView.position || empAny.positions;
+              if (!pos) return 'N/A';
+              if (typeof pos === 'string') return pos;
+              if (typeof pos === 'object') {
+                return pos.label || pos.name || pos.value || 'N/A';
+              }
+              return 'N/A';
+            })(),
+            department: (() => {
+              const empAny = selectedEmployeeForView as any;
+              const dept = selectedEmployeeForView.department || empAny.departments;
+              if (!dept) return 'N/A';
+              if (typeof dept === 'string') return dept;
+              if (Array.isArray(dept) && dept.length > 0) {
+                return dept[0]?.name || dept[0] || 'N/A';
+              }
+              if (typeof dept === 'object') {
+                return dept.label || dept.name || dept.department_name || dept.value || 'N/A';
+              }
+              return 'N/A';
+            })(),
+            branch: (() => {
+              const empAny = selectedEmployeeForView as any;
+              const branch = selectedEmployeeForView.branch || empAny.branches;
+              if (!branch) return undefined;
+              if (typeof branch === 'string') return branch;
+              if (Array.isArray(branch) && branch.length > 0) {
+                const firstBranch = branch[0];
+                if (typeof firstBranch === 'string') return firstBranch;
+                if (typeof firstBranch === 'object') {
+                  return firstBranch.branch_name || firstBranch.name || firstBranch.label || undefined;
+                }
+              }
+              if (typeof branch === 'object') {
+                return branch.branch_name || branch.name || branch.label || undefined;
+              }
+              return undefined;
+            })(),
+            role: (() => {
+              const empAny = selectedEmployeeForView as any;
+              const role = selectedEmployeeForView.role || empAny.roles;
+              if (!role) return 'N/A';
+              if (typeof role === 'string') return role;
+              if (Array.isArray(role) && role.length > 0) {
+                const firstRole = role[0];
+                if (typeof firstRole === 'string') return firstRole;
+                if (typeof firstRole === 'object') {
+                  return firstRole.name || firstRole.label || firstRole.value || 'N/A';
+                }
+              }
+              if (typeof role === 'object') {
+                return role.name || role.label || role.value || 'N/A';
+              }
+              return 'N/A';
+            })(),
+            employeeId: viewEmployeeId || (selectedEmployeeForView as any).employeeId || (selectedEmployeeForView as any).employee_id || (() => {
+              // Convert string employeeId to number if it's a formatted string like "1234-567890"
+              const empId = (selectedEmployeeForView as any).employeeId;
+              if (empId && typeof empId === 'string') {
+                const idStr = empId.replace(/-/g, '');
+                const numId = parseInt(idStr, 10);
+                return isNaN(numId) ? undefined : numId;
+              }
+              return undefined;
+            })(),
+            bio: (selectedEmployeeForView as any).bio || undefined,
+            isActive: (() => {
+              const empAny = selectedEmployeeForView as any;
+              const isActive = empAny.is_active || empAny.isActive;
+              if (typeof isActive === 'string' && isActive === 'active') return true;
+              if (typeof isActive === 'boolean' && isActive === true) return true;
+              return false;
+            })(),
+            created_at: (selectedEmployeeForView as any).created_at || undefined,
+            updated_at: (selectedEmployeeForView as any).updated_at || undefined,
+          } : null}
+          designVariant="admin"
+          onStartEvaluationAction={(employee: any) => {
             setIsViewEmployeeModalOpen(false);
             
-            // Fetch fresh employee data from API to ensure we have latest updates (position, department, role, hireDate)
-            try {
-              const freshEmployeeData = await apiService.getEmployee(employee.id);
-              
-              // If API returns fresh data, use it; otherwise fall back to cached employee data
-              const updatedEmployee: Employee = freshEmployeeData ? {
-                id: freshEmployeeData.id || employee.id,
-                name: freshEmployeeData.name || freshEmployeeData.fname + ' ' + freshEmployeeData.lname || employee.name,
-                email: freshEmployeeData.email || employee.email,
-                position: freshEmployeeData.position || employee.position,
-                department: freshEmployeeData.department || employee.department,
-                branch: freshEmployeeData.branch || employee.branch,
-                role: freshEmployeeData.role || freshEmployeeData.roles?.[0]?.name || freshEmployeeData.roles?.[0] || employee.role,
-                hireDate: freshEmployeeData.hireDate || employee.hireDate,
-                ...(freshEmployeeData.avatar || (employee as any).avatar ? { avatar: freshEmployeeData.avatar || (employee as any).avatar } : {}),
-              } as Employee : employee;
-              
-              setSelectedEmployee(updatedEmployee);
-            } catch (error) {
-              console.error('Error fetching fresh employee data:', error);
-              // Fallback to cached employee data if API call fails
-              setSelectedEmployee(employee);
-            }
-            
-            setIsEvaluationTypeModalOpen(true);
+            // Fetch fresh employee data from API to ensure we have latest updates (position, department, role)
+            // Handle async operation without making the function async
+            apiService.getEmployee(employee.id)
+              .then((freshEmployeeData) => {
+                // If API returns fresh data, use it; otherwise fall back to cached employee data
+                const updatedEmployee: Employee = freshEmployeeData ? {
+                  id: freshEmployeeData.id || employee.id,
+                  name: freshEmployeeData.name || (freshEmployeeData.fname && freshEmployeeData.lname ? `${freshEmployeeData.fname} ${freshEmployeeData.lname}` : '') || employee.name || '',
+                  email: freshEmployeeData.email || employee.email,
+                  position: freshEmployeeData.position || employee.position,
+                  department: freshEmployeeData.department || employee.department,
+                  branch: freshEmployeeData.branch || employee.branch,
+                  role: freshEmployeeData.role || freshEmployeeData.roles?.[0]?.name || freshEmployeeData.roles?.[0] || employee.role,
+                  ...(freshEmployeeData.avatar || (employee as any).avatar ? { avatar: freshEmployeeData.avatar || (employee as any).avatar } : {}),
+                } as Employee : employee;
+                
+                setSelectedEmployee(updatedEmployee);
+                setIsEvaluationTypeModalOpen(true);
+              })
+              .catch((error) => {
+                console.error('Error fetching fresh employee data:', error);
+                // Fallback to cached employee data if API call fails
+                setSelectedEmployee(employee);
+                setIsEvaluationTypeModalOpen(true);
+              });
           }}
           onViewSubmissionAction={(submission: any) => {
             setSelectedSubmission(submission);

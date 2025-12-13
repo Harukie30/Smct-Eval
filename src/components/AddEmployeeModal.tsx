@@ -33,7 +33,6 @@ interface User {
   username: string;
   password: string;
   contact: string;
-  hireDate?: string;
 }
 
 interface AddEmployeeModalProps {
@@ -67,7 +66,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     username: "",
     password: "",
     contact: "",
-    hireDate: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -483,17 +481,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               )}
             </div>
 
-            {/* Hire Date */}
-            <div className="space-y-2 w-1/2">
-              <Label htmlFor="hireDate">Hire Date</Label>
-              <Input
-                id="hireDate"
-                type="date"
-                value={formData.hireDate || ""}
-                onChange={(e) => handleInputChange("hireDate", e.target.value)}
-                placeholder="Select hire date"
-              />
-            </div>
           </div>
 
           <DialogFooter className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">

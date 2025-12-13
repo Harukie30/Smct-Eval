@@ -67,7 +67,7 @@ export default function ProfileCard({
       <div className={`flex items-center space-x-3 ${className}`}>
         <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
           <img
-            src="/profile.png"
+            src="/user.png"
             alt={profile?.fname || "Profile"}
             className="h-8 w-8 rounded-full object-cover"
           />
@@ -125,7 +125,7 @@ export default function ProfileCard({
       >
         <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden">
           <img
-            src="/profile.png"
+            src="/user.png"
             alt={profile?.fname || "Profile"}
             className="h-10 w-10 rounded-full object-cover"
           />
@@ -184,7 +184,7 @@ export default function ProfileCard({
       <div className="flex items-center">
         <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center overflow-hidden mr-3">
           <img
-            src="/profile.png"
+            src="/user.png"
             alt={profile?.fname || "Profile"}
             className="h-10 w-10 rounded-full object-cover"
           />

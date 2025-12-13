@@ -57,9 +57,13 @@ export function Combobox({
   };
 
   // Filter options based on search term
-  const filteredOptions = options?.filter((option) =>
-    getOptionText(option)?.toLowerCase()?.includes(searchTerm.toLowerCase())
-  );
+  const filteredOptions = options?.filter((option) => {
+    const optionText = getOptionText(option);
+    return (
+      typeof optionText === "string" &&
+      optionText.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   return (
     <>
