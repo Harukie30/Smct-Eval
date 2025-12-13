@@ -117,9 +117,11 @@ export default function UserManagementTab() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
   const [totalItems, setTotalItems] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
+  const [totalActivePages, setTotalActivePages] = useState(1);
+  const [totalPendingPages, setTotalPendingPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
 
+  console.log(tab);
   const loadPendingUsers = async (
     searchValue: string,
     statusFilter: string,
@@ -136,63 +138,12 @@ export default function UserManagementTab() {
         itemsPerPage
       );
 
-      // Handle different response structures
-      let pendingUsersData: Employee[] = [];
-      let total = 0;
-      let lastPage = 1;
-      let perPageValue = itemsPerPage;
-
-      if (response) {
-        // If response has data property (paginated response)
-        if (response.data && Array.isArray(response.data)) {
-          pendingUsersData = response.data;
-          total = response.total || 0;
-          lastPage = response.last_page || 1;
-          perPageValue = response.per_page || itemsPerPage;
-        }
-        // If response is directly an array - apply client-side pagination
-        else if (Array.isArray(response)) {
-          total = response.length;
-          lastPage = Math.ceil(response.length / itemsPerPage);
-          perPageValue = itemsPerPage;
-          // Slice the array to show only items for current page
-          const startIndex = (currentPage - 1) * itemsPerPage;
-          const endIndex = startIndex + itemsPerPage;
-          pendingUsersData = response.slice(startIndex, endIndex);
-        }
-        // If response has users property
-        else if (response.users && Array.isArray(response.users)) {
-          // Check if it's already paginated
-          if (response.total && response.last_page) {
-            pendingUsersData = response.users;
-            total = response.total;
-            lastPage = response.last_page;
-            perPageValue = response.per_page || itemsPerPage;
-          } else {
-            // Apply client-side pagination
-            total = response.users.length;
-            lastPage = Math.ceil(response.users.length / itemsPerPage);
-            perPageValue = itemsPerPage;
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            pendingUsersData = response.users.slice(startIndex, endIndex);
-          }
-        }
-      }
-
-      setPendingRegistrations(pendingUsersData);
-      setTotalItems(total);
-      setPendingTotalItems(total);
-      setTotalPages(lastPage);
-      setPerPage(perPageValue);
+      setPendingRegistrations(response.data);
+      setPendingTotalItems(response.total);
+      setTotalPendingPages(response.last_page);
+      setPerPage(response.per_page);
     } catch (error) {
       console.error("Error loading pending users:", error);
-      // Set empty array on error to prevent undefined errors
-      setPendingRegistrations([]);
-      setTotalItems(0);
-      setPendingTotalItems(0);
-      setTotalPages(1);
-      setPerPage(itemsPerPage);
     } finally {
       if (isPageChange) {
         setIsPageLoading(false);
@@ -209,72 +160,20 @@ export default function UserManagementTab() {
       if (isPageChange) {
         setIsPageLoading(true);
       }
-      // Convert "0" (All Roles) to empty string for API call
-      const roleFilterForAPI = roleFilter === "0" ? "" : roleFilter;
+
       const response = await apiService.getActiveRegistrations(
         searchValue,
-        roleFilterForAPI,
+        roleFilter,
         currentPage,
         itemsPerPage
       );
 
-      // Handle different response structures
-      let activeUsersData: Employee[] = [];
-      let total = 0;
-      let lastPage = 1;
-      let perPageValue = itemsPerPage;
-
-      if (response) {
-        // If response has data property (paginated response)
-        if (response.data && Array.isArray(response.data)) {
-          activeUsersData = response.data;
-          total = response.total || 0;
-          lastPage = response.last_page || 1;
-          perPageValue = response.per_page || itemsPerPage;
-        }
-        // If response is directly an array - apply client-side pagination
-        else if (Array.isArray(response)) {
-          total = response.length;
-          lastPage = Math.ceil(response.length / itemsPerPage);
-          perPageValue = itemsPerPage;
-          // Slice the array to show only items for current page
-          const startIndex = (currentPage - 1) * itemsPerPage;
-          const endIndex = startIndex + itemsPerPage;
-          activeUsersData = response.slice(startIndex, endIndex);
-        }
-        // If response has users property
-        else if (response.users && Array.isArray(response.users)) {
-          // Check if it's already paginated
-          if (response.total && response.last_page) {
-            activeUsersData = response.users;
-            total = response.total;
-            lastPage = response.last_page;
-            perPageValue = response.per_page || itemsPerPage;
-          } else {
-            // Apply client-side pagination
-            total = response.users.length;
-            lastPage = Math.ceil(response.users.length / itemsPerPage);
-            perPageValue = itemsPerPage;
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            activeUsersData = response.users.slice(startIndex, endIndex);
-          }
-        }
-      }
-
-      setActiveRegistrations(activeUsersData);
-      setTotalItems(total);
-      setActiveTotalItems(total);
-      setTotalPages(lastPage);
-      setPerPage(perPageValue);
+      setActiveRegistrations(response.data);
+      setActiveTotalItems(response.total);
+      setTotalActivePages(response.last_page);
+      setPerPage(response.per_page);
     } catch (error) {
       console.error("Error loading active users:", error);
-      // Set empty array on error to prevent undefined errors
-      setActiveRegistrations([]);
-      setTotalItems(0);
-      setActiveTotalItems(0);
-      setTotalPages(1);
-      setPerPage(itemsPerPage);
     } finally {
       if (isPageChange) {
         setIsPageLoading(false);
@@ -312,9 +211,11 @@ export default function UserManagementTab() {
   //mount every activeSearchTerm changes and RoleFilter
   useEffect(() => {
     const handler = setTimeout(() => {
-      activeSearchTerm === "" ? currentPage : setCurrentPage(1);
-      setDebouncedActiveSearchTerm(activeSearchTerm);
-      setDebouncedRoleFilter(roleFilter);
+      if (tab === "active") {
+        activeSearchTerm === "" ? currentPage : setCurrentPage(1);
+        setDebouncedActiveSearchTerm(activeSearchTerm);
+        setDebouncedRoleFilter(roleFilter);
+      }
     }, 500);
 
     return () => clearTimeout(handler);
@@ -342,9 +243,11 @@ export default function UserManagementTab() {
   //mount every pendingSearchTerm changes and statusFilter
   useEffect(() => {
     const handler = setTimeout(() => {
-      pendingSearchTerm === "" ? currentPage : setCurrentPage(1);
-      setDebouncedPendingSearchTerm(pendingSearchTerm);
-      setDebouncedStatusFilter(statusFilter);
+      if (tab === "new") {
+        pendingSearchTerm === "" ? currentPage : setCurrentPage(1);
+        setDebouncedPendingSearchTerm(pendingSearchTerm);
+        setDebouncedStatusFilter(statusFilter);
+      }
     }, 500);
 
     return () => clearTimeout(handler);
@@ -374,10 +277,10 @@ export default function UserManagementTab() {
     try {
       setRefresh(true);
       if (tab === "new") {
-        await loadActiveUsers(activeSearchTerm, roleFilter);
+        await loadPendingUsers(pendingSearchTerm, statusFilter);
       }
       if (tab === "active") {
-        await loadPendingUsers(pendingSearchTerm, statusFilter);
+        await loadActiveUsers(activeSearchTerm, roleFilter);
       }
 
       if (showLoading) {
@@ -861,7 +764,7 @@ export default function UserManagementTab() {
                   <div>
                     <EvaluationsPagination
                       currentPage={currentPage}
-                      totalPages={totalPages}
+                      totalPages={totalActivePages}
                       total={activeTotalItems}
                       perPage={perPage}
                       onPageChange={(page) => {
@@ -1179,7 +1082,7 @@ export default function UserManagementTab() {
                     <div>
                       <EvaluationsPagination
                         currentPage={currentPage}
-                        totalPages={totalPages}
+                        totalPages={totalPendingPages}
                         total={pendingTotalItems}
                         perPage={perPage}
                         onPageChange={(page) => {
