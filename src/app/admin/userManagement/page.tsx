@@ -42,11 +42,13 @@ import { toastMessages } from "@/lib/toastMessages";
 import apiService from "@/lib/apiService";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import EvaluationsPagination from "@/components/paginationComponent";
+import ViewEmployeeModal from "@/components/ViewEmployeeModal";
 
 interface Employee {
   id: number;
   fname: string;
   lname: string;
+  emp_id: number;
   email: string;
   positions: any;
   departments: any;
@@ -120,6 +122,9 @@ export default function UserManagementTab() {
   const [totalActivePages, setTotalActivePages] = useState(1);
   const [totalPendingPages, setTotalPendingPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
+
+  const [employeeToView, setEmployeeToView] = useState<Employee | null>(null);
+  const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
 
   console.log(tab);
   const loadPendingUsers = async (
@@ -616,6 +621,60 @@ export default function UserManagementTab() {
                 </div>
               </div>
 
+              {/* Role and Status Color Indicators */}
+              <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-gray-700">
+                    Role Indicators:
+                  </span>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Badge
+                      variant="outline"
+                      className="bg-red-100 text-red-800 hover:bg-red-200 border-red-300"
+                    >
+                      Admin
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300"
+                    >
+                      HR
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300"
+                    >
+                      Evaluator
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300"
+                    >
+                      Employee
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-gray-700">
+                    Status Indicators:
+                  </span>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Badge
+                      variant="outline"
+                      className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300"
+                    >
+                      ✨ New Added (≤30min)
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300"
+                    >
+                      🕐 Recently Added (&gt;30min)
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
               <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 <Table>
                   <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
@@ -705,56 +764,108 @@ export default function UserManagementTab() {
                     ) : activeRegistrations &&
                       Array.isArray(activeRegistrations) &&
                       activeRegistrations.length > 0 ? (
-                      activeRegistrations.map((employee) => (
-                        <TableRow key={employee.id}>
-                          <TableCell className="font-medium">
-                            {employee.fname + " " + employee.lname}
-                          </TableCell>
-                          <TableCell>{employee.email}</TableCell>
-                          <TableCell>
-                            {employee.positions?.label || "N/A"}
-                          </TableCell>
-                          <TableCell>
-                            {(employee.branches &&
-                              Array.isArray(employee.branches) &&
-                              employee.branches[0]?.branch_name) ||
-                              "N/A"}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {(employee.roles &&
-                                Array.isArray(employee.roles) &&
-                                employee.roles[0]?.name) ||
+                      activeRegistrations.map((employee) => {
+                        const createdDate = employee.updated_at
+                          ? new Date(employee.updated_at)
+                          : null;
+                        let isNew = false;
+                        let isRecentlyAdded = false;
+
+                        if (createdDate) {
+                          const now = new Date();
+                          const minutesDiff =
+                            (now.getTime() - createdDate.getTime()) /
+                            (1000 * 60);
+                          const hoursDiff = minutesDiff / 60;
+                          isNew = minutesDiff <= 30;
+                          isRecentlyAdded = minutesDiff > 30 && hoursDiff <= 48;
+                        }
+
+                        return (
+                          <TableRow
+                            key={employee.id}
+                            className={
+                              isNew
+                                ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100"
+                                : isRecentlyAdded
+                                ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
+                                : "hover:bg-gray-50"
+                            }
+                          >
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                <span>
+                                  {employee.fname + " " + employee.lname}
+                                </span>
+                                {isNew && (
+                                  <Badge className="bg-green-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                    ✨ New
+                                  </Badge>
+                                )}
+                                {isRecentlyAdded && !isNew && (
+                                  <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                    🕐 Recent
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>{employee.email}</TableCell>
+                            <TableCell>
+                              {employee.positions?.label || "N/A"}
+                            </TableCell>
+                            <TableCell>
+                              {(employee.branches &&
+                                Array.isArray(employee.branches) &&
+                                employee.branches[0]?.branch_name) ||
                                 "N/A"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className="text-green-600 bg-green-100">
-                              Active
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-blue-600 hover:text-blue-700"
-                                onClick={() => openEditModal(employee)}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-600 hover:text-red-700"
-                                onClick={() => openDeleteModal(employee)}
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {(employee.roles &&
+                                  Array.isArray(employee.roles) &&
+                                  employee.roles[0]?.name) ||
+                                  "N/A"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className="text-green-600 bg-green-100">
+                                Active
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-green-600 hover:text-green-700"
+                                  onClick={() => {
+                                    setEmployeeToView(employee);
+                                    setIsViewEmployeeModalOpen(true);
+                                  }}
+                                >
+                                  View
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-blue-600 hover:text-blue-700"
+                                  onClick={() => openEditModal(employee)}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-600 hover:text-red-700"
+                                  onClick={() => openDeleteModal(employee)}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     ) : null}
                   </TableBody>
                 </Table>
@@ -990,46 +1101,113 @@ export default function UserManagementTab() {
                       ) : pendingRegistrations &&
                         Array.isArray(pendingRegistrations) &&
                         pendingRegistrations.length > 0 ? (
-                        pendingRegistrations.map((account) => (
-                          <TableRow
-                            key={account.id}
-                            className="hover:bg-gray-50"
-                          >
-                            <TableCell className="px-6 py-3 font-medium">
-                              {account.fname + " " + account.lname}
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              {account.email}
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              {account.positions.label}
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              {new Date(
-                                account.created_at
-                              ).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              <Badge
-                                className={
-                                  account.is_active === "declined"
-                                    ? "bg-red-100 text-red-800 hover:bg-red-200"
-                                    : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                                }
-                              >
-                                {account.is_active === "declined"
-                                  ? "REJECTED"
-                                  : "PENDING VERIFICATION"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="px-6 py-3">
-                              <div className="flex space-x-2">
-                                {account.is_active === "pending" && (
-                                  <>
+                        pendingRegistrations.map((account) => {
+                          const createdDate = account.updated_at
+                            ? new Date(account.updated_at)
+                            : null;
+                          let isNew = false;
+                          let isRecentlyAdded = false;
+
+                          if (createdDate) {
+                            const now = new Date();
+                            const minutesDiff =
+                              (now.getTime() - createdDate.getTime()) /
+                              (1000 * 60);
+                            const hoursDiff = minutesDiff / 60;
+                            isNew = minutesDiff <= 30;
+                            isRecentlyAdded =
+                              minutesDiff > 30 && hoursDiff <= 48;
+                          }
+
+                          return (
+                            <TableRow
+                              key={account.id}
+                              className={
+                                isNew
+                                  ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100"
+                                  : isRecentlyAdded
+                                  ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
+                                  : "hover:bg-gray-50"
+                              }
+                            >
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  <span>
+                                    {account.fname + " " + account.lname}
+                                  </span>
+                                  {isNew && (
+                                    <Badge className="bg-green-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                      ✨ New
+                                    </Badge>
+                                  )}
+                                  {isRecentlyAdded && !isNew && (
+                                    <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                      🕐 Recent
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="px-6 py-3">
+                                {account.email}
+                              </TableCell>
+                              <TableCell className="px-6 py-3">
+                                {account.positions.label}
+                              </TableCell>
+                              <TableCell className="px-6 py-3">
+                                {new Date(
+                                  account.created_at
+                                ).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell className="px-6 py-3">
+                                <Badge
+                                  className={
+                                    account.is_active === "declined"
+                                      ? "bg-red-100 text-red-800 hover:bg-red-200"
+                                      : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                                  }
+                                >
+                                  {account.is_active === "declined"
+                                    ? "REJECTED"
+                                    : "PENDING VERIFICATION"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="px-6 py-3">
+                                <div className="flex space-x-2">
+                                  {account.is_active === "pending" && (
+                                    <>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-white bg-green-500 hover:text-white hover:bg-green-600"
+                                        onClick={() =>
+                                          handleApproveRegistration(
+                                            account.id,
+                                            account.fname
+                                          )
+                                        }
+                                      >
+                                        Approve
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-white bg-red-500 hover:bg-red-600 hover:text-white"
+                                        onClick={() =>
+                                          handleRejectRegistration(
+                                            account.id,
+                                            account.fname
+                                          )
+                                        }
+                                      >
+                                        Reject
+                                      </Button>
+                                    </>
+                                  )}
+                                  {account.is_active === "declined" && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-white bg-green-500 hover:text-white hover:bg-green-600"
+                                      className="text-green-600 hover:text-green-700"
                                       onClick={() =>
                                         handleApproveRegistration(
                                           account.id,
@@ -1039,40 +1217,12 @@ export default function UserManagementTab() {
                                     >
                                       Approve
                                     </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-white bg-red-500 hover:bg-red-600 hover:text-white"
-                                      onClick={() =>
-                                        handleRejectRegistration(
-                                          account.id,
-                                          account.fname
-                                        )
-                                      }
-                                    >
-                                      Reject
-                                    </Button>
-                                  </>
-                                )}
-                                {account.is_active === "declined" && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-green-600 hover:text-green-700"
-                                    onClick={() =>
-                                      handleApproveRegistration(
-                                        account.id,
-                                        account.fname
-                                      )
-                                    }
-                                  >
-                                    Approve
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       ) : null}
                     </TableBody>
                   </Table>
@@ -1221,6 +1371,26 @@ export default function UserManagementTab() {
         positions={positionsData}
         roles={roles}
       />
+
+      {employeeToView && (
+        <ViewEmployeeModal
+          isOpen={isViewEmployeeModalOpen}
+          onCloseAction={() => {
+            setIsViewEmployeeModalOpen(false);
+            setEmployeeToView(null);
+          }}
+          employee={employeeToView}
+          onStartEvaluationAction={() => {
+            // Not used in admin, but required by component
+            setIsViewEmployeeModalOpen(false);
+            setEmployeeToView(null);
+          }}
+          onViewSubmissionAction={() => {
+            // Not used in admin, but required by component
+          }}
+          designVariant="admin"
+        />
+      )}
     </div>
   );
 }

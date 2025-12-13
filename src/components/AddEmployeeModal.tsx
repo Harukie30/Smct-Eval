@@ -88,7 +88,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         username: "",
         password: "",
         contact: "",
-        hireDate: "",
       });
       setErrors({});
       setShowPassword(false);
@@ -480,7 +479,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 <p className="text-sm text-red-500">{errors.role_id}</p>
               )}
             </div>
-
           </div>
 
           <DialogFooter className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
