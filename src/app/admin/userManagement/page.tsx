@@ -374,10 +374,10 @@ export default function UserManagementTab() {
     try {
       setRefresh(true);
       if (tab === "new") {
-        await loadPendingUsers(pendingSearchTerm, statusFilter);
+        await loadActiveUsers(activeSearchTerm, roleFilter);
       }
       if (tab === "active") {
-        await loadActiveUsers(activeSearchTerm, roleFilter);
+        await loadPendingUsers(pendingSearchTerm, statusFilter);
       }
 
       if (showLoading) {
