@@ -61,8 +61,8 @@ interface Employee {
   avatar?: string | null;
   bio?: string | null;
   contact?: string;
-  created_at: Date;
-  updated_at?: Date;
+  created_at: string;
+  updated_at?: string;
 }
 
 interface RoleType {
@@ -116,7 +116,8 @@ export default function UserManagementTab() {
   const [debouncedStatusFilter, setDebouncedStatusFilter] =
     useState(statusFilter);
   //pagination
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPageActive, setCurrentPageActive] = useState(1);
+  const [currentPagePending, setCurrentPagePending] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
   const [totalItems, setTotalItems] = useState(0);
   const [totalActivePages, setTotalActivePages] = useState(1);
@@ -126,7 +127,6 @@ export default function UserManagementTab() {
   const [employeeToView, setEmployeeToView] = useState<Employee | null>(null);
   const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
 
-  console.log(tab);
   const loadPendingUsers = async (
     searchValue: string,
     statusFilter: string,
@@ -139,7 +139,7 @@ export default function UserManagementTab() {
       const response = await apiService.getPendingRegistrations(
         searchValue,
         statusFilter,
-        currentPage,
+        currentPagePending,
         itemsPerPage
       );
 
@@ -169,7 +169,7 @@ export default function UserManagementTab() {
       const response = await apiService.getActiveRegistrations(
         searchValue,
         roleFilter,
-        currentPage,
+        currentPageActive,
         itemsPerPage
       );
 
@@ -213,11 +213,24 @@ export default function UserManagementTab() {
     mountData();
   }, []);
 
+  useEffect(() => {
+    const load = async () => {
+      if (tab === "active") {
+        await loadActiveUsers(activeSearchTerm, roleFilter);
+      }
+      if (tab === "new") {
+        await loadPendingUsers(pendingSearchTerm, statusFilter);
+      }
+    };
+
+    load();
+  }, [tab]);
+
   //mount every activeSearchTerm changes and RoleFilter
   useEffect(() => {
     const handler = setTimeout(() => {
       if (tab === "active") {
-        activeSearchTerm === "" ? currentPage : setCurrentPage(1);
+        activeSearchTerm === "" ? currentPageActive : setCurrentPageActive(1);
         setDebouncedActiveSearchTerm(activeSearchTerm);
         setDebouncedRoleFilter(roleFilter);
       }
@@ -243,13 +256,15 @@ export default function UserManagementTab() {
     };
 
     fetchData();
-  }, [debouncedActiveSearchTerm, debouncedRoleFilter, currentPage]);
+  }, [debouncedActiveSearchTerm, debouncedRoleFilter, currentPageActive]);
 
   //mount every pendingSearchTerm changes and statusFilter
   useEffect(() => {
     const handler = setTimeout(() => {
       if (tab === "new") {
-        pendingSearchTerm === "" ? currentPage : setCurrentPage(1);
+        pendingSearchTerm === ""
+          ? currentPagePending
+          : setCurrentPagePending(1);
         setDebouncedPendingSearchTerm(pendingSearchTerm);
         setDebouncedStatusFilter(statusFilter);
       }
@@ -275,7 +290,7 @@ export default function UserManagementTab() {
     };
 
     fetchData();
-  }, [debouncedPendingSearchTerm, debouncedStatusFilter, currentPage]);
+  }, [debouncedPendingSearchTerm, debouncedStatusFilter, currentPagePending]);
 
   // Function to refresh user data
   const refreshUserData = async (showLoading = false) => {
@@ -385,7 +400,6 @@ export default function UserManagementTab() {
   };
 
   const handleDeleteEmployee = async (employee: any) => {
-    console.log(employee.id);
     try {
       await apiService.deleteUser(employee.id);
       toastMessages.user.deleted(employee.fname);
@@ -771,14 +785,14 @@ export default function UserManagementTab() {
                         let isNew = false;
                         let isRecentlyAdded = false;
 
-                        if (createdDate) {
+                        if (createdDate !== null) {
                           const now = new Date();
                           const minutesDiff =
                             (now.getTime() - createdDate.getTime()) /
                             (1000 * 60);
                           const hoursDiff = minutesDiff / 60;
-                          isNew = minutesDiff <= 30;
-                          isRecentlyAdded = minutesDiff > 30 && hoursDiff <= 48;
+                          isNew = hoursDiff <= 30;
+                          isRecentlyAdded = hoursDiff > 30 && hoursDiff <= 40;
                         }
 
                         return (
@@ -874,12 +888,12 @@ export default function UserManagementTab() {
                 {tab === "active" && (
                   <div>
                     <EvaluationsPagination
-                      currentPage={currentPage}
+                      currentPage={currentPageActive}
                       totalPages={totalActivePages}
                       total={activeTotalItems}
                       perPage={perPage}
                       onPageChange={(page) => {
-                        setCurrentPage(page);
+                        setCurrentPageActive(page);
                       }}
                     />
                   </div>
@@ -1114,9 +1128,8 @@ export default function UserManagementTab() {
                               (now.getTime() - createdDate.getTime()) /
                               (1000 * 60);
                             const hoursDiff = minutesDiff / 60;
-                            isNew = minutesDiff <= 30;
-                            isRecentlyAdded =
-                              minutesDiff > 30 && hoursDiff <= 48;
+                            isNew = hoursDiff <= 30;
+                            isRecentlyAdded = hoursDiff > 30 && hoursDiff <= 40;
                           }
 
                           return (
@@ -1231,12 +1244,12 @@ export default function UserManagementTab() {
                   {tab === "new" && (
                     <div>
                       <EvaluationsPagination
-                        currentPage={currentPage}
+                        currentPage={currentPagePending}
                         totalPages={totalPendingPages}
                         total={pendingTotalItems}
                         perPage={perPage}
                         onPageChange={(page) => {
-                          setCurrentPage(page);
+                          setCurrentPagePending(page);
                         }}
                       />
                     </div>
