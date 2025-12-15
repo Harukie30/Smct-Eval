@@ -64,6 +64,7 @@ export function EmployeesTab({
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [selectedPosition, setSelectedPosition] = useState<string>('');
   const [employeesPage, setEmployeesPage] = useState(1);
+  const [isPageLoading, setIsPageLoading] = useState(false);
   const itemsPerPage = 8;
 
   const refreshKey = `employees-${employeeDataRefresh}`;
@@ -171,6 +172,16 @@ export function EmployeesTab({
   useEffect(() => {
     setEmployeesPage(1);
   }, [employeeSearch, selectedDepartment, selectedPosition]);
+
+  // Handle page change with loading state
+  const handlePageChange = (newPage: number) => {
+    setIsPageLoading(true);
+    setEmployeesPage(newPage);
+    // Simulate a brief loading delay for smooth UX
+    setTimeout(() => {
+      setIsPageLoading(false);
+    }, 300);
+  };
 
   // Calculate new hires this month
   const newHiresThisMonth = (() => {
@@ -340,6 +351,46 @@ export function EmployeesTab({
                 </TableBody>
               </Table>
             </div>
+          </div>
+        ) : isPageLoading ? (
+          <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <Table>
+              <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Position</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {/* Skeleton loading rows - no spinner for page changes */}
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <TableRow key={`skeleton-employee-page-${index}`}>
+                    <TableCell className="px-6 py-3">
+                      <Skeleton className="h-6 w-24" />
+                    </TableCell>
+                    <TableCell className="px-6 py-3">
+                      <Skeleton className="h-6 w-24" />
+                    </TableCell>
+                    <TableCell className="px-6 py-3">
+                      <Skeleton className="h-6 w-24" />
+                    </TableCell>
+                    <TableCell className="px-6 py-3">
+                      <Skeleton className="h-6 w-24" />
+                    </TableCell>
+                    <TableCell className="px-6 py-3">
+                      <Skeleton className="h-6 w-24" />
+                    </TableCell>
+                    <TableCell className="px-6 py-3">
+                      <Skeleton className="h-6 w-24" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         ) : (
           <>
@@ -513,10 +564,12 @@ export function EmployeesTab({
 
               return (
                 <PaginationItem key={p}>
-                  <PaginationLink
+                    <PaginationLink
                     onClick={(e) => {
                       e.preventDefault();
-                      setEmployeesPage(Number(p));
+                      if (Number(p) !== employeesPage) {
+                        handlePageChange(Number(p));
+                      }
                     }}
                     className={
                       p === employeesPage ? "bg-blue-400 text-white rounded-xl" : ""
@@ -551,7 +604,9 @@ export function EmployeesTab({
                         }
                         onClick={(e) => {
                           e.preventDefault();
-                          if (employeesPage > 1) setEmployeesPage(employeesPage - 1);
+                          if (employeesPage > 1) {
+                            handlePageChange(employeesPage - 1);
+                          }
                         }}
                       />
                     </PaginationItem>
@@ -569,7 +624,9 @@ export function EmployeesTab({
                         }
                         onClick={(e) => {
                           e.preventDefault();
-                          if (employeesPage < employeesTotalPages) setEmployeesPage(employeesPage + 1);
+                          if (employeesPage < employeesTotalPages) {
+                            handlePageChange(employeesPage + 1);
+                          }
                         }}
                       />
                     </PaginationItem>

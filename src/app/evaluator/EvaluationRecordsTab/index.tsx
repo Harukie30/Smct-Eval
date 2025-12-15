@@ -31,6 +31,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getQuarterFromEvaluationData } from "@/lib/quarterUtils";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface EvaluationRecordsTabProps {
   recentSubmissions: any[];
@@ -226,6 +235,9 @@ export function EvaluationRecordsTab({
     key: string;
     direction: "asc" | "desc";
   }>({ key: "date", direction: "desc" });
+  const [feedbackPage, setFeedbackPage] = useState(1);
+  const [isPageLoading, setIsPageLoading] = useState(false);
+  const itemsPerPage = 10;
 
   // Get available years from submissions
   const availableYears = useMemo(() => {
@@ -455,6 +467,28 @@ export function EvaluationRecordsTab({
   const getSortIcon = (key: string) => {
     if (feedbackSort.key !== key) return "↕️";
     return feedbackSort.direction === "asc" ? "↑" : "↓";
+  };
+
+  // Pagination calculations
+  const feedbackTotal = filteredFeedbackData.length;
+  const feedbackTotalPages = Math.ceil(feedbackTotal / itemsPerPage);
+  const feedbackStartIndex = (feedbackPage - 1) * itemsPerPage;
+  const feedbackEndIndex = feedbackStartIndex + itemsPerPage;
+  const feedbackPaginated = filteredFeedbackData.slice(feedbackStartIndex, feedbackEndIndex);
+
+  // Reset to page 1 when filters/search change
+  useEffect(() => {
+    setFeedbackPage(1);
+  }, [feedbackSearch, feedbackDateFilter, feedbackYearFilter, feedbackQuarterFilter, feedbackApprovalStatusFilter]);
+
+  // Handle page change with loading state
+  const handlePageChange = (newPage: number) => {
+    setIsPageLoading(true);
+    setFeedbackPage(newPage);
+    // Simulate a brief loading delay for smooth UX
+    setTimeout(() => {
+      setIsPageLoading(false);
+    }, 300);
   };
 
   return (
@@ -748,6 +782,71 @@ export function EvaluationRecordsTab({
                 </TableBody>
               </Table>
             </div>
+          ) : isPageLoading ? (
+            <div className="max-h-[500px] overflow-y-auto overflow-x-auto scrollable-table evaluation-records-table">
+              <Table className="min-w-full">
+                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                  <TableRow key="feedback-header">
+                    <TableHead className="px-6 py-3">Employee Name</TableHead>
+                    <TableHead className="px-6 py-3">Position</TableHead>
+                    <TableHead className="px-6 py-3">Reviewer</TableHead>
+                    <TableHead className="px-6 py-3">Rating</TableHead>
+                    <TableHead className="px-6 py-3">Date</TableHead>
+                    <TableHead className="px-6 py-3">Approval Status</TableHead>
+                    <TableHead className="px-6 py-3">
+                      Employee Signature
+                    </TableHead>
+                    <TableHead className="px-6 py-3">
+                      Evaluator Signature
+                    </TableHead>
+                    <TableHead className="px-6 py-3">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y divide-gray-200">
+                  {/* Skeleton loading rows - no spinner for page changes */}
+                  {Array.from({ length: 10 }).map((_, index) => (
+                    <TableRow key={`skeleton-feedback-page-${index}`}>
+                      <TableCell className="px-6 py-3">
+                        <div className="space-y-1">
+                          <Skeleton className="h-3 w-20" />
+                          <Skeleton className="h-2.5 w-24" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <Skeleton className="h-3 w-16" />
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="space-y-1">
+                          <Skeleton className="h-3 w-16" />
+                          <Skeleton className="h-2.5 w-12" />
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <Skeleton className="h-5 w-18 rounded-full" />
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <Skeleton className="h-3 w-8" />
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <Skeleton className="h-3 w-16" />
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <Skeleton className="h-5 w-12 rounded-full" />
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <Skeleton className="h-3 w-12" />
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <Skeleton className="h-3 w-12" />
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <Skeleton className="h-6 w-12" />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <div className="max-h-[500px] overflow-y-auto overflow-x-auto scrollable-table evaluation-records-table">
               <Table className="min-w-full">
@@ -784,7 +883,38 @@ export function EvaluationRecordsTab({
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
-                  {filteredFeedbackData.map((feedback) => {
+                  {feedbackPaginated.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={10}
+                        className="text-center py-8 text-gray-500"
+                      >
+                        <div className="flex flex-col items-center justify-center gap-4">
+                          <img
+                            src="/not-found.gif"
+                            alt="No data"
+                            className="w-25 h-25 object-contain"
+                            style={{
+                              imageRendering: "auto",
+                              willChange: "auto",
+                              transform: "translateZ(0)",
+                              backfaceVisibility: "hidden",
+                              WebkitBackfaceVisibility: "hidden",
+                            }}
+                          />
+                          <div className="text-gray-500">
+                            <p className="text-base font-medium mb-1">
+                              No evaluation records found
+                            </p>
+                            <p className="text-sm text-gray-400">
+                              Try adjusting your search or filter criteria
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    feedbackPaginated.map((feedback: any) => {
                     // Find the original submission to check evaluationData if needed
                     const originalSubmission = recentSubmissions.find(
                       (s) => s.id === feedback.id
@@ -1012,11 +1142,127 @@ export function EvaluationRecordsTab({
                         </TableCell>
                       </TableRow>
                     );
-                  })}
+                  })
+                  )}
                 </TableBody>
               </Table>
             </div>
           )}
+
+          {/* Pagination Controls */}
+          {feedbackTotal > itemsPerPage && (() => {
+            // Function to render page buttons with ellipses
+            const renderPages = () => {
+              let pages: (number | "...")[] = [];
+
+              // Always show first page
+              pages.push(1);
+
+              // Insert ellipsis after first page if needed
+              if (feedbackPage > 3) {
+                pages.push("...");
+              }
+
+              // Show pages around current (feedbackPage - 1, feedbackPage, feedbackPage + 1)
+              for (let i = feedbackPage - 1; i <= feedbackPage + 1; i++) {
+                if (i > 1 && i < feedbackTotalPages) {
+                  pages.push(i);
+                }
+              }
+
+              // Insert ellipsis before last page if needed
+              if (feedbackPage < feedbackTotalPages - 2) {
+                pages.push("...");
+              }
+
+              // Always show last page
+              if (feedbackTotalPages > 1) {
+                pages.push(feedbackTotalPages);
+              }
+
+              return pages.map((p, index) => {
+                if (p === "...") {
+                  return (
+                    <PaginationItem key={`ellipsis-${index}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  );
+                }
+
+                return (
+                  <PaginationItem key={p}>
+                    <PaginationLink
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (Number(p) !== feedbackPage) {
+                          handlePageChange(Number(p));
+                        }
+                      }}
+                      className={
+                        p === feedbackPage ? "bg-blue-400 text-white rounded-xl" : ""
+                      }
+                    >
+                      {p}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              });
+            };
+
+            const startIndex = (feedbackPage - 1) * itemsPerPage;
+            const endIndex = feedbackPage * itemsPerPage;
+
+            return (
+              <div className="flex flex-col items-center justify-center gap-3 w-full p-2 mt-4">
+                <div className="text-sm text-gray-600">
+                  Showing {startIndex + 1} to {Math.min(endIndex, feedbackTotal)} of {feedbackTotal}{" "}
+                  records
+                </div>
+                <div>
+                  <Pagination>
+                    <PaginationContent>
+                      {/* PREVIOUS */}
+                      <PaginationItem>
+                        <PaginationPrevious
+                          className={
+                            feedbackPage === 1
+                              ? "hover:pointer-events-none bg-blue-100 opacity-50"
+                              : "hover:bg-blue-400 bg-blue-200"
+                          }
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (feedbackPage > 1) {
+                              handlePageChange(feedbackPage - 1);
+                            }
+                          }}
+                        />
+                      </PaginationItem>
+
+                      {/* PAGE NUMBERS WITH ELLIPSES */}
+                      {renderPages()}
+
+                      {/* NEXT */}
+                      <PaginationItem>
+                        <PaginationNext
+                          className={
+                            feedbackPage === feedbackTotalPages
+                              ? "hover:pointer-events-none bg-blue-100 opacity-50"
+                              : "hover:bg-blue-400 bg-blue-200"
+                          }
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (feedbackPage < feedbackTotalPages) {
+                              handlePageChange(feedbackPage + 1);
+                            }
+                          }}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
     </div>

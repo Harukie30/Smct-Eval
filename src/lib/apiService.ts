@@ -142,7 +142,7 @@ export const apiService = {
   },
 
   getAccounts: async (): Promise<any> => {
-    const response = await api.get("/api/accounts");
+    const response = await api.get("/accounts");
     return response.data.accounts || [];
   },
 
@@ -153,12 +153,12 @@ export const apiService = {
 
   // Profile management
   getProfile: async (id: number): Promise<any> => {
-    const response = await api.get(`/api/profiles/${id}`);
+    const response = await api.get(`/profiles/${id}`);
     return response.data.profile || response.data;
   },
 
   updateProfile: async (id: number, updates: Partial<any>): Promise<any> => {
-    const response = await api.put(`/api/profiles/${id}`, updates);
+    const response = await api.put(`/profiles/${id}`, updates);
     return response.data.profile || response.data;
   },
 
