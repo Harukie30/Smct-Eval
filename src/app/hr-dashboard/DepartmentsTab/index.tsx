@@ -244,10 +244,10 @@ export function DepartmentsTab({
                     {searchTerm ? `No departments found matching "${searchTerm}"` : 'No departments found'}
                   </div>
                 ) : (
-                  filteredDepartments.map((dept) => {
+                  filteredDepartments.map((dept, index) => {
                   const stats = getDepartmentStats(dept.name);
                   return (
-                    <Card key={dept.id}>
+                    <Card key={dept.id || `dept-${dept.name}-${index}`}>
                       <CardHeader>
                         <CardTitle className="flex justify-between items-center">
                           {dept.name}

@@ -142,13 +142,24 @@ export const apiService = {
   },
 
   getAccounts: async (): Promise<any> => {
-    const response = await api.get("/api/accounts");
+    const response = await api.get("/accounts");
     return response.data.accounts || [];
   },
 
   uploadAvatar: async (formData: FormData): Promise<any> => {
     const response = await api.post("/uploadAvatar", formData);
     return response.data;
+  },
+
+  // Profile management
+  getProfile: async (id: number): Promise<any> => {
+    const response = await api.get(`/profiles/${id}`);
+    return response.data.profile || response.data;
+  },
+
+  updateProfile: async (id: number, updates: Partial<any>): Promise<any> => {
+    const response = await api.put(`/profiles/${id}`, updates);
+    return response.data.profile || response.data;
   },
 
   getSubmissions: async (
@@ -242,8 +253,14 @@ export const apiService = {
   },
 
   // Approve evaluation by employee (matches documentation endpoint)
-  approvedByEmployee: async (evaluationId: number): Promise<any> => {
-    const response = await api.post(`/approvedByEmployee/${evaluationId}`);
+  approvedByEmployee: async (
+    evaluationId: number,
+    data?: any
+  ): Promise<any> => {
+    const response = await api.post(
+      `/approvedByEmployee/${evaluationId}`,
+      data || {}
+    );
     return response.data;
   },
 
@@ -429,19 +446,14 @@ export const apiService = {
     };
   },
 
-  deleteNotification: async (notificationId: number): Promise<any> => {
-    const isRead = await api.post(`/deleteNotification/${notificationId}`);
-    return isRead.data.message || isRead.data;
+  markNotificationAsRead: async (notificationId: number): Promise<void> => {
+    await api.put(`/notifications/${notificationId}/read`);
   },
 
-  markNotificationAsRead: async (notificationId: number): Promise<any> => {
-    const isRead = await api.post(`/isReadNotification/${notificationId}`);
-    return isRead.data.message || isRead.data;
-  },
-
-  markAllNotificationAsRead: async (): Promise<any> => {
-    const isRead = await api.post(`/markAllAsRead`);
-    return isRead.data.message || isRead.data;
+  markAllNotificationsAsRead: async (userRole: string): Promise<void> => {
+    await api.put("/notifications/read-all", null, {
+      params: { role: userRole },
+    });
   },
 
   // Utility methods
@@ -457,6 +469,26 @@ export const apiService = {
     }
     return data;
   },
+
+  getProfiles: async (): Promise<any[]> => {
+    const response = await api.get("/profiles");
+    const data = response.data;
+
+    if (data.success && data.profiles) {
+      return data.profiles;
+    }
+    if (Array.isArray(data.profiles)) {
+      return data.profiles;
+    }
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return [];
+  },
+
+  // ============================================
+  // USER MANAGEMENT (Missing Endpoints)
+  // ============================================
 
   // Get all users (except authenticated user)
   getAllUsers: async (): Promise<any[]> => {
@@ -632,23 +664,20 @@ export const apiService = {
   },
 
   // Get evaluations by authenticated employee
-  getMyEvalAuthEmployee: async (
-    searchTerm?: string,
-    page?: number,
-    perPage?: number,
-    year?: string,
-    quarter?: string
-  ): Promise<any> => {
-    const response = await api.get("/getMyEvalAuthEmployee", {
-      params: {
-        search: searchTerm || "",
-        page: page,
-        per_page: perPage,
-        year: year,
-        quarter: quarter,
-      },
-    });
-    return response.data;
+  getMyEvalAuthEmployee: async (): Promise<any[]> => {
+    const response = await api.get("/getMyEvalAuthEmployee");
+    const data = response.data;
+
+    if (data.success && data.evaluations) {
+      return data.evaluations;
+    }
+    if (Array.isArray(data.evaluations)) {
+      return data.evaluations;
+    }
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return [];
   },
 
   // Evaluator dashboard total cards

@@ -2294,16 +2294,6 @@ function EvaluatorDashboard() {
 
           <Card>
             <CardHeader className="pb-2">
-              <Skeleton className="h-3 w-24" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-6 w-6" />
-              <Skeleton className="h-3 w-20 mt-1" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
               <Skeleton className="h-3 w-22" />
             </CardHeader>
             <CardContent>
@@ -2339,35 +2329,6 @@ function EvaluatorDashboard() {
                 </span>
               </div>
               <p className="text-sm text-gray-500 mt-1">Conducted by you</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                Average Rating
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2">
-                <span className="text-3xl font-bold text-gray-900">
-                  {stats.averageRating}
-                </span>
-                <span className="text-sm text-gray-500">/ 5.0</span>
-              </div>
-              <Badge
-                className={`mt-2 ${getRatingColor(
-                  parseFloat(stats.averageRating)
-                )}`}
-              >
-                {parseFloat(stats.averageRating) >= 4.5
-                  ? "Excellent"
-                  : parseFloat(stats.averageRating) >= 4.0
-                  ? "Good"
-                  : parseFloat(stats.averageRating) >= 3.5
-                  ? "Average"
-                  : "Needs Improvement"}
-              </Badge>
             </CardContent>
           </Card>
 
