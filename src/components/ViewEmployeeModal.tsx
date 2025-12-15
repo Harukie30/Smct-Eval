@@ -73,11 +73,25 @@ export default function ViewEmployeeModal({
   const [employeeDataError, setEmployeeDataError] = useState<string | null>(
     null
   );
+  // Format employee ID - check multiple possible field names
   let empId = "";
-
-  if (employee?.emp_id && employee.emp_id.toString().length > 4) {
-    const s = String(employee.emp_id);
-    empId = `${s.slice(0, 4)}-${s.slice(4)}`;
+  const employeeIdValue = (employee as any)?.emp_id || 
+                          (employee as any)?.employeeId || 
+                          (employee as any)?.employee_id;
+  
+  if (employeeIdValue) {
+    const idString = employeeIdValue.toString();
+    if (idString.length > 4) {
+      empId = `${idString.slice(0, 4)}-${idString.slice(4)}`;
+    } else if (idString.length > 0) {
+      // Handle shorter IDs by padding to 10 digits if needed
+      const padded = idString.padStart(10, "0");
+      if (padded.length >= 10) {
+        empId = `${padded.slice(0, 4)}-${padded.slice(4, 10)}`;
+      } else {
+        empId = idString;
+      }
+    }
   }
 
   // API Functions for Employee Data Tracking
@@ -275,7 +289,7 @@ export default function ViewEmployeeModal({
                       }`}
                     >
                       <Briefcase className="w-4 h-4 mr-1.5" />
-                      {employee.positions.label || "Not Assigned"}
+                      {employee.positions?.label || employee.positions?.name || "Not Assigned"}
                     </Badge>
                     <Badge
                       variant="outline"
@@ -297,7 +311,7 @@ export default function ViewEmployeeModal({
                       }`}
                     >
                       <Shield className="w-4 h-4 mr-1.5" />
-                      {employee.roles[0].name || "Not Assigned"}
+                      {(Array.isArray(employee.roles) && employee.roles[0]?.name) || (employee.roles?.name) || "Not Assigned"}
                     </Badge>
                   </div>
                 </div>
@@ -341,7 +355,7 @@ export default function ViewEmployeeModal({
                         isAdminVariant ? "text-slate-800" : "text-black"
                       }`}
                     >
-                      {empId}
+                      {empId || "Not Assigned"}
                     </p>
                   </div>
                 </div>
@@ -509,7 +523,7 @@ export default function ViewEmployeeModal({
                         isAdminVariant ? "text-slate-800" : "text-black"
                       }`}
                     >
-                      {employee.positions.label || "Not Assigned"}
+                      {employee.positions?.label || employee.positions?.name || "Not Assigned"}
                     </p>
                   </div>
                 </div>
@@ -558,7 +572,7 @@ export default function ViewEmployeeModal({
             </Card>
 
             {/* Branch Card */}
-            {employee.branches.branch_name && (
+            {(employee.branches?.branch_name || (Array.isArray(employee.branches) && employee.branches[0]?.branch_name)) && (
               <Card
                 className={`${
                   isAdminVariant
@@ -592,7 +606,7 @@ export default function ViewEmployeeModal({
                           isAdminVariant ? "text-slate-800" : "text-black"
                         }`}
                       >
-                        {employee.branches.branch_name}
+                        {employee.branches?.branch_name || (Array.isArray(employee.branches) && employee.branches[0]?.branch_name) || "Not Assigned"}
                       </p>
                     </div>
                   </div>
