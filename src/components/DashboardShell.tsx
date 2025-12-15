@@ -269,7 +269,7 @@ export default function DashboardShell(props: DashboardShellProps) {
   const handleMarkAllAsRead = async () => {
     // Mark as read
     try {
-      await apiService.markAllNotificationAsRead();
+      await apiService.markAllNotificationsAsRead();
       await refreshUser();
     } catch (error: any) {
       alert("test");

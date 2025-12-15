@@ -446,14 +446,20 @@ export const apiService = {
     };
   },
 
-  markNotificationAsRead: async (notificationId: number): Promise<void> => {
-    await api.put(`/notifications/${notificationId}/read`);
+  markNotificationAsRead: async (
+    notificationId: string | number
+  ): Promise<void> => {
+    await api.post(`/isReadNotification/${notificationId}`);
   },
 
-  markAllNotificationsAsRead: async (userRole: string): Promise<void> => {
-    await api.put("/notifications/read-all", null, {
-      params: { role: userRole },
-    });
+  markAllNotificationsAsRead: async (): Promise<void> => {
+    await api.post("/markAllAsRead");
+  },
+
+  deleteNotification: async (
+    notificationId: string | number
+  ): Promise<void> => {
+    await api.post(`/deleteNotification/${notificationId}`);
   },
 
   // Utility methods
