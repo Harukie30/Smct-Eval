@@ -481,6 +481,22 @@ export default function UserManagementTab() {
     setCurrentPagePending(page);
   };
 
+  // Get role color based on role name
+  const getRoleColor = (roleName: string | undefined): string => {
+    if (!roleName) return "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300";
+    
+    const role = roleName.toLowerCase();
+    if (role === "admin") {
+      return "bg-red-100 text-red-800 hover:bg-red-200 border-red-300";
+    } else if (role === "hr") {
+      return "bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300";
+    } else if (role === "evaluator") {
+      return "bg-green-100 text-green-800 hover:bg-green-200 border-green-300";
+    } else {
+      return "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300";
+    }
+  };
+
   // Handle tab change with refresh
   const handleTabChange = async (tab: "active" | "new") => {
     try {
@@ -715,7 +731,6 @@ export default function UserManagementTab() {
                       <TableHead>Position</TableHead>
                       <TableHead>Branch</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -751,7 +766,7 @@ export default function UserManagementTab() {
                       activeRegistrations.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={7}
+                          colSpan={6}
                           className="text-center py-8 text-gray-500"
                         >
                           <div className="flex flex-col items-center justify-center gap-4">
@@ -851,16 +866,18 @@ export default function UserManagementTab() {
                                 "N/A"}
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">
+                              <Badge
+                                variant="outline"
+                                className={getRoleColor(
+                                  employee.roles &&
+                                    Array.isArray(employee.roles) &&
+                                    employee.roles[0]?.name
+                                )}
+                              >
                                 {(employee.roles &&
                                   Array.isArray(employee.roles) &&
                                   employee.roles[0]?.name) ||
                                   "N/A"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className="text-green-600 bg-green-100">
-                                Active
                               </Badge>
                             </TableCell>
                             <TableCell>

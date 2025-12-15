@@ -485,10 +485,10 @@ export function EvaluationRecordsTab({
   const handlePageChange = (newPage: number) => {
     setIsPageLoading(true);
     setFeedbackPage(newPage);
-    // Simulate a brief loading delay for smooth UX
+    // Ensure skeleton shows for 2 seconds for smooth UX
     setTimeout(() => {
       setIsPageLoading(false);
-    }, 300);
+    }, 2000); // 2 seconds
   };
 
   return (
