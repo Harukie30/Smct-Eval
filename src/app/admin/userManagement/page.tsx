@@ -127,15 +127,14 @@ export default function UserManagementTab() {
   const [employeeToView, setEmployeeToView] = useState<Employee | null>(null);
   const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
 
+  // Track when page change started for pending users
+  const pendingPageChangeStartTimeRef = useRef<number | null>(null);
+
   const loadPendingUsers = async (
     searchValue: string,
-    statusFilter: string,
-    isPageChange: boolean = false
+    statusFilter: string
   ) => {
     try {
-      if (isPageChange) {
-        setIsPageLoading(true);
-      }
       const response = await apiService.getPendingRegistrations(
         searchValue,
         statusFilter,
@@ -150,22 +149,28 @@ export default function UserManagementTab() {
     } catch (error) {
       console.error("Error loading pending users:", error);
     } finally {
-      if (isPageChange) {
-        setIsPageLoading(false);
+      // If this was a page change, ensure minimum display time (2 seconds)
+      if (pendingPageChangeStartTimeRef.current !== null) {
+        const elapsed = Date.now() - pendingPageChangeStartTimeRef.current;
+        const minDisplayTime = 2000; // 2 seconds
+        const remainingTime = Math.max(0, minDisplayTime - elapsed);
+        
+        setTimeout(() => {
+          setIsPageLoading(false);
+          pendingPageChangeStartTimeRef.current = null;
+        }, remainingTime);
       }
     }
   };
 
+  // Track when page change started for active users
+  const activePageChangeStartTimeRef = useRef<number | null>(null);
+
   const loadActiveUsers = async (
     searchValue: string,
-    roleFilter: string,
-    isPageChange: boolean = false
+    roleFilter: string
   ) => {
     try {
-      if (isPageChange) {
-        setIsPageLoading(true);
-      }
-
       const response = await apiService.getActiveRegistrations(
         searchValue,
         roleFilter,
@@ -180,8 +185,16 @@ export default function UserManagementTab() {
     } catch (error) {
       console.error("Error loading active users:", error);
     } finally {
-      if (isPageChange) {
-        setIsPageLoading(false);
+      // If this was a page change, ensure minimum display time (2 seconds)
+      if (activePageChangeStartTimeRef.current !== null) {
+        const elapsed = Date.now() - activePageChangeStartTimeRef.current;
+        const minDisplayTime = 2000; // 2 seconds
+        const remainingTime = Math.max(0, minDisplayTime - elapsed);
+        
+        setTimeout(() => {
+          setIsPageLoading(false);
+          activePageChangeStartTimeRef.current = null;
+        }, remainingTime);
       }
     }
   };
@@ -243,14 +256,9 @@ export default function UserManagementTab() {
   useEffect(() => {
     const fetchData = async () => {
       if (tab === "active") {
-        // Only show page loading if currentPage changed (not search/filter term)
-        const isPageChange =
-          debouncedActiveSearchTerm === activeSearchTerm &&
-          debouncedRoleFilter === roleFilter;
         await loadActiveUsers(
           debouncedActiveSearchTerm,
-          debouncedRoleFilter,
-          isPageChange
+          debouncedRoleFilter
         );
       }
     };
@@ -277,14 +285,9 @@ export default function UserManagementTab() {
   useEffect(() => {
     const fetchData = async () => {
       if (tab === "new") {
-        // Only show page loading if currentPage changed (not search/filter term)
-        const isPageChange =
-          debouncedPendingSearchTerm === pendingSearchTerm &&
-          debouncedStatusFilter === statusFilter;
         await loadPendingUsers(
           debouncedPendingSearchTerm,
-          debouncedStatusFilter,
-          isPageChange
+          debouncedStatusFilter
         );
       }
     };
@@ -462,6 +465,20 @@ export default function UserManagementTab() {
       );
       throw error;
     }
+  };
+
+  // Handle page change for active users
+  const handleActivePageChange = (page: number) => {
+    setIsPageLoading(true);
+    activePageChangeStartTimeRef.current = Date.now();
+    setCurrentPageActive(page);
+  };
+
+  // Handle page change for pending users
+  const handlePendingPageChange = (page: number) => {
+    setIsPageLoading(true);
+    pendingPageChangeStartTimeRef.current = Date.now();
+    setCurrentPagePending(page);
   };
 
   // Handle tab change with refresh
@@ -892,9 +909,7 @@ export default function UserManagementTab() {
                       totalPages={totalActivePages}
                       total={activeTotalItems}
                       perPage={perPage}
-                      onPageChange={(page) => {
-                        setCurrentPageActive(page);
-                      }}
+                      onPageChange={handleActivePageChange}
                     />
                   </div>
                 )}
@@ -1027,6 +1042,22 @@ export default function UserManagementTab() {
                   </div>
                 </div>
 
+                {/* Status Color Indicator */}
+                <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                  <span className="text-sm font-medium text-gray-700">Status Indicators:</span>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300">
+                      ⚡ New (≤24h)
+                    </Badge>
+                    <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300">
+                      🕐 Recent (24-48h)
+                    </Badge>
+                    <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 border-red-300">
+                      ✗ Rejected
+                    </Badge>
+                  </div>
+                </div>
+
                 <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   <Table>
                     <TableHeader className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-200">
@@ -1100,11 +1131,10 @@ export default function UserManagementTab() {
                                 ) : (
                                   <>
                                     <p className="text-base font-medium mb-1">
-                                      No evaluation records to display
+                                      No new registrations
                                     </p>
                                     <p className="text-sm text-gray-400">
-                                      Records will appear here when evaluations
-                                      are submitted
+                                      New registrations will appear here
                                     </p>
                                   </>
                                 )}
@@ -1116,44 +1146,38 @@ export default function UserManagementTab() {
                         Array.isArray(pendingRegistrations) &&
                         pendingRegistrations.length > 0 ? (
                         pendingRegistrations.map((account) => {
-                          const createdDate = account.updated_at
-                            ? new Date(account.updated_at)
-                            : null;
-                          let isNew = false;
-                          let isRecentlyAdded = false;
-
-                          if (createdDate) {
-                            const now = new Date();
-                            const minutesDiff =
-                              (now.getTime() - createdDate.getTime()) /
-                              (1000 * 60);
-                            const hoursDiff = minutesDiff / 60;
-                            isNew = hoursDiff <= 30;
-                            isRecentlyAdded = hoursDiff > 30 && hoursDiff <= 40;
-                          }
+                          // Check if registration is new (within 24 hours) or recent (24-48 hours)
+                          const registrationDate = new Date(account.created_at);
+                          const now = new Date();
+                          const hoursDiff = (now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60);
+                          const isNew = hoursDiff <= 24;
+                          const isRecent = hoursDiff > 24 && hoursDiff <= 48;
+                          const isRejected = account.is_active === "declined";
 
                           return (
                             <TableRow
                               key={account.id}
                               className={
-                                isNew
-                                  ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100"
-                                  : isRecentlyAdded
-                                  ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
-                                  : "hover:bg-gray-50"
+                                isRejected
+                                  ? "bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100"
+                                  : isNew
+                                    ? "bg-yellow-50 border-l-4 border-l-yellow-500 hover:bg-yellow-100"
+                                    : isRecent
+                                      ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
+                                      : "hover:bg-gray-50"
                               }
                             >
-                              <TableCell className="font-medium">
+                              <TableCell className="px-6 py-3 font-medium">
                                 <div className="flex items-center gap-2">
                                   <span>
                                     {account.fname + " " + account.lname}
                                   </span>
-                                  {isNew && (
-                                    <Badge className="bg-green-500 text-white text-xs px-2 py-0.5 font-semibold">
-                                      ✨ New
+                                  {!isRejected && isNew && (
+                                    <Badge className="bg-yellow-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                      ⚡ New
                                     </Badge>
                                   )}
-                                  {isRecentlyAdded && !isNew && (
+                                  {!isRejected && isRecent && !isNew && (
                                     <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5 font-semibold">
                                       🕐 Recent
                                     </Badge>
@@ -1164,7 +1188,7 @@ export default function UserManagementTab() {
                                 {account.email}
                               </TableCell>
                               <TableCell className="px-6 py-3">
-                                {account.positions.label}
+                                {account.positions?.label || "N/A"}
                               </TableCell>
                               <TableCell className="px-6 py-3">
                                 {new Date(
@@ -1248,9 +1272,7 @@ export default function UserManagementTab() {
                         totalPages={totalPendingPages}
                         total={pendingTotalItems}
                         perPage={perPage}
-                        onPageChange={(page) => {
-                          setCurrentPagePending(page);
-                        }}
+                        onPageChange={handlePendingPageChange}
                       />
                     </div>
                   )}

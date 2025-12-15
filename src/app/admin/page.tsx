@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,14 +55,8 @@ export default function OverviewTab() {
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
 
-  const loadEvaluations = async (
-    searchValue: string,
-    isPageChange: boolean = false
-  ) => {
+  const loadEvaluations = async (searchValue: string) => {
     try {
-      if (isPageChange) {
-        setIsPageLoading(true);
-      }
       const response = await clientDataService.getSubmissions(
         searchValue,
         currentPage,
@@ -74,10 +68,6 @@ export default function OverviewTab() {
       setPerPage(response.per_page);
     } catch (error) {
       console.error("Error loading evaluations:", error);
-    } finally {
-      if (isPageChange) {
-        setIsPageLoading(false);
-      }
     }
   };
   useEffect(() => {
@@ -104,14 +94,31 @@ export default function OverviewTab() {
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
-  // Fetch API whenever debounced search term changes
+  // Track when page change started
+  const pageChangeStartTimeRef = useRef<number | null>(null);
+
+  // Fetch API whenever debounced search term or page changes
   useEffect(() => {
     const fetchData = async () => {
-      // Only show page loading if currentPage changed (not search term)
-      const isPageChange = debouncedSearchTerm === searchTerm;
-      await loadEvaluations(debouncedSearchTerm, isPageChange);
-      const getTotals = await clientDataService.adminDashboard();
-      setDashboardTotals(getTotals);
+      try {
+        await loadEvaluations(debouncedSearchTerm);
+        const getTotals = await clientDataService.adminDashboard();
+        setDashboardTotals(getTotals);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        // If this was a page change, ensure minimum display time (2 seconds)
+        if (pageChangeStartTimeRef.current !== null) {
+          const elapsed = Date.now() - pageChangeStartTimeRef.current;
+          const minDisplayTime = 2000; // 2 seconds
+          const remainingTime = Math.max(0, minDisplayTime - elapsed);
+          
+          setTimeout(() => {
+            setIsPageLoading(false);
+            pageChangeStartTimeRef.current = null;
+          }, remainingTime);
+        }
+      }
     };
 
     fetchData();
@@ -127,6 +134,12 @@ export default function OverviewTab() {
     } finally {
       setRefreshing(false);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    setIsPageLoading(true);
+    pageChangeStartTimeRef.current = Date.now();
+    setCurrentPage(page);
   };
 
   const getQuarterColor = (quarter: string): string => {
@@ -328,6 +341,19 @@ export default function OverviewTab() {
                 scrollbarColor: "#cbd5e1 #f1f5f9",
               }}
             >
+              {refreshing && ( // Only show spinner for initial refresh
+                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                    <div className="relative">
+                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 font-medium">Loading evaluation records...</p>
+                  </div>
+                </div>
+              )}
               <Table className="min-w-full">
                 <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                   <TableRow>
@@ -341,7 +367,7 @@ export default function OverviewTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
-                  {refreshing || isPageLoading ? (
+                  {(refreshing || isPageLoading) ? (
                     Array.from({ length: itemsPerPage }).map((_, index) => (
                       <TableRow key={`skeleton-${index}`}>
                         <TableCell className="px-6 py-3">
@@ -548,9 +574,7 @@ export default function OverviewTab() {
               totalPages={totalPages}
               total={overviewTotal}
               perPage={perPage}
-              onPageChange={(page) => {
-                setCurrentPage(page);
-              }}
+              onPageChange={handlePageChange}
             />
           )}
         </div>
