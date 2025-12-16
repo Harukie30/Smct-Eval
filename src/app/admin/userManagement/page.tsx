@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, use } from "react";
 import {
   Card,
   CardContent,
@@ -186,10 +186,9 @@ export default function UserManagementTab() {
     }
   };
 
-  //render when page reload not loading not everySearch or Filters
   useEffect(() => {
-    const mountData = async () => {
-      setRefresh(true);
+    if (!isAddUserModalOpen && !isEditModalOpen) return;
+    const getAddUserData = async () => {
       try {
         const [positions, branches, departments] = await Promise.all([
           apiService.getPositions(),
@@ -199,6 +198,18 @@ export default function UserManagementTab() {
         setPositionData(positions);
         setBranchesData(branches);
         setDepartmentData(departments);
+      } catch (error) {
+        console.log("Error fetching add user data:", error);
+      }
+    };
+    getAddUserData();
+  }, [isAddUserModalOpen, isEditModalOpen]);
+
+  //render when page reload not loading not everySearch or Filters
+  useEffect(() => {
+    const mountData = async () => {
+      setRefresh(true);
+      try {
         const roles = await apiService.getAllRoles();
         setRoles(roles);
         await loadActiveUsers(activeSearchTerm, roleFilter);
@@ -1031,13 +1042,13 @@ export default function UserManagementTab() {
                       variant="outline"
                       className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300"
                     >
-                      ⚡ New (≤24h)
+                      ⚡ New (≤24min)
                     </Badge>
                     <Badge
                       variant="outline"
                       className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300"
                     >
-                      🕐 Recent (24-48h)
+                      🕐 Recent (24-48min)
                     </Badge>
                     <Badge
                       variant="outline"
@@ -1136,8 +1147,11 @@ export default function UserManagementTab() {
                         Array.isArray(pendingRegistrations) &&
                         pendingRegistrations.length > 0 ? (
                         pendingRegistrations.map((account) => {
-                          const registrationDate = new Date(account.created_at);
+                          const registrationDate = account.updated_at
+                            ? new Date(account.updated_at)
+                            : null;
                           const now = new Date();
+                          if (registrationDate === null) return null;
                           const hoursDiff =
                             (now.getTime() - registrationDate.getTime()) /
                             (1000 * 60 * 60);
@@ -1163,12 +1177,12 @@ export default function UserManagementTab() {
                                   <span>
                                     {account.fname + " " + account.lname}
                                   </span>
-                                  {isNew && (
-                                    <Badge className="bg-green-500 text-white text-xs px-2 py-0.5 font-semibold">
-                                      ✨ New
+                                  {!isRejected && isNew && (
+                                    <Badge className="bg-yellow-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                      ⚡ New
                                     </Badge>
                                   )}
-                                  {isRecent && !isNew && (
+                                  {!isRejected && isRecent && !isNew && (
                                     <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5 font-semibold">
                                       🕐 Recent
                                     </Badge>
