@@ -69,8 +69,6 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const router = useRouter();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Restore session on mount
-  // ⬇ Fetch authenticated user from Sanctum
   async function refreshUser() {
     try {
       const res = await apiService.authUser();

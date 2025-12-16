@@ -693,13 +693,12 @@ export default function UserManagementTab() {
                 <Table>
                   <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                     <TableRow>
-                      <TableHead>Name</TableHead>
+                      <TableHead className="pl-10">Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Position</TableHead>
                       <TableHead>Branch</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="pl-20">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -806,7 +805,7 @@ export default function UserManagementTab() {
                                 : "hover:bg-gray-50"
                             }
                           >
-                            <TableCell className="font-medium">
+                            <TableCell className="font-medium pl-5">
                               <div className="flex items-center gap-2">
                                 <span>
                                   {employee.fname + " " + employee.lname}
@@ -841,11 +840,7 @@ export default function UserManagementTab() {
                                   "N/A"}
                               </Badge>
                             </TableCell>
-                            <TableCell>
-                              <Badge className="text-green-600 bg-green-100">
-                                Active
-                              </Badge>
-                            </TableCell>
+
                             <TableCell>
                               <div className="flex space-x-2">
                                 <Button
