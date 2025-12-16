@@ -45,6 +45,7 @@ interface UserContextType {
   login: (username: string, password: string) => Promise<any>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  setIsRefreshing: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -66,6 +67,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [showLogoutLoading, setShowLogoutLoading] = useState(false);
   const router = useRouter();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   // Restore session on mount
   // ⬇ Fetch authenticated user from Sanctum
   async function refreshUser() {
@@ -80,16 +83,20 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   }
 
   useEffect(() => {
-    const loadUserAuth = async () => {};
-    try {
-      refreshUser();
-    } catch (error) {
-      console.error("Error during session restoration:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    const loadUserAuth = async () => {
+      try {
+        const res = await apiService.authUser();
+        const userData = res?.data || res;
+        setUser(userData);
+      } catch (error) {
+        console.error("Error during session restoration:", error);
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    };
     loadUserAuth();
-  }, []);
+  }, [isRefreshing]);
 
   // ⬇ Login using Sanctum
   const login = async (username: string, password: string) => {
@@ -129,6 +136,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     login,
     logout,
     refreshUser,
+    setIsRefreshing,
   };
 
   return (
