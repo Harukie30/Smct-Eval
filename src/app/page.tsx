@@ -36,7 +36,6 @@ import { withPublicPage } from "@/hoc";
 function LandingLoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn] = useState(false);

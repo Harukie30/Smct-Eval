@@ -41,6 +41,7 @@ import { Notification } from "@/lib/types";
 import { apiService } from "@/lib/apiService";
 import { useRouter } from "next/navigation";
 import { toastMessages } from "@/lib/toastMessages";
+import echo from "@/utils/echo";
 
 export type SidebarItem = {
   id: string;
@@ -92,30 +93,21 @@ export default function DashboardShell(props: DashboardShellProps) {
   // Toggle state for help buttons (Contact Devs & Dashboard Guide)
   const [isHelpButtonsVisible, setIsHelpButtonsVisible] = useState(true);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
-
-  const { user, logout, refreshUser } = useUser();
+  const { user, logout, setIsRefreshing } = useUser();
 
   const notificationCount = user?.notification_counts ?? 0;
 
-  // Get user role for notifications - extract from roles array
-  const userRole = useMemo(() => {
-    if (!user?.roles) return "employee";
-    // Handle roles as array or object
-    if (Array.isArray(user.roles)) {
-      return user.roles[0]?.name || user.roles[0] || "employee";
-    }
-    return user.roles?.name || "employee";
-  }, [user]);
-
-  const { notifications, unreadCount, markAsRead, markAllAsRead } =
-    useNotifications(userRole);
-
-  // Update profile function
-  const updateProfile = async (updatedProfile: UserProfile) => {
-    // Update user data - this will be handled by the parent component's onSaveProfile
-    // For now, we'll refresh the user data from the server
-    await refreshUser();
-  };
+  useEffect(() => {
+    const setupEcho = async () => {
+      echo
+        .private(`App.Models.User.${user?.id}`)
+        .notification((notification: any) => {
+          console.log("New notification received:", notification);
+          setIsRefreshing(true);
+        });
+    };
+    setupEcho();
+  }, []);
 
   // Memoize dashboard type detection to avoid dependency issues
   const dashboardType = useMemo(() => {
@@ -233,7 +225,7 @@ export default function DashboardShell(props: DashboardShellProps) {
       }
 
       // Refresh user data from server to get updated profile
-      await refreshUser();
+      setIsRefreshing(true);
 
       setIsProfileModalOpen(false);
     } catch (error) {
@@ -269,14 +261,14 @@ export default function DashboardShell(props: DashboardShellProps) {
   const handleMarkAllAsRead = async () => {
     // Mark as read
     try {
-      await apiService.markAllNotificationAsRead();
-      await refreshUser();
+      await apiService.markAllNotificationsAsRead();
+      setIsRefreshing(true);
     } catch (error: any) {
       alert("test");
-      // toastMessages.generic.error(
-      //   "Mark All asRead Failed : ",
-      //   error?.response?.data?.message || error?.message || "Unknown error"
-      // );
+      toastMessages.generic.error(
+        "Mark All asRead Failed : ",
+        error?.response?.data?.message || error?.message || "Unknown error"
+      );
     }
 
     // Close the notification panel
@@ -290,7 +282,7 @@ export default function DashboardShell(props: DashboardShellProps) {
     e.stopPropagation(); // Prevent triggering the notification click
     try {
       await apiService.deleteNotification(notification.id);
-      refreshUser();
+      setIsRefreshing(true);
     } catch (error: any) {
       toastMessages.generic.error(
         "isRead Failed : ",
@@ -926,7 +918,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                 <Button
                   onClick={async () => {
                     setIsNotificationDetailOpen(false);
-                    refreshUser();
+                    setIsRefreshing(true);
                   }}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
                 >
