@@ -99,6 +99,7 @@ export function EmployeesTab({
   const [employeeViewMode, setEmployeeViewMode] = useState<'directory' | 'performance'>('directory');
   const [employeesPage, setEmployeesPage] = useState(1);
   const [isPageChanging, setIsPageChanging] = useState(false);
+  const [isPerformanceLoading, setIsPerformanceLoading] = useState(false);
   const itemsPerPage = 8;
 
   // New Registrations state
@@ -310,7 +311,14 @@ export function EmployeesTab({
                     <Button
                       variant={employeeViewMode === 'performance' ? 'default' : 'ghost'}
                       size="sm"
-                      onClick={() => setEmployeeViewMode('performance')}
+                      onClick={() => {
+                        setIsPerformanceLoading(true);
+                        setEmployeeViewMode('performance');
+                        // Simulate loading delay for smooth transition
+                        setTimeout(() => {
+                          setIsPerformanceLoading(false);
+                        }, 2000);
+                      }}
                       className={employeeViewMode === 'performance' ? 'bg-blue-600 text-white hover:bg-blue-700' : 'hover:bg-gray-200'}
                     >
                       📊 Performance
@@ -604,10 +612,10 @@ export function EmployeesTab({
                                         key={employee.id}
                                         className={
                                           isNew
-                                            ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100"
+                                            ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100 hover:shadow-md transition-all duration-200 cursor-pointer"
                                             : isRecentlyAdded
-                                              ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
-                                              : "hover:bg-gray-50"
+                                              ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                              : "hover:bg-blue-100 hover:shadow-md transition-all duration-200 cursor-pointer"
                                         }
                                       >
                                         <TableCell className="font-medium">
@@ -693,54 +701,87 @@ export function EmployeesTab({
                 {/* Performance Distribution View */}
                 {employeeViewMode === 'performance' && (
                   <div className="max-h-[70vh] overflow-y-auto space-y-4 pr-2">
-                    {Object.entries(hrMetrics?.performanceDistribution || {}).map(([level, count]) => {
-                      // Get employees for this performance level (mock data for now)
-                      const performanceEmployees = getPerformanceEmployees(level);
-
-                      return (
-                        <div key={level} className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    {isPerformanceLoading ? (
+                      // Skeleton loading animation
+                      Array.from({ length: 4 }).map((_, index) => (
+                        <div key={`skeleton-performance-${index}`} className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
                           <div className="flex justify-between items-center">
                             <div className="flex items-center space-x-2">
-                              <span className="capitalize font-semibold text-lg">{level}</span>
-                              <Badge variant="outline" className="text-xs">
-                                {count} employees
-                              </Badge>
+                              <Skeleton className="h-6 w-24" />
+                              <Skeleton className="h-5 w-20" />
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-xs h-7 px-3 hover:bg-blue-100"
-                              onClick={() => onViewPerformanceEmployees(level)}
-                            >
-                              View All →
-                            </Button>
+                            <Skeleton className="h-7 w-20" />
                           </div>
-                          <Progress
-                            value={(count / (hrMetrics?.totalEmployees || 1)) * 100}
-                            className="h-3"
-                          />
-                          {performanceEmployees.length > 0 && (
-                            <div className="space-y-2 mt-3">
-                              <p className="text-xs text-gray-600 font-medium">Sample employees:</p>
-                              <div className="space-y-2">
-                                {performanceEmployees.map((emp) => (
-                                  <div key={emp.id} className="flex items-center justify-between text-sm bg-white p-3 rounded border border-gray-200 hover:border-blue-300 transition-colors">
-                                    <div className="flex items-center space-x-3">
-                                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                      <span className="font-medium">{emp.name}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="outline" className="text-xs">{emp.department}</Badge>
-                                      <span className="text-gray-500 text-xs">{emp.position}</span>
-                                    </div>
+                          <Skeleton className="h-3 w-full" />
+                          <div className="space-y-2 mt-3">
+                            <Skeleton className="h-4 w-32" />
+                            <div className="space-y-2">
+                              {Array.from({ length: 2 }).map((_, empIndex) => (
+                                <div key={`skeleton-emp-${empIndex}`} className="flex items-center justify-between text-sm bg-white p-3 rounded border border-gray-200">
+                                  <div className="flex items-center space-x-3">
+                                    <Skeleton className="w-2 h-2 rounded-full" />
+                                    <Skeleton className="h-4 w-32" />
                                   </div>
-                                ))}
-                              </div>
+                                  <div className="flex items-center gap-2">
+                                    <Skeleton className="h-5 w-20" />
+                                    <Skeleton className="h-4 w-24" />
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          )}
+                          </div>
                         </div>
-                      );
-                    })}
+                      ))
+                    ) : (
+                      Object.entries(hrMetrics?.performanceDistribution || {}).map(([level, count]) => {
+                        // Get employees for this performance level (mock data for now)
+                        const performanceEmployees = getPerformanceEmployees(level);
+
+                        return (
+                          <div key={level} className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center space-x-2">
+                                <span className="capitalize font-semibold text-lg">{level}</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {count} employees
+                                </Badge>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs h-7 px-3 hover:bg-blue-100"
+                                onClick={() => onViewPerformanceEmployees(level)}
+                              >
+                                View All →
+                              </Button>
+                            </div>
+                            <Progress
+                              value={(count / (hrMetrics?.totalEmployees || 1)) * 100}
+                              className="h-3"
+                            />
+                            {performanceEmployees.length > 0 && (
+                              <div className="space-y-2 mt-3">
+                                <p className="text-xs text-gray-600 font-medium">Sample employees:</p>
+                                <div className="space-y-2">
+                                  {performanceEmployees.map((emp) => (
+                                    <div key={emp.id} className="flex items-center justify-between text-sm bg-white p-3 rounded border border-gray-200 hover:border-blue-300 transition-colors">
+                                      <div className="flex items-center space-x-3">
+                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                        <span className="font-medium">{emp.name}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="text-xs">{emp.department}</Badge>
+                                        <span className="text-gray-500 text-xs">{emp.position}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 )}
               </CardContent>

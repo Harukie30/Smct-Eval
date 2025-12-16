@@ -457,10 +457,10 @@ export function EmployeesTab({
                           key={employee.id}
                           className={
                             isNew
-                              ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100"
+                              ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100 hover:shadow-md transition-all duration-200 cursor-pointer"
                               : isRecentlyAdded
-                                ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
-                                : "hover:bg-gray-50"
+                                ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                : "hover:bg-blue-100 hover:shadow-md transition-all duration-200 cursor-pointer"
                           }
                         >
                           <TableCell className="font-medium">
