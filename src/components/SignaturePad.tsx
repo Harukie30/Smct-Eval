@@ -294,27 +294,29 @@ export default function SignaturePad({
             )}
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-block">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={user?.requestSignatureReset !== 0}
-                  size="sm"
-                  onClick={onRequestReset}
-                  className="text-orange-600 border-orange-300 hover:bg-orange-50"
-                >
-                  Request Reset
-                </Button>
-              </span>
-            </TooltipTrigger>
-            {user?.requestSignatureReset !== 0 && (
-              <TooltipContent>
-                <p>Wait for admin to approve</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
+          {!hideRequestReset && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-block">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={user?.requestSignatureReset !== 0}
+                    size="sm"
+                    onClick={onRequestReset}
+                    className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                  >
+                    Request Reset
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {user?.requestSignatureReset !== 0 && (
+                <TooltipContent>
+                  <p>Wait for admin to approve</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          )}
         </div>
 
         {hasSignature && (
