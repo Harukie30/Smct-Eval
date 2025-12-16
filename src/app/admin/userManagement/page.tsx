@@ -1021,7 +1021,32 @@ export default function UserManagementTab() {
                     </Button>
                   </div>
                 </div>
-
+                {/* Status Color Indicator */}
+                <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                  <span className="text-sm font-medium text-gray-700">
+                    Status Indicators:
+                  </span>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Badge
+                      variant="outline"
+                      className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300"
+                    >
+                      ⚡ New (≤24h)
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300"
+                    >
+                      🕐 Recent (24-48h)
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="bg-red-100 text-red-800 hover:bg-red-200 border-red-300"
+                    >
+                      ✗ Rejected
+                    </Badge>
+                  </div>
+                </div>
                 <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   <Table>
                     <TableHeader className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-200">
@@ -1111,34 +1136,29 @@ export default function UserManagementTab() {
                         Array.isArray(pendingRegistrations) &&
                         pendingRegistrations.length > 0 ? (
                         pendingRegistrations.map((account) => {
-                          const createdDate = account.updated_at
-                            ? new Date(account.updated_at)
-                            : null;
-                          let isNew = false;
-                          let isRecentlyAdded = false;
-
-                          if (createdDate) {
-                            const now = new Date();
-                            const minutesDiff =
-                              (now.getTime() - createdDate.getTime()) /
-                              (1000 * 60);
-                            const hoursDiff = minutesDiff / 60;
-                            isNew = hoursDiff <= 30;
-                            isRecentlyAdded = hoursDiff > 30 && hoursDiff <= 40;
-                          }
+                          const registrationDate = new Date(account.created_at);
+                          const now = new Date();
+                          const hoursDiff =
+                            (now.getTime() - registrationDate.getTime()) /
+                            (1000 * 60 * 60);
+                          const isNew = hoursDiff <= 24;
+                          const isRecent = hoursDiff > 24 && hoursDiff <= 48;
+                          const isRejected = account.is_active === "declined";
 
                           return (
                             <TableRow
                               key={account.id}
                               className={
-                                isNew
-                                  ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100"
-                                  : isRecentlyAdded
+                                isRejected
+                                  ? "bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100"
+                                  : isNew
+                                  ? "bg-yellow-50 border-l-4 border-l-yellow-500 hover:bg-yellow-100"
+                                  : isRecent
                                   ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
                                   : "hover:bg-gray-50"
                               }
                             >
-                              <TableCell className="font-medium">
+                              <TableCell className="px-6 py-3 font-medium">
                                 <div className="flex items-center gap-2">
                                   <span>
                                     {account.fname + " " + account.lname}
@@ -1148,7 +1168,7 @@ export default function UserManagementTab() {
                                       ✨ New
                                     </Badge>
                                   )}
-                                  {isRecentlyAdded && !isNew && (
+                                  {isRecent && !isNew && (
                                     <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5 font-semibold">
                                       🕐 Recent
                                     </Badge>
