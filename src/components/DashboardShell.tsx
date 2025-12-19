@@ -29,6 +29,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 import ProfileCard, { UserProfile } from "./ProfileCard";
 import ProfileModal from "./ProfileModal";
 import ContactDevsModal from "./ContactDevsModal";
@@ -93,6 +94,7 @@ export default function DashboardShell(props: DashboardShellProps) {
   // Toggle state for help buttons (Contact Devs & Dashboard Guide)
   const [isHelpButtonsVisible, setIsHelpButtonsVisible] = useState(true);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
+  const [isDeletingNotification, setIsDeletingNotification] = useState(false);
   const { user, logout, setIsRefreshing } = useUser();
 
   const notificationCount = user?.notification_counts ?? 0;
@@ -108,6 +110,7 @@ export default function DashboardShell(props: DashboardShellProps) {
     };
     setupEcho();
   }, []);
+
 
   // Memoize dashboard type detection to avoid dependency issues
   const dashboardType = useMemo(() => {
@@ -280,12 +283,27 @@ export default function DashboardShell(props: DashboardShellProps) {
     e: React.MouseEvent
   ) => {
     e.stopPropagation(); // Prevent triggering the notification click
+    
+    // Set deleting state to show skeleton on all notifications
+    setIsDeletingNotification(true);
+    
     try {
+      // Wait 2 seconds to show skeleton animation on all notifications
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // Actually delete the notification
       await apiService.deleteNotification(notification.id);
       setIsRefreshing(true);
+      
+      // Reset deleting state after a short delay to allow refresh to complete
+      setTimeout(() => {
+        setIsDeletingNotification(false);
+      }, 300);
     } catch (error: any) {
+      // Remove deleting state on error
+      setIsDeletingNotification(false);
       toastMessages.generic.error(
-        "isRead Failed : ",
+        "Delete Failed : ",
         error?.response?.data?.message || error?.message || "Unknown error"
       );
     }
@@ -374,61 +392,83 @@ export default function DashboardShell(props: DashboardShellProps) {
                         No notifications
                       </div>
                     ) : (
-                      user?.notifications.map((notification: any) => (
-                        <div
-                          key={notification.id}
-                          className={`p-4 border-b hover:bg-gray-50 ${
-                            notification.read_at === "" ||
-                            notification.read_at === null
-                              ? "bg-blue-50 border-l-4 border-l-blue-500"
-                              : ""
-                          }`}
-                        >
-                          <div className="flex items-start space-x-3">
-                            <span className="text-sm opacity-50">
-                              {notification.read_at === "" ||
-                              notification.read_at === null
-                                ? "✅"
-                                : ""}{" "}
-                            </span>
+                      user?.notifications.map((notification: any) => {
+                        // Show skeleton animation on all notifications when any deletion is in progress
+                        if (isDeletingNotification) {
+                          return (
                             <div
-                              className="flex-1 min-w-0 cursor-pointer"
-                              onClick={() =>
-                                handleNotificationClick(notification)
-                              }
+                              key={notification.id}
+                              className="p-4 border-b bg-gray-50"
                             >
-                              <p className="text-sm text-gray-900">
-                                {notification.data.message.length > 50
-                                  ? notification.data.message.slice(0, 50) +
-                                    "  . . ."
-                                  : notification.data.message}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-2">
-                                {new Date(
-                                  notification.created_at
-                                ).toLocaleString()}
-                              </p>
+                              <div className="flex items-start space-x-3">
+                                <Skeleton className="h-4 w-4 rounded-full" />
+                                <div className="flex-1 min-w-0 space-y-2">
+                                  <Skeleton className="h-4 w-full" />
+                                  <Skeleton className="h-3 w-2/3" />
+                                </div>
+                                <Skeleton className="h-6 w-6 rounded" />
+                              </div>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              {notification.read_at === "" ||
-                                (notification.read_at === null && (
-                                  <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
-                                ))}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) =>
-                                  handleDeleteNotification(notification, e)
+                          );
+                        }
+                        
+                        return (
+                          <div
+                            key={notification.id}
+                            className={`p-4 border-b hover:bg-gray-50 ${
+                              notification.read_at === "" ||
+                              notification.read_at === null
+                                ? "bg-blue-50 border-l-4 border-l-blue-500"
+                                : ""
+                            }`}
+                          >
+                            <div className="flex items-start space-x-3">
+                              <span className="text-sm opacity-50">
+                                {notification.read_at === "" ||
+                                notification.read_at === null
+                                  ? "✅"
+                                  : ""}{" "}
+                              </span>
+                              <div
+                                className="flex-1 min-w-0 cursor-pointer"
+                                onClick={() =>
+                                  handleNotificationClick(notification)
                                 }
-                                className="p-1 h-6 w-6 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                                title="Delete notification"
                               >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                                <p className="text-sm text-gray-900">
+                                  {notification.data.message.length > 50
+                                    ? notification.data.message.slice(0, 50) +
+                                      "  . . ."
+                                    : notification.data.message}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-2">
+                                  {new Date(
+                                    notification.created_at
+                                  ).toLocaleString()}
+                                </p>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {notification.read_at === "" ||
+                                  (notification.read_at === null && (
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                                  ))}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) =>
+                                    handleDeleteNotification(notification, e)
+                                  }
+                                  className="p-1 h-6 w-6 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                                  title="Delete notification"
+                                  disabled={isDeletingNotification}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>

@@ -77,7 +77,15 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       setUser(userData);
     } catch (error: any) {
       const status = error?.status || error?.response?.status;
-      console.log(status);
+      // If 401, user is not authenticated - clear user state
+      // This is expected when no user is logged in, so we handle silently
+      if (status === 401) {
+        setUser(null);
+        // Don't log 401 errors as they're expected when not authenticated
+        return;
+      }
+      // Only log non-401 errors
+      console.error("Error refreshing user:", error);
     }
   }
 
@@ -87,8 +95,17 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
         const res = await apiService.authUser();
         const userData = res?.data || res;
         setUser(userData);
-      } catch (error) {
-        console.error("Error during session restoration:", error);
+      } catch (error: any) {
+        const status = error?.status || error?.response?.status;
+        // If 401, user is not authenticated - clear user state
+        // This is expected when no user is logged in, so we handle silently
+        if (status === 401) {
+          setUser(null);
+          // Don't log 401 errors as they're expected when not authenticated
+        } else {
+          // Only log non-401 errors
+          console.error("Error during session restoration:", error);
+        }
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
