@@ -165,26 +165,30 @@ export default function OverviewTab() {
   };
 
   // Helper functions
-  const getTimeAgo = (submittedAt: string) => {
-    const submissionDate = new Date(submittedAt);
-    const now = new Date();
-    const diffInMs = now.getTime() - submissionDate.getTime();
-    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 
-    if (diffInMinutes < 1) return "Just now";
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    if (diffInDays < 7) return `${diffInDays}d ago`;
-    return new Date(submittedAt).toLocaleDateString();
+  const getTimeAgo = (submittedAt: string) => {
+    const diffSeconds = Math.floor(
+      (Date.now() - new Date(submittedAt).getTime()) / 1000
+    );
+
+    if (diffSeconds < 60) return rtf.format(-diffSeconds, "second");
+    if (diffSeconds < 3600)
+      return rtf.format(-Math.floor(diffSeconds / 60), "minute");
+    if (diffSeconds < 86400)
+      return rtf.format(-Math.floor(diffSeconds / 3600), "hour");
+    if (diffSeconds < 604800)
+      return rtf.format(-Math.floor(diffSeconds / 86400), "day");
+
+    return;
   };
 
   const getQuarterColor = (quarter: string): string => {
     if (quarter.includes("Q1")) return "bg-blue-100 text-blue-800";
     if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
     if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
-    return "bg-purple-100 text-purple-800";
+    if (quarter.includes("Q4")) return "bg-purple-100 text-purple-800";
+    return "bg-gray-100 text-gray-800";
   };
 
   return (

@@ -150,11 +150,6 @@ export const apiService = {
     return response.data.accounts || [];
   },
 
-  uploadAvatar: async (formData: FormData): Promise<any> => {
-    const response = await api.post("/uploadAvatar", formData);
-    return response.data;
-  },
-
   // Profile management
   getProfile: async (id: number): Promise<any> => {
     const response = await api.get(`/profiles/${id}`);
@@ -693,8 +688,18 @@ export const apiService = {
   },
 
   // Evaluator dashboard total cards
-  evaluatorDashboard: async (): Promise<any> => {
-    const response = await api.get("/evaluatorDashboard");
+  evaluatorDashboard: async (
+    searchTerm?: string,
+    currentPage?: number,
+    itemsPerPage?: number
+  ): Promise<any> => {
+    const response = await api.get("/evaluatorDashboard", {
+      params: {
+        search: searchTerm || "",
+        page: currentPage,
+        per_page: itemsPerPage,
+      },
+    });
     return response.data;
   },
 

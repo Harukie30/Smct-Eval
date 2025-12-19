@@ -25,116 +25,283 @@ import {
   getQuarterFromEvaluationData,
   getQuarterColor,
 } from "@/lib/quarterUtils";
+import apiService from "@/lib/apiService";
+import { Progress } from "@/components/ui/progress";
+import EvaluationsPagination from "@/components/paginationComponent";
+import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import { set } from "date-fns";
 
-interface OverviewTabProps {
-  recentSubmissions: any[];
-  seenSubmissions: Set<number>;
-  isRefreshing: boolean;
-  isFeedbackRefreshing: boolean;
-  onRefresh: () => void;
-  onViewEvaluation: (submission: any) => void;
-  onMarkAsSeen: (submissionId: number) => void;
-  getSubmissionHighlight: (
-    submittedAt: string,
-    submissionId: number,
-    approvalStatus?: string
-  ) => any;
-  getTimeAgo: (submittedAt: string) => string;
-  calculateOverallRating: (evaluationData: any) => number;
-  isActive?: boolean;
+interface Review {
+  id: number;
+  employee: any;
+  evaluator: any;
+  reviewTypeProbationary: number | string;
+  reviewTypeRegular: number | string;
+  created_at: string;
+  rating: number;
+  status: string;
 }
 
 export default function OverviewTab() {
-  const [overviewSearch, setOverviewSearch] = useState("");
-  const [overviewPage, setOverviewPage] = useState(1);
-  const itemsPerPage = 4;
+  //data
+  const [data, setData] = useState<any | null>(null);
+  const [totalEvaluations, setTotalEvaluations] = useState(0);
+  const [totalPending, setTotalPending] = useState(0);
+  const [totalApproved, setTotalApproved] = useState(0);
 
-  // Ensure scrollbar is always visible
+  //filters and pagination
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(4);
+  const [overviewTotal, setOverviewTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [perPage, setPerPage] = useState(0);
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
+
+  //view data
+  const [overviewSearch, setOverviewSearch] = useState("");
+
+  //refreshing state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isPaginate, setIsPaginate] = useState(false);
+
   useEffect(() => {
-    const style = document.createElement("style");
-    style.textContent = `
-      .overview-table::-webkit-scrollbar {
-        width: 12px;
-        height: 12px;
-        -webkit-appearance: none;
+    if (!isRefreshing) return;
+    const fetchData = async () => {
+      try {
+        setIsPaginate(true);
+        const response = await apiService.evaluatorDashboard(
+          searchTerm,
+          currentPage,
+          itemsPerPage
+        );
+
+        setData(response.myEval_as_Evaluator.data);
+        setTotalEvaluations(response.total_evaluations);
+        setTotalPending(response.total_pending);
+        setTotalApproved(response.total_approved);
+
+        setOverviewTotal(response.myEval_as_Evaluator.total);
+        setTotalPages(response.myEval_as_Evaluator.last_page);
+        setPerPage(response.myEval_as_Evaluator.per_page);
+        setIsPaginate(false);
+        setIsRefreshing(false);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
       }
-      .overview-table::-webkit-scrollbar-track {
-        background: #f1f5f9;
-        border-radius: 6px;
-      }
-      .overview-table::-webkit-scrollbar-thumb {
-        background: #94a3b8;
-        border-radius: 6px;
-        border: 2px solid #f1f5f9;
-      }
-      .overview-table::-webkit-scrollbar-thumb:hover {
-        background: #64748b;
-      }
-      /* Force scrollbar to always be visible */
-      .overview-table {
-        scrollbar-width: thin;
-        scrollbar-color: #94a3b8 #f1f5f9;
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      document.head.removeChild(style);
     };
-  }, []);
+    fetchData();
+  }, [isRefreshing, currentPage, debouncedSearchTerm]);
+
+  useEffect(() => {
+    const debounceTimeout = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    return () => clearTimeout(debounceTimeout);
+  }, [searchTerm]);
+
+  const handleViewEvaluation = async (review: Review) => {
+    try {
+      const submission = await apiService.getSubmissionById(review.id);
+
+      if (submission) {
+        setSelectedSubmission(submission);
+        setIsViewResultsModalOpen(true);
+      } else {
+        console.error("Submission not found for review ID:", review.id);
+      }
+    } catch (error) {
+      console.error("Error fetching submission details:", error);
+    }
+  };
+
+  const handleClose = async () => {
+    try {
+      let search =
+        debouncedSearchTerm !== "" ? debouncedSearchTerm : searchTerm;
+      setIsRefreshing(true);
+      setIsViewResultsModalOpen(false);
+      setSelectedSubmission(null);
+    } catch (error) {
+      console.log(error);
+      setIsViewResultsModalOpen(false);
+      setSelectedSubmission(null);
+    }
+  };
+
+  // // Ensure scrollbar is always visible
+  // useEffect(() => {
+  //   const style = document.createElement("style");
+  //   style.textContent = `
+  //     .overview-table::-webkit-scrollbar {
+  //       width: 12px;
+  //       height: 12px;
+  //       -webkit-appearance: none;
+  //     }
+  //     .overview-table::-webkit-scrollbar-track {
+  //       background: #f1f5f9;
+  //       border-radius: 6px;
+  //     }
+  //     .overview-table::-webkit-scrollbar-thumb {
+  //       background: #94a3b8;
+  //       border-radius: 6px;
+  //       border: 2px solid #f1f5f9;
+  //     }
+  //     .overview-table::-webkit-scrollbar-thumb:hover {
+  //       background: #64748b;
+  //     }
+  //     /* Force scrollbar to always be visible */
+  //     .overview-table {
+  //       scrollbar-width: thin;
+  //       scrollbar-color: #94a3b8 #f1f5f9;
+  //     }
+  //   `;
+  //   document.head.appendChild(style);
+  //   return () => {
+  //     document.head.removeChild(style);
+  //   };
+  // }, []);
+
+  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+  const getTimeAgo = (submittedAt: string) => {
+    const diffSeconds = Math.floor(
+      (Date.now() - new Date(submittedAt).getTime()) / 1000
+    );
+
+    if (diffSeconds < 60) return rtf.format(-diffSeconds, "second");
+    if (diffSeconds < 3600)
+      return rtf.format(-Math.floor(diffSeconds / 60), "minute");
+    if (diffSeconds < 86400)
+      return rtf.format(-Math.floor(diffSeconds / 3600), "hour");
+    if (diffSeconds < 604800)
+      return rtf.format(-Math.floor(diffSeconds / 86400), "day");
+
+    return;
+  };
+
+  const getQuarterColor = (quarter: string): string => {
+    if (quarter.includes("Q1")) return "bg-blue-100 text-blue-800";
+    if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
+    if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
+    if (quarter.includes("Q4")) return "bg-purple-100 text-purple-800";
+    return "bg-gray-100 text-gray-800";
+  };
 
   // Filter submissions for overview table
-  const filteredSubmissions = useMemo(() => {
-    return recentSubmissions.filter((submission) => {
-      // Ensure submission is valid
-      if (!submission || !submission.employeeName) {
-        return false;
-      }
-
-      if (!overviewSearch.trim()) return true;
-      const searchTerm = overviewSearch.toLowerCase();
-      return (
-        submission.employeeName.toLowerCase().includes(searchTerm) ||
-        (submission.evaluator || "").toLowerCase().includes(searchTerm)
-      );
-    });
-  }, [recentSubmissions, overviewSearch]);
-
-  // Pagination calculations
-  const sortedFilteredSubmissions = useMemo(() => {
-    return [...filteredSubmissions].sort(
-      (a, b) =>
-        new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-    );
-  }, [filteredSubmissions]);
-
-  const overviewTotalPages = Math.ceil(
-    sortedFilteredSubmissions.length / itemsPerPage
-  );
-  const overviewStartIndex = (overviewPage - 1) * itemsPerPage;
-  const overviewEndIndex = overviewStartIndex + itemsPerPage;
-  const overviewPaginated = sortedFilteredSubmissions.slice(
-    overviewStartIndex,
-    overviewEndIndex
-  );
-
-  // Reset to page 1 when search term changes
-  useEffect(() => {
-    setOverviewPage(1);
-  }, [overviewSearch]);
 
   return (
     <div className="grid grid-cols-1 gap-6">
+      <>
+        {isRefreshing ? (
+          // Skeleton cards for overview
+          <div className="flex">
+            <Card className="w-1/4">
+              <CardHeader className="pb-2">
+                <Skeleton className="h-3 w-20" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center space-x-2">
+                  <Skeleton className="h-6 w-8" />
+                  <Skeleton className="h-3 w-6" />
+                </div>
+                <Skeleton className="h-5 w-16 mt-2 rounded-full" />
+              </CardContent>
+            </Card>
+
+            <Card className="w-1/4">
+              <CardHeader className="pb-2">
+                <Skeleton className="h-3 w-22" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-6 w-12" />
+                <Skeleton className="h-3 w-16 mt-1" />
+                <Skeleton className="h-1.5 w-full mt-2" />
+              </CardContent>
+            </Card>
+
+            <Card className="w-1/4">
+              <CardHeader className="pb-2">
+                <Skeleton className="h-3 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-6 w-8" />
+                <Skeleton className="h-3 w-20 mt-1" />
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          // Actual cards with real data
+          <div className="flex gap-5">
+            <Card className="w-1/4">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  Total Evaluations
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center space-x-2">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {totalEvaluations ? totalEvaluations : 0}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">Conducted by you</p>
+              </CardContent>
+            </Card>
+
+            <Card className="w-1/4">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  Pending Approvals
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-yellow-600">
+                  {totalPending ? totalPending : 0}
+                </div>
+                <p className="text-sm text-gray-500 mt-1">Awaiting approval</p>
+                <Progress
+                  value={
+                    totalPending > 0
+                      ? (totalPending / totalEvaluations) * 100
+                      : 0
+                  }
+                  className="mt-2"
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="w-1/4">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  Fully Approved
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-green-600">
+                  {totalApproved ? totalApproved : 0}
+                </div>
+                <p className="text-sm text-gray-500 mt-1">Completed & signed</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             Recent Submissions
             {(() => {
-              const newCount = filteredSubmissions.filter((sub) => {
-                const hoursDiff =
-                  (new Date().getTime() - new Date(sub.submittedAt).getTime()) /
-                  (1000 * 60 * 60);
-                return hoursDiff <= 24 && !seenSubmissions.has(sub.id);
-              }).length;
+              const newCount =
+                data?.filter((sub: any) => {
+                  const hoursDiff =
+                    (Date.now() - new Date(sub.created_at).getTime()) /
+                    (1000 * 60 * 60);
+                  return hoursDiff <= 24;
+                }).length ?? 0;
+
               return newCount > 0 ? (
                 <Badge className="bg-yellow-500 text-white animate-pulse">
                   {newCount} NEW
@@ -142,9 +309,9 @@ export default function OverviewTab() {
               ) : null;
             })()}
           </CardTitle>
+
           <CardDescription>
-            Latest items awaiting evaluation ({filteredSubmissions.length}{" "}
-            total)
+            Latest items awaiting evaluation ({data?.length} total)
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -152,8 +319,8 @@ export default function OverviewTab() {
           <div className="px-6 py-4 flex gap-2 border-b border-gray-200">
             <Input
               placeholder="Search submissions by employee name or evaluator..."
-              value={overviewSearch}
-              onChange={(e) => setOverviewSearch(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-1/2 bg-gray-100"
             />
             {overviewSearch && (
@@ -167,12 +334,12 @@ export default function OverviewTab() {
             )}
             <Button
               size="sm"
-              onClick={onRefresh}
-              disabled={isFeedbackRefreshing}
+              onClick={() => setIsRefreshing(true)}
+              disabled={isRefreshing || isPaginate}
               className="px-3 py-2 text-white hover:text-white bg-blue-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
               title="Refresh submissions data"
             >
-              {isFeedbackRefreshing ? (
+              {isRefreshing || isPaginate ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   Refreshing...
@@ -188,7 +355,7 @@ export default function OverviewTab() {
               )}
             </Button>
           </div>
-          {isRefreshing ? (
+          {isRefreshing || isPaginate ? (
             <div className="relative max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table overview-table">
               {/* Centered Loading Spinner */}
               <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
@@ -211,6 +378,32 @@ export default function OverviewTab() {
                 </div>
               </div>
 
+              {/* Simple Legend */}
+              <div className="m-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex flex-wrap gap-4 text-xs">
+                  <span className="text-sm font-medium text-gray-700 mr-2">
+                    Indicators:
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
+                    <Badge className="bg-yellow-200 text-yellow-800 text-xs">
+                      New
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+                    <Badge className="bg-blue-300 text-blue-800 text-xs">
+                      Recent
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+                    <Badge className="bg-green-500 text-white text-xs">
+                      Approved
+                    </Badge>
+                  </div>
+                </div>
+              </div>
               {/* Table structure visible in background */}
               <Table className="table-fixed w-full">
                 <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
@@ -229,7 +422,7 @@ export default function OverviewTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {Array.from({ length: 6 }).map((_, index) => (
+                  {Array.from({ length: itemsPerPage }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
                       <TableCell className="w-1/5 pl-4">
                         <div className="flex items-center space-x-3">
@@ -308,7 +501,7 @@ export default function OverviewTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortedFilteredSubmissions.length === 0 ? (
+                    {Number(totalEvaluations) === 0 || !data ? (
                       <TableRow key="no-submissions">
                         <TableCell
                           colSpan={5}
@@ -353,101 +546,72 @@ export default function OverviewTab() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      overviewPaginated.map((submission) => {
-                        // Check if both parties have signed - must be actual signature images (base64 data URLs)
-                        const hasEmployeeSignature = !!(
-                          (submission.employeeSignature &&
-                            submission.employeeSignature.trim() &&
-                            submission.employeeSignature.startsWith(
-                              "data:image"
-                            )) ||
-                          (submission.evaluationData?.employeeSignature &&
-                            submission.evaluationData.employeeSignature.trim() &&
-                            submission.evaluationData.employeeSignature.startsWith(
-                              "data:image"
-                            ))
-                        );
+                      data?.map((review: any) => {
+                        const submittedDate = new Date(review.created_at);
+                        const now = new Date();
+                        const hoursDiff =
+                          (now.getTime() - submittedDate.getTime()) /
+                          (1000 * 60 * 60);
+                        const isNew = hoursDiff <= 24;
+                        const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
+                        const isCompleted = review.status === "completed";
+                        const isPending = review.status === "pending";
 
-                        const hasEvaluatorSignature = !!(
-                          (submission.evaluationData?.evaluatorSignatureImage &&
-                            submission.evaluationData.evaluatorSignatureImage.trim() &&
-                            submission.evaluationData.evaluatorSignatureImage.startsWith(
-                              "data:image"
-                            )) ||
-                          ((submission as any).evaluatorSignatureImage &&
-                            (
-                              submission as any
-                            ).evaluatorSignatureImage.trim() &&
-                            (
-                              submission as any
-                            ).evaluatorSignatureImage.startsWith("data:image"))
-                        );
-
-                        // Determine approval status
-                        let actualApprovalStatus = "pending";
-                        if (hasEmployeeSignature && hasEvaluatorSignature) {
-                          actualApprovalStatus = "fully_approved";
-                        } else if (hasEmployeeSignature) {
-                          actualApprovalStatus = "employee_approved";
-                        } else if (
-                          submission.approvalStatus &&
-                          submission.approvalStatus !== "pending"
-                        ) {
-                          actualApprovalStatus = submission.approvalStatus;
-                        } else {
-                          actualApprovalStatus = "pending";
+                        // Determine row background color
+                        let rowClassName =
+                          "hover:bg-gray-100 transition-colors";
+                        if (isCompleted) {
+                          rowClassName =
+                            "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
+                        } else if (isNew) {
+                          rowClassName =
+                            "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
+                        } else if (isRecent) {
+                          rowClassName =
+                            "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
+                        } else if (isPending) {
+                          rowClassName =
+                            "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
                         }
 
-                        const highlight = getSubmissionHighlight(
-                          submission.submittedAt,
-                          submission.id,
-                          actualApprovalStatus
-                        );
                         return (
-                          <TableRow
-                            key={submission.id}
-                            className={highlight.className}
-                            onClick={() => onMarkAsSeen(submission.id)}
-                          >
-                            <TableCell className="w-1/5 font-medium pl-4">
-                              <div className="flex items-center gap-2">
-                                {submission.employeeName}
-                                {highlight.badge && (
-                                  <Badge
-                                    variant="secondary"
-                                    className={`${highlight.badge.className} text-xs`}
-                                  >
-                                    {highlight.badge.text}
-                                  </Badge>
-                                )}
-                                {highlight.secondaryBadge && (
-                                  <Badge
-                                    variant="secondary"
-                                    className={`${highlight.secondaryBadge.className} text-xs`}
-                                  >
-                                    {highlight.secondaryBadge.text}
-                                  </Badge>
-                                )}
+                          <TableRow key={review.id} className={rowClassName}>
+                            <TableCell className="px-6 py-3">
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium text-gray-900">
+                                    {review.employee?.fname +
+                                      " " +
+                                      review.employee?.lname}
+                                  </span>
+                                  {isNew && (
+                                    <Badge className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 font-semibold">
+                                      ⚡ New
+                                    </Badge>
+                                  )}
+                                  {!isNew && isRecent && (
+                                    <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 font-semibold">
+                                      🕐 Recent
+                                    </Badge>
+                                  )}
+                                  {isPending && (
+                                    <Badge className="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 font-semibold">
+                                      🕐 Pending
+                                    </Badge>
+                                  )}
+
+                                  {isCompleted && (
+                                    <Badge className="bg-green-100 text-green-800 text-xs px-2 py-0.5 font-semibold">
+                                      ✓ COMPLETED
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell className="w-1/5 pl-4">
                               <div className="flex justify-center">
                                 <span className="font-semibold">
-                                  {(() => {
-                                    if (submission.evaluationData) {
-                                      const calculatedRating =
-                                        calculateOverallRating(
-                                          submission.evaluationData
-                                        );
-                                      if (
-                                        calculatedRating > 0 &&
-                                        calculatedRating <= 5
-                                      ) {
-                                        return `${calculatedRating}/5`;
-                                      }
-                                    }
-                                    return `${submission.rating || "N/A"}/5`;
-                                  })()}
+                                  {review.rating ? review.rating : "N/A"}
                                 </span>
                               </div>
                             </TableCell>
@@ -455,36 +619,32 @@ export default function OverviewTab() {
                               <div className="flex flex-col items-center">
                                 <span className="font-medium">
                                   {new Date(
-                                    submission.submittedAt
+                                    review.created_at
                                   ).toLocaleDateString()}
                                 </span>
                                 <span className="text-xs text-gray-500">
-                                  {getTimeAgo(submission.submittedAt)}
+                                  {getTimeAgo(String(review.created_at))}
                                 </span>
                               </div>
                             </TableCell>
                             <TableCell className="w-1/5 text-right pr-6">
                               <Badge
                                 className={getQuarterColor(
-                                  getQuarterFromEvaluationData(
-                                    submission.evaluationData || submission
+                                  String(
+                                    review.reviewTypeProbationary ||
+                                      review.reviewTypeRegular
                                   )
                                 )}
                               >
-                                {getQuarterFromEvaluationData(
-                                  submission.evaluationData || submission
-                                )}
+                                {review.reviewTypeRegular ||
+                                  "M" + review.reviewTypeProbationary}
                               </Badge>
                             </TableCell>
                             <TableCell className="w-1/5 text-right pl-1 pr-4">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onMarkAsSeen(submission.id);
-                                  onViewEvaluation(submission);
-                                }}
+                                onClick={() => handleViewEvaluation(review)}
                                 className="bg-blue-500 hover:bg-blue-200 text-white border-blue-200"
                               >
                                 <Eye className="w-4 h-4" />
@@ -499,88 +659,30 @@ export default function OverviewTab() {
                 </Table>
               </div>
 
-              {/* Pagination Controls - Show when more than 4 items */}
-              {sortedFilteredSubmissions.length > 4 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-0 mt-3 md:mt-4 px-4">
-                  <div className="text-xs md:text-sm text-gray-600 order-2 sm:order-1">
-                    Showing {overviewStartIndex + 1} to{" "}
-                    {Math.min(
-                      overviewEndIndex,
-                      sortedFilteredSubmissions.length
-                    )}{" "}
-                    of {sortedFilteredSubmissions.length} records
-                  </div>
-                  <div className="flex items-center gap-1.5 md:gap-2 order-1 sm:order-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setOverviewPage((prev) => Math.max(1, prev - 1))
-                      }
-                      disabled={overviewPage === 1}
-                      className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                    >
-                      Previous
-                    </Button>
-                    <div className="flex items-center gap-0.5 md:gap-1">
-                      {Array.from(
-                        { length: overviewTotalPages },
-                        (_, i) => i + 1
-                      ).map((page) => {
-                        if (
-                          page === 1 ||
-                          page === overviewTotalPages ||
-                          (page >= overviewPage - 1 && page <= overviewPage + 1)
-                        ) {
-                          return (
-                            <Button
-                              key={page}
-                              variant={
-                                overviewPage === page ? "default" : "outline"
-                              }
-                              size="sm"
-                              onClick={() => setOverviewPage(page)}
-                              className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
-                                overviewPage === page
-                                  ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
-                                  : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                              }`}
-                            >
-                              {page}
-                            </Button>
-                          );
-                        } else if (
-                          page === overviewPage - 2 ||
-                          page === overviewPage + 2
-                        ) {
-                          return (
-                            <span
-                              key={page}
-                              className="text-gray-400 text-xs md:text-sm"
-                            >
-                              ...
-                            </span>
-                          );
-                        }
-                        return null;
-                      })}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setOverviewPage((prev) =>
-                          Math.min(overviewTotalPages, prev + 1)
-                        )
-                      }
-                      disabled={overviewPage === overviewTotalPages}
-                      className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
+              {/* Pagination Controls */}
+              {overviewTotal > itemsPerPage && (
+                <EvaluationsPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  total={overviewTotal}
+                  perPage={perPage}
+                  onPageChange={(page) => {
+                    setCurrentPage(page);
+                    setIsPaginate(true);
+                  }}
+                />
               )}
+
+              {/* View Results Modal */}
+              <ViewResultsModal
+                isOpen={isViewResultsModalOpen}
+                onCloseAction={() => {
+                  handleClose();
+                }}
+                submission={selectedSubmission}
+                showApprovalButton={true}
+                isEvaluatorView={false}
+              />
             </>
           )}
         </CardContent>

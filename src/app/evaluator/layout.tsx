@@ -5,7 +5,7 @@ import { withAuth } from "@/hoc";
 import { useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
-function EmployeeLayout({ children }: { children: React.ReactNode }) {
+function EvaluatorLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -56,7 +56,7 @@ function EmployeeLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <DashboardShell
-      title="Employee Dashboard"
+      title="Evaluator Dashboard"
       currentPeriod={new Date().toLocaleDateString()}
       sidebarItems={sidebarItems}
       activeItemId={active}
@@ -67,4 +67,4 @@ function EmployeeLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default withAuth(EmployeeLayout, { requiredRole: "employee" });
+export default withAuth(EvaluatorLayout, { requiredRole: "evaluator" });
