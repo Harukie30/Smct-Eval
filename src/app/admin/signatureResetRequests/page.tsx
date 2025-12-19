@@ -436,13 +436,36 @@ export default function SignatureResetRequestsTab() {
                           src="/not-found.gif"
                           alt="No data"
                           className="w-25 h-25 object-contain"
+                          draggable="false"
+                          onContextMenu={(e) => e.preventDefault()}
+                          onDragStart={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return false;
+                          }}
+                          onDrag={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return false;
+                          }}
+                          onDragEnd={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return false;
+                          }}
+                          onMouseDown={(e) => {
+                            // Prevent default behavior on mouse down to prevent dragging
+                            if (e.button === 0) { // Left mouse button
+                              e.preventDefault();
+                            }
+                          }}
                           style={{
                             imageRendering: "auto",
                             willChange: "auto",
                             transform: "translateZ(0)",
                             backfaceVisibility: "hidden",
                             WebkitBackfaceVisibility: "hidden",
-                          }}
+                          } as React.CSSProperties}
                         />
                         <div className="text-gray-500">
                           {searchTerm || statusFilter !== "0" ? (

@@ -49,9 +49,40 @@ export function LazyGif({
           alt={alt}
           className={className}
           loading="lazy"
+          draggable="false"
           onError={(e) => {
             e.currentTarget.style.display = 'none';
           }}
+          onContextMenu={(e) => e.preventDefault()}
+          onDragStart={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }}
+          onDrag={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }}
+          onDragEnd={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }}
+          onMouseDown={(e) => {
+            // Prevent default behavior on mouse down to prevent dragging
+            if (e.button === 0) { // Left mouse button
+              e.preventDefault();
+            }
+          }}
+          style={{
+            userSelect: 'none',
+            WebkitUserDrag: 'none',
+            WebkitUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none',
+            pointerEvents: 'auto',
+          } as React.CSSProperties}
         />
       )}
     </div>
