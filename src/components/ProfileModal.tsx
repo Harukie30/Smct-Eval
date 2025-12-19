@@ -66,6 +66,8 @@ export default function ProfileModal({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
+    // Current password validation removed - no uppercase/lowercase/number requirements
+
     if (formData?.new_password && String(formData?.new_password).length < 8) {
       newErrors.new_password = "Password must be at least 8 characters";
     } else if (

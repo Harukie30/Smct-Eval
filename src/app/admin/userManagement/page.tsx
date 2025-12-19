@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, use } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -127,15 +127,14 @@ export default function UserManagementTab() {
   const [employeeToView, setEmployeeToView] = useState<Employee | null>(null);
   const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
 
+  // Track when page change started for pending users
+  const pendingPageChangeStartTimeRef = useRef<number | null>(null);
+
   const loadPendingUsers = async (
     searchValue: string,
-    statusFilter: string,
-    isPageChange: boolean = false
+    statusFilter: string
   ) => {
     try {
-      if (isPageChange) {
-        setIsPageLoading(true);
-      }
       const response = await apiService.getPendingRegistrations(
         searchValue,
         statusFilter,
@@ -150,22 +149,28 @@ export default function UserManagementTab() {
     } catch (error) {
       console.error("Error loading pending users:", error);
     } finally {
-      if (isPageChange) {
-        setIsPageLoading(false);
+      // If this was a page change, ensure minimum display time (2 seconds)
+      if (pendingPageChangeStartTimeRef.current !== null) {
+        const elapsed = Date.now() - pendingPageChangeStartTimeRef.current;
+        const minDisplayTime = 2000; // 2 seconds
+        const remainingTime = Math.max(0, minDisplayTime - elapsed);
+        
+        setTimeout(() => {
+          setIsPageLoading(false);
+          pendingPageChangeStartTimeRef.current = null;
+        }, remainingTime);
       }
     }
   };
 
+  // Track when page change started for active users
+  const activePageChangeStartTimeRef = useRef<number | null>(null);
+
   const loadActiveUsers = async (
     searchValue: string,
-    roleFilter: string,
-    isPageChange: boolean = false
+    roleFilter: string
   ) => {
     try {
-      if (isPageChange) {
-        setIsPageLoading(true);
-      }
-
       const response = await apiService.getActiveRegistrations(
         searchValue,
         roleFilter,
@@ -180,15 +185,24 @@ export default function UserManagementTab() {
     } catch (error) {
       console.error("Error loading active users:", error);
     } finally {
-      if (isPageChange) {
-        setIsPageLoading(false);
+      // If this was a page change, ensure minimum display time (2 seconds)
+      if (activePageChangeStartTimeRef.current !== null) {
+        const elapsed = Date.now() - activePageChangeStartTimeRef.current;
+        const minDisplayTime = 2000; // 2 seconds
+        const remainingTime = Math.max(0, minDisplayTime - elapsed);
+        
+        setTimeout(() => {
+          setIsPageLoading(false);
+          activePageChangeStartTimeRef.current = null;
+        }, remainingTime);
       }
     }
   };
 
+  //render when page reload not loading not everySearch or Filters
   useEffect(() => {
-    if (!isAddUserModalOpen && !isEditModalOpen) return;
-    const getAddUserData = async () => {
+    const mountData = async () => {
+      setRefresh(true);
       try {
         const [positions, branches, departments] = await Promise.all([
           apiService.getPositions(),
@@ -198,18 +212,6 @@ export default function UserManagementTab() {
         setPositionData(positions);
         setBranchesData(branches);
         setDepartmentData(departments);
-      } catch (error) {
-        console.log("Error fetching add user data:", error);
-      }
-    };
-    getAddUserData();
-  }, [isAddUserModalOpen, isEditModalOpen]);
-
-  //render when page reload not loading not everySearch or Filters
-  useEffect(() => {
-    const mountData = async () => {
-      setRefresh(true);
-      try {
         const roles = await apiService.getAllRoles();
         setRoles(roles);
         await loadActiveUsers(activeSearchTerm, roleFilter);
@@ -254,14 +256,9 @@ export default function UserManagementTab() {
   useEffect(() => {
     const fetchData = async () => {
       if (tab === "active") {
-        // Only show page loading if currentPage changed (not search/filter term)
-        const isPageChange =
-          debouncedActiveSearchTerm === activeSearchTerm &&
-          debouncedRoleFilter === roleFilter;
         await loadActiveUsers(
           debouncedActiveSearchTerm,
-          debouncedRoleFilter,
-          isPageChange
+          debouncedRoleFilter
         );
       }
     };
@@ -288,14 +285,9 @@ export default function UserManagementTab() {
   useEffect(() => {
     const fetchData = async () => {
       if (tab === "new") {
-        // Only show page loading if currentPage changed (not search/filter term)
-        const isPageChange =
-          debouncedPendingSearchTerm === pendingSearchTerm &&
-          debouncedStatusFilter === statusFilter;
         await loadPendingUsers(
           debouncedPendingSearchTerm,
-          debouncedStatusFilter,
-          isPageChange
+          debouncedStatusFilter
         );
       }
     };
@@ -472,6 +464,36 @@ export default function UserManagementTab() {
         "Failed to add user. Please try again."
       );
       throw error;
+    }
+  };
+
+  // Handle page change for active users
+  const handleActivePageChange = (page: number) => {
+    setIsPageLoading(true);
+    activePageChangeStartTimeRef.current = Date.now();
+    setCurrentPageActive(page);
+  };
+
+  // Handle page change for pending users
+  const handlePendingPageChange = (page: number) => {
+    setIsPageLoading(true);
+    pendingPageChangeStartTimeRef.current = Date.now();
+    setCurrentPagePending(page);
+  };
+
+  // Get role color based on role name
+  const getRoleColor = (roleName: string | undefined): string => {
+    if (!roleName) return "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300";
+    
+    const role = roleName.toLowerCase();
+    if (role === "admin") {
+      return "bg-red-100 text-red-800 hover:bg-red-200 border-red-300";
+    } else if (role === "hr") {
+      return "bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300";
+    } else if (role === "evaluator") {
+      return "bg-green-100 text-green-800 hover:bg-green-200 border-green-300";
+    } else {
+      return "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300";
     }
   };
 
@@ -704,12 +726,12 @@ export default function UserManagementTab() {
                 <Table>
                   <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                     <TableRow>
-                      <TableHead className="pl-10">Name</TableHead>
+                      <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Position</TableHead>
                       <TableHead>Branch</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead className="pl-20">Actions</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -744,7 +766,7 @@ export default function UserManagementTab() {
                       activeRegistrations.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={7}
+                          colSpan={6}
                           className="text-center py-8 text-gray-500"
                         >
                           <div className="flex flex-col items-center justify-center gap-4">
@@ -816,7 +838,7 @@ export default function UserManagementTab() {
                                 : "hover:bg-gray-50"
                             }
                           >
-                            <TableCell className="font-medium pl-5">
+                            <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
                                 <span>
                                   {employee.fname + " " + employee.lname}
@@ -844,14 +866,20 @@ export default function UserManagementTab() {
                                 "N/A"}
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">
+                              <Badge
+                                variant="outline"
+                                className={getRoleColor(
+                                  employee.roles &&
+                                    Array.isArray(employee.roles) &&
+                                    employee.roles[0]?.name
+                                )}
+                              >
                                 {(employee.roles &&
                                   Array.isArray(employee.roles) &&
                                   employee.roles[0]?.name) ||
                                   "N/A"}
                               </Badge>
                             </TableCell>
-
                             <TableCell>
                               <div className="flex space-x-2">
                                 <Button
@@ -898,9 +926,7 @@ export default function UserManagementTab() {
                       totalPages={totalActivePages}
                       total={activeTotalItems}
                       perPage={perPage}
-                      onPageChange={(page) => {
-                        setCurrentPageActive(page);
-                      }}
+                      onPageChange={handleActivePageChange}
                     />
                   </div>
                 )}
@@ -1032,32 +1058,23 @@ export default function UserManagementTab() {
                     </Button>
                   </div>
                 </div>
+
                 {/* Status Color Indicator */}
                 <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
-                  <span className="text-sm font-medium text-gray-700">
-                    Status Indicators:
-                  </span>
+                  <span className="text-sm font-medium text-gray-700">Status Indicators:</span>
                   <div className="flex items-center gap-3 flex-wrap">
-                    <Badge
-                      variant="outline"
-                      className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300"
-                    >
-                      ⚡ New (≤24min)
+                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300">
+                      ⚡ New (≤24h)
                     </Badge>
-                    <Badge
-                      variant="outline"
-                      className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300"
-                    >
-                      🕐 Recent (24-48min)
+                    <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300">
+                      🕐 Recent (24-48h)
                     </Badge>
-                    <Badge
-                      variant="outline"
-                      className="bg-red-100 text-red-800 hover:bg-red-200 border-red-300"
-                    >
+                    <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 border-red-300">
                       ✗ Rejected
                     </Badge>
                   </div>
                 </div>
+
                 <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   <Table>
                     <TableHeader className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-200">
@@ -1131,11 +1148,10 @@ export default function UserManagementTab() {
                                 ) : (
                                   <>
                                     <p className="text-base font-medium mb-1">
-                                      No evaluation records to display
+                                      No new registrations
                                     </p>
                                     <p className="text-sm text-gray-400">
-                                      Records will appear here when evaluations
-                                      are submitted
+                                      New registrations will appear here
                                     </p>
                                   </>
                                 )}
@@ -1147,14 +1163,10 @@ export default function UserManagementTab() {
                         Array.isArray(pendingRegistrations) &&
                         pendingRegistrations.length > 0 ? (
                         pendingRegistrations.map((account) => {
-                          const registrationDate = account.updated_at
-                            ? new Date(account.updated_at)
-                            : null;
+                          // Check if registration is new (within 24 hours) or recent (24-48 hours)
+                          const registrationDate = new Date(account.created_at);
                           const now = new Date();
-                          if (registrationDate === null) return null;
-                          const hoursDiff =
-                            (now.getTime() - registrationDate.getTime()) /
-                            (1000 * 60 * 60);
+                          const hoursDiff = (now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60);
                           const isNew = hoursDiff <= 24;
                           const isRecent = hoursDiff > 24 && hoursDiff <= 48;
                           const isRejected = account.is_active === "declined";
@@ -1166,10 +1178,10 @@ export default function UserManagementTab() {
                                 isRejected
                                   ? "bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100"
                                   : isNew
-                                  ? "bg-yellow-50 border-l-4 border-l-yellow-500 hover:bg-yellow-100"
-                                  : isRecent
-                                  ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
-                                  : "hover:bg-gray-50"
+                                    ? "bg-yellow-50 border-l-4 border-l-yellow-500 hover:bg-yellow-100"
+                                    : isRecent
+                                      ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
+                                      : "hover:bg-gray-50"
                               }
                             >
                               <TableCell className="px-6 py-3 font-medium">
@@ -1193,7 +1205,7 @@ export default function UserManagementTab() {
                                 {account.email}
                               </TableCell>
                               <TableCell className="px-6 py-3">
-                                {account.positions.label}
+                                {account.positions?.label || "N/A"}
                               </TableCell>
                               <TableCell className="px-6 py-3">
                                 {new Date(
@@ -1277,9 +1289,7 @@ export default function UserManagementTab() {
                         totalPages={totalPendingPages}
                         total={pendingTotalItems}
                         perPage={perPage}
-                        onPageChange={(page) => {
-                          setCurrentPagePending(page);
-                        }}
+                        onPageChange={handlePendingPageChange}
                       />
                     </div>
                   )}

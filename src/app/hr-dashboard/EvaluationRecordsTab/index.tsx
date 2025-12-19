@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -408,27 +408,26 @@ export function EvaluationRecordsTab({
   const recordsEndIndex = recordsStartIndex + itemsPerPage;
   const recordsPaginated = filteredAndSortedSubmissions.slice(recordsStartIndex, recordsEndIndex);
 
+  // Track when page change started
+  const pageChangeStartTimeRef = useRef<number | null>(null);
+
   // Reset to page 1 when filters/search change
   useEffect(() => {
     setRecordsPage(1);
   }, [recordsSearchTerm, recordsApprovalFilter, recordsQuarterFilter, recordsYearFilter]);
 
-  // Handle page change - following admin overview pattern
+  // Handle page change with 2-second skeleton display
   const handlePageChange = (page: number, isPageChange: boolean = false) => {
     if (isPageChange) {
-      // Set loading state first, before changing page
       setIsPageLoading(true);
+      pageChangeStartTimeRef.current = Date.now();
+      setRecordsPage(page);
       
-      // Use a small delay to ensure React processes the loading state
-      // before the page change triggers a re-render
+      // Ensure minimum display time of 2 seconds
       setTimeout(() => {
-        setRecordsPage(page);
-        
-        // Simulate loading delay for better UX
-        setTimeout(() => {
-          setIsPageLoading(false);
-        }, 500);
-      }, 10); // Small delay to ensure loading state is set first
+        setIsPageLoading(false);
+        pageChangeStartTimeRef.current = null;
+      }, 2000); // 2 seconds
     } else {
       setRecordsPage(page);
     }

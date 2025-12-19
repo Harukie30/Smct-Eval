@@ -19,6 +19,15 @@ api.interceptors.response.use(
       console.error("Request timed out");
     }
 
+    // Handle 401 Unauthorized errors
+    // Note: 401 errors during auth checks (like /profile) are expected when not logged in
+    // The UserContext will handle these silently
+    // Only log 401 for non-auth-check endpoints if needed
+    if (error.response?.status === 401 && !error.config?.url?.includes("/profile")) {
+      // Log 401 for other endpoints (not profile/auth checks)
+      console.warn("Unauthorized request - authentication may be expired");
+    }
+
     return Promise.reject(error);
   }
 );

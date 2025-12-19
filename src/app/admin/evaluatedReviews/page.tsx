@@ -3,7 +3,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import clientDataService, { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -57,6 +57,7 @@ interface Review {
 export default function OverviewTab() {
   const [evaluations, setEvaluations] = useState<Review[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(false);
   //filters
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -136,15 +137,34 @@ export default function OverviewTab() {
     return () => clearTimeout(handler);
   }, [searchTerm, statusFilter, quarterFilter, yearFilter]);
 
+  // Track when page change started
+  const pageChangeStartTimeRef = useRef<number | null>(null);
+
   // Fetch API whenever debounced search term changes
   useEffect(() => {
     const fetchData = async () => {
-      await loadEvaluations(
-        debouncedSearchTerm,
-        debouncedStatusFilter,
-        debouncedQuarterFilter,
-        debouncedYearFilter
-      );
+      try {
+        await loadEvaluations(
+          debouncedSearchTerm,
+          debouncedStatusFilter,
+          debouncedQuarterFilter,
+          debouncedYearFilter
+        );
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        // If this was a page change, ensure minimum display time (2 seconds)
+        if (pageChangeStartTimeRef.current !== null) {
+          const elapsed = Date.now() - pageChangeStartTimeRef.current;
+          const minDisplayTime = 2000; // 2 seconds
+          const remainingTime = Math.max(0, minDisplayTime - elapsed);
+          
+          setTimeout(() => {
+            setIsPageLoading(false);
+            pageChangeStartTimeRef.current = null;
+          }, remainingTime);
+        }
+      }
     };
 
     fetchData();
@@ -461,7 +481,7 @@ export default function OverviewTab() {
                 scrollbarColor: "#cbd5e1 #f1f5f9",
               }}
             >
-              {refreshing && (
+              {refreshing && ( // Only show spinner for initial refresh
                 <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
                   <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
                     <div className="relative">
@@ -498,7 +518,7 @@ export default function OverviewTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
-                  {refreshing ? (
+                  {(refreshing || isPageLoading) ? (
                     Array.from({ length: itemsPerPage }).map((_, index) => (
                       <TableRow key={`skeleton-${index}`}>
                         <TableCell className="px-6 py-3">
@@ -727,14 +747,9 @@ export default function OverviewTab() {
               total={overviewTotal}
               perPage={perPage}
               onPageChange={(page) => {
+                setIsPageLoading(true);
+                pageChangeStartTimeRef.current = Date.now();
                 setCurrentPage(page);
-
-                loadEvaluations(
-                  searchTerm,
-                  statusFilter,
-                  quarterFilter,
-                  yearFilter
-                );
               }}
             />
           )}

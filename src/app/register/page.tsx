@@ -228,8 +228,14 @@ function RegisterPage() {
         }
         break;
       case "contact":
-        if (value && !/^\d{11}$/.test(value)) {
-          errors.contact = "Contact number must be exactly 11 digits";
+        if (value) {
+          if (!/^\d{11}$/.test(value)) {
+            errors.contact = "Contact number must be exactly 11 digits";
+          } else if (!value.startsWith("09")) {
+            errors.contact = "Contact number must start with 09";
+          } else {
+            delete errors.contact;
+          }
         } else {
           delete errors.contact;
         }
@@ -298,6 +304,31 @@ function RegisterPage() {
 
     if (!formData.contact.trim()) {
       showAlert("Missing Information", "Contact number is required!", "error");
+      return;
+    }
+
+    // Validate contact number format (must be 11 digits starting with 09)
+    const contactRegex = /^09\d{9}$/;
+    if (!contactRegex.test(formData.contact)) {
+      if (formData.contact.length !== 11) {
+        showAlert(
+          "Invalid Contact Number",
+          "Contact number must be exactly 11 digits!",
+          "error"
+        );
+      } else if (!formData.contact.startsWith("09")) {
+        showAlert(
+          "Invalid Contact Number",
+          "Contact number must start with 09!",
+          "error"
+        );
+      } else {
+        showAlert(
+          "Invalid Contact Number",
+          "Please enter a valid contact number!",
+          "error"
+        );
+      }
       return;
     }
 

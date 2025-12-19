@@ -2239,21 +2239,6 @@ function EvaluatorDashboard() {
         sub.evaluationData?.employeeId === user?.id?.toString()
     );
 
-    // Calculate average rating
-    const ratings = evaluatorSubmissions
-      .map((sub) => {
-        if (sub.evaluationData) {
-          return calculateOverallRating(sub.evaluationData);
-        }
-        return sub.rating || 0;
-      })
-      .filter((r) => r > 0);
-
-    const averageRating =
-      ratings.length > 0
-        ? (ratings.reduce((sum, r) => sum + r, 0) / ratings.length).toFixed(1)
-        : "0.0";
-
     // Count pending approvals (not fully approved)
     const pendingCount = evaluatorSubmissions.filter((sub) => {
       const status = getCorrectApprovalStatus(sub);
@@ -2268,7 +2253,6 @@ function EvaluatorDashboard() {
 
     return {
       totalEvaluations: evaluatorSubmissions.length,
-      averageRating,
       pendingApprovals: pendingCount,
       completedApprovals: approvedCount,
     };
@@ -3056,92 +3040,75 @@ function EvaluatorDashboard() {
           }}
           employee={selectedEmployeeForView ? {
             id: selectedEmployeeForView.id,
-            name: (() => {
+            fname: (() => {
               const empAny = selectedEmployeeForView as any;
-              if (empAny.fname || empAny.lname) {
-                return `${empAny.fname || ''} ${empAny.lname || ''}`.trim() || selectedEmployeeForView.name || 'N/A';
+              if (empAny.fname) return empAny.fname;
+              if (selectedEmployeeForView.name) {
+                const nameParts = selectedEmployeeForView.name.split(' ');
+                return nameParts[0] || '';
               }
-              return selectedEmployeeForView.name || 'N/A';
+              return '';
             })(),
+            lname: (() => {
+              const empAny = selectedEmployeeForView as any;
+              if (empAny.lname) return empAny.lname;
+              if (selectedEmployeeForView.name) {
+                const nameParts = selectedEmployeeForView.name.split(' ');
+                return nameParts.slice(1).join(' ') || '';
+              }
+              return '';
+            })(),
+            emp_id: viewEmployeeId || (selectedEmployeeForView as any).employeeId || (selectedEmployeeForView as any).employee_id || (selectedEmployeeForView as any).emp_id || 0,
             email: selectedEmployeeForView.email || '',
-            username: (selectedEmployeeForView as any).username || undefined,
+            username: (selectedEmployeeForView as any).username || '',
+            password: '',
             contact: (selectedEmployeeForView as any).contact || undefined,
-            position: (() => {
+            positions: (() => {
               const empAny = selectedEmployeeForView as any;
               const pos = selectedEmployeeForView.position || empAny.positions;
-              if (!pos) return 'N/A';
-              if (typeof pos === 'string') return pos;
-              if (typeof pos === 'object') {
-                return pos.label || pos.name || pos.value || 'N/A';
-              }
-              return 'N/A';
+              if (!pos) return null;
+              if (typeof pos === 'string') return { name: pos, label: pos };
+              if (typeof pos === 'object') return pos;
+              return null;
             })(),
-            department: (() => {
+            departments: (() => {
               const empAny = selectedEmployeeForView as any;
               const dept = selectedEmployeeForView.department || empAny.departments;
-              if (!dept) return 'N/A';
-              if (typeof dept === 'string') return dept;
-              if (Array.isArray(dept) && dept.length > 0) {
-                return dept[0]?.name || dept[0] || 'N/A';
-              }
-              if (typeof dept === 'object') {
-                return dept.label || dept.name || dept.department_name || dept.value || 'N/A';
-              }
-              return 'N/A';
+              if (!dept) return null;
+              if (typeof dept === 'string') return { name: dept, department_name: dept };
+              if (Array.isArray(dept) && dept.length > 0) return dept[0];
+              if (typeof dept === 'object') return dept;
+              return null;
             })(),
-            branch: (() => {
+            branches: (() => {
               const empAny = selectedEmployeeForView as any;
               const branch = selectedEmployeeForView.branch || empAny.branches;
-              if (!branch) return undefined;
-              if (typeof branch === 'string') return branch;
-              if (Array.isArray(branch) && branch.length > 0) {
-                const firstBranch = branch[0];
-                if (typeof firstBranch === 'string') return firstBranch;
-                if (typeof firstBranch === 'object') {
-                  return firstBranch.branch_name || firstBranch.name || firstBranch.label || undefined;
-                }
-              }
-              if (typeof branch === 'object') {
-                return branch.branch_name || branch.name || branch.label || undefined;
-              }
-              return undefined;
+              if (!branch) return null;
+              if (typeof branch === 'string') return [{ branch_name: branch, name: branch }];
+              if (Array.isArray(branch) && branch.length > 0) return branch;
+              if (typeof branch === 'object') return [branch];
+              return null;
             })(),
-            role: (() => {
+            hireDate: (selectedEmployeeForView as any).hireDate || new Date(),
+            roles: (() => {
               const empAny = selectedEmployeeForView as any;
               const role = selectedEmployeeForView.role || empAny.roles;
-              if (!role) return 'N/A';
-              if (typeof role === 'string') return role;
-              if (Array.isArray(role) && role.length > 0) {
-                const firstRole = role[0];
-                if (typeof firstRole === 'string') return firstRole;
-                if (typeof firstRole === 'object') {
-                  return firstRole.name || firstRole.label || firstRole.value || 'N/A';
-                }
-              }
-              if (typeof role === 'object') {
-                return role.name || role.label || role.value || 'N/A';
-              }
-              return 'N/A';
+              if (!role) return null;
+              if (typeof role === 'string') return [{ name: role }];
+              if (Array.isArray(role) && role.length > 0) return role;
+              if (typeof role === 'object') return [role];
+              return null;
             })(),
-            employeeId: viewEmployeeId || (selectedEmployeeForView as any).employeeId || (selectedEmployeeForView as any).employee_id || (() => {
-              // Convert string employeeId to number if it's a formatted string like "1234-567890"
-              const empId = (selectedEmployeeForView as any).employeeId;
-              if (empId && typeof empId === 'string') {
-                const idStr = empId.replace(/-/g, '');
-                const numId = parseInt(idStr, 10);
-                return isNaN(numId) ? undefined : numId;
-              }
-              return undefined;
-            })(),
-            bio: (selectedEmployeeForView as any).bio || undefined,
-            isActive: (() => {
+            avatar: (selectedEmployeeForView as any).avatar || null,
+            bio: (selectedEmployeeForView as any).bio || null,
+            is_active: (() => {
               const empAny = selectedEmployeeForView as any;
               const isActive = empAny.is_active || empAny.isActive;
-              if (typeof isActive === 'string' && isActive === 'active') return true;
-              if (typeof isActive === 'boolean' && isActive === true) return true;
-              return false;
+              if (typeof isActive === 'string') return isActive;
+              if (typeof isActive === 'boolean') return isActive ? 'active' : 'inactive';
+              return 'active';
             })(),
-            created_at: (selectedEmployeeForView as any).created_at || undefined,
+            created_at: (selectedEmployeeForView as any).created_at || new Date().toISOString(),
             updated_at: (selectedEmployeeForView as any).updated_at || undefined,
           } : null}
           designVariant="admin"
