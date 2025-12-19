@@ -155,15 +155,8 @@ export default function ProfileModal({
 
       // Refresh user profile to get updated data
       refreshUser();
+      onClose();
 
-      setFormData({
-        username: "",
-        email: "",
-        current_password: "",
-        new_password: "",
-        confirm_password: "",
-        signature: "",
-      });
       // Close modal after a brief delay to ensure state is updated
     } catch (error: any) {
       setOpen(true);
