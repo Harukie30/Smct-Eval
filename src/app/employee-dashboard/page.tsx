@@ -586,6 +586,7 @@ export default function OverviewTab() {
                   </Badge>
                 </div>
                 <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-orange-100 border-l-2 border-l-orange-500 rounded"></div>
                   <Badge className="text-white bg-orange-500 text-xs">
                     Pending
                   </Badge>

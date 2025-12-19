@@ -66,19 +66,6 @@ export default function ProfileModal({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (
-      formData?.current_password &&
-      String(formData?.current_password).length < 8
-    ) {
-      newErrors.current_password = "Password must be at least 8 characters";
-    } else if (
-      formData?.current_password &&
-      !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.current_password)
-    ) {
-      newErrors.current_password =
-        "Password must contain uppercase, lowercase, and number";
-    }
-
     if (formData?.new_password && String(formData?.new_password).length < 8) {
       newErrors.new_password = "Password must be at least 8 characters";
     } else if (

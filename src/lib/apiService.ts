@@ -670,20 +670,23 @@ export const apiService = {
   },
 
   // Get evaluations by authenticated employee
-  getMyEvalAuthEmployee: async (): Promise<any[]> => {
-    const response = await api.get("/getMyEvalAuthEmployee");
-    const data = response.data;
-
-    if (data.success && data.evaluations) {
-      return data.evaluations;
-    }
-    if (Array.isArray(data.evaluations)) {
-      return data.evaluations;
-    }
-    if (Array.isArray(data)) {
-      return data;
-    }
-    return [];
+  getMyEvalAuthEmployee: async (
+    searchValue?: string,
+    currentPage?: number,
+    itemsPerPage?: number,
+    selectedYear?: string,
+    selectedQuarter?: string
+  ): Promise<any> => {
+    const response = await api.get("/getMyEvalAuthEmployee", {
+      params: {
+        search: searchValue || "",
+        page: currentPage,
+        per_page: itemsPerPage,
+        year: selectedYear || "",
+        quarter: selectedQuarter || "",
+      },
+    });
+    return response.data;
   },
 
   // Evaluator dashboard total cards
