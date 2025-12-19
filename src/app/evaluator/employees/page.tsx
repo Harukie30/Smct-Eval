@@ -1,15 +1,28 @@
-'use client';
+"use client";
 
-import { useState, useMemo, useEffect } from 'react';
-import { X, Eye, FileText } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useMemo, useEffect } from "react";
+import { X, Eye, FileText } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Combobox } from "@/components/ui/combobox";
-import { useEmployeeFiltering } from '@/hooks/useEmployeeFiltering';
+import { useEmployeeFiltering } from "@/hooks/useEmployeeFiltering";
 import {
   Pagination,
   PaginationContent,
@@ -38,7 +51,10 @@ interface EmployeesTabProps {
   onRefresh: () => void;
   onViewEmployee: (employee: any) => void;
   onEvaluateEmployee: (employee: any) => void;
-  getUpdatedAvatar: (employeeId: number, currentAvatar?: string) => string | undefined;
+  getUpdatedAvatar: (
+    employeeId: number,
+    currentAvatar?: string
+  ) => string | undefined;
   hasAvatarUpdate: (employeeId: number) => boolean;
   currentUser?: any; // Add currentUser prop for filtering
   isActive?: boolean;
@@ -58,11 +74,11 @@ export function EmployeesTab({
   currentUser,
   isActive = false,
   employees = [],
-  positions = []
+  positions = [],
 }: EmployeesTabProps) {
-  const [employeeSearch, setEmployeeSearch] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
-  const [selectedPosition, setSelectedPosition] = useState<string>('');
+  const [employeeSearch, setEmployeeSearch] = useState("");
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("");
+  const [selectedPosition, setSelectedPosition] = useState<string>("");
   const [employeesPage, setEmployeesPage] = useState(1);
   const [isPageLoading, setIsPageLoading] = useState(false);
   const itemsPerPage = 8;
@@ -73,7 +89,7 @@ export function EmployeesTab({
   const getUpdatedEmployeeData = (employee: any) => {
     try {
       const employeeId = employee.employeeId || employee.id;
-      
+
       // Check for real-time profile updates (avatar only)
       const updatedAvatar = getUpdatedAvatar(employeeId, employee.avatar);
       if (hasAvatarUpdate(employeeId) && updatedAvatar) {
@@ -85,7 +101,7 @@ export function EmployeesTab({
 
       return employee;
     } catch (error) {
-      console.error('Error getting updated employee data:', error);
+      console.error("Error getting updated employee data:", error);
       return employee;
     }
   };
@@ -93,15 +109,29 @@ export function EmployeesTab({
   // Get all employees from API (passed as prop)
   const allEmployees = useMemo(() => {
     if (!employees || employees.length === 0) return [];
-    
+
     return employees.map((e: any) => ({
       id: e.employeeId || e.id,
-      name: e.name || `${e.fname || ''} ${e.lname || ''}`.trim(),
+      name: e.name || `${e.fname || ""} ${e.lname || ""}`.trim(),
       email: e.email,
-      position: e.positions?.label || e.position?.name || e.position || 'N/A',
-      department: e.departments?.department_name || e.department?.name || e.department || 'N/A',
-      branch: (e.branches && Array.isArray(e.branches) && e.branches[0]?.branch_name) || e.branch?.name || e.branch || 'N/A',
-      role: (e.roles && Array.isArray(e.roles) && e.roles[0]?.name) || e.role?.name || e.role || 'N/A',
+      position: e.positions?.label || e.position?.name || e.position || "N/A",
+      department:
+        e.departments?.department_name ||
+        e.department?.name ||
+        e.department ||
+        "N/A",
+      branch:
+        (e.branches &&
+          Array.isArray(e.branches) &&
+          e.branches[0]?.branch_name) ||
+        e.branch?.name ||
+        e.branch ||
+        "N/A",
+      role:
+        (e.roles && Array.isArray(e.roles) && e.roles[0]?.name) ||
+        e.role?.name ||
+        e.role ||
+        "N/A",
       isActive: e.isActive !== false,
       avatar: e.avatar,
       created_at: e.created_at, // Include created_at for highlighting
@@ -113,14 +143,15 @@ export function EmployeesTab({
     const positionSet = new Set<string>();
     allEmployees.forEach((e: any) => {
       const pos = e.position;
-      if (pos && typeof pos === 'string' && pos.trim() !== '') {
+      if (pos && typeof pos === "string" && pos.trim() !== "") {
         positionSet.add(pos);
       }
     });
     // Also add positions from the positions prop if they're strings
     positions.forEach((pos: any) => {
-      const posName = typeof pos === 'string' ? pos : (pos?.name || String(pos || ''));
-      if (posName && typeof posName === 'string' && posName.trim() !== '') {
+      const posName =
+        typeof pos === "string" ? pos : pos?.name || String(pos || "");
+      if (posName && typeof posName === "string" && posName.trim() !== "") {
         positionSet.add(posName);
       }
     });
@@ -146,7 +177,7 @@ export function EmployeesTab({
       })
       .map((e: any) => {
         const updatedEmployee = getUpdatedEmployeeData(e);
-        
+
         return {
           id: updatedEmployee.employeeId || updatedEmployee.id,
           name: updatedEmployee.name,
@@ -155,7 +186,7 @@ export function EmployeesTab({
           department: updatedEmployee.department,
           role: updatedEmployee.role,
           avatar: updatedEmployee.avatar,
-          branch: updatedEmployee.branch || 'N/A',
+          branch: updatedEmployee.branch || "N/A",
           created_at: updatedEmployee.created_at, // Include created_at for highlighting
         };
       });
@@ -166,7 +197,10 @@ export function EmployeesTab({
   const employeesTotalPages = Math.ceil(employeesTotal / itemsPerPage);
   const employeesStartIndex = (employeesPage - 1) * itemsPerPage;
   const employeesEndIndex = employeesStartIndex + itemsPerPage;
-  const employeesPaginated = filtered.slice(employeesStartIndex, employeesEndIndex);
+  const employeesPaginated = filtered.slice(
+    employeesStartIndex,
+    employeesEndIndex
+  );
 
   // Reset to page 1 when filters/search change
   useEffect(() => {
@@ -201,10 +235,16 @@ export function EmployeesTab({
             </div>
             {/* Badge-style employee counts */}
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="px-3 py-1 text-sm font-semibold bg-blue-50 text-blue-700 border-blue-200">
+              <Badge
+                variant="outline"
+                className="px-3 py-1 text-sm font-semibold bg-blue-50 text-blue-700 border-blue-200"
+              >
                 Total: {filtered.length}
               </Badge>
-              <Badge variant="outline" className="px-3 py-1 text-sm font-semibold bg-green-50 text-green-700 border-green-200">
+              <Badge
+                variant="outline"
+                className="px-3 py-1 text-sm font-semibold bg-green-50 text-green-700 border-green-200"
+              >
                 New Hires: {newHiresThisMonth}
               </Badge>
             </div>
@@ -241,7 +281,7 @@ export function EmployeesTab({
             />
             {employeeSearch && (
               <button
-                onClick={() => setEmployeeSearch('')}
+                onClick={() => setEmployeeSearch("")}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-600"
                 title="Clear search"
               >
@@ -251,13 +291,17 @@ export function EmployeesTab({
           </div>
           <Combobox
             options={[
-              { value: 'all', label: 'All Positions' },
-              ...uniquePositions.map((pos: string) => ({ value: pos, label: pos }))
+              { value: "all", label: "All Positions" },
+              ...uniquePositions.map((pos: string) => ({
+                value: pos,
+                label: pos,
+              })),
             ]}
-            value={selectedPosition || 'all'}
+            value={selectedPosition || "all"}
             onValueChangeAction={(value) => {
-              const selectedValue = typeof value === 'string' ? value : String(value);
-              setSelectedPosition(selectedValue === 'all' ? '' : selectedValue);
+              const selectedValue =
+                typeof value === "string" ? value : String(value);
+              setSelectedPosition(selectedValue === "all" ? "" : selectedValue);
             }}
             placeholder="All Positions"
             searchPlaceholder="Search positions..."
@@ -268,8 +312,8 @@ export function EmployeesTab({
             <Button
               variant="outline"
               onClick={() => {
-                setEmployeeSearch('');
-                setSelectedPosition('');
+                setEmployeeSearch("");
+                setSelectedPosition("");
               }}
               className="px-4 py-2 text-sm"
               title="Clear all filters"
@@ -282,12 +326,20 @@ export function EmployeesTab({
         {/* Status Indicators */}
         <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200 flex-wrap mb-4">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-gray-700">Status Indicators:</span>
+            <span className="text-sm font-medium text-gray-700">
+              Status Indicators:
+            </span>
             <div className="flex items-center gap-3 flex-wrap">
-              <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300">
+              <Badge
+                variant="outline"
+                className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300"
+              >
                 ✨ New Added (≤30min)
               </Badge>
-              <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300">
+              <Badge
+                variant="outline"
+                className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300"
+              >
                 🕐 Recently Added (&gt;30min)
               </Badge>
             </div>
@@ -304,13 +356,19 @@ export function EmployeesTab({
                   <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
                   {/* Logo in center */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                    <img
+                      src="/smct.png"
+                      alt="SMCT Logo"
+                      className="h-10 w-10 object-contain"
+                    />
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 font-medium">Loading employees...</p>
+                <p className="text-sm text-gray-600 font-medium">
+                  Loading employees...
+                </p>
               </div>
             </div>
-            
+
             {/* Table structure visible in background */}
             <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               <Table>
@@ -440,13 +498,16 @@ export function EmployeesTab({
                   ) : (
                     employeesPaginated.map((employee: any) => {
                       // Check if user is new (within 30 minutes) or recently added (after 30 minutes, within 48 hours)
-                      const createdDate = employee.created_at ? new Date(employee.created_at) : null;
+                      const createdDate = employee.created_at
+                        ? new Date(employee.created_at)
+                        : null;
                       let isNew = false;
                       let isRecentlyAdded = false;
 
                       if (createdDate) {
                         const now = new Date();
-                        const minutesDiff = (now.getTime() - createdDate.getTime()) / (1000 * 60);
+                        const minutesDiff =
+                          (now.getTime() - createdDate.getTime()) / (1000 * 60);
                         const hoursDiff = minutesDiff / 60;
                         isNew = minutesDiff <= 30;
                         isRecentlyAdded = minutesDiff > 30 && hoursDiff <= 48;
@@ -459,8 +520,8 @@ export function EmployeesTab({
                             isNew
                               ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100 hover:shadow-md transition-all duration-200 cursor-pointer"
                               : isRecentlyAdded
-                                ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100 hover:shadow-md transition-all duration-200 cursor-pointer"
-                                : "hover:bg-blue-100 hover:shadow-md transition-all duration-200 cursor-pointer"
+                              ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100 hover:shadow-md transition-all duration-200 cursor-pointer"
+                              : "hover:bg-blue-100 hover:shadow-md transition-all duration-200 cursor-pointer"
                           }
                         >
                           <TableCell className="font-medium">
@@ -479,12 +540,8 @@ export function EmployeesTab({
                             </div>
                           </TableCell>
                           <TableCell>{employee.email}</TableCell>
-                          <TableCell>
-                            {employee.position || "N/A"}
-                          </TableCell>
-                          <TableCell>
-                            {employee.branch || "N/A"}
-                          </TableCell>
+                          <TableCell>{employee.position || "N/A"}</TableCell>
+                          <TableCell>{employee.branch || "N/A"}</TableCell>
                           <TableCell>
                             <Badge variant="outline">
                               {employee.role || "N/A"}
@@ -523,121 +580,124 @@ export function EmployeesTab({
         )}
 
         {/* Pagination Controls - Centered (matching admin style) */}
-        {employeesTotal > itemsPerPage && (() => {
-          // Function to render page buttons with ellipses (matching admin style)
-          const renderPages = () => {
-            let pages: (number | "...")[] = [];
+        {employeesTotal > itemsPerPage &&
+          (() => {
+            // Function to render page buttons with ellipses (matching admin style)
+            const renderPages = () => {
+              let pages: (number | "...")[] = [];
 
-            // Always show first page
-            pages.push(1);
+              // Always show first page
+              pages.push(1);
 
-            // Insert ellipsis after first page if needed
-            if (employeesPage > 3) {
-              pages.push("...");
-            }
-
-            // Show pages around current (employeesPage - 1, employeesPage, employeesPage + 1)
-            for (let i = employeesPage - 1; i <= employeesPage + 1; i++) {
-              if (i > 1 && i < employeesTotalPages) {
-                pages.push(i);
+              // Insert ellipsis after first page if needed
+              if (employeesPage > 3) {
+                pages.push("...");
               }
-            }
 
-            // Insert ellipsis before last page if needed
-            if (employeesPage < employeesTotalPages - 2) {
-              pages.push("...");
-            }
+              // Show pages around current (employeesPage - 1, employeesPage, employeesPage + 1)
+              for (let i = employeesPage - 1; i <= employeesPage + 1; i++) {
+                if (i > 1 && i < employeesTotalPages) {
+                  pages.push(i);
+                }
+              }
 
-            // Always show last page
-            if (employeesTotalPages > 1) {
-              pages.push(employeesTotalPages);
-            }
+              // Insert ellipsis before last page if needed
+              if (employeesPage < employeesTotalPages - 2) {
+                pages.push("...");
+              }
 
-            return pages.map((p, index) => {
-              if (p === "...") {
+              // Always show last page
+              if (employeesTotalPages > 1) {
+                pages.push(employeesTotalPages);
+              }
+
+              return pages.map((p, index) => {
+                if (p === "...") {
+                  return (
+                    <PaginationItem key={`ellipsis-${index}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  );
+                }
+
                 return (
-                  <PaginationItem key={`ellipsis-${index}`}>
-                    <PaginationEllipsis />
+                  <PaginationItem key={p}>
+                    <PaginationLink
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (Number(p) !== employeesPage) {
+                          handlePageChange(Number(p));
+                        }
+                      }}
+                      className={
+                        p === employeesPage
+                          ? "bg-blue-400 text-white rounded-xl"
+                          : ""
+                      }
+                    >
+                      {p}
+                    </PaginationLink>
                   </PaginationItem>
                 );
-              }
+              });
+            };
 
-              return (
-                <PaginationItem key={p}>
-                    <PaginationLink
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (Number(p) !== employeesPage) {
-                        handlePageChange(Number(p));
-                      }
-                    }}
-                    className={
-                      p === employeesPage ? "bg-blue-400 text-white rounded-xl" : ""
-                    }
-                  >
-                    {p}
-                  </PaginationLink>
-                </PaginationItem>
-              );
-            });
-          };
+            const startIndex = (employeesPage - 1) * itemsPerPage;
+            const endIndex = employeesPage * itemsPerPage;
 
-          const startIndex = (employeesPage - 1) * itemsPerPage;
-          const endIndex = employeesPage * itemsPerPage;
-
-          return (
-            <div className="flex flex-col items-center justify-center gap-3 w-full p-2 mt-4">
-              <div className="text-sm text-gray-600">
-                Showing {startIndex + 1} to {Math.min(endIndex, employeesTotal)} of {employeesTotal}{" "}
-                records
-              </div>
-              <div>
-                <Pagination>
-                  <PaginationContent>
-                    {/* PREVIOUS */}
-                    <PaginationItem>
-                      <PaginationPrevious
-                        className={
-                          employeesPage === 1
-                            ? "hover:pointer-events-none bg-blue-100 opacity-50"
-                            : "hover:bg-blue-400 bg-blue-200"
-                        }
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (employeesPage > 1) {
-                            handlePageChange(employeesPage - 1);
+            return (
+              <div className="flex flex-col items-center justify-center gap-3 w-full p-2 mt-4">
+                <div className="text-sm text-gray-600">
+                  Showing {startIndex + 1} to{" "}
+                  {Math.min(endIndex, employeesTotal)} of {employeesTotal}{" "}
+                  records
+                </div>
+                <div>
+                  <Pagination>
+                    <PaginationContent>
+                      {/* PREVIOUS */}
+                      <PaginationItem>
+                        <PaginationPrevious
+                          className={
+                            employeesPage === 1
+                              ? "hover:pointer-events-none bg-blue-100 opacity-50"
+                              : "hover:bg-blue-400 bg-blue-200"
                           }
-                        }}
-                      />
-                    </PaginationItem>
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (employeesPage > 1) {
+                              handlePageChange(employeesPage - 1);
+                            }
+                          }}
+                        />
+                      </PaginationItem>
 
-                    {/* PAGE NUMBERS WITH ELLIPSES */}
-                    {renderPages()}
+                      {/* PAGE NUMBERS WITH ELLIPSES */}
+                      {renderPages()}
 
-                    {/* NEXT */}
-                    <PaginationItem>
-                      <PaginationNext
-                        className={
-                          employeesPage === employeesTotalPages
-                            ? "hover:pointer-events-none bg-blue-100 opacity-50"
-                            : "hover:bg-blue-400 bg-blue-200"
-                        }
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (employeesPage < employeesTotalPages) {
-                            handlePageChange(employeesPage + 1);
+                      {/* NEXT */}
+                      <PaginationItem>
+                        <PaginationNext
+                          className={
+                            employeesPage === employeesTotalPages
+                              ? "hover:pointer-events-none bg-blue-100 opacity-50"
+                              : "hover:bg-blue-400 bg-blue-200"
                           }
-                        }}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (employeesPage < employeesTotalPages) {
+                              handlePageChange(employeesPage + 1);
+                            }
+                          }}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
               </div>
-            </div>
-          );
-        })()}
+            );
+          })()}
       </CardContent>
     </Card>
   );
 }
-

@@ -111,7 +111,6 @@ export default function DashboardShell(props: DashboardShellProps) {
     setupEcho();
   }, []);
 
-
   // Memoize dashboard type detection to avoid dependency issues
   const dashboardType = useMemo(() => {
     const hasFeedback = sidebarItems.some((item) => item.id === "feedback");
@@ -283,18 +282,18 @@ export default function DashboardShell(props: DashboardShellProps) {
     e: React.MouseEvent
   ) => {
     e.stopPropagation(); // Prevent triggering the notification click
-    
+
     // Set deleting state to show skeleton on all notifications
     setIsDeletingNotification(true);
-    
+
     try {
       // Wait 2 seconds to show skeleton animation on all notifications
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      
+
       // Actually delete the notification
       await apiService.deleteNotification(notification.id);
       setIsRefreshing(true);
-      
+
       // Reset deleting state after a short delay to allow refresh to complete
       setTimeout(() => {
         setIsDeletingNotification(false);
@@ -411,7 +410,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                             </div>
                           );
                         }
-                        
+
                         return (
                           <div
                             key={notification.id}

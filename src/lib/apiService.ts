@@ -45,8 +45,12 @@ export const apiService = {
     return response.data;
   },
 
-  getSignatureResetRequests: async (): Promise<any> => {
-    const response = await api.get("/getAllSignatureReset");
+  getSignatureResetRequests: async (searchTerm?: string): Promise<any> => {
+    const response = await api.get("/getAllSignatureReset", {
+      params: {
+        search: searchTerm || "",
+      },
+    });
     return response.data.users;
   },
 
@@ -683,7 +687,6 @@ export const apiService = {
         page: currentPage,
         per_page: itemsPerPage,
         year: selectedYear || "",
-        quarter: selectedQuarter || "",
       },
     });
     return response.data;

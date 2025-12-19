@@ -97,7 +97,7 @@ export default function SignatureResetRequestsTab() {
       if (isPageChange) {
         setIsPageLoading(true);
       }
-      const response = await apiService.getSignatureResetRequests();
+      const response = await apiService.getSignatureResetRequests(searchValue);
 
       // Handle different response structures
       let allRequests: SignatureResetRequest[] = [];
