@@ -387,9 +387,56 @@ export default function DashboardShell(props: DashboardShellProps) {
                   </div>
 
                   <div className="h-[270px] overflow-y-auto">
-                    {user?.notifications === 0 ? (
-                      <div className="p-4 text-center text-gray-500">
-                        No notifications
+                    {!user?.notifications || user?.notifications.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 px-4">
+                        <div className="mb-4">
+                          <img
+                            src="/notific.gif"
+                            alt="No notifications"
+                            className="w-20 h-20 object-contain"
+                            draggable="false"
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              return false;
+                            }}
+                            onDragStart={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              return false;
+                            }}
+                            onDrag={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              return false;
+                            }}
+                            onDragEnd={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              return false;
+                            }}
+                            onMouseDown={(e) => {
+                              if (e.button === 0) {
+                                e.preventDefault();
+                              }
+                            }}
+                            style={{
+                              imageRendering: "auto",
+                              willChange: "auto",
+                              transform: "translateZ(0)",
+                              backfaceVisibility: "hidden",
+                              WebkitBackfaceVisibility: "hidden",
+                            } as React.CSSProperties}
+                          />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-base font-medium text-gray-700 mb-1">
+                            No notifications yet
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Wait for any notifications to appear here
+                          </p>
+                        </div>
                       </div>
                     ) : (
                       user?.notifications.map((notification: any) => {
