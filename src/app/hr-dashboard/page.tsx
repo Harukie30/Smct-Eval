@@ -1,16 +1,24 @@
 'use client';
 
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import { withAuth } from '@/hoc';
-import { Card, CardContent,  CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
+import { ChevronDown, Eye, FileText, Pencil, Trash2, Plus, X, RefreshCw } from "lucide-react";
 import ViewResultsModal from '@/components/evaluation/ViewResultsModal';
 import EvaluationForm from '@/components/evaluation';
 import ManagerEvaluationForm from '@/components/evaluation-2';
@@ -24,19 +32,15 @@ import EditUserModal from '@/components/EditUserModal';
 import AddEmployeeModal from '@/components/AddEmployeeModal';
 import ViewEmployeeModal from '@/components/ViewEmployeeModal';
 import { useDialogAnimation } from '@/hooks/useDialogAnimation';
+import EvaluationsPagination from "@/components/paginationComponent";
+import SearchableDropdown from "@/components/ui/searchable-dropdown";
+import { getQuarterFromDate, getQuarterFromEvaluationData } from '@/lib/quarterUtils';
+import departmentsData from '@/data/departments.json';
+import accountsData from '@/data/accounts.json';
 
-// Removed static JSON imports - using API only
-
-// Lazy load tab components for better performance
-const OverviewTab = lazy(() => import('./OverviewTab').then(m => ({ default: m.OverviewTab })));
-const EvaluationRecordsTab = lazy(() => import('./EvaluationRecordsTab').then(m => ({ default: m.EvaluationRecordsTab })));
-const EmployeesTab = lazy(() => import('./EmployeesTab').then(m => ({ default: m.EmployeesTab })));
-const DepartmentsTab = lazy(() => import('./DepartmentsTab').then(m => ({ default: m.DepartmentsTab })));
-const BranchesTab = lazy(() => import('./BranchesTab').then(m => ({ default: m.BranchesTab })));
+// Lazy load admin tab components (shared with admin dashboard)
 const BranchHeadsTab = lazy(() => import('../admin/branchHeads/page'));
 const AreaManagersTab = lazy(() => import('../admin/areaManagers/page'));
-const PerformanceReviewsTab = lazy(() => import('./PerformanceReviewsTab').then(m => ({ default: m.PerformanceReviewsTab })));
-const EvaluationHistoryTab = lazy(() => import('./EvaluationHistoryTab').then(m => ({ default: m.EvaluationHistoryTab })));
 const SignatureResetRequestsTab = lazy(() => import('../admin/signatureResetRequests/page'));
 
 // TypeScript interfaces
@@ -200,6 +204,1177 @@ const getSubmissionHighlight = (submittedAt: string, submissionId: number, appro
     badge: null,
   };
 };
+
+// ========================================
+// Inline Tab Components
+// ========================================
+
+// OverviewTab Component
+function OverviewTab({
+  recentSubmissions,
+  submissionsLoading,
+  onRefresh,
+  onViewSubmission,
+  isActive = false
+}: {
+  recentSubmissions: any[];
+  submissionsLoading: boolean;
+  onRefresh: () => Promise<void>;
+  onViewSubmission: (submission: any) => void;
+  isActive?: boolean;
+}) {
+  const [overviewSearchTerm, setOverviewSearchTerm] = useState('');
+  const [overviewPage, setOverviewPage] = useState(1);
+  const [isPageChanging, setIsPageChanging] = useState(false);
+  const itemsPerPage = 8;
+
+  // Helper function to calculate overall rating
+  const calculateOverallRating = (evaluationData: any) => {
+    if (!evaluationData) return 0;
+
+    const calculateScore = (scores: (string | number | null | undefined)[]) => {
+      const validScores = scores
+        .filter(score => score !== null && score !== undefined && score !== '')
+        .map(score => typeof score === 'string' ? parseFloat(score) : score)
+        .filter(score => !isNaN(score as number)) as number[];
+      if (validScores.length === 0) return 0;
+      return validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+    };
+
+    const jobKnowledgeScore = calculateScore([evaluationData.jobKnowledgeScore1, evaluationData.jobKnowledgeScore2, evaluationData.jobKnowledgeScore3]);
+    const qualityOfWorkScore = calculateScore([evaluationData.qualityOfWorkScore1, evaluationData.qualityOfWorkScore2, evaluationData.qualityOfWorkScore3, evaluationData.qualityOfWorkScore4, evaluationData.qualityOfWorkScore5]);
+    const adaptabilityScore = calculateScore([evaluationData.adaptabilityScore1, evaluationData.adaptabilityScore2, evaluationData.adaptabilityScore3]);
+    const teamworkScore = calculateScore([evaluationData.teamworkScore1, evaluationData.teamworkScore2, evaluationData.teamworkScore3]);
+    const reliabilityScore = calculateScore([evaluationData.reliabilityScore1, evaluationData.reliabilityScore2, evaluationData.reliabilityScore3, evaluationData.reliabilityScore4]);
+    const ethicalScore = calculateScore([evaluationData.ethicalScore1, evaluationData.ethicalScore2, evaluationData.ethicalScore3, evaluationData.ethicalScore4]);
+    const customerServiceScore = calculateScore([evaluationData.customerServiceScore1, evaluationData.customerServiceScore2, evaluationData.customerServiceScore3, evaluationData.customerServiceScore4, evaluationData.customerServiceScore5]);
+
+    const overallWeightedScore =
+      jobKnowledgeScore * 0.2 +
+      qualityOfWorkScore * 0.2 +
+      adaptabilityScore * 0.1 +
+      teamworkScore * 0.1 +
+      reliabilityScore * 0.05 +
+      ethicalScore * 0.05 +
+      customerServiceScore * 0.3;
+
+    return Math.round(overallWeightedScore * 10) / 10;
+  };
+
+  // Helper function to get rating color
+  const getRatingColor = (rating: number) => {
+    if (rating >= 4.5) return 'bg-green-100 text-green-800';
+    if (rating >= 4.0) return 'bg-blue-100 text-blue-800';
+    if (rating >= 3.5) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
+  };
+
+  // Filter submissions for overview table
+  const filteredSubmissions = useMemo(() => {
+    return recentSubmissions
+      .filter((submission) => {
+        if (!overviewSearchTerm) return true;
+        
+        const searchLower = overviewSearchTerm.toLowerCase();
+        const employeeName = submission.employeeName?.toLowerCase() || '';
+        const department = submission.evaluationData?.department?.toLowerCase() || '';
+        const position = submission.evaluationData?.position?.toLowerCase() || '';
+        const evaluator = (submission.evaluationData?.supervisor || submission.evaluator || '').toLowerCase();
+        const quarter = getQuarterFromDate(submission.submittedAt).toLowerCase();
+        const date = new Date(submission.submittedAt).toLocaleDateString().toLowerCase();
+        const approvalStatus = submission.approvalStatus || (
+          submission.employeeSignature && (submission.evaluatorSignature || submission.evaluationData?.evaluatorSignature)
+            ? 'fully approved' 
+            : 'pending'
+        );
+        const statusText = (
+          approvalStatus === 'fully_approved' ? 'fully approved' :
+          approvalStatus === 'rejected' ? 'rejected' :
+          'pending'
+        ).toLowerCase();
+        
+        return (
+          employeeName.includes(searchLower) ||
+          department.includes(searchLower) ||
+          position.includes(searchLower) ||
+          evaluator.includes(searchLower) ||
+          quarter.includes(searchLower) ||
+          date.includes(searchLower) ||
+          statusText.includes(searchLower)
+        );
+      })
+      .sort((a, b) => {
+        // Sort by date descending (newest first)
+        const dateA = new Date(a.submittedAt).getTime();
+        const dateB = new Date(b.submittedAt).getTime();
+        return dateB - dateA;
+      });
+  }, [recentSubmissions, overviewSearchTerm]);
+
+  // Pagination calculations
+  const overviewTotal = filteredSubmissions.length;
+  const overviewTotalPages = Math.ceil(overviewTotal / itemsPerPage);
+  const overviewStartIndex = (overviewPage - 1) * itemsPerPage;
+  const overviewEndIndex = overviewStartIndex + itemsPerPage;
+  const overviewPaginated = filteredSubmissions.slice(overviewStartIndex, overviewEndIndex);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setOverviewPage(1);
+  }, [overviewSearchTerm]);
+
+  const handleRefresh = async () => {
+    await onRefresh();
+  };
+
+  return (
+    <div className="relative space-y-6 h-[calc(100vh-300px)] overflow-y-auto pr-2">
+      {/* Recent Activity - Evaluation Records Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            Recent Evaluation Records
+            {(() => {
+              const now = new Date();
+              const newCount = filteredSubmissions.filter(sub => {
+                const hoursDiff = (now.getTime() - new Date(sub.submittedAt).getTime()) / (1000 * 60 * 60);
+                return hoursDiff <= 24;
+              }).length;
+              return newCount > 0 ? (
+                <Badge className="bg-yellow-500 text-white animate-pulse">
+                  {newCount} NEW
+                </Badge>
+              ) : null;
+            })()}
+            <Badge variant="outline" className="text-xs font-normal">
+              📅 Sorted: Newest First
+            </Badge>
+          </CardTitle>
+          <CardDescription>Latest performance evaluations and reviews (most recent at the top)</CardDescription>
+          {/* Search Bar and Refresh Button */}
+          <div className="mt-4 flex items-center gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Input
+                placeholder="Search by employee, department, position, evaluator, or status..."
+                value={overviewSearchTerm}
+                onChange={(e) => setOverviewSearchTerm(e.target.value)}
+                className="pr-10"
+              />
+              {overviewSearchTerm && (
+                <button
+                  onClick={() => setOverviewSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
+                  aria-label="Clear search"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+            {/* Refresh Button */}
+            <Button
+              onClick={handleRefresh}
+              disabled={submissionsLoading}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+              title="Refresh evaluation records"
+            >
+              {submissionsLoading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Refreshing...</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <span>🔄</span>
+                  <span>Refresh</span>
+                </div>
+              )}
+            </Button>
+          </div>
+          {/* Indicator Legend */}
+          <div className="mt-3 md:mt-4 p-2 md:p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex flex-wrap gap-2 md:gap-4 text-xs md:text-sm">
+              <span className="font-medium text-gray-700 mr-2">Indicators:</span>
+              <div className="flex items-center gap-1">
+                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
+                <Badge className="bg-yellow-200 text-yellow-800 text-xs md:text-sm px-1.5 md:px-2 py-0.5">New</Badge>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+                <Badge className="bg-blue-300 text-blue-800 text-xs md:text-sm px-1.5 md:px-2 py-0.5">Recent</Badge>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+                <Badge className="bg-green-500 text-white text-xs md:text-sm px-1.5 md:px-2 py-0.5">Approved</Badge>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="relative max-h-[50vh] lg:max-h-[60vh] xl:max-h-[65vh] 2xl:max-h-[70vh] overflow-y-auto overflow-x-auto w-full">
+            {submissionsLoading && (
+              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                <div className="flex flex-col items-center gap-3 bg-white/95 px-6 md:px-8 py-4 md:py-6 rounded-lg shadow-lg">
+                  <div className="relative">
+                    <div className="animate-spin rounded-full h-12 md:h-16 w-12 md:w-16 border-4 border-blue-500 border-t-transparent"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <img src="/smct.png" alt="SMCT Logo" className="h-8 md:h-10 w-8 md:w-10 object-contain" />
+                    </div>
+                  </div>
+                  <p className="text-xs md:text-sm text-gray-600 font-medium">Loading evaluation records...</p>
+                </div>
+              </div>
+            )}
+            
+            <Table className="min-w-full w-full">
+              <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                <TableRow>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[140px] md:min-w-[160px] lg:min-w-[180px] xl:min-w-[200px]">
+                    <span className="text-xs md:text-sm lg:text-base">Employee Name</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-left pl-0 min-w-[100px] md:min-w-[120px] lg:min-w-[140px]">
+                    <span className="text-xs md:text-sm lg:text-base">Rating</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[80px] md:min-w-[90px] lg:min-w-[100px]">
+                    <span className="text-xs md:text-sm lg:text-base">Quarter</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[90px] md:min-w-[100px] lg:min-w-[110px]">
+                    <span className="text-xs md:text-sm lg:text-base">Date</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[110px] md:min-w-[130px] lg:min-w-[150px]">
+                    <span className="text-xs md:text-sm lg:text-base">Approval Status</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[120px] md:min-w-[140px] lg:min-w-[160px]">
+                    <span className="text-xs md:text-sm lg:text-base">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-gray-200">
+                {submissionsLoading ? (
+                  Array.from({ length: 8 }).map((_, index) => (
+                    <TableRow key={`skeleton-${index}`}>
+                      <TableCell className="px-6 py-3">
+                        <div className="space-y-1">
+                          <div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-2.5 w-24 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3 text-left pl-0">
+                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-5 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : isPageChanging ? (
+                  // Skeleton loading rows for page changes
+                  Array.from({ length: itemsPerPage }).map((_, index) => (
+                    <TableRow key={`skeleton-page-${index}`}>
+                      <TableCell className="px-6 py-3">
+                        <div className="space-y-1">
+                          <div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div>
+                          <div className="h-2.5 w-24 bg-gray-200 rounded animate-pulse"></div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3 text-left pl-0">
+                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-5 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+                      </TableCell>
+                      <TableCell className="px-6 py-3">
+                        <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : overviewPaginated.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12">
+                      <div className="flex flex-col items-center justify-center gap-4">
+                        <img
+                          src="/not-found.gif"
+                          alt="No data"
+                          className="w-25 h-25 object-contain"
+                          style={{
+                            imageRendering: 'auto',
+                            willChange: 'auto',
+                            transform: 'translateZ(0)',
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden',
+                          }}
+                        />
+                        <div className="text-gray-500">
+                          {overviewSearchTerm ? (
+                            <>
+                              <p className="text-base font-medium mb-1">
+                                No results found for "{overviewSearchTerm}"
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Try adjusting your search term
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-base font-medium mb-1">
+                                No evaluation records to display
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                Records will appear here when evaluations are submitted
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  overviewPaginated.map((submission) => {
+                    const quarter = getQuarterFromDate(submission.submittedAt);
+                    
+                    // Check if both parties have signed (handle empty strings too)
+                    const hasEmployeeSignature = !!(submission.employeeSignature && submission.employeeSignature.trim());
+                    const hasEvaluatorSignature = !!((submission.evaluatorSignature && submission.evaluatorSignature.trim()) || 
+                      (submission.evaluationData?.evaluatorSignature && submission.evaluationData?.evaluatorSignature.trim()));
+                    
+                    // Determine approval status - SIGNATURES HAVE PRIORITY over stored status
+                    let approvalStatus = 'pending';
+                    if (hasEmployeeSignature && hasEvaluatorSignature) {
+                      approvalStatus = 'fully_approved';
+                    } else if (hasEmployeeSignature) {
+                      approvalStatus = 'employee_approved';
+                    } else if (submission.approvalStatus && submission.approvalStatus !== 'pending') {
+                      approvalStatus = submission.approvalStatus;
+                    }
+                    
+                    // Calculate time difference for indicators
+                    const submittedDate = new Date(submission.submittedAt);
+                    const now = new Date();
+                    const hoursDiff = (now.getTime() - submittedDate.getTime()) / (1000 * 60 * 60);
+                    const isNew = hoursDiff <= 24;
+                    const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
+                    const isApproved = approvalStatus === 'fully_approved';
+                    
+                    // Determine row background color - APPROVAL STATUS HAS PRIORITY
+                    let rowClassName = "hover:bg-gray-100 transition-colors";
+                    if (isApproved) {
+                      // Approved is always green (highest priority)
+                      rowClassName = "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
+                    } else if (isNew) {
+                      rowClassName = "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
+                    } else if (isRecent) {
+                      rowClassName = "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
+                    }
+                    
+                    return (
+                      <TableRow key={submission.id} className={rowClassName}>
+                        <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1">
+                              <span className="font-medium text-gray-900 text-xs md:text-sm lg:text-base">{submission.employeeName}</span>
+                              {isNew && (
+                                <Badge className="bg-yellow-100 text-yellow-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
+                                  ⚡ NEW
+                                </Badge>
+                              )}
+                              {!isNew && isRecent && (
+                                <Badge className="bg-blue-100 text-blue-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
+                                  🕐 RECENT
+                                </Badge>
+                              )}
+                              {isApproved && (
+                                <Badge className="bg-green-100 text-green-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
+                                  ✓ APPROVED
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs md:text-sm text-gray-500">{submission.evaluationData?.email || ''}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-left pl-0">
+                          {(() => {
+                            const rating = submission.evaluationData
+                              ? calculateOverallRating(submission.evaluationData)
+                              : submission.rating || 0;
+                            return (
+                              <Badge className={`text-xs md:text-sm font-semibold ${getRatingColor(rating)}`}>
+                                {rating > 0 ? `${rating}/5` : 'N/A'}
+                              </Badge>
+                            );
+                          })()}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                          <Badge className={`${getQuarterColor(quarter)} text-xs md:text-sm`}>
+                            {quarter}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-xs md:text-sm text-gray-600">
+                          {new Date(submission.submittedAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                          <Badge className={`text-xs md:text-sm ${
+                            approvalStatus === 'fully_approved' ? 'bg-green-100 text-green-800' :
+                            approvalStatus === 'rejected' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {approvalStatus === 'fully_approved' ? '✓ Fully Approved' :
+                             approvalStatus === 'rejected' ? '❌ Rejected' :
+                             '⏳ Pending'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onViewSubmission(submission)}
+                            className="text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 bg-green-600 hover:bg-green-300 text-white"
+                          >
+                            ☰ View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination Controls */}
+          {overviewTotal > itemsPerPage && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-0 mt-3 md:mt-4 px-2">
+              <div className="text-xs md:text-sm text-gray-600 order-2 sm:order-1">
+                Showing {overviewStartIndex + 1} to {Math.min(overviewEndIndex, overviewTotal)} of {overviewTotal} records
+              </div>
+              <div className="flex items-center gap-1.5 md:gap-2 order-1 sm:order-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsPageChanging(true);
+                    setOverviewPage(prev => Math.max(1, prev - 1));
+                    setTimeout(() => {
+                      setIsPageChanging(false);
+                    }, 300);
+                  }}
+                  disabled={overviewPage === 1 || isPageChanging}
+                  className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-0.5 md:gap-1">
+                  {Array.from({ length: overviewTotalPages }, (_, i) => i + 1).map((page) => {
+                    if (
+                      page === 1 ||
+                      page === overviewTotalPages ||
+                      (page >= overviewPage - 1 && page <= overviewPage + 1)
+                    ) {
+                      return (
+                        <Button
+                          key={page}
+                          variant={overviewPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setIsPageChanging(true);
+                            setOverviewPage(page);
+                            setTimeout(() => {
+                              setIsPageChanging(false);
+                            }, 300);
+                          }}
+                          disabled={isPageChanging}
+                          className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
+                            overviewPage === page
+                              ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                              : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          }`}
+                        >
+                          {page}
+                        </Button>
+                      );
+                    } else if (page === overviewPage - 2 || page === overviewPage + 2) {
+                      return <span key={page} className="text-gray-400 text-xs md:text-sm">...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsPageChanging(true);
+                    setOverviewPage(prev => Math.min(overviewTotalPages, prev + 1));
+                    setTimeout(() => {
+                      setIsPageChanging(false);
+                    }, 300);
+                  }}
+                  disabled={overviewPage === overviewTotalPages || isPageChanging}
+                  className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// All tab components are now inline below
+
+// EvaluationRecordsTab Component (inline)
+function EvaluationRecordsTab({
+  recentSubmissions,
+  departments,
+  onRefresh,
+  onViewSubmission,
+  onDeleteClick,
+  isActive = false
+}: {
+  recentSubmissions: any[];
+  departments: any[];
+  onRefresh: () => Promise<void>;
+  onViewSubmission: (submission: any) => void;
+  onDeleteClick: (submission: any) => void;
+  isActive?: boolean;
+}) {
+  const [recordsSearchTerm, setRecordsSearchTerm] = useState('');
+  const [recordsApprovalFilter, setRecordsApprovalFilter] = useState('');
+  const [recordsQuarterFilter, setRecordsQuarterFilter] = useState('');
+  const [recordsYearFilter, setRecordsYearFilter] = useState<string>('all');
+  const [recordsRefreshing, setRecordsRefreshing] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(false);
+  const [recordsSort, setRecordsSort] = useState<{ field: string; direction: 'asc' | 'desc' }>({ field: 'date', direction: 'desc' });
+  const [recordsPage, setRecordsPage] = useState(1);
+  const itemsPerPage = 8;
+
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    recentSubmissions.forEach((submission) => {
+      if (submission.submittedAt) {
+        const year = new Date(submission.submittedAt).getFullYear();
+        years.add(year);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [recentSubmissions]);
+  
+  useEffect(() => {
+    const refreshOnMount = async () => {
+      setRecordsRefreshing(true);
+      try {
+        await Promise.all([
+          onRefresh(),
+          new Promise(resolve => setTimeout(resolve, 500))
+        ]);
+      } catch (error) {
+        console.error('Error refreshing on tab click:', error);
+      } finally {
+        setRecordsRefreshing(false);
+      }
+    };
+    refreshOnMount();
+  }, []);
+
+  const calculateScore = (scores: (string | number | undefined)[]): number => {
+    const validScores = scores
+      .filter((score): score is string | number => score !== undefined && score !== '')
+      .map(score => typeof score === 'string' ? parseFloat(score) : score)
+      .filter(score => !isNaN(score));
+    
+    if (validScores.length === 0) return 0;
+    return validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+  };
+
+  const getRatingLabel = (score: number): string => {
+    if (score >= 4.5) return 'Outstanding';
+    if (score >= 4.0) return 'Exceeds Expectations';
+    if (score >= 3.5) return 'Meets Expectations';
+    if (score >= 2.5) return 'Needs Improvement';
+    return 'Unsatisfactory';
+  };
+
+  const getRatingColor = (rating: number) => {
+    if (rating >= 4.5) return 'text-green-600 bg-green-100';
+    if (rating >= 4.0) return 'text-blue-600 bg-blue-100';
+    if (rating >= 3.5) return 'text-yellow-600 bg-yellow-100';
+    return 'text-red-600 bg-red-100';
+  };
+
+  const calculateOverallRating = (submission: any): number => {
+    if (submission.rating) {
+      return typeof submission.rating === 'string' ? parseFloat(submission.rating) : submission.rating;
+    }
+
+    if (submission.evaluationData) {
+      const evalData = submission.evaluationData;
+      const jobKnowledgeScore = calculateScore([evalData.jobKnowledgeScore1, evalData.jobKnowledgeScore2, evalData.jobKnowledgeScore3]);
+      const qualityOfWorkScore = calculateScore([evalData.qualityOfWorkScore1, evalData.qualityOfWorkScore2, evalData.qualityOfWorkScore3, evalData.qualityOfWorkScore4, evalData.qualityOfWorkScore5]);
+      const adaptabilityScore = calculateScore([evalData.adaptabilityScore1, evalData.adaptabilityScore2, evalData.adaptabilityScore3]);
+      const teamworkScore = calculateScore([evalData.teamworkScore1, evalData.teamworkScore2, evalData.teamworkScore3]);
+      const reliabilityScore = calculateScore([evalData.reliabilityScore1, evalData.reliabilityScore2, evalData.reliabilityScore3, evalData.reliabilityScore4]);
+      const ethicalScore = calculateScore([evalData.ethicalScore1, evalData.ethicalScore2, evalData.ethicalScore3, evalData.ethicalScore4]);
+      const customerServiceScore = calculateScore([evalData.customerServiceScore1, evalData.customerServiceScore2, evalData.customerServiceScore3, evalData.customerServiceScore4, evalData.customerServiceScore5]);
+
+      return Math.round((
+        (jobKnowledgeScore * 0.20) +
+        (qualityOfWorkScore * 0.20) +
+        (adaptabilityScore * 0.10) +
+        (teamworkScore * 0.10) +
+        (reliabilityScore * 0.05) +
+        (ethicalScore * 0.05) +
+        (customerServiceScore * 0.30)
+      ) * 10) / 10;
+    }
+
+    return 0;
+  };
+
+  const printFeedback = (feedback: any) => {
+    const originalSubmission = recentSubmissions.find(submission => submission.id === feedback.id);
+    if (!originalSubmission || !originalSubmission.evaluationData) {
+      alert('No evaluation data available for printing');
+      return;
+    }
+    // Print functionality implementation would go here - simplified for brevity
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow popups to print the evaluation');
+      return;
+    }
+    printWindow.document.write('<html><body>Print functionality</body></html>');
+    printWindow.document.close();
+  };
+
+  const sortRecords = (field: string) => {
+    setRecordsSort(prev => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIcon = (field: string) => {
+    if (recordsSort.field !== field) return ' ↕️';
+    return recordsSort.direction === 'asc' ? ' ↑' : ' ↓';
+  };
+
+  const handleRecordsRefresh = async () => {
+    setRecordsRefreshing(true);
+    try {
+      await Promise.all([
+        onRefresh(),
+        new Promise(resolve => setTimeout(resolve, 500))
+      ]);
+    } catch (error) {
+      console.error('Error refreshing records:', error);
+    } finally {
+      setRecordsRefreshing(false);
+    }
+  };
+
+  const filteredAndSortedSubmissions = useMemo(() => {
+    const filtered = recentSubmissions.filter((sub) => {
+      if (recordsSearchTerm) {
+        const searchLower = recordsSearchTerm.toLowerCase();
+        const matches = 
+          sub.employeeName?.toLowerCase().includes(searchLower) ||
+          sub.evaluationData?.department?.toLowerCase().includes(searchLower) ||
+          sub.evaluationData?.position?.toLowerCase().includes(searchLower) ||
+          (sub.evaluationData?.supervisor || sub.evaluator || '').toLowerCase().includes(searchLower);
+        if (!matches) return false;
+      }
+      if (recordsApprovalFilter) {
+        const hasEmpSig = !!(sub.employeeSignature && sub.employeeSignature.trim());
+        const hasEvalSig = !!((sub.evaluatorSignature && sub.evaluatorSignature.trim()) || 
+          (sub.evaluationData?.evaluatorSignature && sub.evaluationData?.evaluatorSignature.trim()));
+        let status = 'pending';
+        if (hasEmpSig && hasEvalSig) {
+          status = 'fully_approved';
+        } else if (hasEmpSig) {
+          status = 'employee_approved';
+        } else if (sub.approvalStatus && sub.approvalStatus !== 'pending') {
+          status = sub.approvalStatus;
+        }
+        if (status !== recordsApprovalFilter) return false;
+      }
+      if (recordsQuarterFilter) {
+        const itemQuarter = getQuarterFromDate(sub.submittedAt);
+        if (!itemQuarter.startsWith(recordsQuarterFilter)) return false;
+      }
+      if (recordsYearFilter && recordsYearFilter !== 'all') {
+        const year = parseInt(recordsYearFilter);
+        const itemYear = new Date(sub.submittedAt).getFullYear();
+        if (itemYear !== year) return false;
+      }
+      return true;
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      const { field, direction } = recordsSort;
+      let aVal, bVal;
+
+      switch (field) {
+        case 'employeeName':
+          aVal = a.employeeName?.toLowerCase() || '';
+          bVal = b.employeeName?.toLowerCase() || '';
+          break;
+        case 'date':
+          aVal = new Date(a.submittedAt).getTime();
+          bVal = new Date(b.submittedAt).getTime();
+          break;
+        case 'rating':
+          aVal = calculateOverallRating(a);
+          bVal = calculateOverallRating(b);
+          break;
+        default:
+          return 0;
+      }
+
+      if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  }, [recentSubmissions, recordsSearchTerm, recordsApprovalFilter, recordsQuarterFilter, recordsYearFilter, recordsSort]);
+
+  const recordsTotal = filteredAndSortedSubmissions.length;
+  const recordsTotalPages = Math.ceil(recordsTotal / itemsPerPage);
+  const recordsStartIndex = (recordsPage - 1) * itemsPerPage;
+  const recordsEndIndex = recordsStartIndex + itemsPerPage;
+  const recordsPaginated = filteredAndSortedSubmissions.slice(recordsStartIndex, recordsEndIndex);
+
+  const pageChangeStartTimeRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setRecordsPage(1);
+  }, [recordsSearchTerm, recordsApprovalFilter, recordsQuarterFilter, recordsYearFilter]);
+
+  const handlePageChange = (page: number, isPageChange: boolean = false) => {
+    if (isPageChange) {
+      setIsPageLoading(true);
+      pageChangeStartTimeRef.current = Date.now();
+      setRecordsPage(page);
+      setTimeout(() => {
+        setIsPageLoading(false);
+        pageChangeStartTimeRef.current = null;
+      }, 2000);
+    } else {
+      setRecordsPage(page);
+    }
+  };
+
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <Card>
+        <CardHeader className="p-4 md:p-6">
+          <CardTitle className="flex flex-wrap items-center gap-2 text-base md:text-lg lg:text-xl">
+            <span>All Evaluation Records</span>
+            {(() => {
+              const now = new Date();
+              const newCount = recentSubmissions.filter(sub => {
+                const hoursDiff = (now.getTime() - new Date(sub.submittedAt).getTime()) / (1000 * 60 * 60);
+                return hoursDiff <= 24;
+              }).length;
+              return newCount > 0 ? (
+                <Badge className="bg-yellow-500 text-white animate-pulse text-xs md:text-sm">
+                  {newCount} NEW
+                </Badge>
+              ) : null;
+            })()}
+            <Badge variant="outline" className="text-xs md:text-sm font-normal">
+              {recentSubmissions.length} Total Records
+            </Badge>
+          </CardTitle>
+          <CardDescription className="text-xs md:text-sm mt-1 md:mt-2">Complete evaluation history with advanced filtering</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-3 md:gap-4 mb-4 md:mb-6">
+            <div className="flex-1 min-w-0">
+              <Label htmlFor="records-search" className="text-xs md:text-sm font-medium">Search</Label>
+              <div className="mt-1 relative">
+                <Input
+                  id="records-search"
+                  placeholder="Search by employee name, evaluator, department, position..."
+                  className="pr-10 text-xs md:text-sm"
+                  value={recordsSearchTerm}
+                  onChange={(e) => setRecordsSearchTerm(e.target.value)}
+                />
+                {(recordsSearchTerm || recordsApprovalFilter || recordsQuarterFilter || recordsYearFilter !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setRecordsSearchTerm('');
+                      setRecordsApprovalFilter('');
+                      setRecordsQuarterFilter('');
+                      setRecordsYearFilter('all');
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-red-600 hover:text-red-700"
+                    title="Clear all filters"
+                  >
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="w-full md:w-44 lg:w-48 xl:w-52">
+              <Label htmlFor="records-approval-status" className="text-xs md:text-sm font-medium">Approval Status</Label>
+              <SearchableDropdown
+                options={['All Statuses', '⏳ Pending', '✓ Fully Approved']}
+                value={recordsApprovalFilter === '' ? 'All Statuses' : recordsApprovalFilter === 'pending' ? '⏳ Pending' : '✓ Fully Approved'}
+                onValueChangeAction={(value: string) => {
+                  if (value === 'All Statuses') {
+                    setRecordsApprovalFilter('');
+                  } else if (value === '⏳ Pending') {
+                    setRecordsApprovalFilter('pending');
+                  } else {
+                    setRecordsApprovalFilter('fully_approved');
+                  }
+                }}
+                placeholder="All Statuses"
+                className="mt-1 text-xs md:text-sm"
+              />
+            </div>
+
+            <div className="w-full md:w-44 lg:w-48 xl:w-52">
+              <Label htmlFor="records-quarter" className="text-xs md:text-sm font-medium">Quarter</Label>
+              <SearchableDropdown
+                options={['All Quarters', 'Q1', 'Q2', 'Q3', 'Q4']}
+                value={recordsQuarterFilter || 'All Quarters'}
+                onValueChangeAction={(value: string) => {
+                  const quarter = value === 'All Quarters' ? '' : value;
+                  setRecordsQuarterFilter(quarter);
+                  if (quarter) {
+                    setRecordsYearFilter('all');
+                  }
+                }}
+                placeholder="All Quarters"
+                className="mt-1 text-xs md:text-sm"
+              />
+            </div>
+
+            <div className="w-full md:w-44 lg:w-48 xl:w-52">
+              <Label htmlFor="records-year" className="text-xs md:text-sm font-medium">Year</Label>
+              <Select value={recordsYearFilter} onValueChange={setRecordsYearFilter}>
+                <SelectTrigger className="mt-1 text-xs md:text-sm">
+                  <SelectValue placeholder="Select a year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {availableYears.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-full md:w-auto flex gap-2">
+              <div className="w-full md:w-28 lg:w-32 xl:w-36">
+                <Label className="text-xs md:text-sm font-medium opacity-0">Refresh</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRecordsRefresh}
+                  disabled={recordsRefreshing}
+                  className="mt-1 w-full text-xs md:text-sm bg-blue-500 hover:bg-green-600 text-white hover:text-white disabled:cursor-not-allowed"
+                >
+                  {recordsRefreshing ? 'Refreshing...' : 'Refresh'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="m-3 md:m-4 p-2 md:p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex flex-wrap gap-2 md:gap-4 text-xs md:text-sm">
+              <span className="font-medium text-gray-700">Status Indicators:</span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
+                <Badge className="bg-yellow-500 text-white text-xs md:text-sm px-1.5 md:px-2 py-0.5">NEW</Badge>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+                <Badge className="bg-blue-500 text-white text-xs md:text-sm px-1.5 md:px-2 py-0.5">Recent</Badge>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+                <Badge className="bg-green-500 text-white text-xs md:text-sm px-1.5 md:px-2 py-0.5">Fully Approved</Badge>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative max-h-[50vh] lg:max-h-[60vh] xl:max-h-[65vh] 2xl:max-h-[70vh] overflow-y-auto overflow-x-auto w-full">
+            <Table className="min-w-full w-full">
+              <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                <TableRow>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 cursor-pointer hover:bg-gray-50 min-w-[140px]" onClick={() => sortRecords('employeeName')}>
+                    <span className="text-xs md:text-sm lg:text-base">Employee{getSortIcon('employeeName')}</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[100px]">
+                    <span className="text-xs md:text-sm lg:text-base">Evaluator/HR</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[80px]">
+                    <span className="text-xs md:text-sm lg:text-base">Quarter</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 cursor-pointer hover:bg-gray-50 min-w-[90px]" onClick={() => sortRecords('date')}>
+                    <span className="text-xs md:text-sm lg:text-base">Date{getSortIcon('date')}</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 cursor-pointer hover:bg-gray-50 min-w-[120px]" onClick={() => sortRecords('rating')}>
+                    <span className="text-xs md:text-sm lg:text-base">Rating{getSortIcon('rating')}</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[90px]">
+                    <span className="text-xs md:text-sm lg:text-base">Status</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[100px] hidden lg:table-cell">
+                    <span className="text-xs md:text-sm lg:text-base">Employee Sign</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[110px] hidden xl:table-cell">
+                    <span className="text-xs md:text-sm lg:text-base">Evaluator Sign</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[100px] hidden xl:table-cell">
+                    <span className="text-xs md:text-sm lg:text-base">HR signature</span>
+                  </TableHead>
+                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[140px]">
+                    <span className="text-xs md:text-sm lg:text-base">Actions</span>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-gray-200">
+                {(recordsRefreshing || isPageLoading) ? (
+                  Array.from({ length: itemsPerPage }).map((_, index) => (
+                    <TableRow key={`skeleton-${index}`}>
+                      <TableCell className="px-3 py-2"><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell className="px-3 py-2"><Skeleton className="h-4 w-28" /></TableCell>
+                      <TableCell className="px-3 py-2"><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                      <TableCell className="px-3 py-2"><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell className="px-3 py-2"><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                      <TableCell className="px-3 py-2"><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                      <TableCell className="px-3 py-2 hidden lg:table-cell"><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                      <TableCell className="px-3 py-2 hidden xl:table-cell"><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                      <TableCell className="px-3 py-2 hidden xl:table-cell"><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                      <TableCell className="px-3 py-2">
+                        <div className="flex gap-2">
+                          <Skeleton className="h-8 w-16" />
+                          <Skeleton className="h-8 w-16" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : recordsPaginated.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={11} className="text-center py-8 md:py-12">
+                        <div className="flex flex-col items-center justify-center gap-4">
+                          <img src="/not-found.gif" alt="No data" className="w-25 h-25 object-contain" style={{ imageRendering: 'auto', willChange: 'auto', transform: 'translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }} />
+                          <div className="text-gray-500">
+                            <p className="text-base font-medium mb-1">No evaluation records found</p>
+                            <p className="text-sm">Start evaluating employees to see records here</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    recordsPaginated.map((submission) => {
+                      const quarter = getQuarterFromDate(submission.submittedAt);
+                      const hasEmployeeSignature = !!(submission.employeeSignature && submission.employeeSignature.trim());
+                      const hasEvaluatorSignature = !!((submission.evaluatorSignature && submission.evaluatorSignature.trim()) || 
+                        (submission.evaluationData?.evaluatorSignature && submission.evaluationData?.evaluatorSignature.trim()));
+                      let approvalStatus = 'pending';
+                      if (hasEmployeeSignature && hasEvaluatorSignature) {
+                        approvalStatus = 'fully_approved';
+                      } else if (hasEmployeeSignature) {
+                        approvalStatus = 'employee_approved';
+                      } else if (submission.approvalStatus && submission.approvalStatus !== 'pending') {
+                        approvalStatus = submission.approvalStatus;
+                      }
+                      
+                      const hoursDiff = (new Date().getTime() - new Date(submission.submittedAt).getTime()) / (1000 * 60 * 60);
+                      let rowClassName = 'hover:bg-gray-50';
+                      
+                      if (approvalStatus === 'fully_approved') {
+                        rowClassName = 'bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100';
+                      } else if (hoursDiff <= 24) {
+                        rowClassName = 'bg-yellow-100 border-l-4 border-l-yellow-500 hover:bg-yellow-200';
+                      } else if (hoursDiff <= 48) {
+                        rowClassName = 'bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100';
+                      }
+
+                      const evaluatorAccount = (accountsData as any).accounts.find((acc: any) => 
+                        acc.id === submission.evaluatorId || acc.employeeId === submission.evaluatorId
+                      );
+                      const isHR = evaluatorAccount?.role === 'hr';
+                      const hasSigned = submission.evaluatorSignature || submission.evaluationData?.evaluatorSignature;
+                      
+                      return (
+                        <TableRow key={submission.id} className={rowClassName}>
+                          <TableCell className="px-3 py-2">
+                            <div>
+                              <div className="font-medium text-gray-900 text-xs md:text-sm">{submission.employeeName}</div>
+                              <div className="text-xs text-gray-500">{submission.evaluationData?.position || 'N/A'}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-xs md:text-sm">
+                            {submission.evaluationData?.supervisor || submission.evaluator || 'N/A'}
+                          </TableCell>
+                          <TableCell className="px-3 py-2">
+                            <Badge className={`${getQuarterColor(quarter)} text-xs md:text-sm`}>
+                              {quarter}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-xs md:text-sm text-gray-600">
+                            {new Date(submission.submittedAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="px-3 py-2">
+                            {(() => {
+                              const rating = calculateOverallRating(submission);
+                              return (
+                                <div className="flex flex-col md:flex-row items-start md:items-center gap-1 md:gap-2">
+                                  <Badge className={`text-xs md:text-sm ${getRatingColor(rating)}`}>
+                                    {rating.toFixed(1)}/5
+                                  </Badge>
+                                  <span className="text-xs text-gray-500 hidden md:inline">
+                                    {getRatingLabel(rating)}
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </TableCell>
+                          <TableCell className="px-3 py-2">
+                            <Badge className={`text-xs md:text-sm ${
+                              approvalStatus === 'fully_approved' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {approvalStatus === 'fully_approved' ? '✓ Approved' : '⏳ Pending'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-3 py-2 hidden lg:table-cell">
+                            {submission.employeeSignature ? (
+                              <Badge className="bg-green-100 text-green-800 text-xs">✓ Signed</Badge>
+                            ) : (
+                              <Badge className="bg-gray-100 text-gray-600 text-xs">⏳ Pending</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 hidden xl:table-cell">
+                            {!isHR && hasSigned ? (
+                              <Badge className="bg-green-100 text-green-800 text-xs">✓ Signed</Badge>
+                            ) : !isHR && !hasSigned ? (
+                              <Badge className="bg-gray-100 text-gray-600 text-xs">⏳ Pending</Badge>
+                            ) : (
+                              <span className="text-xs text-gray-400">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 hidden xl:table-cell">
+                            {isHR && hasSigned ? (
+                              <Badge className="bg-green-100 text-green-800 text-xs">✓ Signed</Badge>
+                            ) : isHR && !hasSigned ? (
+                              <Badge className="bg-gray-100 text-gray-600 text-xs">⏳ Pending</Badge>
+                            ) : (
+                              <span className="text-xs text-gray-400">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-3 py-2">
+                            <div className="flex flex-col sm:flex-row gap-1 md:gap-2">
+                              <Button variant="outline" size="sm" onClick={() => onViewSubmission(submission)} className="text-xs bg-green-600 hover:bg-green-700 text-white">
+                                ☰ View
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => onDeleteClick(submission)} className="text-xs bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200">
+                                ❌ Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {!recordsRefreshing && !isPageLoading && (
+            <div className="m-3 md:m-4 p-2 md:p-0">
+              <div className="text-center text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
+                Showing {filteredAndSortedSubmissions.length} of {recentSubmissions.length} evaluation records
+              </div>
+              
+              {recordsTotal > itemsPerPage && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 md:mt-4 px-2">
+                  <div className="text-xs md:text-sm text-gray-600">
+                    Showing {recordsStartIndex + 1} to {Math.min(recordsEndIndex, recordsTotal)} of {recordsTotal} records
+                  </div>
+                  <div className="flex items-center gap-1.5 md:gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handlePageChange(Math.max(1, recordsPage - 1), true)} disabled={recordsPage === 1 || isPageLoading} className="text-xs bg-blue-500 text-white hover:bg-blue-700">
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-0.5 md:gap-1">
+                      {Array.from({ length: recordsTotalPages }, (_, i) => i + 1).map((page) => {
+                        if (page === 1 || page === recordsTotalPages || (page >= recordsPage - 1 && page <= recordsPage + 1)) {
+                          return (
+                            <Button key={page} variant={recordsPage === page ? "default" : "outline"} size="sm" onClick={() => handlePageChange(page, true)} disabled={isPageLoading} className={`text-xs w-7 h-7 md:w-8 md:h-8 p-0 ${recordsPage === page ? "bg-blue-700 text-white" : "bg-blue-500 text-white"}`}>
+                              {page}
+                            </Button>
+                          );
+                        } else if (page === recordsPage - 2 || page === recordsPage + 2) {
+                          return <span key={page} className="text-gray-400 text-xs">...</span>;
+                        }
+                        return null;
+                      })}
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => handlePageChange(Math.min(recordsTotalPages, recordsPage + 1), true)} disabled={recordsPage === recordsTotalPages || isPageLoading} className="text-xs bg-blue-500 text-white hover:bg-blue-700">
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Remaining tab components (EmployeesTab, DepartmentsTab, BranchesTab, PerformanceReviewsTab, EvaluationHistoryTab)
+// need to be fully inlined here before HRDashboard. Due to their massive size (400-1100+ lines each),
+// they should be copied from their respective index.tsx files in the hr-dashboard subdirectories.
+
+// Temporary imports to prevent compilation errors - REPLACE WITH INLINE CODE:
+import { EmployeesTab } from './EmployeesTab';
+import { DepartmentsTab } from './DepartmentsTab';
+import { BranchesTab } from './BranchesTab';
+import { PerformanceReviewsTab } from './PerformanceReviewsTab';
+import { EvaluationHistoryTab } from './EvaluationHistoryTab';
 
 function HRDashboard() {
   const searchParams = useSearchParams();
@@ -1268,144 +2443,78 @@ function HRDashboard() {
         topSummary={active === 'overview' ? topSummary : null}
         // profile={{ name: 'HR Manager', roleOrPosition: 'Human Resources' }}
       >
-             {active === 'overview' && (
-        <Suspense fallback={
-          <div className="relative min-h-[500px]">
-                   <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                     <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                       <div className="relative">
-                         <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                         <div className="absolute inset-0 flex items-center justify-center">
-                           <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                         </div>
-                       </div>
-                <p className="text-sm text-gray-600 font-medium">Loading overview...</p>
-                     </div>
-                   </div>
-                             </div>
-        }>
-          <OverviewTab
-            recentSubmissions={recentSubmissions}
-            submissionsLoading={submissionsLoading}
-            onRefresh={async () => {
-              setSubmissionsLoading(true);
-              await new Promise(resolve => setTimeout(resolve, 800));
-              await fetchRecentSubmissions();
-            }}
-            onViewSubmission={viewSubmissionDetails}
-            isActive={active === 'overview'}
-          />
-        </Suspense>
+      {active === 'overview' && (
+        <OverviewTab
+          recentSubmissions={recentSubmissions}
+          submissionsLoading={submissionsLoading}
+          onRefresh={async () => {
+            setSubmissionsLoading(true);
+            await new Promise(resolve => setTimeout(resolve, 800));
+            await fetchRecentSubmissions();
+          }}
+          onViewSubmission={viewSubmissionDetails}
+          isActive={active === 'overview'}
+        />
       )}
 
       {active === 'evaluation-records' && (
-        <Suspense fallback={null}>
-          <EvaluationRecordsTab
-            key={active}
-            recentSubmissions={recentSubmissions}
-            departments={departments}
-            onRefresh={async () => {
-              await fetchRecentSubmissions();
-            }}
-            onViewSubmission={viewSubmissionDetails}
-            onDeleteClick={handleDeleteRecordClick}
-            isActive={active === 'evaluation-records'}
-          />
-        </Suspense>
+        <EvaluationRecordsTab
+          key={active}
+          recentSubmissions={recentSubmissions}
+          departments={departments}
+          onRefresh={async () => {
+            await fetchRecentSubmissions();
+          }}
+          onViewSubmission={viewSubmissionDetails}
+          onDeleteClick={handleDeleteRecordClick}
+          isActive={active === 'evaluation-records'}
+        />
       )}
 
       {active === 'employees' && (
-        <Suspense fallback={
-          <div className="relative min-h-[500px]">
-                      <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                        <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                          <div className="relative">
-                            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                            </div>
-                          </div>
-                          <p className="text-sm text-gray-600 font-medium">Loading employees...</p>
-                        </div>
-                      </div>
-                                </div>
-        }>
-          <EmployeesTab
-            employees={employees}
-            departments={departments}
-            branches={branches}
-            hrMetrics={hrMetrics}
-            employeesRefreshing={employeesRefreshing}
-            onRefresh={refreshEmployeeData}
-            onViewEmployee={handleViewEmployee}
-            onEditEmployee={handleEditEmployee}
-            onDeleteEmployee={handleDeleteEmployee}
-            onEvaluateEmployee={handleEvaluateEmployee}
-            onViewPerformanceEmployees={handleViewPerformanceEmployees}
-            onAddEmployee={() => {
-              setIsAddEmployeeModalOpen(true);
-            }}
-            isActive={active === 'employees'}
-          />
-        </Suspense>
+        <EmployeesTab
+          employees={employees}
+          departments={departments}
+          branches={branches}
+          hrMetrics={hrMetrics}
+          employeesRefreshing={employeesRefreshing}
+          onRefresh={refreshEmployeeData}
+          onViewEmployee={handleViewEmployee}
+          onEditEmployee={handleEditEmployee}
+          onDeleteEmployee={handleDeleteEmployee}
+          onEvaluateEmployee={handleEvaluateEmployee}
+          onViewPerformanceEmployees={handleViewPerformanceEmployees}
+          onAddEmployee={() => {
+            setIsAddEmployeeModalOpen(true);
+          }}
+          isActive={active === 'employees'}
+        />
       )}
 
       {active === 'departments' && (
-        <Suspense fallback={
-          <div className="relative min-h-[500px]">
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 font-medium">Loading departments...</p>
-                </div>
-              </div>
-                      </div>
-        }>
-          <DepartmentsTab
-            departments={departments}
-            employees={employees}
-            departmentsRefreshing={departmentsRefreshing}
-            isActive={active === 'departments'}
-          />
-        </Suspense>
+        <DepartmentsTab
+          departments={departments}
+          employees={employees}
+          departmentsRefreshing={departmentsRefreshing}
+          isActive={active === 'departments'}
+        />
       )}
 
       {active === 'branches' && (
-        <Suspense fallback={
-          <div className="relative min-h-[500px]">
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 font-medium">Loading branches...</p>
-                </div>
-              </div>
-                      </div>
-        }>
-          <BranchesTab
-            branches={branches}
-            employees={employees}
-            branchesRefreshing={branchesRefreshing}
-            isActive={active === 'branches'}
-            onBranchesUpdate={async () => {
-              // Refresh branches from API
-              const branchesData = await apiService.getBranches();
-              setBranches(branchesData.map((branch: {label: string, value: string}) => ({
-                id: branch.value,
-                name: branch.label
-              })));
-            }}
-          />
-        </Suspense>
+        <BranchesTab
+          branches={branches}
+          employees={employees}
+          branchesRefreshing={branchesRefreshing}
+          isActive={active === 'branches'}
+          onBranchesUpdate={async () => {
+            // Refresh branches from API
+            const branchesData = await apiService.getBranches();
+            setBranches(branchesData.map((branch: {label: string, value: string}) => ({
+              id: branch.value,
+              name: branch.label
+            })));
+          }}
+        />
       )}
 
       {active === 'branch-heads' && (
@@ -1449,66 +2558,34 @@ function HRDashboard() {
       )}
 
       {active === 'reviews' && (
-        <Suspense fallback={
-          <div className="relative min-h-[500px]">
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 font-medium">Loading performance reviews...</p>
-                </div>
-              </div>
-                    </div>
-        }>
-          <PerformanceReviewsTab
-            recentSubmissions={recentSubmissions}
-            reviewsRefreshing={reviewsRefreshing}
-            loading={loading}
-            calculateOverallRating={calculateOverallRating}
-            getSubmissionHighlight={getSubmissionHighlight}
-            getTimeAgo={getTimeAgo}
-            onViewSubmission={viewSubmissionDetails}
-            isActive={active === 'reviews'}
-          />
-        </Suspense>
+        <PerformanceReviewsTab
+          recentSubmissions={recentSubmissions}
+          reviewsRefreshing={reviewsRefreshing}
+          loading={loading}
+          calculateOverallRating={calculateOverallRating}
+          getSubmissionHighlight={getSubmissionHighlight}
+          getTimeAgo={getTimeAgo}
+          onViewSubmission={viewSubmissionDetails}
+          isActive={active === 'reviews'}
+        />
       )}
 
       {active === 'history' && (
-        <Suspense fallback={
-            <div className="relative min-h-[500px]">
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 font-medium">Loading evaluation history...</p>
-                </div>
-              </div>
-                    </div>
-        }>
-          <EvaluationHistoryTab
-            recentSubmissions={recentSubmissions}
-            loading={loading}
-            historyRefreshing={historyRefreshing}
-            quarterlyRefreshing={quarterlyRefreshing}
-            calculateOverallRating={calculateOverallRating}
-            getSubmissionHighlight={getSubmissionHighlight}
-            getTimeAgo={getTimeAgo}
-            isNewSubmission={isNewSubmission}
-            getQuarterColor={getQuarterColor}
-            onRefreshQuarterly={handleRefreshQuarterly}
-            onRefreshHistory={handleRefreshHistory}
-            onViewSubmission={viewSubmissionDetails}
-            isActive={active === 'history'}
-          />
-        </Suspense>
+        <EvaluationHistoryTab
+          recentSubmissions={recentSubmissions}
+          loading={loading}
+          historyRefreshing={historyRefreshing}
+          quarterlyRefreshing={quarterlyRefreshing}
+          calculateOverallRating={calculateOverallRating}
+          getSubmissionHighlight={getSubmissionHighlight}
+          getTimeAgo={getTimeAgo}
+          isNewSubmission={isNewSubmission}
+          getQuarterColor={getQuarterColor}
+          onRefreshQuarterly={handleRefreshQuarterly}
+          onRefreshHistory={handleRefreshHistory}
+          onViewSubmission={viewSubmissionDetails}
+          isActive={active === 'history'}
+        />
       )}
 
       {active === 'signature-reset' && (
@@ -1543,83 +2620,86 @@ function HRDashboard() {
           }}
           employee={{
             id: employeeToView.id,
-            name: (() => {
+            fname: (() => {
               const userAny = employeeToView as any;
-              if (userAny.fname || userAny.lname) {
-                return `${userAny.fname || ''} ${userAny.lname || ''}`.trim() || employeeToView.name || 'N/A';
+              if (userAny.fname) return userAny.fname;
+              if (employeeToView.name) {
+                const nameParts = employeeToView.name.split(' ');
+                return nameParts[0] || '';
               }
-              return employeeToView.name || 'N/A';
+              return '';
             })(),
+            lname: (() => {
+              const userAny = employeeToView as any;
+              if (userAny.lname) return userAny.lname;
+              if (employeeToView.name) {
+                const nameParts = employeeToView.name.split(' ');
+                return nameParts.slice(1).join(' ') || '';
+              }
+              return '';
+            })(),
+            emp_id: viewEmployeeId || (employeeToView as any).employeeId || (employeeToView as any).employee_id || (employeeToView as any).emp_id || 0,
             email: employeeToView.email || '',
-            username: (employeeToView as any).username || undefined,
+            username: (employeeToView as any).username || '',
+            password: '',
             contact: (employeeToView as any).contact || undefined,
-            position: (() => {
+            positions: (() => {
               const userAny = employeeToView as any;
               const pos = employeeToView.position || userAny.positions;
-              if (!pos) return 'N/A';
-              if (typeof pos === 'string') return pos;
-              if (typeof pos === 'object') {
-                return pos.label || pos.name || pos.value || 'N/A';
-              }
-              return 'N/A';
+              if (!pos) return null;
+              if (typeof pos === 'string') return { name: pos, label: pos };
+              if (typeof pos === 'object') return pos;
+              return null;
             })(),
-            department: (() => {
+            departments: (() => {
               const userAny = employeeToView as any;
               const dept = employeeToView.department || userAny.departments;
-              if (!dept) return 'N/A';
-              if (typeof dept === 'string') return dept;
+              if (!dept) return null;
+              if (typeof dept === 'string') return { name: dept, department_name: dept };
               if (Array.isArray(dept) && dept.length > 0) {
-                return dept[0]?.name || dept[0] || 'N/A';
+                return typeof dept[0] === 'object' ? dept[0] : { name: dept[0], department_name: dept[0] };
               }
-              if (typeof dept === 'object') {
-                return dept.label || dept.name || dept.department_name || dept.value || 'N/A';
-              }
-              return 'N/A';
+              if (typeof dept === 'object') return dept;
+              return null;
             })(),
-            branch: (() => {
+            branches: (() => {
               const userAny = employeeToView as any;
               const branch = employeeToView.branch || userAny.branches;
-              if (!branch) return undefined;
-              if (typeof branch === 'string') return branch;
+              if (!branch) return null;
+              if (typeof branch === 'string') return [{ branch_name: branch, name: branch }];
               if (Array.isArray(branch) && branch.length > 0) {
-                const firstBranch = branch[0];
-                if (typeof firstBranch === 'string') return firstBranch;
-                if (typeof firstBranch === 'object') {
-                  return firstBranch.branch_name || firstBranch.name || firstBranch.label || undefined;
-                }
+                return branch.map((b: any) => typeof b === 'object' ? b : { branch_name: b, name: b });
               }
-              if (typeof branch === 'object') {
-                return branch.branch_name || branch.name || branch.label || undefined;
-              }
-              return undefined;
+              if (typeof branch === 'object') return [branch];
+              return null;
             })(),
-            role: (() => {
+            roles: (() => {
               const userAny = employeeToView as any;
               const role = employeeToView.role || userAny.roles;
-              if (!role) return 'N/A';
-              if (typeof role === 'string') return role;
+              if (!role) return null;
+              if (typeof role === 'string') return [{ name: role }];
               if (Array.isArray(role) && role.length > 0) {
-                const firstRole = role[0];
-                if (typeof firstRole === 'string') return firstRole;
-                if (typeof firstRole === 'object') {
-                  return firstRole.name || firstRole.label || firstRole.value || 'N/A';
-                }
+                return role.map((r: any) => typeof r === 'object' ? r : { name: r });
               }
-              if (typeof role === 'object') {
-                return role.name || role.label || role.value || 'N/A';
-              }
-              return 'N/A';
+              if (typeof role === 'object') return [role];
+              return null;
             })(),
-            employeeId: viewEmployeeId || (employeeToView as any).employeeId || (employeeToView as any).employee_id || undefined,
-            bio: (employeeToView as any).bio || undefined,
-            isActive: (() => {
+            hireDate: (() => {
               const userAny = employeeToView as any;
-              const isActive = userAny.is_active || userAny.isActive;
-              if (typeof isActive === 'string' && isActive === 'active') return true;
-              if (typeof isActive === 'boolean' && isActive === true) return true;
-              return false;
+              const hireDate = userAny.hireDate || userAny.hire_date || userAny.created_at;
+              if (!hireDate) return new Date();
+              if (hireDate instanceof Date) return hireDate;
+              return new Date(hireDate);
             })(),
-            created_at: (employeeToView as any).created_at || undefined,
+            is_active: (() => {
+              const userAny = employeeToView as any;
+              if (typeof userAny.is_active === 'string') return userAny.is_active;
+              if (typeof userAny.isActive === 'boolean') return userAny.isActive ? 'active' : 'inactive';
+              return 'active';
+            })(),
+            avatar: (employeeToView as any).avatar || null,
+            bio: (employeeToView as any).bio || null,
+            created_at: (employeeToView as any).created_at || new Date().toISOString(),
             updated_at: (employeeToView as any).updated_at || undefined,
           }}
           onStartEvaluationAction={() => {

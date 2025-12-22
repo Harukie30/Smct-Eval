@@ -670,20 +670,40 @@ export const apiService = {
   },
 
   // Get evaluations by authenticated employee
-  getMyEvalAuthEmployee: async (): Promise<any[]> => {
-    const response = await api.get("/getMyEvalAuthEmployee");
+  getMyEvalAuthEmployee: async (
+    searchValue?: string,
+    page?: number,
+    perPage?: number,
+    year?: string,
+    quarter?: string
+  ): Promise<any> => {
+    const response = await api.get("/getMyEvalAuthEmployee", {
+      params: {
+        search: searchValue || "",
+        page: page || 1,
+        per_page: perPage || 10,
+        year: year || "",
+        quarter: quarter || "",
+      },
+    });
     const data = response.data;
 
-    if (data.success && data.evaluations) {
-      return data.evaluations;
-    }
-    if (Array.isArray(data.evaluations)) {
-      return data.evaluations;
-    }
-    if (Array.isArray(data)) {
+    // Handle paginated response
+    if (data.myEval_as_Employee) {
       return data;
     }
-    return [];
+    
+    // Handle non-paginated response (fallback)
+    if (data.success && data.evaluations) {
+      return { myEval_as_Employee: { data: data.evaluations, total: data.evaluations.length, last_page: 1, per_page: perPage || 10 } };
+    }
+    if (Array.isArray(data.evaluations)) {
+      return { myEval_as_Employee: { data: data.evaluations, total: data.evaluations.length, last_page: 1, per_page: perPage || 10 } };
+    }
+    if (Array.isArray(data)) {
+      return { myEval_as_Employee: { data: data, total: data.length, last_page: 1, per_page: perPage || 10 } };
+    }
+    return { myEval_as_Employee: { data: [], total: 0, last_page: 1, per_page: perPage || 10 } };
   },
 
   // Evaluator dashboard total cards

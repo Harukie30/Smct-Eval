@@ -391,9 +391,9 @@ export default function DashboardShell(props: DashboardShellProps) {
                       <div className="flex flex-col items-center justify-center py-12 px-4">
                         <div className="mb-4">
                           <img
-                            src="/notific.gif"
+                            src="/alarm.gif"
                             alt="No notifications"
-                            className="w-20 h-20 object-contain"
+                            className="w-25 h-25 object-contain"
                             draggable="false"
                             onContextMenu={(e) => {
                               e.preventDefault();
