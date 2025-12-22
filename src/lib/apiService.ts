@@ -536,20 +536,21 @@ export const apiService = {
   },
 
   // Get all employees under authenticated user
-  getAllEmployeeByAuth: async (): Promise<any[]> => {
-    const response = await api.get("/getAllEmployeeByAuth");
-    const data = response.data;
-
-    if (data.success && data.users) {
-      return data.users;
-    }
-    if (Array.isArray(data.users)) {
-      return data.users;
-    }
-    if (Array.isArray(data)) {
-      return data;
-    }
-    return [];
+  getAllEmployeeByAuth: async (
+    search?: string,
+    page?: number,
+    perPage?: number,
+    position?: string
+  ): Promise<any> => {
+    const response = await api.get("/getAllEmployeeByAuth", {
+      params: {
+        search: search || "",
+        page: page,
+        per_page: perPage,
+        position: position || "",
+      },
+    });
+    return response.data.employees;
   },
 
   // Get specific user

@@ -29,14 +29,14 @@ import EvaluationTypeModal from "@/components/EvaluationTypeModal";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import EvaluationForm from "@/components/evaluation";
 import ManagerEvaluationForm from "@/components/evaluation-2";
+import EvaluationsPagination from "@/components/paginationComponent";
 
 export default function EmployeesTab() {
   //refreshing state
   const [isRefreshing, setIsRefreshing] = useState(false);
-  // const [isPageLoading, setIsPageLoading] = useState(false);
 
   //Active employees
-  const [employees, setEmployees] = useState<User[]>([]);
+  const [employees, setEmployees] = useState<User[] | null>(null);
   const [positions, setPositions] = useState<
     {
       value: string | number;
@@ -45,13 +45,25 @@ export default function EmployeesTab() {
   >([]);
 
   // filters
-  const [positionFilter, setPositionFilter] = useState<string | number>("");
+  const [positionFilter, setPositionFilter] = useState("");
   const [employeeSearch, setEmployeeSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const [selectedDepartment, setSelectedDepartment] = useState<string>("");
-  const [selectedPosition, setSelectedPosition] = useState<string>("");
-  const [employeesPage, setEmployeesPage] = useState(1);
-  const itemsPerPage = 8;
+  //pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(1);
+  const [overviewTotal, setOverviewTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [perPage, setPerPage] = useState(0);
+
+  // modals
+  const [isEvaluationTypeModalOpen, setIsEvaluationTypeModalOpen] =
+    useState(false);
+  const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
+  const [evaluationType, setEvaluationType] = useState<
+    "employee" | "manager" | null
+  >(null);
 
   useEffect(() => {
     const fetchPositions = async () => {
@@ -60,8 +72,18 @@ export default function EmployeesTab() {
         const positionsRes = await apiService.getPositions();
         setPositions(positionsRes);
 
-        const res = await apiService.getActiveRegistrations();
+        const res = await apiService.getAllEmployeeByAuth(
+          employeeSearch,
+          currentPage,
+          itemsPerPage,
+          positionFilter
+        );
         setEmployees(res.data);
+
+        setOverviewTotal(res.total);
+        setTotalPages(res.last_page);
+        setPerPage(res.per_page);
+
         setIsRefreshing(false);
       } catch (error) {
         console.error("Error fetching positions:", error);
@@ -74,15 +96,32 @@ export default function EmployeesTab() {
     if (!isRefreshing) return;
     const fetchEmployees = async () => {
       try {
-        const res = await apiService.getActiveRegistrations();
+        const res = await apiService.getAllEmployeeByAuth(
+          employeeSearch,
+          currentPage,
+          itemsPerPage,
+          positionFilter
+        );
         setEmployees(res.data);
+
+        setOverviewTotal(res.total);
+        setTotalPages(res.last_page);
+        setPerPage(res.per_page);
+
         setIsRefreshing(false);
       } catch (error) {
         console.error("Error fetching employees:", error);
       }
     };
     fetchEmployees();
-  }, [isRefreshing]);
+  }, [isRefreshing, positionFilter, debouncedSearch, currentPage]);
+
+  useEffect(() => {
+    const debounceSearch = setTimeout(() => {
+      setDebouncedSearch(employeeSearch);
+    }, 1000);
+    return () => clearTimeout(debounceSearch);
+  }, [employeeSearch]);
 
   // Get all employees from API (passed as prop)
   // const allEmployees = useMemo(() => {
@@ -185,16 +224,6 @@ export default function EmployeesTab() {
   //   setEmployeesPage(1);
   // }, [employeeSearch, selectedDepartment, selectedPosition]);
 
-  // Handle page change with loading state
-  const handlePageChange = (newPage: number) => {
-    setIsRefreshing(true);
-    setEmployeesPage(newPage);
-    // Simulate a brief loading delay for smooth UX
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 300);
-  };
-
   // Calculate new hires this month
   const newHiresThisMonth = (() => {
     const now = new Date();
@@ -255,12 +284,18 @@ export default function EmployeesTab() {
               <Input
                 placeholder="Search employees..."
                 value={employeeSearch}
-                onChange={(e) => setEmployeeSearch(e.target.value)}
+                onChange={(e) => {
+                  setEmployeeSearch(e.target.value);
+                  setIsRefreshing(true);
+                }}
                 className=" pr-10"
               />
               {employeeSearch && (
                 <button
-                  onClick={() => setEmployeeSearch("")}
+                  onClick={() => {
+                    setEmployeeSearch("");
+                    setIsRefreshing(true);
+                  }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-600"
                   title="Clear search"
                 >
@@ -272,7 +307,8 @@ export default function EmployeesTab() {
               options={positions}
               value={positionFilter}
               onValueChangeAction={(value) => {
-                setPositionFilter(value);
+                setPositionFilter(String(value));
+                setIsRefreshing(true);
               }}
               placeholder="All Positions"
               searchPlaceholder="Search positions..."
@@ -285,6 +321,7 @@ export default function EmployeesTab() {
                 onClick={() => {
                   setEmployeeSearch("");
                   setPositionFilter("");
+                  setIsRefreshing(true);
                 }}
                 className="px-4 py-2 text-sm text-red-400"
                 title="Clear all filters"
@@ -355,7 +392,7 @@ export default function EmployeesTab() {
                   </TableHeader>
                   <TableBody>
                     {/* Skeleton loading rows */}
-                    {Array.from({ length: 8 }).map((_, index) => (
+                    {Array.from({ length: itemsPerPage }).map((_, index) => (
                       <TableRow key={`skeleton-employee-${index}`}>
                         <TableCell className="px-6 py-3">
                           <Skeleton className="h-6 w-24" />
@@ -396,7 +433,7 @@ export default function EmployeesTab() {
                 </TableHeader>
                 <TableBody>
                   {/* Skeleton loading rows - no spinner for page changes */}
-                  {Array.from({ length: 8 }).map((_, index) => (
+                  {Array.from({ length: itemsPerPage }).map((_, index) => (
                     <TableRow key={`skeleton-employee-page-${index}`}>
                       <TableCell className="px-6 py-3">
                         <Skeleton className="h-6 w-24" />
@@ -436,7 +473,9 @@ export default function EmployeesTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {!employees ? (
+                    {!employees ||
+                    employees === null ||
+                    Number(employees) === 0 ? (
                       <TableRow>
                         <TableCell
                           colSpan={6}
@@ -557,115 +596,19 @@ export default function EmployeesTab() {
             </>
           )}
 
-          {/* Pagination Controls - Centered (matching admin style) */}
-          {
-            // employeesTotal > itemsPerPage &&
-            //   (() => {
-            //     // Function to render page buttons with ellipses (matching admin style)
-            //     const renderPages = () => {
-            //       let pages: (number | "...")[] = [];
-            //       // Always show first page
-            //       pages.push(1);
-            //       // Insert ellipsis after first page if needed
-            //       if (employeesPage > 3) {
-            //         pages.push("...");
-            //       }
-            //       // Show pages around current (employeesPage - 1, employeesPage, employeesPage + 1)
-            //       for (let i = employeesPage - 1; i <= employeesPage + 1; i++) {
-            //         if (i > 1 && i < employeesTotalPages) {
-            //           pages.push(i);
-            //         }
-            //       }
-            //       // Insert ellipsis before last page if needed
-            //       if (employeesPage < employeesTotalPages - 2) {
-            //         pages.push("...");
-            //       }
-            //       // Always show last page
-            //       if (employeesTotalPages > 1) {
-            //         pages.push(employeesTotalPages);
-            //       }
-            //       return pages.map((p, index) => {
-            //         if (p === "...") {
-            //           return (
-            //             <PaginationItem key={`ellipsis-${index}`}>
-            //               <PaginationEllipsis />
-            //             </PaginationItem>
-            //           );
-            //         }
-            //         return (
-            //           <PaginationItem key={p}>
-            //             <PaginationLink
-            //               onClick={(e) => {
-            //                 e.preventDefault();
-            //                 if (Number(p) !== employeesPage) {
-            //                   handlePageChange(Number(p));
-            //                 }
-            //               }}
-            //               className={
-            //                 p === employeesPage
-            //                   ? "bg-blue-400 text-white rounded-xl"
-            //                   : ""
-            //               }
-            //             >
-            //               {p}
-            //             </PaginationLink>
-            //           </PaginationItem>
-            //         );
-            //       });
-            //     };
-            //     const startIndex = (employeesPage - 1) * itemsPerPage;
-            //     const endIndex = employeesPage * itemsPerPage;
-            //     return (
-            //       <div className="flex flex-col items-center justify-center gap-3 w-full p-2 mt-4">
-            //         <div className="text-sm text-gray-600">
-            //           Showing {startIndex + 1} to{" "}
-            //           {Math.min(endIndex, employeesTotal)} of {employeesTotal}{" "}
-            //           records
-            //         </div>
-            //         <div>
-            //           <Pagination>
-            //             <PaginationContent>
-            //               {/* PREVIOUS */}
-            //               <PaginationItem>
-            //                 <PaginationPrevious
-            //                   className={
-            //                     employeesPage === 1
-            //                       ? "hover:pointer-events-none bg-blue-100 opacity-50"
-            //                       : "hover:bg-blue-400 bg-blue-200"
-            //                   }
-            //                   onClick={(e) => {
-            //                     e.preventDefault();
-            //                     if (employeesPage > 1) {
-            //                       handlePageChange(employeesPage - 1);
-            //                     }
-            //                   }}
-            //                 />
-            //               </PaginationItem>
-            //               {/* PAGE NUMBERS WITH ELLIPSES */}
-            //               {renderPages()}
-            //               {/* NEXT */}
-            //               <PaginationItem>
-            //                 <PaginationNext
-            //                   className={
-            //                     employeesPage === employeesTotalPages
-            //                       ? "hover:pointer-events-none bg-blue-100 opacity-50"
-            //                       : "hover:bg-blue-400 bg-blue-200"
-            //                   }
-            //                   onClick={(e) => {
-            //                     e.preventDefault();
-            //                     if (employeesPage < employeesTotalPages) {
-            //                       handlePageChange(employeesPage + 1);
-            //                     }
-            //                   }}
-            //                 />
-            //               </PaginationItem>
-            //             </PaginationContent>
-            //           </Pagination>
-            //         </div>
-            //       </div>
-            //     );
-            //   })()
-          }
+          {/* Pagination Controls */}
+          {overviewTotal > itemsPerPage && (
+            <EvaluationsPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              total={overviewTotal}
+              perPage={perPage}
+              onPageChange={(page) => {
+                setCurrentPage(page);
+                setIsRefreshing(true);
+              }}
+            />
+          )}
         </CardContent>
       </Card>
       <EvaluationTypeModal

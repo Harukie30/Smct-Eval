@@ -24,6 +24,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import { useAuth } from "../../contexts/UserContext";
+import { toast } from "sonner";
+import { toastMessages } from "@/lib/toastMessages";
 
 interface Review {
   id: number;
@@ -54,6 +57,8 @@ export default function OverviewTab() {
   const [totalEvaluations, setTotalEvaluations] = useState<any>(0);
   const [average, setAverage] = useState<any>(0);
   const [recentEvaluation, setRecentEvaluation] = useState<any>([]);
+
+  const { user } = useAuth();
 
   // Load approved evaluations from API
   const loadApprovedEvaluations = async (searchValue: string) => {
@@ -136,6 +141,12 @@ export default function OverviewTab() {
 
   const handleApprove = async (id: number) => {
     try {
+      if (user?.signature === null || user?.signature === undefined) {
+        toastMessages.generic.warning(
+          "No signature found",
+          "Please set up your signature before approving evaluations."
+        );
+      }
       await apiService.approvedByEmployee(id);
       const submission = await apiService.getSubmissionById(id);
 

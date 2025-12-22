@@ -49,19 +49,22 @@ export default function OverviewTab() {
   const [totalPending, setTotalPending] = useState(0);
   const [totalApproved, setTotalApproved] = useState(0);
 
-  //filters and pagination
+  //filters
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+
+  //pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(4);
   const [overviewTotal, setOverviewTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
-  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
-  const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
 
   //view data
-  const [overviewSearch, setOverviewSearch] = useState("");
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+
+  //modal
+  const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
 
   //refreshing state
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -129,39 +132,6 @@ export default function OverviewTab() {
       setSelectedSubmission(null);
     }
   };
-
-  // // Ensure scrollbar is always visible
-  // useEffect(() => {
-  //   const style = document.createElement("style");
-  //   style.textContent = `
-  //     .overview-table::-webkit-scrollbar {
-  //       width: 12px;
-  //       height: 12px;
-  //       -webkit-appearance: none;
-  //     }
-  //     .overview-table::-webkit-scrollbar-track {
-  //       background: #f1f5f9;
-  //       border-radius: 6px;
-  //     }
-  //     .overview-table::-webkit-scrollbar-thumb {
-  //       background: #94a3b8;
-  //       border-radius: 6px;
-  //       border: 2px solid #f1f5f9;
-  //     }
-  //     .overview-table::-webkit-scrollbar-thumb:hover {
-  //       background: #64748b;
-  //     }
-  //     /* Force scrollbar to always be visible */
-  //     .overview-table {
-  //       scrollbar-width: thin;
-  //       scrollbar-color: #94a3b8 #f1f5f9;
-  //     }
-  //   `;
-  //   document.head.appendChild(style);
-  //   return () => {
-  //     document.head.removeChild(style);
-  //   };
-  // }, []);
 
   const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 
@@ -322,10 +292,10 @@ export default function OverviewTab() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-1/2 bg-gray-100"
             />
-            {overviewSearch && (
+            {searchTerm && (
               <Button
                 size="sm"
-                onClick={() => setOverviewSearch("")}
+                onClick={() => setSearchTerm("")}
                 className="px-3 py-2 text-white hover:text-white bg-blue-400 hover:bg-blue-500"
               >
                 ⌫ Clear
@@ -520,7 +490,7 @@ export default function OverviewTab() {
                               }}
                             />
                             <div className="text-gray-500">
-                              {overviewSearch.trim() ? (
+                              {searchTerm.trim() ? (
                                 <>
                                   <p className="text-base font-medium mb-1">
                                     No submissions found

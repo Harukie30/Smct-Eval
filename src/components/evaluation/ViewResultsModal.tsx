@@ -3229,7 +3229,7 @@ export default function ViewResultsModal({
                                 Click to acknowledge and approve this evaluation
                               </p>
                               {approvalError && (
-                                <p className="text-xs text-red-600 bg-red-50 p-3 rounded">
+                                <p className="text-xs text-center text-red-600 bg-red-50 p-3 rounded">
                                   {approvalError}
                                 </p>
                               )}
