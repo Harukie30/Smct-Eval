@@ -30,12 +30,13 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import EvaluationForm from "@/components/evaluation";
 import ManagerEvaluationForm from "@/components/evaluation-2";
 import EvaluationsPagination from "@/components/paginationComponent";
+import ViewEmployeeModal from "@/components/ViewEmployeeModal";
 
 export default function EmployeesTab() {
   //refreshing state
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  //Active employees
+  //data employees
   const [employees, setEmployees] = useState<User[] | null>(null);
   const [positions, setPositions] = useState<
     {
@@ -64,6 +65,11 @@ export default function EmployeesTab() {
   const [evaluationType, setEvaluationType] = useState<
     "employee" | "manager" | null
   >(null);
+  const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
+
+  // View Employee Modal states
+  const [selectedEmployeeForView, setSelectedEmployeeForView] =
+    useState<User | null>(null);
 
   useEffect(() => {
     const fetchPositions = async () => {
@@ -570,7 +576,10 @@ export default function EmployeesTab() {
                                   variant="ghost"
                                   size="sm"
                                   className="text-blue-600 hover:text-blue-700"
-                                  onClick={() => {}}
+                                  onClick={() => {
+                                    setSelectedEmployeeForView(employee);
+                                    setIsViewEmployeeModalOpen(true);
+                                  }}
                                   title="View employee details"
                                 >
                                   <Eye className="h-4 w-4" />
@@ -579,7 +588,9 @@ export default function EmployeesTab() {
                                   variant="ghost"
                                   size="sm"
                                   className="text-green-600 hover:text-green-700"
-                                  onClick={() => {}}
+                                  onClick={() =>
+                                    setIsEvaluationTypeModalOpen(true)
+                                  }
                                   title="Evaluate employee performance"
                                 >
                                   <FileText className="h-4 w-4" />
@@ -609,6 +620,26 @@ export default function EmployeesTab() {
               }}
             />
           )}
+
+          {/* View Employee Modal Component */}
+          <ViewEmployeeModal
+            isOpen={isViewEmployeeModalOpen}
+            onCloseAction={() => {
+              setIsViewEmployeeModalOpen(false);
+              setSelectedEmployeeForView(null);
+            }}
+            employee={selectedEmployeeForView}
+            designVariant="admin"
+            onStartEvaluationAction={(employee: any) => {
+              // setIsViewEmployeeModalOpen(false);
+              // Fetch fresh employee data from API to ensure we have latest updates (position, department, role)
+              // Handle async operation without making the function async
+            }}
+            onViewSubmissionAction={(submission: any) => {
+              // setSelectedSubmission(submission);
+              // setIsViewSubmissionModalOpen(true);
+            }}
+          />
         </CardContent>
       </Card>
       <EvaluationTypeModal
@@ -665,7 +696,7 @@ export default function EmployeesTab() {
             setIsEvaluationModalOpen(true);
           }, 50);
         }}
-        employeeName={selectedEmployee?.name}
+        employeeName={selectedEmployee?.fname}
       />
 
       <Dialog

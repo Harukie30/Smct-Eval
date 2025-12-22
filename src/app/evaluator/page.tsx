@@ -649,7 +649,7 @@ export default function OverviewTab() {
                   handleClose();
                 }}
                 submission={selectedSubmission}
-                showApprovalButton={true}
+                showApprovalButton={false}
                 isEvaluatorView={false}
               />
             </>
