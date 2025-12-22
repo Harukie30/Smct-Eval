@@ -12,9 +12,8 @@ import RealLoadingScreen from "@/components/RealLoadingScreen";
 import { toastMessages } from "@/lib/toastMessages";
 import { apiService } from "@/lib/apiService";
 import { useRouter } from "next/navigation";
-import { is } from "date-fns/locale";
 
-export interface AuthenticatedUser {
+export interface User {
   id?: string | number;
   fname: string;
   lname: string;
@@ -40,7 +39,7 @@ export interface AuthenticatedUser {
 }
 
 interface UserContextType {
-  user: AuthenticatedUser | null;
+  user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<any>;
@@ -64,7 +63,7 @@ interface UserProviderProps {
 }
 
 export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<AuthenticatedUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showLogoutLoading, setShowLogoutLoading] = useState(false);
   const router = useRouter();

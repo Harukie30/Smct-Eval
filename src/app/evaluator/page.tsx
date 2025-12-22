@@ -68,7 +68,6 @@ export default function OverviewTab() {
   const [isPaginate, setIsPaginate] = useState(false);
 
   useEffect(() => {
-    if (!isRefreshing) return;
     const fetchData = async () => {
       try {
         setIsPaginate(true);

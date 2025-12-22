@@ -105,10 +105,10 @@ export const apiService = {
   },
 
   getActiveRegistrations: async (
-    searchTerm: string,
-    role: string | number,
-    page: number,
-    perPage: number
+    searchTerm?: string,
+    role?: string | number,
+    page?: number,
+    perPage?: number
   ): Promise<any | null> => {
     const response = await api.get("/getAllActiveUsers", {
       params: {
