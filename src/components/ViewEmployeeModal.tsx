@@ -26,33 +26,13 @@ import {
   MapPin,
   FileText,
 } from "lucide-react";
-
-interface Employee {
-  id: number;
-  fname: string;
-  lname: string;
-  emp_id: number;
-  email: string;
-  positions: any;
-  departments: any;
-  branches: any;
-  hireDate: Date;
-  roles: any;
-  username: string;
-  password: string;
-  is_active: string;
-  avatar?: string | null;
-  bio?: string | null;
-  contact?: string;
-  created_at: string;
-  updated_at?: string;
-}
+import { User as UserType } from "../contexts/UserContext";
 
 interface ViewEmployeeModalProps {
   isOpen: boolean;
   onCloseAction: () => void;
-  employee: Employee | null;
-  onStartEvaluationAction: (employee: Employee) => void;
+  employee: UserType | null;
+  onStartEvaluationAction: (employee: UserType) => void;
   onViewSubmissionAction: (submission: any) => void;
   designVariant?: "default" | "admin"; // New prop for design variant
 }
@@ -62,23 +42,19 @@ export default function ViewEmployeeModal({
   onCloseAction,
   employee,
   onStartEvaluationAction,
-  onViewSubmissionAction,
   designVariant = "default",
 }: ViewEmployeeModalProps) {
-  const [employeeSearchTerm, setEmployeeSearchTerm] = useState("");
   const [employeeEvaluationData, setEmployeeEvaluationData] = useState<any[]>(
     []
   );
-  const [isLoadingEmployeeData, setIsLoadingEmployeeData] = useState(false);
-  const [employeeDataError, setEmployeeDataError] = useState<string | null>(
-    null
-  );
+
   // Format employee ID - check multiple possible field names
   let empId = "";
-  const employeeIdValue = (employee as any)?.emp_id || 
-                          (employee as any)?.employeeId || 
-                          (employee as any)?.employee_id;
-  
+  const employeeIdValue =
+    (employee as any)?.emp_id ||
+    (employee as any)?.employeeId ||
+    (employee as any)?.employee_id;
+
   if (employeeIdValue) {
     const idString = employeeIdValue.toString();
     if (idString.length > 4) {
@@ -93,51 +69,6 @@ export default function ViewEmployeeModal({
       }
     }
   }
-
-  // API Functions for Employee Data Tracking
-  const fetchEmployeeEvaluationHistory = async (
-    employeeId: number,
-    employeeName: string
-  ) => {
-    setIsLoadingEmployeeData(true);
-    setEmployeeDataError(null);
-
-    try {
-      console.log("Fetching evaluation history for employee:", {
-        employeeId,
-        employeeName,
-      });
-
-      // Get all submissions from localStorage
-      const allSubmissions = JSON.parse(
-        localStorage.getItem("evaluationSubmissions") || "[]"
-      );
-
-      // Filter submissions for this specific employee
-      const employeeSubmissions = allSubmissions.filter(
-        (submission: any) =>
-          submission.employeeId === employeeId ||
-          submission.employeeName === employeeName ||
-          submission.employeeEmail === employee?.email
-      );
-
-      console.log(
-        "Found submissions for employee:",
-        employeeSubmissions.length
-      );
-
-      setEmployeeEvaluationData(employeeSubmissions);
-      console.log("Employee evaluation data loaded:", employeeSubmissions);
-
-      return employeeSubmissions;
-    } catch (err) {
-      console.error("Error fetching employee evaluation history:", err);
-      setEmployeeDataError("Failed to load employee evaluation data");
-      throw err;
-    } finally {
-      setIsLoadingEmployeeData(false);
-    }
-  };
 
   const getEmployeePerformanceMetrics = (employeeData: any[]) => {
     if (!employeeData || employeeData.length === 0) {
@@ -211,13 +142,6 @@ export default function ViewEmployeeModal({
     };
   };
 
-  // Fetch data when modal opens
-  useEffect(() => {
-    if (isOpen && employee) {
-      fetchEmployeeEvaluationHistory(employee.emp_id, employee.fname || "");
-    }
-  }, [isOpen, employee]);
-
   if (!employee) return null;
 
   // Design variant styles
@@ -289,7 +213,9 @@ export default function ViewEmployeeModal({
                       }`}
                     >
                       <Briefcase className="w-4 h-4 mr-1.5" />
-                      {employee.positions?.label || employee.positions?.name || "Not Assigned"}
+                      {employee.positions?.label ||
+                        employee.positions?.name ||
+                        "Not Assigned"}
                     </Badge>
                     <Badge
                       variant="outline"
@@ -311,7 +237,10 @@ export default function ViewEmployeeModal({
                       }`}
                     >
                       <Shield className="w-4 h-4 mr-1.5" />
-                      {(Array.isArray(employee.roles) && employee.roles[0]?.name) || (employee.roles?.name) || "Not Assigned"}
+                      {(Array.isArray(employee.roles) &&
+                        employee.roles[0]?.name) ||
+                        employee.roles?.name ||
+                        "Not Assigned"}
                     </Badge>
                   </div>
                 </div>
@@ -523,7 +452,9 @@ export default function ViewEmployeeModal({
                         isAdminVariant ? "text-slate-800" : "text-black"
                       }`}
                     >
-                      {employee.positions?.label || employee.positions?.name || "Not Assigned"}
+                      {employee.positions?.label ||
+                        employee.positions?.name ||
+                        "Not Assigned"}
                     </p>
                   </div>
                 </div>
@@ -572,7 +503,9 @@ export default function ViewEmployeeModal({
             </Card>
 
             {/* Branch Card */}
-            {(employee.branches?.branch_name || (Array.isArray(employee.branches) && employee.branches[0]?.branch_name)) && (
+            {(employee.branches?.branch_name ||
+              (Array.isArray(employee.branches) &&
+                employee.branches[0]?.branch_name)) && (
               <Card
                 className={`${
                   isAdminVariant
@@ -606,7 +539,10 @@ export default function ViewEmployeeModal({
                           isAdminVariant ? "text-slate-800" : "text-black"
                         }`}
                       >
-                        {employee.branches?.branch_name || (Array.isArray(employee.branches) && employee.branches[0]?.branch_name) || "Not Assigned"}
+                        {employee.branches?.branch_name ||
+                          (Array.isArray(employee.branches) &&
+                            employee.branches[0]?.branch_name) ||
+                          "Not Assigned"}
                       </p>
                     </div>
                   </div>
@@ -664,49 +600,6 @@ export default function ViewEmployeeModal({
               </Card>
             )}
           </div>
-
-          {/* Bio Section */}
-          {employee.bio && (
-            <Card
-              className={`${
-                isAdminVariant
-                  ? "bg-slate-50 border-2 border-slate-300 shadow-md"
-                  : "bg-white border border-gray-200 shadow-sm"
-              }`}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      isAdminVariant ? "bg-slate-200" : "bg-amber-100"
-                    }`}
-                  >
-                    <FileText
-                      className={`w-5 h-5 ${
-                        isAdminVariant ? "text-slate-700" : "text-amber-600"
-                      }`}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Label
-                      className={`text-xs font-medium uppercase tracking-wide ${
-                        isAdminVariant ? "text-slate-600" : "text-gray-500"
-                      }`}
-                    >
-                      Bio
-                    </Label>
-                    <p
-                      className={`text-sm mt-1 ${
-                        isAdminVariant ? "text-slate-800" : "text-black"
-                      }`}
-                    >
-                      {employee.bio}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Performance Metrics Section */}
           {employeeEvaluationData.length > 0 && (
@@ -836,7 +729,7 @@ export default function ViewEmployeeModal({
                               : "→"}
                           </div>
                           <div
-                            className={`text-xs font-medium uppercase tracking-wide capitalize ${
+                            className={`text-xs font-medium uppercase tracking-wide  ${
                               isAdminVariant
                                 ? "text-slate-600"
                                 : "text-gray-600"

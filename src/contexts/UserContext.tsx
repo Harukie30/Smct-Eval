@@ -36,6 +36,7 @@ export interface User {
   notification_counts: number;
   approvedSignatureReset: number;
   requestSignatureReset: number;
+  created_at?: string;
 }
 
 interface UserContextType {

@@ -630,15 +630,6 @@ export default function EmployeesTab() {
             }}
             employee={selectedEmployeeForView}
             designVariant="admin"
-            onStartEvaluationAction={(employee: any) => {
-              // setIsViewEmployeeModalOpen(false);
-              // Fetch fresh employee data from API to ensure we have latest updates (position, department, role)
-              // Handle async operation without making the function async
-            }}
-            onViewSubmissionAction={(submission: any) => {
-              // setSelectedSubmission(submission);
-              // setIsViewSubmissionModalOpen(true);
-            }}
           />
         </CardContent>
       </Card>
