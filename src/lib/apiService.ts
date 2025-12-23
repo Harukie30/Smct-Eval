@@ -716,6 +716,11 @@ export const apiService = {
     return response.data;
   },
 
+  employeeDashboard2: async (id: number): Promise<any> => {
+    const response = await api.get(`/employeeDashboard2/${id}`);
+    return response.data;
+  },
+
   // ============================================
   // OTHER MISSING ENDPOINTS
   // ============================================

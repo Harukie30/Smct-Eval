@@ -70,6 +70,8 @@ export default function EmployeesTab() {
   // View Employee Modal states
   const [selectedEmployeeForView, setSelectedEmployeeForView] =
     useState<User | null>(null);
+  const [selectedEmployeeForEvaluation, setSelectedEmployeeForEvaluation] =
+    useState<User | null>(null);
 
   useEffect(() => {
     const fetchPositions = async () => {
@@ -125,7 +127,7 @@ export default function EmployeesTab() {
   useEffect(() => {
     const debounceSearch = setTimeout(() => {
       setDebouncedSearch(employeeSearch);
-    }, 1000);
+    }, 500);
     return () => clearTimeout(debounceSearch);
   }, [employeeSearch]);
 
@@ -291,16 +293,16 @@ export default function EmployeesTab() {
                 placeholder="Search employees..."
                 value={employeeSearch}
                 onChange={(e) => {
-                  setEmployeeSearch(e.target.value);
                   setIsRefreshing(true);
+                  setEmployeeSearch(e.target.value);
                 }}
                 className=" pr-10"
               />
               {employeeSearch && (
                 <button
                   onClick={() => {
-                    setEmployeeSearch("");
                     setIsRefreshing(true);
+                    setEmployeeSearch("");
                   }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-600"
                   title="Clear search"
@@ -313,8 +315,8 @@ export default function EmployeesTab() {
               options={positions}
               value={positionFilter}
               onValueChangeAction={(value) => {
-                setPositionFilter(String(value));
                 setIsRefreshing(true);
+                setPositionFilter(String(value));
               }}
               placeholder="All Positions"
               searchPlaceholder="Search positions..."
@@ -325,9 +327,9 @@ export default function EmployeesTab() {
               <Button
                 variant="outline"
                 onClick={() => {
+                  setIsRefreshing(true);
                   setEmployeeSearch("");
                   setPositionFilter("");
-                  setIsRefreshing(true);
                 }}
                 className="px-4 py-2 text-sm text-red-400"
                 title="Clear all filters"
@@ -588,9 +590,10 @@ export default function EmployeesTab() {
                                   variant="ghost"
                                   size="sm"
                                   className="text-green-600 hover:text-green-700"
-                                  onClick={() =>
-                                    setIsEvaluationTypeModalOpen(true)
-                                  }
+                                  onClick={() => {
+                                    setIsEvaluationTypeModalOpen(true);
+                                    setSelectedEmployeeForEvaluation(employee);
+                                  }}
                                   title="Evaluate employee performance"
                                 >
                                   <FileText className="h-4 w-4" />
@@ -630,6 +633,8 @@ export default function EmployeesTab() {
             }}
             employee={selectedEmployeeForView}
             designVariant="admin"
+            onStartEvaluationAction={() => {}}
+            onViewSubmissionAction={() => {}}
           />
         </CardContent>
       </Card>
@@ -642,7 +647,7 @@ export default function EmployeesTab() {
           }
         }}
         onSelectEmployeeAction={() => {
-          const employee = selectedEmployee;
+          const employee = selectedEmployeeForEvaluation;
           console.log("Selecting employee evaluation", employee);
           if (!employee) {
             console.error("No employee selected!");
@@ -687,20 +692,12 @@ export default function EmployeesTab() {
             setIsEvaluationModalOpen(true);
           }, 50);
         }}
-        employeeName={selectedEmployee?.fname}
+        employeeName={selectedEmployee?.fname + " " + selectedEmployee?.lname}
       />
 
       <Dialog
         open={isEvaluationModalOpen}
         onOpenChangeAction={(open) => {
-          console.log(
-            "Evaluation modal onOpenChangeAction",
-            open,
-            "selectedEmployee:",
-            selectedEmployee,
-            "evaluationType:",
-            evaluationType
-          );
           if (!open) {
             setIsEvaluationModalOpen(false);
             setSelectedEmployee(null);
@@ -709,18 +706,9 @@ export default function EmployeesTab() {
         }}
       >
         <DialogContent className="max-w-7xl max-h-[101vh] overflow-hidden p-0 evaluation-container">
-          {selectedEmployee && evaluationType === "employee" && (
+          {selectedEmployeeForEvaluation && evaluationType === "employee" && (
             <EvaluationForm
-              key={`employee-eval-${selectedEmployee.id}-${evaluationType}`}
-              employee={{
-                ...selectedEmployee,
-                name: selectedEmployee.name || "",
-                email: selectedEmployee.email || "",
-                position: selectedEmployee.position || "",
-                department: selectedEmployee.department || "",
-                role: selectedEmployee.role || "",
-              }}
-              currentUser={getCurrentUserData()}
+              employee={selectedEmployeeForEvaluation}
               onCloseAction={() => {
                 setIsEvaluationModalOpen(false);
                 setSelectedEmployee(null);
@@ -728,7 +716,7 @@ export default function EmployeesTab() {
               }}
             />
           )}
-          {selectedEmployee && evaluationType === "manager" && (
+          {/* {selectedEmployee && evaluationType === "manager" && (
             <ManagerEvaluationForm
               key={`manager-eval-${selectedEmployee.id}-${evaluationType}`}
               employee={{
@@ -746,22 +734,22 @@ export default function EmployeesTab() {
                 setEvaluationType(null);
               }}
             />
-          )}
-          {selectedEmployee && !evaluationType && (
+          )} */}
+          {/* {selectedEmployee && !evaluationType && (
             <div className="p-8 text-center">
               <p className="text-gray-500">
                 Please select an evaluation type... (Debug: employee=
                 {selectedEmployee?.name}, type={evaluationType})
               </p>
             </div>
-          )}
-          {!selectedEmployee && (
+          )} */}
+          {/* {!selectedEmployee && (
             <div className="p-8 text-center">
               <p className="text-gray-500">
                 No employee selected (Debug: evaluationType={evaluationType})
               </p>
             </div>
-          )}
+          )} */}
         </DialogContent>
       </Dialog>
     </>

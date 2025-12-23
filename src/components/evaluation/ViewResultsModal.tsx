@@ -6,9 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Printer, X } from "lucide-react";
-import { approveEvaluation } from "@/lib/approvalService";
-import { useEmployeeSignaturesByEmployee } from "@/hooks/useEmployeeSignature";
+import { Printer } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { CONFIG } from "../../../config/config";
 
@@ -1271,76 +1269,101 @@ export default function ViewResultsModal({
 
   const JOB_KNOWLEDGE = {
     1: {
+      title:
+        "Mastery in Core Competencies and Job Understanding (L.E.A.D.E.R.)",
       indicator:
-        "  Mastery in Core Competencies and Job Functions  (L.E.A.D.E.R.)",
+        "  Exhibits mastery in essential skills and competencies required for the role. Displays a deep understanding of job responsibilities and requirements",
       example:
-        " Demonstrates comprehensive understanding of job requirements and applies knowledge effectively.",
+        "Consistently performs tasks accurately and with precision, showing a deep understanding of core job functions.",
     },
     2: {
-      indicator: "  Keeps Documentation Updated",
+      title: "Keeps Documentation Updated",
+      indicator:
+        " Maintains accurate and up-to-date documentation related to job functions",
       example:
-        "  Maintains current and accurate documentation for projects and processes.",
+        " Ensures that procedures, guidelines, and documentation are current; contributing to organizational efficiency.",
     },
     3: {
-      indicator: " Problem Solving",
+      title: " Problem Solving",
+      indicator:
+        " Applies critical thinking skills to solve problems efficiently",
       example:
-        " Effectively identifies and resolves work-related challenges using job knowledge.",
+        " Identifies and resolves issues in advance, effectively preventing potential disruptions.",
     },
   };
 
   const QUALITY_OF_WORK = {
     1: {
-      indicator: "Meets Standards and Requirements",
+      title: "Meets Standards and Requirements",
+      indicator:
+        "Ensures work is accurate and meets or exceeds established standards",
       example:
-        "  Consistently delivers work that meets or exceeds established standards and requirements.",
+        "Complies with industry regulations and project specifications; delivers reliable, high-quality work, and accurate work.",
     },
     2: {
-      indicator: " Work Output Volume (L.E.A.D.E.R.)",
-      example:
-        "Produces an appropriate volume of work output relative to role expectations.",
+      title: " Timeliness (L.E.A.D.E.R.)",
+      indicator: "Completes tasks and projects within specified deadlines",
+      example: "Submits work on time without compromising quality.",
     },
     3: {
-      indicator: "Consistency in Performance (L.E.A.D.E.R.)",
-      example:
-        "Maintains consistent quality and performance standards across all tasks and projects.",
+      title: "Work Output Volume (L.E.A.D.E.R.)",
+      indicator:
+        "Produces a high volume of quality work within a given time frame",
+      example: "Handles a substantial workload without sacrificing quality.",
     },
     4: {
-      indicator: " Attention to Detail",
+      title: "Consistency in Performance (L.E.A.D.E.R.)",
+      indicator: " Maintains a consistent level of productivity over time",
       example:
-        "Demonstrates thoroughness and accuracy in work, catching and correcting errors.",
+        "Meets productivity expectations reliably, without significant fluctuations.",
+    },
+    5: {
+      title: " Job Targets",
+      indicator:
+        " Achieves targets set for their respective position (Sales / CCR / Mechanic / etc.)",
+      example: "Consistently hits monthly targets assigned to their role.",
     },
   };
 
   const ADAPTABILITY = {
     1: {
-      indicator: " Openness to Change (attitude towards change)",
-      example:
+      title: "Openness to Change (attitude towards change)",
+      indicator:
         " Demonstrates a positive attitude and openness to new ideas and major changes at work",
+      example:
+        " Welcomes changes in work processes, procedures, or tools without resistance. Maintains a cooperative attitude when asked to adjust to new ways of working.",
     },
     2: {
-      indicator: " Flexibility in Job Role (ability to adapt to changes)",
-      example:
+      title: " Flexibility in Job Role (ability to adapt to changes)",
+      indicator:
         "Adapts to changes in job responsibilities and willingly takes on new tasks",
+      example:
+        "Quickly adjusts to changes in job assignments, schedules, or unexpected demands. Helps cover additional responsibilities during staffing shortages or high workloads.",
     },
     3: {
-      indicator: "Resilience in the Face of Challenges",
+      title: "Resilience in the Face of Challenges",
+      indicator:
+        "Maintains a positive attitude and performance under challenging or difficult conditions",
       example:
-        " Maintains a positive attitude and performance under challenging or difficult conditions",
+        " Remains focused and effective during periods of high stress or uncertainty. Completes tasks or meets deadlines when faced with unforeseen obstacles.s",
     },
   };
 
   const TEAMWORK = {
     1: {
+      title: "Active Participation in Team Activities",
       indicator: "Active Participation in Team Activities",
       example:
         "  Actively participates in team meetings and projects. Contributes ideas and feedback during discussions. Engages in team tasks to achieve group goals.",
     },
     2: {
+      title: "Promotion of a Positive Team Culture",
       indicator: "Promotion of a Positive Team Culture",
       example:
         "  Interacts positively with coworkers. Fosters inclusive team culture. Provides support and constructive feedback. Promotes teamwork and camaraderie.",
     },
     3: {
+      title: "  Effective Communication",
       indicator: "  Effective Communication",
       example:
         " Communicates openly and clearly with team members. Shares information and updates in a timely manner. Ensures important details are communicated clearly.",
@@ -1349,73 +1372,98 @@ export default function ViewResultsModal({
 
   const RELIABILITY = {
     1: {
-      indicator: " Consistent Attendance",
+      title: " Consistent Attendance",
+      indicator:
+        " Demonstrates regular attendance by being present at work as scheduled",
       example:
-        "  Demonstrates regular attendance by being present at work as scheduled",
+        " Has not taken any unplanned absences and follows the company's attendance policy.",
     },
     2: {
-      indicator: " Punctuality",
-      example:
+      title: " Punctuality",
+      indicator:
         "Arrives at work and meetings on time or before the scheduled time",
+      example:
+        "Consistently arrives at work on time, ready to begin work promptly.",
     },
     3: {
+      title: "Follows Through on Commitments",
       indicator: "Follows Through on Commitments",
       example:
         " Follows through on assignments from and commitments made to coworkers or superiors",
     },
     4: {
-      indicator: "Reliable Handling of Routine Tasks",
-      example:
+      title: "Reliable Handling of Routine Tasks",
+      indicator:
         " Demonstrates reliability in completing routine tasks without oversight",
+      example:
+        "Delivers on commitments, ensuring that expectations are met or exceeded.",
     },
   };
 
   const ETHICAL = {
     1: {
-      indicator: " Follows Company Policies",
-      example: " Complies with company rules, regulations, and memorandums",
+      title: " Follows Company Policies",
+      indicator: " Complies with company rules, regulations, and memorandums",
+      example:
+        "Follows established guidelines and protocols to ensure compliance with organizational standards.",
     },
     2: {
-      indicator: "Professionalism (L.E.A.D.E.R.)",
-      example:
+      title: "Professionalism (L.E.A.D.E.R.)",
+      indicator:
         "Maintains a high level of professionalism in all work interactions",
+      example:
+        "Represents the organization positively, addressing work needs with integrity and professionalism. Handles sensitive information with discretion.",
     },
     3: {
-      indicator: "Accountability for Mistakes (L.E.A.D.E.R.)",
-      example:
+      title: "Accountability for Mistakes (L.E.A.D.E.R.)",
+      indicator:
         " Takes responsibility for errors and actively works to correct mistakes",
+      example:
+        "Acknowledges errors promptly, communicates about corrective actions, and learns from the experience. Takes ownership of mistakes and actively seeks ways to prevent future occurrences.",
     },
     4: {
-      indicator: "Respect for Others (L.E.A.D.E.R.)",
-      example:
+      title: "Respect for Others (L.E.A.D.E.R.)",
+      indicator:
         " Treats all individuals fairly and with respect, regardless of background or position",
+      example:
+        "Demonstrates unbiased decision-making and avoids favoritism in interactions with team members. Treats all coworkers and suppliers respectfully, with dignity and fairness.",
     },
   };
 
   const CUSTOMER_SERVICE = {
     1: {
-      indicator: "Listening & Understanding",
-      example:
+      title: "Listening & Understanding",
+      indicator:
         "Listens to customers and displays understanding of customer needs and concerns",
+      example:
+        "Repeats or summarizes customer concerns to ensure complete understanding before responding. Expresses genuine concern and seeks to understand the customer's perspective.",
     },
     2: {
-      indicator: "Problem-Solving for Customer Satisfaction",
-      example:
+      title: "Problem-Solving for Customer Satisfaction",
+      indicator:
         "Proactively identifies and solves customer problems to ensure satisfaction",
+      example:
+        "Takes initiative to resolve issues and prevent future challenges for the customer. Offers alternative solutions when standard resolutions are not enough.",
     },
     3: {
-      indicator: " Product Knowledge for Customer Support (L.E.A.D.E.R.)",
-      example:
+      title: " Product Knowledge for Customer Support (L.E.A.D.E.R.)",
+      indicator:
         " Possesses comprehensive product knowledge to assist customers effectively",
+      example:
+        "Demonstrates a deep understanding of products and/or services, enabling accurate and helpful guidance. Suggests the most suitable product or service based on customer requirements.",
     },
     4: {
-      indicator: "Positive and Professional Attitude (L.E.A.D.E.R.)",
-      example:
+      title: "Positive and Professional Attitude (L.E.A.D.E.R.)",
+      indicator:
         " Maintains a positive and professional demeanor, particularly during customer interactions",
+      example:
+        "Represents the organization positively. Remains courteous and patient, even with challenging customers or in stressful situations.",
     },
     5: {
-      indicator: "Timely Resolution of Customer Issues (L.E.A.D.E.R.)",
-      example: "Resolves customer issues promptly and efficiently",
+      title: "Timely Resolution of Customer Issues (L.E.A.D.E.R.)",
+      indicator: "Resolves customer issues promptly and efficiently",
+      example:
+        "Addresses and resolves customer complaints or concerns within established timeframes. Ensures follow-ups are conducted for unresolved issues until completion.",
     },
   };
 
@@ -1808,6 +1856,7 @@ export default function ViewResultsModal({
                     <table className="w-full border-collapse border border-gray-300">
                       <thead>
                         <tr className="bg-gray-100">
+                          <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900"></th>
                           <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
                             Behavioral Indicators
                           </th>
@@ -1837,6 +1886,9 @@ export default function ViewResultsModal({
 
                             return (
                               <tr key={item.question_number}>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.title}
+                                </td>
                                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                                   {indicators.indicator}
                                 </td>
@@ -1888,6 +1940,7 @@ export default function ViewResultsModal({
                     <table className="w-full border-collapse border border-gray-300">
                       <thead>
                         <tr className="bg-gray-100">
+                          <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900"></th>
                           <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
                             Behavioral Indicators
                           </th>
@@ -1908,7 +1961,7 @@ export default function ViewResultsModal({
                       <tbody>
                         {submission.quality_of_works.map(
                           (item: {
-                            question_number: 1 | 2 | 3 | 4;
+                            question_number: 1 | 2 | 3 | 4 | 5;
                             score: number;
                             comment: string;
                           }) => {
@@ -1917,6 +1970,9 @@ export default function ViewResultsModal({
 
                             return (
                               <tr key={item.question_number}>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.title}
+                                </td>
                                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                                   {indicators.indicator}
                                 </td>
@@ -1966,6 +2022,7 @@ export default function ViewResultsModal({
                     <table className="w-full border-collapse border border-gray-300">
                       <thead>
                         <tr className="bg-gray-100">
+                          <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900"></th>
                           <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
                             Behavioral Indicators
                           </th>
@@ -1995,6 +2052,9 @@ export default function ViewResultsModal({
 
                             return (
                               <tr key={item.question_number}>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.title}
+                                </td>
                                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                                   {indicators.indicator}
                                 </td>
@@ -2044,6 +2104,7 @@ export default function ViewResultsModal({
                     <table className="w-full border-collapse border border-gray-300">
                       <thead>
                         <tr className="bg-gray-100">
+                          <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900"></th>
                           <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
                             Behavioral Indicators
                           </th>
@@ -2072,6 +2133,9 @@ export default function ViewResultsModal({
 
                             return (
                               <tr key={item.question_number}>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.title}
+                                </td>
                                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                                   {indicators.indicator}
                                 </td>
@@ -2121,6 +2185,7 @@ export default function ViewResultsModal({
                     <table className="w-full border-collapse border border-gray-300">
                       <thead>
                         <tr className="bg-gray-100">
+                          <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900"></th>
                           <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
                             Behavioral Indicators
                           </th>
@@ -2150,6 +2215,9 @@ export default function ViewResultsModal({
 
                             return (
                               <tr key={item.question_number}>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.title}
+                                </td>
                                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                                   {indicators.indicator}
                                 </td>
@@ -2200,6 +2268,7 @@ export default function ViewResultsModal({
                     <table className="w-full border-collapse border border-gray-300">
                       <thead>
                         <tr className="bg-gray-100">
+                          <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900"></th>
                           <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
                             Behavioral Indicators
                           </th>
@@ -2228,6 +2297,9 @@ export default function ViewResultsModal({
 
                             return (
                               <tr key={item.question_number}>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.title}
+                                </td>
                                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                                   {indicators.indicator}
                                 </td>
@@ -2277,6 +2349,7 @@ export default function ViewResultsModal({
                     <table className="w-full border-collapse border border-gray-300">
                       <thead>
                         <tr className="bg-gray-100">
+                          <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900"></th>
                           <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
                             Behavioral Indicators
                           </th>
@@ -2306,6 +2379,9 @@ export default function ViewResultsModal({
 
                             return (
                               <tr key={item.question_number}>
+                                <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  {indicators.title}
+                                </td>
                                 <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                                   {indicators.indicator}
                                 </td>

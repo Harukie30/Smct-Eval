@@ -287,7 +287,7 @@ export default function OverviewTab() {
           {/* Search and Filter Controls */}
           <div className="px-6 py-4 flex gap-2 border-b border-gray-200">
             <Input
-              placeholder="Search submissions by employee name or evaluator..."
+              placeholder="Search submissions by employee name ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-1/2 bg-gray-100"
@@ -470,7 +470,9 @@ export default function OverviewTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Number(totalEvaluations) === 0 || !data ? (
+                    {Number(totalEvaluations) === 0 ||
+                    !data ||
+                    data.length === 0 ? (
                       <TableRow key="no-submissions">
                         <TableCell
                           colSpan={5}

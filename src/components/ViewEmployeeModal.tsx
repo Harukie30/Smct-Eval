@@ -27,6 +27,7 @@ import {
   FileText,
 } from "lucide-react";
 import { User as UserType } from "../contexts/UserContext";
+import apiService from "@/lib/apiService";
 
 interface ViewEmployeeModalProps {
   isOpen: boolean;
@@ -44,9 +45,24 @@ export default function ViewEmployeeModal({
   onStartEvaluationAction,
   designVariant = "default",
 }: ViewEmployeeModalProps) {
-  const [employeeEvaluationData, setEmployeeEvaluationData] = useState<any[]>(
-    []
-  );
+  const [totalEvaluations, setTotalEvaluations] = useState<any>(0);
+  const [average, setAverage] = useState<any>(0);
+  const [highestRating, setHighestRating] = useState<any>(0);
+  const [recentEvaluation, setRecentEvaluation] = useState<any>([]);
+
+  useEffect(() => {
+    if (!isOpen || !employee) return;
+    const loadDashboard = async () => {
+      const dashboard = await apiService.employeeDashboard2(
+        Number(employee?.id)
+      );
+      setHighestRating(dashboard.highest_rating);
+      setTotalEvaluations(dashboard.total_evaluations);
+      setAverage(dashboard.average);
+      setRecentEvaluation(dashboard.recent_evaluation);
+    };
+    loadDashboard();
+  }, [isOpen, employee]);
 
   // Format employee ID - check multiple possible field names
   let empId = "";
@@ -247,7 +263,6 @@ export default function ViewEmployeeModal({
               </div>
             </CardContent>
           </Card>
-
           {/* Employee Information Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Employee ID Card */}
@@ -600,9 +615,8 @@ export default function ViewEmployeeModal({
               </Card>
             )}
           </div>
-
           {/* Performance Metrics Section */}
-          {employeeEvaluationData.length > 0 && (
+          {totalEvaluations > 0 && (
             <Card
               className={`${
                 isAdminVariant
@@ -624,128 +638,76 @@ export default function ViewEmployeeModal({
                   Performance Overview
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {(() => {
-                    const metrics = getEmployeePerformanceMetrics(
-                      employeeEvaluationData
-                    );
-                    return (
-                      <>
-                        <div
-                          className={`rounded-lg p-4 text-center shadow-md border-2 ${
-                            isAdminVariant
-                              ? "bg-slate-50 border-slate-300"
-                              : "bg-white border border-gray-200"
-                          }`}
-                        >
-                          <div
-                            className={`text-3xl font-bold mb-1 ${
-                              isAdminVariant
-                                ? "text-slate-700"
-                                : "text-blue-600"
-                            }`}
-                          >
-                            {metrics.totalEvaluations}
-                          </div>
-                          <div
-                            className={`text-xs font-medium uppercase tracking-wide ${
-                              isAdminVariant
-                                ? "text-slate-600"
-                                : "text-gray-600"
-                            }`}
-                          >
-                            Total Evaluations
-                          </div>
-                        </div>
-                        <div
-                          className={`rounded-lg p-4 text-center shadow-md border-2 ${
-                            isAdminVariant
-                              ? "bg-slate-50 border-slate-300"
-                              : "bg-white border border-gray-200"
-                          }`}
-                        >
-                          <div
-                            className={`text-3xl font-bold mb-1 ${
-                              isAdminVariant
-                                ? "text-slate-700"
-                                : "text-green-600"
-                            }`}
-                          >
-                            {metrics.averageRating}
-                          </div>
-                          <div
-                            className={`text-xs font-medium uppercase tracking-wide ${
-                              isAdminVariant
-                                ? "text-slate-600"
-                                : "text-gray-600"
-                            }`}
-                          >
-                            Average Rating
-                          </div>
-                        </div>
-                        <div
-                          className={`rounded-lg p-4 text-center shadow-md border-2 ${
-                            isAdminVariant
-                              ? "bg-slate-50 border-slate-300"
-                              : "bg-white border border-gray-200"
-                          }`}
-                        >
-                          <div
-                            className={`text-3xl font-bold mb-1 ${
-                              isAdminVariant
-                                ? "text-slate-700"
-                                : "text-purple-600"
-                            }`}
-                          >
-                            {metrics.highestRating}
-                          </div>
-                          <div
-                            className={`text-xs font-medium uppercase tracking-wide ${
-                              isAdminVariant
-                                ? "text-slate-600"
-                                : "text-gray-600"
-                            }`}
-                          >
-                            Highest Rating
-                          </div>
-                        </div>
-                        <div
-                          className={`rounded-lg p-4 text-center shadow-md border-2 ${
-                            isAdminVariant
-                              ? "bg-slate-50 border-slate-300"
-                              : "bg-white border border-gray-200"
-                          }`}
-                        >
-                          <div
-                            className={`text-3xl font-bold mb-1 ${
-                              isAdminVariant
-                                ? "text-slate-700"
-                                : "text-orange-600"
-                            }`}
-                          >
-                            {metrics.performanceTrend === "improving"
-                              ? "↗"
-                              : metrics.performanceTrend === "declining"
-                              ? "↘"
-                              : "→"}
-                          </div>
-                          <div
-                            className={`text-xs font-medium uppercase tracking-wide  ${
-                              isAdminVariant
-                                ? "text-slate-600"
-                                : "text-gray-600"
-                            }`}
-                          >
-                            {metrics.performanceTrend}
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })()}
+                  <div
+                    className={`rounded-lg p-4 text-center shadow-md border-2 ${
+                      isAdminVariant
+                        ? "bg-slate-50 border-slate-300"
+                        : "bg-white border border-gray-200"
+                    }`}
+                  >
+                    <div
+                      className={`text-3xl font-bold mb-1 ${
+                        isAdminVariant ? "text-slate-700" : "text-blue-600"
+                      }`}
+                    >
+                      {totalEvaluations}
+                    </div>
+                    <div
+                      className={`text-xs font-medium uppercase tracking-wide ${
+                        isAdminVariant ? "text-slate-600" : "text-gray-600"
+                      }`}
+                    >
+                      Total Evaluations
+                    </div>
+                  </div>
+                  <div
+                    className={`rounded-lg p-4 text-center shadow-md border-2 ${
+                      isAdminVariant
+                        ? "bg-slate-50 border-slate-300"
+                        : "bg-white border border-gray-200"
+                    }`}
+                  >
+                    <div
+                      className={`text-3xl font-bold mb-1 ${
+                        isAdminVariant ? "text-slate-700" : "text-green-600"
+                      }`}
+                    >
+                      {average}
+                    </div>
+                    <div
+                      className={`text-xs font-medium uppercase tracking-wide ${
+                        isAdminVariant ? "text-slate-600" : "text-gray-600"
+                      }`}
+                    >
+                      Average Rating
+                    </div>
+                  </div>
+                  <div
+                    className={`rounded-lg p-4 text-center shadow-md border-2 ${
+                      isAdminVariant
+                        ? "bg-slate-50 border-slate-300"
+                        : "bg-white border border-gray-200"
+                    }`}
+                  >
+                    <div
+                      className={`text-3xl font-bold mb-1 ${
+                        isAdminVariant ? "text-slate-700" : "text-purple-600"
+                      }`}
+                    >
+                      {highestRating}
+                    </div>
+                    <div
+                      className={`text-xs font-medium uppercase tracking-wide ${
+                        isAdminVariant ? "text-slate-600" : "text-gray-600"
+                      }`}
+                    >
+                      Highest Rating
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           )}
-
           {/* Action Buttons */}
           <div
             className={`flex justify-end gap-3 pt-4 ${
@@ -761,28 +723,6 @@ export default function ViewEmployeeModal({
               <X className="w-4 h-4 mr-2 " />
               Close
             </Button>
-            {!isAdminVariant && (
-              <Button
-                onClick={() => onStartEvaluationAction(employee)}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all"
-              >
-                <svg
-                  className="w-4 h-4 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                Evaluate Employee
-              </Button>
-            )}
           </div>
         </div>
       </DialogContent>
