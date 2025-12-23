@@ -297,6 +297,24 @@ body {
   animation: popDown 0.4s cubic-bezier(0.36, 0, 0.66, -0.56);
 }
 
+/* Slide out to right animation for delete */
+@keyframes slideOutRight {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+    background-color: rgb(254 242 242); /* red-50 */
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+    background-color: rgb(254 242 242); /* red-50 */
+  }
+}
+
+.animate-slide-out-right {
+  animation: slideOutRight 0.5s ease-out forwards;
+}
+
 /* Subtle bounce animation for role icons */
 @keyframes bounceGentle {
   0%, 100% {

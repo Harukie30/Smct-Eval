@@ -43,6 +43,7 @@ export default function DepartmentsTab() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [departmentToDelete, setDepartmentToDelete] =
     useState<Department | null>(null);
+  const [deletingDepartmentId, setDeletingDepartmentId] = useState<number | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
@@ -192,8 +193,22 @@ export default function DepartmentsTab() {
         );
         return;
       } else {
+        // Set deleting state to show skeleton animation
+        setDeletingDepartmentId(departmentToDelete.id);
+        
+        // Close modal immediately
+        setIsDeleteModalOpen(false);
+        
+        // Wait 2 seconds to show skeleton animation
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        
+        // Actually delete the department
         await apiService.deleteDepartment(departmentToDelete.id);
-        loadData(searchTerm);
+        
+        // Refresh data first, then reset deleting state after data loads
+        await loadData(searchTerm);
+        setDeletingDepartmentId(null);
+        
         toastMessages.generic.success(
           "Department Deleted",
           `"${departmentToDelete.department_name}" has been deleted successfully.`
@@ -201,12 +216,12 @@ export default function DepartmentsTab() {
       }
     } catch (error) {
       console.error("Error deleting department:", error);
+      setDeletingDepartmentId(null);
       toastMessages.generic.error(
         "Error",
         "Failed to delete department. Please try again."
       );
     } finally {
-      setIsDeleteModalOpen(false);
       setDepartmentToDelete(null);
     }
   };
@@ -379,55 +394,89 @@ export default function DepartmentsTab() {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Render all departments in their original order */}
               {departments &&
               Array.isArray(departments) &&
               departments.length > 0
-                ? departments.map((dept) => (
-                    <Card key={dept.id}>
-                      <CardHeader>
-                        <CardTitle className="flex justify-between items-center">
-                          {dept.department_name}
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">
-                              {dept.employees_count} employees
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setDepartmentToDelete(dept);
-                                setIsDeleteModalOpen(true);
-                              }}
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardTitle>
-                        <CardDescription>Department Manager</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="text-center p-3 bg-blue-50 rounded-lg">
-                            <div className="text-lg font-bold text-blue-600">
-                              {dept.employees_count}
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              Employees
-                            </div>
-                          </div>
-                          <div className="text-center p-3 bg-green-50 rounded-lg">
-                            <div className="text-lg font-bold text-green-600">
-                              {dept.managers_count}
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              Managers
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                ? departments.map((dept) => {
+                    const isDeleting = deletingDepartmentId === dept.id;
+                    return (
+                      <Card key={dept.id} className={isDeleting ? "animate-slide-out-right bg-red-50 border-red-200" : ""}>
+                        {isDeleting ? (
+                          <>
+                            <CardHeader>
+                              <div className="flex justify-between items-center">
+                                <Skeleton className="h-6 w-32" />
+                                <div className="flex items-center gap-2">
+                                  <Skeleton className="h-5 w-24 rounded-full" />
+                                  <Skeleton className="h-8 w-8 rounded" />
+                                </div>
+                              </div>
+                              <Skeleton className="h-4 w-40 mt-2" />
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="text-center p-3 bg-gray-100 rounded-lg">
+                                  <Skeleton className="h-6 w-12 mx-auto mb-2" />
+                                  <Skeleton className="h-3 w-16 mx-auto" />
+                                </div>
+                                <div className="text-center p-3 bg-gray-100 rounded-lg">
+                                  <Skeleton className="h-6 w-12 mx-auto mb-2" />
+                                  <Skeleton className="h-3 w-16 mx-auto" />
+                                </div>
+                              </div>
+                            </CardContent>
+                          </>
+                        ) : (
+                          <>
+                            <CardHeader>
+                              <CardTitle className="flex justify-between items-center">
+                                {dept.department_name}
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline">
+                                    {dept.employees_count} employees
+                                  </Badge>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setDepartmentToDelete(dept);
+                                      setIsDeleteModalOpen(true);
+                                    }}
+                                    disabled={deletingDepartmentId !== null}
+                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </CardTitle>
+                              <CardDescription>Department Manager</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                                  <div className="text-lg font-bold text-blue-600">
+                                    {dept.employees_count}
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    Employees
+                                  </div>
+                                </div>
+                                <div className="text-center p-3 bg-green-50 rounded-lg">
+                                  <div className="text-lg font-bold text-green-600">
+                                    {dept.managers_count}
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    Managers
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </>
+                        )}
+                      </Card>
+                    );
+                  })
                 : null}
             </div>
           </div>

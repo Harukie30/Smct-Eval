@@ -101,6 +101,7 @@ export default function UserManagementTab() {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(
     null
   );
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
 
   //filters for active users
   const [activeSearchTerm, setActiveSearchTerm] = useState("");
@@ -404,13 +405,31 @@ export default function UserManagementTab() {
 
   const handleDeleteEmployee = async (employee: any) => {
     try {
-      await apiService.deleteUser(employee.id);
-      toastMessages.user.deleted(employee.fname);
-      loadActiveUsers(activeSearchTerm, roleFilter);
-    } catch (error) {
-      console.error("Error approving registration:", error);
-    } finally {
+      // Set deleting state to show skeleton animation
+      setDeletingUserId(employee.id);
+      
+      // Close modal immediately
       setIsDeleteModalOpen(false);
+      
+      // Wait 2 seconds to show skeleton animation
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // Actually delete the user
+      await apiService.deleteUser(employee.id);
+      
+      // Refresh data first, then reset deleting state after data loads
+      await loadActiveUsers(activeSearchTerm, roleFilter);
+      setDeletingUserId(null);
+      
+      toastMessages.user.deleted(employee.fname);
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      setDeletingUserId(null);
+      toastMessages.generic.error(
+        "Error",
+        "Failed to delete user. Please try again."
+      );
+    } finally {
       setEmployeeToDelete(null);
     }
   };
@@ -811,6 +830,7 @@ export default function UserManagementTab() {
                       Array.isArray(activeRegistrations) &&
                       activeRegistrations.length > 0 ? (
                       activeRegistrations.map((employee) => {
+                        const isDeleting = deletingUserId === employee.id;
                         const createdDate = employee.updated_at
                           ? new Date(employee.updated_at)
                           : null;
@@ -831,86 +851,120 @@ export default function UserManagementTab() {
                           <TableRow
                             key={employee.id}
                             className={
-                              isNew
+                              isDeleting
+                                ? "animate-slide-out-right bg-red-100 border-l-4 border-l-red-600"
+                                : isNew
                                 ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100"
                                 : isRecentlyAdded
                                 ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
                                 : "hover:bg-gray-50"
                             }
                           >
-                            <TableCell className="font-medium">
-                              <div className="flex items-center gap-2">
-                                <span>
-                                  {employee.fname + " " + employee.lname}
-                                </span>
-                                {isNew && (
-                                  <Badge className="bg-green-500 text-white text-xs px-2 py-0.5 font-semibold">
-                                    ✨ New
+                            {isDeleting ? (
+                              <>
+                                <TableCell className="font-medium bg-red-300">
+                                  <Skeleton className="h-4 w-32" />
+                                </TableCell>
+                                <TableCell className="bg-red-300">
+                                  <Skeleton className="h-4 w-40" />
+                                </TableCell>
+                                <TableCell className="bg-red-300">
+                                  <Skeleton className="h-4 w-24" />
+                                </TableCell>
+                                <TableCell className="bg-red-300">
+                                  <Skeleton className="h-4 w-24" />
+                                </TableCell>
+                                <TableCell className="bg-red-300">
+                                  <Skeleton className="h-5 w-16 rounded-full" />
+                                </TableCell>
+                                <TableCell className="bg-red-300">
+                                  <div className="flex space-x-2">
+                                    <Skeleton className="h-8 w-16" />
+                                    <Skeleton className="h-8 w-16" />
+                                    <Skeleton className="h-8 w-16" />
+                                  </div>
+                                </TableCell>
+                              </>
+                            ) : (
+                              <>
+                                <TableCell className="font-medium">
+                                  <div className="flex items-center gap-2">
+                                    <span>
+                                      {employee.fname + " " + employee.lname}
+                                    </span>
+                                    {isNew && (
+                                      <Badge className="bg-green-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                        ✨ New
+                                      </Badge>
+                                    )}
+                                    {isRecentlyAdded && !isNew && (
+                                      <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                        🕐 Recent
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>{employee.email}</TableCell>
+                                <TableCell>
+                                  {employee.positions?.label || "N/A"}
+                                </TableCell>
+                                <TableCell>
+                                  {(employee.branches &&
+                                    Array.isArray(employee.branches) &&
+                                    employee.branches[0]?.branch_name) ||
+                                    "N/A"}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="outline"
+                                    className={getRoleColor(
+                                      employee.roles &&
+                                        Array.isArray(employee.roles) &&
+                                        employee.roles[0]?.name
+                                    )}
+                                  >
+                                    {(employee.roles &&
+                                      Array.isArray(employee.roles) &&
+                                      employee.roles[0]?.name) ||
+                                      "N/A"}
                                   </Badge>
-                                )}
-                                {isRecentlyAdded && !isNew && (
-                                  <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5 font-semibold">
-                                    🕐 Recent
-                                  </Badge>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>{employee.email}</TableCell>
-                            <TableCell>
-                              {employee.positions?.label || "N/A"}
-                            </TableCell>
-                            <TableCell>
-                              {(employee.branches &&
-                                Array.isArray(employee.branches) &&
-                                employee.branches[0]?.branch_name) ||
-                                "N/A"}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={getRoleColor(
-                                  employee.roles &&
-                                    Array.isArray(employee.roles) &&
-                                    employee.roles[0]?.name
-                                )}
-                              >
-                                {(employee.roles &&
-                                  Array.isArray(employee.roles) &&
-                                  employee.roles[0]?.name) ||
-                                  "N/A"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-green-600 hover:text-green-700"
-                                  onClick={() => {
-                                    setEmployeeToView(employee);
-                                    setIsViewEmployeeModalOpen(true);
-                                  }}
-                                >
-                                  View
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-blue-600 hover:text-blue-700"
-                                  onClick={() => openEditModal(employee)}
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-red-600 hover:text-red-700"
-                                  onClick={() => openDeleteModal(employee)}
-                                >
-                                  Delete
-                                </Button>
-                              </div>
-                            </TableCell>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex space-x-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-green-600 hover:text-green-700"
+                                      onClick={() => {
+                                        setEmployeeToView(employee);
+                                        setIsViewEmployeeModalOpen(true);
+                                      }}
+                                      disabled={deletingUserId !== null}
+                                    >
+                                      View
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-blue-600 hover:text-blue-700"
+                                      onClick={() => openEditModal(employee)}
+                                      disabled={deletingUserId !== null}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-red-600 hover:text-red-700"
+                                      onClick={() => openDeleteModal(employee)}
+                                      disabled={deletingUserId !== null}
+                                    >
+                                      Delete
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </>
+                            )}
                           </TableRow>
                         );
                       })
