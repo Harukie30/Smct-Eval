@@ -559,7 +559,10 @@ export default function DashboardShell(props: DashboardShellProps) {
 
       {/* Clock Display - Fixed below navbar, right edge */}
       {isClockVisible && (
-        <div className="fixed top-20 right-6 mt-2 z-40 bg-blue-600 border border-blue-700 rounded-lg shadow-lg px-4 py-2">
+        <div 
+          className="fixed top-20 right-6 mt-2 z-40 bg-blue-600 border border-blue-700 rounded-lg shadow-lg px-4 py-2 cursor-pointer hover:bg-blue-700 transition-colors"
+          onClick={() => setIsClockVisible(false)}
+        >
           <div className="flex flex-col items-end">
             <div className="text-base font-semibold text-white">
               {currentTime.toLocaleTimeString('en-US', { 
