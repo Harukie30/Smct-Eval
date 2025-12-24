@@ -2,24 +2,22 @@
 export type ISODateString = string; // e.g. "2number24-number1-number1"
 
 export type ReviewTypeRegular = "" | "Q1" | "Q2" | "Q3" | "Q4";
-export type ReviewTypeProbationary = 0 | 3 | 5;
+export type ReviewTypeProbationary = "" | 3 | 5;
 
 // Main payload
 export interface EvaluationPayload {
   hireDate: string;
-  category: string;
   rating: number;
-  coverageFrom: string;
-  coverageTo: string;
+  coverageFrom: string | Date;
+  coverageTo: string | Date;
   reviewTypeProbationary: ReviewTypeProbationary;
   reviewTypeRegular: ReviewTypeRegular;
-  reviewTypeOthersImprovement: false;
+  reviewTypeOthersImprovement: boolean;
   reviewTypeOthersCustom: string;
   priorityArea1: string;
   priorityArea2: string;
   priorityArea3: string;
   remarks: string;
-  overallComments: string;
   jobKnowledgeScore1: number;
   jobKnowledgeScore2: number;
   jobKnowledgeScore3: number;

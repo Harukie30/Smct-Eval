@@ -15,6 +15,7 @@ import {
   CheckCircle,
   AlertCircle,
   Send,
+  User,
 } from "lucide-react";
 import { EvaluationPayload } from "./types";
 import { format } from "date-fns";
@@ -23,28 +24,13 @@ import {
   getQuarterlyReviewStatus,
   getCurrentYear,
 } from "@/lib/quarterlyReviewUtils";
+import { useAuth, User as UserType } from "@/contexts/UserContext";
+import { CONFIG } from "../../../config/config";
 
 interface OverallAssessmentProps {
   data: EvaluationPayload;
   updateDataAction: (updates: Partial<EvaluationPayload>) => void;
-  employee?: {
-    id: number;
-    name: string;
-    email: string;
-    position: string;
-    department: string;
-    role: string;
-    signature?: string;
-  };
-  currentUser?: {
-    id: number;
-    name: string;
-    email: string;
-    position: string;
-    department: string;
-    role: string;
-    signature?: string;
-  };
+  employee?: UserType | null;
   onSubmitAction?: () => void;
   onPreviousAction?: () => void;
   onCloseAction?: () => void;
@@ -84,7 +70,6 @@ export default function OverallAssessment({
   data,
   updateDataAction,
   employee,
-  currentUser,
   onSubmitAction,
   onPreviousAction,
   onCloseAction,
@@ -97,6 +82,7 @@ export default function OverallAssessment({
     priorityAreas: false,
     remarks: false,
   });
+  const { user } = useAuth();
 
   // Quarterly review status
   const [quarterlyStatus, setQuarterlyStatus] = useState({
@@ -107,51 +93,39 @@ export default function OverallAssessment({
   });
   const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
 
-  // Auto-populate evaluator name when currentUser is available
-  useEffect(() => {
-    if (currentUser && !data.evaluatorSignature) {
-      updateDataAction({ evaluatorSignature: currentUser.name });
-    }
-  }, [currentUser, data.evaluatorSignature, updateDataAction]);
-
   // Check for existing quarterly reviews when employee changes
-  useEffect(() => {
-    const checkQuarterlyReviews = async () => {
-      if (employee?.id) {
-        setIsLoadingQuarters(true);
-        try {
-          const status = await getQuarterlyReviewStatus(
-            employee.id,
-            getCurrentYear()
-          );
-          setQuarterlyStatus(status);
-          console.log(
-            "Quarterly review status for employee",
-            employee.id,
-            ":",
-            status
-          );
-        } catch (error) {
-          console.error("Error checking quarterly reviews:", error);
-        } finally {
-          setIsLoadingQuarters(false);
-        }
-      }
-    };
+  // useEffect(() => {
+  //   const checkQuarterlyReviews = async () => {
+  //     if (employee?.id) {
+  //       setIsLoadingQuarters(true);
+  //       try {
+  //         const status = await getQuarterlyReviewStatus(
+  //           employee.id,
+  //           getCurrentYear()
+  //         );
+  //         setQuarterlyStatus(status);
+  //         console.log(
+  //           "Quarterly review status for employee",
+  //           employee.id,
+  //           ":",
+  //           status
+  //         );
+  //       } catch (error) {
+  //         console.error("Error checking quarterly reviews:", error);
+  //       } finally {
+  //         setIsLoadingQuarters(false);
+  //       }
+  //     }
+  //   };
 
-    checkQuarterlyReviews();
-  }, [employee?.id]);
+  //   checkQuarterlyReviews();
+  // }, [employee?.id]);
 
-  // Auto-populate employee name when employee data is available
-  useEffect(() => {
-    if (employee && !data.employeeSignature) {
-      updateDataAction({ employeeSignature: employee.name });
-    }
-  }, [employee, data.employeeSignature, updateDataAction]);
+  const handleSubmitEvaluation = async () => {
+    updateDataAction({ rating: Number(overallWeightedScore) });
 
-  const handleSubmitEvaluation = async (isRetry = false) => {
     // Validate evaluator has a signature
-    if (!currentUser?.signature) {
+    if (!user?.signature) {
       error(
         "Please add your signature to your profile before submitting the evaluation."
       );
@@ -190,19 +164,6 @@ export default function OverallAssessment({
     setSubmissionError("");
     setValidationErrors({ priorityAreas: false, remarks: false });
 
-    // Update the data with evaluator signature before submitting
-    const updatedData = {
-      ...data,
-      evaluatorSignatureImage: currentUser?.signature || "",
-      evaluatorSignature: currentUser?.name || data.evaluatorSignature,
-      evaluatorSignatureDate:
-        data.evaluatorSignatureDate || new Date().toISOString().split("T")[0],
-    };
-
-    updateDataAction(updatedData);
-
-    // Use the parent's submission logic
-    console.log("🔄 Calling parent onSubmitAction...");
     if (onSubmitAction) {
       onSubmitAction();
     } else {
@@ -262,15 +223,21 @@ export default function OverallAssessment({
                         <div class="print-label">Review Type:</div>
                         <div class="print-value">
                             ${
-                              data.reviewTypeProbationary3 ? "✓ 3m" : "☐ 3m"
+                              data.reviewTypeProbationary === 3
+                                ? "✓ 3m"
+                                : "☐ 3m"
                             } | ${
-      data.reviewTypeProbationary5 ? "✓ 5m" : "☐ 5m"
+      data.reviewTypeProbationary === 5 ? "✓ 5m" : "☐ 5m"
     } | 
-                            ${data.reviewTypeRegularQ1 ? "✓ Q1" : "☐ Q1"} | ${
-      data.reviewTypeRegularQ2 ? "✓ Q2" : "☐ Q2"
+                            ${
+                              data.reviewTypeRegular === "Q1" ? "✓ Q1" : "☐ Q1"
+                            } | ${
+      data.reviewTypeRegular === "Q2" ? "✓ Q2" : "☐ Q2"
     } | 
-                            ${data.reviewTypeRegularQ3 ? "✓ Q3" : "☐ Q3"} | ${
-      data.reviewTypeRegularQ4 ? "✓ Q4" : "☐ Q4"
+                            ${
+                              data.reviewTypeRegular === "Q3" ? "✓ Q3" : "☐ Q3"
+                            } | ${
+      data.reviewTypeRegular === "Q4" ? "✓ Q4" : "☐ Q4"
     }
                             ${data.reviewTypeOthersImprovement ? " | ✓ PI" : ""}
                             ${
@@ -283,20 +250,25 @@ export default function OverallAssessment({
                     <div class="print-field">
                         <div class="print-label">Employee:</div>
                         <div class="print-value">${
-                          data.employeeName || "Not specified"
-                        } (${data.employeeId || "ID: N/A"})</div>
+                          employee?.fname + " " + employee?.lname ||
+                          "Not specified"
+                        } (${employee?.emp_id || "ID: N/A"})</div>
                     </div>
                     <div class="print-field">
                         <div class="print-label">Position:</div>
                         <div class="print-value">${
-                          data.position || "Not specified"
-                        } - ${data.department || "Dept: N/A"}</div>
+                          employee?.positions.label || "Not specified"
+                        } - ${
+      employee?.departments?.department_name || "Dept: N/A"
+    }</div>
                     </div>
                     <div class="print-field">
                         <div class="print-label">Branch & Supervisor:</div>
                         <div class="print-value">${
-                          data.branch || "Branch: N/A"
-                        } | ${data.supervisor || "Sup: N/A"}</div>
+                          employee?.branches[0]?.branch_name || "Branch: N/A"
+                        } | ${
+      user?.fname + " " + user?.lname || "Sup: N/A"
+    }</div>
                     </div>
                     <div class="print-field">
                         <div class="print-label">Hire Date & Coverage:</div>
@@ -406,26 +378,21 @@ export default function OverallAssessment({
                 <div class="print-signature-grid">
                     <div>
                         <div class="print-signature">${
-                          data.employeeSignature ||
+                          employee?.signature ||
                           "Employee signature not provided"
                         }</div>
                         <div class="print-signature-label">Employee's Name & Signature</div>
                         <div style="margin-top: 5px; font-size: 8px;">
-                            <strong>Date:</strong> ${
-                              data.employeeSignatureDate ||
-                              new Date().toISOString().split("T")[0]
-                            }
+                            <strong>Date:</strong> Not Approved Yet
                         </div>
                     </div>
                     <div>
                         <div class="print-signature">${
-                          data.evaluatorSignature ||
-                          "Evaluator signature not provided"
+                          user?.signature || "Evaluator signature not provided"
                         }</div>
                         <div class="print-signature-label">Evaluator's Name & Signature</div>
                         <div style="margin-top: 5px; font-size: 8px;">
                             <strong>Date:</strong> ${
-                              data.evaluatorSignatureDate ||
                               new Date().toISOString().split("T")[0]
                             }
                         </div>
@@ -459,8 +426,8 @@ export default function OverallAssessment({
       data.jobKnowledgeScore2,
       data.jobKnowledgeScore3,
     ]
-      .filter((score) => score && score !== "")
-      .map((score) => parseFloat(score));
+      .filter((score) => score && score !== 0)
+      .map((score) => parseFloat(String(score)));
 
     if (scores.length === 0) return "0.00";
     return (
@@ -476,8 +443,8 @@ export default function OverallAssessment({
       data.qualityOfWorkScore4,
       data.qualityOfWorkScore5,
     ]
-      .filter((score) => score && score !== "")
-      .map((score) => parseFloat(score));
+      .filter((score) => score && score !== 0)
+      .map((score) => parseFloat(String(score)));
 
     if (scores.length === 0) return "0.00";
     return (
@@ -491,8 +458,8 @@ export default function OverallAssessment({
       data.adaptabilityScore2,
       data.adaptabilityScore3,
     ]
-      .filter((score) => score && score !== "")
-      .map((score) => parseFloat(score));
+      .filter((score) => score && score !== 0)
+      .map((score) => parseFloat(String(score)));
 
     if (scores.length === 0) return "0.00";
     return (
@@ -506,8 +473,8 @@ export default function OverallAssessment({
       data.teamworkScore2,
       data.teamworkScore3,
     ]
-      .filter((score) => score && score !== "")
-      .map((score) => parseFloat(score));
+      .filter((score) => score && score !== 0)
+      .map((score) => parseFloat(String(score)));
 
     if (scores.length === 0) return "0.00";
     return (
@@ -522,8 +489,8 @@ export default function OverallAssessment({
       data.reliabilityScore3,
       data.reliabilityScore4,
     ]
-      .filter((score) => score && score !== "")
-      .map((score) => parseFloat(score));
+      .filter((score) => score && score !== 0)
+      .map((score) => parseFloat(String(score)));
 
     if (scores.length === 0) return "0.00";
     return (
@@ -538,8 +505,8 @@ export default function OverallAssessment({
       data.ethicalScore3,
       data.ethicalScore4,
     ]
-      .filter((score) => score && score !== "")
-      .map((score) => parseFloat(score));
+      .filter((score) => score && score !== 0)
+      .map((score) => parseFloat(String(score)));
 
     if (scores.length === 0) return "0.00";
     return (
@@ -555,8 +522,8 @@ export default function OverallAssessment({
       data.customerServiceScore4,
       data.customerServiceScore5,
     ]
-      .filter((score) => score && score !== "")
-      .map((score) => parseFloat(score));
+      .filter((score) => score && score !== 0)
+      .map((score) => parseFloat(String(score)));
 
     if (scores.length === 0) return "0.00";
     return (
@@ -613,33 +580,33 @@ export default function OverallAssessment({
   const [showAutoSaveIndicator, setShowAutoSaveIndicator] =
     React.useState(false);
 
-  const autoSave = () => {
-    try {
-      const evaluationData = {
-        ...data,
-        lastSaved: new Date().toISOString(),
-        employeeName: data.employeeName || "Unknown Employee",
-      };
+  // const autoSave = () => {
+  //   try {
+  //     const evaluationData = {
+  //       ...data,
+  //       lastSaved: new Date().toISOString(),
+  //       employeeName: data.employeeName || "Unknown Employee",
+  //     };
 
-      localStorage.setItem(
-        "evaluation_autosave",
-        JSON.stringify(evaluationData)
-      );
-      console.log("Auto-saved evaluation data");
+  //     localStorage.setItem(
+  //       "evaluation_autosave",
+  //       JSON.stringify(evaluationData)
+  //     );
+  //     console.log("Auto-saved evaluation data");
 
-      // Show auto-save indicator
-      setShowAutoSaveIndicator(true);
-      setTimeout(() => setShowAutoSaveIndicator(false), 2000);
-    } catch (error) {
-      console.error("Auto-save failed:", error);
-    }
-  };
+  //     // Show auto-save indicator
+  //     setShowAutoSaveIndicator(true);
+  //     setTimeout(() => setShowAutoSaveIndicator(false), 2000);
+  //   } catch (error) {
+  //     console.error("Auto-save failed:", error);
+  //   }
+  // };
 
   // Auto-save every 30 seconds (but don't load auto-saved data on mount)
-  useEffect(() => {
-    const interval = setInterval(autoSave, 30000);
-    return () => clearInterval(interval);
-  }, [data]);
+  // useEffect(() => {
+  //   const interval = setInterval(autoSave, 30000);
+  //   return () => clearInterval(interval);
+  // }, [data]);
 
   return (
     <div className="space-y-6">
@@ -664,7 +631,7 @@ export default function OverallAssessment({
                     type="checkbox"
                     id="prob3"
                     className="rounded"
-                    checked={data.reviewTypeProbationary3}
+                    checked={data.reviewTypeProbationary === 3}
                     disabled
                     readOnly
                   />
@@ -677,7 +644,7 @@ export default function OverallAssessment({
                     type="checkbox"
                     id="prob5"
                     className="rounded"
-                    checked={data.reviewTypeProbationary5}
+                    checked={data.reviewTypeProbationary === 5}
                     disabled
                     readOnly
                   />
@@ -703,7 +670,7 @@ export default function OverallAssessment({
                     id="q1"
                     name="regularReview"
                     className="rounded"
-                    checked={data.reviewTypeRegularQ1}
+                    checked={data.reviewTypeRegular === "Q1"}
                     disabled
                     readOnly
                   />
@@ -729,7 +696,7 @@ export default function OverallAssessment({
                     id="q2"
                     name="regularReview"
                     className="rounded"
-                    checked={data.reviewTypeRegularQ2}
+                    checked={data.reviewTypeRegular === "Q2"}
                     disabled
                     readOnly
                   />
@@ -755,7 +722,7 @@ export default function OverallAssessment({
                     id="q3"
                     name="regularReview"
                     className="rounded"
-                    checked={data.reviewTypeRegularQ3}
+                    checked={data.reviewTypeRegular === "Q3"}
                     disabled
                     readOnly
                   />
@@ -781,7 +748,7 @@ export default function OverallAssessment({
                     id="q4"
                     name="regularReview"
                     className="rounded"
-                    checked={data.reviewTypeRegularQ4}
+                    checked={data.reviewTypeRegular === "Q4"}
                     disabled
                     readOnly
                   />
@@ -853,7 +820,7 @@ export default function OverallAssessment({
               <div>
                 <Label className="font-medium">Employee Name:</Label>
                 <Input
-                  value={data.employeeName || ""}
+                  value={employee?.fname + " " + employee?.lname || ""}
                   readOnly
                   className="mt-1 bg-gray-50"
                   disabled
@@ -862,7 +829,7 @@ export default function OverallAssessment({
               <div>
                 <Label className="font-medium">Employee Number:</Label>
                 <Input
-                  value={data.employeeId || ""}
+                  value={employee?.emp_id || ""}
                   readOnly
                   className="mt-1 bg-gray-50"
                   disabled
@@ -871,7 +838,7 @@ export default function OverallAssessment({
               <div>
                 <Label className="font-medium">Position:</Label>
                 <Input
-                  value={data.position || ""}
+                  value={employee?.positions?.label || ""}
                   readOnly
                   className="mt-1 bg-gray-50"
                   disabled
@@ -880,7 +847,7 @@ export default function OverallAssessment({
               <div>
                 <Label className="font-medium">Department:</Label>
                 <Input
-                  value={data.department || ""}
+                  value={employee?.departments?.department_name || ""}
                   readOnly
                   className="mt-1 bg-gray-50"
                   disabled
@@ -893,7 +860,7 @@ export default function OverallAssessment({
               <div>
                 <Label className="font-medium">Branch:</Label>
                 <Input
-                  value={data.branch || ""}
+                  value={employee?.branches[0]?.branch_name || ""}
                   readOnly
                   className="mt-1 bg-gray-50"
                   disabled
@@ -911,10 +878,7 @@ export default function OverallAssessment({
               <div>
                 <Label className="font-medium">Immediate Supervisor:</Label>
                 <Input
-                  value={data.supervisor || ""}
-                  onChange={(e) =>
-                    updateDataAction({ supervisor: e.target.value })
-                  }
+                  value={user?.fname + " " + user?.lname || ""}
                   className="mt-1 bg-gray-50"
                   placeholder="Enter supervisor name"
                   disabled
@@ -994,28 +958,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.jobKnowledgeScore1 === "5"
+                        data.jobKnowledgeScore1 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.jobKnowledgeScore1 === "4"
+                          : data.jobKnowledgeScore1 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.jobKnowledgeScore1 === "3"
+                          : data.jobKnowledgeScore1 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.jobKnowledgeScore1 === "2"
+                          : data.jobKnowledgeScore1 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.jobKnowledgeScore1 === "1"
+                          : data.jobKnowledgeScore1 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.jobKnowledgeScore1 === "5"
+                      {data.jobKnowledgeScore1 === 5
                         ? "Outstanding"
-                        : data.jobKnowledgeScore1 === "4"
+                        : data.jobKnowledgeScore1 === 4
                         ? "Exceeds Expectation"
-                        : data.jobKnowledgeScore1 === "3"
+                        : data.jobKnowledgeScore1 === 3
                         ? "Meets Expectations"
-                        : data.jobKnowledgeScore1 === "2"
+                        : data.jobKnowledgeScore1 === 2
                         ? "Needs Improvement"
-                        : data.jobKnowledgeScore1 === "1"
+                        : data.jobKnowledgeScore1 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1038,28 +1002,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.jobKnowledgeScore2 === "5"
+                        data.jobKnowledgeScore2 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.jobKnowledgeScore2 === "4"
+                          : data.jobKnowledgeScore2 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.jobKnowledgeScore2 === "3"
+                          : data.jobKnowledgeScore2 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.jobKnowledgeScore2 === "2"
+                          : data.jobKnowledgeScore2 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.jobKnowledgeScore2 === "1"
+                          : data.jobKnowledgeScore2 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.jobKnowledgeScore2 === "5"
+                      {data.jobKnowledgeScore2 === 5
                         ? "Outstanding"
-                        : data.jobKnowledgeScore2 === "4"
+                        : data.jobKnowledgeScore2 === 4
                         ? "Exceeds Expectation"
-                        : data.jobKnowledgeScore2 === "3"
+                        : data.jobKnowledgeScore2 === 3
                         ? "Meets Expectations"
-                        : data.jobKnowledgeScore2 === "2"
+                        : data.jobKnowledgeScore2 === 2
                         ? "Needs Improvement"
-                        : data.jobKnowledgeScore2 === "1"
+                        : data.jobKnowledgeScore2 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1082,28 +1046,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.jobKnowledgeScore3 === "5"
+                        data.jobKnowledgeScore3 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.jobKnowledgeScore3 === "4"
+                          : data.jobKnowledgeScore3 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.jobKnowledgeScore3 === "3"
+                          : data.jobKnowledgeScore3 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.jobKnowledgeScore3 === "2"
+                          : data.jobKnowledgeScore3 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.jobKnowledgeScore3 === "1"
+                          : data.jobKnowledgeScore3 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.jobKnowledgeScore3 === "5"
+                      {data.jobKnowledgeScore3 === 5
                         ? "Outstanding"
-                        : data.jobKnowledgeScore3 === "4"
+                        : data.jobKnowledgeScore3 === 4
                         ? "Exceeds Expectation"
-                        : data.jobKnowledgeScore3 === "3"
+                        : data.jobKnowledgeScore3 === 3
                         ? "Meets Expectations"
-                        : data.jobKnowledgeScore3 === "2"
+                        : data.jobKnowledgeScore3 === 2
                         ? "Needs Improvement"
-                        : data.jobKnowledgeScore3 === "1"
+                        : data.jobKnowledgeScore3 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1174,28 +1138,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.qualityOfWorkScore1 === "5"
+                        data.qualityOfWorkScore1 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.qualityOfWorkScore1 === "4"
+                          : data.qualityOfWorkScore1 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.qualityOfWorkScore1 === "3"
+                          : data.qualityOfWorkScore1 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.qualityOfWorkScore1 === "2"
+                          : data.qualityOfWorkScore1 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.qualityOfWorkScore1 === "1"
+                          : data.qualityOfWorkScore1 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.qualityOfWorkScore1 === "5"
+                      {data.qualityOfWorkScore1 === 5
                         ? "Outstanding"
-                        : data.qualityOfWorkScore1 === "4"
+                        : data.qualityOfWorkScore1 === 4
                         ? "Exceeds Expectation"
-                        : data.qualityOfWorkScore1 === "3"
+                        : data.qualityOfWorkScore1 === 3
                         ? "Meets Expectations"
-                        : data.qualityOfWorkScore1 === "2"
+                        : data.qualityOfWorkScore1 === 2
                         ? "Needs Improvement"
-                        : data.qualityOfWorkScore1 === "1"
+                        : data.qualityOfWorkScore1 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1218,28 +1182,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.qualityOfWorkScore2 === "5"
+                        data.qualityOfWorkScore2 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.qualityOfWorkScore2 === "4"
+                          : data.qualityOfWorkScore2 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.qualityOfWorkScore2 === "3"
+                          : data.qualityOfWorkScore2 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.qualityOfWorkScore2 === "2"
+                          : data.qualityOfWorkScore2 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.qualityOfWorkScore2 === "1"
+                          : data.qualityOfWorkScore2 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.qualityOfWorkScore2 === "5"
+                      {data.qualityOfWorkScore2 === 5
                         ? "Outstanding"
-                        : data.qualityOfWorkScore2 === "4"
+                        : data.qualityOfWorkScore2 === 4
                         ? "Exceeds Expectation"
-                        : data.qualityOfWorkScore2 === "3"
+                        : data.qualityOfWorkScore2 === 3
                         ? "Meets Expectations"
-                        : data.qualityOfWorkScore2 === "2"
+                        : data.qualityOfWorkScore2 === 2
                         ? "Needs Improvement"
-                        : data.qualityOfWorkScore2 === "1"
+                        : data.qualityOfWorkScore2 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1262,28 +1226,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.qualityOfWorkScore3 === "5"
+                        data.qualityOfWorkScore3 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.qualityOfWorkScore3 === "4"
+                          : data.qualityOfWorkScore3 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.qualityOfWorkScore3 === "3"
+                          : data.qualityOfWorkScore3 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.qualityOfWorkScore3 === "2"
+                          : data.qualityOfWorkScore3 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.qualityOfWorkScore3 === "1"
+                          : data.qualityOfWorkScore3 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.qualityOfWorkScore3 === "5"
+                      {data.qualityOfWorkScore3 === 5
                         ? "Outstanding"
-                        : data.qualityOfWorkScore3 === "4"
+                        : data.qualityOfWorkScore3 === 4
                         ? "Exceeds Expectation"
-                        : data.qualityOfWorkScore3 === "3"
+                        : data.qualityOfWorkScore3 === 3
                         ? "Meets Expectations"
-                        : data.qualityOfWorkScore3 === "2"
+                        : data.qualityOfWorkScore3 === 2
                         ? "Needs Improvement"
-                        : data.qualityOfWorkScore3 === "1"
+                        : data.qualityOfWorkScore3 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1306,28 +1270,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.qualityOfWorkScore4 === "5"
+                        data.qualityOfWorkScore4 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.qualityOfWorkScore4 === "4"
+                          : data.qualityOfWorkScore4 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.qualityOfWorkScore4 === "3"
+                          : data.qualityOfWorkScore4 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.qualityOfWorkScore4 === "2"
+                          : data.qualityOfWorkScore4 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.qualityOfWorkScore4 === "1"
+                          : data.qualityOfWorkScore4 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.qualityOfWorkScore4 === "5"
+                      {data.qualityOfWorkScore4 === 5
                         ? "Outstanding"
-                        : data.qualityOfWorkScore4 === "4"
+                        : data.qualityOfWorkScore4 === 4
                         ? "Exceeds Expectation"
-                        : data.qualityOfWorkScore4 === "3"
+                        : data.qualityOfWorkScore4 === 3
                         ? "Meets Expectations"
-                        : data.qualityOfWorkScore4 === "2"
+                        : data.qualityOfWorkScore4 === 2
                         ? "Needs Improvement"
-                        : data.qualityOfWorkScore4 === "1"
+                        : data.qualityOfWorkScore4 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1350,28 +1314,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.qualityOfWorkScore5 === "5"
+                        data.qualityOfWorkScore5 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.qualityOfWorkScore5 === "4"
+                          : data.qualityOfWorkScore5 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.qualityOfWorkScore5 === "3"
+                          : data.qualityOfWorkScore5 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.qualityOfWorkScore5 === "2"
+                          : data.qualityOfWorkScore5 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.qualityOfWorkScore5 === "1"
+                          : data.qualityOfWorkScore5 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.qualityOfWorkScore5 === "5"
+                      {data.qualityOfWorkScore5 === 5
                         ? "Outstanding"
-                        : data.qualityOfWorkScore5 === "4"
+                        : data.qualityOfWorkScore5 === 4
                         ? "Exceeds Expectation"
-                        : data.qualityOfWorkScore5 === "3"
+                        : data.qualityOfWorkScore5 === 3
                         ? "Meets Expectations"
-                        : data.qualityOfWorkScore5 === "2"
+                        : data.qualityOfWorkScore5 === 2
                         ? "Needs Improvement"
-                        : data.qualityOfWorkScore5 === "1"
+                        : data.qualityOfWorkScore5 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1440,28 +1404,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.adaptabilityScore1 === "5"
+                        data.adaptabilityScore1 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.adaptabilityScore1 === "4"
+                          : data.adaptabilityScore1 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.adaptabilityScore1 === "3"
+                          : data.adaptabilityScore1 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.adaptabilityScore1 === "2"
+                          : data.adaptabilityScore1 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.adaptabilityScore1 === "1"
+                          : data.adaptabilityScore1 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.adaptabilityScore1 === "5"
+                      {data.adaptabilityScore1 === 5
                         ? "Outstanding"
-                        : data.adaptabilityScore1 === "4"
+                        : data.adaptabilityScore1 === 4
                         ? "Exceeds Expectation"
-                        : data.adaptabilityScore1 === "3"
+                        : data.adaptabilityScore1 === 3
                         ? "Meets Expectations"
-                        : data.adaptabilityScore1 === "2"
+                        : data.adaptabilityScore1 === 2
                         ? "Needs Improvement"
-                        : data.adaptabilityScore1 === "1"
+                        : data.adaptabilityScore1 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1484,28 +1448,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.adaptabilityScore2 === "5"
+                        data.adaptabilityScore2 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.adaptabilityScore2 === "4"
+                          : data.adaptabilityScore2 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.adaptabilityScore2 === "3"
+                          : data.adaptabilityScore2 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.adaptabilityScore2 === "2"
+                          : data.adaptabilityScore2 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.adaptabilityScore2 === "1"
+                          : data.adaptabilityScore2 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.adaptabilityScore2 === "5"
+                      {data.adaptabilityScore2 === 5
                         ? "Outstanding"
-                        : data.adaptabilityScore2 === "4"
+                        : data.adaptabilityScore2 === 4
                         ? "Exceeds Expectation"
-                        : data.adaptabilityScore2 === "3"
+                        : data.adaptabilityScore2 === 3
                         ? "Meets Expectations"
-                        : data.adaptabilityScore2 === "2"
+                        : data.adaptabilityScore2 === 2
                         ? "Needs Improvement"
-                        : data.adaptabilityScore2 === "1"
+                        : data.adaptabilityScore2 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1528,28 +1492,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.adaptabilityScore3 === "5"
+                        data.adaptabilityScore3 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.adaptabilityScore3 === "4"
+                          : data.adaptabilityScore3 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.adaptabilityScore3 === "3"
+                          : data.adaptabilityScore3 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.adaptabilityScore3 === "2"
+                          : data.adaptabilityScore3 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.adaptabilityScore3 === "1"
+                          : data.adaptabilityScore3 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.adaptabilityScore3 === "5"
+                      {data.adaptabilityScore3 === 5
                         ? "Outstanding"
-                        : data.adaptabilityScore3 === "4"
+                        : data.adaptabilityScore3 === 4
                         ? "Exceeds Expectation"
-                        : data.adaptabilityScore3 === "3"
+                        : data.adaptabilityScore3 === 3
                         ? "Meets Expectations"
-                        : data.adaptabilityScore3 === "2"
+                        : data.adaptabilityScore3 === 2
                         ? "Needs Improvement"
-                        : data.adaptabilityScore3 === "1"
+                        : data.adaptabilityScore3 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1617,28 +1581,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.teamworkScore1 === "5"
+                        data.teamworkScore1 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.teamworkScore1 === "4"
+                          : data.teamworkScore1 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.teamworkScore1 === "3"
+                          : data.teamworkScore1 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.teamworkScore1 === "2"
+                          : data.teamworkScore1 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.teamworkScore1 === "1"
+                          : data.teamworkScore1 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.teamworkScore1 === "5"
+                      {data.teamworkScore1 === 5
                         ? "Outstanding"
-                        : data.teamworkScore1 === "4"
+                        : data.teamworkScore1 === 4
                         ? "Exceeds Expectation"
-                        : data.teamworkScore1 === "3"
+                        : data.teamworkScore1 === 3
                         ? "Meets Expectations"
-                        : data.teamworkScore1 === "2"
+                        : data.teamworkScore1 === 2
                         ? "Needs Improvement"
-                        : data.teamworkScore1 === "1"
+                        : data.teamworkScore1 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1662,28 +1626,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.teamworkScore2 === "5"
+                        data.teamworkScore2 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.teamworkScore2 === "4"
+                          : data.teamworkScore2 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.teamworkScore2 === "3"
+                          : data.teamworkScore2 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.teamworkScore2 === "2"
+                          : data.teamworkScore2 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.teamworkScore2 === "1"
+                          : data.teamworkScore2 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.teamworkScore2 === "5"
+                      {data.teamworkScore2 === 5
                         ? "Outstanding"
-                        : data.teamworkScore2 === "4"
+                        : data.teamworkScore2 === 4
                         ? "Exceeds Expectation"
-                        : data.teamworkScore2 === "3"
+                        : data.teamworkScore2 === 3
                         ? "Meets Expectations"
-                        : data.teamworkScore2 === "2"
+                        : data.teamworkScore2 === 2
                         ? "Needs Improvement"
-                        : data.teamworkScore2 === "1"
+                        : data.teamworkScore2 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1707,28 +1671,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.teamworkScore3 === "5"
+                        data.teamworkScore3 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.teamworkScore3 === "4"
+                          : data.teamworkScore3 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.teamworkScore3 === "3"
+                          : data.teamworkScore3 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.teamworkScore3 === "2"
+                          : data.teamworkScore3 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.teamworkScore3 === "1"
+                          : data.teamworkScore3 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.teamworkScore3 === "5"
+                      {data.teamworkScore3 === 5
                         ? "Outstanding"
-                        : data.teamworkScore3 === "4"
+                        : data.teamworkScore3 === 4
                         ? "Exceeds Expectation"
-                        : data.teamworkScore3 === "3"
+                        : data.teamworkScore3 === 3
                         ? "Meets Expectations"
-                        : data.teamworkScore3 === "2"
+                        : data.teamworkScore3 === 2
                         ? "Needs Improvement"
-                        : data.teamworkScore3 === "1"
+                        : data.teamworkScore3 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1797,28 +1761,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.reliabilityScore1 === "5"
+                        data.reliabilityScore1 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.reliabilityScore1 === "4"
+                          : data.reliabilityScore1 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.reliabilityScore1 === "3"
+                          : data.reliabilityScore1 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.reliabilityScore1 === "2"
+                          : data.reliabilityScore1 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.reliabilityScore1 === "1"
+                          : data.reliabilityScore1 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.reliabilityScore1 === "5"
+                      {data.reliabilityScore1 === 5
                         ? "Outstanding"
-                        : data.reliabilityScore1 === "4"
+                        : data.reliabilityScore1 === 4
                         ? "Exceeds Expectation"
-                        : data.reliabilityScore1 === "3"
+                        : data.reliabilityScore1 === 3
                         ? "Meets Expectations"
-                        : data.reliabilityScore1 === "2"
+                        : data.reliabilityScore1 === 2
                         ? "Needs Improvement"
-                        : data.reliabilityScore1 === "1"
+                        : data.reliabilityScore1 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1841,28 +1805,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.reliabilityScore2 === "5"
+                        data.reliabilityScore2 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.reliabilityScore2 === "4"
+                          : data.reliabilityScore2 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.reliabilityScore2 === "3"
+                          : data.reliabilityScore2 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.reliabilityScore2 === "2"
+                          : data.reliabilityScore2 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.reliabilityScore2 === "1"
+                          : data.reliabilityScore2 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.reliabilityScore2 === "5"
+                      {data.reliabilityScore2 === 5
                         ? "Outstanding"
-                        : data.reliabilityScore2 === "4"
+                        : data.reliabilityScore2 === 4
                         ? "Exceeds Expectation"
-                        : data.reliabilityScore2 === "3"
+                        : data.reliabilityScore2 === 3
                         ? "Meets Expectations"
-                        : data.reliabilityScore2 === "2"
+                        : data.reliabilityScore2 === 2
                         ? "Needs Improvement"
-                        : data.reliabilityScore2 === "1"
+                        : data.reliabilityScore2 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1885,28 +1849,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.reliabilityScore3 === "5"
+                        data.reliabilityScore3 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.reliabilityScore3 === "4"
+                          : data.reliabilityScore3 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.reliabilityScore3 === "3"
+                          : data.reliabilityScore3 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.reliabilityScore3 === "2"
+                          : data.reliabilityScore3 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.reliabilityScore3 === "1"
+                          : data.reliabilityScore3 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.reliabilityScore3 === "5"
+                      {data.reliabilityScore3 === 5
                         ? "Outstanding"
-                        : data.reliabilityScore3 === "4"
+                        : data.reliabilityScore3 === 4
                         ? "Exceeds Expectation"
-                        : data.reliabilityScore3 === "3"
+                        : data.reliabilityScore3 === 3
                         ? "Meets Expectations"
-                        : data.reliabilityScore3 === "2"
+                        : data.reliabilityScore3 === 2
                         ? "Needs Improvement"
-                        : data.reliabilityScore3 === "1"
+                        : data.reliabilityScore3 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1929,28 +1893,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.reliabilityScore4 === "5"
+                        data.reliabilityScore4 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.reliabilityScore4 === "4"
+                          : data.reliabilityScore4 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.reliabilityScore4 === "3"
+                          : data.reliabilityScore4 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.reliabilityScore4 === "2"
+                          : data.reliabilityScore4 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.reliabilityScore4 === "1"
+                          : data.reliabilityScore4 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.reliabilityScore4 === "5"
+                      {data.reliabilityScore4 === 5
                         ? "Outstanding"
-                        : data.reliabilityScore4 === "4"
+                        : data.reliabilityScore4 === 4
                         ? "Exceeds Expectation"
-                        : data.reliabilityScore4 === "3"
+                        : data.reliabilityScore4 === 3
                         ? "Meets Expectations"
-                        : data.reliabilityScore4 === "2"
+                        : data.reliabilityScore4 === 2
                         ? "Needs Improvement"
-                        : data.reliabilityScore4 === "1"
+                        : data.reliabilityScore4 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -2019,28 +1983,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.ethicalScore1 === "5"
+                        data.ethicalScore1 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.ethicalScore1 === "4"
+                          : data.ethicalScore1 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.ethicalScore1 === "3"
+                          : data.ethicalScore1 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.ethicalScore1 === "2"
+                          : data.ethicalScore1 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.ethicalScore1 === "1"
+                          : data.ethicalScore1 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.ethicalScore1 === "5"
+                      {data.ethicalScore1 === 5
                         ? "Outstanding"
-                        : data.ethicalScore1 === "4"
+                        : data.ethicalScore1 === 4
                         ? "Exceeds Expectation"
-                        : data.ethicalScore1 === "3"
+                        : data.ethicalScore1 === 3
                         ? "Meets Expectations"
-                        : data.ethicalScore1 === "2"
+                        : data.ethicalScore1 === 2
                         ? "Needs Improvement"
-                        : data.ethicalScore1 === "1"
+                        : data.ethicalScore1 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -2063,28 +2027,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.ethicalScore2 === "5"
+                        data.ethicalScore2 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.ethicalScore2 === "4"
+                          : data.ethicalScore2 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.ethicalScore2 === "3"
+                          : data.ethicalScore2 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.ethicalScore2 === "2"
+                          : data.ethicalScore2 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.ethicalScore2 === "1"
+                          : data.ethicalScore2 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.ethicalScore2 === "5"
+                      {data.ethicalScore2 === 5
                         ? "Outstanding"
-                        : data.ethicalScore2 === "4"
+                        : data.ethicalScore2 === 4
                         ? "Exceeds Expectation"
-                        : data.ethicalScore2 === "3"
+                        : data.ethicalScore2 === 3
                         ? "Meets Expectations"
-                        : data.ethicalScore2 === "2"
+                        : data.ethicalScore2 === 2
                         ? "Needs Improvement"
-                        : data.ethicalScore2 === "1"
+                        : data.ethicalScore2 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -2107,28 +2071,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.ethicalScore3 === "5"
+                        data.ethicalScore3 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.ethicalScore3 === "4"
+                          : data.ethicalScore3 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.ethicalScore3 === "3"
+                          : data.ethicalScore3 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.ethicalScore3 === "2"
+                          : data.ethicalScore3 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.ethicalScore3 === "1"
+                          : data.ethicalScore3 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.ethicalScore3 === "5"
+                      {data.ethicalScore3 === 5
                         ? "Outstanding"
-                        : data.ethicalScore3 === "4"
+                        : data.ethicalScore3 === 4
                         ? "Exceeds Expectation"
-                        : data.ethicalScore3 === "3"
+                        : data.ethicalScore3 === 3
                         ? "Meets Expectations"
-                        : data.ethicalScore3 === "2"
+                        : data.ethicalScore3 === 2
                         ? "Needs Improvement"
-                        : data.ethicalScore3 === "1"
+                        : data.ethicalScore3 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -2151,28 +2115,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.ethicalScore4 === "5"
+                        data.ethicalScore4 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.ethicalScore4 === "4"
+                          : data.ethicalScore4 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.ethicalScore4 === "3"
+                          : data.ethicalScore4 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.ethicalScore4 === "2"
+                          : data.ethicalScore4 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.ethicalScore4 === "1"
+                          : data.ethicalScore4 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.ethicalScore4 === "5"
+                      {data.ethicalScore4 === 5
                         ? "Outstanding"
-                        : data.ethicalScore4 === "4"
+                        : data.ethicalScore4 === 4
                         ? "Exceeds Expectation"
-                        : data.ethicalScore4 === "3"
+                        : data.ethicalScore4 === 3
                         ? "Meets Expectations"
-                        : data.ethicalScore4 === "2"
+                        : data.ethicalScore4 === 2
                         ? "Needs Improvement"
-                        : data.ethicalScore4 === "1"
+                        : data.ethicalScore4 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -2241,28 +2205,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.customerServiceScore1 === "5"
+                        data.customerServiceScore1 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.customerServiceScore1 === "4"
+                          : data.customerServiceScore1 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.customerServiceScore1 === "3"
+                          : data.customerServiceScore1 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.customerServiceScore1 === "2"
+                          : data.customerServiceScore1 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.customerServiceScore1 === "1"
+                          : data.customerServiceScore1 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.customerServiceScore1 === "5"
+                      {data.customerServiceScore1 === 5
                         ? "Outstanding"
-                        : data.customerServiceScore1 === "4"
+                        : data.customerServiceScore1 === 4
                         ? "Exceeds Expectation"
-                        : data.customerServiceScore1 === "3"
+                        : data.customerServiceScore1 === 3
                         ? "Meets Expectations"
-                        : data.customerServiceScore1 === "2"
+                        : data.customerServiceScore1 === 2
                         ? "Needs Improvement"
-                        : data.customerServiceScore1 === "1"
+                        : data.customerServiceScore1 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -2285,28 +2249,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.customerServiceScore2 === "5"
+                        data.customerServiceScore2 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.customerServiceScore2 === "4"
+                          : data.customerServiceScore2 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.customerServiceScore2 === "3"
+                          : data.customerServiceScore2 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.customerServiceScore2 === "2"
+                          : data.customerServiceScore2 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.customerServiceScore2 === "1"
+                          : data.customerServiceScore2 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.customerServiceScore2 === "5"
+                      {data.customerServiceScore2 === 5
                         ? "Outstanding"
-                        : data.customerServiceScore2 === "4"
+                        : data.customerServiceScore2 === 4
                         ? "Exceeds Expectation"
-                        : data.customerServiceScore2 === "3"
+                        : data.customerServiceScore2 === 3
                         ? "Meets Expectations"
-                        : data.customerServiceScore2 === "2"
+                        : data.customerServiceScore2 === 2
                         ? "Needs Improvement"
-                        : data.customerServiceScore2 === "1"
+                        : data.customerServiceScore2 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -2329,28 +2293,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.customerServiceScore3 === "5"
+                        data.customerServiceScore3 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.customerServiceScore3 === "4"
+                          : data.customerServiceScore3 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.customerServiceScore3 === "3"
+                          : data.customerServiceScore3 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.customerServiceScore3 === "2"
+                          : data.customerServiceScore3 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.customerServiceScore3 === "1"
+                          : data.customerServiceScore3 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.customerServiceScore3 === "5"
+                      {data.customerServiceScore3 === 5
                         ? "Outstanding"
-                        : data.customerServiceScore3 === "4"
+                        : data.customerServiceScore3 === 4
                         ? "Exceeds Expectation"
-                        : data.customerServiceScore3 === "3"
+                        : data.customerServiceScore3 === 3
                         ? "Meets Expectations"
-                        : data.customerServiceScore3 === "2"
+                        : data.customerServiceScore3 === 2
                         ? "Needs Improvement"
-                        : data.customerServiceScore3 === "1"
+                        : data.customerServiceScore3 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -2373,28 +2337,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.customerServiceScore4 === "5"
+                        data.customerServiceScore4 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.customerServiceScore4 === "4"
+                          : data.customerServiceScore4 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.customerServiceScore4 === "3"
+                          : data.customerServiceScore4 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.customerServiceScore4 === "2"
+                          : data.customerServiceScore4 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.customerServiceScore4 === "1"
+                          : data.customerServiceScore4 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.customerServiceScore4 === "5"
+                      {data.customerServiceScore4 === 5
                         ? "Outstanding"
-                        : data.customerServiceScore4 === "4"
+                        : data.customerServiceScore4 === 4
                         ? "Exceeds Expectation"
-                        : data.customerServiceScore4 === "3"
+                        : data.customerServiceScore4 === 3
                         ? "Meets Expectations"
-                        : data.customerServiceScore4 === "2"
+                        : data.customerServiceScore4 === 2
                         ? "Needs Improvement"
-                        : data.customerServiceScore4 === "1"
+                        : data.customerServiceScore4 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -2416,28 +2380,28 @@ export default function OverallAssessment({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.customerServiceScore5 === "5"
+                        data.customerServiceScore5 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.customerServiceScore5 === "4"
+                          : data.customerServiceScore5 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.customerServiceScore5 === "3"
+                          : data.customerServiceScore5 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.customerServiceScore5 === "2"
+                          : data.customerServiceScore5 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.customerServiceScore5 === "1"
+                          : data.customerServiceScore5 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.customerServiceScore5 === "5"
+                      {data.customerServiceScore5 === 5
                         ? "Outstanding"
-                        : data.customerServiceScore5 === "4"
+                        : data.customerServiceScore5 === 4
                         ? "Exceeds Expectation"
-                        : data.customerServiceScore5 === "3"
+                        : data.customerServiceScore5 === 3
                         ? "Meets Expectations"
-                        : data.customerServiceScore5 === "2"
+                        : data.customerServiceScore5 === 2
                         ? "Needs Improvement"
-                        : data.customerServiceScore5 === "1"
+                        : data.customerServiceScore5 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -2913,8 +2877,8 @@ export default function OverallAssessment({
                   {/* Name area */}
                   <div className="p-2 text-center">
                     <p className="text-sm font-medium text-gray-700">
-                      {data.employeeSignature ||
-                        employee?.name ||
+                      {employee?.signature ||
+                        employee?.fname + " " + employee?.lname ||
                         "Employee Name"}
                     </p>
                   </div>
@@ -2923,19 +2887,7 @@ export default function OverallAssessment({
               <p className="text-center text-sm text-gray-600">
                 Employee's Name & Signature
               </p>
-              <div className="flex items-center space-x-2">
-                <Label className="text-sm font-medium">Date:</Label>
-                <Input
-                  type="date"
-                  value={data.employeeSignatureDate || ""}
-                  onChange={(e) =>
-                    updateDataAction({ employeeSignatureDate: e.target.value })
-                  }
-                  className="w-40 bg-gray-100"
-                  disabled
-                  readOnly
-                />
-              </div>
+
               <div className="text-center">
                 <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded">
                   ⏳ Waiting for employee approval
@@ -2955,14 +2907,12 @@ export default function OverallAssessment({
                   <div className="h-16 flex items-center justify-center relative">
                     {/* Name as background text - always show */}
                     <span className="text-md text-gray-900 font-bold">
-                      {data.evaluatorSignature ||
-                        currentUser?.name ||
-                        "Evaluator Name"}
+                      {user?.fname + " " + user?.lname || "Evaluator Name"}
                     </span>
                     {/* Signature overlay - automatically show when signature exists */}
-                    {currentUser?.signature && (
+                    {user?.signature && (
                       <img
-                        src={currentUser.signature}
+                        src={`${CONFIG.API_URL_STORAGE}/${user.signature}`}
                         alt="Evaluator Signature"
                         className="absolute top-5 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-14 max-w-full object-contain"
                         onError={(e) => {
@@ -2971,7 +2921,7 @@ export default function OverallAssessment({
                       />
                     )}
                     {/* Show message if no signature */}
-                    {!currentUser?.signature && (
+                    {!user?.signature && (
                       <span className="text-xs text-red-600">
                         Please add signature to your profile
                       </span>
@@ -2986,13 +2936,8 @@ export default function OverallAssessment({
                 </Label>
                 <Input
                   type="date"
-                  value={
-                    data.evaluatorSignatureDate ||
-                    new Date().toISOString().split("T")[0]
-                  }
-                  onChange={(e) =>
-                    updateDataAction({ evaluatorSignatureDate: e.target.value })
-                  }
+                  value={new Date().toISOString().split("T")[0]}
+                  readOnly
                   className="w-32 text-sm"
                 />
               </div>

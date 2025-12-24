@@ -59,11 +59,10 @@ export default function EvaluationForm({
   const { user } = useAuth();
   const [form, setForm] = useState<EvaluationPayload>({
     hireDate: "",
-    category: "",
     rating: 0,
     coverageFrom: "",
     coverageTo: "",
-    reviewTypeProbationary: null,
+    reviewTypeProbationary: "",
     reviewTypeRegular: "",
     reviewTypeOthersImprovement: false,
     reviewTypeOthersCustom: "",
@@ -71,7 +70,6 @@ export default function EvaluationForm({
     priorityArea2: "",
     priorityArea3: "",
     remarks: "",
-    overallComments: "",
     jobKnowledgeScore1: 0,
     jobKnowledgeScore2: 0,
     jobKnowledgeScore3: 0,
@@ -159,112 +157,107 @@ export default function EvaluationForm({
   };
 
   // Check if current step scores are complete
-  // const isCurrentStepComplete = () => {
-  //   switch (currentStep) {
-  //     case 1: // Employee Information & Job Knowledge
-  //       // Check if at least one review type is selected
-  //       const hasReviewType =
-  //         evaluationData.reviewTypeProbationary3 ||
-  //         evaluationData.reviewTypeProbationary5 ||
-  //         evaluationData.reviewTypeRegularQ1 ||
-  //         evaluationData.reviewTypeRegularQ2 ||
-  //         evaluationData.reviewTypeRegularQ3 ||
-  //         evaluationData.reviewTypeRegularQ4 ||
-  //         evaluationData.reviewTypeOthersImprovement ||
-  //         (evaluationData.reviewTypeOthersCustom &&
-  //           evaluationData.reviewTypeOthersCustom.trim() !== "");
+  const isCurrentStepComplete = () => {
+    switch (currentStep) {
+      case 1: // Employee Information & Job Knowledge
+        // Check if at least one review type is selected
+        const hasReviewType =
+          form.reviewTypeProbationary ||
+          form.reviewTypeProbationary ||
+          form.reviewTypeRegular ||
+          form.reviewTypeOthersImprovement ||
+          (form.reviewTypeOthersCustom &&
+            form.reviewTypeOthersCustom.trim() !== "");
 
-  //       // Check if all job knowledge scores are filled
-  //       const hasJobKnowledgeScores =
-  //         evaluationData.jobKnowledgeScore1 &&
-  //         evaluationData.jobKnowledgeScore1 !== "" &&
-  //         evaluationData.jobKnowledgeScore2 &&
-  //         evaluationData.jobKnowledgeScore2 !== "" &&
-  //         evaluationData.jobKnowledgeScore3 &&
-  //         evaluationData.jobKnowledgeScore3 !== "";
+        // Check if all job knowledge scores are filled
+        const hasJobKnowledgeScores =
+          form.jobKnowledgeScore1 &&
+          form.jobKnowledgeScore1 !== 0 &&
+          form.jobKnowledgeScore2 &&
+          form.jobKnowledgeScore2 !== 0 &&
+          form.jobKnowledgeScore3 &&
+          form.jobKnowledgeScore3 !== 0;
 
-  //       // Check if basic employee information is filled
-  //       const hasBasicInfo =
-  //         evaluationData.supervisor &&
-  //         evaluationData.supervisor.trim() !== "" &&
-  //         evaluationData.coverageFrom &&
-  //         evaluationData.coverageFrom.trim() !== "" &&
-  //         evaluationData.coverageTo &&
-  //         evaluationData.coverageTo.trim() !== "";
+        // Check if basic employee information is filled
+        const hasBasicInfo =
+          form.coverageFrom &&
+          form.coverageFrom !== "" &&
+          form.coverageTo &&
+          form.coverageTo !== "";
 
-  //       return hasReviewType && hasJobKnowledgeScores && hasBasicInfo;
-  //     case 2: // Quality of Work
-  //       return (
-  //         evaluationData.qualityOfWorkScore1 &&
-  //         evaluationData.qualityOfWorkScore1 !== "" &&
-  //         evaluationData.qualityOfWorkScore2 &&
-  //         evaluationData.qualityOfWorkScore2 !== "" &&
-  //         evaluationData.qualityOfWorkScore3 &&
-  //         evaluationData.qualityOfWorkScore3 !== "" &&
-  //         evaluationData.qualityOfWorkScore4 &&
-  //         evaluationData.qualityOfWorkScore4 !== "" &&
-  //         evaluationData.qualityOfWorkScore5 &&
-  //         evaluationData.qualityOfWorkScore5 !== ""
-  //       );
-  //     case 3: // Adaptability
-  //       return (
-  //         evaluationData.adaptabilityScore1 &&
-  //         evaluationData.adaptabilityScore1 !== "" &&
-  //         evaluationData.adaptabilityScore2 &&
-  //         evaluationData.adaptabilityScore2 !== "" &&
-  //         evaluationData.adaptabilityScore3 &&
-  //         evaluationData.adaptabilityScore3 !== ""
-  //       );
-  //     case 4: // Teamwork
-  //       return (
-  //         evaluationData.teamworkScore1 &&
-  //         evaluationData.teamworkScore1 !== "" &&
-  //         evaluationData.teamworkScore2 &&
-  //         evaluationData.teamworkScore2 !== "" &&
-  //         evaluationData.teamworkScore3 &&
-  //         evaluationData.teamworkScore3 !== ""
-  //       );
-  //     case 5: // Reliability
-  //       return (
-  //         evaluationData.reliabilityScore1 &&
-  //         evaluationData.reliabilityScore1 !== "" &&
-  //         evaluationData.reliabilityScore2 &&
-  //         evaluationData.reliabilityScore2 !== "" &&
-  //         evaluationData.reliabilityScore3 &&
-  //         evaluationData.reliabilityScore3 !== "" &&
-  //         evaluationData.reliabilityScore4 &&
-  //         evaluationData.reliabilityScore4 !== ""
-  //       );
-  //     case 6: // Ethical & Professional Behavior
-  //       return (
-  //         evaluationData.ethicalScore1 &&
-  //         evaluationData.ethicalScore1 !== "" &&
-  //         evaluationData.ethicalScore2 &&
-  //         evaluationData.ethicalScore2 !== "" &&
-  //         evaluationData.ethicalScore3 &&
-  //         evaluationData.ethicalScore3 !== "" &&
-  //         evaluationData.ethicalScore4 &&
-  //         evaluationData.ethicalScore4 !== ""
-  //       );
-  //     case 7: // Customer Service
-  //       return (
-  //         evaluationData.customerServiceScore1 &&
-  //         evaluationData.customerServiceScore1 !== "" &&
-  //         evaluationData.customerServiceScore2 &&
-  //         evaluationData.customerServiceScore2 !== "" &&
-  //         evaluationData.customerServiceScore3 &&
-  //         evaluationData.customerServiceScore3 !== "" &&
-  //         evaluationData.customerServiceScore4 &&
-  //         evaluationData.customerServiceScore4 !== "" &&
-  //         evaluationData.customerServiceScore5 &&
-  //         evaluationData.customerServiceScore5 !== ""
-  //       );
-  //     case 8: // Overall Assessment
-  //       return true; // No validation required for step 8
-  //     default:
-  //       return true; // For other steps, allow progression
-  //   }
-  // };
+        return hasReviewType && hasJobKnowledgeScores && hasBasicInfo;
+      case 2: // Quality of Work
+        return (
+          form.qualityOfWorkScore1 &&
+          form.qualityOfWorkScore1 !== 0 &&
+          form.qualityOfWorkScore2 &&
+          form.qualityOfWorkScore2 !== 0 &&
+          form.qualityOfWorkScore3 &&
+          form.qualityOfWorkScore3 !== 0 &&
+          form.qualityOfWorkScore4 &&
+          form.qualityOfWorkScore4 !== 0 &&
+          form.qualityOfWorkScore5 &&
+          form.qualityOfWorkScore5 !== 0
+        );
+      case 3: // Adaptability
+        return (
+          form.adaptabilityScore1 &&
+          form.adaptabilityScore1 !== 0 &&
+          form.adaptabilityScore2 &&
+          form.adaptabilityScore2 !== 0 &&
+          form.adaptabilityScore3 &&
+          form.adaptabilityScore3 !== 0
+        );
+      case 4: // Teamwork
+        return (
+          form.teamworkScore1 &&
+          form.teamworkScore1 !== 0 &&
+          form.teamworkScore2 &&
+          form.teamworkScore2 !== 0 &&
+          form.teamworkScore3 &&
+          form.teamworkScore3 !== 0
+        );
+      case 5: // Reliability
+        return (
+          form.reliabilityScore1 &&
+          form.reliabilityScore1 !== 0 &&
+          form.reliabilityScore2 &&
+          form.reliabilityScore2 !== 0 &&
+          form.reliabilityScore3 &&
+          form.reliabilityScore3 !== 0 &&
+          form.reliabilityScore4 &&
+          form.reliabilityScore4 !== 0
+        );
+      case 6: // Ethical & Professional Behavior
+        return (
+          form.ethicalScore1 &&
+          form.ethicalScore1 !== 0 &&
+          form.ethicalScore2 &&
+          form.ethicalScore2 !== 0 &&
+          form.ethicalScore3 &&
+          form.ethicalScore3 !== 0 &&
+          form.ethicalScore4 &&
+          form.ethicalScore4 !== 0
+        );
+      case 7: // Customer Service
+        return (
+          form.customerServiceScore1 &&
+          form.customerServiceScore1 !== 0 &&
+          form.customerServiceScore2 &&
+          form.customerServiceScore2 !== 0 &&
+          form.customerServiceScore3 &&
+          form.customerServiceScore3 !== 0 &&
+          form.customerServiceScore4 &&
+          form.customerServiceScore4 !== 0 &&
+          form.customerServiceScore5 &&
+          form.customerServiceScore5 !== 0
+        );
+      case 8: // Overall Assessment
+        return true; // No validation required for step 8
+      default:
+        return true; // For other steps, allow progression
+    }
+  };
 
   // Get step name for tooltip
   const getStepName = () => {
@@ -291,53 +284,43 @@ export default function EvaluationForm({
   };
 
   // Get validation message for incomplete steps
-  // const getValidationMessage = () => {
-  //   switch (currentStep) {
-  //     case 1: // Employee Information & Job Knowledge
-  //       if (
-  //         !evaluationData.reviewTypeProbationary3 &&
-  //         !evaluationData.reviewTypeProbationary5 &&
-  //         !evaluationData.reviewTypeRegularQ1 &&
-  //         !evaluationData.reviewTypeRegularQ2 &&
-  //         !evaluationData.reviewTypeRegularQ3 &&
-  //         !evaluationData.reviewTypeRegularQ4 &&
-  //         !evaluationData.reviewTypeOthersImprovement &&
-  //         (!evaluationData.reviewTypeOthersCustom ||
-  //           evaluationData.reviewTypeOthersCustom.trim() === "")
-  //       ) {
-  //         return "Please select at least one review type";
-  //       }
-  //       if (
-  //         !evaluationData.supervisor ||
-  //         evaluationData.supervisor.trim() === ""
-  //       ) {
-  //         return "Please enter supervisor name";
-  //       }
-  //       if (
-  //         !evaluationData.coverageFrom ||
-  //         evaluationData.coverageFrom.trim() === ""
-  //       ) {
-  //         return "Please select coverage from date";
-  //       }
-  //       if (
-  //         !evaluationData.coverageTo ||
-  //         evaluationData.coverageTo.trim() === ""
-  //       ) {
-  //         return "Please select coverage to date";
-  //       }
-  //       if (
-  //         !evaluationData.jobKnowledgeScore1 ||
-  //         evaluationData.jobKnowledgeScore1 === ""
-  //       ) {
-  //         return "Please complete all job knowledge scores";
-  //       }
-  //       return "Please complete all required fields";
-  //     case 8: // Overall Assessment
-  //       return "Please complete all required fields";
-  //     default:
-  //       return "Please complete all scores for this step";
-  //   }
-  // };
+  const getValidationMessage = () => {
+    switch (currentStep) {
+      case 1: // Employee Information & Job Knowledge
+        if (
+          !form.reviewTypeProbationary &&
+          !form.reviewTypeRegular &&
+          !form.reviewTypeOthersImprovement &&
+          (!form.reviewTypeOthersCustom ||
+            form.reviewTypeOthersCustom.trim() === "")
+        ) {
+          return "Please select at least one review type";
+        }
+
+        if (!form.coverageFrom || form.coverageFrom === "") {
+          return "Please select coverage from date";
+        }
+        if (!form.coverageTo || form.coverageTo === "") {
+          return "Please select coverage to date";
+        }
+        if (
+          !form.jobKnowledgeScore1 ||
+          form.jobKnowledgeScore1 === 0 ||
+          !form.jobKnowledgeScore2 ||
+          form.jobKnowledgeScore2 === 0 ||
+          !form.jobKnowledgeScore1 ||
+          form.jobKnowledgeScore3 === 0
+        ) {
+          return "Please complete all job knowledge scores";
+        }
+
+        return "Please complete all required fields";
+      case 8: // Overall Assessment
+        return "Please complete all required fields";
+      default:
+        return "Please complete all scores for this step";
+    }
+  };
 
   const nextStep = () => {
     if (currentStep < steps.length) {
@@ -353,7 +336,7 @@ export default function EvaluationForm({
 
   const handleSubmit = () => {
     // Direct submission - no modal needed
-    // confirmSubmit();
+    confirmSubmit();
   };
 
   const handleCloseAfterSubmission = () => {
@@ -382,117 +365,16 @@ export default function EvaluationForm({
   };
 
   // submission confirmation
-  // const confirmSubmit = async () => {
-  //   console.log("🚀 confirmSubmit called");
-  //   try {
-  //     // No additional validation needed for step 8
-
-  //     // Calculate overall rating from evaluation data
-  //     const overallRating = calculateOverallRating(evaluationData);
-
-  //     // Store in localStorage for frontend-only mode
-  //     const employeeResult = storeEvaluationResult({
-  //       employeeId: parseInt(evaluationData.employeeId),
-  //       employeeEmail:
-  //         employee?.email ||
-  //         `${evaluationData.employeeName
-  //           .toLowerCase()
-  //           .replace(/\s+/g, ".")}@smct.com`,
-  //       employeeName: evaluationData.employeeName,
-  //       evaluatorId: currentUser?.id || 1,
-  //       evaluatorName: currentUser?.name || "Evaluator",
-  //       evaluationData: {
-  //         ...evaluationData,
-  //         // Explicitly ensure position, department, and branch are included
-  //         position: evaluationData.position || employee?.position || "",
-  //         department: evaluationData.department || employee?.department || "",
-  //         branch: evaluationData.branch || employee?.branch || "",
-  //         role: evaluationData.role || employee?.role || "",
-  //         overallRating,
-  //         // Ensure evaluator signature is included
-  //         evaluatorSignatureImage:
-  //           evaluationData.evaluatorSignatureImage ||
-  //           currentUser?.signature ||
-  //           "",
-  //         evaluatorSignature:
-  //           evaluationData.evaluatorSignature ||
-  //           currentUser?.name ||
-  //           "Evaluator",
-  //         evaluatorSignatureDate:
-  //           evaluationData.evaluatorSignatureDate ||
-  //           new Date().toISOString().split("T")[0],
-  //       },
-  //       status: "completed",
-  //       period: new Date().toISOString().slice(0, 7), // YYYY-MM format
-  //       overallRating,
-  //     });
-
-  //     console.log("Evaluation stored in localStorage:", employeeResult);
-
-  //     // Also store in client data service for consistency
-  //     try {
-  //       await apiService.createSubmission({
-  //         employeeId: parseInt(evaluationData.employeeId),
-  //         employeeName: evaluationData.employeeName,
-  //         employeeEmail:
-  //           employee?.email ||
-  //           `${evaluationData.employeeName
-  //             .toLowerCase()
-  //             .replace(/\s+/g, ".")}@smct.com`,
-  //         evaluatorId: currentUser?.id || 1,
-  //         evaluatorName: currentUser?.name || "Evaluator",
-  //         evaluationData: {
-  //           ...evaluationData,
-  //           // Explicitly ensure position, department, and branch are included
-  //           position: evaluationData.position || employee?.position || "",
-  //           department: evaluationData.department || employee?.department || "",
-  //           branch: evaluationData.branch || employee?.branch || "",
-  //           role: evaluationData.role || employee?.role || "",
-  //           overallRating,
-  //           // Ensure evaluator signature is included
-  //           evaluatorSignatureImage:
-  //             evaluationData.evaluatorSignatureImage ||
-  //             currentUser?.signature ||
-  //             "",
-  //           evaluatorSignature:
-  //             evaluationData.evaluatorSignature ||
-  //             currentUser?.name ||
-  //             "Evaluator",
-  //           evaluatorSignatureDate:
-  //             evaluationData.evaluatorSignatureDate ||
-  //             new Date().toISOString().split("T")[0],
-  //           // Include supervisor/evaluator info
-  //           supervisor:
-  //             evaluationData.supervisor || currentUser?.name || "Evaluator",
-  //         },
-  //         status: "completed",
-  //         period: new Date().toISOString().slice(0, 7), // YYYY-MM format
-  //         overallRating,
-  //         submittedAt: new Date().toISOString(),
-  //         category: "Performance Review",
-  //         evaluator: currentUser?.name || "Evaluator",
-  //       });
-  //       console.log(
-  //         "Also stored in client data service with evaluator:",
-  //         currentUser?.name
-  //       );
-  //     } catch (clientError) {
-  //       console.log(
-  //         "Client data service storage failed, but localStorage storage succeeded:",
-  //         clientError
-  //       );
-  //     }
-
-  //     setShowSuccessDialog(true);
-  //   } catch (error) {
-  //     console.error("Error submitting evaluation:", error);
-  //     alert(
-  //       `Error submitting evaluation: ${
-  //         error instanceof Error ? error.message : "Unknown error"
-  //       }`
-  //     );
-  //   }
-  // };
+  const confirmSubmit = async () => {
+    try {
+      setShowSuccessDialog(true);
+    } catch (clientError) {
+      console.log(
+        "Client data service storage failed, but localStorage storage succeeded:",
+        clientError
+      );
+    }
+  };
 
   // Helper function to calculate overall rating
   const calculateOverallRating = (data: EvaluationPayload): string => {
@@ -664,10 +546,9 @@ export default function EvaluationForm({
               >
                 <CardContent>
                   <CurrentStepComponent
-                    data={evaluationData}
-                    updateDataAction={updateEvaluationData}
+                    data={form}
+                    updateDataAction={updateDataAction}
                     employee={employee}
-                    currentUser={currentUser}
                     onStartAction={startEvaluation}
                     onBackAction={onCloseAction}
                   />
@@ -736,8 +617,9 @@ export default function EvaluationForm({
 
                 <div className="flex flex-col gap-2">
                   <TooltipProvider>
-                    {currentStep >= 1 && currentStep <= 7 ? (
-                      // && !isCurrentStepComplete()
+                    {currentStep >= 1 &&
+                    currentStep <= 7 &&
+                    !isCurrentStepComplete() ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
@@ -751,7 +633,7 @@ export default function EvaluationForm({
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          {/* <p>{getValidationMessage()}</p> */}
+                          <p>{getValidationMessage()}</p>
                         </TooltipContent>
                       </Tooltip>
                     ) : (
@@ -820,6 +702,74 @@ export default function EvaluationForm({
                 } else if (onCloseAction) {
                   onCloseAction();
                 }
+                setForm({
+                  hireDate: "",
+                  rating: 0,
+                  coverageFrom: "",
+                  coverageTo: "",
+                  reviewTypeProbationary: "",
+                  reviewTypeRegular: "",
+                  reviewTypeOthersImprovement: false,
+                  reviewTypeOthersCustom: "",
+                  priorityArea1: "",
+                  priorityArea2: "",
+                  priorityArea3: "",
+                  remarks: "",
+                  jobKnowledgeScore1: 0,
+                  jobKnowledgeScore2: 0,
+                  jobKnowledgeScore3: 0,
+                  jobKnowledgeComments1: "",
+                  jobKnowledgeComments2: "",
+                  jobKnowledgeComments3: "",
+                  qualityOfWorkScore1: 0,
+                  qualityOfWorkScore2: 0,
+                  qualityOfWorkScore3: 0,
+                  qualityOfWorkScore4: 0,
+                  qualityOfWorkScore5: 0,
+                  qualityOfWorkComments1: "",
+                  qualityOfWorkComments2: "",
+                  qualityOfWorkComments3: "",
+                  qualityOfWorkComments4: "",
+                  qualityOfWorkComments5: "",
+                  adaptabilityScore1: 0,
+                  adaptabilityScore2: 0,
+                  adaptabilityScore3: 0,
+                  adaptabilityComments1: "",
+                  adaptabilityComments2: "",
+                  adaptabilityComments3: "",
+                  teamworkScore1: 0,
+                  teamworkScore2: 0,
+                  teamworkScore3: 0,
+                  teamworkComments1: "",
+                  teamworkComments2: "",
+                  teamworkComments3: "",
+                  reliabilityScore1: 0,
+                  reliabilityScore2: 0,
+                  reliabilityScore3: 0,
+                  reliabilityScore4: 0,
+                  reliabilityComments1: "",
+                  reliabilityComments2: "",
+                  reliabilityComments3: "",
+                  reliabilityComments4: "",
+                  ethicalScore1: 0,
+                  ethicalScore2: 0,
+                  ethicalScore3: 0,
+                  ethicalScore4: 0,
+                  ethicalExplanation1: "",
+                  ethicalExplanation2: "",
+                  ethicalExplanation3: "",
+                  ethicalExplanation4: "",
+                  customerServiceScore1: 0,
+                  customerServiceScore2: 0,
+                  customerServiceScore3: 0,
+                  customerServiceScore4: 0,
+                  customerServiceScore5: 0,
+                  customerServiceExplanation1: "",
+                  customerServiceExplanation2: "",
+                  customerServiceExplanation3: "",
+                  customerServiceExplanation4: "",
+                  customerServiceExplanation5: "",
+                });
               }}
               className="px-4"
             >
@@ -875,7 +825,8 @@ export default function EvaluationForm({
             </div>
             <div className="text-sm text-gray-600 text-center">
               <p>
-                <strong>Employee:</strong> {evaluationData.employeeName}
+                <strong>Employee:</strong>{" "}
+                {employee?.fname + " " + employee?.lname}
               </p>
               <p>
                 <strong>Submitted:</strong>{" "}

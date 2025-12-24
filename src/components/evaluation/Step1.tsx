@@ -130,13 +130,6 @@ export default function Step1({
     );
   };
 
-  const updateJobKnowledgeScore = (question_number: number, score: number) => {
-    setForm((prev) => {
-      const updated = [...prev.job_knowledge];
-      updated[question_number] = { ...updated[question_number], score };
-      return { ...prev, job_knowledge: updated };
-    });
-  };
   // Check for existing quarterly reviews when employee changes
   useEffect(() => {
     const checkQuarterlyReviews = async () => {
@@ -184,23 +177,23 @@ export default function Step1({
   }, [data.coverageFrom, data.coverageTo]);
 
   // Calculate average score for Job Knowledge
-  // const calculateAverageScore = () => {
-  //   const scores = [
-  //     data.jobKnowledgeScore1,
-  //     data.jobKnowledgeScore2,
-  //     data.jobKnowledgeScore3,
-  //   ]
-  //     .filter((score) => score && score !== "")
-  //     .map((score) => parseInt(score));
+  const calculateAverageScore = () => {
+    const scores = [
+      data.jobKnowledgeScore1,
+      data.jobKnowledgeScore2,
+      data.jobKnowledgeScore3,
+    ]
+      .filter((score) => score && score !== 0)
+      .map((score) => parseInt(String(score)));
 
-  //   if (scores.length === 0) return "0.00";
-  //   return (
-  //     scores.reduce((sum, score) => sum + score, 0) / scores.length
-  //   ).toFixed(2);
-  // };
+    if (scores.length === 0) return "0.00";
+    return (
+      scores.reduce((sum, score) => sum + score, 0) / scores.length
+    ).toFixed(2);
+  };
 
-  // const averageScore = calculateAverageScore();
-  // const averageScoreNumber = parseFloat(averageScore);
+  const averageScore = calculateAverageScore();
+  const averageScoreNumber = parseFloat(averageScore);
 
   const getAverageScoreColor = (score: number) => {
     if (score >= 4.5) return "bg-green-100 text-green-800 border-green-300";
@@ -245,7 +238,7 @@ export default function Step1({
                 size="sm"
                 onClick={() => {
                   updateDataAction({
-                    reviewTypeProbationary: 0,
+                    reviewTypeProbationary: "",
                     reviewTypeRegular: "",
                     reviewTypeOthersImprovement: false,
                     reviewTypeOthersCustom: "",
@@ -349,7 +342,7 @@ export default function Step1({
                     checked={data.reviewTypeRegular === "Q1"}
                     disabled={
                       quarterlyStatus.q1 ||
-                      data.reviewTypeProbationary !== 0 ||
+                      data.reviewTypeProbationary !== "" ||
                       isOthersSelected()
                     }
                     onChange={(e) => {
@@ -357,7 +350,7 @@ export default function Step1({
                         // Clear probationary and others when selecting regular
                         updateDataAction({
                           reviewTypeRegular: "Q1",
-                          reviewTypeProbationary: 0,
+                          reviewTypeProbationary: "",
                           reviewTypeOthersImprovement: false,
                           reviewTypeOthersCustom: "",
                         });
@@ -389,7 +382,7 @@ export default function Step1({
                     checked={data.reviewTypeRegular === "Q2"}
                     disabled={
                       quarterlyStatus.q2 ||
-                      data.reviewTypeProbationary !== 0 ||
+                      data.reviewTypeProbationary !== "" ||
                       isOthersSelected()
                     }
                     onChange={(e) => {
@@ -397,7 +390,7 @@ export default function Step1({
                         // Clear probationary and others when selecting regular
                         updateDataAction({
                           reviewTypeRegular: "Q2",
-                          reviewTypeProbationary: 0,
+                          reviewTypeProbationary: "",
                           reviewTypeOthersImprovement: false,
                           reviewTypeOthersCustom: "",
                         });
@@ -429,7 +422,7 @@ export default function Step1({
                     checked={data.reviewTypeRegular === "Q3"}
                     disabled={
                       quarterlyStatus.q3 ||
-                      data.reviewTypeProbationary !== 0 ||
+                      data.reviewTypeProbationary !== "" ||
                       isOthersSelected()
                     }
                     onChange={(e) => {
@@ -437,7 +430,7 @@ export default function Step1({
                         // Clear probationary and others when selecting regular
                         updateDataAction({
                           reviewTypeRegular: "Q3",
-                          reviewTypeProbationary: 0,
+                          reviewTypeProbationary: "",
                           reviewTypeOthersImprovement: false,
                           reviewTypeOthersCustom: "",
                         });
@@ -469,7 +462,7 @@ export default function Step1({
                     checked={data.reviewTypeRegular === "Q4"}
                     disabled={
                       quarterlyStatus.q4 ||
-                      data.reviewTypeProbationary !== 0 ||
+                      data.reviewTypeProbationary !== "" ||
                       isOthersSelected()
                     }
                     onChange={(e) => {
@@ -477,7 +470,7 @@ export default function Step1({
                         // Clear probationary and others when selecting regular
                         updateDataAction({
                           reviewTypeRegular: "Q4",
-                          reviewTypeProbationary: 0,
+                          reviewTypeProbationary: "",
                           reviewTypeOthersImprovement: false,
                           reviewTypeOthersCustom: "",
                         });
@@ -514,16 +507,18 @@ export default function Step1({
                     className="rounded"
                     checked={data.reviewTypeOthersImprovement}
                     disabled={
-                      data.reviewTypeProbationary !== 0 ||
-                      data.reviewTypeRegular !== ""
+                      data.reviewTypeProbationary !== "" ||
+                      data.reviewTypeRegular !== "" ||
+                      data.reviewTypeOthersCustom !== ""
                     }
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear probationary and regular when selecting others
                         updateDataAction({
-                          reviewTypeProbationary: 0,
+                          reviewTypeProbationary: "",
                           reviewTypeRegular: "",
                           reviewTypeOthersImprovement: true,
+                          reviewTypeOthersCustom: "",
                         });
                       } else {
                         updateDataAction({
@@ -535,8 +530,9 @@ export default function Step1({
                   <label
                     htmlFor="improvement"
                     className={`text-sm ${
-                      data.reviewTypeProbationary !== 0 ||
-                      data.reviewTypeRegular !== ""
+                      data.reviewTypeProbationary !== "" ||
+                      data.reviewTypeRegular !== "" ||
+                      data.reviewTypeOthersCustom !== ""
                         ? "text-gray-400"
                         : "text-gray-700"
                     }`}
@@ -547,8 +543,9 @@ export default function Step1({
                 <div className="flex items-center gap-2">
                   <label
                     className={`text-sm ${
-                      data.reviewTypeProbationary !== 0 ||
-                      data.reviewTypeRegular !== ""
+                      data.reviewTypeProbationary !== "" ||
+                      data.reviewTypeRegular !== "" ||
+                      data.reviewTypeOthersCustom !== ""
                         ? "text-gray-400"
                         : "text-gray-700"
                     }`}
@@ -559,32 +556,33 @@ export default function Step1({
                     type="text"
                     value={data.reviewTypeOthersCustom || ""}
                     disabled={
-                      data.reviewTypeProbationary !== 0 ||
-                      data.reviewTypeRegular !== ""
+                      data.reviewTypeProbationary !== "" ||
+                      data.reviewTypeRegular !== "" ||
+                      data.reviewTypeOthersImprovement === true
                     }
                     onChange={(e) => {
                       if (e.target.value.trim() !== "") {
                         // Clear probationary and regular when entering custom others
                         updateDataAction({
                           reviewTypeOthersCustom: e.target.value,
-                          reviewTypeOthersImprovement: true,
-                          reviewTypeProbationary: 0,
+                          reviewTypeOthersImprovement: false,
+                          reviewTypeProbationary: "",
                           reviewTypeRegular: "",
                         });
                       } else {
                         updateDataAction({
-                          reviewTypeOthersCustom: e.target.value,
+                          reviewTypeOthersCustom: "",
                         });
                       }
                     }}
                     className={`flex-1 px-2 py-1 text-sm border border-gray-300 rounded ${
-                      data.reviewTypeProbationary !== 0 ||
+                      data.reviewTypeProbationary !== "" ||
                       data.reviewTypeRegular !== ""
                         ? "bg-gray-100 text-gray-400"
                         : ""
                     }`}
                     placeholder={
-                      data.reviewTypeProbationary !== 0 ||
+                      data.reviewTypeProbationary !== "" ||
                       data.reviewTypeRegular !== ""
                         ? "Disabled - other review type selected"
                         : "Enter custom review type"
@@ -655,7 +653,7 @@ export default function Step1({
             </Label>
             <Input
               id="department"
-              value={employee?.departments.department_name || ""}
+              value={employee?.departments?.department_name || ""}
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
@@ -765,7 +763,7 @@ export default function Step1({
 
                           setCoverageError("");
                           updateDataAction({
-                            coverageFrom: date.toISOString(),
+                            coverageFrom: fromDate.toISOString().split("T")[0],
                           });
                         }
                       }}
@@ -825,7 +823,9 @@ export default function Step1({
                           }
 
                           setCoverageError("");
-                          updateDataAction({ coverageTo: date.toISOString() });
+                          updateDataAction({
+                            coverageTo: toDate.toISOString().split("T")[0],
+                          });
                         }
                       }}
                       disabled={(date) => {
@@ -1035,7 +1035,9 @@ export default function Step1({
               size="sm"
               onClick={() => {
                 updateDataAction({
-                  job_knowledge: [],
+                  jobKnowledgeScore1: 0,
+                  jobKnowledgeScore2: 0,
+                  jobKnowledgeScore3: 0,
                 });
               }}
               className="text-xs px-3 py-1 h-7 text-gray-600 border-gray-300 hover:bg-gray-50"
@@ -1085,9 +1087,9 @@ export default function Step1({
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.job_knowledge}
+                      value={String(data.jobKnowledgeScore1)}
                       onValueChange={(value) =>
-                        updateDataAction({ jobKnowledgeScore1: value })
+                        updateDataAction({ jobKnowledgeScore1: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -1095,28 +1097,28 @@ export default function Step1({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.jobKnowledgeScore1 === "5"
+                        data.jobKnowledgeScore1 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.jobKnowledgeScore1 === "4"
+                          : data.jobKnowledgeScore1 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.jobKnowledgeScore1 === "3"
+                          : data.jobKnowledgeScore1 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.jobKnowledgeScore1 === "2"
+                          : data.jobKnowledgeScore1 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.jobKnowledgeScore1 === "1"
+                          : data.jobKnowledgeScore1 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.jobKnowledgeScore1 === "5"
+                      {data.jobKnowledgeScore1 === 5
                         ? "Outstanding"
-                        : data.jobKnowledgeScore1 === "4"
+                        : data.jobKnowledgeScore1 === 4
                         ? "Exceeds Expectation"
-                        : data.jobKnowledgeScore1 === "3"
+                        : data.jobKnowledgeScore1 === 3
                         ? "Meets Expectations"
-                        : data.jobKnowledgeScore1 === "2"
+                        : data.jobKnowledgeScore1 === 2
                         ? "Needs Improvement"
-                        : data.jobKnowledgeScore1 === "1"
+                        : data.jobKnowledgeScore1 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1151,9 +1153,9 @@ export default function Step1({
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.jobKnowledgeScore2 || ""}
+                      value={String(data.jobKnowledgeScore2)}
                       onValueChange={(value) =>
-                        updateDataAction({ jobKnowledgeScore2: value })
+                        updateDataAction({ jobKnowledgeScore2: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -1161,28 +1163,28 @@ export default function Step1({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.jobKnowledgeScore2 === "5"
+                        data.jobKnowledgeScore2 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.jobKnowledgeScore2 === "4"
+                          : data.jobKnowledgeScore2 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.jobKnowledgeScore2 === "3"
+                          : data.jobKnowledgeScore2 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.jobKnowledgeScore2 === "2"
+                          : data.jobKnowledgeScore2 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.jobKnowledgeScore2 === "1"
+                          : data.jobKnowledgeScore2 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.jobKnowledgeScore2 === "5"
+                      {data.jobKnowledgeScore2 === 5
                         ? "Outstanding"
-                        : data.jobKnowledgeScore2 === "4"
+                        : data.jobKnowledgeScore2 === 4
                         ? "Exceeds Expectation"
-                        : data.jobKnowledgeScore2 === "3"
+                        : data.jobKnowledgeScore2 === 3
                         ? "Meets Expectations"
-                        : data.jobKnowledgeScore2 === "2"
+                        : data.jobKnowledgeScore2 === 2
                         ? "Needs Improvement"
-                        : data.jobKnowledgeScore2 === "1"
+                        : data.jobKnowledgeScore2 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1217,9 +1219,9 @@ export default function Step1({
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.jobKnowledgeScore3 || ""}
+                      value={String(data.jobKnowledgeScore3)}
                       onValueChange={(value) =>
-                        updateDataAction({ jobKnowledgeScore3: value })
+                        updateDataAction({ jobKnowledgeScore3: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -1227,28 +1229,28 @@ export default function Step1({
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.jobKnowledgeScore3 === "5"
+                        data.jobKnowledgeScore3 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.jobKnowledgeScore3 === "4"
+                          : data.jobKnowledgeScore3 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.jobKnowledgeScore3 === "3"
+                          : data.jobKnowledgeScore3 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.jobKnowledgeScore3 === "2"
+                          : data.jobKnowledgeScore3 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.jobKnowledgeScore3 === "1"
+                          : data.jobKnowledgeScore3 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.jobKnowledgeScore3 === "5"
+                      {data.jobKnowledgeScore3 === 5
                         ? "Outstanding"
-                        : data.jobKnowledgeScore3 === "4"
+                        : data.jobKnowledgeScore3 === 4
                         ? "Exceeds Expectation"
-                        : data.jobKnowledgeScore3 === "3"
+                        : data.jobKnowledgeScore3 === 3
                         ? "Meets Expectations"
-                        : data.jobKnowledgeScore3 === "2"
+                        : data.jobKnowledgeScore3 === 2
                         ? "Needs Improvement"
-                        : data.jobKnowledgeScore3 === "1"
+                        : data.jobKnowledgeScore3 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -1324,7 +1326,7 @@ export default function Step1({
                   data.jobKnowledgeScore1,
                   data.jobKnowledgeScore2,
                   data.jobKnowledgeScore3,
-                ].filter((score) => score && score !== "").length
+                ].filter((score) => score && score !== 0).length
               }{" "}
               of 3 criteria
             </div>
