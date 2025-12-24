@@ -52,7 +52,7 @@ export default function EmployeesTab() {
 
   //pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(8);
   const [overviewTotal, setOverviewTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
@@ -255,7 +255,7 @@ export default function EmployeesTab() {
                   variant="outline"
                   className="px-3 py-1 text-sm font-semibold bg-blue-50 text-blue-700 border-blue-200"
                 >
-                  {/* Total: {filtered.length} */}
+                  Total: {overviewTotal || 0}
                 </Badge>
                 <Badge
                   variant="outline"
@@ -648,49 +648,25 @@ export default function EmployeesTab() {
         }}
         onSelectEmployeeAction={() => {
           const employee = selectedEmployeeForEvaluation;
-          console.log("Selecting employee evaluation", employee);
           if (!employee) {
             console.error("No employee selected!");
             return;
           }
           setEvaluationType("employee");
           setIsEvaluationTypeModalOpen(false);
-          // Use setTimeout to ensure state is set before opening modal
-          setTimeout(() => {
-            console.log(
-              "Opening employee evaluation modal",
-              employee,
-              "employee"
-            );
-            // Ensure employee is still set
-            if (employee) {
-              setSelectedEmployee(employee);
-            }
-            setIsEvaluationModalOpen(true);
-          }, 50);
+
+          setIsEvaluationModalOpen(true);
         }}
         onSelectManagerAction={() => {
           const employee = selectedEmployee;
-          console.log("Selecting manager evaluation", employee);
           if (!employee) {
             console.error("No employee selected!");
             return;
           }
           setEvaluationType("manager");
           setIsEvaluationTypeModalOpen(false);
-          // Use setTimeout to ensure state is set before opening modal
-          setTimeout(() => {
-            console.log(
-              "Opening manager evaluation modal",
-              employee,
-              "manager"
-            );
-            // Ensure employee is still set
-            if (employee) {
-              setSelectedEmployee(employee);
-            }
-            setIsEvaluationModalOpen(true);
-          }, 50);
+
+          setIsEvaluationModalOpen(true);
         }}
         employeeName={selectedEmployee?.fname + " " + selectedEmployee?.lname}
       />

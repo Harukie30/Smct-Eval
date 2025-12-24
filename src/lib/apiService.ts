@@ -1,5 +1,5 @@
 import { api, sanctum } from "./api";
-
+import { EvaluationPayload } from "../components/evaluation/types";
 // Helper function to get CSRF cookie from Sanctum
 export const sanctum_csrf = async () => {
   try {
@@ -199,21 +199,11 @@ export const apiService = {
   },
 
   createSubmission: async (
-    submission: any,
-    userId?: string | number
+    employeeId: string | number,
+    submission: EvaluationPayload
   ): Promise<any> => {
-    // Use /submit/{user} if userId provided, otherwise fallback to /submissions
-    const endpoint = userId ? `/submit/${userId}` : "/submissions";
-    const response = await api.post(endpoint, submission);
-    const data = response.data;
-
-    if (data.success && data.submission) {
-      return data.submission;
-    }
-    if (data.submission) {
-      return data.submission;
-    }
-    return data;
+    const response = await api.post(`submit/${employeeId}`, submission);
+    return response.data;
   },
 
   updateSubmission: async (id: number, updates: any): Promise<any> => {

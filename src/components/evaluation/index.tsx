@@ -148,7 +148,6 @@ export default function EvaluationForm({
     setWelcomeAnimationKey((prev) => prev + 1);
   }, []);
 
-  const [isEvaluatorApproved, setIsEvaluatorApproved] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
@@ -346,15 +345,15 @@ export default function EvaluationForm({
     }
   };
 
-  const handleApprove = () => {
-    // Mark the evaluation as approved by the evaluator
-    setIsEvaluatorApproved(true);
+  // const handleApprove = () => {
+  //   // Mark the evaluation as approved by the evaluator
+  //   setIsEvaluatorApproved(true);
 
-    // Show success message
-    alert(
-      "Evaluation approved by evaluator! The evaluation is now ready for employee review."
-    );
-  };
+  //   // Show success message
+  //   alert(
+  //     "Evaluation approved by evaluator! The evaluation is now ready for employee review."
+  //   );
+  // };
 
   const handleSuccessDialogClose = () => {
     setShowSuccessDialog(false);
@@ -367,6 +366,10 @@ export default function EvaluationForm({
   // submission confirmation
   const confirmSubmit = async () => {
     try {
+      const empID = employee?.id;
+      if (empID) {
+        const response = await apiService.createSubmission(empID, form);
+      }
       setShowSuccessDialog(true);
     } catch (clientError) {
       console.log(
@@ -377,25 +380,25 @@ export default function EvaluationForm({
   };
 
   // Helper function to calculate overall rating
-  const calculateOverallRating = (data: EvaluationPayload): string => {
-    const scores: number[] = [];
+  // const calculateOverallRating = (data: EvaluationPayload): string => {
+  //   const scores: number[] = [];
 
-    // Collect all numeric scores
-    Object.entries(data).forEach(([key, value]) => {
-      if (key.includes("Score") && typeof value === "string" && value !== "") {
-        const numValue = parseFloat(value);
-        if (!isNaN(numValue)) {
-          scores.push(numValue);
-        }
-      }
-    });
+  //   // Collect all numeric scores
+  //   Object.entries(data).forEach(([key, value]) => {
+  //     if (key.includes("Score") && typeof value === "string" && value !== "") {
+  //       const numValue = parseFloat(value);
+  //       if (!isNaN(numValue)) {
+  //         scores.push(numValue);
+  //       }
+  //     }
+  //   });
 
-    // Calculate average
-    if (scores.length === 0) return "0";
-    const average =
-      scores.reduce((sum, score) => sum + score, 0) / scores.length;
-    return (Math.round(average * 10) / 10).toString(); // Round to 1 decimal place and return as string
-  };
+  //   // Calculate average
+  //   if (scores.length === 0) return "0";
+  //   const average =
+  //     scores.reduce((sum, score) => sum + score, 0) / scores.length;
+  //   return (Math.round(average * 10) / 10).toString(); // Round to 1 decimal place and return as string
+  // };
 
   const CurrentStepComponent =
     currentStep === 0 ? WelcomeStep : steps[currentStep - 1].component;
