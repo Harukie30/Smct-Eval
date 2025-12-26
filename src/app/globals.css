@@ -164,6 +164,44 @@
   animation-delay: 2s;
 }
 
+/* Prevent dragging and copying of images/GIFs */
+img[src$=".gif"],
+img[src*=".gif"],
+img[src^="/"] {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  -webkit-user-drag: none !important;
+  -khtml-user-drag: none !important;
+  -moz-user-drag: none !important;
+  -o-user-drag: none !important;
+  user-drag: none !important;
+  pointer-events: auto;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Additional protection for all images */
+img {
+  -webkit-user-drag: none !important;
+  -khtml-user-drag: none !important;
+  -moz-user-drag: none !important;
+  -o-user-drag: none !important;
+  user-drag: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+/* Prevent image dragging globally via JavaScript events */
+body {
+  /* Prevent drag operations on images */
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+}
+
 .animation-delay-4000 {
   animation-delay: 4s;
 }
@@ -257,6 +295,24 @@
 
 .animate-popdown {
   animation: popDown 0.4s cubic-bezier(0.36, 0, 0.66, -0.56);
+}
+
+/* Slide out to right animation for delete */
+@keyframes slideOutRight {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+    background-color: rgb(254 242 242); /* red-50 */
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+    background-color: rgb(254 242 242); /* red-50 */
+  }
+}
+
+.animate-slide-out-right {
+  animation: slideOutRight 0.5s ease-out forwards;
 }
 
 /* Subtle bounce animation for role icons */

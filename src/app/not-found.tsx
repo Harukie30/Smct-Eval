@@ -6,10 +6,11 @@ import Link from "next/link";
 import { getUserDashboardPath } from "@/lib/dashboardUtils";
 
 export default function NotFound() {
-  const { isAuthenticated, isLoading, profile, user } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   
   // Get user's dashboard based on role, or return to landing page
-  const dashboardPath = getUserDashboardPath(profile, user, "/") || "/";
+  // Pass user as profile since it has roles array, and null as user param since user object doesn't have role property
+  const dashboardPath = getUserDashboardPath(user as { roles?: { name: string }[] } | null, null, "/") || "/";
 
   if (isLoading) return <RealLoadingScreen />;
   return (

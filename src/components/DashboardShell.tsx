@@ -12,6 +12,7 @@ import {
   ChevronDown,
   HelpCircle,
   ChevronUp,
+  Clock,
 } from "lucide-react";
 import {
   Collapsible,
@@ -96,8 +97,19 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [isDeletingNotification, setIsDeletingNotification] = useState(false);
   const { user, logout, setIsRefreshing } = useUser();
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [isClockVisible, setIsClockVisible] = useState(true);
 
   const notificationCount = user?.notification_counts ?? 0;
+
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const setupEcho = async () => {
@@ -327,11 +339,22 @@ export default function DashboardShell(props: DashboardShellProps) {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            {currentPeriod ? (
-              <Badge variant="outline" className="text-sm">
-                {currentPeriod}
-              </Badge>
-            ) : null}
+            {/* Clock Toggle Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsClockVisible(!isClockVisible)}
+                  className={`p-2 ${isClockVisible ? "bg-gray-100 hover:bg-gray-200" : "bg-blue-100 hover:bg-blue-200"}`}
+                >
+                  <Clock className={`h-5 w-5 ${isClockVisible ? "text-gray-500" : "text-blue-600"}`} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{isClockVisible ? "Hide Clock" : "Show Clock"}</p>
+              </TooltipContent>
+            </Tooltip>
 
             {/* Notification Bell */}
             <div className="relative" ref={notificationRef}>
@@ -386,9 +409,56 @@ export default function DashboardShell(props: DashboardShellProps) {
                   </div>
 
                   <div className="h-[270px] overflow-y-auto">
-                    {user?.notifications === 0 ? (
-                      <div className="p-4 text-center text-gray-500">
-                        No notifications
+                    {!user?.notifications || user?.notifications.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 px-4">
+                        <div className="mb-4">
+                          <img
+                            src="/alarm.gif"
+                            alt="No notifications"
+                            className="w-25 h-25 object-contain"
+                            draggable="false"
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              return false;
+                            }}
+                            onDragStart={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              return false;
+                            }}
+                            onDrag={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              return false;
+                            }}
+                            onDragEnd={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              return false;
+                            }}
+                            onMouseDown={(e) => {
+                              if (e.button === 0) {
+                                e.preventDefault();
+                              }
+                            }}
+                            style={{
+                              imageRendering: "auto",
+                              willChange: "auto",
+                              transform: "translateZ(0)",
+                              backfaceVisibility: "hidden",
+                              WebkitBackfaceVisibility: "hidden",
+                            } as React.CSSProperties}
+                          />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-base font-medium text-gray-700 mb-1">
+                            No notifications yet
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Wait for any notifications to appear here
+                          </p>
+                        </div>
                       </div>
                     ) : (
                       user?.notifications.map((notification: any) => {
@@ -485,6 +555,30 @@ export default function DashboardShell(props: DashboardShellProps) {
           </div>
         </div>
       </header>
+
+      {/* Clock Display - Fixed below navbar, right edge */}
+      {isClockVisible && (
+        <div className="fixed top-20 right-6 mt-2 z-40 bg-blue-600 border border-blue-700 rounded-lg shadow-lg px-4 py-2">
+          <div className="flex flex-col items-end">
+            <div className="text-base font-semibold text-white">
+              {currentTime.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                hour12: true 
+              })}
+            </div>
+            <div className="text-xs text-blue-100 mt-0.5">
+              {currentTime.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric',
+                year: 'numeric'
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Layout with Sidebar */}
       <div className="flex overflow-hidden mt-20">
