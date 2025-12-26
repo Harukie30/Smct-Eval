@@ -188,6 +188,11 @@ export const apiService = {
     return response.data.user_eval;
   },
 
+  getQuarters: async (id: number | string): Promise<any> => {
+    const response = await api.get(`/getQuarters/${id}`);
+    return response.data.data;
+  },
+
   getAllYears: async (): Promise<any> => {
     const response = await api.get(`getAllYears`);
     return response.data.years;

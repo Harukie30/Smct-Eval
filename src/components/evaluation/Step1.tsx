@@ -25,6 +25,8 @@ import {
   getCurrentYear,
 } from "@/lib/quarterlyReviewUtils";
 import { User, useAuth } from "@/contexts/UserContext";
+import { Item } from "@radix-ui/react-select";
+import apiService from "@/lib/apiService";
 
 interface Step1Props {
   data: EvaluationPayload;
@@ -110,12 +112,12 @@ export default function Step1({
   updateDataAction,
   employee,
 }: Step1Props) {
-  const [quarterlyStatus, setQuarterlyStatus] = useState({
-    q1: false,
-    q2: false,
-    q3: false,
-    q4: false,
-  });
+  const [probitionary3, setProbitionary3] = useState(false);
+  const [probitionary5, setProbitionary5] = useState(false);
+  const [regular1, setRegular1] = useState(false);
+  const [regular2, setRegular2] = useState(false);
+  const [regular3, setRegular3] = useState(false);
+  const [regular4, setRegular4] = useState(false);
   const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
   const [coverageError, setCoverageError] = useState("");
   const { user } = useAuth();
@@ -133,32 +135,38 @@ export default function Step1({
   // Check for existing quarterly reviews when employee changes
   useEffect(() => {
     const checkQuarterlyReviews = async () => {
-      if (employee?.id) {
-        setIsLoadingQuarters(true);
-        try {
-          const status = await getQuarterlyReviewStatus(
-            Number(employee.id),
-            getCurrentYear()
-          );
-          setQuarterlyStatus(status);
-        } catch (error) {
-          console.error("Error checking quarterly reviews:", error);
-        } finally {
-          setIsLoadingQuarters(false);
-        }
-      } else {
-        // Reset status when no employee
-        setQuarterlyStatus({
-          q1: false,
-          q2: false,
-          q3: false,
-          q4: false,
+      if (!employee?.id) return;
+      setIsLoadingQuarters(true);
+      try {
+        const status = await apiService.getQuarters(Number(employee.id));
+        Object.values(status).forEach((item: any) => {
+          if (item.reviewTypeProbationary === 3) {
+            setProbitionary3(true);
+          }
+          if (item.reviewTypeProbationary === 5) {
+            setProbitionary5(true);
+          }
+          if (item.reviewTypeRegular === "Q1") {
+            setRegular1(true);
+          }
+          if (item.reviewTypeRegular === "Q2") {
+            setRegular2(true);
+          }
+          if (item.reviewTypeRegular === "Q3") {
+            setRegular3(true);
+          }
+          if (item.reviewTypeRegular === "Q4") {
+            setRegular4(true);
+          }
         });
+      } catch (error) {
+        console.error("Error checking quarterly reviews:", error);
+      } finally {
+        setIsLoadingQuarters(false);
       }
     };
-
     checkQuarterlyReviews();
-  }, [employee?.id, employee?.fname]);
+  }, [employee?.id]);
 
   // Validate coverage dates whenever they change
   useEffect(() => {
@@ -263,7 +271,9 @@ export default function Step1({
                     className="rounded"
                     checked={data.reviewTypeProbationary === 3}
                     disabled={
-                      data.reviewTypeRegular !== "" || isOthersSelected()
+                      probitionary3 ||
+                      data.reviewTypeRegular !== "" ||
+                      isOthersSelected()
                     }
                     onChange={(e) => {
                       if (e.target.checked) {
@@ -280,12 +290,21 @@ export default function Step1({
                   <label
                     htmlFor="prob3"
                     className={`text-sm ${
-                      data.reviewTypeRegular !== "" || isOthersSelected()
-                        ? "text-gray-400"
+                      probitionary3 ? "line-through" : ""
+                    } ${
+                      probitionary3 ||
+                      isOthersSelected() ||
+                      data.reviewTypeRegular !== ""
+                        ? "text-gray-400 "
                         : "text-gray-700"
                     }`}
                   >
                     3 months
+                    {probitionary3 && (
+                      <span className="ml-2 text-xs text-red-500 font-medium">
+                        (Already exists for {getCurrentYear()})
+                      </span>
+                    )}
                   </label>
                 </div>
                 <div className="flex items-center gap-2">
@@ -296,7 +315,9 @@ export default function Step1({
                     className="rounded"
                     checked={data.reviewTypeProbationary === 5}
                     disabled={
-                      data.reviewTypeRegular !== "" || isOthersSelected()
+                      probitionary5 ||
+                      data.reviewTypeRegular !== "" ||
+                      isOthersSelected()
                     }
                     onChange={(e) => {
                       if (e.target.checked) {
@@ -313,12 +334,21 @@ export default function Step1({
                   <label
                     htmlFor="prob5"
                     className={`text-sm ${
-                      data.reviewTypeRegular !== "" || isOthersSelected()
-                        ? "text-gray-400"
+                      probitionary5 ? "line-through" : ""
+                    } ${
+                      probitionary5 ||
+                      isOthersSelected() ||
+                      data.reviewTypeRegular !== ""
+                        ? "text-gray-400 "
                         : "text-gray-700"
                     }`}
                   >
                     5 months
+                    {probitionary5 && (
+                      <span className="ml-2 text-xs text-red-500 font-medium">
+                        (Already exists for {getCurrentYear()})
+                      </span>
+                    )}
                   </label>
                 </div>
               </div>
@@ -341,7 +371,7 @@ export default function Step1({
                     className="rounded"
                     checked={data.reviewTypeRegular === "Q1"}
                     disabled={
-                      quarterlyStatus.q1 ||
+                      regular1 ||
                       data.reviewTypeProbationary !== "" ||
                       isOthersSelected()
                     }
@@ -359,14 +389,16 @@ export default function Step1({
                   />
                   <label
                     htmlFor="q1"
-                    className={`text-sm ${
-                      quarterlyStatus.q1
-                        ? "text-gray-400 line-through"
+                    className={`text-sm ${regular1 ? "line-through" : ""} ${
+                      regular1 ||
+                      isOthersSelected() ||
+                      data.reviewTypeRegular !== ""
+                        ? "text-gray-400 "
                         : "text-gray-700"
                     }`}
                   >
                     Q1 review
-                    {quarterlyStatus.q1 && (
+                    {regular1 && (
                       <span className="ml-2 text-xs text-red-500 font-medium">
                         (Already exists for {getCurrentYear()})
                       </span>
@@ -381,7 +413,7 @@ export default function Step1({
                     className="rounded"
                     checked={data.reviewTypeRegular === "Q2"}
                     disabled={
-                      quarterlyStatus.q2 ||
+                      regular2 ||
                       data.reviewTypeProbationary !== "" ||
                       isOthersSelected()
                     }
@@ -399,14 +431,16 @@ export default function Step1({
                   />
                   <label
                     htmlFor="q2"
-                    className={`text-sm ${
-                      quarterlyStatus.q2
-                        ? "text-gray-400 line-through"
+                    className={`text-sm ${regular2 ? "line-through" : ""} ${
+                      regular2 ||
+                      isOthersSelected() ||
+                      data.reviewTypeRegular !== ""
+                        ? "text-gray-400 "
                         : "text-gray-700"
                     }`}
                   >
                     Q2 review
-                    {quarterlyStatus.q2 && (
+                    {regular2 && (
                       <span className="ml-2 text-xs text-red-500 font-medium">
                         (Already exists for {getCurrentYear()})
                       </span>
@@ -421,7 +455,7 @@ export default function Step1({
                     className="rounded"
                     checked={data.reviewTypeRegular === "Q3"}
                     disabled={
-                      quarterlyStatus.q3 ||
+                      regular3 ||
                       data.reviewTypeProbationary !== "" ||
                       isOthersSelected()
                     }
@@ -439,14 +473,16 @@ export default function Step1({
                   />
                   <label
                     htmlFor="q3"
-                    className={`text-sm ${
-                      quarterlyStatus.q3
-                        ? "text-gray-400 line-through"
+                    className={`text-sm ${regular3 ? "line-through" : ""} ${
+                      regular3 ||
+                      isOthersSelected() ||
+                      data.reviewTypeRegular !== ""
+                        ? "text-gray-400 "
                         : "text-gray-700"
                     }`}
                   >
                     Q3 review
-                    {quarterlyStatus.q3 && (
+                    {regular3 && (
                       <span className="ml-2 text-xs text-red-500 font-medium">
                         (Already exists for {getCurrentYear()})
                       </span>
@@ -461,7 +497,7 @@ export default function Step1({
                     className="rounded"
                     checked={data.reviewTypeRegular === "Q4"}
                     disabled={
-                      quarterlyStatus.q4 ||
+                      regular4 ||
                       data.reviewTypeProbationary !== "" ||
                       isOthersSelected()
                     }
@@ -479,14 +515,16 @@ export default function Step1({
                   />
                   <label
                     htmlFor="q4"
-                    className={`text-sm ${
-                      quarterlyStatus.q4
-                        ? "text-gray-400 line-through"
+                    className={`text-sm ${regular4 ? "line-through" : ""} ${
+                      regular4 ||
+                      isOthersSelected() ||
+                      data.reviewTypeRegular !== ""
+                        ? "text-gray-400 "
                         : "text-gray-700"
                     }`}
                   >
                     Q4 review
-                    {quarterlyStatus.q4 && (
+                    {regular4 && (
                       <span className="ml-2 text-xs text-red-500 font-medium">
                         (Already exists for {getCurrentYear()})
                       </span>

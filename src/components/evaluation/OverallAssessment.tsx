@@ -2860,7 +2860,7 @@ export default function OverallAssessment({
                   <div className="h-16 border-b border-gray-300 flex items-center justify-center">
                     {employee?.signature ? (
                       <img
-                        src={employee.signature}
+                        src={`${CONFIG.API_URL_STORAGE}/${employee.signature}`}
                         alt="Employee Signature"
                         className="h-12 max-w-full object-contain"
                         onError={(e) => {
@@ -2877,8 +2877,7 @@ export default function OverallAssessment({
                   {/* Name area */}
                   <div className="p-2 text-center">
                     <p className="text-sm font-medium text-gray-700">
-                      {employee?.signature ||
-                        employee?.fname + " " + employee?.lname ||
+                      {employee?.fname + " " + employee?.lname ||
                         "Employee Name"}
                     </p>
                   </div>

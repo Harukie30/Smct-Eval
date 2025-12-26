@@ -21,7 +21,7 @@ type Submission = {
   coverageTo: string;
   reviewTypeProbationary: number;
   reviewTypeRegular: string;
-  reviewTypeOthersImprovement: boolean;
+  reviewTypeOthersImprovement: boolean | number;
   reviewTypeOthersCustom: string;
   priorityArea1: string;
   priorityArea2: string;
@@ -143,6 +143,9 @@ export default function ViewResultsModal({
   //   error: signatureError,
   // } = useemployee.signatureByEvaluation(submission?.id || null);
 
+  if (submission) {
+    console.log(submission);
+  }
   // Update currentApprovalData when approvalData prop changes
   useEffect(() => {
     setCurrentApprovalData(approvalData);
@@ -1539,9 +1542,7 @@ export default function ViewResultsModal({
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.reviewTypeProbationary && (
-                              <div className="w-2 h-2 bg-white rounded-full"></div>
-                            )}
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
                           </div>
                           <span className="text-sm text-gray-700">
                             3 months
@@ -1555,9 +1556,7 @@ export default function ViewResultsModal({
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.reviewTypeProbationary && (
-                              <div className="w-2 h-2 bg-white rounded-full"></div>
-                            )}
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
                           </div>
                           <span className="text-sm text-gray-700">
                             5 months
@@ -1580,9 +1579,7 @@ export default function ViewResultsModal({
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.reviewTypeRegular && (
-                              <div className="w-2 h-2 bg-white rounded-full"></div>
-                            )}
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
                           </div>
                           <span className="text-sm text-gray-700">
                             Q1 review
@@ -1596,9 +1593,7 @@ export default function ViewResultsModal({
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.reviewTypeRegular && (
-                              <div className="w-2 h-2 bg-white rounded-full"></div>
-                            )}
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
                           </div>
                           <span className="text-sm text-gray-700">
                             Q2 review
@@ -1612,9 +1607,7 @@ export default function ViewResultsModal({
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.reviewTypeRegular && (
-                              <div className="w-2 h-2 bg-white rounded-full"></div>
-                            )}
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
                           </div>
                           <span className="text-sm text-gray-700">
                             Q3 review
@@ -1628,9 +1621,7 @@ export default function ViewResultsModal({
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.reviewTypeRegular && (
-                              <div className="w-2 h-2 bg-white rounded-full"></div>
-                            )}
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
                           </div>
                           <span className="text-sm text-gray-700">
                             Q4 review
@@ -1653,11 +1644,7 @@ export default function ViewResultsModal({
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.reviewTypeOthersImprovement && (
-                              <div className="w-2 h-2 bg-white rounded-full">
-                                {" "}
-                              </div>
-                            )}
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
                           </div>
                           <span className="text-sm text-gray-700">
                             Performance Improvement
@@ -1671,9 +1658,7 @@ export default function ViewResultsModal({
                                 : "bg-gray-300"
                             }`}
                           >
-                            {submission.reviewTypeOthersCustom && (
-                              <div className="w-2 h-2 bg-white rounded-full"></div>
-                            )}
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
                           </div>
                           <span className="text-sm text-gray-700">Others:</span>
                         </div>

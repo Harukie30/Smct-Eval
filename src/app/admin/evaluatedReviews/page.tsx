@@ -158,7 +158,7 @@ export default function OverviewTab() {
           const elapsed = Date.now() - pageChangeStartTimeRef.current;
           const minDisplayTime = 2000; // 2 seconds
           const remainingTime = Math.max(0, minDisplayTime - elapsed);
-          
+
           setTimeout(() => {
             setIsPageLoading(false);
             pageChangeStartTimeRef.current = null;
@@ -518,7 +518,7 @@ export default function OverviewTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
-                  {(refreshing || isPageLoading) ? (
+                  {refreshing || isPageLoading ? (
                     Array.from({ length: itemsPerPage }).map((_, index) => (
                       <TableRow key={`skeleton-${index}`}>
                         <TableCell className="px-6 py-3">
@@ -655,7 +655,10 @@ export default function OverviewTab() {
                               )}
                             >
                               {review.reviewTypeRegular ||
-                                "M" + review.reviewTypeProbationary}
+                                (review.reviewTypeProbationary
+                                  ? "M" + review.reviewTypeProbationary
+                                  : "") ||
+                                "Others"}
                             </Badge>
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">

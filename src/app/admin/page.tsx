@@ -112,7 +112,7 @@ export default function OverviewTab() {
           const elapsed = Date.now() - pageChangeStartTimeRef.current;
           const minDisplayTime = 2000; // 2 seconds
           const remainingTime = Math.max(0, minDisplayTime - elapsed);
-          
+
           setTimeout(() => {
             setIsPageLoading(false);
             pageChangeStartTimeRef.current = null;
@@ -347,10 +347,16 @@ export default function OverviewTab() {
                     <div className="relative">
                       <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <img src="/smct.png" alt="SMCT Logo" className="h-10 w-10 object-contain" />
+                        <img
+                          src="/smct.png"
+                          alt="SMCT Logo"
+                          className="h-10 w-10 object-contain"
+                        />
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 font-medium">Loading evaluation records...</p>
+                    <p className="text-sm text-gray-600 font-medium">
+                      Loading evaluation records...
+                    </p>
                   </div>
                 </div>
               )}
@@ -367,7 +373,7 @@ export default function OverviewTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
-                  {(refreshing || isPageLoading) ? (
+                  {refreshing || isPageLoading ? (
                     Array.from({ length: itemsPerPage }).map((_, index) => (
                       <TableRow key={`skeleton-${index}`}>
                         <TableCell className="px-6 py-3">
@@ -516,7 +522,10 @@ export default function OverviewTab() {
                               )}
                             >
                               {review.reviewTypeRegular ||
-                                "M" + review.reviewTypeProbationary}
+                                (review.reviewTypeProbationary
+                                  ? "M" + review.reviewTypeProbationary
+                                  : "") ||
+                                "Others"}
                             </Badge>
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">

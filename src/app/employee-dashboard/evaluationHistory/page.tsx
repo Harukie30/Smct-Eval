@@ -714,7 +714,10 @@ export default function OverviewTab() {
                                 )}
                               >
                                 {submission.reviewTypeRegular ||
-                                  "M" + submission.reviewTypeProbationary}
+                                  (submission.reviewTypeProbationary
+                                    ? "M" + submission.reviewTypeProbationary
+                                    : "") ||
+                                  "Others"}
                               </Badge>
                             </div>
                           </TableCell>

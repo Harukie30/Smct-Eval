@@ -544,7 +544,7 @@ export default function OverviewTab() {
                           rowClassName =
                             "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
                         }
-
+                        // console.log(review);
                         return (
                           <TableRow key={review.id} className={rowClassName}>
                             <TableCell className="px-6 py-3">
@@ -608,7 +608,10 @@ export default function OverviewTab() {
                                 )}
                               >
                                 {review.reviewTypeRegular ||
-                                  "M" + review.reviewTypeProbationary}
+                                  (review.reviewTypeProbationary
+                                    ? "M" + review.reviewTypeProbationary
+                                    : "") ||
+                                  "Others"}
                               </Badge>
                             </TableCell>
                             <TableCell className="w-1/5 text-right pl-1 pr-4">
