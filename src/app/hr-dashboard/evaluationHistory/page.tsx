@@ -76,64 +76,25 @@ export default function OverviewTab() {
         selectedYear,
         selectedQuarter
       );
-
-      // Add safety checks to prevent "Cannot read properties of undefined" error
-      if (!response || !response.myEval_as_Employee) {
-        console.error(
-          "API response is undefined or missing myEval_as_Employee"
-        );
-        setMyEvaluations([]);
-        setOverviewTotal(0);
-        setTotalPages(1);
-        setPerPage(itemsPerPage);
-        setIsPaginate(false);
-        setYears([]);
-        return;
-      }
-
-      setMyEvaluations(response.myEval_as_Employee.data || []);
-      setOverviewTotal(response.myEval_as_Employee.total || 0);
-      setTotalPages(response.myEval_as_Employee.last_page || 1);
-      setPerPage(response.myEval_as_Employee.per_page || itemsPerPage);
+      setMyEvaluations(response.myEval_as_Employee.data);
+      setOverviewTotal(response.myEval_as_Employee.total);
+      setTotalPages(response.myEval_as_Employee.last_page);
+      setPerPage(response.myEval_as_Employee.per_page);
       setIsPaginate(false);
-      setYears(response.years || []);
+      setYears(response.years);
     } catch (error) {
       console.error("Error loading approved evaluations:", error);
-      // Set default values on error
-      setMyEvaluations([]);
-      setOverviewTotal(0);
-      setTotalPages(1);
-      setPerPage(itemsPerPage);
       setIsPaginate(false);
-      setYears([]);
     }
   };
 
   useEffect(() => {
     loadApprovedEvaluations(searchTerm);
     const loadDashboard = async () => {
-      try {
-        const dashboard = await apiService.employeeDashboard();
-
-        // Add safety checks to prevent "Cannot read properties of undefined" error
-        if (!dashboard) {
-          console.error("Dashboard API response is undefined");
-          setTotalEvaluations(0);
-          setAverage(0);
-          setRecentEvaluation([]);
-          return;
-        }
-
-        setTotalEvaluations(dashboard.total_evaluations || 0);
-        setAverage(dashboard.average || 0);
-        setRecentEvaluation(dashboard.recent_evaluation || []);
-      } catch (error) {
-        console.error("Error loading dashboard data:", error);
-        // Set default values on error
-        setTotalEvaluations(0);
-        setAverage(0);
-        setRecentEvaluation([]);
-      }
+      const dashboard = await apiService.employeeDashboard();
+      setTotalEvaluations(dashboard.total_evaluations);
+      setAverage(dashboard.average);
+      setRecentEvaluation(dashboard.recent_evaluation);
     };
     loadDashboard();
   }, [selectedQuarter, selectedYear]);

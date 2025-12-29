@@ -31,7 +31,7 @@ type Submission = {
   evaluatorApprovedAt: string;
   employeeApprovedAt: string;
   created_at: string;
-
+  hireDate: string;
   //relations
   job_knowledge: any;
   adaptability: any;
@@ -1743,10 +1743,8 @@ export default function ViewResultsModal({
                       className="text-gray-900 print-value"
                       style={{ fontSize: "11px" }}
                     >
-                      {submission.employee?.date_hired
-                        ? new Date(
-                            submission.employee?.date_hired
-                          ).toLocaleDateString()
+                      {submission.hireDate
+                        ? new Date(submission.hireDate).toLocaleString()
                         : "Not specified"}
                     </p>
                   </div>
@@ -1805,6 +1803,7 @@ export default function ViewResultsModal({
                               submission.coverageTo
                             ).toLocaleDateString("en-US", {
                               month: "short",
+
                               day: "numeric",
                               year: "numeric",
                             })}`}
@@ -3238,7 +3237,7 @@ export default function ViewResultsModal({
                             <div className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-red-500">
                               Error loading signature
                             </div>
-                          ) : (
+                          ) : submission.status === "completed" ? (
                             submission.employee?.signature && (
                               <img
                                 src={
@@ -3253,6 +3252,8 @@ export default function ViewResultsModal({
                                 }}
                               />
                             )
+                          ) : (
+                            <></>
                           )}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
@@ -3350,7 +3351,9 @@ export default function ViewResultsModal({
                               submission.evaluator.lname || "Evaluator Name"}
                           </span>
                           {/* Signature overlay - automatically show when signature exists */}
-                          {submission.evaluator.signature ? (
+                          {submission.evaluator.signature &&
+                          (submission.status === "completed" ||
+                            submission.status === "pending") ? (
                             <img
                               src={
                                 CONFIG.API_URL_STORAGE +

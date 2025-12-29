@@ -2857,22 +2857,7 @@ export default function OverallAssessment({
                 </Label>
                 <div className="mt-1 border-2 border-dashed border-white rounded-lg bg-gray-50">
                   {/* Signature area */}
-                  <div className="h-16 border-b border-gray-300 flex items-center justify-center">
-                    {employee?.signature ? (
-                      <img
-                        src={`${CONFIG.API_URL_STORAGE}/${employee.signature}`}
-                        alt="Employee Signature"
-                        className="h-12 max-w-full object-contain"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <span className="text-gray-500 text-sm">
-                        No signature available
-                      </span>
-                    )}
-                  </div>
+                  <div className="h-16 border-b border-gray-300 flex items-center justify-center"></div>
 
                   {/* Name area */}
                   <div className="p-2 text-center">
@@ -2908,17 +2893,7 @@ export default function OverallAssessment({
                     <span className="text-md text-gray-900 font-bold">
                       {user?.fname + " " + user?.lname || "Evaluator Name"}
                     </span>
-                    {/* Signature overlay - automatically show when signature exists */}
-                    {user?.signature && (
-                      <img
-                        src={`${CONFIG.API_URL_STORAGE}/${user.signature}`}
-                        alt="Evaluator Signature"
-                        className="absolute top-5 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-14 max-w-full object-contain"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                        }}
-                      />
-                    )}
+
                     {/* Show message if no signature */}
                     {!user?.signature && (
                       <span className="text-xs text-red-600">
