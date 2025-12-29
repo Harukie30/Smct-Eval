@@ -1765,12 +1765,23 @@ function HRDashboard() {
   // Removed localStorage event listeners - using API only
 
   // Fetch recent submissions from client data service
+  // HR should see ALL evaluation records across all dashboards
   const fetchRecentSubmissions = async () => {
     try {
       setSubmissionsLoading(true); // Set loading to true when starting fetch
-      const submissions = await apiService.getSubmissions();
-      // Ensure submissions is always an array
-      setRecentSubmissions(Array.isArray(submissions) ? submissions : []);
+      // Pass getAll: true to get ALL evaluations (not just HR's own)
+      const response = await apiService.getSubmissions(undefined, undefined, undefined, undefined, undefined, undefined, true);
+      // Handle paginated response structure: { data: [...], total: ..., ... }
+      if (response && response.data && Array.isArray(response.data)) {
+        setRecentSubmissions(response.data);
+      } else if (Array.isArray(response)) {
+        // Fallback: if response is already an array
+        setRecentSubmissions(response);
+      } else {
+        // Default to empty array if structure is unexpected
+        console.warn('Unexpected response structure from getSubmissions:', response);
+        setRecentSubmissions([]);
+      }
     } catch (error) {
       console.error('Error fetching submissions:', error);
       setRecentSubmissions([]); // Set to empty array on error
@@ -2701,7 +2712,7 @@ function HRDashboard() {
             bio: (employeeToView as any).bio || null,
             created_at: (employeeToView as any).created_at || new Date().toISOString(),
             updated_at: (employeeToView as any).updated_at || undefined,
-          }}
+          } as any}
           onStartEvaluationAction={() => {
             // Not used in HR, but required by component
             setIsViewEmployeeModalOpen(false);
@@ -2953,16 +2964,7 @@ function HRDashboard() {
                   branch: employeeToEvaluate.branch,
                   role: employeeToEvaluate.role,
                   employeeId: employeeToEvaluate.employeeId || undefined,
-                }}
-                currentUser={{
-                  id: typeof currentUser.id === 'number' ? currentUser.id : Number(currentUser.id) || 0,
-                  name: currentUser.fname + ' ' + currentUser.lname,
-                  email: currentUser.email || '',
-                  position: 'HR Manager',
-                  department: 'Human Resources',
-                  role: currentUser.roles?.[0]?.name || currentUser.roles?.[0] || 'employee',
-                  signature: currentUser.signature,
-                }}
+                } as any}
                 onCloseAction={async () => {
                   setIsEvaluationModalOpen(false);
                   setEmployeeToEvaluate(null);
@@ -2991,16 +2993,7 @@ function HRDashboard() {
                   branch: employeeToEvaluate.branch,
                   role: employeeToEvaluate.role,
                   employeeId: employeeToEvaluate.employeeId || undefined,
-                }}
-                currentUser={{
-                  id: typeof currentUser.id === 'number' ? currentUser.id : Number(currentUser.id) || 0,
-                  name: currentUser.fname + ' ' + currentUser.lname,
-                  email: currentUser.email || '',
-                  position: 'HR Manager',
-                  department: 'Human Resources',
-                  role: currentUser.roles?.[0]?.name || currentUser.roles?.[0] || 'employee',
-                  signature: currentUser.signature,
-                }}
+                } as any}
                   onCloseAction={async () => {
                     setIsEvaluationModalOpen(false);
                     setEmployeeToEvaluate(null);

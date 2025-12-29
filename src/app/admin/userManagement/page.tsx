@@ -719,13 +719,19 @@ export default function UserManagementTab() {
                       variant="outline"
                       className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300"
                     >
-                      ✨ New Added (≤30min)
+                      ✨ New Added 
                     </Badge>
                     <Badge
                       variant="outline"
                       className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300"
                     >
-                      🕐 Recently Added (&gt;30min)
+                      🕐 Recently Added 
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300"
+                    >
+                      ✏️ Recently Updated 
                     </Badge>
                   </div>
                 </div>
@@ -824,8 +830,12 @@ export default function UserManagementTab() {
                         const createdDate = employee.created_at
                           ? new Date(employee.created_at)
                           : null;
+                        const updatedDate = (employee as any).updated_at
+                          ? new Date((employee as any).updated_at)
+                          : null;
                         let isNew = false;
                         let isRecentlyAdded = false;
+                        let isRecentlyUpdated = false;
 
                         if (createdDate !== null) {
                           const now = new Date();
@@ -837,12 +847,33 @@ export default function UserManagementTab() {
                           isRecentlyAdded = hoursDiff > 30 && hoursDiff <= 40;
                         }
 
+                        // Check if user was recently updated (within 30 minutes)
+                        if (updatedDate !== null && createdDate !== null) {
+                          const now = new Date();
+                          const updatedMinutesDiff =
+                            (now.getTime() - updatedDate.getTime()) /
+                            (1000 * 60);
+                          const createdMinutesDiff =
+                            (now.getTime() - createdDate.getTime()) /
+                            (1000 * 60);
+                          // Only show as updated if updated_at is different from created_at
+                          // and the update was within 30 minutes
+                          if (
+                            updatedDate.getTime() !== createdDate.getTime() &&
+                            updatedMinutesDiff <= 30
+                          ) {
+                            isRecentlyUpdated = true;
+                          }
+                        }
+
                         return (
                           <TableRow
                             key={employee.id}
                             className={
                               isDeleting
                                 ? "animate-slide-out-right bg-red-100 border-l-4 border-l-red-600"
+                                : isRecentlyUpdated
+                                ? "bg-yellow-50 border-l-4 border-l-yellow-500 hover:bg-yellow-100"
                                 : isNew
                                 ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100"
                                 : isRecentlyAdded
@@ -882,12 +913,17 @@ export default function UserManagementTab() {
                                     <span>
                                       {employee.fname + " " + employee.lname}
                                     </span>
-                                    {isNew && (
+                                    {isRecentlyUpdated && (
+                                      <Badge className="bg-yellow-500 text-white text-xs px-2 py-0.5 font-semibold">
+                                        ✏️ Updated
+                                      </Badge>
+                                    )}
+                                    {isNew && !isRecentlyUpdated && (
                                       <Badge className="bg-green-500 text-white text-xs px-2 py-0.5 font-semibold">
                                         ✨ New
                                       </Badge>
                                     )}
-                                    {isRecentlyAdded && !isNew && (
+                                    {isRecentlyAdded && !isNew && !isRecentlyUpdated && (
                                       <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5 font-semibold">
                                         🕐 Recent
                                       </Badge>

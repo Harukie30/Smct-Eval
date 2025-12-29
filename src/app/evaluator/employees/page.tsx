@@ -35,6 +35,7 @@ import ViewEmployeeModal from "@/components/ViewEmployeeModal";
 export default function EmployeesTab() {
   //refreshing state
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Add refresh trigger
 
   //data employees
   const [employees, setEmployees] = useState<User[] | null>(null);
@@ -79,38 +80,9 @@ export default function EmployeesTab() {
         setIsRefreshing(true);
         const positionsRes = await apiService.getPositions();
         setPositions(positionsRes);
-
-        const res = await apiService.getAllEmployeeByAuth(
-          employeeSearch,
-          currentPage,
-          itemsPerPage,
-          positionFilter
-        );
-        
-        // Add safety checks to prevent "Cannot read properties of undefined" error
-        if (!res) {
-          console.error("API response is undefined");
-          setEmployees([]);
-          setOverviewTotal(0);
-          setTotalPages(1);
-          setPerPage(itemsPerPage);
-          setIsRefreshing(false);
-          return;
-        }
-
-        setEmployees(res.data || []);
-        setOverviewTotal(res.total || 0);
-        setTotalPages(res.last_page || 1);
-        setPerPage(res.per_page || itemsPerPage);
-
         setIsRefreshing(false);
       } catch (error) {
         console.error("Error fetching positions:", error);
-        // Set default values on error
-        setEmployees([]);
-        setOverviewTotal(0);
-        setTotalPages(1);
-        setPerPage(itemsPerPage);
         setIsRefreshing(false);
       }
     };
@@ -120,6 +92,7 @@ export default function EmployeesTab() {
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
+        setIsRefreshing(true);
         const res = await apiService.getAllEmployeeByAuth(
           debouncedSearch,
           currentPage,
@@ -138,7 +111,9 @@ export default function EmployeesTab() {
           return;
         }
 
-        setEmployees(res.data || []);
+        // Ensure we have an array
+        const employeesData = Array.isArray(res.data) ? res.data : [];
+        setEmployees(employeesData);
         setOverviewTotal(res.total || 0);
         setTotalPages(res.last_page || 1);
         setPerPage(res.per_page || itemsPerPage);
@@ -155,7 +130,7 @@ export default function EmployeesTab() {
       }
     };
     fetchEmployees();
-  }, [positionFilter, debouncedSearch, currentPage]);
+  }, [positionFilter, debouncedSearch, currentPage, itemsPerPage, refreshTrigger]); // Add refreshTrigger to dependencies
 
   useEffect(() => {
     const debounceSearch = setTimeout(() => {
@@ -299,9 +274,11 @@ export default function EmployeesTab() {
               </div>
             </div>
             <Button
-              onClick={() => setIsRefreshing(true)}
-              disabled={false}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => {
+                setRefreshTrigger(prev => prev + 1); // Trigger refresh by incrementing counter
+              }}
+              disabled={isRefreshing}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
               title="Refresh employee data"
             >
               {isRefreshing ? (
@@ -326,7 +303,6 @@ export default function EmployeesTab() {
                 placeholder="Search employees..."
                 value={employeeSearch}
                 onChange={(e) => {
-                  setIsRefreshing(true);
                   setEmployeeSearch(e.target.value);
                 }}
                 className=" pr-10"
@@ -334,7 +310,6 @@ export default function EmployeesTab() {
               {employeeSearch && (
                 <button
                   onClick={() => {
-                    setIsRefreshing(true);
                     setEmployeeSearch("");
                   }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-600"
@@ -348,7 +323,6 @@ export default function EmployeesTab() {
               options={positions}
               value={positionFilter}
               onValueChangeAction={(value) => {
-                setIsRefreshing(true);
                 setPositionFilter(String(value));
               }}
               placeholder="All Positions"
@@ -360,7 +334,6 @@ export default function EmployeesTab() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setIsRefreshing(true);
                   setEmployeeSearch("");
                   setPositionFilter("");
                 }}
@@ -514,10 +487,7 @@ export default function EmployeesTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {!employees ||
-                    employees === null ||
-                    !Array.isArray(employees) ||
-                    employees.length === 0 ? (
+                    {!employees || employees === null || !Array.isArray(employees) || employees.length === 0 ? (
                       <TableRow>
                         <TableCell
                           colSpan={6}
@@ -548,7 +518,7 @@ export default function EmployeesTab() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      employees?.map((employee: any) => {
+                      employees.map((employee: any) => {
                         // Check if user is new (within 30 minutes) or recently added (after 30 minutes, within 48 hours)
                         const createdDate = employee.created_at
                           ? new Date(employee.created_at)
@@ -657,7 +627,6 @@ export default function EmployeesTab() {
               perPage={perPage}
               onPageChange={(page) => {
                 setCurrentPage(page);
-                setIsRefreshing(true);
               }}
             />
           )}

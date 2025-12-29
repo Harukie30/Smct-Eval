@@ -168,23 +168,80 @@ export const apiService = {
     perPage?: number,
     status?: string,
     quarter?: string,
-    year?: string
+    year?: string,
+    getAll?: boolean // New parameter: if true, get all submissions (for HR/Admin)
   ): Promise<any> => {
-    
-    const response = await api.get(`/getEvalAuthEvaluator`, {
-      params: {
-        search: searchTerm || "",
-        page: page,
-        per_page: perPage,
-        status: status || "",
-        quarter: quarter || "",
-        year: year || "",
-      },
-    });
+    try {
+      // For HR/Admin, use a different endpoint or parameter to get ALL evaluations
+      // If getAll is true, we might need a different endpoint, or the backend might handle it based on role
+      const endpoint = getAll ? `/getEvalAuthEvaluator` : `/getEvalAuthEvaluator`;
+      
+      const response = await api.get(endpoint, {
+        params: {
+          search: searchTerm || "",
+          page: page,
+          per_page: perPage,
+          status: status || "",
+          quarter: quarter || "",
+          year: year || "",
+          // Add a parameter to indicate we want all submissions (backend should handle based on role)
+          ...(getAll && { all: true }),
+        },
+      });
 
-    // Add safety check to prevent "Cannot read properties of undefined" error
-    if (!response || !response.data) {
-      console.error("API response is undefined or missing data");
+      // Add safety check to prevent "Cannot read properties of undefined" error
+      if (!response || !response.data) {
+        console.error("API response is undefined or missing data");
+        return {
+          data: [],
+          total: 0,
+          last_page: 1,
+          per_page: perPage || 5,
+        };
+      }
+
+      const data = response.data;
+
+      // Handle nested structure: { evaluations: { data: [...], total: X, ... } }
+      // This is similar to the getAllEmployeeByAuth structure
+      if (data.evaluations && data.evaluations.data && Array.isArray(data.evaluations.data)) {
+        return {
+          data: data.evaluations.data,
+          total: data.evaluations.total || 0,
+          last_page: data.evaluations.last_page || 1,
+          per_page: data.evaluations.per_page || perPage || 5,
+        };
+      }
+
+      // Handle structure: { evaluations: [...], total: X, ... }
+      if (data.evaluations && Array.isArray(data.evaluations)) {
+        return {
+          data: data.evaluations,
+          total: data.total || data.evaluations.length,
+          last_page: data.last_page || 1,
+          per_page: data.per_page || perPage || 5,
+        };
+      }
+
+      // Handle direct array response
+      if (Array.isArray(data)) {
+        return {
+          data: data,
+          total: data.length,
+          last_page: 1,
+          per_page: perPage || 5,
+        };
+      }
+
+      // Fallback: return the data as-is if structure is different
+      return {
+        data: data.data || [],
+        total: data.total || 0,
+        last_page: data.last_page || 1,
+        per_page: data.per_page || perPage || 5,
+      };
+    } catch (error) {
+      console.error("Error fetching submissions:", error);
       return {
         data: [],
         total: 0,
@@ -192,19 +249,6 @@ export const apiService = {
         per_page: perPage || 5,
       };
     }
-
-    // Return full pagination structure if available, otherwise return evaluations array
-    if (response.data.evaluations) {
-      return {
-        data: response.data.evaluations,
-        total: response.data.total || response.data.evaluations.length,
-        last_page: response.data.last_page || 1,
-        per_page: response.data.per_page || perPage || 5,
-      };
-    }
-
-    // Fallback: return the data as-is if structure is different
-    return response.data;
   },
 
   getSubmissionById: async (id: number | string): Promise<any> => {
@@ -223,12 +267,12 @@ export const apiService = {
   },
 
   createSubmission: async (
-    submission: any,
-    userId?: string | number
+    userId: string | number,
+    submission: any
   ): Promise<any> => {
     // Use /submit/{user} if userId provided, otherwise fallback to /submissions
-    const endpoint = userId ? `/submit/${userId}` : "/submissions";
-    const response = await api.post(endpoint, submission);
+    //const endpoint = userId ? `` : "/submissions";
+    const response = await api.post(`submit/${userId}`, submission);
     const data = response.data;
 
     if (data.success && data.submission) {
@@ -589,17 +633,29 @@ export const apiService = {
 
       const data = response.data;
 
-      // Handle paginated response
-      if (data.data && Array.isArray(data.data)) {
+      // Handle response with employees wrapper: { employees: { data: [...], total: X, ... } }
+      // This is the ACTUAL structure from the API
+      if (data && data.employees && data.employees.data && Array.isArray(data.employees.data)) {
+        return {
+          data: data.employees.data,
+          total: data.employees.total || 0,
+          last_page: data.employees.last_page || 1,
+          per_page: data.employees.per_page || perPage || 10,
+        };
+      }
+
+      // Handle Laravel paginated response (data.data array) - Fallback structure
+      // Response structure: { current_page: 1, data: [...], total: X, last_page: Y, per_page: Z }
+      if (data && typeof data === 'object' && data.hasOwnProperty('data') && Array.isArray(data.data)) {
         return {
           data: data.data,
-          total: data.total || data.data.length,
+          total: data.total || 0,
           last_page: data.last_page || 1,
           per_page: data.per_page || perPage || 10,
         };
       }
 
-      // Handle response with users array
+      // Handle response with users array (success.users)
       if (data.success && data.users && Array.isArray(data.users)) {
         return {
           data: data.users,
@@ -609,7 +665,17 @@ export const apiService = {
         };
       }
 
-      // Handle direct array response
+      // Handle response with employees array
+      if (data.employees && Array.isArray(data.employees)) {
+        return {
+          data: data.employees,
+          total: data.total || data.employees.length,
+          last_page: data.last_page || 1,
+          per_page: data.per_page || perPage || 10,
+        };
+      }
+
+      // Handle direct users array (without success flag)
       if (Array.isArray(data.users)) {
         return {
           data: data.users,
@@ -619,6 +685,7 @@ export const apiService = {
         };
       }
 
+      // Handle direct array response
       if (Array.isArray(data)) {
         return {
           data: data,
@@ -626,6 +693,18 @@ export const apiService = {
           last_page: 1,
           per_page: data.length,
         };
+      }
+
+      // Fallback: Try to find any array in the response
+      for (const key in data) {
+        if (Array.isArray(data[key])) {
+          return {
+            data: data[key],
+            total: data.total || data[key].length,
+            last_page: data.last_page || 1,
+            per_page: data.per_page || perPage || 10,
+          };
+        }
       }
 
       // Return empty paginated structure if no data
@@ -809,6 +888,21 @@ export const apiService = {
       return { myEval_as_Employee: { data: data, total: data.length, last_page: 1, per_page: perPage || 10 } };
     }
     return { myEval_as_Employee: { data: [], total: 0, last_page: 1, per_page: perPage || 10 } };
+  },
+
+  // Get quarters/reviews for an employee
+  getQuarters: async (employeeId: number): Promise<any> => {
+    try {
+      const response = await api.get(`/getQuarters/${employeeId}`);
+      if (response && response.data) {
+        return response.data;
+      }
+      return {};
+    } catch (error: any) {
+      console.error("Error fetching quarters:", error);
+      // Return empty object on error
+      return {};
+    }
   },
 
   // Evaluator dashboard total cards
