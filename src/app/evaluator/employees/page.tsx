@@ -86,43 +86,76 @@ export default function EmployeesTab() {
           itemsPerPage,
           positionFilter
         );
-        setEmployees(res.data);
+        
+        // Add safety checks to prevent "Cannot read properties of undefined" error
+        if (!res) {
+          console.error("API response is undefined");
+          setEmployees([]);
+          setOverviewTotal(0);
+          setTotalPages(1);
+          setPerPage(itemsPerPage);
+          setIsRefreshing(false);
+          return;
+        }
 
-        setOverviewTotal(res.total);
-        setTotalPages(res.last_page);
-        setPerPage(res.per_page);
+        setEmployees(res.data || []);
+        setOverviewTotal(res.total || 0);
+        setTotalPages(res.last_page || 1);
+        setPerPage(res.per_page || itemsPerPage);
 
         setIsRefreshing(false);
       } catch (error) {
         console.error("Error fetching positions:", error);
+        // Set default values on error
+        setEmployees([]);
+        setOverviewTotal(0);
+        setTotalPages(1);
+        setPerPage(itemsPerPage);
+        setIsRefreshing(false);
       }
     };
     fetchPositions();
   }, []);
 
   useEffect(() => {
-    if (!isRefreshing && !debouncedSearch) return;
     const fetchEmployees = async () => {
       try {
         const res = await apiService.getAllEmployeeByAuth(
-          employeeSearch,
+          debouncedSearch,
           currentPage,
           itemsPerPage,
           positionFilter
         );
-        setEmployees(res.data);
+        
+        // Add safety checks to prevent "Cannot read properties of undefined" error
+        if (!res) {
+          console.error("API response is undefined");
+          setEmployees([]);
+          setOverviewTotal(0);
+          setTotalPages(1);
+          setPerPage(itemsPerPage);
+          setIsRefreshing(false);
+          return;
+        }
 
-        setOverviewTotal(res.total);
-        setTotalPages(res.last_page);
-        setPerPage(res.per_page);
+        setEmployees(res.data || []);
+        setOverviewTotal(res.total || 0);
+        setTotalPages(res.last_page || 1);
+        setPerPage(res.per_page || itemsPerPage);
 
         setIsRefreshing(false);
       } catch (error) {
         console.error("Error fetching employees:", error);
+        // Set default values on error
+        setEmployees([]);
+        setOverviewTotal(0);
+        setTotalPages(1);
+        setPerPage(itemsPerPage);
+        setIsRefreshing(false);
       }
     };
     fetchEmployees();
-  }, [isRefreshing, positionFilter, debouncedSearch, currentPage]);
+  }, [positionFilter, debouncedSearch, currentPage]);
 
   useEffect(() => {
     const debounceSearch = setTimeout(() => {
@@ -483,7 +516,8 @@ export default function EmployeesTab() {
                   <TableBody>
                     {!employees ||
                     employees === null ||
-                    Number(employees) === 0 ? (
+                    !Array.isArray(employees) ||
+                    employees.length === 0 ? (
                       <TableRow>
                         <TableCell
                           colSpan={6}
@@ -560,16 +594,20 @@ export default function EmployeesTab() {
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell>{employee.email}</TableCell>
+                            <TableCell>{employee.email || "N/A"}</TableCell>
                             <TableCell>
-                              {employee.positions.label || "N/A"}
+                              {employee.positions?.label || employee.position || "N/A"}
                             </TableCell>
                             <TableCell>
-                              {employee.branches[0]?.branch_name || "N/A"}
+                              {employee.branches && Array.isArray(employee.branches) && employee.branches.length > 0
+                                ? employee.branches[0]?.branch_name || "N/A"
+                                : employee.branch || "N/A"}
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline">
-                                {employee.roles[0]?.name || "N/A"}
+                                {employee.roles && Array.isArray(employee.roles) && employee.roles.length > 0
+                                  ? employee.roles[0]?.name || "N/A"
+                                  : employee.role || "N/A"}
                               </Badge>
                             </TableCell>
                             <TableCell>

@@ -560,20 +560,97 @@ export const apiService = {
   },
 
   // Get all employees under authenticated user
-  getAllEmployeeByAuth: async (): Promise<any[]> => {
-    const response = await api.get("/getAllEmployeeByAuth");
-    const data = response.data;
+  getAllEmployeeByAuth: async (
+    searchValue?: string,
+    page?: number,
+    perPage?: number,
+    positionFilter?: string
+  ): Promise<any> => {
+    try {
+      const response = await api.get("/getAllEmployeeByAuth", {
+        params: {
+          search: searchValue || "",
+          page: page || 1,
+          per_page: perPage || 10,
+          position: positionFilter || "",
+        },
+      });
+      
+      // Add safety check to prevent "Cannot read properties of undefined" error
+      if (!response || !response.data) {
+        console.error("API response is undefined or missing data");
+        return {
+          data: [],
+          total: 0,
+          last_page: 1,
+          per_page: perPage || 10,
+        };
+      }
 
-    if (data.success && data.users) {
-      return data.users;
+      const data = response.data;
+
+      // Handle paginated response
+      if (data.data && Array.isArray(data.data)) {
+        return {
+          data: data.data,
+          total: data.total || data.data.length,
+          last_page: data.last_page || 1,
+          per_page: data.per_page || perPage || 10,
+        };
+      }
+
+      // Handle response with users array
+      if (data.success && data.users && Array.isArray(data.users)) {
+        return {
+          data: data.users,
+          total: data.total || data.users.length,
+          last_page: data.last_page || 1,
+          per_page: data.per_page || perPage || 10,
+        };
+      }
+
+      // Handle direct array response
+      if (Array.isArray(data.users)) {
+        return {
+          data: data.users,
+          total: data.total || data.users.length,
+          last_page: data.last_page || 1,
+          per_page: data.per_page || perPage || 10,
+        };
+      }
+
+      if (Array.isArray(data)) {
+        return {
+          data: data,
+          total: data.length,
+          last_page: 1,
+          per_page: data.length,
+        };
+      }
+
+      // Return empty paginated structure if no data
+      return {
+        data: [],
+        total: 0,
+        last_page: 1,
+        per_page: perPage || 10,
+      };
+    } catch (error: any) {
+      // Handle 401 Unauthorized errors gracefully
+      if (error.response?.status === 401) {
+        console.warn("Unauthorized: User authentication may have expired");
+        // Return empty data structure instead of throwing
+        return {
+          data: [],
+          total: 0,
+          last_page: 1,
+          per_page: perPage || 10,
+        };
+      }
+      
+      // Re-throw other errors
+      throw error;
     }
-    if (Array.isArray(data.users)) {
-      return data.users;
-    }
-    if (Array.isArray(data)) {
-      return data;
-    }
-    return [];
   },
 
   // Get specific user
