@@ -169,7 +169,7 @@ export const apiService = {
     quarter?: string,
     year?: string
   ): Promise<any> => {
-    const response = await api.get(`/getEvalAuthEvaluator`, {
+    const response = await api.get(`/allEvaluations`, {
       params: {
         search: searchTerm || "",
         page: page,
