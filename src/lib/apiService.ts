@@ -172,9 +172,9 @@ export const apiService = {
     getAll?: boolean // New parameter: if true, get all submissions (for HR/Admin)
   ): Promise<any> => {
     try {
-      // For HR/Admin, use a different endpoint or parameter to get ALL evaluations
-      // If getAll is true, we might need a different endpoint, or the backend might handle it based on role
-      const endpoint = getAll ? `/getEvalAuthEvaluator` : `/getEvalAuthEvaluator`;
+      // For HR/Admin, use /allEvaluations endpoint to get ALL evaluations
+      // For regular evaluators, use /getEvalAuthEvaluator to get only their evaluations
+      const endpoint = getAll ? `/allEvaluations` : `/getEvalAuthEvaluator`;
       
       const response = await api.get(endpoint, {
         params: {
@@ -184,8 +184,6 @@ export const apiService = {
           status: status || "",
           quarter: quarter || "",
           year: year || "",
-          // Add a parameter to indicate we want all submissions (backend should handle based on role)
-          ...(getAll && { all: true }),
         },
       });
 
@@ -202,8 +200,31 @@ export const apiService = {
 
       const data = response.data;
 
+      // Handle /allEvaluations endpoint response: { evaluations: [...] }
+      // This endpoint returns response.data.evaluations directly
+      if (getAll && data.evaluations) {
+        // If evaluations is an array, return it directly
+        if (Array.isArray(data.evaluations)) {
+          return {
+            data: data.evaluations,
+            total: data.total || data.evaluations.length,
+            last_page: data.last_page || 1,
+            per_page: data.per_page || perPage || 5,
+          };
+        }
+        // If evaluations has nested data structure: { evaluations: { data: [...], total: X, ... } }
+        if (data.evaluations.data && Array.isArray(data.evaluations.data)) {
+          return {
+            data: data.evaluations.data,
+            total: data.evaluations.total || 0,
+            last_page: data.evaluations.last_page || 1,
+            per_page: data.evaluations.per_page || perPage || 5,
+          };
+        }
+      }
+
+      // Handle /getEvalAuthEvaluator endpoint response (for regular evaluators)
       // Handle nested structure: { evaluations: { data: [...], total: X, ... } }
-      // This is similar to the getAllEmployeeByAuth structure
       if (data.evaluations && data.evaluations.data && Array.isArray(data.evaluations.data)) {
         return {
           data: data.evaluations.data,

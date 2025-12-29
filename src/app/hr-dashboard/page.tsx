@@ -206,6 +206,21 @@ const getSubmissionHighlight = (submittedAt: string, submissionId: number, appro
 };
 
 // ========================================
+// Helper Functions
+// ========================================
+
+// Helper to safely extract name from object or string
+const getEmployeeNameForSearch = (employee: any): string => {
+  if (!employee) return '';
+  if (typeof employee === 'string') return employee;
+  if (employee.name) return employee.name;
+  if (employee.full_name) return employee.full_name;
+  if (employee.fname && employee.lname) return `${employee.fname} ${employee.lname}`;
+  if (employee.fname) return employee.fname;
+  return '';
+};
+
+// ========================================
 // Inline Tab Components
 // ========================================
 
@@ -596,7 +611,9 @@ function OverviewTab({
                         <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
                           <div>
                             <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1">
-                              <span className="font-medium text-gray-900 text-xs md:text-sm lg:text-base">{submission.employeeName}</span>
+                              <span className="font-medium text-gray-900 text-xs md:text-sm lg:text-base">
+                                {getEmployeeNameForSearch(submission.employeeName || submission.employee || submission.evaluationData?.employeeName)}
+                              </span>
                               {isNew && (
                                 <Badge className="bg-yellow-100 text-yellow-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
                                   ⚡ NEW
@@ -765,6 +782,17 @@ function EvaluationRecordsTab({
   isActive?: boolean;
 }) {
   const [recordsSearchTerm, setRecordsSearchTerm] = useState('');
+  
+  // Helper to safely extract name from object or string (local to this component)
+  const getEmployeeNameForSearch = (employee: any): string => {
+    if (!employee) return '';
+    if (typeof employee === 'string') return employee;
+    if (employee.name) return employee.name;
+    if (employee.full_name) return employee.full_name;
+    if (employee.fname && employee.lname) return `${employee.fname} ${employee.lname}`;
+    if (employee.fname) return employee.fname;
+    return '';
+  };
   const [recordsApprovalFilter, setRecordsApprovalFilter] = useState('');
   const [recordsQuarterFilter, setRecordsQuarterFilter] = useState('');
   const [recordsYearFilter, setRecordsYearFilter] = useState<string>('all');
@@ -902,11 +930,15 @@ function EvaluationRecordsTab({
     const filtered = recentSubmissions.filter((sub) => {
       if (recordsSearchTerm) {
         const searchLower = recordsSearchTerm.toLowerCase();
+        const employeeName = getEmployeeNameForSearch(sub.employeeName || sub.employee || sub.evaluationData?.employeeName);
+        const evaluatorName = getEmployeeNameForSearch(
+          sub.evaluationData?.supervisor || sub.evaluator || sub.evaluationData?.evaluator
+        );
         const matches = 
-          sub.employeeName?.toLowerCase().includes(searchLower) ||
+          employeeName.toLowerCase().includes(searchLower) ||
           sub.evaluationData?.department?.toLowerCase().includes(searchLower) ||
           sub.evaluationData?.position?.toLowerCase().includes(searchLower) ||
-          (sub.evaluationData?.supervisor || sub.evaluator || '').toLowerCase().includes(searchLower);
+          evaluatorName.toLowerCase().includes(searchLower);
         if (!matches) return false;
       }
       if (recordsApprovalFilter) {
@@ -941,8 +973,8 @@ function EvaluationRecordsTab({
 
       switch (field) {
         case 'employeeName':
-          aVal = a.employeeName?.toLowerCase() || '';
-          bVal = b.employeeName?.toLowerCase() || '';
+          aVal = getEmployeeNameForSearch(a.employeeName || a.employee || a.evaluationData?.employeeName).toLowerCase();
+          bVal = getEmployeeNameForSearch(b.employeeName || b.employee || b.evaluationData?.employeeName).toLowerCase();
           break;
         case 'date':
           aVal = new Date(a.submittedAt).getTime();
@@ -1237,16 +1269,45 @@ function EvaluationRecordsTab({
                       const isHR = evaluatorAccount?.role === 'hr';
                       const hasSigned = submission.evaluatorSignature || submission.evaluationData?.evaluatorSignature;
                       
+                      // Helper to safely extract name from object or string
+                      const getEmployeeName = (employee: any): string => {
+                        if (!employee) return 'N/A';
+                        if (typeof employee === 'string') return employee;
+                        if (employee.name) return employee.name;
+                        if (employee.full_name) return employee.full_name;
+                        if (employee.fname && employee.lname) return `${employee.fname} ${employee.lname}`;
+                        if (employee.fname) return employee.fname;
+                        return 'N/A';
+                      };
+
+                      // Helper to safely extract evaluator name
+                      const getEvaluatorName = (evaluator: any): string => {
+                        if (!evaluator) return 'N/A';
+                        if (typeof evaluator === 'string') return evaluator;
+                        if (evaluator.name) return evaluator.name;
+                        if (evaluator.full_name) return evaluator.full_name;
+                        if (evaluator.fname && evaluator.lname) return `${evaluator.fname} ${evaluator.lname}`;
+                        if (evaluator.fname) return evaluator.fname;
+                        return 'N/A';
+                      };
+
+                      const employeeName = getEmployeeName(submission.employeeName || submission.employee || submission.evaluationData?.employeeName);
+                      const evaluatorName = getEvaluatorName(
+                        submission.evaluationData?.supervisor || 
+                        submission.evaluator || 
+                        submission.evaluationData?.evaluator
+                      );
+
                       return (
                         <TableRow key={submission.id} className={rowClassName}>
                           <TableCell className="px-3 py-2">
                             <div>
-                              <div className="font-medium text-gray-900 text-xs md:text-sm">{submission.employeeName}</div>
+                              <div className="font-medium text-gray-900 text-xs md:text-sm">{employeeName}</div>
                               <div className="text-xs text-gray-500">{submission.evaluationData?.position || 'N/A'}</div>
                             </div>
                           </TableCell>
                           <TableCell className="px-3 py-2 text-xs md:text-sm">
-                            {submission.evaluationData?.supervisor || submission.evaluator || 'N/A'}
+                            {evaluatorName}
                           </TableCell>
                           <TableCell className="px-3 py-2">
                             <Badge className={`${getQuarterColor(quarter)} text-xs md:text-sm`}>
