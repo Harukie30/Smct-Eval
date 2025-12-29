@@ -4,19 +4,45 @@ import DashboardShell, { SidebarItem } from "@/components/DashboardShell";
 import { withAuth } from "@/hoc";
 import { useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/contexts/UserContext";
 
 function EvaluatorLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { user } = useAuth();
 
-  const sidebarItems: SidebarItem[] = useMemo(
-    () => [
-      {
-        id: "overview",
-        label: "Overview",
-        icon: "📊",
-        path: "/evaluator",
-      },
+  const sidebarItems: SidebarItem[] = useMemo(() => {
+    if ([35, 36, 37, 38].includes(user?.position_id ?? 0)) {
+      return [
+        { id: "overview", label: "Overview", icon: "📊", path: "/evaluator" },
+        {
+          id: "employees",
+          label: "Employees",
+          icon: "👥",
+          path: "/evaluator/employees",
+        },
+        {
+          id: "feedback",
+          label: "Evaluation Records",
+          icon: "🗂️",
+          path: "/evaluator/evaluationRecords",
+        },
+        {
+          id: "reviews",
+          label: "Performance Reviews",
+          icon: "📝",
+          path: "/evaluator/performanceReviews",
+        },
+        {
+          id: "history",
+          label: "Evaluation History",
+          icon: "📈",
+          path: "/evaluator/evaluationHistory",
+        },
+      ];
+    }
+    return [
+      { id: "overview", label: "Overview", icon: "📊", path: "/evaluator" },
       {
         id: "employees",
         label: "Employees",
@@ -29,21 +55,8 @@ function EvaluatorLayout({ children }: { children: React.ReactNode }) {
         icon: "🗂️",
         path: "/evaluator/evaluationRecords",
       },
-      {
-        id: "reviews",
-        label: "Performance Reviews",
-        icon: "📝",
-        path: "/evaluator/performanceReviews",
-      },
-      {
-        id: "history",
-        label: "Evaluation History",
-        icon: "📈",
-        path: "/evaluator/evaluationHistory",
-      },
-    ],
-    []
-  );
+    ];
+  }, [user?.position_id]);
 
   // Determine active item based on current URL
   const active =

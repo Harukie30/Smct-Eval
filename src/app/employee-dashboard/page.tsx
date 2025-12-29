@@ -713,9 +713,9 @@ export default function OverviewTab() {
                                   )
                                 )}
                               >
-                                {review.reviewTypeRegular ||
-                                  (review.reviewTypeProbationary
-                                    ? "M" + review.reviewTypeProbationary
+                                {submission.reviewTypeRegular ||
+                                  (submission.reviewTypeProbationary
+                                    ? "M" + submission.reviewTypeProbationary
                                     : "") ||
                                   "Others"}
                               </Badge>
@@ -772,7 +772,6 @@ export default function OverviewTab() {
                 }}
                 submission={selectedSubmission}
                 showApprovalButton={true}
-                isEvaluatorView={false}
                 onApprove={(id) => handleApprove(id)}
               />
             </>

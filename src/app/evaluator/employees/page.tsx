@@ -101,7 +101,7 @@ export default function EmployeesTab() {
   }, []);
 
   useEffect(() => {
-    if (!isRefreshing) return;
+    if (!isRefreshing && !debouncedSearch) return;
     const fetchEmployees = async () => {
       try {
         const res = await apiService.getAllEmployeeByAuth(
