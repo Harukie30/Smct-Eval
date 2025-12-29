@@ -867,7 +867,6 @@ export default function OverviewTab() {
           }}
           submission={selectedSubmission}
           showApprovalButton={false}
-          isEvaluatorView={false}
         />
       </div>
     </div>

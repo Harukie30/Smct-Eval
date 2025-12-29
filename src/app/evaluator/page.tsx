@@ -280,7 +280,7 @@ export default function OverviewTab() {
           </CardTitle>
 
           <CardDescription>
-            Latest items awaiting evaluation ({data?.length} total)
+            Latest items awaiting evaluation ({totalEvaluations} total)
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -655,7 +655,6 @@ export default function OverviewTab() {
                 }}
                 submission={selectedSubmission}
                 showApprovalButton={false}
-                isEvaluatorView={false}
               />
             </>
           )}

@@ -43,6 +43,7 @@ import apiService from "@/lib/apiService";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewEmployeeModal from "@/components/ViewEmployeeModal";
+import { User } from "@/contexts/UserContext";
 
 interface Employee {
   id: number;
@@ -71,13 +72,9 @@ interface RoleType {
 }
 
 export default function UserManagementTab() {
-  const [pendingRegistrations, setPendingRegistrations] = useState<Employee[]>(
-    []
-  );
+  const [pendingRegistrations, setPendingRegistrations] = useState<User[]>([]);
 
-  const [activeRegistrations, setActiveRegistrations] = useState<Employee[]>(
-    []
-  );
+  const [activeRegistrations, setActiveRegistrations] = useState<User[]>([]);
   const [tab, setTab] = useState<"active" | "new">("active");
   const [roles, setRoles] = useState<RoleType[]>([]);
   const [activeTotalItems, setActiveTotalItems] = useState(0);
@@ -98,9 +95,7 @@ export default function UserManagementTab() {
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [userToEdit, setUserToEdit] = useState<any>(null);
-  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(
-    null
-  );
+  const [employeeToDelete, setEmployeeToDelete] = useState<User | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
 
   //filters for active users
@@ -125,7 +120,7 @@ export default function UserManagementTab() {
   const [totalPendingPages, setTotalPendingPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
 
-  const [employeeToView, setEmployeeToView] = useState<Employee | null>(null);
+  const [employeeToView, setEmployeeToView] = useState<User | null>(null);
   const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
 
   // Track when page change started for pending users
@@ -155,7 +150,7 @@ export default function UserManagementTab() {
         const elapsed = Date.now() - pendingPageChangeStartTimeRef.current;
         const minDisplayTime = 2000; // 2 seconds
         const remainingTime = Math.max(0, minDisplayTime - elapsed);
-        
+
         setTimeout(() => {
           setIsPageLoading(false);
           pendingPageChangeStartTimeRef.current = null;
@@ -167,10 +162,7 @@ export default function UserManagementTab() {
   // Track when page change started for active users
   const activePageChangeStartTimeRef = useRef<number | null>(null);
 
-  const loadActiveUsers = async (
-    searchValue: string,
-    roleFilter: string
-  ) => {
+  const loadActiveUsers = async (searchValue: string, roleFilter: string) => {
     try {
       const response = await apiService.getActiveRegistrations(
         searchValue,
@@ -191,7 +183,7 @@ export default function UserManagementTab() {
         const elapsed = Date.now() - activePageChangeStartTimeRef.current;
         const minDisplayTime = 2000; // 2 seconds
         const remainingTime = Math.max(0, minDisplayTime - elapsed);
-        
+
         setTimeout(() => {
           setIsPageLoading(false);
           activePageChangeStartTimeRef.current = null;
@@ -257,10 +249,7 @@ export default function UserManagementTab() {
   useEffect(() => {
     const fetchData = async () => {
       if (tab === "active") {
-        await loadActiveUsers(
-          debouncedActiveSearchTerm,
-          debouncedRoleFilter
-        );
+        await loadActiveUsers(debouncedActiveSearchTerm, debouncedRoleFilter);
       }
     };
 
@@ -331,7 +320,7 @@ export default function UserManagementTab() {
     }
   };
 
-  const openDeleteModal = (employee: Employee) => {
+  const openDeleteModal = (employee: User) => {
     setEmployeeToDelete(employee);
     setIsDeleteModalOpen(true);
   };
@@ -407,20 +396,20 @@ export default function UserManagementTab() {
     try {
       // Set deleting state to show skeleton animation
       setDeletingUserId(employee.id);
-      
+
       // Close modal immediately
       setIsDeleteModalOpen(false);
-      
+
       // Wait 2 seconds to show skeleton animation
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      
+
       // Actually delete the user
       await apiService.deleteUser(employee.id);
-      
+
       // Refresh data first, then reset deleting state after data loads
       await loadActiveUsers(activeSearchTerm, roleFilter);
       setDeletingUserId(null);
-      
+
       toastMessages.user.deleted(employee.fname);
     } catch (error) {
       console.error("Error deleting user:", error);
@@ -502,8 +491,9 @@ export default function UserManagementTab() {
 
   // Get role color based on role name
   const getRoleColor = (roleName: string | undefined): string => {
-    if (!roleName) return "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300";
-    
+    if (!roleName)
+      return "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300";
+
     const role = roleName.toLowerCase();
     if (role === "admin") {
       return "bg-red-100 text-red-800 hover:bg-red-200 border-red-300";
@@ -829,10 +819,10 @@ export default function UserManagementTab() {
                     ) : activeRegistrations &&
                       Array.isArray(activeRegistrations) &&
                       activeRegistrations.length > 0 ? (
-                      activeRegistrations.map((employee) => {
+                      activeRegistrations?.map((employee) => {
                         const isDeleting = deletingUserId === employee.id;
-                        const createdDate = employee.updated_at
-                          ? new Date(employee.updated_at)
+                        const createdDate = employee.created_at
+                          ? new Date(employee.created_at)
                           : null;
                         let isNew = false;
                         let isRecentlyAdded = false;
@@ -1115,15 +1105,26 @@ export default function UserManagementTab() {
 
                 {/* Status Color Indicator */}
                 <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
-                  <span className="text-sm font-medium text-gray-700">Status Indicators:</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Status Indicators:
+                  </span>
                   <div className="flex items-center gap-3 flex-wrap">
-                    <Badge variant="outline" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300">
+                    <Badge
+                      variant="outline"
+                      className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300"
+                    >
                       ⚡ New (≤24h)
                     </Badge>
-                    <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300">
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300"
+                    >
                       🕐 Recent (24-48h)
                     </Badge>
-                    <Badge variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 border-red-300">
+                    <Badge
+                      variant="outline"
+                      className="bg-red-100 text-red-800 hover:bg-red-200 border-red-300"
+                    >
                       ✗ Rejected
                     </Badge>
                   </div>
@@ -1218,9 +1219,12 @@ export default function UserManagementTab() {
                         pendingRegistrations.length > 0 ? (
                         pendingRegistrations.map((account) => {
                           // Check if registration is new (within 24 hours) or recent (24-48 hours)
+                          if (!account.created_at) return;
                           const registrationDate = new Date(account.created_at);
                           const now = new Date();
-                          const hoursDiff = (now.getTime() - registrationDate.getTime()) / (1000 * 60 * 60);
+                          const hoursDiff =
+                            (now.getTime() - registrationDate.getTime()) /
+                            (1000 * 60 * 60);
                           const isNew = hoursDiff <= 24;
                           const isRecent = hoursDiff > 24 && hoursDiff <= 48;
                           const isRejected = account.is_active === "declined";
@@ -1232,10 +1236,10 @@ export default function UserManagementTab() {
                                 isRejected
                                   ? "bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100"
                                   : isNew
-                                    ? "bg-yellow-50 border-l-4 border-l-yellow-500 hover:bg-yellow-100"
-                                    : isRecent
-                                      ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
-                                      : "hover:bg-gray-50"
+                                  ? "bg-yellow-50 border-l-4 border-l-yellow-500 hover:bg-yellow-100"
+                                  : isRecent
+                                  ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
+                                  : "hover:bg-gray-50"
                               }
                             >
                               <TableCell className="px-6 py-3 font-medium">
@@ -1289,7 +1293,7 @@ export default function UserManagementTab() {
                                         className="text-white bg-green-500 hover:text-white hover:bg-green-600"
                                         onClick={() =>
                                           handleApproveRegistration(
-                                            account.id,
+                                            Number(account.id),
                                             account.fname
                                           )
                                         }
@@ -1302,7 +1306,7 @@ export default function UserManagementTab() {
                                         className="text-white bg-red-500 hover:bg-red-600 hover:text-white"
                                         onClick={() =>
                                           handleRejectRegistration(
-                                            account.id,
+                                            Number(account.id),
                                             account.fname
                                           )
                                         }
@@ -1318,7 +1322,7 @@ export default function UserManagementTab() {
                                       className="text-green-600 hover:text-green-700"
                                       onClick={() =>
                                         handleApproveRegistration(
-                                          account.id,
+                                          Number(account.id),
                                           account.fname
                                         )
                                       }

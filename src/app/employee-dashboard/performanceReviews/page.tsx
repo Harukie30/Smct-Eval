@@ -802,8 +802,7 @@ export default function performanceReviews() {
                       setSelectedSubmission(null);
                     }}
                     submission={selectedSubmission}
-                    showApprovalButton={false}
-                    isEvaluatorView={false}
+                    showApprovalButton={true}
                   />
                 </>
               ) : (

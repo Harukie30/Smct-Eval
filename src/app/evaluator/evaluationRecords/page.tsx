@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { X, RefreshCw } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import clientDataService, { apiService } from "@/lib/apiService";
+import EvaluationsPagination from "@/components/paginationComponent";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -14,15 +16,21 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  TableCell,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import SearchableDropdown from "@/components/ui/searchable-dropdown";
 import {
   Select,
   SelectContent,
@@ -30,865 +38,524 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getQuarterFromEvaluationData } from "@/lib/quarterUtils";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 
-interface EvaluationRecordsTabProps {
-  recentSubmissions: any[];
-  seenSubmissions: Set<number>;
-  isFeedbackRefreshing: boolean;
-  onRefresh: () => void;
-  onViewEvaluation: (feedback: any) => void;
-  onPrintFeedback: (feedback: any) => void;
-  onDeleteClick: (feedback: any) => void;
-  onMarkAsSeen: (id: number) => void;
-  getSubmissionHighlight: (
-    submittedAt: string,
-    id: number,
-    approvalStatus?: string
-  ) => any;
-  isActive?: boolean;
+import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import { setQuarter } from "date-fns";
+import { useDialogAnimation } from "@/hooks/useDialogAnimation";
+import { toastMessages } from "@/lib/toastMessages";
+interface Review {
+  id: number;
+  employee: any;
+  evaluator: any;
+  reviewTypeProbationary: number | string;
+  reviewTypeRegular: number | string;
+  created_at: string;
+  rating: number;
+  status: string;
 }
 
-// Helper function to calculate score from array
-const calculateScore = (
-  scores: (string | number | null | undefined)[]
-): number => {
-  const validScores = scores
-    .filter((score) => score !== null && score !== undefined && score !== "")
-    .map((score) => (typeof score === "string" ? parseFloat(score) : score))
-    .filter((score) => !isNaN(score as number)) as number[];
+export default function OverviewTab() {
+  const [evaluations, setEvaluations] = useState<Review[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(false);
+  //filters
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [quarterFilter, setQuarterFilter] = useState("");
+  const [yearFilter, setYearFilter] = useState("");
+  //debounce filters
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+  const [debouncedStatusFilter, setDebouncedStatusFilter] =
+    useState(statusFilter);
+  const [debouncedQuarterFilter, setDebouncedQuarterFilter] =
+    useState(quarterFilter);
+  const [debouncedYearFilter, setDebouncedYearFilter] = useState(yearFilter);
 
-  if (validScores.length === 0) return 0;
-  return (
-    validScores.reduce((sum, score) => sum + score, 0) / validScores.length
-  );
-};
+  const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(4);
+  const [overviewTotal, setOverviewTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [perPage, setPerPage] = useState(0);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
+  const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
+  const [years, setYears] = useState<any[]>([]);
 
-// Helper function to get rating label
-const getRatingLabel = (score: number) => {
-  if (score >= 4.5) return "Outstanding";
-  if (score >= 4.0) return "Exceeds Expectations";
-  if (score >= 3.5) return "Meets Expectations";
-  if (score >= 2.5) return "Needs Improvement";
-  return "Unsatisfactory";
-};
+  const loadEvaluations = async (
+    searchValue: string,
+    status: string,
+    quarter: string,
+    year: string
+  ) => {
+    const response = await clientDataService.getEvalAuthEvaluator(
+      searchValue,
+      currentPage,
+      itemsPerPage,
+      status,
+      quarter,
+      year
+    );
+    setEvaluations(response.myEval_as_Evaluator.data);
+    setOverviewTotal(response.myEval_as_Evaluator.total);
+    setTotalPages(response.myEval_as_Evaluator.last_page);
+    setPerPage(response.myEval_as_Evaluator.per_page);
+  };
 
-// Helper function to get rating color
-const getRatingColor = (rating: number) => {
-  if (rating >= 4.5) return "text-green-600 bg-green-100";
-  if (rating >= 4.0) return "text-blue-600 bg-blue-100";
-  if (rating >= 3.5) return "text-yellow-600 bg-yellow-100";
-  return "text-red-600 bg-red-100";
-};
+  useEffect(() => {
+    const mount = async () => {
+      setRefreshing(true);
+      try {
+        const years = await apiService.getAllYears();
+        setYears(years);
+        await loadEvaluations(
+          searchTerm,
+          statusFilter,
+          quarterFilter,
+          yearFilter
+        );
+      } catch (error) {
+        console.log(error);
+        setRefreshing(false);
+      } finally {
+        setRefreshing(false);
+      }
+    };
+    mount();
+  }, []);
 
-// Helper function to merge employee approval data
-const mergeEmployeeApprovalData = (submissions: any[]) => {
-  return submissions.map((submission) => {
-    // Try to get employee approval data from localStorage
-    let employeeApprovalData = null;
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      searchTerm === "" ? currentPage : setCurrentPage(1);
+      setDebouncedSearchTerm(searchTerm);
+      setDebouncedStatusFilter(statusFilter);
+      setDebouncedQuarterFilter(quarterFilter);
+      setDebouncedYearFilter(yearFilter);
+    }, 500);
 
-    // Check if submission has employee email
-    if (submission.employeeEmail || submission.evaluationData?.employeeEmail) {
-      const email =
-        submission.employeeEmail || submission.evaluationData?.employeeEmail;
-      const approvalKey = `approvalData_${email}`;
-      const approvalData = JSON.parse(
-        localStorage.getItem(approvalKey) || "{}"
-      );
-      employeeApprovalData = approvalData[submission.id?.toString()] || null;
-    }
+    return () => clearTimeout(handler);
+  }, [searchTerm, statusFilter, quarterFilter, yearFilter]);
 
-    // If not found, try to find approval data by checking all localStorage keys
-    if (!employeeApprovalData) {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith("approvalData_")) {
-          const approvalData = JSON.parse(localStorage.getItem(key) || "{}");
-          const foundApproval = approvalData[submission.id?.toString()];
-          if (foundApproval) {
-            employeeApprovalData = foundApproval;
-            break;
-          }
+  // Track when page change started
+  const pageChangeStartTimeRef = useRef<number | null>(null);
+
+  // Fetch API whenever debounced search term changes
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        await loadEvaluations(
+          debouncedSearchTerm,
+          debouncedStatusFilter,
+          debouncedQuarterFilter,
+          debouncedYearFilter
+        );
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        // If this was a page change, ensure minimum display time (2 seconds)
+        if (pageChangeStartTimeRef.current !== null) {
+          const elapsed = Date.now() - pageChangeStartTimeRef.current;
+          const minDisplayTime = 2000; // 2 seconds
+          const remainingTime = Math.max(0, minDisplayTime - elapsed);
+
+          setTimeout(() => {
+            setIsPageLoading(false);
+            pageChangeStartTimeRef.current = null;
+          }, remainingTime);
         }
       }
-    }
-
-    // Merge approval data if found
-    if (employeeApprovalData) {
-      return {
-        ...submission,
-        employeeSignature: employeeApprovalData.employeeSignature,
-        employeeApprovedAt: employeeApprovalData.approvedAt,
-        employeeName:
-          employeeApprovalData.employeeName || submission.employeeName,
-        employeeEmail:
-          employeeApprovalData.employeeEmail ||
-          submission.employeeEmail ||
-          submission.evaluationData?.employeeEmail,
-      };
-    }
-
-    return submission;
-  });
-};
-
-// Helper function to get correct approval status
-const getCorrectApprovalStatus = (submission: any) => {
-  // Check if both parties have signed (handle empty strings too)
-  const hasEmployeeSignature = !!(
-    (submission.employeeSignature &&
-      submission.employeeSignature.trim() &&
-      submission.employeeSignature.startsWith("data:image")) ||
-    (submission.evaluationData?.employeeSignature &&
-      submission.evaluationData.employeeSignature.trim() &&
-      submission.evaluationData.employeeSignature.startsWith("data:image"))
-  );
-
-  // Evaluator signature - check for actual signature image, not just the name
-  const hasEvaluatorSignature = !!(
-    (submission.evaluatorSignatureImage &&
-      submission.evaluatorSignatureImage.trim() &&
-      submission.evaluatorSignatureImage.startsWith("data:image")) ||
-    (submission.evaluationData?.evaluatorSignatureImage &&
-      submission.evaluationData.evaluatorSignatureImage.trim() &&
-      submission.evaluationData.evaluatorSignatureImage.startsWith(
-        "data:image"
-      ))
-  );
-
-  // Determine approval status - SIGNATURES HAVE PRIORITY over stored status
-  if (hasEmployeeSignature && hasEvaluatorSignature) {
-    return "fully_approved";
-  } else if (hasEmployeeSignature) {
-    return "employee_approved";
-  } else if (
-    submission.approvalStatus &&
-    submission.approvalStatus !== "pending"
-  ) {
-    return submission.approvalStatus;
-  } else {
-    return "pending";
-  }
-};
-
-export function EvaluationRecordsTab({
-  recentSubmissions,
-  seenSubmissions,
-  isFeedbackRefreshing,
-  onRefresh,
-  onViewEvaluation,
-  onPrintFeedback,
-  onDeleteClick,
-  onMarkAsSeen,
-  getSubmissionHighlight,
-  isActive = false,
-}: EvaluationRecordsTabProps) {
-  const [feedbackSearch, setFeedbackSearch] = useState("");
-
-  // Ensure scrollbar is always visible
-  useEffect(() => {
-    const style = document.createElement("style");
-    style.textContent = `
-      .evaluation-records-table::-webkit-scrollbar {
-        width: 12px;
-        height: 12px;
-        -webkit-appearance: none;
-      }
-      .evaluation-records-table::-webkit-scrollbar-track {
-        background: #f1f5f9;
-        border-radius: 6px;
-      }
-      .evaluation-records-table::-webkit-scrollbar-thumb {
-        background: #94a3b8;
-        border-radius: 6px;
-        border: 2px solid #f1f5f9;
-      }
-      .evaluation-records-table::-webkit-scrollbar-thumb:hover {
-        background: #64748b;
-      }
-      /* Force scrollbar to always be visible */
-      .evaluation-records-table {
-        scrollbar-width: thin;
-        scrollbar-color: #94a3b8 #f1f5f9;
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      document.head.removeChild(style);
     };
-  }, []);
-  const [feedbackDateFilter, setFeedbackDateFilter] = useState("");
-  const [feedbackYearFilter, setFeedbackYearFilter] = useState<string>("all");
-  const [feedbackQuarterFilter, setFeedbackQuarterFilter] = useState("");
-  const [feedbackApprovalStatusFilter, setFeedbackApprovalStatusFilter] =
-    useState("");
-  const [feedbackSort, setFeedbackSort] = useState<{
-    key: string;
-    direction: "asc" | "desc";
-  }>({ key: "date", direction: "desc" });
-  const [feedbackPage, setFeedbackPage] = useState(1);
-  const [isPageLoading, setIsPageLoading] = useState(false);
-  const itemsPerPage = 10;
 
-  // Get available years from submissions
-  const availableYears = useMemo(() => {
-    const years = new Set<number>();
-    recentSubmissions.forEach((submission) => {
-      if (submission.submittedAt) {
-        const year = new Date(submission.submittedAt).getFullYear();
-        years.add(year);
-      }
-    });
-    return Array.from(years).sort((a, b) => b - a); // Sort descending (newest first)
-  }, [recentSubmissions]);
-
-  // Computed feedback data
-  const filteredFeedbackData = useMemo(() => {
-    // Filter out any submissions with invalid data
-    const validSubmissions = recentSubmissions.filter(
-      (submission) =>
-        submission &&
-        typeof submission === "object" &&
-        submission.id !== undefined &&
-        submission.employeeName
-    );
-
-    // Merge employee approval data from localStorage
-    const submissionsWithApprovalData =
-      mergeEmployeeApprovalData(validSubmissions);
-
-    let data = submissionsWithApprovalData.map((submission, index) => {
-      // Calculate rating from evaluation data if available
-      let calculatedRating = submission.rating || 0;
-
-      if (submission.evaluationData) {
-        const evalData = submission.evaluationData;
-
-        // Calculate weighted average from all scores
-        const jobKnowledgeScore = calculateScore([
-          evalData.jobKnowledgeScore1,
-          evalData.jobKnowledgeScore2,
-          evalData.jobKnowledgeScore3,
-        ]);
-        const qualityOfWorkScore = calculateScore([
-          evalData.qualityOfWorkScore1,
-          evalData.qualityOfWorkScore2,
-          evalData.qualityOfWorkScore3,
-          evalData.qualityOfWorkScore4,
-          evalData.qualityOfWorkScore5,
-        ]);
-        const adaptabilityScore = calculateScore([
-          evalData.adaptabilityScore1,
-          evalData.adaptabilityScore2,
-          evalData.adaptabilityScore3,
-        ]);
-        const teamworkScore = calculateScore([
-          evalData.teamworkScore1,
-          evalData.teamworkScore2,
-          evalData.teamworkScore3,
-        ]);
-        const reliabilityScore = calculateScore([
-          evalData.reliabilityScore1,
-          evalData.reliabilityScore2,
-          evalData.reliabilityScore3,
-          evalData.reliabilityScore4,
-        ]);
-        const ethicalScore = calculateScore([
-          evalData.ethicalScore1,
-          evalData.ethicalScore2,
-          evalData.ethicalScore3,
-          evalData.ethicalScore4,
-        ]);
-        const customerServiceScore = calculateScore([
-          evalData.customerServiceScore1,
-          evalData.customerServiceScore2,
-          evalData.customerServiceScore3,
-          evalData.customerServiceScore4,
-          evalData.customerServiceScore5,
-        ]);
-
-        // Calculate weighted overall score
-        calculatedRating =
-          Math.round(
-            (jobKnowledgeScore * 0.2 +
-              qualityOfWorkScore * 0.2 +
-              adaptabilityScore * 0.1 +
-              teamworkScore * 0.1 +
-              reliabilityScore * 0.05 +
-              ethicalScore * 0.05 +
-              customerServiceScore * 0.3) *
-              10
-          ) / 10; // Round to 1 decimal place
-      }
-
-      return {
-        id: submission.id || `submission-${index}`,
-        uniqueKey: `${submission.id || "submission"}-${index}-${
-          submission.submittedAt || Date.now()
-        }`,
-        employeeName: submission.employeeName || "Unknown Employee",
-        employeeEmail: submission.evaluationData?.employeeEmail || "",
-        department: submission.evaluationData?.department || "",
-        position: submission.evaluationData?.position || "",
-        reviewer: submission.evaluator || "Unknown",
-        reviewerRole: "Evaluator",
-        supervisor: submission.evaluationData?.supervisor || "Not specified",
-        category: submission.category || "Performance Review",
-        rating: calculatedRating,
-        date: submission.submittedAt || new Date().toISOString(),
-        submittedAt: submission.submittedAt,
-        comment:
-          submission.evaluationData?.overallComments ||
-          "Performance evaluation completed",
-        approvalStatus: getCorrectApprovalStatus(submission),
-        employeeSignature:
-          submission.employeeSignature ||
-          submission.evaluationData?.employeeSignature ||
-          null,
-        employeeApprovedAt:
-          submission.employeeApprovedAt ||
-          submission.evaluationData?.employeeApprovedAt ||
-          null,
-        evaluatorSignature:
-          submission.evaluatorSignature ||
-          submission.evaluationData?.evaluatorSignature ||
-          null,
-        evaluatorApprovedAt:
-          submission.evaluatorApprovedAt ||
-          submission.evaluationData?.evaluatorApprovedAt ||
-          null,
-      };
-    });
-
-    // Apply search filter
-    if (feedbackSearch) {
-      data = data.filter(
-        (item) =>
-          item.employeeName
-            .toLowerCase()
-            .includes(feedbackSearch.toLowerCase()) ||
-          item.reviewer.toLowerCase().includes(feedbackSearch.toLowerCase()) ||
-          item.comment.toLowerCase().includes(feedbackSearch.toLowerCase())
-      );
-    }
-
-    // Apply date filter (preset ranges)
-    if (feedbackDateFilter) {
-      const daysAgo = parseInt(feedbackDateFilter);
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
-      data = data.filter((item) => new Date(item.date) >= cutoffDate);
-    }
-
-    // Apply year filter
-    if (feedbackYearFilter && feedbackYearFilter !== "all") {
-      const year = parseInt(feedbackYearFilter);
-      data = data.filter((item) => {
-        const itemYear = new Date(item.date).getFullYear();
-        return itemYear === year;
-      });
-    }
-
-    // Apply quarter filter
-    if (feedbackQuarterFilter) {
-      data = data.filter((item) => {
-        const itemQuarter = getQuarterFromEvaluationData(item);
-        // Match quarter regardless of year (e.g., "Q1" matches "Q1 2024", "Q1 2025", etc.)
-        return itemQuarter.startsWith(feedbackQuarterFilter);
-      });
-    }
-
-    if (feedbackApprovalStatusFilter) {
-      data = data.filter((item) => {
-        const approvalStatus = item.approvalStatus || "pending";
-        return approvalStatus === feedbackApprovalStatusFilter;
-      });
-    }
-
-    // Apply sorting
-    data.sort((a, b) => {
-      const aValue = a[feedbackSort.key as keyof typeof a];
-      const bValue = b[feedbackSort.key as keyof typeof b];
-
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        return feedbackSort.direction === "asc"
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
-
-      if (typeof aValue === "number" && typeof bValue === "number") {
-        return feedbackSort.direction === "asc"
-          ? aValue - bValue
-          : bValue - aValue;
-      }
-
-      return 0;
-    });
-
-    // Ensure unique keys by filtering out duplicates
-    const uniqueData = data.filter(
-      (item, index, self) =>
-        index === self.findIndex((t) => t.uniqueKey === item.uniqueKey)
-    );
-
-    // Final validation - ensure all items have unique keys
-    const finalData = uniqueData.map((item, index) => ({
-      ...item,
-      uniqueKey: item.uniqueKey || `fallback-${index}-${Date.now()}`,
-    }));
-
-    return finalData;
+    fetchData();
   }, [
-    recentSubmissions,
-    feedbackSearch,
-    feedbackDateFilter,
-    feedbackYearFilter,
-    feedbackQuarterFilter,
-    feedbackApprovalStatusFilter,
-    feedbackSort,
+    debouncedSearchTerm,
+    currentPage,
+    debouncedStatusFilter,
+    debouncedQuarterFilter,
+    debouncedYearFilter,
   ]);
 
-  const sortFeedback = (key: string) => {
-    setFeedbackSort((prev) => ({
-      key,
-      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
-    }));
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await loadEvaluations(
+        debouncedSearchTerm,
+        debouncedStatusFilter,
+        debouncedQuarterFilter,
+        debouncedYearFilter
+      );
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
-  const getSortIcon = (key: string) => {
-    if (feedbackSort.key !== key) return "↕️";
-    return feedbackSort.direction === "asc" ? "↑" : "↓";
+  const getQuarterColor = (quarter: string): string => {
+    if (quarter.includes("Q1")) return "bg-blue-100 text-blue-800";
+    if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
+    if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
+    return "bg-purple-100 text-purple-800";
   };
 
-  // Pagination calculations
-  const feedbackTotal = filteredFeedbackData.length;
-  const feedbackTotalPages = Math.ceil(feedbackTotal / itemsPerPage);
-  const feedbackStartIndex = (feedbackPage - 1) * itemsPerPage;
-  const feedbackEndIndex = feedbackStartIndex + itemsPerPage;
-  const feedbackPaginated = filteredFeedbackData.slice(feedbackStartIndex, feedbackEndIndex);
+  const handleViewEvaluation = async (review: Review) => {
+    try {
+      const submission = await clientDataService.getSubmissionById(review.id);
 
-  // Reset to page 1 when filters/search change
-  useEffect(() => {
-    setFeedbackPage(1);
-  }, [feedbackSearch, feedbackDateFilter, feedbackYearFilter, feedbackQuarterFilter, feedbackApprovalStatusFilter]);
-
-  // Handle page change with loading state
-  const handlePageChange = (newPage: number) => {
-    setIsPageLoading(true);
-    setFeedbackPage(newPage);
-    // Ensure skeleton shows for 2 seconds for smooth UX
-    setTimeout(() => {
-      setIsPageLoading(false);
-    }, 2000); // 2 seconds
+      if (submission) {
+        setSelectedSubmission(submission);
+        setIsViewResultsModalOpen(true);
+      } else {
+        console.error("Submission not found for review ID:", review.id);
+      }
+    } catch (error) {
+      console.error("Error fetching submission details:", error);
+    }
   };
+
+  const handleDeleteClick = async (submission: any) => {
+    try {
+      await clientDataService.deleteSubmission(submission.id);
+      await handleRefresh();
+      toastMessages.evaluation.deleted(
+        submission.employee?.fname + " " + submission.employee?.lname
+      );
+    } catch (error) {
+      console.error("Error deleting submission:", error);
+    } finally {
+      setReviewToDelete(null);
+      setIsDeleteModalOpen(false);
+    }
+  };
+
+  const openDeleteModal = (review: Review) => {
+    setReviewToDelete(review);
+    setIsDeleteModalOpen(true);
+  };
+  // const groupedByYear = evaluations.reduce((acc: any, item) => {
+  //   const year = new Date(item.created_at).getFullYear();
+  //   acc[year] = acc[year] || [];
+  //   acc[year].push(item);
+  //   return acc;
+  // }, {});
 
   return (
-    <div className="space-y-6">
-      {/* Search and Filter Controls */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            All Feedback/Evaluation Records
-            {(() => {
-              const newCount = filteredFeedbackData.filter((feedback) => {
-                if (!feedback.submittedAt) return false;
-                const hoursDiff =
-                  (new Date().getTime() -
-                    new Date(feedback.submittedAt).getTime()) /
-                  (1000 * 60 * 60);
-                return hoursDiff <= 24 && !seenSubmissions.has(feedback.id);
-              }).length;
-              return newCount > 0 ? (
-                <Badge className="bg-yellow-500 text-white animate-pulse">
-                  {newCount} NEW
-                </Badge>
-              ) : null;
-            })()}
-          </CardTitle>
-          <CardDescription>
-            Complete feedback history and evaluation records
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            {/* Search */}
-            <div className="flex-1">
-              <Label htmlFor="feedback-search" className="text-sm font-medium">
-                Search
-              </Label>
-              <div className="mt-1 relative">
-                <div className="relative w-full">
-                  <Input
-                    id="feedback-search"
-                    placeholder="Search by employee name, reviewer, or comments..."
-                    className="pr-10"
-                    value={feedbackSearch}
-                    onChange={(e) => setFeedbackSearch(e.target.value)}
-                  />
-
-                  {(feedbackSearch ||
-                    feedbackDateFilter ||
-                    feedbackYearFilter !== "all" ||
-                    feedbackQuarterFilter ||
-                    feedbackApprovalStatusFilter) && (
-                    <button
-                      onClick={() => {
-                        setFeedbackSearch("");
-                        setFeedbackDateFilter("");
-                        setFeedbackYearFilter("all");
-                        setFeedbackQuarterFilter("");
-                        setFeedbackApprovalStatusFilter("");
-                      }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-red-600 hover:text-red-700"
-                      title="Clear all filters"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Approval Status Filter */}
-            <div className="w-full md:w-48">
-              <Label
-                htmlFor="feedback-approval-status"
-                className="text-sm font-medium"
-              >
-                Approval Status
-              </Label>
-              <SearchableDropdown
-                options={["All Statuses", "⏳ Pending", "✓ Fully Approved"]}
-                value={
-                  feedbackApprovalStatusFilter === "pending"
-                    ? "⏳ Pending"
-                    : feedbackApprovalStatusFilter === "fully_approved"
-                    ? "✓ Fully Approved"
-                    : "All Statuses"
-                }
-                onValueChangeAction={(value) => {
-                  const statusMap: Record<string, string> = {
-                    "⏳ Pending": "pending",
-                    "✓ Fully Approved": "fully_approved",
-                  };
-                  setFeedbackApprovalStatusFilter(
-                    value === "All Statuses" ? "" : statusMap[value] || ""
-                  );
-                }}
-                placeholder="All Statuses"
-                className="mt-1"
-              />
-            </div>
-
-            {/* Quarter Filter */}
-            <div className="w-full md:w-48">
-              <Label htmlFor="feedback-quarter" className="text-sm font-medium">
-                Quarter
-              </Label>
-              <SearchableDropdown
-                options={["All Quarters", "Q1", "Q2", "Q3", "Q4"]}
-                value={feedbackQuarterFilter || "All Quarters"}
-                onValueChangeAction={(value) => {
-                  setFeedbackQuarterFilter(
-                    value === "All Quarters" ? "" : value
-                  );
-                  if (value !== "All Quarters") {
-                    setFeedbackDateFilter("");
-                    setFeedbackYearFilter("all");
-                  }
-                }}
-                placeholder="All Quarters"
-                className="mt-1"
-              />
-            </div>
-
-            {/* Year Filter */}
-            <div className="w-full md:w-48">
-              <Label htmlFor="feedback-year" className="text-sm font-medium">
-                Year
-              </Label>
-              <Select
-                value={feedbackYearFilter}
-                onValueChange={setFeedbackYearFilter}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select a year" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
-                  {availableYears.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Refresh Button */}
-            <div className="w-full md:w-auto flex gap-2">
-              <div className="w-full md:w-32">
-                <Label className="text-sm font-medium opacity-0">Refresh</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onRefresh}
-                  disabled={isFeedbackRefreshing}
-                  className="mt-1 w-full text-xs bg-blue-500 hover:bg-green-600 text-center text-white hover:text-white disabled:cursor-not-allowed"
-                  title="Refresh evaluation records data"
-                >
-                  {isFeedbackRefreshing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
-                      Refreshing...
-                    </>
-                  ) : (
-                    <>
-                      Refresh{" "}
-                      <span>
-                        <RefreshCw className="h-3 w-3" />
-                      </span>
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Feedback Table */}
-      <Card>
-        <CardContent className="p-0">
-          {/* Color Legend */}
-          <div className="m-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex flex-wrap gap-4 text-xs">
-              <span className="font-medium text-gray-700">
-                Status Indicators:
-              </span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
-                <span className="text-gray-600 bg-yellow-500 text-white rounded-full px-2 py-1">
-                  NEW{" "}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
-                <span className="text-gray-600 bg-blue-500 text-white rounded-full px-2 py-1">
-                  Recent{" "}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
-                <span className="text-gray-600 bg-green-500 text-white rounded-full px-2 py-1">
-                  Fully Approved
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {isFeedbackRefreshing ? (
-            <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto scrollable-table evaluation-records-table">
-              {/* Centered Loading Spinner with Logo */}
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    {/* Spinning ring */}
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    {/* Logo in center */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img
-                        src="/smct.png"
-                        alt="SMCT Logo"
-                        className="h-10 w-10 object-contain"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 font-medium">
-                    Loading evaluation records...
-                  </p>
-                </div>
-              </div>
-
-              {/* Table structure visible in background */}
-              <Table className="min-w-full">
-                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
-                  <TableRow key="feedback-header">
-                    <TableHead className="px-6 py-3">Employee Name</TableHead>
-                    <TableHead className="px-6 py-3">Position</TableHead>
-                    <TableHead className="px-6 py-3">Reviewer</TableHead>
-                    <TableHead className="px-6 py-3">Rating</TableHead>
-                    <TableHead className="px-6 py-3">Date</TableHead>
-                    <TableHead className="px-6 py-3">Approval Status</TableHead>
-                    <TableHead className="px-6 py-3">
-                      Employee Signature
-                    </TableHead>
-                    <TableHead className="px-6 py-3">
-                      Evaluator Signature
-                    </TableHead>
-                    <TableHead className="px-6 py-3">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="divide-y divide-gray-200">
-                  {Array.from({ length: 10 }).map((_, index) => (
-                    <TableRow key={`skeleton-feedback-${index}`}>
-                      <TableCell className="px-6 py-3">
-                        <div className="space-y-1">
-                          <Skeleton className="h-3 w-20" />
-                          <Skeleton className="h-2.5 w-24" />
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-3 w-16" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="space-y-1">
-                          <Skeleton className="h-3 w-16" />
-                          <Skeleton className="h-2.5 w-12" />
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-5 w-18 rounded-full" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-3 w-8" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-3 w-16" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-5 w-12 rounded-full" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-3 w-12" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-3 w-12" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-6 w-12" />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : isPageLoading ? (
-            <div className="max-h-[500px] overflow-y-auto overflow-x-auto scrollable-table evaluation-records-table">
-              <Table className="min-w-full">
-                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
-                  <TableRow key="feedback-header">
-                    <TableHead className="px-6 py-3">Employee Name</TableHead>
-                    <TableHead className="px-6 py-3">Position</TableHead>
-                    <TableHead className="px-6 py-3">Reviewer</TableHead>
-                    <TableHead className="px-6 py-3">Rating</TableHead>
-                    <TableHead className="px-6 py-3">Date</TableHead>
-                    <TableHead className="px-6 py-3">Approval Status</TableHead>
-                    <TableHead className="px-6 py-3">
-                      Employee Signature
-                    </TableHead>
-                    <TableHead className="px-6 py-3">
-                      Evaluator Signature
-                    </TableHead>
-                    <TableHead className="px-6 py-3">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="divide-y divide-gray-200">
-                  {/* Skeleton loading rows - no spinner for page changes */}
-                  {Array.from({ length: 10 }).map((_, index) => (
-                    <TableRow key={`skeleton-feedback-page-${index}`}>
-                      <TableCell className="px-6 py-3">
-                        <div className="space-y-1">
-                          <Skeleton className="h-3 w-20" />
-                          <Skeleton className="h-2.5 w-24" />
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-3 w-16" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="space-y-1">
-                          <Skeleton className="h-3 w-16" />
-                          <Skeleton className="h-2.5 w-12" />
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-5 w-18 rounded-full" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-3 w-8" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-3 w-16" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-5 w-12 rounded-full" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-3 w-12" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-3 w-12" />
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <Skeleton className="h-6 w-12" />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="max-h-[500px] overflow-y-auto overflow-x-auto scrollable-table evaluation-records-table">
-              <Table className="min-w-full">
-                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
-                  <TableRow key="feedback-header">
-                    <TableHead
-                      className="px-6 py-3 cursor-pointer hover:bg-gray-50"
-                      onClick={() => sortFeedback("employeeName")}
-                    >
-                      Employee Name {getSortIcon("employeeName")}
-                    </TableHead>
-                    <TableHead className="px-6 py-3">Position</TableHead>
-                    <TableHead className="px-6 py-3">Reviewer</TableHead>
-                    <TableHead
-                      className="px-6 py-3 cursor-pointer hover:bg-gray-50"
-                      onClick={() => sortFeedback("rating")}
-                    >
-                      Rating {getSortIcon("rating")}
-                    </TableHead>
-                    <TableHead
-                      className="px-6 py-3 cursor-pointer hover:bg-gray-50"
-                      onClick={() => sortFeedback("date")}
-                    >
-                      Date {getSortIcon("date")}
-                    </TableHead>
-                    <TableHead className="px-6 py-3">Approval Status</TableHead>
-                    <TableHead className="px-6 py-3">
-                      Employee Signature
-                    </TableHead>
-                    <TableHead className="px-6 py-3">
-                      Evaluator Signature
-                    </TableHead>
-                    <TableHead className="px-6 py-3">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="divide-y divide-gray-200">
-                  {feedbackPaginated.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={10}
-                        className="text-center py-8 text-gray-500"
+    <div className="relative ">
+      <div className="relative  overflow-y-auto">
+        <Card className="">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 w-100">
+              All Evaluation Records
+              <Badge variant="outline" className="text-xs font-normal">
+                {overviewTotal} Total Records
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              Complete evaluation history with advanced filtering
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              {/* Search */}
+              <div className="flex-1">
+                <Label htmlFor="records-search" className="text-sm font-medium">
+                  Search
+                </Label>
+                <div className=" relative ">
+                  <div className="relative ">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <svg
+                        className="h-5 w-5 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
                       >
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                      </svg>
+                    </span>
+                    <Input
+                      placeholder="Search by employee, evaluator"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pr-10 pl-10"
+                    />
+                    {searchTerm && (
+                      <button
+                        onClick={() => setSearchTerm("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
+                        aria-label="Clear search"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Approval Status Filter */}
+              <div className="w-full md:w-48">
+                <Label
+                  htmlFor="records-approval-status"
+                  className="text-sm font-medium"
+                >
+                  Approval Status
+                </Label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => setStatusFilter(value)}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">All Status</SelectItem>
+                    <SelectItem value="pending">
+                      Pending Verification
+                    </SelectItem>
+                    <SelectItem value="completed">
+                      All parties approved
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Quarter Filter */}
+              <div className="w-full md:w-48">
+                <Label
+                  htmlFor="records-quarter"
+                  className="text-sm font-medium"
+                >
+                  Quarter
+                </Label>
+                <Select
+                  value={quarterFilter}
+                  onValueChange={(value) => setQuarterFilter(value)}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by quarter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">All Quarter</SelectItem>
+                    <SelectItem value="Q1">Q1</SelectItem>
+                    <SelectItem value="Q2">Q2</SelectItem>
+                    <SelectItem value="Q3">Q3</SelectItem>
+                    <SelectItem value="Q4">Q4</SelectItem>
+                    <SelectItem value="3">M3</SelectItem>
+                    <SelectItem value="5">M5</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Year Filter */}
+              <div className="w-full md:w-48">
+                <Label htmlFor="records-year" className="text-sm font-medium">
+                  Year
+                </Label>
+                <Select
+                  value={yearFilter}
+                  onValueChange={(value) => setYearFilter(value)}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select a year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">All Years</SelectItem>
+                    {years.map((year: any) => (
+                      <SelectItem key={year.year} value={year.year}>
+                        {year.year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Refresh Button */}
+              <div className="w-full md:w-auto flex gap-2">
+                <div className="w-full md:w-32">
+                  <Label className="text-sm font-medium opacity-0">
+                    Refresh
+                  </Label>
+                  {/* Refresh Button */}
+                  <Button
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className="mt-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    title="Refresh evaluation records"
+                  >
+                    {refreshing ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Refreshing...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <span>🔄</span>
+                        <span>Refresh</span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      <div className="space-y-6 mt-2">
+        {/* Main Container Div (replacing Card) */}
+        <div className="bg-white border rounded-lg p-6">
+          {/* Table Header Section */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              {(() => {
+                const now = new Date();
+                const newCount = evaluations?.filter((review) => {
+                  const hoursDiff =
+                    (now.getTime() - new Date(review.created_at).getTime()) /
+                    (1000 * 60 * 60);
+                  return hoursDiff <= 24;
+                }).length;
+                return newCount > 0 ? (
+                  <Badge className="bg-yellow-500 text-white animate-pulse">
+                    {newCount} NEW
+                  </Badge>
+                ) : null;
+              })()}
+            </div>
+            {/* Search Bar and Refresh Button */}
+          </div>
+
+          {/* Indicator Legend */}
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+            <div className="flex flex-wrap gap-4 text-xs">
+              <span className="text-sm font-medium text-gray-700 mr-2">
+                Indicators:
+              </span>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
+                <Badge className="bg-yellow-200 text-yellow-800 text-xs">
+                  New
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+                <Badge className="bg-blue-300 text-blue-800 text-xs">
+                  Recent
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-red-50 border-l-2 border-l-red-500 rounded"></div>
+                <Badge className="bg-orange-300 text-orange-800 text-xs">
+                  Pending
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+                <Badge className="bg-green-500 text-white text-xs">
+                  Completed
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Section */}
+          <div className="border rounded-lg overflow-hidden">
+            <div
+              className="relative max-h-[600px] overflow-y-auto overflow-x-auto"
+              style={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "#cbd5e1 #f1f5f9",
+              }}
+            >
+              {refreshing && ( // Only show spinner for initial refresh
+                <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
+                  <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
+                    <div className="relative">
+                      {/* Spinning ring */}
+                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                      {/* Logo in center */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <img
+                          src="/smct.png"
+                          alt="SMCT Logo"
+                          className="h-10 w-10 object-contain"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 font-medium">
+                      Refreshing...
+                    </p>
+                  </div>
+                </div>
+              )}
+              <Table className="min-w-full">
+                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                  <TableRow>
+                    <TableHead className="px-6 py-3">Employee</TableHead>
+                    <TableHead className="px-6 py-3">Evaluator</TableHead>
+                    <TableHead className="px-6 py-3">Branch</TableHead>
+                    <TableHead className="px-6 py-3">Quarter</TableHead>
+                    <TableHead className="px-6 py-3">Date</TableHead>
+                    <TableHead className="px-6 py-3">Rating</TableHead>
+                    <TableHead className="px-6 py-3">Status</TableHead>
+                    <TableHead className="px-6 py-3">Employee Sign</TableHead>
+                    <TableHead className="px-6 py-3">Evaluator Sign</TableHead>
+                    <TableHead className="px-6 py-3">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y divide-gray-200">
+                  {refreshing || isPageLoading ? (
+                    Array.from({ length: itemsPerPage }).map((_, index) => (
+                      <TableRow key={`skeleton-${index}`}>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-6 w-24" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-6 w-24" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-6 w-24" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-6 w-24" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-6 w-24" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-6 w-24" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-6 w-24" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-6 w-24" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-6 w-24" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Skeleton className="h-6 w-24" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : !evaluations || evaluations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-12">
                         <div className="flex flex-col items-center justify-center gap-4">
                           <img
                             src="/not-found.gif"
@@ -903,368 +570,306 @@ export function EvaluationRecordsTab({
                             }}
                           />
                           <div className="text-gray-500">
-                            <p className="text-base font-medium mb-1">
-                              No evaluation records found
-                            </p>
-                            <p className="text-sm text-gray-400">
-                              Try adjusting your search or filter criteria
-                            </p>
+                            {searchTerm ? (
+                              <>
+                                <p className="text-base font-medium mb-1">
+                                  No results found
+                                </p>
+                                <p className="text-sm text-gray-400">
+                                  Try adjusting your search or filters
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-base font-medium mb-1">
+                                  No evaluation records to display
+                                </p>
+                                <p className="text-sm text-gray-400">
+                                  Records will appear here when evaluations are
+                                  submitted
+                                </p>
+                              </>
+                            )}
                           </div>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    feedbackPaginated.map((feedback: any) => {
-                    // Find the original submission to check evaluationData if needed
-                    const originalSubmission = recentSubmissions.find(
-                      (s) => s.id === feedback.id
-                    );
+                    evaluations.map((review) => {
+                      const submittedDate = new Date(review.created_at);
+                      const now = new Date();
+                      const hoursDiff =
+                        (now.getTime() - submittedDate.getTime()) /
+                        (1000 * 60 * 60);
+                      const isNew = hoursDiff <= 24;
+                      const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
+                      const isCompleted = review.status === "completed";
+                      const isPending = review.status === "pending";
 
-                    // Check if both parties have signed - must be actual signature images (base64 data URLs)
-                    const hasEmployeeSignature = !!(
-                      (feedback.employeeSignature &&
-                        feedback.employeeSignature.trim() &&
-                        feedback.employeeSignature.startsWith("data:image")) ||
-                      (originalSubmission?.employeeSignature &&
-                        originalSubmission.employeeSignature.trim() &&
-                        originalSubmission.employeeSignature.startsWith(
-                          "data:image"
-                        )) ||
-                      (originalSubmission?.evaluationData?.employeeSignature &&
-                        originalSubmission.evaluationData.employeeSignature.trim() &&
-                        originalSubmission.evaluationData.employeeSignature.startsWith(
-                          "data:image"
-                        ))
-                    );
+                      // Determine row background color
+                      let rowClassName = "hover:bg-gray-100 transition-colors";
+                      if (isCompleted) {
+                        rowClassName =
+                          "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
+                      } else if (isNew) {
+                        rowClassName =
+                          "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
+                      } else if (isRecent) {
+                        rowClassName =
+                          "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
+                      } else if (isPending) {
+                        rowClassName =
+                          "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
+                      }
 
-                    // Evaluator signature - check for actual signature image, not just the name
-                    const hasEvaluatorSignature = !!(
-                      (originalSubmission?.evaluationData
-                        ?.evaluatorSignatureImage &&
-                        originalSubmission.evaluationData.evaluatorSignatureImage.trim() &&
-                        originalSubmission.evaluationData.evaluatorSignatureImage.startsWith(
-                          "data:image"
-                        )) ||
-                      ((originalSubmission as any)?.evaluatorSignatureImage &&
-                        (
-                          originalSubmission as any
-                        ).evaluatorSignatureImage.trim() &&
-                        (
-                          originalSubmission as any
-                        ).evaluatorSignatureImage.startsWith("data:image"))
-                    );
-
-                    // Determine approval status - SIGNATURES HAVE PRIORITY over stored status
-                    let actualApprovalStatus = "pending";
-                    if (hasEmployeeSignature && hasEvaluatorSignature) {
-                      actualApprovalStatus = "fully_approved";
-                    } else if (hasEmployeeSignature) {
-                      actualApprovalStatus = "employee_approved";
-                    } else if (
-                      feedback.approvalStatus &&
-                      feedback.approvalStatus !== "pending"
-                    ) {
-                      actualApprovalStatus = feedback.approvalStatus;
-                    } else {
-                      actualApprovalStatus = "pending";
-                    }
-
-                    const highlight = getSubmissionHighlight(
-                      feedback.submittedAt ||
-                        feedback.date ||
-                        new Date().toISOString(),
-                      feedback.id,
-                      actualApprovalStatus
-                    );
-                    return (
-                      <TableRow
-                        key={feedback.uniqueKey}
-                        className={highlight.className}
-                        onClick={() => {
-                          onMarkAsSeen(feedback.id);
-                          onViewEvaluation(feedback);
-                        }}
-                      >
-                        <TableCell className="px-6 py-3">
-                          <div className="flex items-center gap-2">
+                      return (
+                        <TableRow key={review.id} className={rowClassName}>
+                          <TableCell className="px-6 py-3">
                             <div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 mb-1">
                                 <span className="font-medium text-gray-900">
-                                  {feedback.employeeName}
+                                  {review.employee?.fname +
+                                    " " +
+                                    review.employee?.lname}
                                 </span>
-                                {highlight.badge && (
-                                  <Badge
-                                    className={`${highlight.badge.className} text-xs px-1.5 py-0`}
-                                  >
-                                    {highlight.badge.text}
-                                  </Badge>
-                                )}
-                                {highlight.secondaryBadge && (
-                                  <Badge
-                                    className={`${highlight.secondaryBadge.className} text-xs px-1.5 py-0`}
-                                  >
-                                    {highlight.secondaryBadge.text}
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {feedback.employeeEmail}
                               </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-3 text-sm text-gray-600">
-                          {feedback.position}
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <div>
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
                             <div className="font-medium text-gray-900">
-                              {feedback.supervisor &&
-                              feedback.supervisor !== "Not specified"
-                                ? feedback.supervisor
-                                : feedback.reviewer}
+                              {review.evaluator?.fname +
+                                " " +
+                                review.evaluator?.lname}
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <div className="flex items-center gap-2">
+                          </TableCell>
+                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                            {review.employee?.branches[0]?.branch_name}
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
                             <Badge
-                              className={`text-xs ${getRatingColor(
-                                feedback.rating
-                              )}`}
+                              className={getQuarterColor(
+                                String(
+                                  review.reviewTypeRegular ||
+                                    review.reviewTypeProbationary
+                                )
+                              )}
                             >
-                              {feedback.rating.toFixed(1)}/5
+                              {review.reviewTypeRegular ||
+                                (review.reviewTypeProbationary
+                                  ? "M" + review.reviewTypeProbationary
+                                  : "") ||
+                                "Others"}
                             </Badge>
-                            <span className="text-xs text-gray-500">
-                              {getRatingLabel(feedback.rating)}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-3 text-sm text-gray-600">
-                          {new Date(feedback.date).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <Badge
-                            className={
-                              actualApprovalStatus === "fully_approved"
-                                ? "bg-green-100 text-green-800"
-                                : actualApprovalStatus === "rejected"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-gray-100 text-gray-800"
-                            }
-                          >
-                            {actualApprovalStatus === "fully_approved"
-                              ? "✓ Fully Approved"
-                              : actualApprovalStatus === "rejected"
-                              ? "❌ Rejected"
-                              : "⏳ Pending"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <div className="flex items-center space-x-2">
-                            {feedback.employeeSignature &&
-                            feedback.employeeApprovedAt ? (
-                              <div className="flex items-center space-x-1 text-green-600">
-                                <span className="text-xs">✓</span>
-                                <span className="text-xs font-medium">
-                                  Signed
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-1 text-gray-500">
-                                <span className="text-xs">⏳</span>
-                                <span className="text-xs">Pending</span>
-                              </div>
+                          </TableCell>
+                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                            {new Date(review.created_at).toLocaleString(
+                              undefined,
+                              {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
                             )}
-                            {feedback.employeeApprovedAt && (
-                              <div className="text-xs text-gray-500">
-                                {new Date(
-                                  feedback.employeeApprovedAt
-                                ).toLocaleDateString()}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <div className="flex items-center space-x-2">
-                            {feedback.evaluatorSignature ||
-                            originalSubmission?.evaluationData
-                              ?.evaluatorSignature ? (
-                              <div className="flex items-center space-x-1 text-blue-600">
-                                <span className="text-xs">✓</span>
-                                <span className="text-xs font-medium">
-                                  Signed
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-1 text-gray-500">
-                                <span className="text-xs">⏳</span>
-                                <span className="text-xs">Pending</span>
-                              </div>
-                            )}
-                            {feedback.evaluatorApprovedAt && (
-                              <div className="text-xs text-gray-500">
-                                {new Date(
-                                  feedback.evaluatorApprovedAt
-                                ).toLocaleDateString()}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-3">
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onMarkAsSeen(feedback.id);
-                                onViewEvaluation(feedback);
-                              }}
-                              className="text-xs px-2 py-1 bg-green-600 hover:bg-green-300 text-white"
+                          </TableCell>
+                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                            {review.rating}
+                          </TableCell>
+                          <TableCell className="px-6 py-3">
+                            <Badge
+                              className={
+                                review.status === "completed"
+                                  ? "bg-green-100 text-green-800"
+                                  : review.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-yellow-100 text-yellow-800"
+                              }
                             >
-                              ☰ View
-                            </Button>
+                              {review.status === "completed"
+                                ? `✓ ${review.status}`
+                                : review.status === "pending"
+                                ? `⏳ ${review.status}`
+                                : review.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                            {review.status === "completed" ? (
+                              <Badge className="bg-green-100 text-green-800 text-xs">
+                                ✓ Signed
+                              </Badge>
+                            ) : review.status === "pending" ? (
+                              <Badge className="bg-gray-100 text-gray-600 text-xs">
+                                ⏳ Pending
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-gray-400">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                            <Badge className="bg-green-100 text-green-800 text-xs">
+                              ✓ Signed
+                            </Badge>
+                          </TableCell>
 
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteClick(feedback);
-                              }}
-                              className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200"
-                              title="Delete this evaluation record"
-                            >
-                              ❌ Delete
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
+                          <TableCell className="px-6 py-3">
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewEvaluation(review)}
+                                className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                ☰ View
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openDeleteModal(review)}
+                                className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200"
+                                title="Delete this evaluation record"
+                              >
+                                ❌ Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
             </div>
-          )}
+          </div>
 
           {/* Pagination Controls */}
-          {feedbackTotal > itemsPerPage && (() => {
-            // Function to render page buttons with ellipses
-            const renderPages = () => {
-              let pages: (number | "...")[] = [];
+          {overviewTotal > itemsPerPage && (
+            <EvaluationsPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              total={overviewTotal}
+              perPage={perPage}
+              onPageChange={(page) => {
+                setIsPageLoading(true);
+                pageChangeStartTimeRef.current = Date.now();
+                setCurrentPage(page);
+              }}
+            />
+          )}
+        </div>
 
-              // Always show first page
-              pages.push(1);
+        {/* Delete Confirmation Modal */}
+        <Dialog
+          open={isDeleteModalOpen}
+          onOpenChangeAction={(open) => {
+            setIsDeleteModalOpen(open);
+            if (!open) {
+              setReviewToDelete(null);
+            }
+          }}
+        >
+          <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
+            <DialogHeader className="pb-4 bg-red-50 rounded-lg ">
+              <DialogTitle className="text-red-800 flex items-center gap-2">
+                <span className="text-xl">⚠️</span>
+                Delete Evaluation of{" "}
+                {reviewToDelete?.employee.fname +
+                  " " +
+                  reviewToDelete?.employee.lname}
+              </DialogTitle>
+              <DialogDescription className="text-red-700">
+                This action cannot be undone. Are you sure you want to
+                permanently delete this evaluation?
+              </DialogDescription>
+            </DialogHeader>
 
-              // Insert ellipsis after first page if needed
-              if (feedbackPage > 3) {
-                pages.push("...");
-              }
-
-              // Show pages around current (feedbackPage - 1, feedbackPage, feedbackPage + 1)
-              for (let i = feedbackPage - 1; i <= feedbackPage + 1; i++) {
-                if (i > 1 && i < feedbackTotalPages) {
-                  pages.push(i);
-                }
-              }
-
-              // Insert ellipsis before last page if needed
-              if (feedbackPage < feedbackTotalPages - 2) {
-                pages.push("...");
-              }
-
-              // Always show last page
-              if (feedbackTotalPages > 1) {
-                pages.push(feedbackTotalPages);
-              }
-
-              return pages.map((p, index) => {
-                if (p === "...") {
-                  return (
-                    <PaginationItem key={`ellipsis-${index}`}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  );
-                }
-
-                return (
-                  <PaginationItem key={p}>
-                    <PaginationLink
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (Number(p) !== feedbackPage) {
-                          handlePageChange(Number(p));
-                        }
-                      }}
-                      className={
-                        p === feedbackPage ? "bg-blue-400 text-white rounded-xl" : ""
-                      }
+            <div className="space-y-4 px-2 mt-8">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-5 w-5 text-red-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
                     >
-                      {p}
-                    </PaginationLink>
-                  </PaginationItem>
-                );
-              });
-            };
-
-            const startIndex = (feedbackPage - 1) * itemsPerPage;
-            const endIndex = feedbackPage * itemsPerPage;
-
-            return (
-              <div className="flex flex-col items-center justify-center gap-3 w-full p-2 mt-4">
-                <div className="text-sm text-gray-600">
-                  Showing {startIndex + 1} to {Math.min(endIndex, feedbackTotal)} of {feedbackTotal}{" "}
-                  records
-                </div>
-                <div>
-                  <Pagination>
-                    <PaginationContent>
-                      {/* PREVIOUS */}
-                      <PaginationItem>
-                        <PaginationPrevious
-                          className={
-                            feedbackPage === 1
-                              ? "hover:pointer-events-none bg-blue-100 opacity-50"
-                              : "hover:bg-blue-400 bg-blue-200"
-                          }
-                          onClick={(e) => {
-                            e.preventDefault();
-                            if (feedbackPage > 1) {
-                              handlePageChange(feedbackPage - 1);
-                            }
-                          }}
-                        />
-                      </PaginationItem>
-
-                      {/* PAGE NUMBERS WITH ELLIPSES */}
-                      {renderPages()}
-
-                      {/* NEXT */}
-                      <PaginationItem>
-                        <PaginationNext
-                          className={
-                            feedbackPage === feedbackTotalPages
-                              ? "hover:pointer-events-none bg-blue-100 opacity-50"
-                              : "hover:bg-blue-400 bg-blue-200"
-                          }
-                          onClick={(e) => {
-                            e.preventDefault();
-                            if (feedbackPage < feedbackTotalPages) {
-                              handlePageChange(feedbackPage + 1);
-                            }
-                          }}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
+                      <path
+                        fillRule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div className="text-sm text-red-700">
+                    <p className="font-medium">
+                      Warning: This will permanently delete:
+                    </p>
+                    <ul className="mt-2 list-disc list-inside space-y-1">
+                      <li>This evaluation record</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
-            );
-          })()}
-        </CardContent>
-      </Card>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="text-sm text-gray-700">
+                  <p className="font-medium">Evaluation Details:</p>
+                  <div className="mt-2 space-y-1">
+                    <p>
+                      <span className="font-medium">Employee Name:</span>{" "}
+                      {reviewToDelete?.employee.fname +
+                        " " +
+                        reviewToDelete?.employee.lname}
+                    </p>
+                    <p>
+                      <span className="font-medium">Evaluator Name:</span>{" "}
+                      {reviewToDelete?.evaluator.fname +
+                        " " +
+                        reviewToDelete?.evaluator.lname}
+                    </p>
+                    <p>
+                      <span className="font-medium">Branch:</span>{" "}
+                      {reviewToDelete?.employee?.branch_name}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="pt-6 px-2">
+              <div className="flex justify-end space-x-4 w-full">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsDeleteModalOpen(false);
+                    setReviewToDelete(null);
+                  }}
+                  className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                  onClick={() => handleDeleteClick(reviewToDelete)}
+                >
+                  ❌ Delete Permanently
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Results Modal */}
+        <ViewResultsModal
+          isOpen={isViewResultsModalOpen}
+          onCloseAction={() => {
+            setIsViewResultsModalOpen(false);
+            setSelectedSubmission(null);
+          }}
+          submission={selectedSubmission}
+          showApprovalButton={false}
+          isEvaluatorView={true}
+        />
+      </div>
     </div>
   );
 }

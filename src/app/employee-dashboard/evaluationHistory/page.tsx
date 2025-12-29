@@ -789,7 +789,6 @@ export default function OverviewTab() {
                 }}
                 submission={selectedSubmission}
                 showApprovalButton={true}
-                isEvaluatorView={false}
                 onApprove={(id) => handleApprove(id)}
               />
             </>

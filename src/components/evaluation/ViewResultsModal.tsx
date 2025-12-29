@@ -60,7 +60,6 @@ interface ViewResultsModalProps {
   currentUserName?: string;
   currentUserSignature?: string; // New prop for current user's signature
   showApprovalButton?: boolean; // New prop to control approval button visibility
-  isEvaluatorView?: boolean; // New prop to indicate if this is being viewed by evaluator
 }
 
 // Helper functions for rating calculations
@@ -143,9 +142,6 @@ export default function ViewResultsModal({
   //   error: signatureError,
   // } = useemployee.signatureByEvaluation(submission?.id || null);
 
-  if (submission) {
-    console.log(submission);
-  }
   // Update currentApprovalData when approvalData prop changes
   useEffect(() => {
     setCurrentApprovalData(approvalData);

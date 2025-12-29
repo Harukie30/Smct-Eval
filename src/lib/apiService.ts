@@ -648,20 +648,25 @@ export const apiService = {
   },
 
   // Get evaluations by authenticated evaluator
-  getEvalAuthEvaluator: async (): Promise<any[]> => {
-    const response = await api.get("/getEvalAuthEvaluator");
-    const data = response.data;
-
-    if (data.success && data.evaluations) {
-      return data.evaluations;
-    }
-    if (Array.isArray(data.evaluations)) {
-      return data.evaluations;
-    }
-    if (Array.isArray(data)) {
-      return data;
-    }
-    return [];
+  getEvalAuthEvaluator: async (
+    searchTerm?: string,
+    page?: number,
+    perPage?: number,
+    status?: string,
+    quarter?: string,
+    year?: string
+  ): Promise<any> => {
+    const response = await api.get("/getEvalAuthEvaluator", {
+      params: {
+        search: searchTerm || "",
+        page: page,
+        per_page: perPage,
+        status: status || "",
+        quarter: quarter || "",
+        year: year || "",
+      },
+    });
+    return response.data;
   },
 
   // Get evaluations by authenticated employee
@@ -678,6 +683,7 @@ export const apiService = {
         page: currentPage,
         per_page: itemsPerPage,
         year: selectedYear || "",
+        quarter: selectedQuarter,
       },
     });
     return response.data;
