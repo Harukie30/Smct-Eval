@@ -115,6 +115,34 @@ function RegisterPage() {
     );
   };
 
+  // Helper function to check if position is Branch Manager or Area Manager
+  const isManagerPosition = (positionId: string | number): boolean => {
+    if (!positionId) return false;
+
+    // Find the position from positions array
+    const position = positions.find((p) => {
+      const positionValue = String(p.value || "")
+        .toLowerCase()
+        .trim();
+      const positionLabel = String(p.label || "")
+        .toLowerCase()
+        .trim();
+      const positionIdStr = String(positionId).toLowerCase().trim();
+      return positionValue === positionIdStr || positionLabel === positionIdStr;
+    });
+
+    if (!position) return false;
+
+    const positionName = position.label.toLowerCase().trim();
+    // Check for Branch Manager or Area Manager
+    return (
+      positionName === "branch manager" ||
+      positionName === "area manager" ||
+      positionName.includes("branch manager") ||
+      positionName.includes("area manager")
+    );
+  };
+
   // Helper function to load mock data
   const loadMockData = () => {
     // Mock positions - positionsData is an array of strings, convert to {value, label} format
@@ -342,8 +370,12 @@ function RegisterPage() {
       return;
     }
 
-    // Department is only required if branch IS HO/Head Office
-    if (isBranchHOOrNone(formData.branch_id) && !formData.department_id) {
+    // Department is only required if branch IS HO/Head Office AND position is NOT Branch Manager or Area Manager
+    if (
+      isBranchHOOrNone(formData.branch_id) &&
+      !isManagerPosition(formData.position_id) &&
+      !formData.department_id
+    ) {
       showAlert(
         "Missing Information",
         "Department is required for Head Office branches!",
@@ -796,7 +828,12 @@ function RegisterPage() {
                         options={positions}
                         value={formData.position_id}
                         onValueChangeAction={(value) => {
-                          setFormData({ ...formData, position_id: value });
+                          const newFormData = { ...formData, position_id: value };
+                          // Clear department if position is Branch Manager or Area Manager
+                          if (isManagerPosition(value)) {
+                            newFormData.department_id = "";
+                          }
+                          setFormData(newFormData);
                         }}
                         placeholder="Select your position"
                         searchPlaceholder="Search positions..."
@@ -835,8 +872,8 @@ function RegisterPage() {
                       )}
                     </div>
 
-                    {/* Department - Show only if branch is HO, Head Office, or none */}
-                    {isBranchHOOrNone(formData.branch_id) && (
+                    {/* Department - Show only if branch is HO, Head Office, or none, AND position is NOT Branch Manager or Area Manager */}
+                    {isBranchHOOrNone(formData.branch_id) && !isManagerPosition(formData.position_id) && (
                       <div className="space-y-2">
                         <Label htmlFor="department">Department</Label>
                         <Combobox
@@ -849,6 +886,7 @@ function RegisterPage() {
                           searchPlaceholder="Search departments..."
                           emptyText="No departments found."
                           className="w-1/2"
+                          disabled={isManagerPosition(formData.position_id)}
                         />
                         {fieldErrors?.department_id && (
                           <p className="text-sm text-red-500">

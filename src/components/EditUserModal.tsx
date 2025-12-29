@@ -389,18 +389,60 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   // Helper function to check if branch is HO, Head Office, or none
   const isBranchHOOrNone = (branch: string | number | undefined): boolean => {
     if (!branch) return false;
-    // Convert to string if it's not already
+
+    // Find the branch from branches array
+    const branchItem = branches.find((b: any) => {
+      const branchValue = String(b.value || b.id || "")
+        .toLowerCase()
+        .trim();
+      const branchLabel = String(b.label || b.name || "")
+        .toLowerCase()
+        .trim();
+      const branchIdStr = String(branch).toLowerCase().trim();
+      return (
+        branchValue === branchIdStr ||
+        branchLabel === branchIdStr ||
+        branchLabel.includes(branchIdStr) ||
+        branchIdStr.includes(branchLabel.split(" /")[0])
+      );
+    });
+
+    // If branch found in array, check its label
+    if (branchItem) {
+      const branchName = (branchItem.label || branchItem.name || "")
+        .toLowerCase()
+        .trim();
+      // Check for various HO/Head Office variations
+      return (
+        branchName === "ho" ||
+        branchName === "head office /ho" ||
+        branchName === "head office" ||
+        branchName.includes("head office") ||
+        branchName === "none" ||
+        branchName === "none ho" ||
+        branchName.startsWith("ho") ||
+        branchName.startsWith("ho-") ||
+        branchName.endsWith("/ho")
+      );
+    }
+
+    // Fallback: check the branch value directly
     const branchStr = typeof branch === "string" ? branch : String(branch);
     const branchLower = branchStr.toLowerCase().trim();
     return (
       branchLower === "ho" ||
       branchLower === "head office /ho" ||
+      branchLower === "head office" ||
+      branchLower.includes("head office") ||
       branchLower === "none" ||
-      branchLower === "none ho"
+      branchLower === "none ho" ||
+      branchLower.startsWith("ho") ||
+      branchLower.startsWith("ho-") ||
+      branchLower.endsWith("/ho")
     );
   };
 
-  // Helper function to check if position contains "manager" (case-insensitive)
+  // Helper function to check if position is Branch Manager, Branch Supervisor, or Area Manager
   const isManagerPosition = (positionId: string): boolean => {
     if (!positionId) return false;
     // Find the position from the positions array
@@ -414,13 +456,39 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     const positionName = (position.label || position.name || "")
       .toLowerCase()
       .trim();
-    // Check if position name contains "manager"
-    return positionName.includes("manager");
+    // Check if position name is specifically "Branch Manager", "Branch Supervisor", or "Area Manager"
+    return (
+      positionName === "branch manager" ||
+      positionName === "branch supervisor" ||
+      positionName === "area manager" ||
+      positionName.includes("branch manager") ||
+      positionName.includes("branch supervisor") ||
+      positionName.includes("area manager")
+    );
   };
 
-  // Auto-set role to evaluator when position is changed to a manager position
+  // Helper function to check if position contains "Manager" or "Supervisor" (for auto-setting role to evaluator)
+  const isManagerOrSupervisorPosition = (positionId: string): boolean => {
+    if (!positionId) return false;
+    // Find the position from the positions array
+    const position = positions.find(
+      (p: any) =>
+        p.value === positionId || p.id === positionId || p.name === positionId
+    );
+    if (!position) return false;
+    // Get position name - could be in label, name, or label property
+    const positionName = (position.label || position.name || "")
+      .toLowerCase()
+      .trim();
+    // Check if position name contains "manager" or "supervisor"
+    return (
+      positionName.includes("manager") || positionName.includes("supervisor")
+    );
+  };
+
+  // Auto-set role to evaluator when position is changed to a manager or supervisor position
   useEffect(() => {
-    if (formData.position && isManagerPosition(formData.position)) {
+    if (formData.position && isManagerOrSupervisorPosition(formData.position)) {
       // Only update if role is not already set to evaluator
       if (formData.role !== "evaluator") {
         setFormData((prev) => ({
@@ -526,8 +594,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         userRole = (user.role as any).name || (user.role as any).value || "";
       }
 
-      // If position contains "manager", role must be evaluator
-      if (isManagerPosition(positionId)) {
+      // If position contains "manager" or "supervisor", role must be evaluator
+      if (isManagerOrSupervisorPosition(positionId)) {
         userRole = "evaluator";
       }
 
@@ -671,8 +739,12 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       newErrors.position = "Position is required";
     }
 
-    // Department is only required if branch IS HO/none/Head Office
-    if (isBranchHOOrNone(formData.branch) && !formData.department) {
+    // Department is only required if branch IS HO/none/Head Office AND position is NOT Branch Manager or Area Manager
+    if (
+      isBranchHOOrNone(formData.branch) &&
+      !isManagerPosition(formData.position) &&
+      !formData.department
+    ) {
       newErrors.department = "Department is required";
     }
 
@@ -741,17 +813,23 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         department: "", // Clear department when branch is a regular branch (not HO/none)
       }));
     }
-    // If position is changed to any position with "manager" in the name, automatically set role to evaluator
+    // If position is changed to any position with "manager" or "supervisor" in the name, automatically set role to evaluator
+    // If it's specifically Branch Manager, Branch Supervisor, or Area Manager, also clear department
     else if (
       field === "position" &&
       typeof value === "string" &&
-      isManagerPosition(value)
+      isManagerOrSupervisorPosition(value)
     ) {
-      setFormData((prev) => ({
-        ...prev,
+      const newFormData: any = {
+        ...formData,
         [field]: value,
-        role: "evaluator", // Auto-set role to evaluator for manager positions
-      }));
+        role: "evaluator", // Auto-set role to evaluator for manager/supervisor positions
+      };
+      // Clear department only if it's specifically Branch Manager, Branch Supervisor, or Area Manager
+      if (isManagerPosition(value)) {
+        newFormData.department = "";
+      }
+      setFormData(newFormData);
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -1185,8 +1263,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               )}
             </div>
 
-            {/* Department - Show only if branch is HO, Head Office, or none */}
-            {isBranchHOOrNone(formData.branch) && (
+            {/* Department - Show only if branch is HO, Head Office, or none, AND position is NOT Branch Manager or Area Manager */}
+            {isBranchHOOrNone(formData.branch) && !isManagerPosition(formData.position) && (
               <div className="space-y-2">
                 <Label htmlFor="department">Department</Label>
                 <Combobox
@@ -1253,14 +1331,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 searchPlaceholder="Search roles..."
                 emptyText="No roles found."
                 className={errors.role ? "border-red-500" : ""}
-                disabled={isManagerPosition(formData.position)}
+                disabled={isManagerOrSupervisorPosition(formData.position)}
               />
               {errors.role && (
                 <p className="text-sm text-red-500">{errors.role}</p>
               )}
-              {isManagerPosition(formData.position) && (
+              {isManagerOrSupervisorPosition(formData.position) && (
                 <p className="text-xs text-gray-500">
-                  Role is automatically set to "Evaluator" for manager positions
+                  Role is automatically set to "Evaluator" for manager/supervisor positions
                 </p>
               )}
             </div>

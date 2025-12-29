@@ -69,13 +69,30 @@ export default function OverviewTab() {
         currentPage,
         itemsPerPage
       );
-      setMyEvaluations(response.myEval_as_Employee.data);
-      setOverviewTotal(response.myEval_as_Employee.total);
-      setTotalPages(response.myEval_as_Employee.last_page);
-      setPerPage(response.myEval_as_Employee.per_page);
+      
+      // Add safety checks to prevent "Cannot read properties of undefined" error
+      if (!response || !response.myEval_as_Employee) {
+        console.error("API response is undefined or missing myEval_as_Employee");
+        setMyEvaluations([]);
+        setOverviewTotal(0);
+        setTotalPages(1);
+        setPerPage(itemsPerPage);
+        setIsPaginate(false);
+        return;
+      }
+
+      setMyEvaluations(response.myEval_as_Employee.data || []);
+      setOverviewTotal(response.myEval_as_Employee.total || 0);
+      setTotalPages(response.myEval_as_Employee.last_page || 1);
+      setPerPage(response.myEval_as_Employee.per_page || itemsPerPage);
       setIsPaginate(false);
     } catch (error) {
       console.error("Error loading approved evaluations:", error);
+      // Set default values on error to prevent crashes
+      setMyEvaluations([]);
+      setOverviewTotal(0);
+      setTotalPages(1);
+      setPerPage(itemsPerPage);
       setIsPaginate(false);
     }
   };
@@ -83,10 +100,28 @@ export default function OverviewTab() {
   useEffect(() => {
     loadApprovedEvaluations(searchTerm);
     const loadDashboard = async () => {
-      const dashboard = await apiService.employeeDashboard();
-      setTotalEvaluations(dashboard.total_evaluations);
-      setAverage(dashboard.average);
-      setRecentEvaluation(dashboard.recent_evaluation);
+      try {
+        const dashboard = await apiService.employeeDashboard();
+        
+        // Add safety checks to prevent "Cannot read properties of undefined" error
+        if (!dashboard) {
+          console.error("Dashboard API response is undefined");
+          setTotalEvaluations(0);
+          setAverage(0);
+          setRecentEvaluation([]);
+          return;
+        }
+
+        setTotalEvaluations(dashboard.total_evaluations || 0);
+        setAverage(dashboard.average || 0);
+        setRecentEvaluation(dashboard.recent_evaluation || []);
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+        // Set default values on error
+        setTotalEvaluations(0);
+        setAverage(0);
+        setRecentEvaluation([]);
+      }
     };
     loadDashboard();
   }, []);
@@ -661,9 +696,9 @@ export default function OverviewTab() {
                         <TableRow key={submission.id} className={rowClassName}>
                           <TableCell className="w-1/6 font-medium pl-4">
                             <div className="flex items-center gap-2">
-                              {submission.evaluator.fname +
-                                " " +
-                                submission.evaluator.lname || "Not specified"}
+                              {submission.evaluator?.fname && submission.evaluator?.lname
+                                ? submission.evaluator.fname + " " + submission.evaluator.lname
+                                : "Not specified"}
                               {isNew && (
                                 <Badge className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 font-semibold">
                                   ⚡ New

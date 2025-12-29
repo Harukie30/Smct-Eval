@@ -89,18 +89,38 @@ export default function OverviewTab() {
     quarter: string,
     year: string
   ) => {
-    const response = await clientDataService.getSubmissions(
-      searchValue,
-      currentPage,
-      itemsPerPage,
-      status,
-      quarter,
-      year
-    );
-    setEvaluations(response.data);
-    setOverviewTotal(response.total);
-    setTotalPages(response.last_page);
-    setPerPage(response.per_page);
+    try {
+      const response = await clientDataService.getSubmissions(
+        searchValue,
+        currentPage,
+        itemsPerPage,
+        status,
+        quarter,
+        year
+      );
+      
+      // Add safety checks to prevent "Cannot read properties of undefined" error
+      if (!response) {
+        console.error("API response is undefined");
+        setEvaluations([]);
+        setOverviewTotal(0);
+        setTotalPages(1);
+        setPerPage(itemsPerPage);
+        return;
+      }
+
+      setEvaluations(response.data || []);
+      setOverviewTotal(response.total || 0);
+      setTotalPages(response.last_page || 1);
+      setPerPage(response.per_page || itemsPerPage);
+    } catch (error) {
+      console.error("Error loading evaluations:", error);
+      // Set default values on error to prevent crashes
+      setEvaluations([]);
+      setOverviewTotal(0);
+      setTotalPages(1);
+      setPerPage(itemsPerPage);
+    }
   };
 
   useEffect(() => {
@@ -234,7 +254,9 @@ export default function OverviewTab() {
     setReviewToDelete(review);
     setIsDeleteModalOpen(true);
   };
-  const groupedByYear = evaluations.reduce((acc: any, item) => {
+  
+  // Group evaluations by year with safety check to prevent "Cannot read properties of undefined (reading 'reduce')" error
+  const groupedByYear = (evaluations && Array.isArray(evaluations) ? evaluations : []).reduce((acc: any, item) => {
     const year = new Date(item.created_at).getFullYear();
     acc[year] = acc[year] || [];
     acc[year].push(item);

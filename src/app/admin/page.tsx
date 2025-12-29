@@ -62,12 +62,28 @@ export default function OverviewTab() {
         currentPage,
         itemsPerPage
       );
-      setEvaluations(response.data);
-      setOverviewTotal(response.total);
-      setTotalPages(response.last_page);
-      setPerPage(response.per_page);
+      
+      // Add safety checks to prevent "Cannot read properties of undefined" error
+      if (!response) {
+        console.error("API response is undefined");
+        setEvaluations([]);
+        setOverviewTotal(0);
+        setTotalPages(1);
+        setPerPage(itemsPerPage);
+        return;
+      }
+
+      setEvaluations(response.data || []);
+      setOverviewTotal(response.total || 0);
+      setTotalPages(response.last_page || 1);
+      setPerPage(response.per_page || itemsPerPage);
     } catch (error) {
       console.error("Error loading evaluations:", error);
+      // Set default values on error to prevent crashes
+      setEvaluations([]);
+      setOverviewTotal(0);
+      setTotalPages(1);
+      setPerPage(itemsPerPage);
     }
   };
   useEffect(() => {
@@ -597,7 +613,6 @@ export default function OverviewTab() {
           }}
           submission={selectedSubmission}
           showApprovalButton={false}
-          isEvaluatorView={false}
         />
       </div>
     </div>
