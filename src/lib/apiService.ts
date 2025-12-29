@@ -170,7 +170,6 @@ export const apiService = {
     quarter?: string,
     year?: string
   ): Promise<any> => {
-    
     const response = await api.get(`/getEvalAuthEvaluator`, {
       params: {
         search: searchTerm || "",
@@ -223,8 +222,8 @@ export const apiService = {
   },
 
   createSubmission: async (
-    submission: any,
-    userId?: string | number
+    userId?: string | number,
+    submission: any
   ): Promise<any> => {
     // Use /submit/{user} if userId provided, otherwise fallback to /submissions
     const endpoint = userId ? `/submit/${userId}` : "/submissions";
@@ -575,7 +574,7 @@ export const apiService = {
           position: positionFilter || "",
         },
       });
-      
+
       // Add safety check to prevent "Cannot read properties of undefined" error
       if (!response || !response.data) {
         console.error("API response is undefined or missing data");
@@ -647,7 +646,7 @@ export const apiService = {
           per_page: perPage || 10,
         };
       }
-      
+
       // Re-throw other errors
       throw error;
     }
@@ -797,18 +796,46 @@ export const apiService = {
     if (data.myEval_as_Employee) {
       return data;
     }
-    
+
     // Handle non-paginated response (fallback)
     if (data.success && data.evaluations) {
-      return { myEval_as_Employee: { data: data.evaluations, total: data.evaluations.length, last_page: 1, per_page: perPage || 10 } };
+      return {
+        myEval_as_Employee: {
+          data: data.evaluations,
+          total: data.evaluations.length,
+          last_page: 1,
+          per_page: perPage || 10,
+        },
+      };
     }
     if (Array.isArray(data.evaluations)) {
-      return { myEval_as_Employee: { data: data.evaluations, total: data.evaluations.length, last_page: 1, per_page: perPage || 10 } };
+      return {
+        myEval_as_Employee: {
+          data: data.evaluations,
+          total: data.evaluations.length,
+          last_page: 1,
+          per_page: perPage || 10,
+        },
+      };
     }
     if (Array.isArray(data)) {
-      return { myEval_as_Employee: { data: data, total: data.length, last_page: 1, per_page: perPage || 10 } };
+      return {
+        myEval_as_Employee: {
+          data: data,
+          total: data.length,
+          last_page: 1,
+          per_page: perPage || 10,
+        },
+      };
     }
-    return { myEval_as_Employee: { data: [], total: 0, last_page: 1, per_page: perPage || 10 } };
+    return {
+      myEval_as_Employee: {
+        data: [],
+        total: 0,
+        last_page: 1,
+        per_page: perPage || 10,
+      },
+    };
   },
 
   // Evaluator dashboard total cards
