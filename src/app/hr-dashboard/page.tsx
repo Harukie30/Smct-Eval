@@ -19,20 +19,55 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { getQuarterFromDate, getQuarterColor } from "@/lib/quarterUtils";
+import { getQuarterColor } from "@/lib/quarterUtils";
 import apiService from "@/lib/apiService";
+import EvaluationPayload from "@/components/evaluation/types";
+import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import EvaluationsPagination from "@/components/paginationComponent";
 
 export default function OverviewTab() {
-  const [submissions, setSubmissions] = useState<any | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(true);
+  //data
+  const [submissions, setSubmissions] = useState<EvaluationPayload[]>([]);
+  const [newEval, setNewEval] = useState<any | null>(null);
+  const [pendingEval, setPendingEval] = useState<any | null>(null);
+  const [completedEval, setCompletedEval] = useState<any | null>(null);
+  const [totalEmployees, setTotalEmployees] = useState<any | null>(null);
+  //filters
   const [overviewSearchTerm, setOverviewSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] =
+    useState(overviewSearchTerm);
+
+  //pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(4);
+  const [overviewTotal, setOverviewTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [perPage, setPerPage] = useState(0);
+  //view
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
+  //modal
+  const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
+  //refresh state
+  const [isRefreshing, setIsRefreshing] = useState(true);
 
   useEffect(() => {
     const loadSubmissions = async () => {
       try {
-        const res = await apiService.getSubmissions();
-        console.log(res.data);
+        const res = await apiService.getSubmissions(
+          overviewSearchTerm,
+          currentPage,
+          itemsPerPage
+        );
         setSubmissions(res.data);
+        setOverviewTotal(res.total);
+        setTotalPages(res.last_page);
+        setPerPage(res.per_page);
+
+        const dashboard = await apiService.hrDashboard();
+        setNewEval(dashboard.new_eval);
+        setPendingEval(dashboard.pending_eval);
+        setCompletedEval(dashboard.completed_eval);
+        setTotalEmployees(dashboard.total_users);
       } catch (error) {
         console.log(error);
         setIsRefreshing(false);
@@ -41,78 +76,14 @@ export default function OverviewTab() {
       }
     };
     loadSubmissions();
-  }, [isRefreshing]);
+  }, [isRefreshing, debouncedSearchTerm, currentPage]);
 
-  // Helper function to calculate overall rating
-  const calculateOverallRating = (evaluationData: any) => {
-    if (!evaluationData) return 0;
-
-    const calculateScore = (scores: (string | number | null | undefined)[]) => {
-      const validScores = scores
-        .filter(
-          (score) => score !== null && score !== undefined && score !== ""
-        )
-        .map((score) => (typeof score === "string" ? parseFloat(score) : score))
-        .filter((score) => !isNaN(score as number)) as number[];
-      if (validScores.length === 0) return 0;
-      return (
-        validScores.reduce((sum, score) => sum + score, 0) / validScores.length
-      );
-    };
-
-    const jobKnowledgeScore = calculateScore([
-      evaluationData.jobKnowledgeScore1,
-      evaluationData.jobKnowledgeScore2,
-      evaluationData.jobKnowledgeScore3,
-    ]);
-    const qualityOfWorkScore = calculateScore([
-      evaluationData.qualityOfWorkScore1,
-      evaluationData.qualityOfWorkScore2,
-      evaluationData.qualityOfWorkScore3,
-      evaluationData.qualityOfWorkScore4,
-      evaluationData.qualityOfWorkScore5,
-    ]);
-    const adaptabilityScore = calculateScore([
-      evaluationData.adaptabilityScore1,
-      evaluationData.adaptabilityScore2,
-      evaluationData.adaptabilityScore3,
-    ]);
-    const teamworkScore = calculateScore([
-      evaluationData.teamworkScore1,
-      evaluationData.teamworkScore2,
-      evaluationData.teamworkScore3,
-    ]);
-    const reliabilityScore = calculateScore([
-      evaluationData.reliabilityScore1,
-      evaluationData.reliabilityScore2,
-      evaluationData.reliabilityScore3,
-      evaluationData.reliabilityScore4,
-    ]);
-    const ethicalScore = calculateScore([
-      evaluationData.ethicalScore1,
-      evaluationData.ethicalScore2,
-      evaluationData.ethicalScore3,
-      evaluationData.ethicalScore4,
-    ]);
-    const customerServiceScore = calculateScore([
-      evaluationData.customerServiceScore1,
-      evaluationData.customerServiceScore2,
-      evaluationData.customerServiceScore3,
-      evaluationData.customerServiceScore4,
-      evaluationData.customerServiceScore5,
-    ]);
-
-    const overallWeightedScore =
-      jobKnowledgeScore * 0.2 +
-      qualityOfWorkScore * 0.2 +
-      adaptabilityScore * 0.1 +
-      teamworkScore * 0.1 +
-      reliabilityScore * 0.05 +
-      ethicalScore * 0.05 +
-      customerServiceScore * 0.3;
-
-    return Math.round(overallWeightedScore * 10) / 10;
-  };
+  useEffect(() => {
+    const debounceTimeout = setTimeout(() => {
+      setDebouncedSearchTerm(overviewSearchTerm);
+    }, 500);
+    return () => clearTimeout(debounceTimeout);
+  }, [overviewSearchTerm]);
 
   // Helper function to get rating color
   const getRatingColor = (rating: number) => {
@@ -160,17 +131,7 @@ export default function OverviewTab() {
   //           : "pending"
   //       ).toLowerCase();
 
-  //       return (
-  //         employeeName.includes(searchLower) ||
-  //         department.includes(searchLower) ||
-  //         position.includes(searchLower) ||
-  //         evaluator.includes(searchLower) ||
-  //         quarter.includes(searchLower) ||
-  //         date.includes(searchLower) ||
-  //         statusText.includes(searchLower)
-  //       );
-  //     })
-  //     .sort((a, b) => {
+  //
   //       // Sort by date descending (newest first)
   //       const dateA = new Date(a.submittedAt).getTime();
   //       const dateB = new Date(b.submittedAt).getTime();
@@ -198,388 +159,436 @@ export default function OverviewTab() {
   };
 
   return (
-    <div className="relative space-y-6 h-[calc(100vh-300px)] overflow-y-auto pr-2">
-      {/* Recent Activity - Evaluation Records Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Recent Evaluation Records
-            {(() => {
-              const now = new Date();
-              const newCount = 0;
-              // filteredSubmissions.filter((sub) => {
-              //   const hoursDiff =
-              //     (now.getTime() - new Date(sub.submittedAt).getTime()) /
-              //     (1000 * 60 * 60);
-              //   return hoursDiff <= 24;
-              // }).length;
-              return newCount > 0 ? (
-                <Badge className="bg-yellow-500 text-white animate-pulse">
-                  {newCount} NEW
-                </Badge>
-              ) : null;
-            })()}
-            <Badge variant="outline" className="text-xs font-normal">
-              📅 Sorted: Newest First
-            </Badge>
-          </CardTitle>
-          <CardDescription>
-            Latest performance evaluations and reviews (most recent at the top)
-          </CardDescription>
-          {/* Search Bar and Refresh Button */}
-          <div className="mt-4 flex items-center gap-3">
-            <div className="relative flex-1 max-w-md">
-              <Input
-                placeholder="Search by employee, department, position, evaluator, or status..."
-                value={overviewSearchTerm}
-                onChange={(e) => setOverviewSearchTerm(e.target.value)}
-                className="pr-10"
-              />
-              {overviewSearchTerm && (
-                <button
-                  onClick={() => setOverviewSearchTerm("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
-                  aria-label="Clear search"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-6 w-6"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
+    <>
+      <div className="flex gap-3 mb-3">
+        {/* New Submissions (Last 24 hours) */}
+        <Card className="w-1/4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              🆕 New Submissions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-yellow-600">
+              {newEval || 0}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">Last 24 hours</p>
+          </CardContent>
+        </Card>
+
+        {/* Pending Approvals */}
+        <Card className="w-1/4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              ⏳ Pending Approvals
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-orange-600">
+              {pendingEval || 0}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">Needs review</p>
+          </CardContent>
+        </Card>
+
+        {/* Approved Evaluations */}
+        <Card className="w-1/4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              ✅ Approved
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-600">
+              {completedEval || 0}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">Completed reviews</p>
+          </CardContent>
+        </Card>
+
+        {/* Total Employees */}
+        <Card className="w-1/4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              👥 Total Employees
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-blue-600">
+              {totalEmployees || 0}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">
+              All registered employees
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+      <div className="relative space-y-6 pr-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Recent Evaluation Records
+              {(() => {
+                const now = new Date();
+                const newCount = 0;
+                submissions.filter((sub) => {
+                  const hoursDiff =
+                    (now.getTime() - new Date(sub.created_at).getTime()) /
+                    (1000 * 60 * 60);
+                  return hoursDiff <= 24;
+                }).length;
+                return newCount > 0 ? (
+                  <Badge className="bg-yellow-500 text-white animate-pulse">
+                    {newCount} NEW
+                  </Badge>
+                ) : null;
+              })()}
+              <Badge variant="outline" className="text-xs font-normal">
+                📅 Sorted: Newest First
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              Latest performance evaluations and reviews (most recent at the
+              top)
+            </CardDescription>
+            {/* Search Bar and Refresh Button */}
+            <div className="mt-4 flex items-center gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Input
+                  placeholder="Search by employee, department, position, evaluator, or status..."
+                  value={overviewSearchTerm}
+                  onChange={(e) => setOverviewSearchTerm(e.target.value)}
+                  className="pr-10"
+                />
+                {overviewSearchTerm && (
+                  <button
+                    onClick={() => setOverviewSearchTerm("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
+                    aria-label="Clear search"
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
-              )}
-            </div>
-            {/* Refresh Button */}
-            <Button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
-              title="Refresh evaluation records"
-            >
-              {isRefreshing ? (
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Refreshing...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <span>🔄</span>
-                  <span>Refresh</span>
-                </div>
-              )}
-            </Button>
-          </div>
-          {/* Indicator Legend */}
-          <div className="mt-3 md:mt-4 p-2 md:p-3 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex flex-wrap gap-2 md:gap-4 text-xs md:text-sm">
-              <span className="font-medium text-gray-700 mr-2">
-                Indicators:
-              </span>
-              <div className="flex items-center gap-1">
-                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
-                <Badge className="bg-yellow-200 text-yellow-800 text-xs md:text-sm px-1.5 md:px-2 py-0.5">
-                  New
-                </Badge>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
-                <Badge className="bg-blue-300 text-blue-800 text-xs md:text-sm px-1.5 md:px-2 py-0.5">
-                  Recent
-                </Badge>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
-                <Badge className="bg-green-500 text-white text-xs md:text-sm px-1.5 md:px-2 py-0.5">
-                  Approved
-                </Badge>
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="relative max-h-[50vh] lg:max-h-[60vh] xl:max-h-[65vh] 2xl:max-h-[70vh] overflow-y-auto overflow-x-auto w-full">
-            {isRefreshing && (
-              <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-6 md:px-8 py-4 md:py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    <div className="animate-spin rounded-full h-12 md:h-16 w-12 md:w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img
-                        src="/smct.png"
-                        alt="SMCT Logo"
-                        className="h-8 md:h-10 w-8 md:w-10 object-contain"
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-6 w-6"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
                       />
-                    </div>
+                    </svg>
+                  </button>
+                )}
+              </div>
+              {/* Refresh Button */}
+              <Button
+                onClick={() => setIsRefreshing(true)}
+                disabled={isRefreshing}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                title="Refresh evaluation records"
+              >
+                {isRefreshing ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Refreshing...</span>
                   </div>
-                  <p className="text-xs md:text-sm text-gray-600 font-medium">
-                    Loading evaluation records...
-                  </p>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <span>🔄</span>
+                    <span>Refresh</span>
+                  </div>
+                )}
+              </Button>
+            </div>
+            {/* Indicator Legend */}
+            <div className="mt-3 md:mt-4 p-2 md:p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex flex-wrap gap-2 md:gap-4 text-xs md:text-sm">
+                <span className="font-medium text-gray-700 mr-2">
+                  Indicators:
+                </span>
+                <div className="flex items-center gap-1">
+                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-yellow-100 border-l-2 border-l-yellow-500 rounded"></div>
+                  <Badge className="bg-yellow-200 text-yellow-800 text-xs md:text-sm px-1.5 md:px-2 py-0.5">
+                    New
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-blue-50 border-l-2 border-l-blue-500 rounded"></div>
+                  <Badge className="bg-blue-300 text-blue-800 text-xs md:text-sm px-1.5 md:px-2 py-0.5">
+                    Recent
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-green-50 border-l-2 border-l-green-500 rounded"></div>
+                  <Badge className="bg-green-500 text-white text-xs md:text-sm px-1.5 md:px-2 py-0.5">
+                    Approved
+                  </Badge>
                 </div>
               </div>
-            )}
-
-            <Table className="min-w-full w-full">
-              <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
-                <TableRow>
-                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[140px] md:min-w-[160px] lg:min-w-[180px] xl:min-w-[200px]">
-                    <span className="text-xs md:text-sm lg:text-base">
-                      Employee Name
-                    </span>
-                  </TableHead>
-                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-left pl-0 min-w-[100px] md:min-w-[120px] lg:min-w-[140px]">
-                    <span className="text-xs md:text-sm lg:text-base">
-                      Rating
-                    </span>
-                  </TableHead>
-                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[80px] md:min-w-[90px] lg:min-w-[100px]">
-                    <span className="text-xs md:text-sm lg:text-base">
-                      Quarter
-                    </span>
-                  </TableHead>
-                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[90px] md:min-w-[100px] lg:min-w-[110px]">
-                    <span className="text-xs md:text-sm lg:text-base">
-                      Date
-                    </span>
-                  </TableHead>
-                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[110px] md:min-w-[130px] lg:min-w-[150px]">
-                    <span className="text-xs md:text-sm lg:text-base">
-                      Approval Status
-                    </span>
-                  </TableHead>
-                  <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[120px] md:min-w-[140px] lg:min-w-[160px]">
-                    <span className="text-xs md:text-sm lg:text-base">
-                      Actions
-                    </span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="divide-y divide-gray-200">
-                {isRefreshing ? (
-                  Array.from({ length: 8 }).map((_, index) => (
-                    <TableRow key={`skeleton-${index}`}>
-                      <TableCell className="px-6 py-3">
-                        <div className="space-y-1">
-                          <div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div>
-                          <div className="h-2.5 w-24 bg-gray-200 rounded animate-pulse"></div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3 text-left pl-0">
-                        <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-12 bg-gray-200 rounded-full animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse"></div>
-                      </TableCell>
-                      <TableCell className="px-6 py-3">
-                        <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : !submissions || submissions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
-                      <div className="flex flex-col items-center justify-center gap-4">
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className=" h-64 overflow-x-auto w-full">
+              {isRefreshing && (
+                <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                  <div className="flex flex-col items-center gap-3 bg-white/95 px-6 md:px-8 py-4 md:py-6 rounded-lg shadow-lg">
+                    <div className="relative">
+                      <div className="animate-spin rounded-full h-12 md:h-16 w-12 md:w-16 border-4 border-blue-500 border-t-transparent"></div>
+                      <div className="absolute inset-0 flex items-center justify-center">
                         <img
-                          src="/not-found.gif"
-                          alt="No data"
-                          className="w-25 h-25 object-contain"
-                          style={{
-                            imageRendering: "auto",
-                            willChange: "auto",
-                            transform: "translateZ(0)",
-                            backfaceVisibility: "hidden",
-                            WebkitBackfaceVisibility: "hidden",
-                          }}
+                          src="/smct.png"
+                          alt="SMCT Logo"
+                          className="h-8 md:h-10 w-8 md:w-10 object-contain"
                         />
-                        <div className="text-gray-500">
-                          {overviewSearchTerm ? (
-                            <>
-                              <p className="text-base font-medium mb-1">
-                                No results found for "{overviewSearchTerm}"
-                              </p>
-                              <p className="text-sm text-gray-400">
-                                Try adjusting your search term
-                              </p>
-                            </>
-                          ) : (
-                            <>
-                              <p className="text-base font-medium mb-1">
-                                No evaluation records to display
-                              </p>
-                              <p className="text-sm text-gray-400">
-                                Records will appear here when evaluations are
-                                submitted
-                              </p>
-                            </>
-                          )}
-                        </div>
                       </div>
-                    </TableCell>
+                    </div>
+                    <p className="text-xs md:text-sm text-gray-600 font-medium">
+                      Loading evaluation records...
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <Table className="min-w-full w-full">
+                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                  <TableRow>
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[140px] md:min-w-[160px] lg:min-w-[180px] xl:min-w-[200px]">
+                      <span className="text-xs md:text-sm lg:text-base">
+                        Employee Name
+                      </span>
+                    </TableHead>
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-left pl-0 min-w-[100px] md:min-w-[120px] lg:min-w-[140px]">
+                      <span className="text-xs md:text-sm lg:text-base">
+                        Rating
+                      </span>
+                    </TableHead>
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[80px] md:min-w-[90px] lg:min-w-[100px]">
+                      <span className="text-xs md:text-sm lg:text-base">
+                        Quarter
+                      </span>
+                    </TableHead>
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[90px] md:min-w-[100px] lg:min-w-[110px]">
+                      <span className="text-xs md:text-sm lg:text-base">
+                        Date
+                      </span>
+                    </TableHead>
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[110px] md:min-w-[130px] lg:min-w-[150px]">
+                      <span className="text-xs md:text-sm lg:text-base">
+                        Approval Status
+                      </span>
+                    </TableHead>
+                    <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[120px] md:min-w-[140px] lg:min-w-[160px]">
+                      <span className="text-xs md:text-sm lg:text-base">
+                        Actions
+                      </span>
+                    </TableHead>
                   </TableRow>
-                ) : (
-                  submissions.map((submission: any) => {
-                    const quarter = getQuarterFromDate(submission.submittedAt);
-
-                    // Check if both parties have signed (handle empty strings too)
-                    const hasEmployeeSignature = !!(
-                      submission.employeeSignature &&
-                      submission.employeeSignature.trim()
-                    );
-                    const hasEvaluatorSignature = !!(
-                      (submission.evaluatorSignature &&
-                        submission.evaluatorSignature.trim()) ||
-                      (submission.evaluationData?.evaluatorSignature &&
-                        submission.evaluationData?.evaluatorSignature.trim())
-                    );
-
-                    // Determine approval status - SIGNATURES HAVE PRIORITY over stored status
-                    let approvalStatus = "pending";
-                    if (hasEmployeeSignature && hasEvaluatorSignature) {
-                      approvalStatus = "fully_approved";
-                    } else if (hasEmployeeSignature) {
-                      approvalStatus = "employee_approved";
-                    } else if (
-                      submission.approvalStatus &&
-                      submission.approvalStatus !== "pending"
-                    ) {
-                      approvalStatus = submission.approvalStatus;
-                    }
-
-                    // Calculate time difference for indicators
-                    const submittedDate = new Date(submission.submittedAt);
-                    const now = new Date();
-                    const hoursDiff =
-                      (now.getTime() - submittedDate.getTime()) /
-                      (1000 * 60 * 60);
-                    const isNew = hoursDiff <= 24;
-                    const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
-                    const isApproved = approvalStatus === "fully_approved";
-
-                    // Determine row background color - APPROVAL STATUS HAS PRIORITY
-                    let rowClassName = "hover:bg-gray-100 transition-colors";
-                    if (isApproved) {
-                      // Approved is always green (highest priority)
-                      rowClassName =
-                        "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
-                    } else if (isNew) {
-                      rowClassName =
-                        "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
-                    } else if (isRecent) {
-                      rowClassName =
-                        "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
-                    }
-
-                    return (
-                      <TableRow key={submission.id} className={rowClassName}>
-                        <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1">
-                              <span className="font-medium text-gray-900 text-xs md:text-sm lg:text-base">
-                                {submission.employeeName}
-                              </span>
-                              {isNew && (
-                                <Badge className="bg-yellow-100 text-yellow-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
-                                  ⚡ NEW
-                                </Badge>
-                              )}
-                              {!isNew && isRecent && (
-                                <Badge className="bg-blue-100 text-blue-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
-                                  🕐 RECENT
-                                </Badge>
-                              )}
-                              {isApproved && (
-                                <Badge className="bg-green-100 text-green-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
-                                  ✓ APPROVED
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-xs md:text-sm text-gray-500">
-                              {submission.evaluationData?.email || ""}
-                            </div>
+                </TableHeader>
+                <TableBody className="divide-y divide-gray-200">
+                  {isRefreshing ? (
+                    Array.from({ length: 8 }).map((_, index) => (
+                      <TableRow key={`skeleton-${index}`}>
+                        <TableCell className="px-6 py-3">
+                          <div className="space-y-1">
+                            <div className="h-3 w-20 bg-gray-200 rounded animate-pulse"></div>
+                            <div className="h-2.5 w-24 bg-gray-200 rounded animate-pulse"></div>
                           </div>
                         </TableCell>
-                        <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-left pl-0">
-                          {(() => {
-                            const rating = submission.evaluationData
-                              ? calculateOverallRating(
-                                  submission.evaluationData
-                                )
-                              : submission.rating || 0;
-                            return (
-                              <Badge
-                                className={`text-xs md:text-sm font-semibold ${getRatingColor(
-                                  rating
-                                )}`}
-                              >
-                                {rating > 0 ? `${rating}/5` : "N/A"}
-                              </Badge>
-                            );
-                          })()}
+                        <TableCell className="px-6 py-3 text-left pl-0">
+                          <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse"></div>
                         </TableCell>
-                        <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
-                          <Badge
-                            className={`${getQuarterColor(
-                              quarter
-                            )} text-xs md:text-sm`}
-                          >
-                            {quarter}
-                          </Badge>
+                        <TableCell className="px-6 py-3">
+                          <div className="h-5 w-12 bg-gray-200 rounded-full animate-pulse"></div>
                         </TableCell>
-                        <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-xs md:text-sm text-gray-600">
-                          {new Date(
-                            submission.submittedAt
-                          ).toLocaleDateString()}
+                        <TableCell className="px-6 py-3">
+                          <div className="h-3 w-16 bg-gray-200 rounded animate-pulse"></div>
                         </TableCell>
-                        <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
-                          <Badge
-                            className={`text-xs md:text-sm ${
-                              approvalStatus === "fully_approved"
-                                ? "bg-green-100 text-green-800"
-                                : approvalStatus === "rejected"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {approvalStatus === "fully_approved"
-                              ? "✓ Fully Approved"
-                              : approvalStatus === "rejected"
-                              ? "❌ Rejected"
-                              : "⏳ Pending"}
-                          </Badge>
+                        <TableCell className="px-6 py-3">
+                          <div className="h-5 w-20 bg-gray-200 rounded-full animate-pulse"></div>
                         </TableCell>
-                        <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onViewSubmission(submission)}
-                            className="text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 bg-green-600 hover:bg-green-300 text-white"
-                          >
-                            ☰ View
-                          </Button>
+                        <TableCell className="px-6 py-3">
+                          <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
                         </TableCell>
                       </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                    ))
+                  ) : !submissions || submissions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-12">
+                        <div className="flex flex-col items-center justify-center gap-4">
+                          <img
+                            src="/not-found.gif"
+                            alt="No data"
+                            className="w-25 h-25 object-contain"
+                            style={{
+                              imageRendering: "auto",
+                              willChange: "auto",
+                              transform: "translateZ(0)",
+                              backfaceVisibility: "hidden",
+                              WebkitBackfaceVisibility: "hidden",
+                            }}
+                          />
+                          <div className="text-gray-500">
+                            {overviewSearchTerm ? (
+                              <>
+                                <p className="text-base font-medium mb-1">
+                                  No results found for "{overviewSearchTerm}"
+                                </p>
+                                <p className="text-sm text-gray-400">
+                                  Try adjusting your search term
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-base font-medium mb-1">
+                                  No evaluation records to display
+                                </p>
+                                <p className="text-sm text-gray-400">
+                                  Records will appear here when evaluations are
+                                  submitted
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    submissions.map((submission: any) => {
+                      // Calculate time difference for indicators
+                      const submittedDate = new Date(submission.created_at);
+                      const now = new Date();
+                      const hoursDiff =
+                        (now.getTime() - submittedDate.getTime()) /
+                        (1000 * 60 * 60);
+                      const isNew = hoursDiff <= 24;
+                      const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
 
-          {/* Pagination Controls */}
-        </CardContent>
-      </Card>
-    </div>
+                      return (
+                        <TableRow
+                          key={submission.id}
+                          className="hover:bg-gray-100 transition-colors"
+                        >
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1">
+                                <span className="font-medium text-gray-900 text-xs md:text-sm lg:text-base">
+                                  {submission.employee.fname +
+                                    " " +
+                                    submission.employee.lname}
+                                </span>
+                                {isNew && (
+                                  <Badge className="bg-yellow-100 text-yellow-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
+                                    ⚡ NEW
+                                  </Badge>
+                                )}
+                                {!isNew && isRecent && (
+                                  <Badge className="bg-blue-100 text-blue-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
+                                    🕐 RECENT
+                                  </Badge>
+                                )}
+                                {submission.status === "completed" && (
+                                  <Badge className="bg-green-100 text-green-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
+                                    ✓ APPROVED
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-xs md:text-sm text-gray-500">
+                                {submission.employee?.email || ""}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-left pl-0">
+                            {submission.rating && (
+                              <Badge
+                                className={`text-xs md:text-sm font-semibold ${getRatingColor(
+                                  submission.rating
+                                )}`}
+                              >
+                                {submission.rating > 0
+                                  ? `${submission.rating}/5`
+                                  : "N/A"}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                            <Badge
+                              className={`${getQuarterColor(
+                                submission.reviewTypeProbationary ||
+                                  submission.reviewTypeRegular
+                              )} text-xs md:text-sm`}
+                            >
+                              {submission.reviewTypeRegular ||
+                                "M" + submission.reviewTypeProbationary}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-xs md:text-sm text-gray-600">
+                            {new Date(
+                              submission.created_at
+                            ).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                            <Badge
+                              className={`text-xs md:text-sm ${
+                                submission.status === "completed"
+                                  ? "bg-green-100 text-green-800"
+                                  : submission.status === "pending"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {submission.status === "completed"
+                                ? "✓ Fully Approved"
+                                : submission.status === "pending"
+                                ? "⏳ Pending"
+                                : ""}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedSubmission(submission);
+                                setIsViewResultsModalOpen(true);
+                              }}
+                              className="text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 bg-green-600 hover:bg-green-300 text-white"
+                            >
+                              ☰ View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            {overviewTotal > itemsPerPage && (
+              <EvaluationsPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                total={overviewTotal}
+                perPage={perPage}
+                onPageChange={(page) => {
+                  setCurrentPage(page);
+                  setIsRefreshing(true);
+                }}
+              />
+            )}
+            {/* View Results Modal */}
+            <ViewResultsModal
+              isOpen={isViewResultsModalOpen}
+              onCloseAction={() => {
+                setIsViewResultsModalOpen(false);
+                setSelectedSubmission(null);
+              }}
+              submission={selectedSubmission}
+              showApprovalButton={false}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }

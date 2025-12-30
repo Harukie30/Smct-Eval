@@ -429,8 +429,18 @@ export const apiService = {
   },
 
   // Evaluator dashboard total cards
-  evaluatorDashboard: async (): Promise<any> => {
-    const response = await api.get("/evaluatorDashboard");
+  evaluatorDashboard: async (
+    searchTerm: string,
+    currentPage: number,
+    itemsPerPage: number
+  ): Promise<any> => {
+    const response = await api.get("/evaluatorDashboard", {
+      params: {
+        search: searchTerm || "",
+        page: currentPage || 1,
+        per_page: itemsPerPage || 10,
+      },
+    });
     return response.data;
   },
 

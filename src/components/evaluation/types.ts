@@ -72,5 +72,6 @@ interface EvaluationPayload {
   customerServiceExplanation3: string;
   customerServiceExplanation4: string;
   customerServiceExplanation5: string;
+  created_at: string;
 }
 export default EvaluationPayload;
