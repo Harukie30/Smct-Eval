@@ -35,7 +35,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import EditUserModal from "@/components/EditUserModal";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import { toastMessages } from "@/lib/toastMessages";
@@ -931,7 +931,7 @@ export default function UserManagementTab() {
                                       }}
                                       disabled={deletingUserId !== null}
                                     >
-                                      View
+                                      <Eye className="h-4 w-4" />
                                     </Button>
                                     <Button
                                       variant="ghost"
@@ -940,7 +940,7 @@ export default function UserManagementTab() {
                                       onClick={() => openEditModal(employee)}
                                       disabled={deletingUserId !== null}
                                     >
-                                      Edit
+                                      <Pencil className="h-4 w-4" />
                                     </Button>
                                     <Button
                                       variant="ghost"
@@ -949,7 +949,7 @@ export default function UserManagementTab() {
                                       onClick={() => openDeleteModal(employee)}
                                       disabled={deletingUserId !== null}
                                     >
-                                      Delete
+                                      <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </div>
                                 </TableCell>
