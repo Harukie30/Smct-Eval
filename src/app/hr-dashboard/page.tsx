@@ -1430,12 +1430,12 @@ function EvaluationRecordsTab({
 // need to be fully inlined here before HRDashboard. Due to their massive size (400-1100+ lines each),
 // they should be copied from their respective index.tsx files in the hr-dashboard subdirectories.
 
-// Temporary imports to prevent compilation errors - REPLACE WITH INLINE CODE:
-import { EmployeesTab } from './EmployeesTab';
-import { DepartmentsTab } from './DepartmentsTab';
-import { BranchesTab } from './BranchesTab';
-import { PerformanceReviewsTab } from './PerformanceReviewsTab';
-import { EvaluationHistoryTab } from './EvaluationHistoryTab';
+// Import tab components from their page.tsx files
+import { EmployeesTab } from './EmployeesTab/page';
+import { DepartmentsTab } from './DepartmentsTab/page';
+import { BranchesTab } from './BranchesTab/page';
+import { PerformanceReviewsTab } from './PerformanceReviewsTab/page';
+import { EvaluationHistoryTab } from './EvaluationHistoryTab/page';
 
 function HRDashboard() {
   const searchParams = useSearchParams();
@@ -3153,5 +3153,5 @@ function HRDashboard() {
   );
 }
 
-// Wrap with HOC for authentication
-export default withAuth(HRDashboard, { requiredRole: 'hr' });
+// Authentication is handled by layout.tsx
+export default HRDashboard;
