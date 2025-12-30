@@ -234,12 +234,12 @@ export default function OverviewTab() {
     setReviewToDelete(review);
     setIsDeleteModalOpen(true);
   };
-  const groupedByYear = evaluations.reduce((acc: any, item) => {
-    const year = new Date(item.created_at).getFullYear();
-    acc[year] = acc[year] || [];
-    acc[year].push(item);
-    return acc;
-  }, {});
+  // const groupedByYear = evaluations.reduce((acc: any, item) => {
+  //   const year = new Date(item.created_at).getFullYear();
+  //   acc[year] = acc[year] || [];
+  //   acc[year].push(item);
+  //   return acc;
+  // }, {});
 
   return (
     <div className="relative ">
@@ -423,7 +423,7 @@ export default function OverviewTab() {
             <div className="flex items-center gap-2">
               {(() => {
                 const now = new Date();
-                const newCount = evaluations.filter((review) => {
+                const newCount = evaluations?.filter((review) => {
                   const hoursDiff =
                     (now.getTime() - new Date(review.created_at).getTime()) /
                     (1000 * 60 * 60);
@@ -553,7 +553,7 @@ export default function OverviewTab() {
                         </TableCell>
                       </TableRow>
                     ))
-                  ) : evaluations.length === 0 ? (
+                  ) : evaluations?.length === 0 || !evaluations ? (
                     <TableRow>
                       <TableCell colSpan={10} className="text-center py-12">
                         <div className="flex flex-col items-center justify-center gap-4">
@@ -595,7 +595,7 @@ export default function OverviewTab() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    evaluations.map((review) => {
+                    evaluations?.map((review) => {
                       const submittedDate = new Date(review.created_at);
                       const now = new Date();
                       const hoursDiff =
