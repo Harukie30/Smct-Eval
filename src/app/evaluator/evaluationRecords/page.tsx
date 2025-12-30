@@ -95,7 +95,7 @@ export default function OverviewTab() {
       itemsPerPage,
       status,
       quarter,
-      year
+      Number(year)
     );
     setEvaluations(response.myEval_as_Evaluator.data);
     setOverviewTotal(response.myEval_as_Evaluator.total);
@@ -867,7 +867,6 @@ export default function OverviewTab() {
           }}
           submission={selectedSubmission}
           showApprovalButton={false}
-          isEvaluatorView={true}
         />
       </div>
     </div>

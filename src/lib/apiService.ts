@@ -1,7 +1,5 @@
-import { EvaluationPayload } from "@/components/evaluation/types";
 import { api, sanctum } from "./api";
-import { Search } from "lucide-react";
-
+import EvaluationPayload from "../components/evaluation/types";
 // Helper function to get CSRF cookie from Sanctum
 export const sanctum_csrf = async () => {
   try {
@@ -47,10 +45,10 @@ export const apiService = {
     return response.data;
   },
 
-  getSignatureResetRequests: async (search: string): Promise<any> => {
+  getSignatureResetRequests: async (searchTerm: string): Promise<any> => {
     const response = await api.get("/getAllSignatureReset", {
       params: {
-        search: search || "",
+        searchTerm: searchTerm || "",
       },
     });
     return response.data.users;
@@ -147,27 +145,6 @@ export const apiService = {
     }));
   },
 
-  getAccounts: async (): Promise<any> => {
-    const response = await api.get("/accounts");
-    return response.data.accounts || [];
-  },
-
-  uploadAvatar: async (formData: FormData): Promise<any> => {
-    const response = await api.post("/uploadAvatar", formData);
-    return response.data;
-  },
-
-  // Profile management
-  getProfile: async (id: number): Promise<any> => {
-    const response = await api.get(`/profiles/${id}`);
-    return response.data.profile || response.data;
-  },
-
-  updateProfile: async (id: number, updates: Partial<any>): Promise<any> => {
-    const response = await api.put(`/profiles/${id}`, updates);
-    return response.data.profile || response.data;
-  },
-
   getSubmissions: async (
     searchTerm?: string,
     page?: number,
@@ -176,7 +153,7 @@ export const apiService = {
     quarter?: string,
     year?: string
   ): Promise<any> => {
-    const response = await api.get(`/getEvalAuthEvaluator`, {
+    const response = await api.get(`/allEvaluations`, {
       params: {
         search: searchTerm || "",
         page: page,
@@ -187,12 +164,17 @@ export const apiService = {
       },
     });
 
-    return response.data;
+    return response.data.evaluations;
   },
 
   getSubmissionById: async (id: number | string): Promise<any> => {
     const response = await api.get(`/submissions/${id}`);
     return response.data.user_eval;
+  },
+
+  getQuarters: async (id: number | string): Promise<any> => {
+    const response = await api.get(`/getQuarters/${id}`);
+    return response.data.data;
   },
 
   getAllYears: async (): Promise<any> => {
@@ -206,18 +188,16 @@ export const apiService = {
   },
 
   createSubmission: async (
-    userId: string | number,
+    employeeId: number | string,
     submission: EvaluationPayload
   ): Promise<any> => {
-    const response = await api.post(`submit/${userId}`, submission);
-    const data = response.data;
-    return data;
+    const response = await api.post(`submit/${employeeId}`, submission);
+    return response.data;
   },
 
   updateSubmission: async (id: number, updates: any): Promise<any> => {
     const response = await api.put(`/submissions/${id}`, updates);
-    const data = response.data;
-    return data;
+    return response.data;
   },
 
   deleteSubmission: async (
@@ -248,19 +228,6 @@ export const apiService = {
     await api.post(`/deleteNotification/${notificationId}`);
   },
 
-  // Utility methods
-  getUserById: async (userId: number): Promise<any> => {
-    const response = await api.get(`/users/${userId}`);
-    const data = response.data;
-    return data;
-  },
-
-  getProfiles: async (): Promise<any[]> => {
-    const response = await api.get("/profiles");
-    const data = response.data;
-    return data;
-  },
-
   // ============================================
   // USER MANAGEMENT (Missing Endpoints)
   // ============================================
@@ -269,14 +236,34 @@ export const apiService = {
   getAllUsers: async (): Promise<any[]> => {
     const response = await api.get("/getAllUsers");
     const data = response.data;
-    return data;
+
+    if (data.success && data.users) {
+      return data.users;
+    }
+    if (Array.isArray(data.users)) {
+      return data.users;
+    }
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return [];
   },
 
   // Get all branch heads/supervisors
   getAllBranchHeads: async (): Promise<any[]> => {
     const response = await api.get("/getAllBranchHeads");
     const data = response.data.branch_heads;
-    return data;
+
+    if (data.success && data.users) {
+      return data.users;
+    }
+    if (Array.isArray(data.users)) {
+      return data.users;
+    }
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return [];
   },
 
   // Get all area managers
@@ -287,26 +274,34 @@ export const apiService = {
 
   // Get all employees under authenticated user
   getAllEmployeeByAuth: async (
-    searchValue?: string,
+    search?: string,
+    per_page?: number,
     page?: number,
-    perPage?: number,
-    positionFilter?: string
-  ): Promise<any> => {
+    position_filter?: number
+  ): Promise<any[]> => {
     const response = await api.get("/getAllEmployeeByAuth", {
       params: {
-        search: searchValue || "",
+        search: search || "",
+        per_page: per_page || 10,
         page: page || 1,
-        per_page: perPage || 10,
-        position: positionFilter || "",
+        position_filter: position_filter || "",
       },
     });
-    return response;
+    const data = response.data;
+    return data.employees;
   },
 
   // Get specific user
   showUser: async (userId: string | number): Promise<any> => {
     const response = await api.get(`/showUser/${userId}`);
     const data = response.data;
+
+    if (data.success && data.user) {
+      return data.user;
+    }
+    if (data.user) {
+      return data.user;
+    }
     return data;
   },
 
@@ -344,7 +339,6 @@ export const apiService = {
         per_page: itemsPerPage,
       },
     });
-
     return response.data.branches;
   },
 
@@ -398,45 +392,40 @@ export const apiService = {
 
   // Get evaluations by authenticated evaluator
   getEvalAuthEvaluator: async (
-    searchValue: string,
-    currentPage: number,
-    itemsPerPage: number,
+    search: string,
+    page: number,
+    per_page: number,
     status: string,
     quarter: string,
-    year: string
+    year: number
   ): Promise<any> => {
     const response = await api.get("/getEvalAuthEvaluator", {
       params: {
-        per_page: currentPage || 1,
-        search: searchValue || "",
+        search: search || "",
+        page: page || 1,
+        per_page: per_page || 10,
         status: status || "",
         quarter: quarter || "",
         year: year || "",
       },
     });
-    const data = response.data;
-    return data;
+    return response.data;
   },
 
   // Get evaluations by authenticated employee
   getMyEvalAuthEmployee: async (
-    searchValue?: string,
-    page?: number,
-    perPage?: number,
-    year?: string,
-    quarter?: string
+    search: string,
+    page: number,
+    per_page: number
   ): Promise<any> => {
     const response = await api.get("/getMyEvalAuthEmployee", {
       params: {
-        search: searchValue || "",
+        search: search || "",
         page: page || 1,
-        per_page: perPage || 10,
-        year: year || "",
-        quarter: quarter || "",
+        per_page: per_page || 10,
       },
     });
-    const data = response.data;
-    return data;
+    return response.data;
   },
 
   // Evaluator dashboard total cards
