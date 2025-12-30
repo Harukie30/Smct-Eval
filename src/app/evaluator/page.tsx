@@ -74,11 +74,7 @@ export default function OverviewTab() {
     const fetchData = async () => {
       try {
         setIsPaginate(true);
-        const response = await apiService.evaluatorDashboard(
-          searchTerm,
-          currentPage,
-          itemsPerPage
-        );
+        const response = await apiService.evaluatorDashboard();
 
         setData(response.myEval_as_Evaluator.data);
         setTotalEvaluations(response.total_evaluations);

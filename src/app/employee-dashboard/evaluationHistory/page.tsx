@@ -231,10 +231,13 @@ export default function OverviewTab() {
   };
 
   const getQuarterColor = (quarter: string): string => {
+    if (quarter === "3" || quarter.includes("M3")) return "bg-indigo-100 text-indigo-800";
+    if (quarter === "5" || quarter.includes("M5")) return "bg-pink-100 text-pink-800";
     if (quarter.includes("Q1")) return "bg-blue-100 text-blue-800";
     if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
     if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
-    return "bg-purple-100 text-purple-800";
+    if (quarter.includes("Q4")) return "bg-purple-100 text-purple-800";
+    return "bg-gray-100 text-gray-800";
   };
 
   return (
@@ -551,7 +554,7 @@ export default function OverviewTab() {
                         )} border-2 shadow-md transform scale-110 `
                       : `${getQuarterColor(
                           quarter
-                        )} border border-gray-300 hover:shadow-sm hover:scale-102`
+                        )} border border-gray-300 hover:shadow-sm hover:scale-105`
                   }`}
                 >
                   {quarter === "3" || quarter === "5" ? "M" + quarter : quarter}

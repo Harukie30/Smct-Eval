@@ -224,6 +224,27 @@ export const apiService = {
       }
 
       // Handle /getEvalAuthEvaluator endpoint response (for regular evaluators)
+      // First check for myEval_as_Evaluator structure (like other evaluator endpoints)
+      if (data.myEval_as_Evaluator) {
+        if (data.myEval_as_Evaluator.data && Array.isArray(data.myEval_as_Evaluator.data)) {
+          return {
+            data: data.myEval_as_Evaluator.data,
+            total: data.myEval_as_Evaluator.total || 0,
+            last_page: data.myEval_as_Evaluator.last_page || 1,
+            per_page: data.myEval_as_Evaluator.per_page || perPage || 5,
+          };
+        }
+        // If myEval_as_Evaluator is directly an array
+        if (Array.isArray(data.myEval_as_Evaluator)) {
+          return {
+            data: data.myEval_as_Evaluator,
+            total: data.total || data.myEval_as_Evaluator.length,
+            last_page: data.last_page || 1,
+            per_page: data.per_page || perPage || 5,
+          };
+        }
+      }
+      
       // Handle nested structure: { evaluations: { data: [...], total: X, ... } }
       if (data.evaluations && data.evaluations.data && Array.isArray(data.evaluations.data)) {
         return {
