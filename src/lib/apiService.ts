@@ -456,6 +456,11 @@ export const apiService = {
     return response.data;
   },
 
+  employeeDashboard2: async (employeeId: number): Promise<any> => {
+    const response = await api.get(`/employeeDashboard2/${employeeId}`);
+    return response.data;
+  },
+
   // ============================================
   // OTHER MISSING ENDPOINTS
   // ============================================
