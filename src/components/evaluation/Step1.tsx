@@ -139,7 +139,7 @@ export default function Step1({
       setIsLoadingQuarters(true);
       try {
         const status = await apiService.getQuarters(Number(employee.id));
-        Object.values(status).forEach((item: any) => {
+        Object.values(status.data).forEach((item: any) => {
           if (item.reviewTypeProbationary === 3) {
             setProbitionary3(true);
           }

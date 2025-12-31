@@ -973,17 +973,8 @@ export const apiService = {
 
   // Get quarters/reviews for an employee
   getQuarters: async (employeeId: number): Promise<any> => {
-    try {
-      const response = await api.get(`/getQuarters/${employeeId}`);
-      if (response && response.data) {
-        return response.data;
-      }
-      return {};
-    } catch (error: any) {
-      console.error("Error fetching quarters:", error);
-      // Return empty object on error
-      return {};
-    }
+    const response = await api.get(`/getQuarters/${employeeId}`);
+    return response.data;
   },
 
   // Evaluator dashboard total cards
