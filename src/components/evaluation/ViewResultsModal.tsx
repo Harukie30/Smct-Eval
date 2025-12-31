@@ -3238,7 +3238,7 @@ export default function ViewResultsModal({
                             <div className="absolute top-7 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xs text-red-500">
                               Error loading signature
                             </div>
-                          ) : (
+                          ) : submission.status === "completed" ? (
                             submission.employee?.signature && (
                               <img
                                 src={
@@ -3253,6 +3253,8 @@ export default function ViewResultsModal({
                                 }}
                               />
                             )
+                          ) : (
+                            <div></div>
                           )}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
