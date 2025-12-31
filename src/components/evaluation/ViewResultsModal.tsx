@@ -134,6 +134,8 @@ export default function ViewResultsModal({
   const lastApprovalDataRef = useRef<string>("");
   const [signatureLoading, setSignatureLoading] = useState(false);
   const [signatureError, setSignatureError] = useState(false);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
 
   // Fetch employee signature for this evaluation
   // const {
@@ -1220,15 +1222,31 @@ export default function ViewResultsModal({
 
     setIsApproving(true);
     setApprovalError("");
+    setShowApprovalDialog(true);
+    setShowSuccessAnimation(false);
 
     try {
+      // Show loading for 2 seconds
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       if (onApprove) {
         onApprove(submission.id);
       }
+      
+      // Show success animation
+      setShowSuccessAnimation(true);
+      
+      // Close dialog after showing success for 1.5 seconds
+      setTimeout(() => {
+        setShowApprovalDialog(false);
+        setShowSuccessAnimation(false);
+        setIsApproving(false);
+      }, 1500);
     } catch (error) {
       console.error("❌ Error approving evaluation:", error);
       setApprovalError("Failed to approve evaluation. Please try again.");
-    } finally {
+      setShowApprovalDialog(false);
+      setShowSuccessAnimation(false);
       setIsApproving(false);
     }
   };
@@ -1467,8 +1485,51 @@ export default function ViewResultsModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-6 animate-popup">
+    <>
+      {/* Approval Loading/Success Dialog */}
+      <Dialog open={showApprovalDialog} onOpenChangeAction={() => {}}>
+        <DialogContent className="sm:max-w-md p-8">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            {!showSuccessAnimation ? (
+              <>
+                <div className="relative">
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <img src="/smct.png" alt="SMCT Logo" className="h-8 w-8 object-contain" />
+                  </div>
+                </div>
+                <p className="text-lg font-medium text-gray-800">Approving evaluation...</p>
+                <p className="text-sm text-gray-500 text-center">Please wait while we process your approval</p>
+              </>
+            ) : (
+              <>
+                <div className="relative">
+                  <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center animate-scale-in">
+                    <svg
+                      className="w-10 h-10 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={3}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <p className="text-lg font-medium text-gray-800">Evaluation Approved!</p>
+                <p className="text-sm text-gray-500 text-center">The evaluation has been successfully approved</p>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-6 animate-popup">
         <style>{`
             .screen-date {
               display: inline;
@@ -1484,6 +1545,22 @@ export default function ViewResultsModal({
             }
             .print-footer {
               display: none;
+            }
+            @keyframes scale-in {
+              0% {
+                transform: scale(0);
+                opacity: 0;
+              }
+              50% {
+                transform: scale(1.1);
+              }
+              100% {
+                transform: scale(1);
+                opacity: 1;
+              }
+            }
+            .animate-scale-in {
+              animation: scale-in 0.5s ease-out;
             }
           `}</style>
         <div ref={printContentRef} className="space-y-8">
@@ -3447,5 +3524,6 @@ export default function ViewResultsModal({
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
