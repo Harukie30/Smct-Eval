@@ -76,25 +76,64 @@ export default function OverviewTab() {
         selectedYear,
         selectedQuarter
       );
-      setMyEvaluations(response.myEval_as_Employee.data);
-      setOverviewTotal(response.myEval_as_Employee.total);
-      setTotalPages(response.myEval_as_Employee.last_page);
-      setPerPage(response.myEval_as_Employee.per_page);
+
+      // Add safety checks to prevent "Cannot read properties of undefined" error
+      if (!response || !response.myEval_as_Employee) {
+        console.error(
+          "API response is undefined or missing myEval_as_Employee"
+        );
+        setMyEvaluations([]);
+        setOverviewTotal(0);
+        setTotalPages(1);
+        setPerPage(itemsPerPage);
+        setIsPaginate(false);
+        setYears([]);
+        return;
+      }
+
+      setMyEvaluations(response.myEval_as_Employee.data || []);
+      setOverviewTotal(response.myEval_as_Employee.total || 0);
+      setTotalPages(response.myEval_as_Employee.last_page || 1);
+      setPerPage(response.myEval_as_Employee.per_page || itemsPerPage);
       setIsPaginate(false);
-      setYears(response.years);
+      setYears(response.years || []);
     } catch (error) {
       console.error("Error loading approved evaluations:", error);
+      // Set default values on error
+      setMyEvaluations([]);
+      setOverviewTotal(0);
+      setTotalPages(1);
+      setPerPage(itemsPerPage);
       setIsPaginate(false);
+      setYears([]);
     }
   };
 
   useEffect(() => {
     loadApprovedEvaluations(searchTerm);
     const loadDashboard = async () => {
-      const dashboard = await apiService.employeeDashboard();
-      setTotalEvaluations(dashboard.total_evaluations);
-      setAverage(dashboard.average);
-      setRecentEvaluation(dashboard.recent_evaluation);
+      try {
+        const dashboard = await apiService.employeeDashboard();
+
+        // Add safety checks to prevent "Cannot read properties of undefined" error
+        if (!dashboard) {
+          console.error("Dashboard API response is undefined");
+          setTotalEvaluations(0);
+          setAverage(0);
+          setRecentEvaluation([]);
+          return;
+        }
+
+        setTotalEvaluations(dashboard.total_evaluations || 0);
+        setAverage(dashboard.average || 0);
+        setRecentEvaluation(dashboard.recent_evaluation || []);
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+        // Set default values on error
+        setTotalEvaluations(0);
+        setAverage(0);
+        setRecentEvaluation([]);
+      }
     };
     loadDashboard();
   }, [selectedQuarter, selectedYear]);
@@ -194,10 +233,15 @@ export default function OverviewTab() {
   };
 
   const getQuarterColor = (quarter: string): string => {
+    if (quarter === "3" || quarter.includes("M3"))
+      return "bg-indigo-100 text-indigo-800";
+    if (quarter === "5" || quarter.includes("M5"))
+      return "bg-pink-100 text-pink-800";
     if (quarter.includes("Q1")) return "bg-blue-100 text-blue-800";
     if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
     if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
-    return "bg-purple-100 text-purple-800";
+    if (quarter.includes("Q4")) return "bg-purple-100 text-purple-800";
+    return "bg-gray-100 text-gray-800";
   };
 
   return (
@@ -514,7 +558,7 @@ export default function OverviewTab() {
                         )} border-2 shadow-md transform scale-110 `
                       : `${getQuarterColor(
                           quarter
-                        )} border border-gray-300 hover:shadow-sm hover:scale-102`
+                        )} border border-gray-300 hover:shadow-sm hover:scale-105`
                   }`}
                 >
                   {quarter === "3" || quarter === "5" ? "M" + quarter : quarter}

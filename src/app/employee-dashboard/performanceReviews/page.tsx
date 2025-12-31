@@ -78,10 +78,12 @@ export default function performanceReviews() {
         currentPage,
         itemsPerPage
       );
-      
+
       // Add safety checks to prevent "Cannot read properties of undefined" error
       if (!response || !response.myEval_as_Employee) {
-        console.error("API response is undefined or missing myEval_as_Employee");
+        console.error(
+          "API response is undefined or missing myEval_as_Employee"
+        );
         setSubmissions([]);
         setOverviewTotal(0);
         setTotalPages(1);
@@ -115,7 +117,7 @@ export default function performanceReviews() {
     const loadDashboard = async () => {
       try {
         const dashboard = await apiService.employeeDashboard();
-        
+
         // Add safety checks to prevent "Cannot read properties of undefined" error
         if (!dashboard) {
           console.error("Dashboard API response is undefined");
@@ -157,6 +159,22 @@ export default function performanceReviews() {
       }
     } catch (error) {
       console.error("Error fetching submission details:", error);
+    }
+  };
+
+  const handleApprove = async (id: number) => {
+    try {
+      await apiService.approvedByEmployee(id);
+      const submission = await apiService.getSubmissionById(id);
+
+      if (submission) {
+        setSelectedSubmission(submission);
+        setIsViewResultsModalOpen(true);
+      } else {
+        console.error("Submission not found for ID:", id);
+      }
+    } catch (error) {
+      console.error("Error approving submission:", error);
     }
   };
 
@@ -840,6 +858,7 @@ export default function performanceReviews() {
                     }}
                     submission={selectedSubmission}
                     showApprovalButton={true}
+                    onApprove={(id) => handleApprove(id)}
                   />
                 </>
               ) : (

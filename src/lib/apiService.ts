@@ -175,7 +175,7 @@ export const apiService = {
       // For HR/Admin, use /allEvaluations endpoint to get ALL evaluations
       // For regular evaluators, use /getEvalAuthEvaluator to get only their evaluations
       const endpoint = getAll ? `/allEvaluations` : `/getEvalAuthEvaluator`;
-      
+
       const response = await api.get(endpoint, {
         params: {
           search: searchTerm || "",
@@ -226,7 +226,10 @@ export const apiService = {
       // Handle /getEvalAuthEvaluator endpoint response (for regular evaluators)
       // First check for myEval_as_Evaluator structure (like other evaluator endpoints)
       if (data.myEval_as_Evaluator) {
-        if (data.myEval_as_Evaluator.data && Array.isArray(data.myEval_as_Evaluator.data)) {
+        if (
+          data.myEval_as_Evaluator.data &&
+          Array.isArray(data.myEval_as_Evaluator.data)
+        ) {
           return {
             data: data.myEval_as_Evaluator.data,
             total: data.myEval_as_Evaluator.total || 0,
@@ -244,9 +247,13 @@ export const apiService = {
           };
         }
       }
-      
+
       // Handle nested structure: { evaluations: { data: [...], total: X, ... } }
-      if (data.evaluations && data.evaluations.data && Array.isArray(data.evaluations.data)) {
+      if (
+        data.evaluations &&
+        data.evaluations.data &&
+        Array.isArray(data.evaluations.data)
+      ) {
         return {
           data: data.evaluations.data,
           total: data.evaluations.total || 0,
@@ -362,14 +369,8 @@ export const apiService = {
   },
 
   // Approve evaluation by employee (matches documentation endpoint)
-  approvedByEmployee: async (
-    evaluationId: number,
-    data?: any
-  ): Promise<any> => {
-    const response = await api.post(
-      `/approvedByEmployee/${evaluationId}`,
-      data || {}
-    );
+  approvedByEmployee: async (evaluationId: number): Promise<any> => {
+    const response = await api.post(`/approvedByEmployee/${evaluationId}`);
     return response.data;
   },
 
@@ -661,7 +662,7 @@ export const apiService = {
           position: positionFilter || "",
         },
       });
-      
+
       // Add safety check to prevent "Cannot read properties of undefined" error
       if (!response || !response.data) {
         console.error("API response is undefined or missing data");
@@ -677,7 +678,12 @@ export const apiService = {
 
       // Handle response with employees wrapper: { employees: { data: [...], total: X, ... } }
       // This is the ACTUAL structure from the API
-      if (data && data.employees && data.employees.data && Array.isArray(data.employees.data)) {
+      if (
+        data &&
+        data.employees &&
+        data.employees.data &&
+        Array.isArray(data.employees.data)
+      ) {
         return {
           data: data.employees.data,
           total: data.employees.total || 0,
@@ -688,7 +694,12 @@ export const apiService = {
 
       // Handle Laravel paginated response (data.data array) - Fallback structure
       // Response structure: { current_page: 1, data: [...], total: X, last_page: Y, per_page: Z }
-      if (data && typeof data === 'object' && data.hasOwnProperty('data') && Array.isArray(data.data)) {
+      if (
+        data &&
+        typeof data === "object" &&
+        data.hasOwnProperty("data") &&
+        Array.isArray(data.data)
+      ) {
         return {
           data: data.data,
           total: data.total || 0,
@@ -768,7 +779,7 @@ export const apiService = {
           per_page: perPage || 10,
         };
       }
-      
+
       // Re-throw other errors
       throw error;
     }
@@ -918,18 +929,46 @@ export const apiService = {
     if (data.myEval_as_Employee) {
       return data;
     }
-    
+
     // Handle non-paginated response (fallback)
     if (data.success && data.evaluations) {
-      return { myEval_as_Employee: { data: data.evaluations, total: data.evaluations.length, last_page: 1, per_page: perPage || 10 } };
+      return {
+        myEval_as_Employee: {
+          data: data.evaluations,
+          total: data.evaluations.length,
+          last_page: 1,
+          per_page: perPage || 10,
+        },
+      };
     }
     if (Array.isArray(data.evaluations)) {
-      return { myEval_as_Employee: { data: data.evaluations, total: data.evaluations.length, last_page: 1, per_page: perPage || 10 } };
+      return {
+        myEval_as_Employee: {
+          data: data.evaluations,
+          total: data.evaluations.length,
+          last_page: 1,
+          per_page: perPage || 10,
+        },
+      };
     }
     if (Array.isArray(data)) {
-      return { myEval_as_Employee: { data: data, total: data.length, last_page: 1, per_page: perPage || 10 } };
+      return {
+        myEval_as_Employee: {
+          data: data,
+          total: data.length,
+          last_page: 1,
+          per_page: perPage || 10,
+        },
+      };
     }
-    return { myEval_as_Employee: { data: [], total: 0, last_page: 1, per_page: perPage || 10 } };
+    return {
+      myEval_as_Employee: {
+        data: [],
+        total: 0,
+        last_page: 1,
+        per_page: perPage || 10,
+      },
+    };
   },
 
   // Get quarters/reviews for an employee

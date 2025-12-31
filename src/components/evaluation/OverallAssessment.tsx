@@ -2853,33 +2853,18 @@ export default function OverallAssessment({
             <div className="space-y-3">
               <div>
                 <Label className="text-sm font-medium text-gray-700">
-                  Signature:
+                  Employee signature:
                 </Label>
-                <div className="mt-1 border-2 border-dashed border-white rounded-lg bg-gray-50">
-                  {/* Signature area */}
-                  <div className="h-16 border-b border-gray-300 flex items-center justify-center">
-                    {employee?.signature ? (
-                      <img
-                        src={`${CONFIG.API_URL_STORAGE}/${employee.signature}`}
-                        alt="Employee Signature"
-                        className="h-12 max-w-full object-contain"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <span className="text-gray-500 text-sm">
-                        No signature available
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Name area */}
-                  <div className="p-2 text-center">
-                    <p className="text-sm font-medium text-gray-700">
+                <div className="border border-gray-300 rounded-lg bg-white p-4 relative">
+                  <div className="h-16 flex items-center justify-center relative">
+                    {/* Name as background text - always show */}
+                    <span className="text-md text-gray-900 font-bold">
                       {employee?.fname + " " + employee?.lname ||
-                        "Employee Name"}
-                    </p>
+                        "Evaluator Name"}
+                    </span>
+                    {/* Signature overlay - automatically show when signature exists */}
+
+                    {/* Show message if no signature */}
                   </div>
                 </div>
               </div>
@@ -2961,8 +2946,9 @@ export default function OverallAssessment({
         <div className="flex items-center space-x-4">
           {/* Print Button */}
           <Button
-            onClick={handlePrint}
+            // onClick={handlePrint}
             variant="outline"
+            disabled
             className="px-6 py-3 text-base flex items-center space-x-2"
           >
             <Printer className="h-4 w-4" />

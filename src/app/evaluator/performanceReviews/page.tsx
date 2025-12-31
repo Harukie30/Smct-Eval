@@ -78,13 +78,33 @@ export default function performanceReviews() {
         currentPage,
         itemsPerPage
       );
-      setSubmissions(response.myEval_as_Employee.data);
-      setOverviewTotal(response.myEval_as_Employee.total);
-      setTotalPages(response.myEval_as_Employee.last_page);
-      setPerPage(response.myEval_as_Employee.per_page);
+
+      // Add safety checks to prevent "Cannot read properties of undefined" error
+      if (!response || !response.myEval_as_Employee) {
+        console.error(
+          "API response is undefined or missing myEval_as_Employee"
+        );
+        setSubmissions([]);
+        setOverviewTotal(0);
+        setTotalPages(1);
+        setPerPage(itemsPerPage);
+        setIsPaginate(false);
+        setLoading(false);
+        return;
+      }
+
+      setSubmissions(response.myEval_as_Employee.data || []);
+      setOverviewTotal(response.myEval_as_Employee.total || 0);
+      setTotalPages(response.myEval_as_Employee.last_page || 1);
+      setPerPage(response.myEval_as_Employee.per_page || itemsPerPage);
       setIsPaginate(false);
     } catch (error) {
       console.error("Error loading submissions:", error);
+      // Set default values on error
+      setSubmissions([]);
+      setOverviewTotal(0);
+      setTotalPages(1);
+      setPerPage(itemsPerPage);
     } finally {
       setIsPaginate(false);
       setLoading(false);
@@ -95,11 +115,30 @@ export default function performanceReviews() {
   useEffect(() => {
     loadSubmissions();
     const loadDashboard = async () => {
-      const dashboard = await apiService.employeeDashboard();
-      setTotalEvaluations(dashboard.total_evaluations);
-      setAverage(dashboard.average);
-      setRecentEvaluation(dashboard.recent_evaluation);
-      setUserEval(dashboard.user_eval);
+      try {
+        const dashboard = await apiService.employeeDashboard();
+
+        // Add safety checks to prevent "Cannot read properties of undefined" error
+        if (!dashboard) {
+          console.error("Dashboard API response is undefined");
+          setTotalEvaluations(0);
+          setAverage(0);
+          setRecentEvaluation([]);
+          return;
+        }
+
+        setTotalEvaluations(dashboard.total_evaluations || 0);
+        setAverage(dashboard.average || 0);
+        setRecentEvaluation(dashboard.recent_evaluation || []);
+        setUserEval(dashboard.user_eval || []);
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+        // Set default values on error
+        setTotalEvaluations(0);
+        setAverage(0);
+        setRecentEvaluation([]);
+        setUserEval([]);
+      }
     };
     loadDashboard();
   }, [user]);
@@ -120,6 +159,22 @@ export default function performanceReviews() {
       }
     } catch (error) {
       console.error("Error fetching submission details:", error);
+    }
+  };
+
+  const handleApprove = async (id: number) => {
+    try {
+      await apiService.approvedByEmployee(id);
+      const submission = await apiService.getSubmissionById(id);
+
+      if (submission) {
+        setSelectedSubmission(submission);
+        setIsViewResultsModalOpen(true);
+      } else {
+        console.error("Submission not found for ID:", id);
+      }
+    } catch (error) {
+      console.error("Error approving submission:", error);
     }
   };
 
@@ -802,8 +857,8 @@ export default function performanceReviews() {
                       setSelectedSubmission(null);
                     }}
                     submission={selectedSubmission}
-                    showApprovalButton={false}
-                    isEvaluatorView={false}
+                    showApprovalButton={true}
+                    onApprove={(id) => handleApprove(id)}
                   />
                 </>
               ) : (
