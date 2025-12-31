@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Eye, FileText, Pencil, Trash2 } from "lucide-react";
-import EvaluationsPagination from "@/components/paginationComponent";
 import { apiService } from '@/lib/apiService';
 import { toastMessages } from '@/lib/toastMessages';
 
@@ -787,22 +786,76 @@ export function EmployeesTab({
               </CardContent>
             </Card>
 
-            {/* Pagination Controls for Active Employees */}
-            {tab === "active" && employeeViewMode === 'directory' && employeesTotal > itemsPerPage && (
-              <EvaluationsPagination
-                currentPage={employeesPage}
-                totalPages={employeesTotalPages}
-                total={employeesTotal}
-                perPage={itemsPerPage}
-                onPageChange={(page) => {
-                  setIsPageChanging(true);
-                  setEmployeesPage(page);
-                  // Simulate a brief loading delay for smooth transition
-                  setTimeout(() => {
-                    setIsPageChanging(false);
-                  }, 300);
-                }}
-              />
+            {/* Pagination Controls for Active Employees - Outside table, centered */}
+            {tab === "active" && employeeViewMode === 'directory' && !isPageChanging && employeesTotal > itemsPerPage && (
+              <div className="w-full flex flex-col items-center justify-center py-4 px-4">
+                <div className="text-center text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
+                  Showing {employeesStartIndex + 1} to {Math.min(employeesEndIndex, employeesTotal)} of {employeesTotal} records
+                </div>
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsPageChanging(true);
+                      setEmployeesPage(Math.max(1, employeesPage - 1));
+                      setTimeout(() => {
+                        setIsPageChanging(false);
+                      }, 300);
+                    }}
+                    disabled={employeesPage === 1 || isPageChanging}
+                    className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-0.5 md:gap-1">
+                    {Array.from({ length: employeesTotalPages }, (_, i) => i + 1).map((page) => {
+                      if (page === 1 || page === employeesTotalPages || (page >= employeesPage - 1 && page <= employeesPage + 1)) {
+                        return (
+                          <Button
+                            key={page}
+                            variant={employeesPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => {
+                              setIsPageChanging(true);
+                              setEmployeesPage(page);
+                              setTimeout(() => {
+                                setIsPageChanging(false);
+                              }, 300);
+                            }}
+                            disabled={isPageChanging}
+                            className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
+                              employeesPage === page
+                                ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                                : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                            }`}
+                          >
+                            {page}
+                          </Button>
+                        );
+                      } else if (page === employeesPage - 2 || page === employeesPage + 2) {
+                        return <span key={page} className="text-gray-400 text-xs md:text-sm">...</span>;
+                      }
+                      return null;
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsPageChanging(true);
+                      setEmployeesPage(Math.min(employeesTotalPages, employeesPage + 1));
+                      setTimeout(() => {
+                        setIsPageChanging(false);
+                      }, 300);
+                    }}
+                    disabled={employeesPage === employeesTotalPages || isPageChanging}
+                    className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             )}
           </>
         )}
@@ -1145,18 +1198,64 @@ export function EmployeesTab({
           </Card>
         )}
 
-        {/* Pagination for New Registrations */}
-        {tab === "new" && pendingTotalItems > pendingItemsPerPage && (
-          <EvaluationsPagination
-            currentPage={pendingPage}
-            totalPages={Math.ceil(pendingTotalItems / pendingItemsPerPage)}
-            total={pendingTotalItems}
-            perPage={pendingItemsPerPage}
-            onPageChange={(page) => {
-              setPendingPage(page);
-            }}
-          />
-        )}
+        {/* Pagination for New Registrations - Outside table, centered */}
+        {tab === "new" && !isPendingLoading && pendingTotalItems > pendingItemsPerPage && (() => {
+          const pendingTotalPages = Math.ceil(pendingTotalItems / pendingItemsPerPage);
+          const pendingStartIndex = (pendingPage - 1) * pendingItemsPerPage;
+          const pendingEndIndex = pendingStartIndex + pendingItemsPerPage;
+          return (
+            <div className="w-full flex flex-col items-center justify-center py-4 px-4">
+              <div className="text-center text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
+                Showing {pendingStartIndex + 1} to {Math.min(pendingEndIndex, pendingTotalItems)} of {pendingTotalItems} records
+              </div>
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPendingPage(Math.max(1, pendingPage - 1))}
+                  disabled={pendingPage === 1 || isPendingLoading}
+                  className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-0.5 md:gap-1">
+                  {Array.from({ length: pendingTotalPages }, (_, i) => i + 1).map((page) => {
+                    if (page === 1 || page === pendingTotalPages || (page >= pendingPage - 1 && page <= pendingPage + 1)) {
+                      return (
+                        <Button
+                          key={page}
+                          variant={pendingPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setPendingPage(page)}
+                          disabled={isPendingLoading}
+                          className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
+                            pendingPage === page
+                              ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                              : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          }`}
+                        >
+                          {page}
+                        </Button>
+                      );
+                    } else if (page === pendingPage - 2 || page === pendingPage + 2) {
+                      return <span key={page} className="text-gray-400 text-xs md:text-sm">...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPendingPage(Math.min(pendingTotalPages, pendingPage + 1))}
+                  disabled={pendingPage === pendingTotalPages || isPendingLoading}
+                  className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
       </>
     </div>
   );

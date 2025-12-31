@@ -465,13 +465,13 @@ export function OverviewTab({
             </Table>
           </div>
 
-          {/* Pagination Controls */}
-          {overviewTotal > itemsPerPage && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-0 mt-3 md:mt-4 px-2">
-              <div className="text-xs md:text-sm text-gray-600 order-2 sm:order-1">
+          {/* Pagination Controls - Centered */}
+          {!isPageChanging && overviewTotal > itemsPerPage && (
+            <div className="w-full flex flex-col items-center justify-center py-4">
+              <div className="text-xs md:text-sm text-gray-600 mb-3">
                 Showing {overviewStartIndex + 1} to {Math.min(overviewEndIndex, overviewTotal)} of {overviewTotal} records
               </div>
-              <div className="flex items-center gap-1.5 md:gap-2 order-1 sm:order-2">
+              <div className="flex items-center gap-1.5 md:gap-2">
                 <Button
                   variant="outline"
                   size="sm"

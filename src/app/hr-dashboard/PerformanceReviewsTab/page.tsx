@@ -586,23 +586,23 @@ export function PerformanceReviewsTab({
                       </Table>
                     </div>
 
-                    {/* Pagination Controls */}
+                    {/* Pagination Controls - Outside table, centered */}
                     {performanceTotal > itemsPerPage && (
-                      <div className="flex items-center justify-between mt-4 mx-4 px-2">
-                        <div className="text-sm text-gray-600">
+                      <div className="w-full flex flex-col items-center justify-center py-4 px-4">
+                        <div className="text-center text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
                           Showing {performanceStartIndex + 1} to {Math.min(performanceEndIndex, performanceTotal)} of {performanceTotal} reviews
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 md:gap-2">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setPerformancePage(prev => Math.max(1, prev - 1))}
                             disabled={performancePage === 1}
-                            className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                            className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
                           >
                             Previous
                           </Button>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-0.5 md:gap-1">
                             {Array.from({ length: performanceTotalPages }, (_, i) => i + 1).map((page) => {
                               if (
                                 page === 1 ||
@@ -615,7 +615,7 @@ export function PerformanceReviewsTab({
                                     variant={performancePage === page ? "default" : "outline"}
                                     size="sm"
                                     onClick={() => setPerformancePage(page)}
-                                    className={`text-xs w-8 h-8 p-0 ${
+                                    className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
                                       performancePage === page
                                         ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
                                         : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
@@ -625,7 +625,7 @@ export function PerformanceReviewsTab({
                                   </Button>
                                 );
                               } else if (page === performancePage - 2 || page === performancePage + 2) {
-                                return <span key={page} className="text-gray-400">...</span>;
+                                return <span key={page} className="text-gray-400 text-xs md:text-sm">...</span>;
                               }
                               return null;
                             })}
@@ -635,7 +635,7 @@ export function PerformanceReviewsTab({
                             size="sm"
                             onClick={() => setPerformancePage(prev => Math.min(performanceTotalPages, prev + 1))}
                             disabled={performancePage === performanceTotalPages}
-                            className="text-xs bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                            className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
                           >
                             Next
                           </Button>

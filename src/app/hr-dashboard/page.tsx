@@ -3,7 +3,6 @@
 import { useState, useEffect, lazy, Suspense, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
-import { withAuth } from '@/hoc';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +31,6 @@ import EditUserModal from '@/components/EditUserModal';
 import AddEmployeeModal from '@/components/AddEmployeeModal';
 import ViewEmployeeModal from '@/components/ViewEmployeeModal';
 import { useDialogAnimation } from '@/hooks/useDialogAnimation';
-import EvaluationsPagination from "@/components/paginationComponent";
 import SearchableDropdown from "@/components/ui/searchable-dropdown";
 import { getQuarterFromDate, getQuarterFromEvaluationData } from '@/lib/quarterUtils';
 import departmentsData from '@/data/departments.json';
@@ -682,13 +680,13 @@ function OverviewTab({
             </Table>
           </div>
 
-          {/* Pagination Controls */}
-          {overviewTotal > itemsPerPage && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-0 mt-3 md:mt-4 px-2">
-              <div className="text-xs md:text-sm text-gray-600 order-2 sm:order-1">
+          {/* Pagination Controls - Centered */}
+          {!isPageChanging && overviewTotal > itemsPerPage && (
+            <div className="w-full flex flex-col items-center justify-center py-4">
+              <div className="text-xs md:text-sm text-gray-600 mb-3">
                 Showing {overviewStartIndex + 1} to {Math.min(overviewEndIndex, overviewTotal)} of {overviewTotal} records
               </div>
-              <div className="flex items-center gap-1.5 md:gap-2 order-1 sm:order-2">
+              <div className="flex items-center gap-1.5 md:gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -1382,45 +1380,41 @@ function EvaluationRecordsTab({
               </TableBody>
             </Table>
           </div>
-
-          {!recordsRefreshing && !isPageLoading && (
-            <div className="m-3 md:m-4 p-2 md:p-0">
-              <div className="text-center text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
-                Showing {filteredAndSortedSubmissions.length} of {recentSubmissions.length} evaluation records
-              </div>
-              
-              {recordsTotal > itemsPerPage && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 md:mt-4 px-2">
-                  <div className="text-xs md:text-sm text-gray-600">
-                    Showing {recordsStartIndex + 1} to {Math.min(recordsEndIndex, recordsTotal)} of {recordsTotal} records
-                  </div>
-                  <div className="flex items-center gap-1.5 md:gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handlePageChange(Math.max(1, recordsPage - 1), true)} disabled={recordsPage === 1 || isPageLoading} className="text-xs bg-blue-500 text-white hover:bg-blue-700">
-                      Previous
-                    </Button>
-                    <div className="flex items-center gap-0.5 md:gap-1">
-                      {Array.from({ length: recordsTotalPages }, (_, i) => i + 1).map((page) => {
-                        if (page === 1 || page === recordsTotalPages || (page >= recordsPage - 1 && page <= recordsPage + 1)) {
-                          return (
-                            <Button key={page} variant={recordsPage === page ? "default" : "outline"} size="sm" onClick={() => handlePageChange(page, true)} disabled={isPageLoading} className={`text-xs w-7 h-7 md:w-8 md:h-8 p-0 ${recordsPage === page ? "bg-blue-700 text-white" : "bg-blue-500 text-white"}`}>
-                              {page}
-                            </Button>
-                          );
-                        } else if (page === recordsPage - 2 || page === recordsPage + 2) {
-                          return <span key={page} className="text-gray-400 text-xs">...</span>;
-                        }
-                        return null;
-                      })}
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => handlePageChange(Math.min(recordsTotalPages, recordsPage + 1), true)} disabled={recordsPage === recordsTotalPages || isPageLoading} className="text-xs bg-blue-500 text-white hover:bg-blue-700">
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </CardContent>
+
+        {/* Pagination - Outside the table, centered */}
+        {!recordsRefreshing && !isPageLoading && (
+          <div className="w-full flex flex-col items-center justify-center py-4 px-4">
+            <div className="text-center text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
+              Showing {recordsStartIndex + 1} to {Math.min(recordsEndIndex, recordsTotal)} of {recordsTotal} records
+            </div>
+            
+            {recordsTotal > itemsPerPage && (
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <Button variant="outline" size="sm" onClick={() => handlePageChange(Math.max(1, recordsPage - 1), true)} disabled={recordsPage === 1 || isPageLoading} className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white">
+                  Previous
+                </Button>
+                <div className="flex items-center gap-0.5 md:gap-1">
+                  {Array.from({ length: recordsTotalPages }, (_, i) => i + 1).map((page) => {
+                    if (page === 1 || page === recordsTotalPages || (page >= recordsPage - 1 && page <= recordsPage + 1)) {
+                      return (
+                        <Button key={page} variant={recordsPage === page ? "default" : "outline"} size="sm" onClick={() => handlePageChange(page, true)} disabled={isPageLoading} className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${recordsPage === page ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white" : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"}`}>
+                          {page}
+                        </Button>
+                      );
+                    } else if (page === recordsPage - 2 || page === recordsPage + 2) {
+                      return <span key={page} className="text-gray-400 text-xs md:text-sm">...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+                <Button variant="outline" size="sm" onClick={() => handlePageChange(Math.min(recordsTotalPages, recordsPage + 1), true)} disabled={recordsPage === recordsTotalPages || isPageLoading} className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white">
+                  Next
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </Card>
     </div>
   );

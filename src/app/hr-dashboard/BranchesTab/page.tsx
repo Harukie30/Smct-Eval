@@ -12,7 +12,6 @@ import { toastMessages } from '@/lib/toastMessages';
 import { useDialogAnimation } from '@/hooks/useDialogAnimation';
 import { apiService } from '@/lib/apiService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import EvaluationsPagination from "@/components/paginationComponent";
 
 interface Employee {
   id: number;
@@ -384,32 +383,106 @@ export function BranchesTab({
               </div>
             )}
           </div>
-          {/* Pagination Controls */}
-          {overviewTotal > itemsPerPage && (
-            <EvaluationsPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              total={overviewTotal}
-              perPage={perPage}
-              onPageChange={async (page) => {
-                setIsPageChanging(true);
-                setCurrentPage(page);
-                // Wait for state update, then load data
-                setTimeout(async () => {
-                  try {
-                    await loadData(debouncedSearchTerm);
-                    // Small delay for smooth transition
-                    setTimeout(() => {
-                      setIsPageChanging(false);
-                    }, 300);
-                  } catch (error) {
-                    setIsPageChanging(false);
-                  }
-                }, 10);
-              }}
-            />
-          )}
         </CardContent>
+
+        {/* Pagination Controls - Outside table, centered */}
+        {!isPageChanging && overviewTotal > itemsPerPage && (() => {
+          const startIndex = (currentPage - 1) * itemsPerPage;
+          const endIndex = startIndex + itemsPerPage;
+          return (
+            <div className="w-full flex flex-col items-center justify-center py-4 px-4">
+              <div className="text-center text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
+                Showing {startIndex + 1} to {Math.min(endIndex, overviewTotal)} of {overviewTotal} records
+              </div>
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    setIsPageChanging(true);
+                    const newPage = Math.max(1, currentPage - 1);
+                    setCurrentPage(newPage);
+                    setTimeout(async () => {
+                      try {
+                        await loadData(debouncedSearchTerm);
+                        setTimeout(() => {
+                          setIsPageChanging(false);
+                        }, 300);
+                      } catch (error) {
+                        setIsPageChanging(false);
+                      }
+                    }, 10);
+                  }}
+                  disabled={currentPage === 1 || isPageChanging}
+                  className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-0.5 md:gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                      return (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={async () => {
+                            setIsPageChanging(true);
+                            setCurrentPage(page);
+                            setTimeout(async () => {
+                              try {
+                                await loadData(debouncedSearchTerm);
+                                setTimeout(() => {
+                                  setIsPageChanging(false);
+                                }, 300);
+                              } catch (error) {
+                                setIsPageChanging(false);
+                              }
+                            }, 10);
+                          }}
+                          disabled={isPageChanging}
+                          className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
+                            currentPage === page
+                              ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                              : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          }`}
+                        >
+                          {page}
+                        </Button>
+                      );
+                    } else if (page === currentPage - 2 || page === currentPage + 2) {
+                      return <span key={page} className="text-gray-400 text-xs md:text-sm">...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    setIsPageChanging(true);
+                    const newPage = Math.min(totalPages, currentPage + 1);
+                    setCurrentPage(newPage);
+                    setTimeout(async () => {
+                      try {
+                        await loadData(debouncedSearchTerm);
+                        setTimeout(() => {
+                          setIsPageChanging(false);
+                        }, 300);
+                      } catch (error) {
+                        setIsPageChanging(false);
+                      }
+                    }, 10);
+                  }}
+                  disabled={currentPage === totalPages || isPageChanging}
+                  className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
       </Card>
 
       {/* Add Branch Modal */}

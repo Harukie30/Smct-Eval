@@ -872,19 +872,12 @@ export function EvaluationRecordsTab({
           </div>
 
           {/* Results Counter and Pagination */}
-          {!recordsRefreshing && !isPageLoading && (
-            <div className="m-3 md:m-4 p-2 md:p-0">
-              <div className="text-center text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
-                Showing {filteredAndSortedSubmissions.length} of {recentSubmissions.length} evaluation records
+          {!recordsRefreshing && !isPageLoading && recordsTotal > itemsPerPage && (
+            <div className="w-full flex flex-col items-center justify-center py-4">
+              <div className="text-xs md:text-sm text-gray-600 mb-3">
+                Showing {recordsStartIndex + 1} to {Math.min(recordsEndIndex, recordsTotal)} of {recordsTotal} records
               </div>
-              
-              {/* Pagination Controls */}
-              {recordsTotal > itemsPerPage && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-0 mt-3 md:mt-4 px-2">
-                  <div className="text-xs md:text-sm text-gray-600 order-2 sm:order-1">
-                    Showing {recordsStartIndex + 1} to {Math.min(recordsEndIndex, recordsTotal)} of {recordsTotal} records
-                  </div>
-                  <div className="flex items-center gap-1.5 md:gap-2 order-1 sm:order-2">
+              <div className="flex items-center gap-1.5 md:gap-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -941,8 +934,6 @@ export function EvaluationRecordsTab({
                       Next
                     </Button>
                   </div>
-                </div>
-              )}
             </div>
           )}
         </CardContent>

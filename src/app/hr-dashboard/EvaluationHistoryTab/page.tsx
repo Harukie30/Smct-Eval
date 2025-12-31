@@ -456,64 +456,64 @@ export function EvaluationHistoryTab({
                         </Table>
                       )}
                     </div>
-
-                    {/* Pagination Controls - Show when more than 7 quarters */}
-                    {filteredQuarters.length > 7 && (
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-0 mt-3 md:mt-4 px-2">
-                        <div className="text-xs md:text-sm text-gray-600 order-2 sm:order-1">
-                          Showing {historyStartIndex + 1} to {Math.min(historyEndIndex, filteredQuarters.length)} of {filteredQuarters.length} records
-                        </div>
-                        <div className="flex items-center gap-1.5 md:gap-2 order-1 sm:order-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setHistoryPage(prev => Math.max(1, prev - 1))}
-                            disabled={historyPage === 1}
-                            className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                          >
-                            Previous
-                          </Button>
-                          <div className="flex items-center gap-0.5 md:gap-1">
-                            {Array.from({ length: historyTotalPages }, (_, i) => i + 1).map((page) => {
-                              if (
-                                page === 1 ||
-                                page === historyTotalPages ||
-                                (page >= historyPage - 1 && page <= historyPage + 1)
-                              ) {
-                                return (
-                                  <Button
-                                    key={page}
-                                    variant={historyPage === page ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => setHistoryPage(page)}
-                                    className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
-                                      historyPage === page
-                                        ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
-                                        : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                                    }`}
-                                  >
-                                    {page}
-                                  </Button>
-                                );
-                              } else if (page === historyPage - 2 || page === historyPage + 2) {
-                                return <span key={page} className="text-gray-400 text-xs md:text-sm">...</span>;
-                              }
-                              return null;
-                            })}
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setHistoryPage(prev => Math.min(historyTotalPages, prev + 1))}
-                            disabled={historyPage === historyTotalPages}
-                            className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
-                          >
-                            Next
-                          </Button>
-                        </div>
-                      </div>
-                    )}
           </CardContent>
+
+          {/* Pagination Controls - Outside table, centered */}
+          {filteredQuarters.length > 7 && (
+            <div className="w-full flex flex-col items-center justify-center py-4 px-4">
+              <div className="text-center text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
+                Showing {historyStartIndex + 1} to {Math.min(historyEndIndex, filteredQuarters.length)} of {filteredQuarters.length} records
+              </div>
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setHistoryPage(prev => Math.max(1, prev - 1))}
+                  disabled={historyPage === 1}
+                  className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-0.5 md:gap-1">
+                  {Array.from({ length: historyTotalPages }, (_, i) => i + 1).map((page) => {
+                    if (
+                      page === 1 ||
+                      page === historyTotalPages ||
+                      (page >= historyPage - 1 && page <= historyPage + 1)
+                    ) {
+                      return (
+                        <Button
+                          key={page}
+                          variant={historyPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setHistoryPage(page)}
+                          className={`text-xs md:text-sm w-7 h-7 md:w-8 md:h-8 p-0 ${
+                            historyPage === page
+                              ? "bg-blue-700 text-white hover:bg-blue-500 hover:text-white"
+                              : "bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                          }`}
+                        >
+                          {page}
+                        </Button>
+                      );
+                    } else if (page === historyPage - 2 || page === historyPage + 2) {
+                      return <span key={page} className="text-gray-400 text-xs md:text-sm">...</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setHistoryPage(prev => Math.min(historyTotalPages, prev + 1))}
+                  disabled={historyPage === historyTotalPages}
+                  className="text-xs md:text-sm px-2 md:px-3 bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
       )}
     </div>
