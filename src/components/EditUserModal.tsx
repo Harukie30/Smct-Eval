@@ -774,13 +774,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     if (formData.contact && formData.contact.trim()) {
       const digitsOnly = formData.contact.replace(/\D/g, "");
       const digitCount = digitsOnly.length;
-      
+
       if (digitCount !== 11) {
         newErrors.contact = "Contact number must be exactly 11 digits";
       } else if (!digitsOnly.startsWith("09")) {
         newErrors.contact = "Contact number must start with '09'";
       } else if (!/^09\d{9}$/.test(digitsOnly)) {
-        newErrors.contact = "Please enter a valid phone number (must start with 09)";
+        newErrors.contact =
+          "Please enter a valid phone number (must start with 09)";
       }
     }
 
@@ -1127,14 +1128,17 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 onChange={(e) => {
                   // Only allow numbers, spaces, hyphens, and parentheses (for formatting)
                   let value = e.target.value.replace(/[^\d\s\-()]/g, "");
-                  
+
                   // Limit to 11 digits maximum
                   const digitsOnly = value.replace(/\D/g, "");
                   if (digitsOnly.length > 11) {
                     // Truncate to 11 digits
-                    value = value.slice(0, value.length - (digitsOnly.length - 11));
+                    value = value.slice(
+                      0,
+                      value.length - (digitsOnly.length - 11)
+                    );
                   }
-                  
+
                   // Auto-format: If user starts typing and first digit is not 0, prepend 0
                   const cleanDigits = value.replace(/\D/g, "");
                   if (cleanDigits.length === 1 && cleanDigits[0] !== "0") {
@@ -1144,14 +1148,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   if (cleanDigits.length === 1 && cleanDigits[0] === "0") {
                     // Allow 0, will check for 09 on next input
                   }
-                  
+
                   handleInputChange("contact", value);
-                  
+
                   // Real-time validation feedback
                   if (value.trim()) {
                     const digitCount = cleanDigits.length;
                     const startsWith09 = cleanDigits.startsWith("09");
-                    
+
                     // Clear previous error if valid
                     if (digitCount === 11 && startsWith09) {
                       if (errors.contact) {
@@ -1169,7 +1173,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   if (value) {
                     const digitsOnly = value.replace(/\D/g, "");
                     const digitCount = digitsOnly.length;
-                    
+
                     if (digitCount !== 11) {
                       setErrors((prev) => ({
                         ...prev,
@@ -1183,7 +1187,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                     } else if (!/^09\d{9}$/.test(digitsOnly)) {
                       setErrors((prev) => ({
                         ...prev,
-                        contact: "Please enter a valid phone number (must start with 09)",
+                        contact:
+                          "Please enter a valid phone number (must start with 09)",
                       }));
                     }
                   }
@@ -1222,16 +1227,20 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               {errors.contact && (
                 <p className="text-sm text-red-500">{errors.contact}</p>
               )}
-              {formData.contact && !errors.contact && formData.contact.replace(/\D/g, "").startsWith("09") && formData.contact.replace(/\D/g, "").length === 11 && (
-                <p className="text-xs text-green-600">
-                  ✓ Valid format
-                </p>
-              )}
-              {formData.contact && formData.contact.replace(/\D/g, "").length > 0 && !formData.contact.replace(/\D/g, "").startsWith("09") && !errors.contact && (
-                <p className="text-xs text-amber-600">
-                  ⚠️ Number must start with "09"
-                </p>
-              )}
+              {formData.contact &&
+                !errors.contact &&
+                formData.contact.replace(/\D/g, "").startsWith("09") &&
+                formData.contact.replace(/\D/g, "").length === 11 && (
+                  <p className="text-xs text-green-600">✓ Valid format</p>
+                )}
+              {formData.contact &&
+                formData.contact.replace(/\D/g, "").length > 0 &&
+                !formData.contact.replace(/\D/g, "").startsWith("09") &&
+                !errors.contact && (
+                  <p className="text-xs text-amber-600">
+                    ⚠️ Number must start with "09"
+                  </p>
+                )}
             </div>
 
             {/* Position */}
@@ -1264,25 +1273,26 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             </div>
 
             {/* Department - Show only if branch is HO, Head Office, or none, AND position is NOT Branch Manager or Area Manager */}
-            {isBranchHOOrNone(formData.branch) && !isManagerPosition(formData.position) && (
-              <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
-                <Combobox
-                  options={departments}
-                  value={String(formData.department)}
-                  onValueChangeAction={(value) =>
-                    setFormData({ ...formData, department: value })
-                  }
-                  placeholder="Select your department"
-                  searchPlaceholder="Search departments..."
-                  emptyText="No departments found."
-                  className="w-1/2"
-                />
-                {errors?.department && (
-                  <p className="text-sm text-red-500">{errors?.department}</p>
-                )}
-              </div>
-            )}
+            {isBranchHOOrNone(formData.branch) &&
+              !isManagerPosition(formData.position) && (
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department</Label>
+                  <Combobox
+                    options={departments}
+                    value={String(formData.department)}
+                    onValueChangeAction={(value) =>
+                      setFormData({ ...formData, department: value })
+                    }
+                    placeholder="Select your department"
+                    searchPlaceholder="Search departments..."
+                    emptyText="No departments found."
+                    className="w-1/2"
+                  />
+                  {errors?.department && (
+                    <p className="text-sm text-red-500">{errors?.department}</p>
+                  )}
+                </div>
+              )}
 
             {/* Branch */}
             <div className="space-y-2 w-1/2">
@@ -1338,11 +1348,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               )}
               {isManagerOrSupervisorPosition(formData.position) && (
                 <p className="text-xs text-gray-500">
-                  Role is automatically set to "Evaluator" for manager/supervisor positions
+                  Role is automatically set to "Evaluator" for
+                  manager/supervisor positions
                 </p>
               )}
             </div>
-
           </div>
 
           <DialogFooter className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">

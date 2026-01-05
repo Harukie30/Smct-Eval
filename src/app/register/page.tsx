@@ -750,7 +750,6 @@ function RegisterPage() {
                           if (value.length > 4) {
                             value = value.slice(0, 4) + "-" + value.slice(4);
                           }
-
                           setFormData({ ...formData, employee_id: value });
                           validateField("employee_id", value);
                         }}
