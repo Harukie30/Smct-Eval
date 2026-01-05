@@ -4,7 +4,7 @@ import Pusher, { Channel } from "pusher-js";
 import { api } from "../lib/api";
 
 type AuthorizerCallBackType = {
-  (error: any, response: any): void;
+  (error: Error | null, auth: any): void;
 };
 
 const authorizer = (channel: Channel) => {
@@ -14,28 +14,33 @@ const authorizer = (channel: Channel) => {
         socket_id: socketId,
         channel_name: channel.name,
       });
-      callback(false, response.data);
+      callback(null, response.data);
     } catch (error: any) {
       console.error("Broadcast auth error:", error);
-      callback(true, error);
+      callback(error instanceof Error ? error : new Error(String(error)), null);
     }
   }
 
   return { authorize };
 };
 
-const pusherClient = new Pusher(CONFIG.REVERB_KEY, {
-  wsHost: CONFIG.REVERB_HOST,
-  wsPort: CONFIG.REVERB_PORT,
-  wssPort: CONFIG.REVERB_PORT,
+// Validate required configuration
+if (!CONFIG.REVERB_KEY) {
+  console.warn("REVERB_KEY is not configured. Echo will not work properly.");
+}
+
+if (!CONFIG.REVERB_HOST) {
+  console.warn("REVERB_HOST is not configured. Echo will not work properly.");
+}
+
+const pusherClient = new Pusher(CONFIG.REVERB_KEY || "", {
+  wsHost: CONFIG.REVERB_HOST || "localhost",
+  wsPort: CONFIG.REVERB_PORT || 6001,
+  wssPort: CONFIG.REVERB_PORT || 6001,
   forceTLS: false,
   disableStats: true,
   cluster: "mt1",
-  authEndpoint: CONFIG.REVERB_API_URL,
   enabledTransports: ["ws", "wss"],
-  auth: {
-    headers: {},
-  },
   authorizer: authorizer,
 });
 

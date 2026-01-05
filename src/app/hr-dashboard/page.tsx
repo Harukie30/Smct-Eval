@@ -576,55 +576,36 @@ function OverviewTab({
                       (submission.evaluationData?.evaluatorSignature && submission.evaluationData?.evaluatorSignature.trim()));
                     
                     // Determine approval status - SIGNATURES HAVE PRIORITY over stored status
-                    let approvalStatus = 'pending';
+                    let approvalStatus: string = 'pending';
                     if (hasEmployeeSignature && hasEvaluatorSignature) {
                       approvalStatus = 'fully_approved';
                     } else if (hasEmployeeSignature) {
                       approvalStatus = 'employee_approved';
                     } else if (submission.approvalStatus && submission.approvalStatus !== 'pending') {
-                      approvalStatus = submission.approvalStatus;
+                      // Normalize approval status format (handle both 'fully_approved' and 'fully approved')
+                      const normalizedStatus = String(submission.approvalStatus).toLowerCase().replace(/\s+/g, '_');
+                      approvalStatus = normalizedStatus === 'fullyapproved' ? 'fully_approved' : normalizedStatus;
                     }
                     
-                    // Calculate time difference for indicators
-                    const submittedDate = new Date(submission.submittedAt);
-                    const now = new Date();
-                    const hoursDiff = (now.getTime() - submittedDate.getTime()) / (1000 * 60 * 60);
-                    const isNew = hoursDiff <= 24;
-                    const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
-                    const isApproved = approvalStatus === 'fully_approved';
-                    
-                    // Determine row background color - APPROVAL STATUS HAS PRIORITY
-                    let rowClassName = "hover:bg-gray-100 transition-colors";
-                    if (isApproved) {
-                      // Approved is always green (highest priority)
-                      rowClassName = "bg-green-50 hover:bg-green-100 border-l-4 border-l-green-500 transition-colors";
-                    } else if (isNew) {
-                      rowClassName = "bg-yellow-50 hover:bg-yellow-100 border-l-4 border-l-yellow-500 transition-colors";
-                    } else if (isRecent) {
-                      rowClassName = "bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-500 transition-colors";
-                    }
+                    // Use getSubmissionHighlight function for consistent highlighting logic
+                    const highlight = getSubmissionHighlight(submission.submittedAt, submission.id, approvalStatus);
                     
                     return (
-                      <TableRow key={submission.id} className={rowClassName}>
+                      <TableRow key={submission.id} className={highlight.className || "hover:bg-gray-100 transition-colors"}>
                         <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
                           <div>
                             <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1">
                               <span className="font-medium text-gray-900 text-xs md:text-sm lg:text-base">
                                 {getEmployeeNameForSearch(submission.employeeName || submission.employee || submission.evaluationData?.employeeName)}
                               </span>
-                              {isNew && (
-                                <Badge className="bg-yellow-100 text-yellow-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
-                                  ⚡ NEW
+                              {highlight.badge && (
+                                <Badge className={`${highlight.badge.className} text-xs px-1.5 md:px-2 py-0.5 font-semibold`}>
+                                  {highlight.badge.text}
                                 </Badge>
                               )}
-                              {!isNew && isRecent && (
-                                <Badge className="bg-blue-100 text-blue-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
-                                  🕐 RECENT
-                                </Badge>
-                              )}
-                              {isApproved && (
-                                <Badge className="bg-green-100 text-green-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
-                                  ✓ APPROVED
+                              {highlight.secondaryBadge && (
+                                <Badge className={`${highlight.secondaryBadge.className} text-xs px-1.5 md:px-2 py-0.5 font-semibold`}>
+                                  {highlight.secondaryBadge.text}
                                 </Badge>
                               )}
                             </div>

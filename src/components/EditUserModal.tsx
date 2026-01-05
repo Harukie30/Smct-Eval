@@ -1239,17 +1239,18 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <Label htmlFor="position">Position *</Label>
               <Combobox
                 options={
-                  positions.length > 0 &&
-                  typeof positions[0] === "object" &&
-                  "value" in positions[0] &&
-                  "label" in positions[0]
-                    ? positions // Already in correct format { value, label }
-                    : positions.map((p: any) => ({
-                        value: p.value || p.id || p,
-                        label: p.label || p.name || p,
-                      }))
+                  Array.isArray(positions) && positions.length > 0
+                    ? typeof positions[0] === "object" &&
+                      "value" in positions[0] &&
+                      "label" in positions[0]
+                      ? positions // Already in correct format { value, label }
+                      : positions.map((p: any) => ({
+                          value: p?.value || p?.id || p || "",
+                          label: p?.label || p?.name || p || "",
+                        })).filter((p: any) => p.value && p.label)
+                    : []
                 }
-                value={formData.position}
+                value={formData.position || ""}
                 onValueChangeAction={(value) =>
                   handleInputChange("position", value as string)
                 }
@@ -1268,8 +1269,19 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <div className="space-y-2">
                 <Label htmlFor="department">Department</Label>
                 <Combobox
-                  options={departments}
-                  value={String(formData.department)}
+                  options={
+                    Array.isArray(departments) && departments.length > 0
+                      ? typeof departments[0] === "object" &&
+                        "value" in departments[0] &&
+                        "label" in departments[0]
+                        ? departments // Already in correct format { value, label }
+                        : departments.map((d: any) => ({
+                            value: d?.value || d?.id || d?.name || d || "",
+                            label: d?.label || d?.name || d || "",
+                          })).filter((d: any) => d.value && d.label)
+                      : []
+                  }
+                  value={String(formData.department || "")}
                   onValueChangeAction={(value) =>
                     setFormData({ ...formData, department: value })
                   }
@@ -1289,15 +1301,18 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <Label htmlFor="branch">Branch *</Label>
               <Combobox
                 options={
-                  Array.isArray(branches) &&
-                  branches.length > 0 &&
-                  typeof branches[0] === "object" &&
-                  !("value" in branches[0])
-                    ? (branches as { id: string; name: string }[]).map((b) => ({
-                        value: b.name,
-                        label: b.name,
-                      }))
-                    : (branches as string[])
+                  Array.isArray(branches) && branches.length > 0
+                    ? typeof branches[0] === "object" &&
+                      "value" in branches[0] &&
+                      "label" in branches[0]
+                      ? branches // Already in correct format { value, label }
+                      : typeof branches[0] === "object" && !("value" in branches[0])
+                      ? (branches as { id: string; name: string }[]).map((b) => ({
+                          value: b?.name || b?.id || "",
+                          label: b?.name || b?.id || "",
+                        })).filter((b: any) => b.value && b.label)
+                      : (branches as string[]).filter((b: any) => b)
+                    : []
                 }
                 value={formData.branch || ""}
                 onValueChangeAction={(value) =>

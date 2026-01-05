@@ -53,11 +53,16 @@ export function Combobox({
 
   // Helper function to get option value
   const getOptionValue = (option: string | ComboboxOption): number | string => {
-    return typeof option === "string" ? Number(option) : option.value;
+    if (!option) return "";
+    return typeof option === "string" ? Number(option) : (option.value ?? "");
   };
 
+  // Ensure options is always an array
+  const safeOptions = Array.isArray(options) ? options : [];
+
   // Filter options based on search term
-  const filteredOptions = options?.filter((option) => {
+  const filteredOptions = safeOptions.filter((option) => {
+    if (!option) return false;
     const optionText = getOptionText(option);
     return (
       typeof optionText === "string" &&
@@ -82,8 +87,8 @@ export function Combobox({
           >
             {value
               ? (() => {
-                  const selectedOption = options.find(
-                    (option) => String(getOptionValue(option)) === String(value)
+                  const selectedOption = safeOptions.find(
+                    (option) => option && String(getOptionValue(option)) === String(value)
                   );
                   return selectedOption ? getOptionText(selectedOption) : value;
                 })()
