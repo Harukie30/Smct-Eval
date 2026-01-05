@@ -24,7 +24,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Combobox } from "@/components/ui/combobox";
 import { User } from "../../../contexts/UserContext";
 import apiService from "@/lib/apiService";
-import { set } from "date-fns";
 import EvaluationTypeModal from "@/components/EvaluationTypeModal";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import EvaluationForm from "@/components/evaluation";
@@ -87,17 +86,6 @@ export default function EmployeesTab() {
           Number(positionFilter)
         );
 
-        // Add safety checks to prevent "Cannot read properties of undefined" error
-        if (!res) {
-          console.error("API response is undefined");
-          setEmployees(null);
-          setOverviewTotal(0);
-          setTotalPages(1);
-          setPerPage(itemsPerPage);
-          setIsRefreshing(false);
-          return;
-        }
-
         setEmployees(res.data);
         setOverviewTotal(res.total || 0);
         setTotalPages(res.last_page || 1);
@@ -111,6 +99,8 @@ export default function EmployeesTab() {
         setOverviewTotal(0);
         setTotalPages(1);
         setPerPage(itemsPerPage);
+        setIsRefreshing(false);
+      } finally {
         setIsRefreshing(false);
       }
     };
@@ -127,17 +117,6 @@ export default function EmployeesTab() {
           Number(positionFilter)
         );
 
-        // Add safety checks to prevent "Cannot read properties of undefined" error
-        if (!res) {
-          console.error("API response is undefined");
-          setEmployees(null);
-          setOverviewTotal(0);
-          setTotalPages(1);
-          setPerPage(itemsPerPage);
-          setIsRefreshing(false);
-          return;
-        }
-
         setEmployees(res.data || []);
         setOverviewTotal(res.total || 0);
         setTotalPages(res.last_page || 1);
@@ -152,10 +131,12 @@ export default function EmployeesTab() {
         setTotalPages(1);
         setPerPage(itemsPerPage);
         setIsRefreshing(false);
+      } finally {
+        setIsRefreshing(false);
       }
     };
     fetchEmployees();
-  }, [positionFilter, debouncedSearch, currentPage]);
+  }, [positionFilter, debouncedSearch, currentPage, isRefreshing]);
 
   useEffect(() => {
     const debounceSearch = setTimeout(() => {
