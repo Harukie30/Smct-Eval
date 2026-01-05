@@ -184,7 +184,44 @@ export default function EvaluationForm({
           form.coverageTo &&
           form.coverageTo !== "";
 
-        return hasReviewType && hasJobKnowledgeScores && hasBasicInfo;
+        // Check if coverage dates are valid (coverageFrom must be before coverageTo and not before hireDate)
+        const hasValidCoverageDates = (() => {
+          if (!hasBasicInfo) return false;
+          try {
+            // Convert to date strings in YYYY-MM-DD format for reliable comparison
+            const fromDateStr = typeof form.coverageFrom === "string" 
+              ? form.coverageFrom 
+              : new Date(form.coverageFrom).toISOString().split("T")[0];
+            const toDateStr = typeof form.coverageTo === "string"
+              ? form.coverageTo
+              : new Date(form.coverageTo).toISOString().split("T")[0];
+            
+            // Validate date strings are in correct format
+            if (!fromDateStr || !toDateStr || fromDateStr.length !== 10 || toDateStr.length !== 10) {
+              return false;
+            }
+            
+            // Check if fromDate is before toDate (string comparison works for YYYY-MM-DD format)
+            if (fromDateStr >= toDateStr) {
+              return false;
+            }
+            
+            // Check if coverageFrom is not before date hired
+            if (form.hireDate) {
+              const hireDateStr = typeof form.hireDate === "string"
+                ? form.hireDate
+                : new Date(form.hireDate).toISOString().split("T")[0];
+              if (hireDateStr && hireDateStr.length === 10 && fromDateStr < hireDateStr) {
+                return false;
+              }
+            }
+            return true;
+          } catch (error) {
+            return false;
+          }
+        })();
+
+        return hasReviewType && hasJobKnowledgeScores && hasBasicInfo && hasValidCoverageDates;
       case 2: // Quality of Work
         return (
           form.qualityOfWorkScore1 &&
@@ -297,10 +334,40 @@ export default function EvaluationForm({
         }
 
         if (!form.coverageFrom || form.coverageFrom === "") {
-          return "Please select coverage from date";
+          return "Please select Performance Coverage 'From' date";
         }
         if (!form.coverageTo || form.coverageTo === "") {
-          return "Please select coverage to date";
+          return "Please select Performance Coverage 'To' date";
+        }
+        // Check if coverage dates are valid (coverageFrom must be before coverageTo and not before hireDate)
+        if (form.coverageFrom && form.coverageTo) {
+          try {
+            // Convert to date strings in YYYY-MM-DD format for reliable comparison
+            const fromDateStr = typeof form.coverageFrom === "string" 
+              ? form.coverageFrom 
+              : new Date(form.coverageFrom).toISOString().split("T")[0];
+            const toDateStr = typeof form.coverageTo === "string"
+              ? form.coverageTo
+              : new Date(form.coverageTo).toISOString().split("T")[0];
+            
+            if (fromDateStr && toDateStr && fromDateStr.length === 10 && toDateStr.length === 10) {
+              // Check if fromDate is before toDate (string comparison works for YYYY-MM-DD format)
+              if (fromDateStr >= toDateStr) {
+                return "Performance Coverage 'From' date must be earlier than 'To' date";
+              }
+              // Check if coverageFrom is before date hired
+              if (form.hireDate) {
+                const hireDateStr = typeof form.hireDate === "string"
+                  ? form.hireDate
+                  : new Date(form.hireDate).toISOString().split("T")[0];
+                if (hireDateStr && hireDateStr.length === 10 && fromDateStr < hireDateStr) {
+                  return "Performance Coverage cannot start before Date Hired";
+                }
+              }
+            }
+          } catch (error) {
+            return "Please enter valid Performance Coverage dates";
+          }
         }
         if (
           !form.jobKnowledgeScore1 ||

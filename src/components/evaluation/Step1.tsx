@@ -168,15 +168,26 @@ export default function Step1({
       const fromDate = new Date(data.coverageFrom);
       const toDate = new Date(data.coverageTo);
 
+      // Check if coverageFrom is before coverageTo
       if (fromDate >= toDate) {
         setCoverageError("Start date must be earlier than end date");
-      } else {
-        setCoverageError("");
+        return;
       }
+
+      // Check if coverageFrom is before date hired
+      if (data.hireDate) {
+        const hireDate = new Date(data.hireDate);
+        if (!isNaN(hireDate.getTime()) && fromDate < hireDate) {
+          setCoverageError("Performance Coverage cannot start before Date Hired");
+          return;
+        }
+      }
+
+      setCoverageError("");
     } else {
       setCoverageError("");
     }
-  }, [data.coverageFrom, data.coverageTo]);
+  }, [data.coverageFrom, data.coverageTo, data.hireDate]);
 
   // Calculate average score for Job Knowledge
   const calculateAverageScore = () => {
@@ -670,7 +681,7 @@ export default function Step1({
             </Label>
             <Input
               id="position"
-              value={employee?.positions.label || ""}
+              value={employee?.positions?.label || (employee as any)?.position || ""}
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
@@ -685,7 +696,7 @@ export default function Step1({
             </Label>
             <Input
               id="department"
-              value={employee?.departments?.department_name || ""}
+              value={employee?.departments?.department_name || (employee as any)?.department || ""}
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
@@ -700,7 +711,7 @@ export default function Step1({
             </Label>
             <Input
               id="branch"
-              value={employee?.branches.branch_name || ""}
+              value={employee?.branches?.branch_name || employee?.branches?.[0]?.branch_name || (employee as any)?.branch || ""}
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
@@ -768,6 +779,11 @@ export default function Step1({
                         : new Date(data.coverageTo).toISOString().split("T")[0]
                       : null;
 
+                    // Always update the form data so parent validation can catch it
+                    updateDataAction({
+                      coverageFrom: fromDate,
+                    });
+
                     // Validate: From date should be earlier than To date
                     if (toDate && fromDate && fromDate >= toDate) {
                       setCoverageError(
@@ -776,11 +792,28 @@ export default function Step1({
                       return;
                     }
 
+                    // Validate: From date should not be before Date Hired
+                    if (data.hireDate && fromDate) {
+                      const hireDateStr = typeof data.hireDate === "string"
+                        ? data.hireDate
+                        : new Date(data.hireDate).toISOString().split("T")[0];
+                      if (fromDate < hireDateStr) {
+                        setCoverageError(
+                          "Performance Coverage cannot start before Date Hired"
+                        );
+                        return;
+                      }
+                    }
+
                     setCoverageError("");
-                    updateDataAction({
-                      coverageFrom: fromDate,
-                    });
                   }}
+                  min={
+                    data.hireDate
+                      ? typeof data.hireDate === "string"
+                        ? data.hireDate
+                        : new Date(data.hireDate).toISOString().split("T")[0]
+                      : undefined
+                  }
                   max={
                     data.coverageTo
                       ? typeof data.coverageTo === "string"
@@ -816,6 +849,11 @@ export default function Step1({
                         : new Date(data.coverageFrom).toISOString().split("T")[0]
                       : null;
 
+                    // Always update the form data so parent validation can catch it
+                    updateDataAction({
+                      coverageTo: toDate,
+                    });
+
                     // Validate: To date should be later than From date
                     if (fromDate && toDate && toDate <= fromDate) {
                       setCoverageError(
@@ -825,9 +863,6 @@ export default function Step1({
                     }
 
                     setCoverageError("");
-                    updateDataAction({
-                      coverageTo: toDate,
-                    });
                   }}
                   min={
                     data.coverageFrom

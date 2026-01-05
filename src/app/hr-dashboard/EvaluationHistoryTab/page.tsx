@@ -103,8 +103,8 @@ export function EvaluationHistoryTab({
     // Sort quarters chronologically
     const sortedQuarters = Object.values(quarterlyData).sort((a: any, b: any) => {
       const quarterOrder: { [key: string]: number } = { 'Q1': 1, 'Q2': 2, 'Q3': 3, 'Q4': 4 };
-      const aQuarter = a.quarter.split(' ')[0];
-      const bQuarter = b.quarter.split(' ')[0];
+      const aQuarter = a.quarter ? a.quarter.split(' ')[0] : '';
+      const bQuarter = b.quarter ? b.quarter.split(' ')[0] : '';
       return (quarterOrder[aQuarter] || 0) - (quarterOrder[bQuarter] || 0);
     });
 
@@ -118,7 +118,7 @@ export function EvaluationHistoryTab({
       const year = parseInt(selectedYear);
       filtered = filtered.filter((quarterData: any) => {
         // Extract year from quarter string (e.g., "Q1 2024" -> "2024")
-        const quarterYear = quarterData.quarter.split(' ')[1];
+        const quarterYear = quarterData.quarter ? quarterData.quarter.split(' ')[1] : '';
         const quarterYearMatches = quarterYear === selectedYear;
         
         // Also check if any submission in this quarter matches the year

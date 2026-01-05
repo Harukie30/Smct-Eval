@@ -142,8 +142,30 @@ export const apiService = {
   },
 
   getAccounts: async (): Promise<any> => {
-    const response = await api.get("/accounts");
-    return response.data.accounts || [];
+    try {
+      // Use getAllUsers endpoint instead of /accounts (which returns 404)
+      const response = await api.get("/getAllUsers");
+      const data = response.data;
+
+      // Handle different response formats similar to showUser pattern
+      if (data.success && data.users) {
+        return data.users;
+      }
+      if (Array.isArray(data.users)) {
+        return data.users;
+      }
+      if (data.accounts && Array.isArray(data.accounts)) {
+        return data.accounts;
+      }
+      if (Array.isArray(data)) {
+        return data;
+      }
+      return [];
+    } catch (error: any) {
+      console.error("Error fetching accounts:", error);
+      // Return empty array on error to prevent crashes
+      return [];
+    }
   },
 
   uploadAvatar: async (formData: FormData): Promise<any> => {

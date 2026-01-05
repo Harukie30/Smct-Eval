@@ -2029,8 +2029,8 @@ function HRDashboard() {
       // Create FormData for API call
       const formData = new FormData();
       formData.append('name', newUser.name || '');
-      formData.append('fname', newUser.fname || newUser.name?.split(' ')[0] || '');
-      formData.append('lname', newUser.lname || newUser.name?.split(' ').slice(1).join(' ') || '');
+      formData.append('fname', newUser.fname || (newUser.name ? newUser.name.split(' ')[0] : '') || '');
+      formData.append('lname', newUser.lname || (newUser.name ? newUser.name.split(' ').slice(1).join(' ') : '') || '');
       formData.append('email', newUser.email || '');
       formData.append('password', newUser.password || '');
       formData.append('position_id', String(newUser.position_id || newUser.position || ''));
@@ -2169,12 +2169,16 @@ function HRDashboard() {
         // If API returns fresh data, use it; otherwise fall back to cached employee data
         const updatedEmployee: Employee = freshEmployeeData ? {
           id: freshEmployeeData.id || employee.id,
-          name: freshEmployeeData.name || freshEmployeeData.fname + ' ' + freshEmployeeData.lname || employee.name,
-          email: freshEmployeeData.email || employee.email,
-          position: freshEmployeeData.position || employee.position,
-          department: freshEmployeeData.department || employee.department,
-          branch: freshEmployeeData.branch || employee.branch,
-          role: freshEmployeeData.role || freshEmployeeData.roles?.[0]?.name || freshEmployeeData.roles?.[0] || employee.role,
+          name: freshEmployeeData.name || 
+                (freshEmployeeData.fname && freshEmployeeData.lname 
+                  ? `${freshEmployeeData.fname} ${freshEmployeeData.lname}` 
+                  : freshEmployeeData.fname || freshEmployeeData.lname || '') || 
+                employee.name || '',
+          email: freshEmployeeData.email || employee.email || '',
+          position: freshEmployeeData.position || employee.position || '',
+          department: freshEmployeeData.department || employee.department || '',
+          branch: freshEmployeeData.branch || employee.branch || '',
+          role: freshEmployeeData.role || freshEmployeeData.roles?.[0]?.name || freshEmployeeData.roles?.[0] || employee.role || '',
           ...(freshEmployeeData.avatar || (employee as any).avatar ? { avatar: freshEmployeeData.avatar || (employee as any).avatar } : {}),
         } as Employee : employee;
         
@@ -2816,12 +2820,12 @@ function HRDashboard() {
                      <div className="flex items-center space-x-4">
                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                          <span className="text-blue-600 font-semibold text-sm">
-                           {employee.name.split(' ').map(n => n[0]).join('')}
+                           {employee.name ? employee.name.split(' ').map(n => n[0]).join('') : 'N/A'}
                          </span>
                        </div>
                        <div>
-                         <h4 className="font-semibold text-gray-900">{employee.name}</h4>
-                         <p className="text-sm text-gray-600">{employee.position}</p>
+                         <h4 className="font-semibold text-gray-900">{employee.name || 'N/A'}</h4>
+                         <p className="text-sm text-gray-600">{employee.position || 'N/A'}</p>
                        </div>
                      </div>
                      <div className="text-right">
