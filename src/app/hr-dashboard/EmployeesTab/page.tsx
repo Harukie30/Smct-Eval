@@ -440,10 +440,10 @@ export function EmployeesTab({
                         <span className="text-sm font-medium text-gray-700">Status Indicators:</span>
                         <div className="flex items-center gap-3 flex-wrap">
                           <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300">
-                            ✨ New Added (≤30min)
+                            ✨ New Added 
                           </Badge>
                           <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300">
-                            🕐 Recently Added (&gt;30min)
+                            🕐 Recently Added 
                           </Badge>
                         </div>
                       </div>
