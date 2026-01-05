@@ -514,6 +514,7 @@ export default function OverviewTab() {
                     <TableHead className="px-6 py-3">Status</TableHead>
                     <TableHead className="px-6 py-3">Employee Sign</TableHead>
                     <TableHead className="px-6 py-3">Evaluator Sign</TableHead>
+                    <TableHead className="px-6 py-3">HR Sign</TableHead>
                     <TableHead className="px-6 py-3">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -621,7 +622,7 @@ export default function OverviewTab() {
                         rowClassName =
                           "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
                       }
-
+                      console.log("test", review);
                       return (
                         <TableRow key={review.id} className={rowClassName}>
                           <TableCell className="px-6 py-3">
@@ -707,9 +708,22 @@ export default function OverviewTab() {
                             )}
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
-                            <Badge className="bg-green-100 text-green-800 text-xs">
-                              ✓ Signed
-                            </Badge>
+                            {review.evaluator.roles[0].name === "evaluator" ? (
+                              <Badge className="bg-green-100 text-green-800 text-xs">
+                                ✓ Signed
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-gray-400">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                            {review.evaluator.roles[0].name === "hr" ? (
+                              <Badge className="bg-green-100 text-green-800 text-xs">
+                                ✓ Signed
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-gray-400">—</span>
+                            )}
                           </TableCell>
 
                           <TableCell className="px-6 py-3">

@@ -108,7 +108,9 @@ export const apiService = {
     searchTerm: string,
     role: string | number,
     page: number,
-    perPage: number
+    perPage: number,
+    branch?: string,
+    department?: string
   ): Promise<any | null> => {
     const response = await api.get("/getAllActiveUsers", {
       params: {
@@ -116,6 +118,8 @@ export const apiService = {
         role: role || "",
         page: page,
         per_page: perPage,
+        branch: branch || "",
+        department: department || "",
       },
     });
     return response.data.users || [];
@@ -278,7 +282,7 @@ export const apiService = {
     per_page?: number,
     page?: number,
     position_filter?: number
-  ): Promise<any[]> => {
+  ): Promise<any> => {
     const response = await api.get("/getAllEmployeeByAuth", {
       params: {
         search: search || "",

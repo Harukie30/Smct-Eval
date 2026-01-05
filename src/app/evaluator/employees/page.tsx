@@ -37,7 +37,7 @@ export default function EmployeesTab() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   //data employees
-  const [employees, setEmployees] = useState<User[] | null>(null);
+  const [employees, setEmployees] = useState<User | null>(null);
   const [positions, setPositions] = useState<
     {
       value: string | number;
@@ -84,13 +84,13 @@ export default function EmployeesTab() {
           employeeSearch,
           currentPage,
           itemsPerPage,
-          positionFilter
+          Number(positionFilter)
         );
-        
+
         // Add safety checks to prevent "Cannot read properties of undefined" error
         if (!res) {
           console.error("API response is undefined");
-          setEmployees([]);
+          setEmployees(null);
           setOverviewTotal(0);
           setTotalPages(1);
           setPerPage(itemsPerPage);
@@ -98,7 +98,7 @@ export default function EmployeesTab() {
           return;
         }
 
-        setEmployees(res.data || []);
+        setEmployees(res.data);
         setOverviewTotal(res.total || 0);
         setTotalPages(res.last_page || 1);
         setPerPage(res.per_page || itemsPerPage);
@@ -107,7 +107,7 @@ export default function EmployeesTab() {
       } catch (error) {
         console.error("Error fetching positions:", error);
         // Set default values on error
-        setEmployees([]);
+        setEmployees(null);
         setOverviewTotal(0);
         setTotalPages(1);
         setPerPage(itemsPerPage);
@@ -124,13 +124,13 @@ export default function EmployeesTab() {
           debouncedSearch,
           currentPage,
           itemsPerPage,
-          positionFilter
+          Number(positionFilter)
         );
-        
+
         // Add safety checks to prevent "Cannot read properties of undefined" error
         if (!res) {
           console.error("API response is undefined");
-          setEmployees([]);
+          setEmployees(null);
           setOverviewTotal(0);
           setTotalPages(1);
           setPerPage(itemsPerPage);
@@ -147,7 +147,7 @@ export default function EmployeesTab() {
       } catch (error) {
         console.error("Error fetching employees:", error);
         // Set default values on error
-        setEmployees([]);
+        setEmployees(null);
         setOverviewTotal(0);
         setTotalPages(1);
         setPerPage(itemsPerPage);
@@ -596,16 +596,22 @@ export default function EmployeesTab() {
                             </TableCell>
                             <TableCell>{employee.email || "N/A"}</TableCell>
                             <TableCell>
-                              {employee.positions?.label || employee.position || "N/A"}
+                              {employee.positions?.label ||
+                                employee.position ||
+                                "N/A"}
                             </TableCell>
                             <TableCell>
-                              {employee.branches && Array.isArray(employee.branches) && employee.branches.length > 0
+                              {employee.branches &&
+                              Array.isArray(employee.branches) &&
+                              employee.branches.length > 0
                                 ? employee.branches[0]?.branch_name || "N/A"
                                 : employee.branch || "N/A"}
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline">
-                                {employee.roles && Array.isArray(employee.roles) && employee.roles.length > 0
+                                {employee.roles &&
+                                Array.isArray(employee.roles) &&
+                                employee.roles.length > 0
                                   ? employee.roles[0]?.name || "N/A"
                                   : employee.role || "N/A"}
                               </Badge>

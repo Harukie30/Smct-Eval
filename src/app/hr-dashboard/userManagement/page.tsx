@@ -35,7 +35,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, FileText, Pencil, Plus, Trash2 } from "lucide-react";
 import EditUserModal from "@/components/EditUserModal";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import { toastMessages } from "@/lib/toastMessages";
@@ -44,6 +44,9 @@ import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewEmployeeModal from "@/components/ViewEmployeeModal";
 import { User } from "@/contexts/UserContext";
+import { Combobox } from "@/components/ui/combobox";
+import EvaluationForm from "@/components/evaluation";
+import EvaluationTypeModal from "@/components/EvaluationTypeModal";
 
 interface Employee {
   id: number;
@@ -91,6 +94,13 @@ export default function UserManagementTab() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isEvaluationTypeModalOpen, setIsEvaluationTypeModalOpen] =
+    useState(false);
+  const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
+  const [evaluationType, setEvaluationType] = useState<
+    "employee" | "manager" | null
+  >(null);
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -102,8 +112,8 @@ export default function UserManagementTab() {
   const [activeSearchTerm, setActiveSearchTerm] = useState("");
   const [debouncedActiveSearchTerm, setDebouncedActiveSearchTerm] =
     useState(activeSearchTerm);
-  const [roleFilter, setRoleFilter] = useState("0"); // Default to "All Roles"
-  const [debouncedRoleFilter, setDebouncedRoleFilter] = useState(roleFilter);
+  const [branchFilter, setBranchFilter] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
   //filters for pending users
   const [pendingSearchTerm, setPendingSearchTerm] = useState("");
   const [debouncedPendingSearchTerm, setDebouncedPendingSearchTerm] =
@@ -119,9 +129,11 @@ export default function UserManagementTab() {
   const [totalActivePages, setTotalActivePages] = useState(1);
   const [totalPendingPages, setTotalPendingPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
-
+  //data to view
   const [employeeToView, setEmployeeToView] = useState<User | null>(null);
   const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
+  const [selectedEmployeeForEvaluation, setSelectedEmployeeForEvaluation] =
+    useState<User | null>(null);
 
   // Track when page change started for pending users
   const pendingPageChangeStartTimeRef = useRef<number | null>(null);
@@ -162,13 +174,19 @@ export default function UserManagementTab() {
   // Track when page change started for active users
   const activePageChangeStartTimeRef = useRef<number | null>(null);
 
-  const loadActiveUsers = async (searchValue: string, roleFilter: string) => {
+  const loadActiveUsers = async (
+    searchValue: string,
+    department: string,
+    branch: string
+  ) => {
     try {
       const response = await apiService.getActiveRegistrations(
         searchValue,
-        roleFilter,
+        "",
         currentPageActive,
-        itemsPerPage
+        itemsPerPage,
+        branch,
+        department
       );
 
       setActiveRegistrations(response.data);
@@ -207,7 +225,7 @@ export default function UserManagementTab() {
         setDepartmentData(departments);
         const roles = await apiService.getAllRoles();
         setRoles(roles);
-        await loadActiveUsers(activeSearchTerm, roleFilter);
+        await loadActiveUsers(activeSearchTerm, departmentFilter, branchFilter);
         await loadPendingUsers(pendingSearchTerm, statusFilter);
       } catch (error) {
         console.error("Error refreshing data:", error);
@@ -222,7 +240,7 @@ export default function UserManagementTab() {
   useEffect(() => {
     const load = async () => {
       if (tab === "active") {
-        await loadActiveUsers(activeSearchTerm, roleFilter);
+        await loadActiveUsers(activeSearchTerm, departmentFilter, branchFilter);
       }
       if (tab === "new") {
         await loadPendingUsers(pendingSearchTerm, statusFilter);
@@ -232,29 +250,37 @@ export default function UserManagementTab() {
     load();
   }, [tab]);
 
-  //mount every activeSearchTerm changes and RoleFilter
+  //mount every activeSearchTerm changes and role
   useEffect(() => {
     const handler = setTimeout(() => {
       if (tab === "active") {
         activeSearchTerm === "" ? currentPageActive : setCurrentPageActive(1);
         setDebouncedActiveSearchTerm(activeSearchTerm);
-        setDebouncedRoleFilter(roleFilter);
       }
     }, 500);
 
     return () => clearTimeout(handler);
-  }, [activeSearchTerm, roleFilter]);
+  }, [activeSearchTerm]);
 
   // Fetch API whenever debounced active search term changes
   useEffect(() => {
     const fetchData = async () => {
       if (tab === "active") {
-        await loadActiveUsers(debouncedActiveSearchTerm, debouncedRoleFilter);
+        await loadActiveUsers(
+          debouncedActiveSearchTerm,
+          departmentFilter,
+          branchFilter
+        );
       }
     };
 
     fetchData();
-  }, [debouncedActiveSearchTerm, debouncedRoleFilter, currentPageActive]);
+  }, [
+    debouncedActiveSearchTerm,
+    currentPageActive,
+    branchFilter,
+    departmentFilter,
+  ]);
 
   //mount every pendingSearchTerm changes and statusFilter
   useEffect(() => {
@@ -293,7 +319,7 @@ export default function UserManagementTab() {
         await loadPendingUsers(pendingSearchTerm, statusFilter);
       }
       if (tab === "active") {
-        await loadActiveUsers(activeSearchTerm, roleFilter);
+        await loadActiveUsers(activeSearchTerm, departmentFilter, branchFilter);
       }
 
       if (showLoading) {
@@ -407,7 +433,7 @@ export default function UserManagementTab() {
       await apiService.deleteUser(employee.id);
 
       // Refresh data first, then reset deleting state after data loads
-      await loadActiveUsers(activeSearchTerm, roleFilter);
+      await loadActiveUsers(activeSearchTerm, departmentFilter, branchFilter);
       setDeletingUserId(null);
 
       toastMessages.user.deleted(employee.fname);
@@ -557,9 +583,9 @@ export default function UserManagementTab() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div className="flex space-x-4">
-                  <div className="relative flex-1 max-w-md">
+              <div className="flex justify-between items-center gap-2">
+                <div className="flex space-x-4 w-5/6">
+                  <div className="relative flex-1">
                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                       <svg
                         className="h-5 w-5 text-gray-400"
@@ -574,7 +600,7 @@ export default function UserManagementTab() {
                     </span>
                     <Input
                       placeholder="Search users..."
-                      className="w-64 pl-10"
+                      className=" pl-10"
                       value={activeSearchTerm}
                       onChange={(e) => setActiveSearchTerm(e.target.value)}
                     />
@@ -599,26 +625,46 @@ export default function UserManagementTab() {
                       </button>
                     )}
                   </div>
-                  <Select
-                    value={roleFilter}
-                    onValueChange={(value) => setRoleFilter(value)}
-                  >
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Filter by role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">All Roles</SelectItem>
-                      {roles &&
-                        Array.isArray(roles) &&
-                        roles.map((role) => (
-                          <SelectItem key={role.id} value={role.id}>
-                            {role.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                  <div>
+                    <Combobox
+                      options={branchesData}
+                      value={branchFilter}
+                      onValueChangeAction={(value) => {
+                        setBranchFilter(String(value));
+                      }}
+                      placeholder="All branches"
+                      searchPlaceholder="Search branches..."
+                      emptyText="No branches found."
+                    />
+                  </div>
+                  <div>
+                    <Combobox
+                      options={departmentData}
+                      value={departmentFilter}
+                      onValueChangeAction={(value) => {
+                        setDepartmentFilter(String(value));
+                      }}
+                      placeholder="All departments"
+                      searchPlaceholder="Search departments..."
+                      emptyText="No departments found."
+                    />
+                  </div>
+                  <div>
+                    {(branchFilter !== "" || departmentFilter !== "") && (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setDepartmentFilter("");
+                          setBranchFilter("");
+                        }}
+                        className="text-red-500 bg-amber-50"
+                      >
+                        Clear Filter
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 w-1/6">
                   <Button
                     variant="outline"
                     onClick={() => refreshUserData(true)}
@@ -932,6 +978,20 @@ export default function UserManagementTab() {
                                       disabled={deletingUserId !== null}
                                     >
                                       <Eye className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-green-600 hover:text-green-700"
+                                      onClick={() => {
+                                        setIsEvaluationTypeModalOpen(true);
+                                        setSelectedEmployeeForEvaluation(
+                                          employee
+                                        );
+                                      }}
+                                      title="Evaluate employee performance"
+                                    >
+                                      <FileText className="h-4 w-4" />
                                     </Button>
                                     <Button
                                       variant="ghost"
@@ -1501,6 +1561,96 @@ export default function UserManagementTab() {
           designVariant="admin"
         />
       )}
+      <EvaluationTypeModal
+        isOpen={isEvaluationTypeModalOpen}
+        onCloseAction={() => {
+          setIsEvaluationTypeModalOpen(false);
+          if (!evaluationType) {
+            setSelectedEmployee(null);
+          }
+        }}
+        onSelectEmployeeAction={() => {
+          const employee = selectedEmployeeForEvaluation;
+          if (!employee) {
+            console.error("No employee selected!");
+            return;
+          }
+          setEvaluationType("employee");
+          setIsEvaluationTypeModalOpen(false);
+
+          setIsEvaluationModalOpen(true);
+        }}
+        onSelectManagerAction={() => {
+          const employee = selectedEmployee;
+          if (!employee) {
+            console.error("No employee selected!");
+            return;
+          }
+          setEvaluationType("manager");
+          setIsEvaluationTypeModalOpen(false);
+
+          setIsEvaluationModalOpen(true);
+        }}
+        employeeName={selectedEmployee?.fname + " " + selectedEmployee?.lname}
+      />
+
+      <Dialog
+        open={isEvaluationModalOpen}
+        onOpenChangeAction={(open) => {
+          if (!open) {
+            setIsEvaluationModalOpen(false);
+            setSelectedEmployee(null);
+            setEvaluationType(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-7xl max-h-[101vh] overflow-hidden p-0 evaluation-container">
+          {selectedEmployeeForEvaluation && evaluationType === "employee" && (
+            <EvaluationForm
+              employee={selectedEmployeeForEvaluation}
+              onCloseAction={() => {
+                setIsEvaluationModalOpen(false);
+                setSelectedEmployee(null);
+                setEvaluationType(null);
+              }}
+            />
+          )}
+          {/* {selectedEmployee && evaluationType === "manager" && (
+                  <ManagerEvaluationForm
+                    key={`manager-eval-${selectedEmployee.id}-${evaluationType}`}
+                    employee={{
+                      ...selectedEmployee,
+                      name: selectedEmployee.name || "",
+                      email: selectedEmployee.email || "",
+                      position: selectedEmployee.position || "",
+                      department: selectedEmployee.department || "",
+                      role: selectedEmployee.role || "",
+                    }}
+                    currentUser={getCurrentUserData()}
+                    onCloseAction={() => {
+                      setIsEvaluationModalOpen(false);
+                      setSelectedEmployee(null);
+                      setEvaluationType(null);
+                    }}
+                  />
+                )} */}
+          {/* {selectedEmployee && !evaluationType && (
+                  <div className="p-8 text-center">
+                    <p className="text-gray-500">
+                      Please select an evaluation type... (Debug: employee=
+                      {selectedEmployee?.name}, type={evaluationType})
+                    </p>
+                  </div>
+                )} */}
+          {/* {!selectedEmployee && (
+                  <div className="p-8 text-center">
+                    <p className="text-gray-500">
+                      No employee selected (Debug: evaluationType={evaluationType})
+                    </p>
+                  </div>
+                )} */}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

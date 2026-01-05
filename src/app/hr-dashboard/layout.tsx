@@ -15,16 +15,16 @@ function HRLayout({ children }: { children: React.ReactNode }) {
     return [
       { id: "overview", label: "Overview", icon: "📊", path: "/hr-dashboard" },
       {
-        id: "users",
-        label: "User Management",
-        icon: "👥",
-        path: "/hr-dashboard/userManagement",
-      },
-      {
         id: "evaluated-reviews",
         label: "Evaluation Records",
-        icon: "📋",
+        icon: "🗂️",
         path: "/hr-dashboard/evaluatedReviews",
+      },
+      {
+        id: "users",
+        label: "Employees",
+        icon: "👥",
+        path: "/hr-dashboard/userManagement",
       },
       {
         id: "reviews",
