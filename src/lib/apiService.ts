@@ -420,13 +420,17 @@ export const apiService = {
   getMyEvalAuthEmployee: async (
     search: string,
     page: number,
-    per_page: number
+    per_page: number,
+    selectedYear?: string,
+    selectedQuarter?: string
   ): Promise<any> => {
     const response = await api.get("/getMyEvalAuthEmployee", {
       params: {
         search: search || "",
         page: page || 1,
         per_page: per_page || 10,
+        year: selectedYear,
+        quarter: selectedQuarter,
       },
     });
     return response.data;

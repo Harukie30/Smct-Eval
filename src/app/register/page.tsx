@@ -77,7 +77,8 @@ function RegisterPage() {
   });
   const [signatureError, setSignatureError] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
+  const [showPasswordConfirmation, setShowPasswordConfirmation] =
+    useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     [key: string]: any;
   }>({});
@@ -828,7 +829,10 @@ function RegisterPage() {
                         options={positions}
                         value={formData.position_id}
                         onValueChangeAction={(value) => {
-                          const newFormData = { ...formData, position_id: value };
+                          const newFormData = {
+                            ...formData,
+                            position_id: value,
+                          };
                           // Clear department if position is Branch Manager or Area Manager
                           if (isManagerPosition(value)) {
                             newFormData.department_id = "";
@@ -873,28 +877,29 @@ function RegisterPage() {
                     </div>
 
                     {/* Department - Show only if branch is HO, Head Office, or none, AND position is NOT Branch Manager or Area Manager */}
-                    {isBranchHOOrNone(formData.branch_id) && !isManagerPosition(formData.position_id) && (
-                      <div className="space-y-2">
-                        <Label htmlFor="department">Department</Label>
-                        <Combobox
-                          options={departments}
-                          value={String(formData.department_id)}
-                          onValueChangeAction={(value) =>
-                            setFormData({ ...formData, department_id: value })
-                          }
-                          placeholder="Select your department"
-                          searchPlaceholder="Search departments..."
-                          emptyText="No departments found."
-                          className="w-1/2"
-                          disabled={isManagerPosition(formData.position_id)}
-                        />
-                        {fieldErrors?.department_id && (
-                          <p className="text-sm text-red-500">
-                            {fieldErrors?.department_id}
-                          </p>
-                        )}
-                      </div>
-                    )}
+                    {isBranchHOOrNone(formData.branch_id) &&
+                      !isManagerPosition(formData.position_id) && (
+                        <div className="space-y-2">
+                          <Label htmlFor="department">Department</Label>
+                          <Combobox
+                            options={departments}
+                            value={String(formData.department_id)}
+                            onValueChangeAction={(value) =>
+                              setFormData({ ...formData, department_id: value })
+                            }
+                            placeholder="Select your department"
+                            searchPlaceholder="Search departments..."
+                            emptyText="No departments found."
+                            className="w-1/2"
+                            disabled={isManagerPosition(formData.position_id)}
+                          />
+                          {fieldErrors?.department_id && (
+                            <p className="text-sm text-red-500">
+                              {fieldErrors?.department_id}
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                     <div className="space-y-2">
                       <Label htmlFor="registerPassword">Password</Label>
@@ -912,14 +917,18 @@ function RegisterPage() {
                             validateField("password", e.target.value);
                           }}
                           className={
-                            fieldErrors?.password ? "border-red-500 pr-10" : "pr-10"
+                            fieldErrors?.password
+                              ? "border-red-500 pr-10"
+                              : "pr-10"
                           }
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          aria-label={
+                            showPassword ? "Hide password" : "Show password"
+                          }
                         >
                           {showPassword ? (
                             <EyeOff className="h-5 w-5" />
@@ -963,9 +972,17 @@ function RegisterPage() {
                         />
                         <button
                           type="button"
-                          onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)}
+                          onClick={() =>
+                            setShowPasswordConfirmation(
+                              !showPasswordConfirmation
+                            )
+                          }
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                          aria-label={showPasswordConfirmation ? "Hide password" : "Show password"}
+                          aria-label={
+                            showPasswordConfirmation
+                              ? "Hide password"
+                              : "Show password"
+                          }
                         >
                           {showPasswordConfirmation ? (
                             <EyeOff className="h-5 w-5" />

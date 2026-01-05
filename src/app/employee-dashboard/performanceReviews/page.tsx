@@ -162,6 +162,22 @@ export default function performanceReviews() {
     }
   };
 
+  const handleApprove = async (id: number) => {
+    try {
+      await apiService.approvedByEmployee(id);
+      const submission = await apiService.getSubmissionById(id);
+
+      if (submission) {
+        setSelectedSubmission(submission);
+        setIsViewResultsModalOpen(true);
+      } else {
+        console.error("Submission not found for ID:", id);
+      }
+    } catch (error) {
+      console.error("Error approving submission:", error);
+    }
+  };
+
   // Helper functions
   const getTimeAgo = (submittedAt: string) => {
     const submissionDate = new Date(submittedAt);
