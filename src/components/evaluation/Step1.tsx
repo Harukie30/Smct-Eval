@@ -133,26 +133,30 @@ export default function Step1({
       setIsLoadingQuarters(true);
       try {
         const status = await apiService.getQuarters(Number(employee.id));
-        Object.values(status.data).forEach((item: any) => {
-          if (item.reviewTypeProbationary === 3) {
-            setProbitionary3(true);
-          }
-          if (item.reviewTypeProbationary === 5) {
-            setProbitionary5(true);
-          }
-          if (item.reviewTypeRegular === "Q1") {
-            setRegular1(true);
-          }
-          if (item.reviewTypeRegular === "Q2") {
-            setRegular2(true);
-          }
-          if (item.reviewTypeRegular === "Q3") {
-            setRegular3(true);
-          }
-          if (item.reviewTypeRegular === "Q4") {
-            setRegular4(true);
-          }
-        });
+        // Check if status and status.data exist before processing
+        const dataToProcess = status?.data || status;
+        if (dataToProcess && typeof dataToProcess === 'object') {
+          Object.values(dataToProcess).forEach((item: any) => {
+            if (item?.reviewTypeProbationary === 3) {
+              setProbitionary3(true);
+            }
+            if (item?.reviewTypeProbationary === 5) {
+              setProbitionary5(true);
+            }
+            if (item?.reviewTypeRegular === "Q1") {
+              setRegular1(true);
+            }
+            if (item?.reviewTypeRegular === "Q2") {
+              setRegular2(true);
+            }
+            if (item?.reviewTypeRegular === "Q3") {
+              setRegular3(true);
+            }
+            if (item?.reviewTypeRegular === "Q4") {
+              setRegular4(true);
+            }
+          });
+        }
       } catch (error) {
         console.error("Error checking quarterly reviews:", error);
       } finally {
