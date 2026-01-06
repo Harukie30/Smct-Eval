@@ -80,6 +80,7 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const [isNotificationPanelClosing, setIsNotificationPanelClosing] = useState(false);
   const [isContactDevsModalOpen, setIsContactDevsModalOpen] = useState(false);
   const [isNotificationDetailOpen, setIsNotificationDetailOpen] =
     useState(false);
@@ -361,9 +362,20 @@ export default function DashboardShell(props: DashboardShellProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() =>
-                  setIsNotificationPanelOpen(!isNotificationPanelOpen)
-                }
+                onClick={() => {
+                  if (isNotificationPanelOpen) {
+                    // Start closing animation
+                    setIsNotificationPanelClosing(true);
+                    // Close after animation completes
+                    setTimeout(() => {
+                      setIsNotificationPanelOpen(false);
+                      setIsNotificationPanelClosing(false);
+                    }, 300);
+                  } else {
+                    setIsNotificationPanelOpen(true);
+                    setIsNotificationPanelClosing(false);
+                  }
+                }}
                 className="relative p-2 hover:bg-gray-100"
               >
                 <Bell className="h-5 w-5" />
@@ -378,11 +390,50 @@ export default function DashboardShell(props: DashboardShellProps) {
               </Button>
 
               {/* Notification Panel */}
-              {isNotificationPanelOpen && (
-                <div className="absolute right-0 top-12 w-80 bg-white rounded-lg shadow-lg border z-[60]">
-                  <div className="p-4 border-b">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">
+              {(isNotificationPanelOpen || isNotificationPanelClosing) && (
+                <div 
+                  className="absolute right-0 top-12 w-80 bg-white rounded-lg shadow-lg border z-[60]"
+                  style={{
+                    animation: isNotificationPanelClosing 
+                      ? 'slideUpFade 0.3s ease-out forwards'
+                      : 'slideDownFade 0.3s ease-out',
+                  }}
+                >
+                  <style jsx>{`
+                    @keyframes slideDownFade {
+                      from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                      }
+                      to {
+                        opacity: 1;
+                        transform: translateY(0);
+                      }
+                    }
+                    @keyframes slideUpFade {
+                      from {
+                        opacity: 1;
+                        transform: translateY(0);
+                      }
+                      to {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                      }
+                    }
+                  `}</style>
+                  <div 
+                    className="p-4 border-b bg-blue-600 rounded-t-lg relative overflow-hidden"
+                    style={{
+                      backgroundImage: 'url(/smct.png)',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat',
+                    }}
+                  >
+                    {/* Fade overlay to ensure text readability */}
+                    <div className="absolute inset-0 bg-blue-600/90"></div>
+                    <div className="relative z-10 flex items-center justify-between">
+                      <h3 className="font-semibold text-white">
                         Notifications
                       </h3>
                       <div className="flex items-center space-x-2">
@@ -391,7 +442,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                             variant="ghost"
                             size="sm"
                             onClick={handleMarkAllAsRead}
-                            className="text-xs text-blue-600 hover:text-blue-700"
+                            className="text-xs text-white hover:text-blue-100 hover:bg-blue-700/50"
                           >
                             Mark all read
                           </Button>
@@ -399,8 +450,14 @@ export default function DashboardShell(props: DashboardShellProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setIsNotificationPanelOpen(false)}
-                          className="p-1"
+                          onClick={() => {
+                            setIsNotificationPanelClosing(true);
+                            setTimeout(() => {
+                              setIsNotificationPanelOpen(false);
+                              setIsNotificationPanelClosing(false);
+                            }, 300);
+                          }}
+                          className="p-1 text-white hover:bg-blue-700/50 hover:text-white"
                         >
                           <X className="h-4 w-4" />
                         </Button>
