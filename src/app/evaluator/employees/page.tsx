@@ -95,8 +95,8 @@ export default function EmployeesTab() {
         setIsRefreshing(true);
         const res = await apiService.getAllEmployeeByAuth(
           debouncedSearch,
-          currentPage,
           itemsPerPage,
+          currentPage,
           Number(positionFilter)
         );
 

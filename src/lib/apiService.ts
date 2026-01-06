@@ -98,7 +98,7 @@ export const apiService = {
         search: searchTerm || "",
         status: status || "",
         page: page,
-        per_page: perPage,
+        per_page: perPage || 1,
       },
     });
     return response.data.users || [];
@@ -117,7 +117,7 @@ export const apiService = {
         search: searchTerm || "",
         role: role || "",
         page: page,
-        per_page: perPage,
+        per_page: perPage || 1,
         branch: branch || "",
         department: department || "",
       },
@@ -161,7 +161,7 @@ export const apiService = {
       params: {
         search: searchTerm || "",
         page: page,
-        per_page: perPage,
+        per_page: perPage || 1,
         status: status || "",
         quarter: quarter || "",
         year: year || "",
@@ -286,7 +286,7 @@ export const apiService = {
     const response = await api.get("/getAllEmployeeByAuth", {
       params: {
         search: search || "",
-        per_page: per_page || 10,
+        per_page: per_page || 1,
         page: page || 1,
         position_filter: position_filter || "",
       },
@@ -340,7 +340,7 @@ export const apiService = {
       params: {
         search: searchValue || "",
         page: currentPage,
-        per_page: itemsPerPage,
+        per_page: itemsPerPage || 1,
       },
     });
     return response.data.branches;
@@ -368,7 +368,7 @@ export const apiService = {
       params: {
         search: searchValue || "",
         page: currentPage,
-        per_page: itemsPerPage,
+        per_page: itemsPerPage || 1,
       },
     });
     return response.data.departments;
@@ -446,7 +446,7 @@ export const apiService = {
       params: {
         search: searchTerm || "",
         page: currentPage || 1,
-        per_page: itemsPerPage || 10,
+        per_page: itemsPerPage || 1,
       },
     });
     return response.data;
