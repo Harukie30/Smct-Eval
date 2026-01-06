@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDownIcon } from "lucide-react";
 import { format } from "date-fns";
-import  EvaluationPayload  from "./types";
+import EvaluationPayload from "./types";
 import {
   getQuarterlyReviewStatus,
   getCurrentYear,
@@ -58,7 +58,7 @@ function ScoreDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className={`w-15 px-1 py-2 text-lg font-bold border-2 border-yellow-400 rounded-md bg-yellow-100 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm min-h-[40px] justify-between inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground ${getScoreColor(
+        className={`w-15 px-1 py-2 font-bold border-2 border-yellow-400 bg-yellow-100 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[40px] justify-between inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm transition-all disabled:pointer-events-none disabled:opacity-50 shadow-xs hover:bg-accent hover:text-accent-foreground ${getScoreColor(
           value
         )}`}
       >
@@ -178,7 +178,9 @@ export default function Step1({
       if (data.hireDate) {
         const hireDate = new Date(data.hireDate);
         if (!isNaN(hireDate.getTime()) && fromDate < hireDate) {
-          setCoverageError("Performance Coverage cannot start before Date Hired");
+          setCoverageError(
+            "Performance Coverage cannot start before Date Hired"
+          );
           return;
         }
       }
@@ -681,7 +683,9 @@ export default function Step1({
             </Label>
             <Input
               id="position"
-              value={employee?.positions?.label || (employee as any)?.position || ""}
+              value={
+                employee?.positions?.label || (employee as any)?.position || ""
+              }
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
@@ -696,7 +700,11 @@ export default function Step1({
             </Label>
             <Input
               id="department"
-              value={employee?.departments?.department_name || (employee as any)?.department || ""}
+              value={
+                employee?.departments?.department_name ||
+                (employee as any)?.department ||
+                ""
+              }
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
@@ -711,7 +719,12 @@ export default function Step1({
             </Label>
             <Input
               id="branch"
-              value={employee?.branches?.branch_name || employee?.branches?.[0]?.branch_name || (employee as any)?.branch || ""}
+              value={
+                employee?.branches?.branch_name ||
+                employee?.branches?.[0]?.branch_name ||
+                (employee as any)?.branch ||
+                ""
+              }
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
@@ -768,7 +781,9 @@ export default function Step1({
                     data.coverageFrom
                       ? typeof data.coverageFrom === "string"
                         ? data.coverageFrom
-                        : new Date(data.coverageFrom).toISOString().split("T")[0]
+                        : new Date(data.coverageFrom)
+                            .toISOString()
+                            .split("T")[0]
                       : ""
                   }
                   onChange={(e) => {
@@ -794,9 +809,10 @@ export default function Step1({
 
                     // Validate: From date should not be before Date Hired
                     if (data.hireDate && fromDate) {
-                      const hireDateStr = typeof data.hireDate === "string"
-                        ? data.hireDate
-                        : new Date(data.hireDate).toISOString().split("T")[0];
+                      const hireDateStr =
+                        typeof data.hireDate === "string"
+                          ? data.hireDate
+                          : new Date(data.hireDate).toISOString().split("T")[0];
                       if (fromDate < hireDateStr) {
                         setCoverageError(
                           "Performance Coverage cannot start before Date Hired"
@@ -822,9 +838,7 @@ export default function Step1({
                       : undefined
                   }
                   className={`w-full bg-yellow-100 border-yellow-300 hover:bg-yellow-200 ${
-                    coverageError && !data.coverageFrom
-                      ? "border-red-500"
-                      : ""
+                    coverageError && !data.coverageFrom ? "border-red-500" : ""
                   }`}
                 />
               </div>
@@ -846,7 +860,9 @@ export default function Step1({
                     const fromDate = data.coverageFrom
                       ? typeof data.coverageFrom === "string"
                         ? data.coverageFrom
-                        : new Date(data.coverageFrom).toISOString().split("T")[0]
+                        : new Date(data.coverageFrom)
+                            .toISOString()
+                            .split("T")[0]
                       : null;
 
                     // Always update the form data so parent validation can catch it
@@ -868,7 +884,9 @@ export default function Step1({
                     data.coverageFrom
                       ? typeof data.coverageFrom === "string"
                         ? data.coverageFrom
-                        : new Date(data.coverageFrom).toISOString().split("T")[0]
+                        : new Date(data.coverageFrom)
+                            .toISOString()
+                            .split("T")[0]
                       : undefined
                   }
                   className={`w-full bg-yellow-100 border-yellow-300 hover:bg-yellow-200 ${
