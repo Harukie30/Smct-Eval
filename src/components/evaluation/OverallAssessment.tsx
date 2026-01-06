@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Send,
   User,
+  Loader2,
 } from "lucide-react";
 import { EvaluationPayload } from "./types";
 import { format } from "date-fns";
@@ -78,6 +79,7 @@ export default function OverallAssessment({
 
   // Submission state management
   const [submissionError, setSubmissionError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState({
     priorityAreas: false,
     remarks: false,
@@ -122,52 +124,58 @@ export default function OverallAssessment({
   // }, [employee?.id]);
 
   const handleSubmitEvaluation = async () => {
-    updateDataAction({ rating: Number(overallWeightedScore) });
+    setIsSubmitting(true);
+    
+    try {
+      updateDataAction({ rating: Number(overallWeightedScore) });
 
-    // Validate evaluator has a signature
-    if (!user?.signature) {
-      error(
-        "Please add your signature to your profile before submitting the evaluation."
-      );
-      setSubmissionError(
-        "Please add your signature to your profile before submitting the evaluation."
-      );
-      return;
-    }
+      // Validate evaluator has a signature
+      if (!user?.signature) {
+        error(
+          "Please add your signature to your profile before submitting the evaluation."
+        );
+        setSubmissionError(
+          "Please add your signature to your profile before submitting the evaluation."
+        );
+        return;
+      }
 
-    // Validate Priority Areas for Improvement - at least one must be filled
-    const hasPriorityArea =
-      (data.priorityArea1 && data.priorityArea1.trim() !== "") ||
-      (data.priorityArea2 && data.priorityArea2.trim() !== "") ||
-      (data.priorityArea3 && data.priorityArea3.trim() !== "");
+      // Validate Priority Areas for Improvement - at least one must be filled
+      const hasPriorityArea =
+        (data.priorityArea1 && data.priorityArea1.trim() !== "") ||
+        (data.priorityArea2 && data.priorityArea2.trim() !== "") ||
+        (data.priorityArea3 && data.priorityArea3.trim() !== "");
 
-    if (!hasPriorityArea) {
-      error(
-        "Please fill in at least one Priority Area for Improvement before submitting."
-      );
-      setSubmissionError(
-        "Please fill in at least one Priority Area for Improvement before submitting."
-      );
-      setValidationErrors((prev) => ({ ...prev, priorityAreas: true }));
-      return;
-    }
+      if (!hasPriorityArea) {
+        error(
+          "Please fill in at least one Priority Area for Improvement before submitting."
+        );
+        setSubmissionError(
+          "Please fill in at least one Priority Area for Improvement before submitting."
+        );
+        setValidationErrors((prev) => ({ ...prev, priorityAreas: true }));
+        return;
+      }
 
-    // Validate Remarks - must be filled
-    if (!data.remarks || data.remarks.trim() === "") {
-      error("Please fill in the Remarks field before submitting.");
-      setSubmissionError("Please fill in the Remarks field before submitting.");
-      setValidationErrors((prev) => ({ ...prev, remarks: true }));
-      return;
-    }
+      // Validate Remarks - must be filled
+      if (!data.remarks || data.remarks.trim() === "") {
+        error("Please fill in the Remarks field before submitting.");
+        setSubmissionError("Please fill in the Remarks field before submitting.");
+        setValidationErrors((prev) => ({ ...prev, remarks: true }));
+        return;
+      }
 
-    // Clear any previous errors
-    setSubmissionError("");
-    setValidationErrors({ priorityAreas: false, remarks: false });
+      // Clear any previous errors
+      setSubmissionError("");
+      setValidationErrors({ priorityAreas: false, remarks: false });
 
-    if (onSubmitAction) {
-      onSubmitAction();
-    } else {
-      console.log("❌ onSubmitAction not provided");
+      if (onSubmitAction) {
+        await onSubmitAction();
+      } else {
+        console.log("❌ onSubmitAction not provided");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -2960,9 +2968,19 @@ export default function OverallAssessment({
             onClick={() => handleSubmitEvaluation()}
             className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white"
             size="lg"
+            disabled={isSubmitting}
           >
-            <Send className="h-4 w-4 mr-2" />
-            Submit Evaluation
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Submit Evaluation
+              </>
+            )}
           </Button>
         </div>
 
