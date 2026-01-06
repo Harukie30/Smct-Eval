@@ -95,14 +95,13 @@ export default function EmployeesTab() {
         setIsRefreshing(true);
         const res = await apiService.getAllEmployeeByAuth(
           debouncedSearch,
-          currentPage,
           itemsPerPage,
+          currentPage,
           Number(positionFilter)
         );
 
         // Add safety checks to prevent "Cannot read properties of undefined" error
         if (!res) {
-          console.error("API response is undefined");
           setEmployees([]);
           setOverviewTotal(0);
           setTotalPages(1);
@@ -111,12 +110,31 @@ export default function EmployeesTab() {
           return;
         }
 
-        // Ensure we have an array
-        const employeesData = Array.isArray(res.data) ? res.data : [];
+        // getAllEmployeeByAuth returns: { data: [...], total, last_page, per_page }
+        // Follow the same pattern as HR dashboard
+        let employeesData: any[] = [];
+        let total = 0;
+        let lastPage = 1;
+        let perPageValue = itemsPerPage;
+
+        if (res.data && Array.isArray(res.data)) {
+          // Standard response structure from getAllEmployeeByAuth
+          employeesData = res.data;
+          total = res.total || 0;
+          lastPage = res.last_page || 1;
+          perPageValue = res.per_page || itemsPerPage;
+        } else if (Array.isArray(res)) {
+          // Response is directly an array (fallback)
+          employeesData = res;
+          total = res.length;
+          lastPage = 1;
+          perPageValue = itemsPerPage;
+        }
+
         setEmployees(employeesData);
-        setOverviewTotal(res.total || 0);
-        setTotalPages(res.last_page || 1);
-        setPerPage(res.per_page || itemsPerPage);
+        setOverviewTotal(total);
+        setTotalPages(lastPage);
+        setPerPage(perPageValue);
 
         setIsRefreshing(false);
       } catch (error) {
@@ -145,108 +163,6 @@ export default function EmployeesTab() {
     return () => clearTimeout(debounceSearch);
   }, [employeeSearch]);
 
-  // Get all employees from API (passed as prop)
-  // const allEmployees = useMemo(() => {
-  //   if (!employees || employees.length === 0) return [];
-
-  //   return employees.map((e: any) => ({
-  //     id: e.employeeId || e.id,
-  //     name: e.name || `${e.fname || ""} ${e.lname || ""}`.trim(),
-  //     email: e.email,
-  //     position: e.positions?.label || e.position?.name || e.position || "N/A",
-  //     department:
-  //       e.departments?.department_name ||
-  //       e.department?.name ||
-  //       e.department ||
-  //       "N/A",
-  //     branch:
-  //       (e.branches &&
-  //         Array.isArray(e.branches) &&
-  //         e.branches[0]?.branch_name) ||
-  //       e.branch?.name ||
-  //       e.branch ||
-  //       "N/A",
-  //     role:
-  //       (e.roles && Array.isArray(e.roles) && e.roles[0]?.name) ||
-  //       e.role?.name ||
-  //       e.role ||
-  //       "N/A",
-  //     isActive: e.isActive !== false,
-  //     avatar: e.avatar,
-  //     created_at: e.created_at, // Include created_at for highlighting
-  //   }));
-  // }, []);
-
-  // Extract unique positions from employees
-  // const uniquePositions = useMemo(() => {
-  //   const positionSet = new Set<string>();
-  //   allEmployees.forEach((e: any) => {
-  //     const pos = e.position;
-  //     if (pos && typeof pos === "string" && pos.trim() !== "") {
-  //       positionSet.add(pos);
-  //     }
-  //   });
-  // Also add positions from the positions prop if they're strings
-  //   positions.forEach((pos: any) => {
-  //     const posName =
-  //       typeof pos === "string" ? pos : pos?.name || String(pos || "");
-  //     if (posName && typeof posName === "string" && posName.trim() !== "") {
-  //       positionSet.add(posName);
-  //     }
-  //   });
-  //   return Array.from(positionSet).sort();
-  // }, [allEmployees, positions]);
-
-  // Use the custom hook for filtering
-  // const filteredEmployees = useEmployeeFiltering({
-  //   currentUser,
-  //   employees: allEmployees,
-  //   searchQuery: employeeSearch,
-  //   selectedDepartment,
-  // });
-
-  // const filtered: Employee[] = useMemo(() => {
-  //   return filteredEmployees
-  //     .filter((e: any) => {
-  //       // Filter by position if selected
-  //       if (selectedPosition && e.position !== selectedPosition) {
-  //         return false;
-  //       }
-  //       return true;
-  //     })
-  //     .map((e: any) => {
-  //       // const updatedEmployee = getUpdatedEmployeeData(e);
-
-  //       return {
-  //   id: updatedEmployee.employeeId || updatedEmployee.id,
-  //   name: updatedEmployee.name,
-  //   email: updatedEmployee.email,
-  //   position: updatedEmployee.position,
-  //   department: updatedEmployee.department,
-  //   role: updatedEmployee.role,
-  //   avatar: updatedEmployee.avatar,
-  //   branch: updatedEmployee.branch || "N/A",
-  //   created_at: updatedEmployee.created_at, // Include created_at for highlighting
-  //       };
-  //     });
-  // }, [filteredEmployees, selectedPosition]);
-
-  // Pagination calculations
-  // const employeesTotal = filtered.length;
-  // const employeesTotalPages = Math.ceil(employeesTotal / itemsPerPage);
-  // const employeesStartIndex = (employeesPage - 1) * itemsPerPage;
-  // const employeesEndIndex = employeesStartIndex + itemsPerPage;
-  // const employeesPaginated = filtered.slice(
-  //   employeesStartIndex,
-  //   employeesEndIndex
-  // );
-
-  // Reset to page 1 when filters/search change
-  // useEffect(() => {
-  //   setEmployeesPage(1);
-  // }, [employeeSearch, selectedDepartment, selectedPosition]);
-
-  // Calculate new hires this month
   const newHiresThisMonth = (() => {
     const now = new Date();
     // Hire date removed - return 0 for new hires this month

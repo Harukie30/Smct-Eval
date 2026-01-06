@@ -42,6 +42,7 @@ interface EvaluationFormProps {
     role: string;
     signature?: string;
     employeeId?: string; // Formatted employee ID from registration (e.g., "1234-567890")
+    hireDate?: string; // Date hired - required by some step components
   };
   currentUser?: {
     id: number;
@@ -433,29 +434,22 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
 
       // Also store in client data service for consistency
       try {
-        await apiService.createSubmission({
-          employeeId: parseInt(evaluationData.employeeId),
-          employeeName: evaluationData.employeeName,
-          employeeEmail: employee?.email || `${evaluationData.employeeName.toLowerCase().replace(/\s+/g, '.')}@smct.com`,
-          evaluatorId: currentUser?.id || 1,
-          evaluatorName: currentUser?.name || 'Evaluator',
-          evaluationData: {
-            ...evaluationData,
-            overallRating,
-            // Ensure evaluator signature is included
-            evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',
-            evaluatorSignature: evaluationData.evaluatorSignature || currentUser?.name || 'Evaluator',
-            evaluatorSignatureDate: evaluationData.evaluatorSignatureDate || new Date().toISOString().split('T')[0],
-            // Include supervisor/evaluator info
-            supervisor: evaluationData.supervisor || currentUser?.name || 'Evaluator',
-          },
-          status: 'completed',
-          period: new Date().toISOString().slice(0, 7), // YYYY-MM format
+        // Transform EvaluationData to match EvaluationPayload structure expected by API
+        const submissionPayload = {
+          ...evaluationData,
           overallRating,
-          submittedAt: new Date().toISOString(),
-          category: 'Performance Review',
-          evaluator: currentUser?.name || 'Evaluator',
-        });
+          // Ensure evaluator signature is included
+          evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',
+          evaluatorSignature: evaluationData.evaluatorSignature || currentUser?.name || 'Evaluator',
+          evaluatorSignatureDate: evaluationData.evaluatorSignatureDate || new Date().toISOString().split('T')[0],
+          // Include supervisor/evaluator info
+          supervisor: evaluationData.supervisor || currentUser?.name || 'Evaluator',
+        } as any; // Type assertion needed due to structure differences
+        
+        await apiService.createSubmission(
+          parseInt(evaluationData.employeeId),
+          submissionPayload
+        );
         console.log('Also stored in client data service with evaluator:', currentUser?.name);
       } catch (clientError) {
         console.log('Client data service storage failed, but localStorage storage succeeded:', clientError);
@@ -652,10 +646,17 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
         {currentStep === 0 ? (
           <Card key={`welcome-${welcomeAnimationKey}`} className="welcome-step-animate">
             <CardContent>
-              <CurrentStepComponent
+              <WelcomeStep
                 data={evaluationData}
                 updateDataAction={updateEvaluationData}
-                employee={employee}
+                employee={employee ? {
+                  id: employee.id,
+                  name: employee.name,
+                  email: employee.email,
+                  position: employee.position,
+                  department: employee.department,
+                  role: employee.role
+                } : undefined}
                 currentUser={currentUser}
                 onStartAction={startEvaluation}
                 onBackAction={onCloseAction}
@@ -687,7 +688,10 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
                 <CurrentStepComponent
                   data={evaluationData}
                   updateDataAction={updateEvaluationData}
-                  employee={employee}
+                  employee={employee ? {
+                    ...employee,
+                    hireDate: employee.hireDate || ''
+                  } : undefined}
                   currentUser={currentUser}
                   onStartAction={startEvaluation}
                   onNextAction={nextStep}

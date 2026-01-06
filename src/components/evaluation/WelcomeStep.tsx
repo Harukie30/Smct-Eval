@@ -44,8 +44,8 @@ export default function WelcomeStep({
               <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
                 <span className="text-2xl font-bold text-blue-600">
                   {(() => {
-                    // Handle both name format (single string) and fname/lname format
-                    const nameToUse = employee.name || (employee.fname && employee.lname ? `${employee.fname} ${employee.lname}` : employee.fname || employee.lname || 'N/A');
+                    // Handle fname/lname format
+                    const nameToUse = (employee.fname && employee.lname ? `${employee.fname} ${employee.lname}` : employee.fname || employee.lname || 'N/A');
                     return nameToUse
                       .split(" ")
                       .map((n: string) => n[0])
@@ -55,7 +55,7 @@ export default function WelcomeStep({
                 </span>
               </div>
               <h4 className="text-xl font-semibold text-gray-900">
-                {employee.name || (employee.fname && employee.lname ? `${employee.fname} ${employee.lname}` : employee.fname || employee.lname || 'N/A')}
+                {(employee.fname && employee.lname ? `${employee.fname} ${employee.lname}` : employee.fname || employee.lname || 'N/A')}
               </h4>
               <p className="text-gray-600">{employee.email || 'N/A'}</p>
             </div>
@@ -66,7 +66,7 @@ export default function WelcomeStep({
                   Position
                 </Badge>
                 <p className="text-sm text-gray-900">
-                  {employee.positions?.label || employee.position || "N/A"}
+                  {employee.positions?.label || employee.positions?.name || "N/A"}
                 </p>
               </div>
               <div>
@@ -74,7 +74,7 @@ export default function WelcomeStep({
                   Department
                 </Badge>
                 <p className="text-sm text-gray-900">
-                  {employee.departments?.department_name || employee.department || "N/A"}
+                  {employee.departments?.department_name || employee.departments?.name || "N/A"}
                 </p>
               </div>
               <div>
@@ -82,7 +82,7 @@ export default function WelcomeStep({
                   Role
                 </Badge>
                 <p className="text-sm text-gray-900">
-                  {employee.roles?.[0]?.name || employee.role || "N/A"}
+                  {employee.roles?.[0]?.name || employee.roles?.name || "N/A"}
                 </p>
               </div>
             </div>

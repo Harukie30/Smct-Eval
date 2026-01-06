@@ -8,6 +8,7 @@ import {
 } from '@/lib/types';
 
 // Hook for getting all employees
+// TODO: Implement getEmployees in apiService or use getActiveRegistrations
 export const useEmployees = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,8 +18,10 @@ export const useEmployees = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiService.getEmployees();
-      setEmployees(data);
+      // TODO: Replace with actual API call when getEmployees is implemented
+      // const data = await apiService.getEmployees();
+      // setEmployees(data);
+      setEmployees([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employees');
       console.error('Error fetching employees:', err);
@@ -35,6 +38,7 @@ export const useEmployees = () => {
 };
 
 // Hook for getting a single employee by ID
+// TODO: Implement getEmployee in apiService
 export const useEmployee = (id: number | null) => {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(false);
@@ -44,8 +48,10 @@ export const useEmployee = (id: number | null) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiService.getEmployee(employeeId);
-      setEmployee(data);
+      // TODO: Replace with actual API call when getEmployee is implemented
+      // const data = await apiService.getEmployee(employeeId);
+      // setEmployee(data);
+      setEmployee(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employee');
       console.error('Error fetching employee:', err);
@@ -66,6 +72,7 @@ export const useEmployee = (id: number | null) => {
 };
 
 // Hook for employee search
+// TODO: Implement searchEmployees in apiService or use getActiveRegistrations with search param
 export const useEmployeeSearch = () => {
   const [results, setResults] = useState<EmployeeSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -80,8 +87,10 @@ export const useEmployeeSearch = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiService.searchEmployees(query);
-      setResults(data);
+      // TODO: Replace with actual API call when searchEmployees is implemented
+      // const data = await apiService.searchEmployees(query);
+      // setResults(data);
+      setResults([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to search employees');
       console.error('Error searching employees:', err);
@@ -98,6 +107,7 @@ export const useEmployeeSearch = () => {
 };
 
 // Hook for getting employees by department
+// TODO: Implement getEmployeesByDepartment in apiService or use getActiveRegistrations with department param
 export const useEmployeesByDepartment = (department: string | null) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
@@ -107,8 +117,10 @@ export const useEmployeesByDepartment = (department: string | null) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiService.getEmployeesByDepartment(dept);
-      setEmployees(data);
+      // TODO: Replace with actual API call when getEmployeesByDepartment is implemented
+      // const data = await apiService.getEmployeesByDepartment(dept);
+      // setEmployees(data);
+      setEmployees([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employees by department');
       console.error('Error fetching employees by department:', err);
@@ -129,6 +141,7 @@ export const useEmployeesByDepartment = (department: string | null) => {
 };
 
 // Hook for getting employees by role
+// TODO: Implement getEmployeesByRole in apiService or use getActiveRegistrations with role param
 export const useEmployeesByRole = (role: string | null) => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
@@ -138,8 +151,10 @@ export const useEmployeesByRole = (role: string | null) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiService.getEmployeesByRole(employeeRole);
-      setEmployees(data);
+      // TODO: Replace with actual API call when getEmployeesByRole is implemented
+      // const data = await apiService.getEmployeesByRole(employeeRole);
+      // setEmployees(data);
+      setEmployees([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employees by role');
       console.error('Error fetching employees by role:', err);
@@ -160,6 +175,7 @@ export const useEmployeesByRole = (role: string | null) => {
 };
 
 // Hook for employee statistics
+// TODO: Implement getEmployeeStats in apiService
 export const useEmployeeStats = () => {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -169,8 +185,10 @@ export const useEmployeeStats = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiService.getEmployeeStats();
-      setStats(data);
+      // TODO: Replace with actual API call when getEmployeeStats is implemented
+      // const data = await apiService.getEmployeeStats();
+      // setStats(data);
+      setStats(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employee statistics');
       console.error('Error fetching employee statistics:', err);
@@ -225,12 +243,18 @@ export const useUpdateEmployee = () => {
 };
 
 // Utility hook to get employee name by ID
+// TODO: Update when Employee type has name property (currently uses fname/lname)
 export const useEmployeeName = (id: number | null) => {
   const { employee, loading } = useEmployee(id);
-  return { name: employee?.name || null, loading };
+  // Employee type uses fname/lname, not name
+  const name = employee && 'fname' in employee && 'lname' in employee
+    ? `${employee.fname} ${employee.lname}`.trim() || null
+    : null;
+  return { name, loading };
 };
 
 // Utility hook to get employee info by email
+// TODO: Implement getEmployeeByEmail in apiService
 export const useEmployeeByEmail = (email: string | null) => {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(false);
@@ -240,8 +264,10 @@ export const useEmployeeByEmail = (email: string | null) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiService.getEmployeeByEmail(employeeEmail);
-      setEmployee(data);
+      // TODO: Replace with actual API call when getEmployeeByEmail is implemented
+      // const data = await apiService.getEmployeeByEmail(employeeEmail);
+      // setEmployee(data);
+      setEmployee(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch employee by email');
       console.error('Error fetching employee by email:', err);

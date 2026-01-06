@@ -291,8 +291,16 @@ export const apiService = {
         position_filter: position_filter || "",
       },
     });
-    const data = response.data;
-    return data.employees;
+    // Response structure: { employees: { current_page, data: [...], total, last_page, per_page } }
+    const employeesData = response.data.employees || {};
+    // Return the full paginated response object, matching HR dashboard pattern
+    return {
+      data: employeesData.data || [],
+      total: employeesData.total || 0,
+      last_page: employeesData.last_page || 1,
+      per_page: employeesData.per_page || per_page || 10,
+      current_page: employeesData.current_page || page || 1,
+    };
   },
 
   // Get specific user

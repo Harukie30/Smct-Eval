@@ -20,10 +20,6 @@ import apiService from "@/lib/apiService";
 import { withPublicPage } from "@/hoc";
 import { dataURLtoFile } from "@/utils/data-url-to-file";
 import { Eye, EyeOff } from "lucide-react";
-// Mock data for testing
-import branchCodes from "@/data/branch-code.json";
-import positionsData from "@/data/positions.json";
-import departmentsData from "@/data/departments.json";
 
 interface FormDataType {
   fname: string;
@@ -41,9 +37,6 @@ interface FormDataType {
 }
 
 function RegisterPage() {
-  // Set to true to force mock data for testing
-  const FORCE_MOCK_DATA = false; // Change to true to always use mock data
-
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
   const [positions, setPositions] = useState<
     { value: string; label: string }[]
@@ -143,45 +136,9 @@ function RegisterPage() {
     );
   };
 
-  // Helper function to load mock data
-  const loadMockData = () => {
-    // Mock positions - positionsData is an array of strings, convert to {value, label} format
-    const mockPositions: { value: string; label: string }[] = positionsData.map(
-      (pos: string, index: number) => ({
-        value: String(index + 1),
-        label: pos,
-      })
-    );
-    setPositions(mockPositions);
-
-    // Mock departments - departmentsData is an array of {id, name, ...}, convert to {value, label} format
-    const mockDepartments: { value: string; label: string }[] =
-      departmentsData.map((dept: any) => ({
-        value: String(dept.id),
-        label: dept.name,
-      }));
-    setDepartments(mockDepartments);
-
-    // Mock branches - branchCodes is an array of strings like ["HO", "HO-MNL", "CEB", ...]
-    // Use branch code as both value and label for easier testing and matching
-    const mockBranches: { value: string; label: string }[] = branchCodes.map(
-      (branch: string) => ({
-        value: branch, // Use branch code as value for easier testing
-        label: branch, // Use branch code as label
-      })
-    );
-    setBranches(mockBranches);
-  };
 
   // Load positions from client data service.api
   useEffect(() => {
-    // If force mock data is enabled, load mock data immediately
-    if (FORCE_MOCK_DATA) {
-      console.log("Force mock data enabled, loading mock data");
-      loadMockData();
-      return;
-    }
-
     const fetchData = async () => {
       try {
         // Fetch positions using API service
@@ -198,8 +155,8 @@ function RegisterPage() {
         setDepartments(departmentsDataFromAPI);
         setBranches(branchDataFromAPI);
       } catch (error) {
-        console.error("Error fetching data, using mock data:", error);
-        loadMockData();
+        console.error("Error fetching data:", error);
+        // Data will remain empty if API fails
       }
     };
 
