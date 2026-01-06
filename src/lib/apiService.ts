@@ -1,5 +1,5 @@
 import { api, sanctum } from "./api";
-import EvaluationPayload from "../components/evaluation/types";
+import { EvaluationPayload } from "../components/evaluation/types";
 // Helper function to get CSRF cookie from Sanctum
 export const sanctum_csrf = async () => {
   try {

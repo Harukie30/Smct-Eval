@@ -124,10 +124,11 @@ export default function EvaluationForm({
     customerServiceExplanation3: "",
     customerServiceExplanation4: "",
     customerServiceExplanation5: "",
+    created_at: "",
   });
 
   const updateDataAction = (updates: Partial<EvaluationPayload>) => {
-    setForm((prev) => ({
+    setForm((prev: EvaluationPayload) => ({
       ...prev,
       ...updates,
     }));
@@ -839,6 +840,7 @@ export default function EvaluationForm({
                   customerServiceExplanation3: "",
                   customerServiceExplanation4: "",
                   customerServiceExplanation5: "",
+                  created_at: "",
                 });
               }}
               className="px-4"

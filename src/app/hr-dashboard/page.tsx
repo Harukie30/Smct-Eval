@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { getQuarterColor } from "@/lib/quarterUtils";
 import apiService from "@/lib/apiService";
-import EvaluationPayload from "@/components/evaluation/types";
+import { EvaluationPayload } from "@/components/evaluation/types";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import EvaluationsPagination from "@/components/paginationComponent";
 

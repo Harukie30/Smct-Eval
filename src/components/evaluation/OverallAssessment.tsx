@@ -17,7 +17,7 @@ import {
   Send,
   User,
 } from "lucide-react";
-import  EvaluationPayload  from "./types";
+import { EvaluationPayload } from "./types";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/useToast";
 import {
