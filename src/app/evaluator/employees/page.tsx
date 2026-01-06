@@ -97,9 +97,9 @@ export default function EmployeesTab() {
           debouncedSearch,
           currentPage,
           itemsPerPage,
-          positionFilter
+          Number(positionFilter)
         );
-        
+
         // Add safety checks to prevent "Cannot read properties of undefined" error
         if (!res) {
           console.error("API response is undefined");
@@ -130,7 +130,13 @@ export default function EmployeesTab() {
       }
     };
     fetchEmployees();
-  }, [positionFilter, debouncedSearch, currentPage, itemsPerPage, refreshTrigger]); // Add refreshTrigger to dependencies
+  }, [
+    positionFilter,
+    debouncedSearch,
+    currentPage,
+    itemsPerPage,
+    refreshTrigger,
+  ]); // Add refreshTrigger to dependencies
 
   useEffect(() => {
     const debounceSearch = setTimeout(() => {
@@ -275,7 +281,7 @@ export default function EmployeesTab() {
             </div>
             <Button
               onClick={() => {
-                setRefreshTrigger(prev => prev + 1); // Trigger refresh by incrementing counter
+                setRefreshTrigger((prev) => prev + 1); // Trigger refresh by incrementing counter
               }}
               disabled={isRefreshing}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
@@ -487,7 +493,10 @@ export default function EmployeesTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {!employees || employees === null || !Array.isArray(employees) || employees.length === 0 ? (
+                    {!employees ||
+                    employees === null ||
+                    !Array.isArray(employees) ||
+                    employees.length === 0 ? (
                       <TableRow>
                         <TableCell
                           colSpan={6}
@@ -566,16 +575,22 @@ export default function EmployeesTab() {
                             </TableCell>
                             <TableCell>{employee.email || "N/A"}</TableCell>
                             <TableCell>
-                              {employee.positions?.label || employee.position || "N/A"}
+                              {employee.positions?.label ||
+                                employee.position ||
+                                "N/A"}
                             </TableCell>
                             <TableCell>
-                              {employee.branches && Array.isArray(employee.branches) && employee.branches.length > 0
+                              {employee.branches &&
+                              Array.isArray(employee.branches) &&
+                              employee.branches.length > 0
                                 ? employee.branches[0]?.branch_name || "N/A"
                                 : employee.branch || "N/A"}
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline">
-                                {employee.roles && Array.isArray(employee.roles) && employee.roles.length > 0
+                                {employee.roles &&
+                                Array.isArray(employee.roles) &&
+                                employee.roles.length > 0
                                   ? employee.roles[0]?.name || "N/A"
                                   : employee.role || "N/A"}
                               </Badge>
