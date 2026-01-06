@@ -97,7 +97,6 @@ export default function OverviewTab() {
         status,
         quarter,
         year,
-        false // getAll = false for evaluator's own evaluations
       );
       
       // Add safety checks to prevent "Cannot read properties of undefined" error
