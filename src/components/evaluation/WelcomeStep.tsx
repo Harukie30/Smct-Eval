@@ -45,7 +45,11 @@ export default function WelcomeStep({
                 <span className="text-2xl font-bold text-blue-600">
                   {(() => {
                     // Handle both name format (single string) and fname/lname format
-                    const nameToUse = employee.name || (employee.fname && employee.lname ? `${employee.fname} ${employee.lname}` : employee.fname || employee.lname || 'N/A');
+                    const nameToUse =
+                      employee.fname ||
+                      (employee.fname && employee.lname
+                        ? `${employee.fname} ${employee.lname}`
+                        : employee.fname || employee.lname || "N/A");
                     return nameToUse
                       .split(" ")
                       .map((n: string) => n[0])
@@ -55,9 +59,12 @@ export default function WelcomeStep({
                 </span>
               </div>
               <h4 className="text-xl font-semibold text-gray-900">
-                {employee.name || (employee.fname && employee.lname ? `${employee.fname} ${employee.lname}` : employee.fname || employee.lname || 'N/A')}
+                {employee.fname ||
+                  (employee.fname && employee.lname
+                    ? `${employee.fname} ${employee.lname}`
+                    : employee.fname || employee.lname || "N/A")}
               </h4>
-              <p className="text-gray-600">{employee.email || 'N/A'}</p>
+              <p className="text-gray-600">{employee.email || "N/A"}</p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -74,7 +81,9 @@ export default function WelcomeStep({
                   Department
                 </Badge>
                 <p className="text-sm text-gray-900">
-                  {employee.departments?.department_name || employee.department || "N/A"}
+                  {employee.departments?.department_name ||
+                    employee.department ||
+                    "N/A"}
                 </p>
               </div>
               <div>
