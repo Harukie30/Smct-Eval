@@ -658,22 +658,59 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         lname = (user as any).lname || user.lname || "";
       }
 
-      // Extract department value - could be string or nested in departments object/array
+      // Extract department value - could be string, object, or array
+      // IMPORTANT: We need to find the department ID (value) not the name (label)
       let departmentValue = "";
-      if (user.department && typeof user.department === "string") {
-        departmentValue = user.department;
+      let departmentNameOrId = "";
+
+      // Check for department_id first (most direct)
+      if (userAny.department_id) {
+        departmentNameOrId = String(userAny.department_id);
+      } else if (user.department && typeof user.department === "string") {
+        departmentNameOrId = user.department;
+      } else if (user.department && typeof user.department === "number") {
+        departmentNameOrId = String(user.department);
       } else if (
         userAny.departments &&
         Array.isArray(userAny.departments) &&
         userAny.departments.length > 0
       ) {
-        departmentValue =
-          userAny.departments[0]?.name || userAny.departments[0] || "";
+        // Handle array format: departments[0].id or departments[0].department_name
+        departmentNameOrId =
+          userAny.departments[0]?.id ||
+          userAny.departments[0]?.department_id ||
+          userAny.departments[0]?.department_name ||
+          userAny.departments[0]?.name ||
+          "";
       } else if (
         userAny.departments &&
         typeof userAny.departments === "object"
       ) {
-        departmentValue = userAny.departments.name || "";
+        // Handle object format: departments.id or departments.department_name
+        departmentNameOrId =
+          userAny.departments.id ||
+          userAny.departments.department_id ||
+          userAny.departments.department_name ||
+          userAny.departments.name ||
+          "";
+      }
+
+      // Find department ID from departmentsData by matching name or ID
+      if (departmentNameOrId && departments && departments.length > 0) {
+        const foundDepartment = departments.find((d: any) => {
+          const dLabel = d.label || d.name || d.department_name || "";
+          const dValue = d.value || d.id || "";
+          return (
+            dLabel === departmentNameOrId ||
+            dValue === departmentNameOrId ||
+            String(dValue) === String(departmentNameOrId) ||
+            dLabel.includes(departmentNameOrId) ||
+            departmentNameOrId.includes(dLabel)
+          );
+        });
+        departmentValue = foundDepartment?.value || foundDepartment?.id || departmentNameOrId;
+      } else {
+        departmentValue = departmentNameOrId;
       }
 
       setFormData({
