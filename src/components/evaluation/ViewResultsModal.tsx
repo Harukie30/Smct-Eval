@@ -1210,6 +1210,68 @@ export default function ViewResultsModal({
 
   if (!submission) return null;
 
+  // Use stored rating from backend if available to match evaluation records table
+  const finalRatingRaw =
+    submission.rating !== undefined && submission.rating !== null
+      ? Number(submission.rating)
+      : (() => {
+          const job_knowledgeScore = calculateScore(
+            submission.job_knowledge.map((item: any) =>
+              String(item.score)
+            )
+          );
+          const quality_of_workScore = calculateScore(
+            submission.quality_of_works.map((item: any) =>
+              String(item.score)
+            )
+          );
+          const adaptabilityScore = calculateScore(
+            submission.adaptability.map((item: any) =>
+              String(item.score)
+            )
+          );
+          const teamworkScore = calculateScore(
+            submission.teamworks.map((item: any) =>
+              String(item.score)
+            )
+          );
+          const reliabilityScore = calculateScore(
+            submission.reliabilities.map((item: any) =>
+              String(item.score)
+            )
+          );
+          const ethicalScore = calculateScore(
+            submission.ethicals.map((item: any) =>
+              String(item.score)
+            )
+          );
+          const customer_serviceScore = calculateScore(
+            submission.customer_services.map((item: any) =>
+              String(item.score)
+            )
+          );
+
+          const overallWeightedScore =
+            job_knowledgeScore * 0.2 +
+            quality_of_workScore * 0.2 +
+            adaptabilityScore * 0.1 +
+            teamworkScore * 0.1 +
+            reliabilityScore * 0.05 +
+            ethicalScore * 0.05 +
+            customer_serviceScore * 0.3;
+
+          return overallWeightedScore;
+        })();
+
+  const finalRating = Number.isFinite(finalRatingRaw)
+    ? Number(finalRatingRaw)
+    : 0;
+  const finalRatingRounded = Number(finalRating.toFixed(2));
+  const finalPercentage = Number(
+    ((finalRatingRounded / 5) * 100).toFixed(2)
+  );
+  const finalIsPass = finalRatingRounded >= 3.0;
+
   // Handle approval API call
   const handleApproveEvaluation = async () => {
     if (!submission.id) {
@@ -2998,66 +3060,7 @@ export default function ViewResultsModal({
                                   Overall Performance Rating
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-lg">
-                                  {(() => {
-                                    const job_knowledgeScore = calculateScore(
-                                      submission.job_knowledge.map(
-                                        (item: any) => {
-                                          return item.score;
-                                        }
-                                      )
-                                    );
-                                    const quality_of_workScore = calculateScore(
-                                      submission.quality_of_works.map(
-                                        (item: any) => {
-                                          return item.score;
-                                        }
-                                      )
-                                    );
-                                    const adaptabilityScore = calculateScore(
-                                      submission.adaptability.map(
-                                        (item: any) => {
-                                          return item.score;
-                                        }
-                                      )
-                                    );
-                                    const teamworkScore = calculateScore(
-                                      submission.teamworks.map((item: any) => {
-                                        return item.score;
-                                      })
-                                    );
-                                    const reliabilityScore = calculateScore(
-                                      submission.reliabilities.map(
-                                        (item: any) => {
-                                          return item.score;
-                                        }
-                                      )
-                                    );
-                                    const ethicalScore = calculateScore(
-                                      submission.ethicals.map((item: any) => {
-                                        return item.score;
-                                      })
-                                    );
-                                    const customer_serviceScore =
-                                      calculateScore(
-                                        submission.customer_services.map(
-                                          (item: any) => {
-                                            return item.score;
-                                          }
-                                        )
-                                      );
-
-                                    const overallWeightedScore = (
-                                      job_knowledgeScore * 0.2 +
-                                      quality_of_workScore * 0.2 +
-                                      adaptabilityScore * 0.1 +
-                                      teamworkScore * 0.1 +
-                                      reliabilityScore * 0.05 +
-                                      ethicalScore * 0.05 +
-                                      customer_serviceScore * 0.3
-                                    ).toFixed(2);
-
-                                    return overallWeightedScore;
-                                  })()}
+                                  {finalRatingRounded.toFixed(2)}
                                 </td>
                               </tr>
                             </tbody>
@@ -3068,57 +3071,7 @@ export default function ViewResultsModal({
                         <div className="mt-6 flex justify-center items-center space-x-8 print-performance-score-wrapper">
                           <div className="text-center">
                             <div className="text-4xl font-bold text-gray-700">
-                              {(() => {
-                                const job_knowledgeScore = calculateScore(
-                                  submission.job_knowledge.map((item: any) => {
-                                    return item.score;
-                                  })
-                                );
-                                const quality_of_workScore = calculateScore(
-                                  submission.quality_of_works.map(
-                                    (item: any) => {
-                                      return item.score;
-                                    }
-                                  )
-                                );
-                                const adaptabilityScore = calculateScore(
-                                  submission.adaptability.map((item: any) => {
-                                    return item.score;
-                                  })
-                                );
-                                const teamworkScore = calculateScore(
-                                  submission.teamworks.map((item: any) => {
-                                    return item.score;
-                                  })
-                                );
-                                const reliabilityScore = calculateScore(
-                                  submission.reliabilities.map((item: any) => {
-                                    return item.score;
-                                  })
-                                );
-                                const ethicalScore = calculateScore(
-                                  submission.ethicals.map((item: any) => {
-                                    return item.score;
-                                  })
-                                );
-                                const customer_serviceScore = calculateScore([
-                                  submission.customer_services.score,
-                                ]);
-
-                                const overallWeightedScore =
-                                  job_knowledgeScore * 0.2 +
-                                  quality_of_workScore * 0.2 +
-                                  adaptabilityScore * 0.1 +
-                                  teamworkScore * 0.1 +
-                                  reliabilityScore * 0.05 +
-                                  ethicalScore * 0.05 +
-                                  customer_serviceScore * 0.3;
-
-                                return (
-                                  (overallWeightedScore / 5) *
-                                  100
-                                ).toFixed(2);
-                              })()}
+                              {finalPercentage.toFixed(2)}
                               %
                             </div>
                             <div className="text-base text-gray-500 mt-1">
@@ -3126,107 +3079,11 @@ export default function ViewResultsModal({
                             </div>
                           </div>
                           <div
-                            className={`px-8 py-4 rounded-lg font-bold text-white text-xl ${(() => {
-                              const job_knowledgeScore = calculateScore(
-                                submission.job_knowledge.map((item: any) => {
-                                  return item.score;
-                                })
-                              );
-                              const quality_of_workScore = calculateScore(
-                                submission.quality_of_works.map((item: any) => {
-                                  return item.score;
-                                })
-                              );
-                              const adaptabilityScore = calculateScore(
-                                submission.quality_of_works.map((item: any) => {
-                                  return item.score;
-                                })
-                              );
-                              const teamworkScore = calculateScore(
-                                submission.teamworks.map((item: any) => {
-                                  return item.score;
-                                })
-                              );
-                              const reliabilityScore = calculateScore(
-                                submission.reliabilities.map((item: any) => {
-                                  return item.score;
-                                })
-                              );
-                              const ethicalScore = calculateScore(
-                                submission.ethicals.map((item: any) => {
-                                  return item.score;
-                                })
-                              );
-                              const customer_serviceScore = calculateScore([
-                                submission.customer_services.score,
-                              ]);
-
-                              const overallWeightedScore =
-                                job_knowledgeScore * 0.2 +
-                                quality_of_workScore * 0.2 +
-                                adaptabilityScore * 0.1 +
-                                teamworkScore * 0.1 +
-                                reliabilityScore * 0.05 +
-                                ethicalScore * 0.05 +
-                                customer_serviceScore * 0.3;
-
-                              return overallWeightedScore >= 3.0
-                                ? "bg-green-600"
-                                : "bg-red-600";
-                            })()}`}
+                            className={`px-8 py-4 rounded-lg font-bold text-white text-xl ${
+                              finalIsPass ? "bg-green-600" : "bg-red-600"
+                            }`}
                           >
-                            {(() => {
-                              const job_knowledgeScore = calculateScore(
-                                submission.job_knowledge.map((item: any) => {
-                                  return item.score;
-                                })
-                              );
-                              const quality_of_workScore = calculateScore(
-                                submission.quality_of_works.map((item: any) => {
-                                  return item.score;
-                                })
-                              );
-                              const adaptabilityScore = calculateScore(
-                                submission.adaptability.map((item: any) => {
-                                  return item.score;
-                                })
-                              );
-                              const teamworkScore = calculateScore(
-                                submission.teamworks.map((item: any) => {
-                                  return item.score;
-                                })
-                              );
-                              const reliabilityScore = calculateScore(
-                                submission.reliabilities.map((item: any) => {
-                                  return item.score;
-                                })
-                              );
-                              const ethicalScore = calculateScore(
-                                submission.ethicals.map((item: any) => {
-                                  return item.score;
-                                })
-                              );
-                              const customer_serviceScore = calculateScore(
-                                submission.customer_services.map(
-                                  (item: any) => {
-                                    return item.score;
-                                  }
-                                )
-                              );
-
-                              const overallWeightedScore =
-                                job_knowledgeScore * 0.2 +
-                                quality_of_workScore * 0.2 +
-                                adaptabilityScore * 0.1 +
-                                teamworkScore * 0.1 +
-                                reliabilityScore * 0.05 +
-                                ethicalScore * 0.05 +
-                                customer_serviceScore * 0.3;
-
-                              return overallWeightedScore >= 3.0
-                                ? "PASS"
-                                : "FAIL";
-                            })()}
+                            {finalIsPass ? "PASS" : "FAIL"}
                           </div>
                         </div>
                       </div>

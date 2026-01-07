@@ -139,31 +139,6 @@ export default function OverallAssessment({
       return;
     }
 
-    // Validate Priority Areas for Improvement - at least one must be filled
-    const hasPriorityArea =
-      (data.priorityArea1 && data.priorityArea1.trim() !== "") ||
-      (data.priorityArea2 && data.priorityArea2.trim() !== "") ||
-      (data.priorityArea3 && data.priorityArea3.trim() !== "");
-
-    if (!hasPriorityArea) {
-      error(
-        "Please fill in at least one Priority Area for Improvement before submitting."
-      );
-      setSubmissionError(
-        "Please fill in at least one Priority Area for Improvement before submitting."
-      );
-      setValidationErrors((prev) => ({ ...prev, priorityAreas: true }));
-      return;
-    }
-
-    // Validate Remarks - must be filled
-    if (!data.remarks || data.remarks.trim() === "") {
-      error("Please fill in the Remarks field before submitting.");
-      setSubmissionError("Please fill in the Remarks field before submitting.");
-      setValidationErrors((prev) => ({ ...prev, remarks: true }));
-      return;
-    }
-
     // Clear any previous errors
     setSubmissionError("");
     setValidationErrors({ priorityAreas: false, remarks: false });
@@ -2692,7 +2667,7 @@ export default function OverallAssessment({
       <Card>
         <CardContent className="pt-6">
           <h4 className="font-bold text-lg text-gray-900 mb-3">
-            PRIORITY AREAS FOR IMPROVEMENT *
+            PRIORITY AREAS FOR IMPROVEMENT
           </h4>
           <p className="text-sm text-gray-600 mb-4">
             This section identifies key areas the employee can focus on for
@@ -2711,28 +2686,8 @@ export default function OverallAssessment({
                 value={data.priorityArea1 || ""}
                 onChange={(e) => {
                   updateDataAction({ priorityArea1: e.target.value });
-                  if (
-                    validationErrors.priorityAreas &&
-                    e.target.value.trim() !== ""
-                  ) {
-                    const hasAnyPriority =
-                      e.target.value.trim() !== "" ||
-                      (data.priorityArea2 &&
-                        data.priorityArea2.trim() !== "") ||
-                      (data.priorityArea3 && data.priorityArea3.trim() !== "");
-                    if (hasAnyPriority) {
-                      setValidationErrors((prev) => ({
-                        ...prev,
-                        priorityAreas: false,
-                      }));
-                    }
-                  }
                 }}
-                className={`mt-1 bg-yellow-50 ${
-                  validationErrors.priorityAreas
-                    ? "border-red-500 border-2"
-                    : "border-gray-300"
-                }`}
+                className="mt-1 bg-yellow-50 border-gray-300"
                 placeholder="Enter priority area for improvement"
               />
             </div>
@@ -2745,28 +2700,8 @@ export default function OverallAssessment({
                 value={data.priorityArea2 || ""}
                 onChange={(e) => {
                   updateDataAction({ priorityArea2: e.target.value });
-                  if (
-                    validationErrors.priorityAreas &&
-                    e.target.value.trim() !== ""
-                  ) {
-                    const hasAnyPriority =
-                      (data.priorityArea1 &&
-                        data.priorityArea1.trim() !== "") ||
-                      e.target.value.trim() !== "" ||
-                      (data.priorityArea3 && data.priorityArea3.trim() !== "");
-                    if (hasAnyPriority) {
-                      setValidationErrors((prev) => ({
-                        ...prev,
-                        priorityAreas: false,
-                      }));
-                    }
-                  }
                 }}
-                className={`mt-1 bg-yellow-50 ${
-                  validationErrors.priorityAreas
-                    ? "border-red-500 border-2"
-                    : "border-gray-300"
-                }`}
+                className="mt-1 bg-yellow-50 border-gray-300"
                 placeholder="Enter priority area for improvement"
               />
             </div>
@@ -2779,65 +2714,27 @@ export default function OverallAssessment({
                 value={data.priorityArea3 || ""}
                 onChange={(e) => {
                   updateDataAction({ priorityArea3: e.target.value });
-                  if (
-                    validationErrors.priorityAreas &&
-                    e.target.value.trim() !== ""
-                  ) {
-                    const hasAnyPriority =
-                      (data.priorityArea1 &&
-                        data.priorityArea1.trim() !== "") ||
-                      (data.priorityArea2 &&
-                        data.priorityArea2.trim() !== "") ||
-                      e.target.value.trim() !== "";
-                    if (hasAnyPriority) {
-                      setValidationErrors((prev) => ({
-                        ...prev,
-                        priorityAreas: false,
-                      }));
-                    }
-                  }
                 }}
-                className={`mt-1 bg-yellow-50 ${
-                  validationErrors.priorityAreas
-                    ? "border-red-500 border-2"
-                    : "border-gray-300"
-                }`}
+                className="mt-1 bg-yellow-50 border-gray-300"
                 placeholder="Enter priority area for improvement"
               />
             </div>
           </div>
-          {validationErrors.priorityAreas && (
-            <p className="text-sm text-red-600 mt-2">
-              ⚠️ Please fill in at least one priority area.
-            </p>
-          )}
         </CardContent>
       </Card>
 
       {/* Remarks */}
       <Card>
         <CardContent className="pt-6">
-          <h4 className="font-bold text-lg text-gray-900 mb-3">REMARKS *</h4>
+          <h4 className="font-bold text-lg text-gray-900 mb-3">REMARKS</h4>
           <textarea
             value={data.remarks || ""}
             onChange={(e) => {
               updateDataAction({ remarks: e.target.value });
-              if (validationErrors.remarks && e.target.value.trim() !== "") {
-                setValidationErrors((prev) => ({ ...prev, remarks: false }));
-              }
             }}
-            className={`w-full h-32 p-3 border rounded-md bg-yellow-50 resize-none ${
-              validationErrors.remarks
-                ? "border-red-500 border-2"
-                : "border-gray-300"
-            }`}
+            className="w-full h-32 p-3 border border-gray-300 rounded-md bg-yellow-50 resize-none"
             placeholder="Enter additional remarks or comments..."
           />
-          {validationErrors.remarks && (
-            <p className="text-sm text-red-600 mt-2">
-              ⚠️ Please fill in the remarks field.
-            </p>
-          )}
         </CardContent>
       </Card>
 
