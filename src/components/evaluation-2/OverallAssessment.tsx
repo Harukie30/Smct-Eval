@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Check, X, AlertTriangle, Printer, Edit, CheckCircle, AlertCircle, Send } from 'lucide-react';
+import { Check, X, AlertTriangle, Printer, Edit, CheckCircle, AlertCircle, Send, Loader2 } from 'lucide-react';
 import { EvaluationData } from './types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/useToast';
@@ -73,6 +73,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
     
     // Submission state management
     const [submissionError, setSubmissionError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     
     // Quarterly review status
     const [quarterlyStatus, setQuarterlyStatus] = useState({
@@ -98,7 +99,6 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                 try {
                     const status = await getQuarterlyReviewStatus(employee.id, getCurrentYear());
                     setQuarterlyStatus(status);
-                    console.log('Quarterly review status for employee', employee.id, ':', status);
                 } catch (error) {
                     console.error('Error checking quarterly reviews:', error);
                 } finally {
@@ -118,6 +118,83 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
     }, [employee, data.employeeSignature, updateDataAction]);
 
 
+    // Helper function to calculate overall rating (same logic as parent component)
+    const calculateOverallRating = (evalData: EvaluationData): number => {
+        // Helper to calculate average score for a category
+        const calculateScore = (scores: (string | number | undefined)[]): number => {
+            const validScores = scores
+                .filter(score => score !== undefined && score !== '' && score !== null)
+                .map(score => typeof score === 'string' ? parseFloat(score) : score)
+                .filter(score => !isNaN(score as number)) as number[];
+            
+            if (validScores.length === 0) return 0;
+            return validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+        };
+
+        // Calculate scores for each category
+        const jobKnowledgeScore = calculateScore([
+            evalData.jobKnowledgeScore1,
+            evalData.jobKnowledgeScore2,
+            evalData.jobKnowledgeScore3
+        ]);
+        
+        const qualityOfWorkScore = calculateScore([
+            evalData.qualityOfWorkScore1,
+            evalData.qualityOfWorkScore2,
+            evalData.qualityOfWorkScore3,
+            evalData.qualityOfWorkScore4,
+            evalData.qualityOfWorkScore5
+        ]);
+        
+        const adaptabilityScore = calculateScore([
+            evalData.adaptabilityScore1,
+            evalData.adaptabilityScore2,
+            evalData.adaptabilityScore3
+        ]);
+        
+        const teamworkScore = calculateScore([
+            evalData.teamworkScore1,
+            evalData.teamworkScore2,
+            evalData.teamworkScore3
+        ]);
+        
+        const reliabilityScore = calculateScore([
+            evalData.reliabilityScore1,
+            evalData.reliabilityScore2,
+            evalData.reliabilityScore3,
+            evalData.reliabilityScore4
+        ]);
+        
+        const ethicalScore = calculateScore([
+            evalData.ethicalScore1,
+            evalData.ethicalScore2,
+            evalData.ethicalScore3,
+            evalData.ethicalScore4
+        ]);
+        
+        const customerServiceScore = calculateScore([
+            evalData.customerServiceScore1,
+            evalData.customerServiceScore2,
+            evalData.customerServiceScore3,
+            evalData.customerServiceScore4,
+            evalData.customerServiceScore5
+        ]);
+
+        // Calculate weighted overall score (matches parent component)
+        const overallWeightedScore = (
+            (jobKnowledgeScore * 0.20) +
+            (qualityOfWorkScore * 0.20) +
+            (adaptabilityScore * 0.10) +
+            (teamworkScore * 0.10) +
+            (reliabilityScore * 0.05) +
+            (ethicalScore * 0.05) +
+            (customerServiceScore * 0.30)
+        );
+
+        // Round to 1 decimal place
+        return Math.round(overallWeightedScore * 10) / 10;
+    };
+
     const handleSubmitEvaluation = async (isRetry = false) => {
         // Validate evaluator has a signature
         if (!currentUser?.signature) {
@@ -125,23 +202,46 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
             return;
         }
 
-        // Update the data with evaluator signature before submitting
-        const updatedData = {
-            ...data,
-            evaluatorSignatureImage: currentUser?.signature || '',
-            evaluatorSignature: currentUser?.name || data.evaluatorSignature,
-            evaluatorSignatureDate: data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
-        };
-        
-        updateDataAction(updatedData);
-
-        // Use the parent's submission logic
-        console.log('🔄 Calling parent onSubmitAction...');
-        if (onSubmitAction) {
-            onSubmitAction();
-        } else {
-            console.log('❌ onSubmitAction not provided');
+        // Prevent multiple submissions
+        if (isSubmitting) {
+            return;
         }
+
+        setIsSubmitting(true);
+        setSubmissionError('');
+
+        try {
+            // Calculate the rating using the same logic as parent component
+            const calculatedRating = calculateOverallRating(data);
+
+            // Update the data with evaluator signature and calculated rating before submitting
+            const updatedData = {
+                ...data,
+                rating: calculatedRating, // Include calculated rating in the payload
+                evaluatorSignatureImage: currentUser?.signature || '',
+                evaluatorSignature: currentUser?.name || data.evaluatorSignature,
+                evaluatorSignatureDate: data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
+            };
+            
+            updateDataAction(updatedData);
+
+            // Use the parent's submission logic
+            if (onSubmitAction) {
+                onSubmitAction();
+                // Add a timeout fallback to reset loading state
+                // The parent component will handle success/error and close the dialog
+                setTimeout(() => {
+                    setIsSubmitting(false);
+                }, 10000); // Reset after 10 seconds if parent doesn't handle it
+            } else {
+                setIsSubmitting(false);
+            }
+        } catch (err) {
+            setSubmissionError(err instanceof Error ? err.message : 'An error occurred while submitting the evaluation.');
+            setIsSubmitting(false);
+        }
+        // Note: If submission is successful, the parent component will handle closing,
+        // so we don't reset isSubmitting here to avoid UI flicker
     };
 
 
@@ -464,7 +564,6 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
             };
             
             localStorage.setItem('evaluation_autosave', JSON.stringify(evaluationData));
-            console.log('Auto-saved evaluation data');
             
             // Show auto-save indicator
             setShowAutoSaveIndicator(true);
@@ -1900,11 +1999,21 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                     {/* Submit Button */}
                     <Button
                         onClick={() => handleSubmitEvaluation()}
-                        className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white"
+                        disabled={isSubmitting}
+                        className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         size="lg"
                     >
-                        <Send className="h-4 w-4 mr-2" />
-                        Submit Evaluation
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Submitting...
+                            </>
+                        ) : (
+                            <>
+                                <Send className="h-4 w-4 mr-2" />
+                                Submit Evaluation
+                            </>
+                        )}
                     </Button>
                 </div>
                 

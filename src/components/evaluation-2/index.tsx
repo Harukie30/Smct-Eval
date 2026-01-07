@@ -58,8 +58,6 @@ interface EvaluationFormProps {
 }
 
 export default function ManagerEvaluationForm({ employee, currentUser, onCloseAction, onCancelAction }: EvaluationFormProps) {
-  console.log('EvaluationForm received employee:', employee); // Debug log
-  
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-8 = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
   
@@ -181,13 +179,6 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
     evaluatorApprovedAt: '',
   });
   
-  console.log('Initial evaluation data:', {
-    employeeId: evaluationData.employeeId,
-    employeeName: evaluationData.employeeName,
-    position: evaluationData.position,
-    department: evaluationData.department,
-    branch: evaluationData.branch,
-  }); // Debug log
   const [isEvaluatorApproved, setIsEvaluatorApproved] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
@@ -195,7 +186,6 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
   // Update evaluation data when employee prop changes
   useEffect(() => {
     if (employee) {
-      console.log('Updating evaluation data with employee:', employee); // Debug log
       setEvaluationData(prev => ({
         ...prev,
         employeeId: employee.employeeId || employee.id.toString(),
@@ -209,10 +199,8 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
   }, [employee]);
 
   const updateEvaluationData = useCallback((updates: Partial<EvaluationData>) => {
-    console.log('updateEvaluationData called with:', updates); // Debug log
     setEvaluationData(prev => {
       const newData = { ...prev, ...updates };
-      console.log('New evaluation data:', newData); // Debug log
       return newData;
     });
   }, []);
@@ -394,21 +382,23 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
   };
 
   const confirmSubmit = async () => {
-    console.log('🚀 confirmSubmit called');
     try {
       // Validate that all required fields are completed before submission
-      console.log('🔍 Checking if current step is complete...');
       if (!isCurrentStepComplete()) {
-        console.log('❌ Step validation failed:', getValidationMessage());
         alert(`Cannot submit evaluation: ${getValidationMessage()}`);
         return;
       }
-      console.log('✅ Step validation passed');
 
       // No additional validation needed for step 8
 
-      // Calculate overall rating from evaluation data
-      const overallRating = calculateOverallRating(evaluationData);
+      // Calculate overall rating from evaluation data (weighted calculation)
+      const calculatedRating = calculateOverallRating(evaluationData);
+      
+      // Create updated evaluation data with calculated rating
+      const updatedEvaluationData = {
+        ...evaluationData,
+        rating: calculatedRating, // Ensure rating is set - this should override any existing rating value
+      };
       
       // Store in localStorage for frontend-only mode
       const employeeResult = storeEvaluationResult({
@@ -418,8 +408,8 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
         evaluatorId: currentUser?.id || 1,
         evaluatorName: currentUser?.name || 'Evaluator',
         evaluationData: {
-          ...evaluationData,
-          overallRating,
+          ...updatedEvaluationData,
+          overallRating: calculatedRating,
           // Ensure evaluator signature is included
           evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',
           evaluatorSignature: evaluationData.evaluatorSignature || currentUser?.name || 'Evaluator',
@@ -427,32 +417,34 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
         },
         status: 'completed',
         period: new Date().toISOString().slice(0, 7), // YYYY-MM format
-        overallRating
+        overallRating: calculatedRating.toString() // Convert to string for storage
       });
-
-      console.log('Evaluation stored in localStorage:', employeeResult);
 
       // Also store in client data service for consistency
       try {
         // Transform EvaluationData to match EvaluationPayload structure expected by API
+        // IMPORTANT: Use 'rating' field (not 'overallRating') to match EvaluationPayload type
+        // Ensure rating is explicitly set and not overwritten by spread
+        // Build submission payload - ensure rating is the LAST property set to prevent overwriting
         const submissionPayload = {
-          ...evaluationData,
-          overallRating,
+          ...updatedEvaluationData, // Use updated data with rating already set
           // Ensure evaluator signature is included
           evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',
           evaluatorSignature: evaluationData.evaluatorSignature || currentUser?.name || 'Evaluator',
           evaluatorSignatureDate: evaluationData.evaluatorSignatureDate || new Date().toISOString().split('T')[0],
           // Include supervisor/evaluator info
           supervisor: evaluationData.supervisor || currentUser?.name || 'Evaluator',
+          overallRating: calculatedRating, // Keep for backward compatibility
+          // CRITICAL: Set rating LAST to ensure it's not overwritten
+          rating: calculatedRating,
         } as any; // Type assertion needed due to structure differences
         
         await apiService.createSubmission(
           parseInt(evaluationData.employeeId),
           submissionPayload
         );
-        console.log('Also stored in client data service with evaluator:', currentUser?.name);
       } catch (clientError) {
-        console.log('Client data service storage failed, but localStorage storage succeeded:', clientError);
+        // Silently handle client data service storage failure - localStorage storage already succeeded
       }
       
       // Create notification for evaluators and HR
@@ -469,8 +461,6 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
       }
       
       // Show success dialog instead of alert
-      console.log('🎉 Evaluation submitted successfully!');
-      
       // Manually trigger a storage event for same-tab updates
       // This helps the HR dashboard refresh even when in the same tab
       window.dispatchEvent(new StorageEvent('storage', {
@@ -488,24 +478,81 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
     }
   };
 
-  // Helper function to calculate overall rating
-  const calculateOverallRating = (data: EvaluationData): string => {
-    const scores: number[] = [];
+  // Helper function to calculate weighted overall rating (matches ViewResultsModal calculation)
+  const calculateOverallRating = (data: EvaluationData): number => {
+    // Helper to calculate average score for a category
+    const calculateScore = (scores: (string | number | undefined)[]): number => {
+      const validScores = scores
+        .filter(score => score !== undefined && score !== '' && score !== null)
+        .map(score => typeof score === 'string' ? parseFloat(score) : score)
+        .filter(score => !isNaN(score as number)) as number[];
+      
+      if (validScores.length === 0) return 0;
+      return validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+    };
+
+    // Calculate scores for each category
+    const jobKnowledgeScore = calculateScore([
+      data.jobKnowledgeScore1,
+      data.jobKnowledgeScore2,
+      data.jobKnowledgeScore3
+    ]);
     
-    // Collect all numeric scores
-    Object.entries(data).forEach(([key, value]) => {
-      if (key.includes('Score') && typeof value === 'string' && value !== '') {
-        const numValue = parseFloat(value);
-        if (!isNaN(numValue)) {
-          scores.push(numValue);
-        }
-      }
-    });
+    const qualityOfWorkScore = calculateScore([
+      data.qualityOfWorkScore1,
+      data.qualityOfWorkScore2,
+      data.qualityOfWorkScore3,
+      data.qualityOfWorkScore4,
+      data.qualityOfWorkScore5
+    ]);
     
-    // Calculate average
-    if (scores.length === 0) return '0';
-    const average = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-    return (Math.round(average * 10) / 10).toString(); // Round to 1 decimal place and return as string
+    const adaptabilityScore = calculateScore([
+      data.adaptabilityScore1,
+      data.adaptabilityScore2,
+      data.adaptabilityScore3
+    ]);
+    
+    const teamworkScore = calculateScore([
+      data.teamworkScore1,
+      data.teamworkScore2,
+      data.teamworkScore3
+    ]);
+    
+    const reliabilityScore = calculateScore([
+      data.reliabilityScore1,
+      data.reliabilityScore2,
+      data.reliabilityScore3,
+      data.reliabilityScore4
+    ]);
+    
+    const ethicalScore = calculateScore([
+      data.ethicalScore1,
+      data.ethicalScore2,
+      data.ethicalScore3,
+      data.ethicalScore4
+    ]);
+    
+    const customerServiceScore = calculateScore([
+      data.customerServiceScore1,
+      data.customerServiceScore2,
+      data.customerServiceScore3,
+      data.customerServiceScore4,
+      data.customerServiceScore5
+    ]);
+
+    // Calculate weighted overall score (matches ViewResultsModal)
+    const overallWeightedScore = (
+      (jobKnowledgeScore * 0.20) +
+      (qualityOfWorkScore * 0.20) +
+      (adaptabilityScore * 0.10) +
+      (teamworkScore * 0.10) +
+      (reliabilityScore * 0.05) +
+      (ethicalScore * 0.05) +
+      (customerServiceScore * 0.30)
+    );
+
+    // Round to 1 decimal place
+    return Math.round(overallWeightedScore * 10) / 10;
   };
 
   const CurrentStepComponent = currentStep === 0 ? WelcomeStep : steps[currentStep - 1].component;
