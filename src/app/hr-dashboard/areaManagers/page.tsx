@@ -458,18 +458,18 @@ export default function AreaManagersTab() {
             <Button
               onClick={handleRefresh}
               disabled={areaManagersRefreshing || loadingAreaManagers}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
               title="Refresh area managers data"
             >
               {areaManagersRefreshing ? (
                 <div className="flex items-center space-x-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Refreshing...</span>
+                  <span className="cursor-pointer">Refreshing...</span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">
                   <span>🔄</span>
-                  <span>Refresh</span>
+                  <span className="cursor-pointer">Refresh</span>
                 </div>
               )}
             </Button>
@@ -481,7 +481,7 @@ export default function AreaManagersTab() {
             <div className="relative w-full md:w-1/3">
               <Label
                 htmlFor="area-managers-search"
-                className="text-sm font-medium mb-2 block"
+                className="text-sm font-medium mb-2 block cursor-pointer"
               >
                 Search
               </Label>
@@ -629,7 +629,7 @@ export default function AreaManagersTab() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-white bg-blue-400 hover:text-blue-700 hover:bg-blue-50"
+                              className="text-white bg-blue-400 hover:text-blue-700 hover:bg-blue-50 cursor-pointer"
                               onClick={async () => {
                                 setAreaManagerToEdit(manager);
                                 setIsEditModalOpen(true);
@@ -664,7 +664,7 @@ export default function AreaManagersTab() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-white bg-red-400 hover:text-red-700 hover:bg-red-50"
+                              className="text-white bg-red-400 hover:text-red-700 hover:bg-red-50 cursor-pointer"
                               onClick={() => {
                                 setAreaManagerToDelete(manager);
                                 setIsDeleteModalOpen(true);
@@ -944,7 +944,7 @@ export default function AreaManagersTab() {
                   <div className="flex justify-end gap-2 pt-2">
                     <Button
                       variant="outline"
-                      className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                      className="border-gray-300 text-gray-700 hover:bg-gray-50 cursor-pointer"
                       onClick={() => {
                         setSelectedBranches([]);
                         setShowConfirmation(false);
@@ -953,7 +953,7 @@ export default function AreaManagersTab() {
                       Clear
                     </Button>
                     <Button
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                       onClick={async () => {
                         if (
                           !selectedAreaManager ||
@@ -1062,8 +1062,8 @@ export default function AreaManagersTab() {
                                   selectedBranches.some(
                                     (b) => b.id === branch.id
                                   )
-                                    ? "bg-green-600 hover:bg-green-700 text-white"
-                                    : "bg-blue-600 hover:bg-blue-700 text-white"
+                                    ? "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                                    : "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                                 }`}
                                 size="sm"
                                 onClick={() => {
@@ -1247,8 +1247,8 @@ export default function AreaManagersTab() {
                                 <Button
                                   className={`${
                                     isSelected
-                                      ? "bg-green-600 hover:bg-green-700 text-white"
-                                      : "bg-blue-600 hover:bg-blue-700 text-white"
+                                      ? "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                                      : "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                                   }`}
                                   size="sm"
                                   onClick={() => {
@@ -1287,7 +1287,7 @@ export default function AreaManagersTab() {
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {editSelectedBranches.map((branch) => (
-                    <Badge key={branch.id} className="bg-blue-600 text-white">
+                    <Badge key={branch.id} className="bg-blue-600 text-white cursor-pointer">
                       {branch.name}
                     </Badge>
                   ))}
@@ -1300,7 +1300,7 @@ export default function AreaManagersTab() {
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button
               variant="outline"
-              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50 cursor-pointer"
               onClick={() => {
                 setIsEditModalOpen(false);
                 setAreaManagerToEdit(null);
@@ -1310,7 +1310,7 @@ export default function AreaManagersTab() {
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer cursor-pointer"
               onClick={async () => {
                 if (!areaManagerToEdit) {
                   toastMessages.generic.error(
@@ -1485,12 +1485,12 @@ export default function AreaManagersTab() {
                   setIsDeleteModalOpen(false);
                   setAreaManagerToDelete(null);
                 }}
-                className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
+                className="text-white bg-blue-600 hover:text-white hover:bg-green-500 cursor-pointer"
               >
                 Cancel
               </Button>
               <Button
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
                 onClick={async () => {
                   if (!areaManagerToDelete) return;
 

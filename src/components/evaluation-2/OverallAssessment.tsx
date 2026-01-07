@@ -215,25 +215,25 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
             const calculatedRating = calculateOverallRating(data);
 
             // Update the data with evaluator signature and calculated rating before submitting
-            const updatedData = {
-                ...data,
+        const updatedData = {
+            ...data,
                 rating: calculatedRating, // Include calculated rating in the payload
-                evaluatorSignatureImage: currentUser?.signature || '',
-                evaluatorSignature: currentUser?.name || data.evaluatorSignature,
-                evaluatorSignatureDate: data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
-            };
-            
-            updateDataAction(updatedData);
+            evaluatorSignatureImage: currentUser?.signature || '',
+            evaluatorSignature: currentUser?.name || data.evaluatorSignature,
+            evaluatorSignatureDate: data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
+        };
+        
+        updateDataAction(updatedData);
 
-            // Use the parent's submission logic
-            if (onSubmitAction) {
-                onSubmitAction();
+        // Use the parent's submission logic
+        if (onSubmitAction) {
+            onSubmitAction();
                 // Add a timeout fallback to reset loading state
                 // The parent component will handle success/error and close the dialog
                 setTimeout(() => {
                     setIsSubmitting(false);
                 }, 10000); // Reset after 10 seconds if parent doesn't handle it
-            } else {
+        } else {
                 setIsSubmitting(false);
             }
         } catch (err) {
@@ -2010,8 +2010,8 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                             </>
                         ) : (
                             <>
-                                <Send className="h-4 w-4 mr-2" />
-                                Submit Evaluation
+                        <Send className="h-4 w-4 mr-2" />
+                        Submit Evaluation
                             </>
                         )}
                     </Button>

@@ -557,7 +557,7 @@ export default function UserManagementTab() {
             <Button
               variant={tab === "active" ? "default" : "outline"}
               onClick={() => handleTabChange("active")}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 cursor-pointer"
             >
               <span>👥</span>
               Active Users ({activeTotalItems})
@@ -565,7 +565,7 @@ export default function UserManagementTab() {
             <Button
               variant={tab === "new" ? "default" : "outline"}
               onClick={() => handleTabChange("new")}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 cursor-pointer"
             >
               <span>🆕</span>
               New Registrations ({pendingTotalItems})
@@ -635,6 +635,7 @@ export default function UserManagementTab() {
                       placeholder="All branches"
                       searchPlaceholder="Search branches..."
                       emptyText="No branches found."
+                      className="cursor-pointer"
                     />
                   </div>
                   <div>
@@ -647,6 +648,7 @@ export default function UserManagementTab() {
                       placeholder="All departments"
                       searchPlaceholder="Search departments..."
                       emptyText="No departments found."
+                      className="cursor-pointer"
                     />
                   </div>
                   <div>
@@ -669,7 +671,7 @@ export default function UserManagementTab() {
                     variant="outline"
                     onClick={() => refreshUserData(true)}
                     disabled={refresh}
-                    className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
+                    className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2 cursor-pointer"
                   >
                     {refresh ? (
                       <>
@@ -715,7 +717,7 @@ export default function UserManagementTab() {
                   </Button>
                   <Button
                     onClick={() => setIsAddUserModalOpen(true)}
-                    className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2"
+                    className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2 cursor-pointer"
                   >
                     <Plus className="h-5 w-5 font-bold " />
                     Add User
@@ -970,7 +972,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700"
+                                      className="text-green-600 hover:text-green-700 cursor-pointer"
                                       onClick={() => {
                                         setEmployeeToView(employee);
                                         setIsViewEmployeeModalOpen(true);
@@ -982,7 +984,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700"
+                                      className="text-green-600 hover:text-green-700 cursor-pointer"
                                       onClick={() => {
                                         setIsEvaluationTypeModalOpen(true);
                                         setSelectedEmployeeForEvaluation(
@@ -996,7 +998,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-blue-600 hover:text-blue-700"
+                                      className="text-blue-600 hover:text-blue-700 cursor-pointer"
                                       onClick={() => openEditModal(employee)}
                                       disabled={deletingUserId !== null}
                                     >
@@ -1005,7 +1007,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-red-600 hover:text-red-700"
+                                      className="text-red-600 hover:text-red-700 cursor-pointer"
                                       onClick={() => openDeleteModal(employee)}
                                       disabled={deletingUserId !== null}
                                     >
@@ -1116,7 +1118,7 @@ export default function UserManagementTab() {
                       variant="outline"
                       onClick={() => refreshUserData(true)}
                       disabled={refresh}
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
                     >
                       {refresh ? (
                         <>
@@ -1350,7 +1352,7 @@ export default function UserManagementTab() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="text-white bg-green-500 hover:text-white hover:bg-green-600"
+                                        className="text-white bg-green-500 hover:text-white hover:bg-green-600 cursor-pointer"
                                         onClick={() =>
                                           handleApproveRegistration(
                                             Number(account.id),
@@ -1363,7 +1365,7 @@ export default function UserManagementTab() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="text-white bg-red-500 hover:bg-red-600 hover:text-white"
+                                        className="text-white bg-red-500 hover:bg-red-600 hover:text-white cursor-pointer"
                                         onClick={() =>
                                           handleRejectRegistration(
                                             Number(account.id),
@@ -1379,7 +1381,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700"
+                                      className="text-green-600 hover:text-green-700 cursor-pointer"
                                       onClick={() =>
                                         handleApproveRegistration(
                                           Number(account.id),

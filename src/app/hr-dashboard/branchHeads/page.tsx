@@ -415,18 +415,18 @@ export default function BranchHeadsTab() {
             <Button
               onClick={handleRefresh}
               disabled={branchHeadsRefreshing || loadingBranchHeads}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
               title="Refresh branch heads data"
             >
               {branchHeadsRefreshing ? (
                 <div className="flex items-center space-x-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Refreshing...</span>
+                  <span className="cursor-pointer">Refreshing...</span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">
                   <span>🔄</span>
-                  <span>Refresh</span>
+                  <span className="cursor-pointer">Refresh</span>
                 </div>
               )}
             </Button>
@@ -438,7 +438,7 @@ export default function BranchHeadsTab() {
             <div className="relative w-full md:w-1/3">
               <Label
                 htmlFor="branch-heads-search"
-                className="text-sm font-medium mb-2 block"
+                className="text-sm font-medium mb-2 block cursor-pointer"
               >
                 Search
               </Label>
@@ -592,7 +592,7 @@ export default function BranchHeadsTab() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-white bg-blue-400 hover:text-blue-700 hover:bg-blue-50"
+                              className="text-white bg-blue-400 hover:text-blue-700 hover:bg-blue-50 cursor-pointer"
                               onClick={async () => {
                                 setBranchHeadToEdit(head);
                                 setIsEditModalOpen(true);
@@ -627,7 +627,7 @@ export default function BranchHeadsTab() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-white bg-red-400 hover:text-red-700 hover:bg-red-50"
+                              className="text-white bg-red-400 hover:text-red-700 hover:bg-red-50 cursor-pointer"
                               onClick={() => {
                                 setBranchHeadToDelete(head);
                                 setIsDeleteModalOpen(true);
@@ -827,7 +827,7 @@ export default function BranchHeadsTab() {
                           </TableCell>
                           <TableCell className="py-3 text-center px-6">
                             <Button
-                              className="bg-blue-600 hover:bg-blue-700 text-white"
+                              className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                               size="sm"
                               onClick={async () => {
                                 // Store the selected branch head
@@ -882,7 +882,7 @@ export default function BranchHeadsTab() {
                   setShowConfirmation(false);
                   setSelectedBranches([]);
                 }}
-                className="h-10 w-10 p-0 hover:bg-gray-100 bg-blue-600 text-white rounded-full hover:text-white hover:bg-red-700"
+                className="h-10 w-10 p-0 hover:bg-gray-100 bg-blue-600 text-white rounded-full hover:text-white hover:bg-red-700 cursor-pointer"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -950,7 +950,7 @@ export default function BranchHeadsTab() {
                   <div className="flex justify-end gap-2 pt-2">
                     <Button
                       variant="outline"
-                      className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                      className="border-gray-300 text-gray-700 hover:bg-gray-50 cursor-pointer"
                       onClick={() => {
                         setSelectedBranches([]);
                         setShowConfirmation(false);
@@ -959,7 +959,7 @@ export default function BranchHeadsTab() {
                       Clear
                     </Button>
                     <Button
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                       onClick={async () => {
                         if (
                           !selectedBranchHead ||
@@ -1270,8 +1270,8 @@ export default function BranchHeadsTab() {
                                 <Button
                                   className={`${
                                     isSelected
-                                      ? "bg-green-600 hover:bg-green-700 text-white"
-                                      : "bg-blue-600 hover:bg-blue-700 text-white"
+                                      ? "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                                      : "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                                   }`}
                                   size="sm"
                                   onClick={() => {
@@ -1323,7 +1323,7 @@ export default function BranchHeadsTab() {
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button
               variant="outline"
-              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              className="border-gray-300 text-gray-700 hover:bg-gray-50 cursor-pointer"
               onClick={() => {
                 setIsEditModalOpen(false);
                 setBranchHeadToEdit(null);
@@ -1333,7 +1333,7 @@ export default function BranchHeadsTab() {
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
               onClick={async () => {
                 if (!branchHeadToEdit) {
                   toastMessages.generic.error(
@@ -1508,12 +1508,12 @@ export default function BranchHeadsTab() {
                   setIsDeleteModalOpen(false);
                   setBranchHeadToDelete(null);
                 }}
-                className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
+                className="text-white bg-blue-600 hover:text-white hover:bg-green-500 cursor-pointer"
               >
                 Cancel
               </Button>
               <Button
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
                 onClick={async () => {
                   if (!branchHeadToDelete) return;
 

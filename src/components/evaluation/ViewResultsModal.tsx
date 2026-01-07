@@ -1277,6 +1277,7 @@ export default function ViewResultsModal({
     if (!submission.id) {
       setApprovalError("Invalid submission ID");
       return;
+      
     }
     if (!submission.employee.signature) {
       setApprovalError("Signature required");
@@ -3092,76 +3093,60 @@ export default function ViewResultsModal({
                 </div>
               )}
 
-              {/* Priority Areas for Improvement */}
-              {submission &&
-                (submission.priorityArea1 ||
-                  submission.priorityArea2 ||
-                  submission.priorityArea3) && (
-                  <Card>
-                    <CardContent className="pt-6 pb-4">
-                      <h4 className="font-semibold text-lg text-gray-900 mb-4 print-priority-header">
-                        Priority Areas for Improvement
-                      </h4>
-                      <p className="text-sm text-gray-600 mb-4 print-priority-description">
-                        This section identifies key areas the employee can focus
-                        on for development in the upcoming quarter. These can be
-                        specific skills, behaviors, or work outputs that will
-                        contribute to better overall performance and align with
-                        branch or company goals. Keep the feedback clear,
-                        helpful, and easy to act on.
-                      </p>
-                      <div className="space-y-3">
-                        {submission.priorityArea1 && (
-                          <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-priority-item">
+              {/* Priority Areas for Improvement (always render; blank lines if none) */}
+              {submission && (
+                <Card>
+                  <CardContent className="pt-6 pb-4">
+                    <h4 className="font-semibold text-lg text-gray-900 mb-4 print-priority-header">
+                      Priority Areas for Improvement
+                    </h4>
+                    <p className="text-sm text-gray-600 mb-4 print-priority-description">
+                      This section identifies key areas the employee can focus
+                      on for development in the upcoming quarter. These can be
+                      specific skills, behaviors, or work outputs that will
+                      contribute to better overall performance and align with
+                      branch or company goals. Keep the feedback clear, helpful,
+                      and easy to act on.
+                    </p>
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((idx) => {
+                        const value =
+                          idx === 1
+                            ? submission.priorityArea1
+                            : idx === 2
+                            ? submission.priorityArea2
+                            : submission.priorityArea3;
+                        return (
+                          <div
+                            key={idx}
+                            className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-priority-item"
+                          >
                             <div className="print-priority-row">
                               <span className="font-medium text-sm print-priority-label">
-                                1.{" "}
+                                {idx}.{" "}
                               </span>
-                              <p className="text-sm text-gray-700 print-priority-value">
-                                {submission.priorityArea1}
+                              <p className="text-sm text-gray-700 print-priority-value min-h-[18px]">
+                                {value || ""}
                               </p>
                             </div>
                           </div>
-                        )}
-                        {submission.priorityArea2 && (
-                          <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-priority-item">
-                            <div className="print-priority-row">
-                              <span className="font-medium text-sm print-priority-label">
-                                2.{" "}
-                              </span>
-                              <p className="text-sm text-gray-700 print-priority-value">
-                                {submission.priorityArea2}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        {submission.priorityArea3 && (
-                          <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-priority-item">
-                            <div className="print-priority-row">
-                              <span className="font-medium text-sm print-priority-label">
-                                3.{" "}
-                              </span>
-                              <p className="text-sm text-gray-700 print-priority-value">
-                                {submission.priorityArea3}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
-              {/* Remarks */}
-              {submission && submission.remarks && (
+              {/* Remarks (always render; blank box if none) */}
+              {submission && (
                 <Card>
                   <CardContent className="pt-6 pb-4">
                     <h4 className="font-semibold text-lg text-gray-900 mb-4 print-remarks-header">
                       Remarks
                     </h4>
-                    <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-remarks-box">
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                        {submission.remarks}
+                    <div className="p-3 bg-yellow-50 border border-gray-300 rounded-md print-remarks-box min-h-[72px]">
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap min-h-[52px]">
+                        {submission.remarks || ""}
                       </p>
                     </div>
                   </CardContent>

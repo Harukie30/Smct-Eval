@@ -62,6 +62,7 @@ type DashboardShellProps = {
   profile?: UserProfile | null;
   onSaveProfile?: (updatedProfile: UserProfile) => void;
   topSummary?: React.ReactNode;
+  dashboardType?: "hr" | "admin" | "employee" | "evaluator";
 };
 
 export default function DashboardShell(props: DashboardShellProps) {
@@ -75,6 +76,7 @@ export default function DashboardShell(props: DashboardShellProps) {
     profile,
     onSaveProfile,
     topSummary,
+    dashboardType: dashboardTypeProp,
   } = props;
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -126,6 +128,7 @@ export default function DashboardShell(props: DashboardShellProps) {
 
   // Memoize dashboard type detection to avoid dependency issues
   const dashboardType = useMemo(() => {
+    if (dashboardTypeProp) return dashboardTypeProp;
     const hasFeedback = sidebarItems.some((item) => item.id === "feedback");
     const hasEvaluationRecords = sidebarItems.some(
       (item) => item.id === "evaluation-records"
@@ -148,7 +151,7 @@ export default function DashboardShell(props: DashboardShellProps) {
     } else {
       return "hr";
     }
-  }, [sidebarItems]);
+  }, [dashboardTypeProp, sidebarItems]);
 
   // Memoize boolean flags to ensure stable references
   const isEmployeeDashboard = useMemo(
@@ -1162,6 +1165,9 @@ export default function DashboardShell(props: DashboardShellProps) {
             : "opacity-0 translate-y-4 pointer-events-none delay-0"
         }`}
         title="Dashboard Guide"
+        tabIndex={isHelpButtonsVisible ? 0 : -1}
+        aria-hidden={!isHelpButtonsVisible}
+        style={{ pointerEvents: isHelpButtonsVisible ? "auto" : "none" }}
       >
         <img
           src="/faq.png"
@@ -1181,6 +1187,9 @@ export default function DashboardShell(props: DashboardShellProps) {
             : "opacity-0 translate-y-4 pointer-events-none delay-0"
         }`}
         title="Contact Developers"
+        tabIndex={isHelpButtonsVisible ? 0 : -1}
+        aria-hidden={!isHelpButtonsVisible}
+        style={{ pointerEvents: isHelpButtonsVisible ? "auto" : "none" }}
       >
         <img
           src="/code.png"
