@@ -62,7 +62,7 @@ export default function OverviewTab() {
         currentPage,
         itemsPerPage
       );
-      
+
       // Add safety checks to prevent "Cannot read properties of undefined" error
       if (!response) {
         console.error("API response is undefined");

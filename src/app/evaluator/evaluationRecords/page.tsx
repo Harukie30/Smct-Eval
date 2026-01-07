@@ -89,46 +89,18 @@ export default function OverviewTab() {
     quarter: string,
     year: string
   ) => {
-    try {
-      const response = await clientDataService.getSubmissions(
-        searchValue,
-        currentPage,
-        itemsPerPage,
-        status,
-        quarter,
-        year,
-        false // getAll = false for evaluator's own evaluations
-      );
-      
-      // Add safety checks to prevent "Cannot read properties of undefined" error
-      if (!response) {
-        console.error("API response is undefined");
-        setEvaluations([]);
-        setOverviewTotal(0);
-        setTotalPages(1);
-        setPerPage(itemsPerPage);
-        return;
-      }
-
-      // getSubmissions now handles myEval_as_Evaluator structure and returns { data, total, last_page, per_page }
-      setEvaluations(response.data || []);
-      setOverviewTotal(response.total || 0);
-      setTotalPages(response.last_page || 1);
-      setPerPage(response.per_page || itemsPerPage);
-      
-      console.log("Evaluation Records loaded:", {
-        count: (response.data || []).length,
-        total: response.total || 0,
-        currentPage: response.last_page || 1
-      });
-    } catch (error) {
-      console.error("Error loading evaluations:", error);
-      // Set default values on error
-      setEvaluations([]);
-      setOverviewTotal(0);
-      setTotalPages(1);
-      setPerPage(itemsPerPage);
-    }
+    const response = await clientDataService.getEvalAuthEvaluator(
+      searchValue,
+      currentPage,
+      itemsPerPage,
+      status,
+      quarter,
+      Number(year)
+    );
+    setEvaluations(response.myEval_as_Evaluator.data);
+    setOverviewTotal(response.myEval_as_Evaluator.total);
+    setTotalPages(response.myEval_as_Evaluator.last_page);
+    setPerPage(response.myEval_as_Evaluator.per_page);
   };
 
   useEffect(() => {

@@ -858,7 +858,6 @@ export default function performanceReviews() {
                     }}
                     submission={selectedSubmission}
                     showApprovalButton={true}
-                    onApprove={(id) => handleApprove(id)}
                   />
                 </>
               ) : (

@@ -43,9 +43,7 @@ export default function DepartmentsTab() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [departmentToDelete, setDepartmentToDelete] =
     useState<Department | null>(null);
-  const [deletingDepartmentId, setDeletingDepartmentId] = useState<
-    number | null
-  >(null);
+  const [deletingDepartmentId, setDeletingDepartmentId] = useState<number | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
@@ -197,20 +195,20 @@ export default function DepartmentsTab() {
       } else {
         // Set deleting state to show skeleton animation
         setDeletingDepartmentId(departmentToDelete.id);
-
+        
         // Close modal immediately
         setIsDeleteModalOpen(false);
-
+        
         // Wait 2 seconds to show skeleton animation
         await new Promise((resolve) => setTimeout(resolve, 2000));
-
+        
         // Actually delete the department
         await apiService.deleteDepartment(departmentToDelete.id);
-
+        
         // Refresh data first, then reset deleting state after data loads
         await loadData(searchTerm);
         setDeletingDepartmentId(null);
-
+        
         toastMessages.generic.success(
           "Department Deleted",
           `"${departmentToDelete.department_name}" has been deleted successfully.`
@@ -403,14 +401,7 @@ export default function DepartmentsTab() {
                 ? departments.map((dept) => {
                     const isDeleting = deletingDepartmentId === dept.id;
                     return (
-                      <Card
-                        key={dept.id}
-                        className={
-                          isDeleting
-                            ? "animate-slide-out-right bg-red-50 border-red-200"
-                            : ""
-                        }
-                      >
+                      <Card key={dept.id} className={isDeleting ? "animate-slide-out-right bg-red-50 border-red-200" : ""}>
                         {isDeleting ? (
                           <>
                             <CardHeader>
@@ -459,9 +450,7 @@ export default function DepartmentsTab() {
                                   </Button>
                                 </div>
                               </CardTitle>
-                              <CardDescription>
-                                Department Manager
-                              </CardDescription>
+                              <CardDescription>Department Manager</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                               <div className="grid grid-cols-2 gap-4">

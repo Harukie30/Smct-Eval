@@ -24,7 +24,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Combobox } from "@/components/ui/combobox";
 import { User } from "../../../contexts/UserContext";
 import apiService from "@/lib/apiService";
-import { set } from "date-fns";
 import EvaluationTypeModal from "@/components/EvaluationTypeModal";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import EvaluationForm from "@/components/evaluation";
@@ -38,7 +37,7 @@ export default function EmployeesTab() {
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Add refresh trigger
 
   //data employees
-  const [employees, setEmployees] = useState<User[] | null>(null);
+  const [employees, setEmployees] = useState<User | null>(null);
   const [positions, setPositions] = useState<
     {
       value: string | number;
@@ -80,9 +79,29 @@ export default function EmployeesTab() {
         setIsRefreshing(true);
         const positionsRes = await apiService.getPositions();
         setPositions(positionsRes);
+
+        const res = await apiService.getAllEmployeeByAuth(
+          employeeSearch,
+          currentPage,
+          itemsPerPage,
+          Number(positionFilter)
+        );
+
+        setEmployees(res.data);
+        setOverviewTotal(res.total || 0);
+        setTotalPages(res.last_page || 1);
+        setPerPage(res.per_page || itemsPerPage);
+
         setIsRefreshing(false);
       } catch (error) {
         console.error("Error fetching positions:", error);
+        // Set default values on error
+        setEmployees(null);
+        setOverviewTotal(0);
+        setTotalPages(1);
+        setPerPage(itemsPerPage);
+        setIsRefreshing(false);
+      } finally {
         setIsRefreshing(false);
       }
     };
@@ -96,20 +115,8 @@ export default function EmployeesTab() {
         const res = await apiService.getAllEmployeeByAuth(
           debouncedSearch,
           itemsPerPage,
-          currentPage,
           Number(positionFilter)
         );
-
-        // Add safety checks to prevent "Cannot read properties of undefined" error
-        if (!res) {
-          console.error("API response is undefined");
-          setEmployees([]);
-          setOverviewTotal(0);
-          setTotalPages(1);
-          setPerPage(itemsPerPage);
-          setIsRefreshing(false);
-          return;
-        }
 
         // Ensure we have an array
         const employeesData = Array.isArray(res.data) ? res.data : [];
@@ -122,21 +129,17 @@ export default function EmployeesTab() {
       } catch (error) {
         console.error("Error fetching employees:", error);
         // Set default values on error
-        setEmployees([]);
+        setEmployees(null);
         setOverviewTotal(0);
         setTotalPages(1);
         setPerPage(itemsPerPage);
         setIsRefreshing(false);
+      } finally {
+        setIsRefreshing(false);
       }
     };
     fetchEmployees();
-  }, [
-    positionFilter,
-    debouncedSearch,
-    currentPage,
-    itemsPerPage,
-    refreshTrigger,
-  ]); // Add refreshTrigger to dependencies
+  }, [positionFilter, debouncedSearch, currentPage, isRefreshing]);
 
   useEffect(() => {
     const debounceSearch = setTimeout(() => {

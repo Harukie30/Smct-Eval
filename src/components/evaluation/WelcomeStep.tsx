@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft } from "lucide-react";
-import { EvaluationPayload } from "./types";
+import EvaluationPayload from "./types";
 import { useAuth, User } from "@/contexts/UserContext";
 
 interface WelcomeStepProps {

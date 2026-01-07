@@ -76,10 +76,12 @@ export default function OverviewTab() {
         selectedYear,
         selectedQuarter
       );
-      
+
       // Add safety checks to prevent "Cannot read properties of undefined" error
       if (!response || !response.myEval_as_Employee) {
-        console.error("API response is undefined or missing myEval_as_Employee");
+        console.error(
+          "API response is undefined or missing myEval_as_Employee"
+        );
         setMyEvaluations([]);
         setOverviewTotal(0);
         setTotalPages(1);
@@ -112,7 +114,7 @@ export default function OverviewTab() {
     const loadDashboard = async () => {
       try {
         const dashboard = await apiService.employeeDashboard();
-        
+
         // Add safety checks to prevent "Cannot read properties of undefined" error
         if (!dashboard) {
           console.error("Dashboard API response is undefined");
