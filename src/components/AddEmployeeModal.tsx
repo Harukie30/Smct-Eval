@@ -464,7 +464,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               <Select
                 onValueChange={(value) => handleInputChange("role_id", value)}
               >
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 cursor-pointer">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>

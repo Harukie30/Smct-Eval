@@ -1099,7 +1099,7 @@ export default function UserManagementTab() {
                       value={statusFilter}
                       onValueChange={(value) => setStatusFilter(value)}
                     >
-                      <SelectTrigger className="w-48">
+                      <SelectTrigger className="w-48 cursor-pointer">
                         <SelectValue placeholder="Filter by status" />
                       </SelectTrigger>
                       <SelectContent>

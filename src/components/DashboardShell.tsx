@@ -347,7 +347,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsClockVisible(!isClockVisible)}
-                  className={`p-2 ${isClockVisible ? "bg-gray-100 hover:bg-gray-200" : "bg-blue-100 hover:bg-blue-200"}`}
+                  className={`p-2 cursor-pointer ${isClockVisible ? "bg-gray-100 hover:bg-gray-200" : "bg-blue-100 hover:bg-blue-200"}`}
                 >
                   <Clock className={`h-5 w-5 ${isClockVisible ? "text-gray-500" : "text-blue-600"}`} />
                 </Button>
@@ -376,7 +376,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                     setIsNotificationPanelClosing(false);
                   }
                 }}
-                className="relative p-2 hover:bg-gray-100"
+                className="relative p-2 hover:bg-gray-100 cursor-pointer"
               >
                 <Bell className="h-5 w-5" />
                 {notificationCount > 0 && (
@@ -442,7 +442,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                             variant="ghost"
                             size="sm"
                             onClick={handleMarkAllAsRead}
-                            className="text-xs text-white hover:text-blue-100 hover:bg-blue-700/50"
+                            className="text-xs text-white hover:text-blue-100 hover:bg-blue-700/50 cursor-pointer"
                           >
                             Mark all read
                           </Button>
@@ -457,7 +457,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                               setIsNotificationPanelClosing(false);
                             }, 300);
                           }}
-                          className="p-1 text-white hover:bg-blue-700/50 hover:text-white"
+                          className="p-1 text-white hover:bg-blue-700/50 hover:text-white cursor-pointer"
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -584,7 +584,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                                   onClick={(e) =>
                                     handleDeleteNotification(notification, e)
                                   }
-                                  className="p-1 h-6 w-6 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                                  className="p-1 h-6 w-6 text-gray-400 hover:text-red-500 hover:bg-red-50 cursor-pointer disabled:cursor-not-allowed"
                                   title="Delete notification"
                                   disabled={isDeletingNotification}
                                 >
@@ -658,7 +658,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                 variant="outline"
                 size="lg"
                 onClick={() => setIsSidebarOpen(false)}
-                className="w-1/3 mb-4 bg-white/10 text-white hover:bg-white/20 border-white/30"
+                className="w-1/3 mb-4 bg-white/10 text-white hover:bg-white/20 border-white/30 cursor-pointer"
               >
                 <div className="flex items-center">
                   <ChevronLeft className="w-10 h-10 mr-[-6px]" />
@@ -751,7 +751,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         >
                           <CollapsibleTrigger asChild>
                             <button
-                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                                 managementItems.includes(activeItemId)
                                   ? "bg-white/20 text-white border border-white/30"
                                   : "text-blue-100 hover:bg-white/10"
@@ -775,7 +775,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
-                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                                     activeItemId === subItem.id
                                       ? "bg-white/20 text-white border border-white/30"
                                       : "text-blue-100 hover:bg-white/10"
@@ -832,7 +832,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
-                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                                     activeItemId === subItem.id
                                       ? "bg-white/20 text-white border border-white/30"
                                       : "text-blue-100 hover:bg-white/10"
@@ -865,7 +865,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         <button
                           key={item.id}
                           onClick={() => onChangeActive(item.id)}
-                          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                             activeItemId === item.id
                               ? "bg-white/20 text-white border border-white/30"
                               : "text-blue-100 hover:bg-white/10"
@@ -883,7 +883,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         <button
                           key={item.id}
                           onClick={() => onChangeActive(item.id)}
-                          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                             activeItemId === item.id
                               ? "bg-white/20 text-white border border-white/30"
                               : "text-blue-100 hover:bg-white/10"
@@ -905,7 +905,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         >
                           <CollapsibleTrigger asChild>
                             <button
-                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                                 managementItems.includes(activeItemId)
                                   ? "bg-white/20 text-white border border-white/30"
                                   : "text-blue-100 hover:bg-white/10"
@@ -929,7 +929,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
-                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                                     activeItemId === subItem.id
                                       ? "bg-white/20 text-white border border-white/30"
                                       : "text-blue-100 hover:bg-white/10"
@@ -988,7 +988,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
-                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                                     activeItemId === subItem.id
                                       ? "bg-white/20 text-white border border-white/30"
                                       : "text-blue-100 hover:bg-white/10"
@@ -1022,7 +1022,7 @@ export default function DashboardShell(props: DashboardShellProps) {
               variant="outline"
               size="sm"
               onClick={() => setIsSidebarOpen(true)}
-              className="bg-blue-700 text-white hover:bg-blue-300  hover:text-blue-700 border-blue-700"
+              className="bg-blue-700 text-white hover:bg-blue-300  hover:text-blue-700 border-blue-700 cursor-pointer"
             >
               <div className="flex items-center">
                 <ChevronRight className="w-10 h-10 mr-[-6px]" />
@@ -1113,7 +1113,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                     setIsNotificationDetailOpen(false);
                     setIsRefreshing(true);
                   }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 cursor-pointer"
                 >
                   Close
                 </Button>
@@ -1130,7 +1130,7 @@ export default function DashboardShell(props: DashboardShellProps) {
             variant="ghost"
             size="lg"
             onClick={() => setIsHelpButtonsVisible(!isHelpButtonsVisible)}
-            className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0 animate-bounce-small"
+            className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0 animate-bounce-small cursor-pointer"
           >
             <img
               src="/question.png"
@@ -1156,7 +1156,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         variant="ghost"
         size="lg"
         onClick={() => setIsGuideModalOpen(true)}
-        className={`fixed bottom-32 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+        className={`fixed bottom-32 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 hover:scale-110 hover:rotate-12 active:scale-95 p-0 cursor-pointer ${
           isHelpButtonsVisible
             ? "opacity-100 translate-y-0 pointer-events-auto delay-0"
             : "opacity-0 translate-y-4 pointer-events-none delay-0"
@@ -1175,7 +1175,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         variant="ghost"
         size="lg"
         onClick={() => setIsContactDevsModalOpen(true)}
-        className={`fixed bottom-48 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+        className={`fixed bottom-48 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 hover:scale-110 hover:rotate-12 active:scale-95 p-0 cursor-pointer ${
           isHelpButtonsVisible
             ? "opacity-100 translate-y-0 pointer-events-auto delay-100"
             : "opacity-0 translate-y-4 pointer-events-none delay-0"

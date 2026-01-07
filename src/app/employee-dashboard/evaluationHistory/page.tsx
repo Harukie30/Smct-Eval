@@ -509,7 +509,7 @@ export default function OverviewTab() {
                 value={String(selectedYear)}
                 onValueChange={(value: any) => setSelectedYear(value)}
               >
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[180px] cursor-pointer">
                   <SelectValue placeholder="Select a year " />
                 </SelectTrigger>
                 <SelectContent>

@@ -297,7 +297,7 @@ export default function OverviewTab() {
               <Button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer disabled:cursor-not-allowed"
                 title="Refresh evaluation records"
               >
                 {refreshing ? (

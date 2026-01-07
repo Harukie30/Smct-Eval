@@ -605,7 +605,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         disabled
                                         readOnly
                                     />
-                                    <label htmlFor="prob3" className="text-sm text-gray-700">3 months</label>
+                                    <label htmlFor="prob3" className="text-sm text-gray-700 cursor-pointer">3 months</label>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <input 
@@ -616,7 +616,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         disabled
                                         readOnly
                                     />
-                                    <label htmlFor="prob5" className="text-sm text-gray-700">5 months</label>
+                                    <label htmlFor="prob5" className="text-sm text-gray-700 cursor-pointer">5 months</label>
                                 </div>
                             </div>
                         </div>
@@ -640,7 +640,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     />
                                     <label 
                                         htmlFor="q1" 
-                                        className={`text-sm ${quarterlyStatus.q1 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+                                        className={`text-sm cursor-pointer ${quarterlyStatus.q1 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
                                     >
                                         Q1 review
                                         {quarterlyStatus.q1 && (
@@ -662,7 +662,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     />
                                     <label 
                                         htmlFor="q2" 
-                                        className={`text-sm ${quarterlyStatus.q2 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+                                        className={`text-sm cursor-pointer ${quarterlyStatus.q2 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
                                     >
                                         Q2 review
                                         {quarterlyStatus.q2 && (
@@ -684,7 +684,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     />
                                     <label 
                                         htmlFor="q3" 
-                                        className={`text-sm ${quarterlyStatus.q3 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+                                        className={`text-sm cursor-pointer ${quarterlyStatus.q3 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
                                     >
                                         Q3 review
                                         {quarterlyStatus.q3 && (
@@ -706,7 +706,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     />
                                     <label 
                                         htmlFor="q4" 
-                                        className={`text-sm ${quarterlyStatus.q4 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+                                        className={`text-sm cursor-pointer ${quarterlyStatus.q4 ? 'text-gray-400 line-through' : 'text-gray-700'}`}
                                     >
                                         Q4 review
                                         {quarterlyStatus.q4 && (
@@ -732,7 +732,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                         disabled
                                         readOnly
                                     />
-                                    <label htmlFor="improvement" className="text-sm text-gray-700">Performance Improvement</label>
+                                    <label htmlFor="improvement" className="text-sm text-gray-700 cursor-pointer">Performance Improvement</label>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <label className="text-sm text-gray-700">Others:</label>
@@ -1978,7 +1978,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                 <Button
                     onClick={handlePrevious}
                     variant="outline"
-                    className="px-8 py-3 text-lg"
+                    className="px-8 py-3 text-lg cursor-pointer"
                     size="lg"
                 >
                     Previous
@@ -1990,7 +1990,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                     <Button
                         onClick={handlePrint}
                         variant="outline"
-                        className="px-6 py-3 text-base flex items-center space-x-2"
+                        className="px-6 py-3 text-base flex items-center space-x-2 cursor-pointer"
                     >
                         <Printer className="h-4 w-4" />
                         <span>Print Evaluation</span>
@@ -2000,7 +2000,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                     <Button
                         onClick={() => handleSubmitEvaluation()}
                         disabled={isSubmitting}
-                        className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         size="lg"
                     >
                         {isSubmitting ? (

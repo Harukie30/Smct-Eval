@@ -422,22 +422,85 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
 
       // Also store in client data service for consistency
       try {
-        // Transform EvaluationData to match EvaluationPayload structure expected by API
-        // IMPORTANT: Use 'rating' field (not 'overallRating') to match EvaluationPayload type
-        // Ensure rating is explicitly set and not overwritten by spread
-        // Build submission payload - ensure rating is the LAST property set to prevent overwriting
+        // Build submission payload - ensure rating is explicitly set
         const submissionPayload = {
-          ...updatedEvaluationData, // Use updated data with rating already set
-          // Ensure evaluator signature is included
-          evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',
-          evaluatorSignature: evaluationData.evaluatorSignature || currentUser?.name || 'Evaluator',
-          evaluatorSignatureDate: evaluationData.evaluatorSignatureDate || new Date().toISOString().split('T')[0],
-          // Include supervisor/evaluator info
-          supervisor: evaluationData.supervisor || currentUser?.name || 'Evaluator',
-          overallRating: calculatedRating, // Keep for backward compatibility
+          ...updatedEvaluationData,
+            // Ensure evaluator signature is included
+            evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',
+            evaluatorSignature: evaluationData.evaluatorSignature || currentUser?.name || 'Evaluator',
+            evaluatorSignatureDate: evaluationData.evaluatorSignatureDate || new Date().toISOString().split('T')[0],
+            // Include supervisor/evaluator info
+            supervisor: evaluationData.supervisor || currentUser?.name || 'Evaluator',
+          overallRating: calculatedRating,
           // CRITICAL: Set rating LAST to ensure it's not overwritten
           rating: calculatedRating,
-        } as any; // Type assertion needed due to structure differences
+        } as any;
+        
+        // Recompute rating directly from the final payload scores to ensure accuracy
+        const average = (vals: any[]) => {
+          const numbers = vals
+            .map((v) => (typeof v === 'string' ? parseFloat(v) : Number(v)))
+            .filter((v) => typeof v === 'number' && !isNaN(v));
+          if (numbers.length === 0) return 0;
+          return numbers.reduce((a, b) => a + b, 0) / numbers.length;
+        };
+
+        const jobKnowledgeScore = average([
+          (submissionPayload as any).jobKnowledgeScore1,
+          (submissionPayload as any).jobKnowledgeScore2,
+          (submissionPayload as any).jobKnowledgeScore3,
+        ]);
+        const qualityOfWorkScore = average([
+          (submissionPayload as any).qualityOfWorkScore1,
+          (submissionPayload as any).qualityOfWorkScore2,
+          (submissionPayload as any).qualityOfWorkScore3,
+          (submissionPayload as any).qualityOfWorkScore4,
+          (submissionPayload as any).qualityOfWorkScore5,
+        ]);
+        const adaptabilityScore = average([
+          (submissionPayload as any).adaptabilityScore1,
+          (submissionPayload as any).adaptabilityScore2,
+          (submissionPayload as any).adaptabilityScore3,
+        ]);
+        const teamworkScore = average([
+          (submissionPayload as any).teamworkScore1,
+          (submissionPayload as any).teamworkScore2,
+          (submissionPayload as any).teamworkScore3,
+        ]);
+        const reliabilityScore = average([
+          (submissionPayload as any).reliabilityScore1,
+          (submissionPayload as any).reliabilityScore2,
+          (submissionPayload as any).reliabilityScore3,
+          (submissionPayload as any).reliabilityScore4,
+        ]);
+        const ethicalScore = average([
+          (submissionPayload as any).ethicalScore1,
+          (submissionPayload as any).ethicalScore2,
+          (submissionPayload as any).ethicalScore3,
+          (submissionPayload as any).ethicalScore4,
+        ]);
+        const customerServiceScore = average([
+          (submissionPayload as any).customerServiceScore1,
+          (submissionPayload as any).customerServiceScore2,
+          (submissionPayload as any).customerServiceScore3,
+          (submissionPayload as any).customerServiceScore4,
+          (submissionPayload as any).customerServiceScore5,
+        ]);
+
+        const recomputed = (
+          jobKnowledgeScore * 0.20 +
+          qualityOfWorkScore * 0.20 +
+          adaptabilityScore * 0.10 +
+          teamworkScore * 0.10 +
+          reliabilityScore * 0.05 +
+          ethicalScore * 0.05 +
+          customerServiceScore * 0.30
+        );
+
+        const recomputedRounded = Math.round(recomputed * 10) / 10;
+        
+        // Ensure rating is set correctly in the payload
+        (submissionPayload as any).rating = recomputedRounded;
         
         await apiService.createSubmission(
           parseInt(evaluationData.employeeId),
@@ -914,7 +977,7 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
         <DialogFooter className="flex justify-center">
           <Button
             onClick={handleSuccessDialogClose}
-            className="px-8 py-2 bg-green-600 text-white hover:bg-green-700"
+            className="px-8 py-2 bg-green-600 text-white hover:bg-green-700 cursor-pointer"
           >
             Close
           </Button>

@@ -87,7 +87,7 @@ export default function ProfileCard({
             variant="ghost"
             size="sm"
             onClick={onEditProfile}
-            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 cursor-pointer"
             title="Edit Profile"
           >
             <Settings className="h-4 w-4" />
@@ -98,7 +98,7 @@ export default function ProfileCard({
             variant="ghost"
             size="sm"
             onClick={handleSettings}
-            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 cursor-pointer"
           >
             <Settings className="h-4 w-4" />
           </Button>
@@ -108,7 +108,7 @@ export default function ProfileCard({
             variant="ghost"
             size="sm"
             onClick={handleLogout}
-            className="h-8 px-3 text-white hover:bg-red-600 hover:text-white bg-red-500 text-xs"
+            className="h-8 px-3 text-white hover:bg-red-600 hover:text-white bg-red-500 text-xs cursor-pointer"
           >
             <LogOut className="h-3 w-3 mr-1" />
             Logout
@@ -156,7 +156,7 @@ export default function ProfileCard({
               variant="ghost"
               size="sm"
               onClick={handleSettings}
-              className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+              className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 cursor-pointer"
             >
               <Settings className="h-4 w-4" />
             </Button>
@@ -166,7 +166,7 @@ export default function ProfileCard({
               variant="ghost"
               size="sm"
               onClick={handleLogout}
-              className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700"
+              className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 cursor-pointer"
             >
               <LogOut className="h-4 w-4" />
             </Button>
@@ -217,7 +217,7 @@ export default function ProfileCard({
             variant="outline"
             size="sm"
             onClick={handleSettings}
-            className="flex-1 bg-white/10 text-white hover:bg-white/20 border-white/30 text-xs"
+            className="flex-1 bg-white/10 text-white hover:bg-white/20 border-white/30 text-xs cursor-pointer"
           >
             <Settings className="w-3 h-3 mr-1" />
             Settings
@@ -228,7 +228,7 @@ export default function ProfileCard({
             variant="outline"
             size="sm"
             onClick={handleLogout}
-            className="flex-1 bg-red-500/20 text-red-200 hover:bg-red-500/30 border-red-400/30 text-xs"
+            className="flex-1 bg-red-500/20 text-red-200 hover:bg-red-500/30 border-red-400/30 text-xs cursor-pointer"
           >
             <LogOut className="w-3 h-3 mr-1" />
             Logout

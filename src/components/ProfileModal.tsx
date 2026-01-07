@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,7 @@ import {
 import { UserProfile } from "./ProfileCard";
 import { User, Save, X } from "lucide-react";
 // Removed profileService import - we'll use UserContext directly
-import SignaturePad from "@/components/SignaturePad";
+import SignaturePad, { SignaturePadRef } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/useToast";
 import LoadingAnimation from "@/components/LoadingAnimation";
 import apiService from "@/lib/apiService";
@@ -54,6 +54,7 @@ export default function ProfileModal({
   const { success } = useToast();
   const { refreshUser } = useAuth();
   const [open, setOpen] = useState(false);
+  const signaturePadRef = useRef<SignaturePadRef>(null);
   // Reset form data when profile changes
   useEffect(() => {
     setFormData((prev) => ({
@@ -126,14 +127,16 @@ export default function ProfileModal({
         "confirm_password",
         formData?.confirm_password || ""
       );
-      console.log("test", formData?.signature);
+      // Get the current signature from SignaturePad (may be local, not in formData yet)
+      const currentSignature = signaturePadRef.current?.getSignature() || formData?.signature || null;
+      console.log("test", currentSignature);
 
-      if (formData?.signature) {
-        const signature = dataURLtoFile(formData?.signature, "signature.png");
+      if (currentSignature) {
+        const signature = dataURLtoFile(currentSignature, "signature.png");
         if (signature) {
           formDataToUpload.append("signature", signature);
         }
-      } else if (formData?.signature === null || formData?.signature === "") {
+      } else if (currentSignature === null || currentSignature === "") {
         formDataToUpload.append("signature", "");
       }
 
@@ -422,9 +425,14 @@ export default function ProfileModal({
           </Label>
           <div className="space-y-2">
             <SignaturePad
+              ref={signaturePadRef}
               value={profile?.signature || formData?.signature || null}
               onChangeAction={(signature) => {
-                setFormData({ ...formData, signature: signature });
+                // Only update formData when signature is cleared (null)
+                // For new signatures, they're stored locally until Save is clicked
+                if (signature === null) {
+                  setFormData({ ...formData, signature: null });
+                }
               }}
               className="w-full"
               required={true}
@@ -453,7 +461,7 @@ export default function ProfileModal({
               variant="outline"
               onClick={handleCancel}
               disabled={isLoading}
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 hover:text-white text-white"
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 hover:text-white text-white cursor-pointer disabled:cursor-not-allowed"
             >
               <X className="w-5 h-5 text-white" />
               Cancel
@@ -461,7 +469,7 @@ export default function ProfileModal({
             <Button
               type="submit"
               disabled={isLoading}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 cursor-pointer disabled:cursor-not-allowed"
               onClick={handleSubmit}
             >
               {isLoading ? (

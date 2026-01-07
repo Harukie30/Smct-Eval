@@ -692,7 +692,7 @@ export default function DepartmentsTab() {
                 value={formData.branch}
                 onValueChange={(value) => handleInputChange("branch", value)}
               >
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 cursor-pointer">
                   <SelectValue placeholder="Select branch" />
                 </SelectTrigger>
                 <SelectContent>
@@ -726,7 +726,7 @@ export default function DepartmentsTab() {
                 value={formData.acronym}
                 onValueChange={(value) => handleInputChange("acronym", value)}
               >
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 cursor-pointer">
                   <SelectValue placeholder="Select branch" />
                 </SelectTrigger>
                 <SelectContent>
