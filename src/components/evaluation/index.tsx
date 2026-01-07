@@ -26,7 +26,7 @@ import Step6 from "./Step6";
 import Step7 from "./Step7";
 import OverallAssessment from "./OverallAssessment";
 import WelcomeStep from "./WelcomeStep";
-import { EvaluationPayload } from "./types";
+import EvaluationPayload from "./types";
 import { storeEvaluationResult } from "@/lib/evaluationStorage";
 import { apiService } from "@/lib/apiService";
 import { createEvaluationNotification } from "@/lib/notificationUtils";

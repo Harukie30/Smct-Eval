@@ -17,7 +17,7 @@ import {
   Send,
   User,
 } from "lucide-react";
-import { EvaluationPayload } from "./types";
+import EvaluationPayload from "./types";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/useToast";
 import {
@@ -93,6 +93,12 @@ export default function OverallAssessment({
   });
   const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
 
+  useEffect(() => {
+    const load = async () => {
+      updateDataAction({ rating: overallWeightedScore });
+    };
+    load();
+  }, []);
   // Check for existing quarterly reviews when employee changes
   // useEffect(() => {
   //   const checkQuarterlyReviews = async () => {
@@ -122,8 +128,6 @@ export default function OverallAssessment({
   // }, [employee?.id]);
 
   const handleSubmitEvaluation = async () => {
-    updateDataAction({ rating: Number(overallWeightedScore) });
-
     // Validate evaluator has a signature
     if (!user?.signature) {
       error(
@@ -2850,21 +2854,21 @@ export default function OverallAssessment({
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Employee Section */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div>
                 <Label className="text-sm font-medium text-gray-700">
-                  Signature:
+                  Employee signature:
                 </Label>
-                <div className="mt-1 border-2 border-dashed border-white rounded-lg bg-gray-50">
-                  {/* Signature area */}
-                  <div className="h-16 border-b border-gray-300 flex items-center justify-center"></div>
-
-                  {/* Name area */}
-                  <div className="p-2 text-center">
-                    <p className="text-sm font-medium text-gray-700">
+                <div className="border border-gray-300 rounded-lg bg-white p-4 relative">
+                  <div className="h-16 flex items-center justify-center relative">
+                    {/* Name as background text - always show */}
+                    <span className="text-md text-gray-900 font-bold">
                       {employee?.fname + " " + employee?.lname ||
-                        "Employee Name"}
-                    </p>
+                        "Evaluator Name"}
+                    </span>
+                    {/* Signature overlay - automatically show when signature exists */}
+
+                    {/* Show message if no signature */}
                   </div>
                 </div>
               </div>
@@ -2893,7 +2897,17 @@ export default function OverallAssessment({
                     <span className="text-md text-gray-900 font-bold">
                       {user?.fname + " " + user?.lname || "Evaluator Name"}
                     </span>
-
+                    {/* Signature overlay - automatically show when signature exists */}
+                    {user?.signature && (
+                      <img
+                        src={`${CONFIG.API_URL_STORAGE}/${user.signature}`}
+                        alt="Evaluator Signature"
+                        className="absolute top-5 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-14 max-w-full object-contain"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    )}
                     {/* Show message if no signature */}
                     {!user?.signature && (
                       <span className="text-xs text-red-600">
@@ -2936,8 +2950,9 @@ export default function OverallAssessment({
         <div className="flex items-center space-x-4">
           {/* Print Button */}
           <Button
-            onClick={handlePrint}
+            // onClick={handlePrint}
             variant="outline"
+            disabled
             className="px-6 py-3 text-base flex items-center space-x-2"
           >
             <Printer className="h-4 w-4" />
@@ -2946,7 +2961,9 @@ export default function OverallAssessment({
 
           {/* Submit Button */}
           <Button
-            onClick={() => handleSubmitEvaluation()}
+            onClick={() => {
+              handleSubmitEvaluation();
+            }}
             className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white"
             size="lg"
           >
