@@ -73,7 +73,7 @@ export default function WelcomeStep({
                   Position
                 </Badge>
                 <p className="text-sm text-gray-900">
-                  {employee.positions?.label || employee.position || "N/A"}
+                  {employee.positions?.label || "N/A"}
                 </p>
               </div>
               <div>
@@ -82,7 +82,6 @@ export default function WelcomeStep({
                 </Badge>
                 <p className="text-sm text-gray-900">
                   {employee.departments?.department_name ||
-                    employee.department ||
                     "N/A"}
                 </p>
               </div>
@@ -91,7 +90,7 @@ export default function WelcomeStep({
                   Role
                 </Badge>
                 <p className="text-sm text-gray-900">
-                  {employee.roles?.[0]?.name || employee.role || "N/A"}
+                  {employee.roles?.[0]?.name || "N/A"}
                 </p>
               </div>
             </div>

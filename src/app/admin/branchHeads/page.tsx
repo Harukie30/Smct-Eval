@@ -767,7 +767,7 @@ export default function BranchHeadsTab() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsListModalOpen(false)}
-                className="h-10 w-10 p-0 hover:bg-gray-100 bg-blue-600 text-white rounded-full hover:text-white hover:bg-red-700"
+                className="h-10 w-10 p-0  bg-blue-600 text-white rounded-full hover:text-white hover:bg-red-700"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -882,7 +882,7 @@ export default function BranchHeadsTab() {
                   setShowConfirmation(false);
                   setSelectedBranches([]);
                 }}
-                className="h-10 w-10 p-0 hover:bg-gray-100 bg-blue-600 text-white rounded-full hover:text-white hover:bg-red-700"
+                className="h-10 w-10 p-0  bg-blue-600 text-white rounded-full hover:text-white hover:bg-red-700"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -1194,7 +1194,7 @@ export default function BranchHeadsTab() {
                   setBranchHeadToEdit(null);
                   setEditSelectedBranches([]);
                 }}
-                className="h-10 w-10 p-0 hover:bg-gray-100 bg-blue-600 text-white rounded-full hover:text-white hover:bg-red-700"
+                className="h-10 w-10 p-0  bg-blue-600 text-white rounded-full hover:text-white hover:bg-red-700"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

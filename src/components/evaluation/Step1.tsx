@@ -11,7 +11,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDownIcon } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { ChevronDownIcon, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { EvaluationPayload } from "./types";
 import {
@@ -133,7 +139,7 @@ export default function Step1({
       setIsLoadingQuarters(true);
       try {
         const status = await apiService.getQuarters(Number(employee.id));
-        Object.values(status.data).forEach((item: any) => {
+        Object.values(status).forEach((item: any) => {
           if (item.reviewTypeProbationary === 3) {
             setProbitionary3(true);
           }
@@ -168,26 +174,15 @@ export default function Step1({
       const fromDate = new Date(data.coverageFrom);
       const toDate = new Date(data.coverageTo);
 
-      // Check if coverageFrom is before coverageTo
       if (fromDate >= toDate) {
         setCoverageError("Start date must be earlier than end date");
-        return;
+      } else {
+        setCoverageError("");
       }
-
-      // Check if coverageFrom is before date hired
-      if (data.hireDate) {
-        const hireDate = new Date(data.hireDate);
-        if (!isNaN(hireDate.getTime()) && fromDate < hireDate) {
-          setCoverageError("Performance Coverage cannot start before Date Hired");
-          return;
-        }
-      }
-
-      setCoverageError("");
     } else {
       setCoverageError("");
     }
-  }, [data.coverageFrom, data.coverageTo, data.hireDate]);
+  }, [data.coverageFrom, data.coverageTo]);
 
   // Calculate average score for Job Knowledge
   const calculateAverageScore = () => {
@@ -681,7 +676,7 @@ export default function Step1({
             </Label>
             <Input
               id="position"
-              value={employee?.positions?.label || (employee as any)?.position || ""}
+              value={employee?.positions.label || ""}
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
@@ -696,7 +691,7 @@ export default function Step1({
             </Label>
             <Input
               id="department"
-              value={employee?.departments?.department_name || (employee as any)?.department || ""}
+              value={employee?.departments?.department_name || ""}
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
@@ -711,7 +706,7 @@ export default function Step1({
             </Label>
             <Input
               id="branch"
-              value={employee?.branches?.branch_name || employee?.branches?.[0]?.branch_name || (employee as any)?.branch || ""}
+              value={employee?.branches.branch_name || ""}
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
@@ -762,119 +757,127 @@ export default function Step1({
               {/* From Date */}
               <div className="space-y-1">
                 <Label className="text-sm text-gray-600">From:</Label>
-                <Input
-                  type="date"
-                  value={
-                    data.coverageFrom
-                      ? typeof data.coverageFrom === "string"
-                        ? data.coverageFrom
-                        : new Date(data.coverageFrom).toISOString().split("T")[0]
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const fromDate = e.target.value;
-                    const toDate = data.coverageTo
-                      ? typeof data.coverageTo === "string"
-                        ? data.coverageTo
-                        : new Date(data.coverageTo).toISOString().split("T")[0]
-                      : null;
-
-                    // Always update the form data so parent validation can catch it
-                    updateDataAction({
-                      coverageFrom: fromDate,
-                    });
-
-                    // Validate: From date should be earlier than To date
-                    if (toDate && fromDate && fromDate >= toDate) {
-                      setCoverageError(
-                        "Start date must be earlier than end date"
-                      );
-                      return;
-                    }
-
-                    // Validate: From date should not be before Date Hired
-                    if (data.hireDate && fromDate) {
-                      const hireDateStr = typeof data.hireDate === "string"
-                        ? data.hireDate
-                        : new Date(data.hireDate).toISOString().split("T")[0];
-                      if (fromDate < hireDateStr) {
-                        setCoverageError(
-                          "Performance Coverage cannot start before Date Hired"
-                        );
-                        return;
+                <Popover>
+                  <PopoverTrigger
+                    className={`w-full text-left bg-yellow-100 border-yellow-300 hover:bg-yellow-200 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border shadow-xs hover:text-accent-foreground ${
+                      data.coverageFrom
+                        ? "text-gray-900"
+                        : "text-muted-foreground"
+                    } ${
+                      coverageError && !data.coverageFrom
+                        ? "border-red-500"
+                        : ""
+                    }`}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {data.coverageFrom ? (
+                      format(new Date(data.coverageFrom), "MMM dd, yyyy")
+                    ) : (
+                      <span>Start date</span>
+                    )}
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={
+                        data.coverageFrom
+                          ? new Date(data.coverageFrom)
+                          : undefined
                       }
-                    }
+                      onSelect={(date) => {
+                        if (date) {
+                          const fromDate = date;
+                          const toDate = data.coverageTo
+                            ? new Date(data.coverageTo)
+                            : null;
 
-                    setCoverageError("");
-                  }}
-                  min={
-                    data.hireDate
-                      ? typeof data.hireDate === "string"
-                        ? data.hireDate
-                        : new Date(data.hireDate).toISOString().split("T")[0]
-                      : undefined
-                  }
-                  max={
-                    data.coverageTo
-                      ? typeof data.coverageTo === "string"
-                        ? data.coverageTo
-                        : new Date(data.coverageTo).toISOString().split("T")[0]
-                      : undefined
-                  }
-                  className={`w-full bg-yellow-100 border-yellow-300 hover:bg-yellow-200 ${
-                    coverageError && !data.coverageFrom
-                      ? "border-red-500"
-                      : ""
-                  }`}
-                />
+                          // Validate: From date should be earlier than To date
+                          if (toDate && fromDate >= toDate) {
+                            setCoverageError(
+                              "Start date must be earlier than end date"
+                            );
+                            return;
+                          }
+
+                          setCoverageError("");
+                          updateDataAction({
+                            coverageFrom: fromDate.toISOString().split("T")[0],
+                          });
+                        }
+                      }}
+                      disabled={(date) => {
+                        // Disable dates that are after the "To" date (if selected)
+                        if (data.coverageTo) {
+                          return date >= new Date(data.coverageTo);
+                        }
+                        return false;
+                      }}
+                      initialFocus
+                      className="bg-white"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* To Date */}
               <div className="space-y-1">
                 <Label className="text-sm text-gray-600">To:</Label>
-                <Input
-                  type="date"
-                  value={
-                    data.coverageTo
-                      ? typeof data.coverageTo === "string"
-                        ? data.coverageTo
-                        : new Date(data.coverageTo).toISOString().split("T")[0]
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const toDate = e.target.value;
-                    const fromDate = data.coverageFrom
-                      ? typeof data.coverageFrom === "string"
-                        ? data.coverageFrom
-                        : new Date(data.coverageFrom).toISOString().split("T")[0]
-                      : null;
+                <Popover>
+                  <PopoverTrigger
+                    className={`w-full text-left bg-yellow-100 border-yellow-300 hover:bg-yellow-200 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border shadow-xs hover:text-accent-foreground ${
+                      data.coverageTo
+                        ? "text-gray-900"
+                        : "text-muted-foreground"
+                    } ${
+                      coverageError && !data.coverageTo ? "border-red-500" : ""
+                    }`}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {data.coverageTo ? (
+                      format(new Date(data.coverageTo), "MMM dd, yyyy")
+                    ) : (
+                      <span>End date</span>
+                    )}
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={
+                        data.coverageTo ? new Date(data.coverageTo) : undefined
+                      }
+                      onSelect={(date) => {
+                        if (date) {
+                          const toDate = date;
+                          const fromDate = data.coverageFrom
+                            ? new Date(data.coverageFrom)
+                            : null;
 
-                    // Always update the form data so parent validation can catch it
-                    updateDataAction({
-                      coverageTo: toDate,
-                    });
+                          // Validate: To date should be later than From date
+                          if (fromDate && toDate <= fromDate) {
+                            setCoverageError(
+                              "End date must be later than start date"
+                            );
+                            return;
+                          }
 
-                    // Validate: To date should be later than From date
-                    if (fromDate && toDate && toDate <= fromDate) {
-                      setCoverageError(
-                        "End date must be later than start date"
-                      );
-                      return;
-                    }
-
-                    setCoverageError("");
-                  }}
-                  min={
-                    data.coverageFrom
-                      ? typeof data.coverageFrom === "string"
-                        ? data.coverageFrom
-                        : new Date(data.coverageFrom).toISOString().split("T")[0]
-                      : undefined
-                  }
-                  className={`w-full bg-yellow-100 border-yellow-300 hover:bg-yellow-200 ${
-                    coverageError && !data.coverageTo ? "border-red-500" : ""
-                  }`}
-                />
+                          setCoverageError("");
+                          updateDataAction({
+                            coverageTo: toDate.toISOString().split("T")[0],
+                          });
+                        }
+                      }}
+                      disabled={(date) => {
+                        // Disable dates that are before or equal to the "From" date (if selected)
+                        if (data.coverageFrom) {
+                          return date <= new Date(data.coverageFrom);
+                        }
+                        return false;
+                      }}
+                      initialFocus
+                      className="bg-white"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 

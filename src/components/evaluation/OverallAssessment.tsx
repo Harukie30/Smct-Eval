@@ -93,6 +93,12 @@ export default function OverallAssessment({
   });
   const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
 
+  useEffect(() => {
+    const load = async () => {
+      updateDataAction({ rating: overallWeightedScore });
+    };
+    load();
+  }, []);
   // Check for existing quarterly reviews when employee changes
   // useEffect(() => {
   //   const checkQuarterlyReviews = async () => {
@@ -122,8 +128,6 @@ export default function OverallAssessment({
   // }, [employee?.id]);
 
   const handleSubmitEvaluation = async () => {
-    updateDataAction({ rating: Number(overallWeightedScore) });
-
     // Validate evaluator has a signature
     if (!user?.signature) {
       error(
@@ -2850,7 +2854,7 @@ export default function OverallAssessment({
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Employee Section */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div>
                 <Label className="text-sm font-medium text-gray-700">
                   Employee signature:
@@ -2957,7 +2961,9 @@ export default function OverallAssessment({
 
           {/* Submit Button */}
           <Button
-            onClick={() => handleSubmitEvaluation()}
+            onClick={() => {
+              handleSubmitEvaluation();
+            }}
             className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white"
             size="lg"
           >
