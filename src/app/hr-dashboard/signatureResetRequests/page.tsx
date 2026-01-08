@@ -528,8 +528,7 @@ export default function SignatureResetRequestsTab() {
                             variant="outline"
                             size="sm"
                             onClick={() => openApproveModal(request)}
-                            className="text-green-600 border-green-300 hover:bg-green-50"
-                            cursor-pointer
+                            className="text-green-600 border-green-300 hover:bg-green-50 cursor-pointer"
                           >
                             <Check className="h-4 w-4 mr-1" />
                             Accept Request

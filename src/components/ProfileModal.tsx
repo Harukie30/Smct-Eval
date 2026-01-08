@@ -197,6 +197,38 @@ export default function ProfileModal({
   return (
     <Dialog open={isOpen} onOpenChangeAction={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto px-6 py-6 animate-popup">
+        {/* Sticky Cancel and Save Buttons - Stay at top when scrolling */}
+        <div className="sticky top-0 z-50 flex justify-end gap-2 mb-4 -mr-6 pr-6 py-4 no-print">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancel}
+            disabled={isLoading}
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 hover:text-white text-white cursor-pointer disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            <X className="w-5 h-5 text-white" />
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 cursor-pointer disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-300"
+            onClick={handleSubmit}
+          >
+            {isLoading ? (
+              <>
+                <LoadingAnimation size="sm" variant="spinner" color="white" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>Save Changes</span>
+              </>
+            )}
+          </Button>
+        </div>
+
         <DialogHeader className="px-1 ">
           <DialogTitle className="flex items-center gap-2 text-xl bg-blue-200 px-3 py-2 rounded-lg">
             <User className="w-5 h-5" />
@@ -454,37 +486,6 @@ export default function ProfileModal({
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex justify-end space-x-4 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCancel}
-              disabled={isLoading}
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 hover:text-white text-white cursor-pointer disabled:cursor-not-allowed"
-            >
-              <X className="w-5 h-5 text-white" />
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 cursor-pointer disabled:cursor-not-allowed"
-              onClick={handleSubmit}
-            >
-              {isLoading ? (
-                <>
-                  <LoadingAnimation size="sm" variant="spinner" color="white" />
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  <span>Save Changes</span>
-                </>
-              )}
-            </Button>
-          </div>
         </form>
       </DialogContent>
     </Dialog>

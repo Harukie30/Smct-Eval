@@ -133,14 +133,15 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       newErrors.username = "Username cannot be empty if provided";
     }
 
-    if (
-      formData.contact &&
-      !/^\d{10,15}$/.test(formData.contact.replace(/\D/g, ""))
-    ) {
-      newErrors.contact = "Please enter a valid phone number";
-    }
     if (!formData.contact) {
-      newErrors.contact = "contact is required";
+      newErrors.contact = "Contact is required";
+    } else {
+      const contactDigits = formData.contact.replace(/\D/g, "");
+      if (!contactDigits.startsWith("09")) {
+        newErrors.contact = "Contact number must start with '09'";
+      } else if (contactDigits.length !== 11) {
+        newErrors.contact = "Contact number must be exactly 11 digits";
+      }
     }
 
     if (!formData.password || formData.password.length < 8) {
@@ -182,6 +183,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         onClose();
         setIsSaving(false);
       } catch (error: any) {
+        setIsSaving(false); // Reset loading state on error
         if (error.response?.data?.errors) {
           const backendErrors: Record<string, string> = {};
 
@@ -381,20 +383,36 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
             {/* Contact */}
             <div className="space-y-2">
-              <Label htmlFor="contact">Contact Number</Label>
+              <Label htmlFor="contact">Contact Number *</Label>
               <Input
                 id="contact"
                 type="tel"
                 value={formData.contact || ""}
                 onChange={(e) => {
-                  handleInputChange("contact", e.target.value);
+                  // Remove all non-numeric characters
+                  let value = e.target.value.replace(/\D/g, "");
+                  
+                  // Limit to 11 digits
+                  value = value.slice(0, 11);
+                  
+                  handleInputChange("contact", value);
                 }}
+                onKeyPress={(e) => {
+                  // Only allow numbers
+                  if (!/[0-9]/.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                maxLength={11}
                 className={errors.contact ? "border-red-500" : "bg-white"}
-                placeholder="Enter contact number (numbers only)"
+                placeholder="09XXXXXXXXX (11 digits)"
               />
               {errors.contact && (
                 <p className="text-sm text-red-500">{errors.contact}</p>
               )}
+              <p className="text-xs text-gray-500">
+                Must start with "09" and be exactly 11 digits
+              </p>
             </div>
 
             {/* Position */}
@@ -464,7 +482,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               <Select
                 onValueChange={(value) => handleInputChange("role_id", value)}
               >
-                <SelectTrigger className="w-48 cursor-pointer">
+                <SelectTrigger className="w-48">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>

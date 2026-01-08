@@ -154,7 +154,7 @@ export default function ViewResultsModal({
   }, [approvalData]);
 
   // Compute isApproved status based on current approval data
-  const computedIsApproved = isApproved || !!submission?.employee.signature;
+  const computedIsApproved = isApproved || !!submission?.employee?.signature;
 
   // Automatic refresh when approval changes are detected in localStorage
   useEffect(() => {
@@ -180,7 +180,7 @@ export default function ViewResultsModal({
             setCurrentApprovalData({
               id: storedApproval.id || submissionId,
               approvedAt: storedApproval.approvedAt,
-              employeeSignature: submission.employee.signature,
+              employeeSignature: submission?.employee?.signature || "",
               employeeName: storedApproval.employeeName,
               employeeEmail: storedApproval.employeeEmail || user.email,
             });
@@ -254,7 +254,9 @@ export default function ViewResultsModal({
             <title>${
               submission
                 ? `Evaluation Details - ${
-                    submission.employee.fname + " " + submission.employee.lname
+                    submission?.employee?.fname && submission?.employee?.lname
+                      ? `${submission.employee.fname} ${submission.employee.lname}`
+                      : "Unknown Employee"
                   }`
                 : "Evaluation Details"
             }</title>
@@ -1279,7 +1281,7 @@ export default function ViewResultsModal({
       return;
       
     }
-    if (!submission.employee.signature) {
+    if (!submission?.employee?.signature) {
       setApprovalError("Signature required");
       return;
     }
@@ -1639,26 +1641,28 @@ export default function ViewResultsModal({
               animation: scale-in 0.5s ease-out;
             }
           `}</style>
+          {/* Sticky Print and Close Buttons - Stay at top when scrolling */}
+          <div className="sticky top-0 z-50 flex justify-end gap-2 mb-4 -mr-6 pr-6 py-4 no-print ">
+            <Button
+              onClick={handlePrint}
+              className="px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <Printer className="h-4 w-4" />
+              Print
+            </Button>
+            <Button
+              onClick={onCloseAction}
+              className="px-4 py-2 bg-blue-500 text-white hover:bg-red-600 hover:text-white cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              🗙 Close
+            </Button>
+          </div>
+
           <div ref={printContentRef} className="space-y-8">
-            <div className="flex items-center justify-between border-b border-gray-200 pb-4 no-print">
+            <div className="border-b border-gray-200 pb-4 no-print">
               <h2 className="text-3xl font-bold text-gray-900">
                 Evaluation Details
               </h2>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={handlePrint}
-                  className="px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 flex items-center gap-2 cursor-pointer"
-                >
-                  <Printer className="h-4 w-4" />
-                  Print
-                </Button>
-                <Button
-                  onClick={onCloseAction}
-                  className="px-4 py-2 bg-blue-500 text-white hover:bg-red-600 hover:text-white cursor-pointer"
-                >
-                  🗙 Close
-                </Button>
-              </div>
             </div>
 
             <div className="space-y-8">
@@ -1840,9 +1844,9 @@ export default function ViewResultsModal({
                         className="font-semibold text-gray-900 print-value"
                         style={{ fontSize: "11px" }}
                       >
-                        {submission.employee.fname +
-                          " " +
-                          submission.employee.lname}
+                        {submission?.employee?.fname && submission?.employee?.lname
+                          ? `${submission.employee.fname} ${submission.employee.lname}`
+                          : "Unknown Employee"}
                       </p>
                     </div>
                     <div className="print-info-row">
@@ -1870,7 +1874,7 @@ export default function ViewResultsModal({
                         className="text-gray-900 print-value"
                         style={{ fontSize: "11px" }}
                       >
-                        {submission.employee.positions.label || "Not specified"}
+                        {submission?.employee?.positions?.label || "Not specified"}
                       </p>
                     </div>
                     <div className="print-info-row">
@@ -1884,7 +1888,7 @@ export default function ViewResultsModal({
                         className="text-gray-900 print-value"
                         style={{ fontSize: "11px" }}
                       >
-                        {submission.employee.branches[0]?.branch_name}
+                        {submission?.employee?.branches?.[0]?.branch_name || "Not specified"}
                       </p>
                     </div>
                     <div className="print-info-row">
@@ -3176,9 +3180,9 @@ export default function ViewResultsModal({
                             <div className="print-signature-line"></div>
                             {/* Name as background text - always show */}
                             <span className="text-md text-gray-900 font-bold">
-                              {submission.employee.fname +
-                                " " +
-                                submission.employee.lname || "Employee Name"}
+                              {submission?.employee?.fname && submission?.employee?.lname
+                                ? `${submission.employee.fname} ${submission.employee.lname}`
+                                : "Employee Name"}
                             </span>
                             {/* Signature overlay - centered and overlapping */}
                             {signatureLoading ? (

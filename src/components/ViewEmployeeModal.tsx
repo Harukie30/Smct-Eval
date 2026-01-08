@@ -166,12 +166,26 @@ export default function ViewEmployeeModal({
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
       <DialogContent
-        className={`max-w-3xl max-h-[80vh] overflow-y-auto p-6 animate-popup ${
+        className={`max-w-3xl max-h-[80vh] overflow-y-auto p-6 animate-popup relative ${
           isAdminVariant
             ? "bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100"
             : "bg-gradient-to-br from-blue-50 to-indigo-50"
         }`}
       >
+        {/* Sticky Close Button - Stays at top when scrolling */}
+        <div className="sticky top-0 z-50 flex justify-end mb-4 -mt-6 -mr-6 pt-6 pr-6">
+          <Button
+            onClick={onCloseAction}
+            className={`bg-blue-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 ${
+              isAdminVariant ? "bg-slate-700 hover:bg-slate-800" : ""
+            }`}
+            size="sm"
+          >
+            <X className="w-4 h-4 mr-2" />
+            Close
+          </Button>
+        </div>
+
         <DialogHeader
           className={`pb-6 ${
             isAdminVariant
@@ -708,22 +722,6 @@ export default function ViewEmployeeModal({
               </CardContent>
             </Card>
           )}
-          {/* Action Buttons */}
-          <div
-            className={`flex justify-end gap-3 pt-4 ${
-              isAdminVariant
-                ? "border-t-2 border-slate-300"
-                : "border-t border-gray-200"
-            }`}
-          >
-            <Button
-              onClick={onCloseAction}
-              className="bg-blue-600 hover:bg-red-700 text-white"
-            >
-              <X className="w-4 h-4 mr-2 " />
-              Close
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -485,17 +485,37 @@ export default function UserManagementTab() {
 
   const handleAddUser = async (newUser: any) => {
     try {
-      const addUser = await apiService.addUser(newUser);
+      // Convert plain object to FormData - matching register page pattern
+      const formDataToUpload = new FormData();
+      formDataToUpload.append("fname", newUser.fname);
+      formDataToUpload.append("lname", newUser.lname);
+      formDataToUpload.append("username", newUser.username);
+      // Remove dash from employee_id before sending (keep only numbers)
+      formDataToUpload.append(
+        "employee_id",
+        newUser.employee_id.replace(/-/g, "")
+      );
+      formDataToUpload.append("email", newUser.email);
+      formDataToUpload.append("contact", newUser.contact);
+      formDataToUpload.append("position_id", String(newUser.position_id));
+      formDataToUpload.append("branch_id", String(newUser.branch_id));
+      formDataToUpload.append("department_id", String(newUser.department_id));
+      formDataToUpload.append("password", newUser.password);
+      // role_id is only for admin/HR adding users (not in register)
+      formDataToUpload.append("role_id", String(newUser.role_id));
+
+      const addUser = await apiService.addUser(formDataToUpload);
 
       await refreshUserData();
 
       toastMessages.user.created(newUser.fname);
       setIsAddUserModalOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding user:", error);
+      console.error("Error response:", error.response?.data);
       toastMessages.generic.error(
         "Add Failed",
-        "Failed to add user. Please try again."
+        error.response?.data?.message || "Failed to add user. Please try again."
       );
       throw error;
     }

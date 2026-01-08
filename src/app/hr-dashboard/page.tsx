@@ -412,9 +412,9 @@ export default function OverviewTab() {
                             <div>
                               <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1">
                                 <span className="font-medium text-gray-900 text-xs md:text-sm lg:text-base">
-                                  {submission.employee.fname +
-                                    " " +
-                                    submission.employee.lname}
+                                  {submission.employee?.fname && submission.employee?.lname
+                                    ? `${submission.employee.fname} ${submission.employee.lname}`
+                                    : "Unknown Employee"}
                                 </span>
                                 {isNew && (
                                   <Badge className="bg-yellow-100 text-yellow-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
