@@ -170,16 +170,19 @@ export default function BranchHeadsTab() {
         }
       }
       
-      // Handle name - use full_name if available, otherwise construct from fname/lname
+      // Handle name - construct from fname/lname to ensure proper spacing
       let nameValue = "";
-      if (item.full_name) {
+      const fname = item.fname || "";
+      const lname = item.lname || "";
+      if (fname || lname) {
+        nameValue = `${fname} ${lname}`.trim();
+      } else if (item.full_name) {
+        // If full_name exists but fname/lname don't, use full_name
         nameValue = item.full_name;
       } else if (item.name) {
         nameValue = item.name;
       } else {
-        const fname = item.fname || "";
-        const lname = item.lname || "";
-        nameValue = `${fname} ${lname}`.trim() || item.username || "";
+        nameValue = item.username || "";
       }
       
       // Handle isActive - API returns is_active as string "active" or boolean

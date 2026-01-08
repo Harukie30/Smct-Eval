@@ -749,7 +749,11 @@ export default function Step1({
             </Label>
             <Input
               id="supervisor"
-              value={user?.fname + "" + user?.lname || ""}
+              value={
+                user?.fname && user?.lname
+                  ? `${user.fname} ${user.lname}`
+                  : user?.fname || user?.lname || ""
+              }
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />

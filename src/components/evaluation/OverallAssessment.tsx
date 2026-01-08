@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -2837,24 +2838,16 @@ export default function OverallAssessment({
         <Button
           onClick={handlePrevious}
           variant="outline"
-          className="px-8 py-3 text-lg"
+          className="px-8 py-3 text-lg cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
           size="lg"
         >
+          <ArrowLeft className="h-4 w-4 mr-2" />
           Previous
         </Button>
 
         {/* Center Action Buttons */}
         <div className="flex items-center space-x-4">
-          {/* Print Button */}
-          <Button
-            // onClick={handlePrint}
-            variant="outline"
-            disabled
-            className="px-6 py-3 text-base flex items-center space-x-2"
-          >
-            <Printer className="h-4 w-4" />
-            <span>Print Evaluation</span>
-          </Button>
+          
 
           {/* Submit Button */}
           <Button
