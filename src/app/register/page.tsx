@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
-import SignaturePad from "@/components/SignaturePad";
+import SignaturePad, { SignaturePadRef } from "@/components/SignaturePad";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import PageTransition from "@/components/PageTransition";
@@ -28,6 +28,7 @@ interface FormDataType {
   employee_id: string;
   email: string;
   contact: string;
+  date_hired: string;
   position_id: number | string;
   branch_id: number | string;
   department_id?: number | string;
@@ -61,6 +62,7 @@ function RegisterPage() {
     employee_id: "",
     email: "",
     contact: "",
+    date_hired: "",
     department_id: "",
     position_id: 0,
     branch_id: 0,
@@ -74,6 +76,7 @@ function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState<{
     [key: string]: any;
   }>({});
+  const signaturePadRef = useRef<SignaturePadRef>(null);
 
   // Helper function to check if branch is HO, Head Office, or none
   const isBranchHOOrNone = (branchId: string | number): boolean => {
@@ -317,6 +320,11 @@ function RegisterPage() {
       return;
     }
 
+    if (!formData.date_hired.trim()) {
+      showAlert("Missing Information", "Date hired is required!", "error");
+      return;
+    }
+
     if (!formData.position_id) {
       showAlert("Missing Information", "Please select your position!", "error");
       return;
@@ -372,8 +380,9 @@ function RegisterPage() {
       return;
     }
 
-    // Validate signature
-    if (!formData.signature) {
+    // Validate signature - check both formData and ref (SignaturePad stores locally)
+    const signatureToValidate = signaturePadRef.current?.getSignature() || formData.signature;
+    if (!signatureToValidate) {
       setSignatureError(true);
       showAlert(
         "Signature Required",
@@ -385,6 +394,9 @@ function RegisterPage() {
 
     setIsRegisterButtonClicked(true);
     // Then send the POST request with the user registration data
+
+    // Get the current signature from SignaturePad (may be local, not in formData yet)
+    const currentSignature = signaturePadRef.current?.getSignature() || formData.signature;
 
     const formDataToUpload = new FormData();
 
@@ -398,6 +410,7 @@ function RegisterPage() {
     );
     formDataToUpload.append("email", formData.email);
     formDataToUpload.append("contact", formData.contact);
+    formDataToUpload.append("date_hired", formData.date_hired);
     formDataToUpload.append("position_id", String(formData.position_id));
     formDataToUpload.append("branch_id", String(formData.branch_id));
     formDataToUpload.append("department_id", String(formData.department_id));
@@ -408,10 +421,10 @@ function RegisterPage() {
     );
 
     // Convert signature data URL to File object (PNG) for binary upload
-    if (formData.signature) {
+    if (currentSignature) {
       try {
         const signatureFile = dataURLtoFile(
-          formData.signature,
+          currentSignature,
           "signature.png"
         );
 
@@ -444,6 +457,7 @@ function RegisterPage() {
               employee_id: "",
               email: "",
               contact: "",
+              date_hired: "",
               position_id: 0,
               department_id: "",
               branch_id: 0,
@@ -779,6 +793,26 @@ function RegisterPage() {
                       )}
                     </div>
 
+                    <div className="space-y-2 w-1/2">
+                      <Label htmlFor="date_hired">Date Hired</Label>
+                      <Input
+                        id="date_hired"
+                        type="date"
+                        value={formData.date_hired}
+                        onChange={(e) => {
+                          setFormData({ ...formData, date_hired: e.target.value });
+                          validateField("date_hired", e.target.value);
+                        }}
+                        className={fieldErrors?.date_hired ? "border-red-500 cursor-pointer" : ""}
+                        
+                      />
+                      {fieldErrors?.date_hired && (
+                        <p className="text-sm text-red-500">
+                          {fieldErrors?.date_hired}
+                        </p>
+                      )}
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="position">Position</Label>
                       <Combobox
@@ -941,6 +975,7 @@ function RegisterPage() {
                     <div className="space-y-2">
                       <Label htmlFor="signature">Digital Signature *</Label>
                       <SignaturePad
+                        ref={signaturePadRef}
                         value={formData.signature}
                         onChangeAction={(signature) => {
                           // Clear signature when null is passed (from Clear button)

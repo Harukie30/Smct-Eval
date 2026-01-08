@@ -579,6 +579,63 @@ export default function ViewEmployeeModal({
               </Card>
             )}
 
+            {/* Date Hired Card */}
+            {((employee as any).date_hired || (employee as any).dateHired || (employee as any).hireDate) && (
+              <Card
+                className={`${
+                  isAdminVariant
+                    ? "bg-slate-50 border-2 border-slate-300 shadow-md hover:shadow-lg"
+                    : "bg-white border border-gray-200 shadow-sm hover:shadow-md"
+                } transition-shadow`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        isAdminVariant ? "bg-slate-200" : "bg-amber-100"
+                      }`}
+                    >
+                      <Calendar
+                        className={`w-5 h-5 ${
+                          isAdminVariant ? "text-slate-700" : "text-amber-600"
+                        }`}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <Label
+                        className={`text-xs font-medium uppercase tracking-wide ${
+                          isAdminVariant ? "text-slate-600" : "text-gray-500"
+                        }`}
+                      >
+                        Date Hired
+                      </Label>
+                      <p
+                        className={`text-sm font-medium mt-1 ${
+                          isAdminVariant ? "text-slate-800" : "text-black"
+                        }`}
+                      >
+                        {(() => {
+                          const dateHired = (employee as any).date_hired || (employee as any).dateHired || (employee as any).hireDate;
+                          if (!dateHired) return "Not Assigned";
+                          try {
+                            const date = new Date(dateHired);
+                            if (isNaN(date.getTime())) return "Not Assigned";
+                            return date.toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            });
+                          } catch {
+                            return "Not Assigned";
+                          }
+                        })()}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Created Date Card */}
             {employee.created_at && (
               <Card
@@ -607,7 +664,7 @@ export default function ViewEmployeeModal({
                           isAdminVariant ? "text-slate-600" : "text-gray-500"
                         }`}
                       >
-                        Created Date
+                        Date hired
                       </Label>
                       <p
                         className={`text-sm font-medium mt-1 ${

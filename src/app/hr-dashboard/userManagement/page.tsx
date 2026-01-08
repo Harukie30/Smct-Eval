@@ -497,6 +497,9 @@ export default function UserManagementTab() {
       );
       formDataToUpload.append("email", newUser.email);
       formDataToUpload.append("contact", newUser.contact);
+      if (newUser.date_hired) {
+        formDataToUpload.append("date_hired", newUser.date_hired);
+      }
       formDataToUpload.append("position_id", String(newUser.position_id));
       formDataToUpload.append("branch_id", String(newUser.branch_id));
       formDataToUpload.append("department_id", String(newUser.department_id));

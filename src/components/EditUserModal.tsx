@@ -30,6 +30,7 @@ interface User {
   username?: string;
   password?: string;
   contact?: string;
+  date_hired?: string;
   isActive?: boolean;
   signature?: string;
   employeeId?: number;
@@ -69,6 +70,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     username: "",
     password: "",
     contact: "",
+    date_hired: "",
     isActive: true,
     signature: "",
     employeeId: undefined,
@@ -727,6 +729,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         username: user.username || "",
         password: user.password || "",
         contact: user.contact || "",
+        date_hired: (user as any).date_hired || (user as any).dateHired || "",
         isActive:
           user.isActive !== undefined
             ? user.isActive
@@ -1268,6 +1271,23 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 <p className="text-xs text-amber-600">
                   ⚠️ Number must start with "09"
                 </p>
+              )}
+            </div>
+
+            {/* Date Hired */}
+            <div className="space-y-2 w-1/2">
+              <Label htmlFor="date_hired">Date Hired</Label>
+              <Input
+                id="date_hired"
+                type="date"
+                value={formData.date_hired || ""}
+                onChange={(e) => {
+                  handleInputChange("date_hired", e.target.value);
+                }}
+                className={errors.date_hired ? "border-red-500 cursor-pointer" : "bg-white cursor-pointer"}
+              />
+              {errors.date_hired && (
+                <p className="text-sm text-red-500">{errors.date_hired}</p>
               )}
             </div>
 
