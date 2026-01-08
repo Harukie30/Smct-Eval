@@ -126,6 +126,26 @@ export default function Step1({
     );
   };
 
+  // Auto-populate Date Hired from employee data
+  useEffect(() => {
+    if (employee && !data.hireDate) {
+      const dateHired = (employee as any).date_hired || (employee as any).dateHired || (employee as any).hireDate;
+      if (dateHired) {
+        try {
+          // Convert to YYYY-MM-DD format for date input
+          const date = new Date(dateHired);
+          if (!isNaN(date.getTime())) {
+            const formattedDate = date.toISOString().split("T")[0];
+            updateDataAction({ hireDate: formattedDate });
+          }
+        } catch (error) {
+          console.error("Error parsing date_hired:", error);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employee?.id]);
+
   // Check for existing quarterly reviews when employee changes
   useEffect(() => {
     const checkQuarterlyReviews = async () => {
@@ -735,8 +755,8 @@ export default function Step1({
               id="hireDate"
               type="date"
               value={data.hireDate || ""}
-              onChange={(e) => updateDataAction({ hireDate: e.target.value })}
-              className="bg-white"
+              readOnly
+              className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
           </div>
 
