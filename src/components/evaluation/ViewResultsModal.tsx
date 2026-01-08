@@ -1902,11 +1902,24 @@ export default function ViewResultsModal({
                         className="text-gray-900 print-value"
                         style={{ fontSize: "11px" }}
                       >
-                        {submission.employee?.date_hired
-                          ? new Date(
-                              submission.employee?.date_hired
-                            ).toLocaleDateString()
-                          : "Not specified"}
+                        {(() => {
+                          const dateHired = submission?.employee?.date_hired || 
+                                           submission?.employee?.dateHired || 
+                                           submission?.employee?.hireDate ||
+                                           (submission as any)?.hireDate;
+                          if (!dateHired) return "Not specified";
+                          try {
+                            const date = new Date(dateHired);
+                            if (isNaN(date.getTime())) return "Not specified";
+                            return date.toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            });
+                          } catch {
+                            return "Not specified";
+                          }
+                        })()}
                       </p>
                     </div>
                     <div className="print-info-row">
