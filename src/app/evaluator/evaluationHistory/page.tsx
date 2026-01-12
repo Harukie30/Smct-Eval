@@ -537,7 +537,7 @@ export default function OverviewTab() {
                 variant={selectedQuarter === "" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedQuarter("")}
-                className={`text-xs ${
+                className={`text-xs cursor-pointer ${
                   selectedQuarter === ""
                     ? "bg-blue-600 text-white border-blue-600 shadow-md"
                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
@@ -551,14 +551,14 @@ export default function OverviewTab() {
                   variant={selectedQuarter === quarter ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedQuarter(quarter)}
-                  className={`text-xs font-medium transition-all duration-200 ${
+                  className={`text-xs font-medium transition-all duration-200 cursor-pointer ${
                     selectedQuarter === quarter
                       ? `${getQuarterColor(
                           quarter
-                        )} border-2 shadow-md transform scale-110 `
+                        )} border-2 shadow-md bg-blue-600 text-white transform scale-110 `
                       : `${getQuarterColor(
                           quarter
-                        )} border border-gray-300 hover:shadow-sm hover:scale-105`
+                        )} border border-gray-300 hover:shadow-sm hover:scale-105 bg-white text-gray-700 cursor-pointer`
                   }`}
                 >
                   {quarter === "3" || quarter === "5" ? "M" + quarter : quarter}
@@ -797,7 +797,7 @@ export default function OverviewTab() {
                           </TableCell>
                           <TableCell className="w-1/6 text-center">
                             <Button
-                              className="bg-blue-500 text-white hover:bg-green-700 hover:text-white"
+                              className="bg-blue-500 text-white hover:bg-green-700 hover:text-white cursor-pointer"
                               size="sm"
                               onClick={() => handleViewEvaluation(submission)}
                             >

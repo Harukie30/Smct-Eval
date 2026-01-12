@@ -827,7 +827,7 @@ export default function performanceReviews() {
                                     onClick={() =>
                                       handleViewEvaluation(submission)
                                     }
-                                    className="text-white bg-blue-500 hover:text-white hover:bg-blue-600"
+                                    className="text-white bg-blue-500 hover:text-white hover:bg-blue-600 cursor-pointer"
                                   >
                                     <Eye className="w-4 h-4" />
                                     View

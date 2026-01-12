@@ -448,7 +448,7 @@ export default function OverviewTab() {
               size="sm"
               onClick={refresh}
               disabled={isRefreshingOverview}
-              className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white"
+              className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white cursor-pointer"
             >
               <svg
                 className="h-4 w-4"
@@ -460,7 +460,7 @@ export default function OverviewTab() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15 "
                 />
               </svg>
               <span>Refresh</span>
@@ -775,7 +775,7 @@ export default function OverviewTab() {
                           </TableCell>
                           <TableCell className="w-1/6 text-right pl-1 pr-4">
                             <Button
-                              className="bg-blue-500 text-white hover:bg-green-700 hover:text-white"
+                              className="bg-blue-500 text-white hover:bg-green-700 hover:text-white cursor-pointer"
                               size="sm"
                               onClick={() => handleViewEvaluation(submission)}
                             >

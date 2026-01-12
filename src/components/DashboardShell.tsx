@@ -1133,7 +1133,7 @@ export default function DashboardShell(props: DashboardShellProps) {
             variant="ghost"
             size="lg"
             onClick={() => setIsHelpButtonsVisible(!isHelpButtonsVisible)}
-            className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0 animate-bounce-small cursor-pointer"
+            className="fixed bottom-20 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0 animate-bounce-small cursor-pointer"
           >
             <img
               src="/question.png"
@@ -1160,7 +1160,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         size="lg"
         onClick={isHelpButtonsVisible ? () => setIsGuideModalOpen(true) : undefined}
         disabled={!isHelpButtonsVisible}
-        className={`fixed bottom-32 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+        className={`fixed bottom-44 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
           isHelpButtonsVisible
             ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-0 cursor-pointer"
             : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"
@@ -1186,7 +1186,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         size="lg"
         onClick={isHelpButtonsVisible ? () => setIsContactDevsModalOpen(true) : undefined}
         disabled={!isHelpButtonsVisible}
-        className={`fixed bottom-48 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+        className={`fixed bottom-60 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
           isHelpButtonsVisible
             ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-100 cursor-pointer"
             : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"
