@@ -87,6 +87,7 @@ function HRLayout({ children }: { children: React.ReactNode }) {
       sidebarItems={sidebarItems}
       activeItemId={active}
       onChangeActive={setActiveWithRefresh}
+      dashboardType="hr"
     >
       {children}
     </DashboardShell>

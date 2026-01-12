@@ -354,12 +354,12 @@ export default function SignatureResetRequestsTab() {
               size="sm"
               onClick={handleRefresh}
               disabled={refresh}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-green-700 text-white hover:text-white border-blue-600 hover:border-green-700"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-green-700 text-white hover:text-white border-blue-600 hover:border-green-700 cursor-pointer"
             >
               <RefreshCw
                 className={`h-4 w-4 ${refresh ? "animate-spin" : ""}`}
               />
-              Refresh
+              <span className="cursor-pointer">Refresh</span>
             </Button>
           </div>
         </CardHeader>
@@ -381,7 +381,7 @@ export default function SignatureResetRequestsTab() {
               placeholder="All Requests"
               searchPlaceholder="Search status..."
               emptyText="No status found."
-              className="w-[180px]"
+              className="w-[180px] cursor-pointer"
             />
           </div>
 
@@ -528,7 +528,7 @@ export default function SignatureResetRequestsTab() {
                             variant="outline"
                             size="sm"
                             onClick={() => openApproveModal(request)}
-                            className="text-green-600 border-green-300 hover:bg-green-50"
+                            className="text-green-600 border-green-300 hover:bg-green-50 cursor-pointer"
                           >
                             <Check className="h-4 w-4 mr-1" />
                             Accept Request
@@ -537,7 +537,7 @@ export default function SignatureResetRequestsTab() {
                             variant="outline"
                             size="sm"
                             onClick={() => openRejectModal(request)}
-                            className="text-red-600 border-red-300 hover:bg-red-50"
+                            className="text-red-600 border-red-300 hover:bg-red-50 cursor-pointer"
                           >
                             <X className="h-4 w-4 mr-1" />
                             Reject Request
@@ -588,12 +588,13 @@ export default function SignatureResetRequestsTab() {
             <Button
               variant="outline"
               onClick={() => setIsApproveModalOpen(false)}
+              className="cursor-pointer"
             >
               Cancel
             </Button>
             <Button
               onClick={handleApprove}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 cursor-pointer"
             >
               <Check className="h-4 w-4 mr-2" />
               Approve
@@ -622,10 +623,11 @@ export default function SignatureResetRequestsTab() {
             <Button
               variant="outline"
               onClick={() => setIsRejectModalOpen(false)}
+              className="cursor-pointer bg-blue-600 hover:bg-green-700 text-white hover:text-white"
             >
               Cancel
             </Button>
-            <Button onClick={handleReject} variant="destructive">
+            <Button onClick={handleReject} variant="destructive" className="cursor-pointer ">
               <X className="h-4 w-4 mr-2" />
               Reject
             </Button>

@@ -422,7 +422,7 @@ export default function OverviewTab() {
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                 />
               </svg>
-              <span>Refresh</span>
+              <span className="cursor-pointer">Refresh</span>
             </Button>
           </div>
 
@@ -462,14 +462,14 @@ export default function OverviewTab() {
           {/* Year Filter */}
           <div className="mb-6 mt-3">
             <div className="flex items-center gap-4">
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-gray-700 cursor-pointer">
                 Filter by Year:
               </span>
               <Select
                 value={String(selectedYear)}
                 onValueChange={(value: any) => setSelectedYear(value)}
               >
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[180px] cursor-pointer">
                   <SelectValue placeholder="Select a year " />
                 </SelectTrigger>
                 <SelectContent>
@@ -497,7 +497,7 @@ export default function OverviewTab() {
                   selectedQuarter === ""
                     ? "bg-blue-600 text-white border-blue-600 shadow-md"
                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                }`}
+                } cursor-pointer`}
               >
                 All Quarters
               </Button>
@@ -515,7 +515,7 @@ export default function OverviewTab() {
                       : `${getQuarterColor(
                           quarter
                         )} border border-gray-300 hover:shadow-sm hover:scale-102`
-                  }`}
+                  } cursor-pointer`}
                 >
                   {quarter === "3" || quarter === "5" ? "M" + quarter : quarter}
                 </Button>

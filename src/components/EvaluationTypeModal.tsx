@@ -75,7 +75,7 @@ export default function EvaluationTypeModal({
                   </ul>
                 </div>
                 <Button 
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white group-hover:scale-105 transition-transform"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white group-hover:scale-105 transition-transform cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSelectEmployee();
@@ -114,7 +114,7 @@ export default function EvaluationTypeModal({
                   </ul>
                 </div>
                 <Button 
-                  className="w-full bg-green-600 hover:bg-green-700 text-white group-hover:scale-105 transition-transform"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white group-hover:scale-105 transition-transform cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleSelectManager();
@@ -132,7 +132,7 @@ export default function EvaluationTypeModal({
           <Button 
             variant="outline" 
             onClick={onCloseAction}
-            className="px-6 bg-blue-500 hover:bg-blue-600 text-white hover:text-white"
+            className="px-6 bg-blue-500 hover:bg-blue-600 text-white hover:text-white cursor-pointer"
           >
             Cancel
           </Button>

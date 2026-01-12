@@ -485,17 +485,40 @@ export default function UserManagementTab() {
 
   const handleAddUser = async (newUser: any) => {
     try {
-      const addUser = await apiService.addUser(newUser);
+      // Convert plain object to FormData - matching register page pattern
+      const formDataToUpload = new FormData();
+      formDataToUpload.append("fname", newUser.fname);
+      formDataToUpload.append("lname", newUser.lname);
+      formDataToUpload.append("username", newUser.username);
+      // Remove dash from employee_id before sending (keep only numbers)
+      formDataToUpload.append(
+        "employee_id",
+        newUser.employee_id.replace(/-/g, "")
+      );
+      formDataToUpload.append("email", newUser.email);
+      formDataToUpload.append("contact", newUser.contact);
+      if (newUser.date_hired) {
+        formDataToUpload.append("date_hired", newUser.date_hired);
+      }
+      formDataToUpload.append("position_id", String(newUser.position_id));
+      formDataToUpload.append("branch_id", String(newUser.branch_id));
+      formDataToUpload.append("department_id", String(newUser.department_id));
+      formDataToUpload.append("password", newUser.password);
+      // role_id is only for admin/HR adding users (not in register)
+      formDataToUpload.append("role_id", String(newUser.role_id));
+
+      const addUser = await apiService.addUser(formDataToUpload);
 
       await refreshUserData();
 
       toastMessages.user.created(newUser.fname);
       setIsAddUserModalOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding user:", error);
+      console.error("Error response:", error.response?.data);
       toastMessages.generic.error(
         "Add Failed",
-        "Failed to add user. Please try again."
+        error.response?.data?.message || "Failed to add user. Please try again."
       );
       throw error;
     }
@@ -557,7 +580,7 @@ export default function UserManagementTab() {
             <Button
               variant={tab === "active" ? "default" : "outline"}
               onClick={() => handleTabChange("active")}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 cursor-pointer"
             >
               <span>👥</span>
               Active Users ({activeTotalItems})
@@ -565,7 +588,7 @@ export default function UserManagementTab() {
             <Button
               variant={tab === "new" ? "default" : "outline"}
               onClick={() => handleTabChange("new")}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 cursor-pointer"
             >
               <span>🆕</span>
               New Registrations ({pendingTotalItems})
@@ -635,6 +658,7 @@ export default function UserManagementTab() {
                       placeholder="All branches"
                       searchPlaceholder="Search branches..."
                       emptyText="No branches found."
+                      className="cursor-pointer"
                     />
                   </div>
                   <div>
@@ -647,6 +671,7 @@ export default function UserManagementTab() {
                       placeholder="All departments"
                       searchPlaceholder="Search departments..."
                       emptyText="No departments found."
+                      className="cursor-pointer"
                     />
                   </div>
                   <div>
@@ -669,7 +694,7 @@ export default function UserManagementTab() {
                     variant="outline"
                     onClick={() => refreshUserData(true)}
                     disabled={refresh}
-                    className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2"
+                    className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2 cursor-pointer"
                   >
                     {refresh ? (
                       <>
@@ -715,7 +740,7 @@ export default function UserManagementTab() {
                   </Button>
                   <Button
                     onClick={() => setIsAddUserModalOpen(true)}
-                    className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2"
+                    className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2 cursor-pointer"
                   >
                     <Plus className="h-5 w-5 font-bold " />
                     Add User
@@ -970,7 +995,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700"
+                                      className="text-green-600 hover:text-green-700 cursor-pointer"
                                       onClick={() => {
                                         setEmployeeToView(employee);
                                         setIsViewEmployeeModalOpen(true);
@@ -982,7 +1007,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700"
+                                      className="text-green-600 hover:text-green-700 cursor-pointer"
                                       onClick={() => {
                                         setIsEvaluationTypeModalOpen(true);
                                         setSelectedEmployeeForEvaluation(
@@ -996,7 +1021,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-blue-600 hover:text-blue-700"
+                                      className="text-blue-600 hover:text-blue-700 cursor-pointer"
                                       onClick={() => openEditModal(employee)}
                                       disabled={deletingUserId !== null}
                                     >
@@ -1005,7 +1030,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-red-600 hover:text-red-700"
+                                      className="text-red-600 hover:text-red-700 cursor-pointer"
                                       onClick={() => openDeleteModal(employee)}
                                       disabled={deletingUserId !== null}
                                     >
@@ -1099,7 +1124,7 @@ export default function UserManagementTab() {
                       value={statusFilter}
                       onValueChange={(value) => setStatusFilter(value)}
                     >
-                      <SelectTrigger className="w-48">
+                      <SelectTrigger className="w-48 cursor-pointer">
                         <SelectValue placeholder="Filter by status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1116,7 +1141,7 @@ export default function UserManagementTab() {
                       variant="outline"
                       onClick={() => refreshUserData(true)}
                       disabled={refresh}
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
                     >
                       {refresh ? (
                         <>
@@ -1350,7 +1375,7 @@ export default function UserManagementTab() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="text-white bg-green-500 hover:text-white hover:bg-green-600"
+                                        className="text-white bg-green-500 hover:text-white hover:bg-green-600 cursor-pointer"
                                         onClick={() =>
                                           handleApproveRegistration(
                                             Number(account.id),
@@ -1363,7 +1388,7 @@ export default function UserManagementTab() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="text-white bg-red-500 hover:bg-red-600 hover:text-white"
+                                        className="text-white bg-red-500 hover:bg-red-600 hover:text-white cursor-pointer"
                                         onClick={() =>
                                           handleRejectRegistration(
                                             Number(account.id),
@@ -1379,7 +1404,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700"
+                                      className="text-green-600 hover:text-green-700 cursor-pointer"
                                       onClick={() =>
                                         handleApproveRegistration(
                                           Number(account.id),
@@ -1514,12 +1539,12 @@ export default function UserManagementTab() {
                   setIsDeleteModalOpen(false);
                   setEmployeeToDelete(null);
                 }}
-                className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
+                className="text-white bg-blue-600 hover:text-white hover:bg-green-500 cursor-pointer"
               >
                 Cancel
               </Button>
               <Button
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
                 onClick={() => handleDeleteEmployee(employeeToDelete)}
               >
                 ❌ Delete Permanently

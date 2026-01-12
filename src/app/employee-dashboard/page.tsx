@@ -133,6 +133,10 @@ export default function OverviewTab() {
       }
 
       setDebouncedSearchTerm(searchTerm);
+      // Reset to page 1 when search term changes (if there's a value)
+      if (searchTerm.trim() !== "") {
+        setCurrentPage(1);
+      }
     }, 500);
 
     return () => clearTimeout(handler);

@@ -105,6 +105,10 @@ export default function OverviewTab() {
     const handler = setTimeout(() => {
       searchTerm === "" ? currentPage : setCurrentPage(1);
       setDebouncedSearchTerm(searchTerm);
+      // Reset to page 1 when search term changes (if there's a value)
+      if (searchTerm.trim() !== "") {
+        setCurrentPage(1);
+      }
     }, 500);
 
     return () => clearTimeout(handler);
@@ -297,7 +301,7 @@ export default function OverviewTab() {
               <Button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer disabled:cursor-not-allowed"
                 title="Refresh evaluation records"
               >
                 {refreshing ? (

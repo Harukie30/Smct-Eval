@@ -25,7 +25,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
+import { Line, LineChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/useToast";
 import {
@@ -351,7 +351,7 @@ export default function performanceReviews() {
           {submissions.length > 0 && (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
               {/* Performance Trend Chart */}
-              <Card className="h-fit">
+              <Card className="h-fit max-w-full">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     📈 Performance Trend
@@ -360,7 +360,7 @@ export default function performanceReviews() {
                     Your rating progression over time
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-6">
                   {chartData.length === 0 ? (
                     <div className="h-64 flex items-center justify-center">
                       <div className="flex flex-col items-center justify-center gap-4">
@@ -387,12 +387,16 @@ export default function performanceReviews() {
                       </div>
                     </div>
                   ) : (
-                    <div className="h-80">
-                      <ChartContainer config={chartConfig}>
-                        <LineChart
-                          data={chartData}
-                          margin={{ left: 20, right: 20, top: 20, bottom: 60 }}
-                        >
+                    <div className="w-full" style={{ height: '320px', minHeight: '320px', maxHeight: '320px', position: 'relative' }}>
+                      <ChartContainer 
+                        config={chartConfig}
+                        className="w-full h-full"
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={chartData}
+                            margin={{ left: 20, right: 20, top: 20, bottom: 60 }}
+                          >
                           <CartesianGrid
                             strokeDasharray="2 2"
                             stroke="#e5e7eb"
@@ -459,7 +463,8 @@ export default function performanceReviews() {
                               fill: "#ffffff",
                             }}
                           />
-                        </LineChart>
+                          </LineChart>
+                        </ResponsiveContainer>
                       </ChartContainer>
                     </div>
                   )}

@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Combobox } from "@/components/ui/combobox";
 import { User } from "../../../contexts/UserContext";
 import apiService from "@/lib/apiService";
+import { set } from "date-fns";
 import EvaluationTypeModal from "@/components/EvaluationTypeModal";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import EvaluationForm from "@/components/evaluation";
@@ -37,7 +38,7 @@ export default function EmployeesTab() {
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Add refresh trigger
 
   //data employees
-  const [employees, setEmployees] = useState<User | null>(null);
+  const [employees, setEmployees] = useState<User[] | null>(null);
   const [positions, setPositions] = useState<
     {
       value: string | number;
@@ -73,40 +74,60 @@ export default function EmployeesTab() {
   const [selectedEmployeeForEvaluation, setSelectedEmployeeForEvaluation] =
     useState<User | null>(null);
 
+  // Fetch all employees to get unique positions (without pagination limit)
   useEffect(() => {
-    const fetchPositions = async () => {
+    const fetchPositionsFromEmployees = async () => {
       try {
-        setIsRefreshing(true);
-        const positionsRes = await apiService.getPositions();
-        setPositions(positionsRes);
-
+        // Fetch all employees with a high limit to get all unique positions
         const res = await apiService.getAllEmployeeByAuth(
-          employeeSearch,
-          currentPage,
-          itemsPerPage,
-          Number(positionFilter)
+          "", // no search filter
+          1000, // high limit to get all employees
+          1, // first page
+          undefined // no position filter
         );
 
-        setEmployees(res.data);
-        setOverviewTotal(res.total || 0);
-        setTotalPages(res.last_page || 1);
-        setPerPage(res.per_page || itemsPerPage);
+        if (!res) {
+          setPositions([]);
+          return;
+        }
 
-        setIsRefreshing(false);
+        let employeesData: any[] = [];
+        if (res.data && Array.isArray(res.data)) {
+          employeesData = res.data;
+        } else if (Array.isArray(res)) {
+          employeesData = res;
+        }
+
+        // Extract unique positions from employees
+        const uniquePositionsMap = new Map<number | string, { value: number | string; label: string }>();
+        
+        employeesData.forEach((employee: any) => {
+          if (employee.positions) {
+            const positionId = employee.positions.id || employee.positions.value || employee.position_id;
+            const positionLabel = employee.positions.label || employee.positions.name || employee.position;
+            
+            if (positionId && positionLabel && !uniquePositionsMap.has(positionId)) {
+              uniquePositionsMap.set(positionId, {
+                value: positionId,
+                label: positionLabel,
+              });
+            }
+          }
+        });
+
+        // Convert Map to Array and sort by label
+        const uniquePositions = Array.from(uniquePositionsMap.values()).sort((a, b) => 
+          a.label.localeCompare(b.label)
+        );
+
+        setPositions(uniquePositions);
       } catch (error) {
-        console.error("Error fetching positions:", error);
-        // Set default values on error
-        setEmployees(null);
-        setOverviewTotal(0);
-        setTotalPages(1);
-        setPerPage(itemsPerPage);
-        setIsRefreshing(false);
-      } finally {
-        setIsRefreshing(false);
+        console.error("Error fetching positions from employees:", error);
+        setPositions([]);
       }
     };
-    fetchPositions();
-  }, []);
+    fetchPositionsFromEmployees();
+  }, [refreshTrigger]); // Refetch when refresh trigger changes
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -115,31 +136,65 @@ export default function EmployeesTab() {
         const res = await apiService.getAllEmployeeByAuth(
           debouncedSearch,
           itemsPerPage,
-          Number(positionFilter)
+          currentPage,
+          Number(positionFilter) || undefined
         );
 
-        // Ensure we have an array
-        const employeesData = Array.isArray(res.data) ? res.data : [];
+        // Add safety checks to prevent "Cannot read properties of undefined" error
+        if (!res) {
+          setEmployees([]);
+          setOverviewTotal(0);
+          setTotalPages(1);
+          setPerPage(itemsPerPage);
+          setIsRefreshing(false);
+          return;
+        }
+
+        // getAllEmployeeByAuth returns: { data: [...], total, last_page, per_page }
+        // Follow the same pattern as HR dashboard
+        let employeesData: any[] = [];
+        let total = 0;
+        let lastPage = 1;
+        let perPageValue = itemsPerPage;
+
+        if (res.data && Array.isArray(res.data)) {
+          // Standard response structure from getAllEmployeeByAuth
+          employeesData = res.data;
+          total = res.total || 0;
+          lastPage = res.last_page || 1;
+          perPageValue = res.per_page || itemsPerPage;
+        } else if (Array.isArray(res)) {
+          // Response is directly an array (fallback)
+          employeesData = res;
+          total = res.length;
+          lastPage = 1;
+          perPageValue = itemsPerPage;
+        }
+
         setEmployees(employeesData);
-        setOverviewTotal(res.total || 0);
-        setTotalPages(res.last_page || 1);
-        setPerPage(res.per_page || itemsPerPage);
+        setOverviewTotal(total);
+        setTotalPages(lastPage);
+        setPerPage(perPageValue);
 
         setIsRefreshing(false);
       } catch (error) {
         console.error("Error fetching employees:", error);
         // Set default values on error
-        setEmployees(null);
+        setEmployees([]);
         setOverviewTotal(0);
         setTotalPages(1);
         setPerPage(itemsPerPage);
         setIsRefreshing(false);
-      } finally {
-        setIsRefreshing(false);
       }
     };
     fetchEmployees();
-  }, [positionFilter, debouncedSearch, currentPage, isRefreshing]);
+  }, [
+    positionFilter,
+    debouncedSearch,
+    currentPage,
+    itemsPerPage,
+    refreshTrigger,
+  ]); // Add refreshTrigger to dependencies
 
   useEffect(() => {
     const debounceSearch = setTimeout(() => {
@@ -148,108 +203,6 @@ export default function EmployeesTab() {
     return () => clearTimeout(debounceSearch);
   }, [employeeSearch]);
 
-  // Get all employees from API (passed as prop)
-  // const allEmployees = useMemo(() => {
-  //   if (!employees || employees.length === 0) return [];
-
-  //   return employees.map((e: any) => ({
-  //     id: e.employeeId || e.id,
-  //     name: e.name || `${e.fname || ""} ${e.lname || ""}`.trim(),
-  //     email: e.email,
-  //     position: e.positions?.label || e.position?.name || e.position || "N/A",
-  //     department:
-  //       e.departments?.department_name ||
-  //       e.department?.name ||
-  //       e.department ||
-  //       "N/A",
-  //     branch:
-  //       (e.branches &&
-  //         Array.isArray(e.branches) &&
-  //         e.branches[0]?.branch_name) ||
-  //       e.branch?.name ||
-  //       e.branch ||
-  //       "N/A",
-  //     role:
-  //       (e.roles && Array.isArray(e.roles) && e.roles[0]?.name) ||
-  //       e.role?.name ||
-  //       e.role ||
-  //       "N/A",
-  //     isActive: e.isActive !== false,
-  //     avatar: e.avatar,
-  //     created_at: e.created_at, // Include created_at for highlighting
-  //   }));
-  // }, []);
-
-  // Extract unique positions from employees
-  // const uniquePositions = useMemo(() => {
-  //   const positionSet = new Set<string>();
-  //   allEmployees.forEach((e: any) => {
-  //     const pos = e.position;
-  //     if (pos && typeof pos === "string" && pos.trim() !== "") {
-  //       positionSet.add(pos);
-  //     }
-  //   });
-  // Also add positions from the positions prop if they're strings
-  //   positions.forEach((pos: any) => {
-  //     const posName =
-  //       typeof pos === "string" ? pos : pos?.name || String(pos || "");
-  //     if (posName && typeof posName === "string" && posName.trim() !== "") {
-  //       positionSet.add(posName);
-  //     }
-  //   });
-  //   return Array.from(positionSet).sort();
-  // }, [allEmployees, positions]);
-
-  // Use the custom hook for filtering
-  // const filteredEmployees = useEmployeeFiltering({
-  //   currentUser,
-  //   employees: allEmployees,
-  //   searchQuery: employeeSearch,
-  //   selectedDepartment,
-  // });
-
-  // const filtered: Employee[] = useMemo(() => {
-  //   return filteredEmployees
-  //     .filter((e: any) => {
-  //       // Filter by position if selected
-  //       if (selectedPosition && e.position !== selectedPosition) {
-  //         return false;
-  //       }
-  //       return true;
-  //     })
-  //     .map((e: any) => {
-  //       // const updatedEmployee = getUpdatedEmployeeData(e);
-
-  //       return {
-  //   id: updatedEmployee.employeeId || updatedEmployee.id,
-  //   name: updatedEmployee.name,
-  //   email: updatedEmployee.email,
-  //   position: updatedEmployee.position,
-  //   department: updatedEmployee.department,
-  //   role: updatedEmployee.role,
-  //   avatar: updatedEmployee.avatar,
-  //   branch: updatedEmployee.branch || "N/A",
-  //   created_at: updatedEmployee.created_at, // Include created_at for highlighting
-  //       };
-  //     });
-  // }, [filteredEmployees, selectedPosition]);
-
-  // Pagination calculations
-  // const employeesTotal = filtered.length;
-  // const employeesTotalPages = Math.ceil(employeesTotal / itemsPerPage);
-  // const employeesStartIndex = (employeesPage - 1) * itemsPerPage;
-  // const employeesEndIndex = employeesStartIndex + itemsPerPage;
-  // const employeesPaginated = filtered.slice(
-  //   employeesStartIndex,
-  //   employeesEndIndex
-  // );
-
-  // Reset to page 1 when filters/search change
-  // useEffect(() => {
-  //   setEmployeesPage(1);
-  // }, [employeeSearch, selectedDepartment, selectedPosition]);
-
-  // Calculate new hires this month
   const newHiresThisMonth = (() => {
     const now = new Date();
     // Hire date removed - return 0 for new hires this month

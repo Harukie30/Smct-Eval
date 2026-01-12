@@ -81,6 +81,10 @@ export default function OverviewTab() {
   useEffect(() => {
     const debounceTimeout = setTimeout(() => {
       setDebouncedSearchTerm(overviewSearchTerm);
+      // Reset to page 1 when search term changes (if there's a value)
+      if (overviewSearchTerm.trim() !== "") {
+        setCurrentPage(1);
+      }
     }, 500);
     return () => clearTimeout(debounceTimeout);
   }, [overviewSearchTerm]);
@@ -92,67 +96,6 @@ export default function OverviewTab() {
     if (rating >= 3.5) return "bg-yellow-100 text-yellow-800";
     return "bg-red-100 text-red-800";
   };
-
-  // Filter submissions for overview table
-  // const filteredSubmissions = useMemo(() => {
-  //   return recentSubmissions
-  //     .filter((submission) => {
-  //       if (!overviewSearchTerm) return true;
-
-  //       const searchLower = overviewSearchTerm.toLowerCase();
-  //       const employeeName = submission.employeeName?.toLowerCase() || "";
-  //       const department =
-  //         submission.evaluationData?.department?.toLowerCase() || "";
-  //       const position =
-  //         submission.evaluationData?.position?.toLowerCase() || "";
-  //       const evaluator = (
-  //         submission.evaluationData?.supervisor ||
-  //         submission.evaluator ||
-  //         ""
-  //       ).toLowerCase();
-  //       const quarter = getQuarterFromDate(
-  //         submission.submittedAt
-  //       ).toLowerCase();
-  //       const date = new Date(submission.submittedAt)
-  //         .toLocaleDateString()
-  //         .toLowerCase();
-  //       const approvalStatus =
-  //         submission.approvalStatus ||
-  //         (submission.employeeSignature &&
-  //         (submission.evaluatorSignature ||
-  //           submission.evaluationData?.evaluatorSignature)
-  //           ? "fully approved"
-  //           : "pending");
-  //       const statusText = (
-  //         approvalStatus === "fully_approved"
-  //           ? "fully approved"
-  //           : approvalStatus === "rejected"
-  //           ? "rejected"
-  //           : "pending"
-  //       ).toLowerCase();
-
-  //
-  //       // Sort by date descending (newest first)
-  //       const dateA = new Date(a.submittedAt).getTime();
-  //       const dateB = new Date(b.submittedAt).getTime();
-  //       return dateB - dateA;
-  //     });
-  // }, [recentSubmissions, overviewSearchTerm]);
-
-  // Pagination calculations
-  // const overviewTotal = filteredSubmissions.length;
-  // const overviewTotalPages = Math.ceil(overviewTotal / itemsPerPage);
-  // const overviewStartIndex = (overviewPage - 1) * itemsPerPage;
-  // const overviewEndIndex = overviewStartIndex + itemsPerPage;
-  // const overviewPaginated = filteredSubmissions.slice(
-  //   overviewStartIndex,
-  //   overviewEndIndex
-  // );
-
-  // Reset to page 1 when search term changes
-  // useEffect(() => {
-  //   setOverviewPage(1);
-  // }, [overviewSearchTerm]);
 
   const handleRefresh = async () => {
     // await onRefresh();
@@ -473,9 +416,9 @@ export default function OverviewTab() {
                             <div>
                               <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1">
                                 <span className="font-medium text-gray-900 text-xs md:text-sm lg:text-base">
-                                  {submission.employee.fname +
-                                    " " +
-                                    submission.employee.lname}
+                                  {submission.employee?.fname && submission.employee?.lname
+                                    ? `${submission.employee.fname} ${submission.employee.lname}`
+                                    : "Unknown Employee"}
                                 </span>
                                 {isNew && (
                                   <Badge className="bg-yellow-100 text-yellow-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
@@ -552,7 +495,7 @@ export default function OverviewTab() {
                                 setSelectedSubmission(submission);
                                 setIsViewResultsModalOpen(true);
                               }}
-                              className="text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 bg-green-600 hover:bg-green-300 text-white"
+                              className="text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 bg-green-600 hover:bg-green-300 text-white cursor-pointer"
                             >
                               ☰ View
                             </Button>

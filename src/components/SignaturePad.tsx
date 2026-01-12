@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useImperativeHandle, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -24,7 +24,11 @@ interface SignaturePadProps {
   hideRequestReset?: boolean; // Hide the "Request Reset" button
 }
 
-export default function SignaturePad({
+export interface SignaturePadRef {
+  getSignature: () => string | null;
+}
+
+const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
   value,
   onChangeAction,
   className = "",
@@ -32,7 +36,7 @@ export default function SignaturePad({
   hasError = false,
   onRequestReset,
   hideRequestReset = false,
-}: SignaturePadProps) {
+}, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
@@ -41,8 +45,36 @@ export default function SignaturePad({
   const [lastDrawnSignature, setLastDrawnSignature] = useState<string | null>(
     null
   ); // Track the last drawn signature (data URL)
-  const { user } = useAuth();
+  const [localSignature, setLocalSignature] = useState<string | null>(null); // Store signature locally until save
+  const { user, refreshUser } = useAuth();
   console.log("test", user?.approvedSignatureReset);
+
+  // Refresh user data on mount if there's a pending request
+  useEffect(() => {
+    if (user?.requestSignatureReset !== 0) {
+      refreshUser();
+    }
+  }, []); // Only run on mount
+
+  // Poll for user updates when request is pending (requestSignatureReset !== 0)
+  useEffect(() => {
+    // Only poll if there's a pending request
+    if (user?.requestSignatureReset !== 0) {
+      const intervalId = setInterval(() => {
+        refreshUser();
+      }, 5000); // Poll every 5 seconds
+
+      return () => clearInterval(intervalId);
+    }
+  }, [user?.requestSignatureReset, refreshUser]);
+
+  // Expose method to get current signature
+  useImperativeHandle(ref, () => ({
+    getSignature: () => {
+      // Return local signature if exists, otherwise return value prop
+      return localSignature || value || null;
+    }
+  }));
   // Helper function to get coordinates
   const getCoordinates = (
     e:
@@ -60,8 +92,15 @@ export default function SignaturePad({
     };
   };
 
-  // Load existing signature when value changes
+  // Load existing signature when value changes (from parent/prop)
   useEffect(() => {
+    // Only sync from parent value if we don't have a local signature
+    // This prevents overwriting locally drawn signatures
+    if (localSignature) {
+      // We have a local signature, use it for preview
+      return;
+    }
+
     console.log("SignaturePad value changed:", value);
     if (value && typeof value === "string" && value.trim() !== "") {
       let imageUrl = "";
@@ -90,12 +129,12 @@ export default function SignaturePad({
       // If value changed from data URL to server path, it means it was just saved
       if (
         isFromServer &&
-        lastDrawnSignature &&
-        lastDrawnSignature.startsWith("data:")
+        (lastDrawnSignature?.startsWith("data:") || localSignature)
       ) {
         console.log("Signature was just saved! Marking as saved.");
         setIsSavedSignature(true);
         setLastDrawnSignature(null); // Clear the drawn signature since it's now saved
+        setLocalSignature(null); // Clear local signature since it's now saved
       } else {
         setIsSavedSignature(isFromServer);
       }
@@ -109,14 +148,25 @@ export default function SignaturePad({
       setPreviewImage(imageUrl);
       setHasSignature(true);
     } else if (!value || value === null || value === "") {
-      // No signature, reset state
-      console.log("No signature value, resetting");
-      setHasSignature(false);
-      setPreviewImage("");
-      setIsSavedSignature(false);
-      setLastDrawnSignature(null);
+      // No signature, reset state (only if no local signature)
+      if (!localSignature) {
+        console.log("No signature value, resetting");
+        setHasSignature(false);
+        setPreviewImage("");
+        setIsSavedSignature(false);
+        setLastDrawnSignature(null);
+      }
     }
-  }, [value, lastDrawnSignature]);
+  }, [value, lastDrawnSignature, localSignature]);
+
+  // Update preview when localSignature changes
+  useEffect(() => {
+    if (localSignature) {
+      setPreviewImage(localSignature);
+      setHasSignature(true);
+      setIsSavedSignature(false);
+    }
+  }, [localSignature]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -173,22 +223,24 @@ export default function SignaturePad({
     setHasSignature(true);
     setIsSavedSignature(false); // Newly drawn signature, not saved yet
 
-    // Convert canvas to data URL and call onChange
+    // Convert canvas to data URL and store locally (don't update parent yet)
     const canvas = canvasRef.current;
     if (canvas) {
       const dataURL = canvas.toDataURL("image/png");
       setPreviewImage(dataURL);
-      // Store as base64 string (can be saved to localStorage/JSON)
-      // If backend needs File, convert using: dataURLtoFile(dataURL, "signature.png")
-      onChangeAction(dataURL);
+      setLocalSignature(dataURL); // Store locally
+      setLastDrawnSignature(dataURL); // Track this as the drawn signature
+      // Don't call onChangeAction here - only update parent when Save is clicked
     }
   };
 
   const clearSignature = () => {
-    onChangeAction(null);
+    setLocalSignature(null);
     setHasSignature(false);
     setIsSavedSignature(false);
     setPreviewImage("");
+    setLastDrawnSignature(null);
+    onChangeAction(null); // Notify parent that signature is cleared
 
     // Small delay to ensure canvas is rendered before resetting
     setTimeout(() => {
@@ -220,17 +272,18 @@ export default function SignaturePad({
           hasError ? "border-red-300 bg-red-50" : "border-gray-300"
         }`}
       >
-        {hasSignature && previewImage ? (
+        {hasSignature && (previewImage || localSignature) ? (
           <div className="w-full h-32 bg-white rounded border border-gray-200 flex items-center justify-center overflow-hidden">
             <img
-              src={previewImage}
+              src={localSignature || previewImage}
               alt="Signature"
               className="max-w-full max-h-full object-contain"
               onError={(e) => {
-                console.error("Signature image failed to load:", previewImage);
+                console.error("Signature image failed to load:", localSignature || previewImage);
                 // If image fails to load, reset signature state
                 setHasSignature(false);
                 setPreviewImage("");
+                setLocalSignature(null);
               }}
             />
           </div>
@@ -280,14 +333,16 @@ export default function SignaturePad({
                   variant="outline"
                   size="sm"
                   onClick={clearSignature}
-                  disabled={user?.approvedSignatureReset === 0}
-                  className="text-red-600 border-red-300 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={
+                    hasSignature && isSavedSignature && user?.approvedSignatureReset === 0
+                  }
+                  className="text-red-600 border-red-300 hover:bg-red-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Clear Signature
                 </Button>
               </span>
             </TooltipTrigger>
-            {user?.approvedSignatureReset === 0 && (
+            {hasSignature && isSavedSignature && user?.approvedSignatureReset === 0 && (
               <TooltipContent>
                 <p>Needs request for reset</p>
               </TooltipContent>
@@ -304,7 +359,7 @@ export default function SignaturePad({
                     disabled={user?.requestSignatureReset !== 0}
                     size="sm"
                     onClick={onRequestReset}
-                    className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                    className="text-orange-600 border-orange-300 hover:bg-orange-50 cursor-pointer disabled:cursor-not-allowed"
                   >
                     Request Reset
                   </Button>
@@ -338,4 +393,8 @@ export default function SignaturePad({
       </div>
     </div>
   );
-}
+});
+
+SignaturePad.displayName = "SignaturePad";
+
+export default SignaturePad;

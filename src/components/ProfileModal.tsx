@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,7 @@ import {
 import { UserProfile } from "./ProfileCard";
 import { User, Save, X } from "lucide-react";
 // Removed profileService import - we'll use UserContext directly
-import SignaturePad from "@/components/SignaturePad";
+import SignaturePad, { SignaturePadRef } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/useToast";
 import LoadingAnimation from "@/components/LoadingAnimation";
 import apiService from "@/lib/apiService";
@@ -54,6 +54,7 @@ export default function ProfileModal({
   const { success } = useToast();
   const { refreshUser } = useAuth();
   const [open, setOpen] = useState(false);
+  const signaturePadRef = useRef<SignaturePadRef>(null);
   // Reset form data when profile changes
   useEffect(() => {
     setFormData((prev) => ({
@@ -126,14 +127,16 @@ export default function ProfileModal({
         "confirm_password",
         formData?.confirm_password || ""
       );
-      console.log("test", formData?.signature);
+      // Get the current signature from SignaturePad (may be local, not in formData yet)
+      const currentSignature = signaturePadRef.current?.getSignature() || formData?.signature || null;
+      console.log("test", currentSignature);
 
-      if (formData?.signature) {
-        const signature = dataURLtoFile(formData?.signature, "signature.png");
+      if (currentSignature) {
+        const signature = dataURLtoFile(currentSignature, "signature.png");
         if (signature) {
           formDataToUpload.append("signature", signature);
         }
-      } else if (formData?.signature === null || formData?.signature === "") {
+      } else if (currentSignature === null || currentSignature === "") {
         formDataToUpload.append("signature", "");
       }
 
@@ -194,6 +197,38 @@ export default function ProfileModal({
   return (
     <Dialog open={isOpen} onOpenChangeAction={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto px-6 py-6 animate-popup">
+        {/* Sticky Cancel and Save Buttons - Stay at top when scrolling */}
+        <div className="sticky top-0 z-50 flex justify-end gap-2 mb-4 -mr-6 pr-6 py-4 no-print">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancel}
+            disabled={isLoading}
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 hover:text-white text-white cursor-pointer disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            <X className="w-5 h-5 text-white" />
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 cursor-pointer disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-300"
+            onClick={handleSubmit}
+          >
+            {isLoading ? (
+              <>
+                <LoadingAnimation size="sm" variant="spinner" color="white" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>Save Changes</span>
+              </>
+            )}
+          </Button>
+        </div>
+
         <DialogHeader className="px-1 ">
           <DialogTitle className="flex items-center gap-2 text-xl bg-blue-200 px-3 py-2 rounded-lg">
             <User className="w-5 h-5" />
@@ -422,9 +457,14 @@ export default function ProfileModal({
           </Label>
           <div className="space-y-2">
             <SignaturePad
+              ref={signaturePadRef}
               value={profile?.signature || formData?.signature || null}
               onChangeAction={(signature) => {
-                setFormData({ ...formData, signature: signature });
+                // Only update formData when signature is cleared (null)
+                // For new signatures, they're stored locally until Save is clicked
+                if (signature === null) {
+                  setFormData({ ...formData, signature: null });
+                }
               }}
               className="w-full"
               required={true}
@@ -437,6 +477,9 @@ export default function ProfileModal({
           </div>
           <p className="text-sm text-gray-500">
             Update your digital signature for official documents and approvals.
+           <p className="text-sm mt-4 font-bold text-gray-500">
+            Note: If you are unsure of your new signature, clearing your signature will reset it to the default signature.
+            </p> 
           </p>
 
           {/* General Error */}
@@ -446,37 +489,6 @@ export default function ProfileModal({
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex justify-end space-x-4 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCancel}
-              disabled={isLoading}
-              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 hover:text-white text-white"
-            >
-              <X className="w-5 h-5 text-white" />
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-              onClick={handleSubmit}
-            >
-              {isLoading ? (
-                <>
-                  <LoadingAnimation size="sm" variant="spinner" color="white" />
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  <span>Save Changes</span>
-                </>
-              )}
-            </Button>
-          </div>
         </form>
       </DialogContent>
     </Dialog>

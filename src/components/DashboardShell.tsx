@@ -62,6 +62,7 @@ type DashboardShellProps = {
   profile?: UserProfile | null;
   onSaveProfile?: (updatedProfile: UserProfile) => void;
   topSummary?: React.ReactNode;
+  dashboardType?: "hr" | "admin" | "employee" | "evaluator";
 };
 
 export default function DashboardShell(props: DashboardShellProps) {
@@ -75,11 +76,13 @@ export default function DashboardShell(props: DashboardShellProps) {
     profile,
     onSaveProfile,
     topSummary,
+    dashboardType: dashboardTypeProp,
   } = props;
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const [isNotificationPanelClosing, setIsNotificationPanelClosing] = useState(false);
   const [isContactDevsModalOpen, setIsContactDevsModalOpen] = useState(false);
   const [isNotificationDetailOpen, setIsNotificationDetailOpen] =
     useState(false);
@@ -125,6 +128,7 @@ export default function DashboardShell(props: DashboardShellProps) {
 
   // Memoize dashboard type detection to avoid dependency issues
   const dashboardType = useMemo(() => {
+    if (dashboardTypeProp) return dashboardTypeProp;
     const hasFeedback = sidebarItems.some((item) => item.id === "feedback");
     const hasEvaluationRecords = sidebarItems.some(
       (item) => item.id === "evaluation-records"
@@ -147,7 +151,7 @@ export default function DashboardShell(props: DashboardShellProps) {
     } else {
       return "hr";
     }
-  }, [sidebarItems]);
+  }, [dashboardTypeProp, sidebarItems]);
 
   // Memoize boolean flags to ensure stable references
   const isEmployeeDashboard = useMemo(
@@ -346,7 +350,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsClockVisible(!isClockVisible)}
-                  className={`p-2 ${isClockVisible ? "bg-gray-100 hover:bg-gray-200" : "bg-blue-100 hover:bg-blue-200"}`}
+                  className={`p-2 cursor-pointer ${isClockVisible ? "bg-gray-100 hover:bg-gray-200" : "bg-blue-100 hover:bg-blue-200"}`}
                 >
                   <Clock className={`h-5 w-5 ${isClockVisible ? "text-gray-500" : "text-blue-600"}`} />
                 </Button>
@@ -361,10 +365,21 @@ export default function DashboardShell(props: DashboardShellProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() =>
-                  setIsNotificationPanelOpen(!isNotificationPanelOpen)
-                }
-                className="relative p-2 hover:bg-gray-100"
+                onClick={() => {
+                  if (isNotificationPanelOpen) {
+                    // Start closing animation
+                    setIsNotificationPanelClosing(true);
+                    // Close after animation completes
+                    setTimeout(() => {
+                      setIsNotificationPanelOpen(false);
+                      setIsNotificationPanelClosing(false);
+                    }, 300);
+                  } else {
+                    setIsNotificationPanelOpen(true);
+                    setIsNotificationPanelClosing(false);
+                  }
+                }}
+                className="relative p-2 hover:bg-gray-100 cursor-pointer"
               >
                 <Bell className="h-5 w-5" />
                 {notificationCount > 0 && (
@@ -378,11 +393,50 @@ export default function DashboardShell(props: DashboardShellProps) {
               </Button>
 
               {/* Notification Panel */}
-              {isNotificationPanelOpen && (
-                <div className="absolute right-0 top-12 w-80 bg-white rounded-lg shadow-lg border z-[60]">
-                  <div className="p-4 border-b">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">
+              {(isNotificationPanelOpen || isNotificationPanelClosing) && (
+                <div 
+                  className="absolute right-0 top-12 w-80 bg-white rounded-lg shadow-lg border z-[60]"
+                  style={{
+                    animation: isNotificationPanelClosing 
+                      ? 'slideUpFade 0.3s ease-out forwards'
+                      : 'slideDownFade 0.3s ease-out',
+                  }}
+                >
+                  <style jsx>{`
+                    @keyframes slideDownFade {
+                      from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                      }
+                      to {
+                        opacity: 1;
+                        transform: translateY(0);
+                      }
+                    }
+                    @keyframes slideUpFade {
+                      from {
+                        opacity: 1;
+                        transform: translateY(0);
+                      }
+                      to {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                      }
+                    }
+                  `}</style>
+                  <div 
+                    className="p-4 border-b bg-blue-600 rounded-t-lg relative overflow-hidden"
+                    style={{
+                      backgroundImage: 'url(/smct.png)',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat',
+                    }}
+                  >
+                    {/* Fade overlay to ensure text readability */}
+                    <div className="absolute inset-0 bg-blue-600/90"></div>
+                    <div className="relative z-10 flex items-center justify-between">
+                      <h3 className="font-semibold text-white">
                         Notifications
                       </h3>
                       <div className="flex items-center space-x-2">
@@ -391,7 +445,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                             variant="ghost"
                             size="sm"
                             onClick={handleMarkAllAsRead}
-                            className="text-xs text-blue-600 hover:text-blue-700"
+                            className="text-xs text-white hover:text-blue-100 hover:bg-blue-700/50 cursor-pointer"
                           >
                             Mark all read
                           </Button>
@@ -399,8 +453,14 @@ export default function DashboardShell(props: DashboardShellProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setIsNotificationPanelOpen(false)}
-                          className="p-1"
+                          onClick={() => {
+                            setIsNotificationPanelClosing(true);
+                            setTimeout(() => {
+                              setIsNotificationPanelOpen(false);
+                              setIsNotificationPanelClosing(false);
+                            }, 300);
+                          }}
+                          className="p-1 text-white hover:bg-blue-700/50 hover:text-white cursor-pointer"
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -527,7 +587,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                                   onClick={(e) =>
                                     handleDeleteNotification(notification, e)
                                   }
-                                  className="p-1 h-6 w-6 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                                  className="p-1 h-6 w-6 text-gray-400 hover:text-red-500 hover:bg-red-50 cursor-pointer disabled:cursor-not-allowed"
                                   title="Delete notification"
                                   disabled={isDeletingNotification}
                                 >
@@ -601,7 +661,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                 variant="outline"
                 size="lg"
                 onClick={() => setIsSidebarOpen(false)}
-                className="w-1/3 mb-4 bg-white/10 text-white hover:bg-white/20 border-white/30"
+                className="w-1/3 mb-4 bg-white/10 text-white hover:bg-white/20 border-white/30 cursor-pointer"
               >
                 <div className="flex items-center">
                   <ChevronLeft className="w-10 h-10 mr-[-6px]" />
@@ -694,7 +754,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         >
                           <CollapsibleTrigger asChild>
                             <button
-                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                                 managementItems.includes(activeItemId)
                                   ? "bg-white/20 text-white border border-white/30"
                                   : "text-blue-100 hover:bg-white/10"
@@ -718,7 +778,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
-                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                                     activeItemId === subItem.id
                                       ? "bg-white/20 text-white border border-white/30"
                                       : "text-blue-100 hover:bg-white/10"
@@ -775,7 +835,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
-                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                                     activeItemId === subItem.id
                                       ? "bg-white/20 text-white border border-white/30"
                                       : "text-blue-100 hover:bg-white/10"
@@ -808,7 +868,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         <button
                           key={item.id}
                           onClick={() => onChangeActive(item.id)}
-                          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                             activeItemId === item.id
                               ? "bg-white/20 text-white border border-white/30"
                               : "text-blue-100 hover:bg-white/10"
@@ -826,7 +886,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         <button
                           key={item.id}
                           onClick={() => onChangeActive(item.id)}
-                          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                          className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                             activeItemId === item.id
                               ? "bg-white/20 text-white border border-white/30"
                               : "text-blue-100 hover:bg-white/10"
@@ -848,7 +908,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         >
                           <CollapsibleTrigger asChild>
                             <button
-                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                                 managementItems.includes(activeItemId)
                                   ? "bg-white/20 text-white border border-white/30"
                                   : "text-blue-100 hover:bg-white/10"
@@ -872,7 +932,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
-                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                                     activeItemId === subItem.id
                                       ? "bg-white/20 text-white border border-white/30"
                                       : "text-blue-100 hover:bg-white/10"
@@ -931,7 +991,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                                 <button
                                   key={subItem.id}
                                   onClick={() => onChangeActive(subItem.id)}
-                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 ${
+                                  className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
                                     activeItemId === subItem.id
                                       ? "bg-white/20 text-white border border-white/30"
                                       : "text-blue-100 hover:bg-white/10"
@@ -965,7 +1025,7 @@ export default function DashboardShell(props: DashboardShellProps) {
               variant="outline"
               size="sm"
               onClick={() => setIsSidebarOpen(true)}
-              className="bg-blue-700 text-white hover:bg-blue-300  hover:text-blue-700 border-blue-700"
+              className="bg-blue-700 text-white hover:bg-blue-300  hover:text-blue-700 border-blue-700 cursor-pointer"
             >
               <div className="flex items-center">
                 <ChevronRight className="w-10 h-10 mr-[-6px]" />
@@ -1056,7 +1116,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                     setIsNotificationDetailOpen(false);
                     setIsRefreshing(true);
                   }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 cursor-pointer"
                 >
                   Close
                 </Button>
@@ -1073,7 +1133,7 @@ export default function DashboardShell(props: DashboardShellProps) {
             variant="ghost"
             size="lg"
             onClick={() => setIsHelpButtonsVisible(!isHelpButtonsVisible)}
-            className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0 animate-bounce-small"
+            className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0 animate-bounce-small cursor-pointer"
           >
             <img
               src="/question.png"
@@ -1098,13 +1158,20 @@ export default function DashboardShell(props: DashboardShellProps) {
       <Button
         variant="ghost"
         size="lg"
-        onClick={() => setIsGuideModalOpen(true)}
-        className={`fixed bottom-32 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+        onClick={isHelpButtonsVisible ? () => setIsGuideModalOpen(true) : undefined}
+        disabled={!isHelpButtonsVisible}
+        className={`fixed bottom-32 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
           isHelpButtonsVisible
-            ? "opacity-100 translate-y-0 pointer-events-auto delay-0"
-            : "opacity-0 translate-y-4 pointer-events-none delay-0"
+            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-0 cursor-pointer"
+            : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"
         }`}
         title="Dashboard Guide"
+        tabIndex={isHelpButtonsVisible ? 0 : -1}
+        aria-hidden={!isHelpButtonsVisible}
+        style={{ 
+          pointerEvents: isHelpButtonsVisible ? "auto" : "none",
+          cursor: isHelpButtonsVisible ? "pointer" : "default"
+        }}
       >
         <img
           src="/faq.png"
@@ -1117,13 +1184,20 @@ export default function DashboardShell(props: DashboardShellProps) {
       <Button
         variant="ghost"
         size="lg"
-        onClick={() => setIsContactDevsModalOpen(true)}
-        className={`fixed bottom-48 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+        onClick={isHelpButtonsVisible ? () => setIsContactDevsModalOpen(true) : undefined}
+        disabled={!isHelpButtonsVisible}
+        className={`fixed bottom-48 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
           isHelpButtonsVisible
-            ? "opacity-100 translate-y-0 pointer-events-auto delay-100"
-            : "opacity-0 translate-y-4 pointer-events-none delay-0"
+            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-100 cursor-pointer"
+            : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"
         }`}
         title="Contact Developers"
+        tabIndex={isHelpButtonsVisible ? 0 : -1}
+        aria-hidden={!isHelpButtonsVisible}
+        style={{ 
+          pointerEvents: isHelpButtonsVisible ? "auto" : "none",
+          cursor: isHelpButtonsVisible ? "pointer" : "default"
+        }}
       >
         <img
           src="/code.png"

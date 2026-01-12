@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
-import SignaturePad from "@/components/SignaturePad";
+import SignaturePad, { SignaturePadRef } from "@/components/SignaturePad";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import PageTransition from "@/components/PageTransition";
@@ -20,10 +20,6 @@ import apiService from "@/lib/apiService";
 import { withPublicPage } from "@/hoc";
 import { dataURLtoFile } from "@/utils/data-url-to-file";
 import { Eye, EyeOff } from "lucide-react";
-// Mock data for testing
-import branchCodes from "@/data/branch-code.json";
-import positionsData from "@/data/positions.json";
-import departmentsData from "@/data/departments.json";
 
 interface FormDataType {
   fname: string;
@@ -32,6 +28,7 @@ interface FormDataType {
   employee_id: string;
   email: string;
   contact: string;
+  date_hired: string;
   position_id: number | string;
   branch_id: number | string;
   department_id?: number | string;
@@ -41,9 +38,6 @@ interface FormDataType {
 }
 
 function RegisterPage() {
-  // Set to true to force mock data for testing
-  const FORCE_MOCK_DATA = false; // Change to true to always use mock data
-
   const [isRegisterButtonClicked, setIsRegisterButtonClicked] = useState(false);
   const [positions, setPositions] = useState<
     { value: string; label: string }[]
@@ -68,6 +62,7 @@ function RegisterPage() {
     employee_id: "",
     email: "",
     contact: "",
+    date_hired: "",
     department_id: "",
     position_id: 0,
     branch_id: 0,
@@ -82,6 +77,7 @@ function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState<{
     [key: string]: any;
   }>({});
+  const signaturePadRef = useRef<SignaturePadRef>(null);
 
   // Helper function to check if branch is HO, Head Office, or none
   const isBranchHOOrNone = (branchId: string | number): boolean => {
@@ -144,45 +140,9 @@ function RegisterPage() {
     );
   };
 
-  // Helper function to load mock data
-  const loadMockData = () => {
-    // Mock positions - positionsData is an array of strings, convert to {value, label} format
-    const mockPositions: { value: string; label: string }[] = positionsData.map(
-      (pos: string, index: number) => ({
-        value: String(index + 1),
-        label: pos,
-      })
-    );
-    setPositions(mockPositions);
-
-    // Mock departments - departmentsData is an array of {id, name, ...}, convert to {value, label} format
-    const mockDepartments: { value: string; label: string }[] =
-      departmentsData.map((dept: any) => ({
-        value: String(dept.id),
-        label: dept.name,
-      }));
-    setDepartments(mockDepartments);
-
-    // Mock branches - branchCodes is an array of strings like ["HO", "HO-MNL", "CEB", ...]
-    // Use branch code as both value and label for easier testing and matching
-    const mockBranches: { value: string; label: string }[] = branchCodes.map(
-      (branch: string) => ({
-        value: branch, // Use branch code as value for easier testing
-        label: branch, // Use branch code as label
-      })
-    );
-    setBranches(mockBranches);
-  };
 
   // Load positions from client data service.api
   useEffect(() => {
-    // If force mock data is enabled, load mock data immediately
-    if (FORCE_MOCK_DATA) {
-      console.log("Force mock data enabled, loading mock data");
-      loadMockData();
-      return;
-    }
-
     const fetchData = async () => {
       try {
         // Fetch positions using API service
@@ -199,8 +159,8 @@ function RegisterPage() {
         setDepartments(departmentsDataFromAPI);
         setBranches(branchDataFromAPI);
       } catch (error) {
-        console.error("Error fetching data, using mock data:", error);
-        loadMockData();
+        console.error("Error fetching data:", error);
+        // Data will remain empty if API fails
       }
     };
 
@@ -361,6 +321,11 @@ function RegisterPage() {
       return;
     }
 
+    if (!formData.date_hired.trim()) {
+      showAlert("Missing Information", "Date hired is required!", "error");
+      return;
+    }
+
     if (!formData.position_id) {
       showAlert("Missing Information", "Please select your position!", "error");
       return;
@@ -416,8 +381,9 @@ function RegisterPage() {
       return;
     }
 
-    // Validate signature
-    if (!formData.signature) {
+    // Validate signature - check both formData and ref (SignaturePad stores locally)
+    const signatureToValidate = signaturePadRef.current?.getSignature() || formData.signature;
+    if (!signatureToValidate) {
       setSignatureError(true);
       showAlert(
         "Signature Required",
@@ -429,6 +395,9 @@ function RegisterPage() {
 
     setIsRegisterButtonClicked(true);
     // Then send the POST request with the user registration data
+
+    // Get the current signature from SignaturePad (may be local, not in formData yet)
+    const currentSignature = signaturePadRef.current?.getSignature() || formData.signature;
 
     const formDataToUpload = new FormData();
 
@@ -442,6 +411,7 @@ function RegisterPage() {
     );
     formDataToUpload.append("email", formData.email);
     formDataToUpload.append("contact", formData.contact);
+    formDataToUpload.append("date_hired", formData.date_hired);
     formDataToUpload.append("position_id", String(formData.position_id));
     formDataToUpload.append("branch_id", String(formData.branch_id));
     formDataToUpload.append("department_id", String(formData.department_id));
@@ -452,10 +422,10 @@ function RegisterPage() {
     );
 
     // Convert signature data URL to File object (PNG) for binary upload
-    if (formData.signature) {
+    if (currentSignature) {
       try {
         const signatureFile = dataURLtoFile(
-          formData.signature,
+          currentSignature,
           "signature.png"
         );
 
@@ -488,6 +458,7 @@ function RegisterPage() {
               employee_id: "",
               email: "",
               contact: "",
+              date_hired: "",
               position_id: 0,
               department_id: "",
               branch_id: 0,
@@ -822,6 +793,26 @@ function RegisterPage() {
                       )}
                     </div>
 
+                    <div className="space-y-2 w-1/2">
+                      <Label htmlFor="date_hired">Date Hired</Label>
+                      <Input
+                        id="date_hired"
+                        type="date"
+                        value={formData.date_hired}
+                        onChange={(e) => {
+                          setFormData({ ...formData, date_hired: e.target.value });
+                          validateField("date_hired", e.target.value);
+                        }}
+                        className={fieldErrors?.date_hired ? "border-red-500 cursor-pointer" : ""}
+                        
+                      />
+                      {fieldErrors?.date_hired && (
+                        <p className="text-sm text-red-500">
+                          {fieldErrors?.date_hired}
+                        </p>
+                      )}
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="position">Position</Label>
                       <Combobox
@@ -1000,6 +991,7 @@ function RegisterPage() {
                     <div className="space-y-2">
                       <Label htmlFor="signature">Digital Signature *</Label>
                       <SignaturePad
+                        ref={signaturePadRef}
                         value={formData.signature}
                         onChangeAction={(signature) => {
                           // Clear signature when null is passed (from Clear button)

@@ -341,7 +341,7 @@ export default function OverviewTab() {
                   value={statusFilter}
                   onValueChange={(value) => setStatusFilter(value)}
                 >
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-48 cursor-pointer">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -368,7 +368,7 @@ export default function OverviewTab() {
                   value={quarterFilter}
                   onValueChange={(value) => setQuarterFilter(value)}
                 >
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-48 cursor-pointer">
                     <SelectValue placeholder="Filter by quarter" />
                   </SelectTrigger>
                   <SelectContent>
@@ -392,7 +392,7 @@ export default function OverviewTab() {
                   value={yearFilter}
                   onValueChange={(value) => setYearFilter(value)}
                 >
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger className="mt-1 cursor-pointer">
                     <SelectValue placeholder="Select a year" />
                   </SelectTrigger>
                   <SelectContent>
@@ -416,7 +416,7 @@ export default function OverviewTab() {
                   <Button
                     onClick={handleRefresh}
                     disabled={refreshing}
-                    className="mt-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    className="mt-1 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer disabled:cursor-not-allowed"
                     title="Refresh evaluation records"
                   >
                     {refreshing ? (
@@ -740,7 +740,7 @@ export default function OverviewTab() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleViewEvaluation(review)}
-                                className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white"
+                                className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white cursor-pointer"
                               >
                                 ☰ View
                               </Button>
@@ -748,7 +748,7 @@ export default function OverviewTab() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => openDeleteModal(review)}
-                                className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200"
+                                className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200 cursor-pointer"
                                 title="Delete this evaluation record"
                               >
                                 ❌ Delete
@@ -865,12 +865,12 @@ export default function OverviewTab() {
                     setIsDeleteModalOpen(false);
                     setReviewToDelete(null);
                   }}
-                  className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
+                  className="text-white bg-blue-600 hover:text-white hover:bg-green-500 cursor-pointer"
                 >
                   Cancel
                 </Button>
                 <Button
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
                   onClick={() => handleDeleteClick(reviewToDelete)}
                 >
                   ❌ Delete Permanently

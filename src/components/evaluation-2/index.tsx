@@ -42,6 +42,7 @@ interface EvaluationFormProps {
     role: string;
     signature?: string;
     employeeId?: string; // Formatted employee ID from registration (e.g., "1234-567890")
+    hireDate?: string; // Date hired - required by some step components
   };
   currentUser?: {
     id: number;
@@ -57,8 +58,6 @@ interface EvaluationFormProps {
 }
 
 export default function ManagerEvaluationForm({ employee, currentUser, onCloseAction, onCancelAction }: EvaluationFormProps) {
-  console.log('EvaluationForm received employee:', employee); // Debug log
-  
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-8 = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
   
@@ -180,13 +179,6 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
     evaluatorApprovedAt: '',
   });
   
-  console.log('Initial evaluation data:', {
-    employeeId: evaluationData.employeeId,
-    employeeName: evaluationData.employeeName,
-    position: evaluationData.position,
-    department: evaluationData.department,
-    branch: evaluationData.branch,
-  }); // Debug log
   const [isEvaluatorApproved, setIsEvaluatorApproved] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
@@ -194,7 +186,6 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
   // Update evaluation data when employee prop changes
   useEffect(() => {
     if (employee) {
-      console.log('Updating evaluation data with employee:', employee); // Debug log
       setEvaluationData(prev => ({
         ...prev,
         employeeId: employee.employeeId || employee.id.toString(),
@@ -208,10 +199,8 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
   }, [employee]);
 
   const updateEvaluationData = useCallback((updates: Partial<EvaluationData>) => {
-    console.log('updateEvaluationData called with:', updates); // Debug log
     setEvaluationData(prev => {
       const newData = { ...prev, ...updates };
-      console.log('New evaluation data:', newData); // Debug log
       return newData;
     });
   }, []);
@@ -393,21 +382,23 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
   };
 
   const confirmSubmit = async () => {
-    console.log('🚀 confirmSubmit called');
     try {
       // Validate that all required fields are completed before submission
-      console.log('🔍 Checking if current step is complete...');
       if (!isCurrentStepComplete()) {
-        console.log('❌ Step validation failed:', getValidationMessage());
         alert(`Cannot submit evaluation: ${getValidationMessage()}`);
         return;
       }
-      console.log('✅ Step validation passed');
 
       // No additional validation needed for step 8
 
-      // Calculate overall rating from evaluation data
-      const overallRating = calculateOverallRating(evaluationData);
+      // Calculate overall rating from evaluation data (weighted calculation)
+      const calculatedRating = calculateOverallRating(evaluationData);
+      
+      // Create updated evaluation data with calculated rating
+      const updatedEvaluationData = {
+        ...evaluationData,
+        rating: calculatedRating, // Ensure rating is set - this should override any existing rating value
+      };
       
       // Store in localStorage for frontend-only mode
       const employeeResult = storeEvaluationResult({
@@ -417,8 +408,8 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
         evaluatorId: currentUser?.id || 1,
         evaluatorName: currentUser?.name || 'Evaluator',
         evaluationData: {
-          ...evaluationData,
-          overallRating,
+          ...updatedEvaluationData,
+          overallRating: calculatedRating,
           // Ensure evaluator signature is included
           evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',
           evaluatorSignature: evaluationData.evaluatorSignature || currentUser?.name || 'Evaluator',
@@ -426,39 +417,97 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
         },
         status: 'completed',
         period: new Date().toISOString().slice(0, 7), // YYYY-MM format
-        overallRating
+        overallRating: calculatedRating.toString() // Convert to string for storage
       });
-
-      console.log('Evaluation stored in localStorage:', employeeResult);
 
       // Also store in client data service for consistency
       try {
-        await apiService.createSubmission({
-          employeeId: parseInt(evaluationData.employeeId),
-          employeeName: evaluationData.employeeName,
-          employeeEmail: employee?.email || `${evaluationData.employeeName.toLowerCase().replace(/\s+/g, '.')}@smct.com`,
-          evaluatorId: currentUser?.id || 1,
-          evaluatorName: currentUser?.name || 'Evaluator',
-          evaluationData: {
-            ...evaluationData,
-            overallRating,
+        // Build submission payload - ensure rating is explicitly set
+        const submissionPayload = {
+          ...updatedEvaluationData,
             // Ensure evaluator signature is included
             evaluatorSignatureImage: evaluationData.evaluatorSignatureImage || currentUser?.signature || '',
             evaluatorSignature: evaluationData.evaluatorSignature || currentUser?.name || 'Evaluator',
             evaluatorSignatureDate: evaluationData.evaluatorSignatureDate || new Date().toISOString().split('T')[0],
             // Include supervisor/evaluator info
             supervisor: evaluationData.supervisor || currentUser?.name || 'Evaluator',
-          },
-          status: 'completed',
-          period: new Date().toISOString().slice(0, 7), // YYYY-MM format
-          overallRating,
-          submittedAt: new Date().toISOString(),
-          category: 'Performance Review',
-          evaluator: currentUser?.name || 'Evaluator',
-        });
-        console.log('Also stored in client data service with evaluator:', currentUser?.name);
+          overallRating: calculatedRating,
+          // CRITICAL: Set rating LAST to ensure it's not overwritten
+          rating: calculatedRating,
+        } as any;
+        
+        // Recompute rating directly from the final payload scores to ensure accuracy
+        const average = (vals: any[]) => {
+          const numbers = vals
+            .map((v) => (typeof v === 'string' ? parseFloat(v) : Number(v)))
+            .filter((v) => typeof v === 'number' && !isNaN(v));
+          if (numbers.length === 0) return 0;
+          return numbers.reduce((a, b) => a + b, 0) / numbers.length;
+        };
+
+        const jobKnowledgeScore = average([
+          (submissionPayload as any).jobKnowledgeScore1,
+          (submissionPayload as any).jobKnowledgeScore2,
+          (submissionPayload as any).jobKnowledgeScore3,
+        ]);
+        const qualityOfWorkScore = average([
+          (submissionPayload as any).qualityOfWorkScore1,
+          (submissionPayload as any).qualityOfWorkScore2,
+          (submissionPayload as any).qualityOfWorkScore3,
+          (submissionPayload as any).qualityOfWorkScore4,
+          (submissionPayload as any).qualityOfWorkScore5,
+        ]);
+        const adaptabilityScore = average([
+          (submissionPayload as any).adaptabilityScore1,
+          (submissionPayload as any).adaptabilityScore2,
+          (submissionPayload as any).adaptabilityScore3,
+        ]);
+        const teamworkScore = average([
+          (submissionPayload as any).teamworkScore1,
+          (submissionPayload as any).teamworkScore2,
+          (submissionPayload as any).teamworkScore3,
+        ]);
+        const reliabilityScore = average([
+          (submissionPayload as any).reliabilityScore1,
+          (submissionPayload as any).reliabilityScore2,
+          (submissionPayload as any).reliabilityScore3,
+          (submissionPayload as any).reliabilityScore4,
+        ]);
+        const ethicalScore = average([
+          (submissionPayload as any).ethicalScore1,
+          (submissionPayload as any).ethicalScore2,
+          (submissionPayload as any).ethicalScore3,
+          (submissionPayload as any).ethicalScore4,
+        ]);
+        const customerServiceScore = average([
+          (submissionPayload as any).customerServiceScore1,
+          (submissionPayload as any).customerServiceScore2,
+          (submissionPayload as any).customerServiceScore3,
+          (submissionPayload as any).customerServiceScore4,
+          (submissionPayload as any).customerServiceScore5,
+        ]);
+
+        const recomputed = (
+          jobKnowledgeScore * 0.20 +
+          qualityOfWorkScore * 0.20 +
+          adaptabilityScore * 0.10 +
+          teamworkScore * 0.10 +
+          reliabilityScore * 0.05 +
+          ethicalScore * 0.05 +
+          customerServiceScore * 0.30
+        );
+
+        const recomputedRounded = Math.round(recomputed * 10) / 10;
+        
+        // Ensure rating is set correctly in the payload
+        (submissionPayload as any).rating = recomputedRounded;
+        
+        await apiService.createSubmission(
+          parseInt(evaluationData.employeeId),
+          submissionPayload
+        );
       } catch (clientError) {
-        console.log('Client data service storage failed, but localStorage storage succeeded:', clientError);
+        // Silently handle client data service storage failure - localStorage storage already succeeded
       }
       
       // Create notification for evaluators and HR
@@ -475,8 +524,6 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
       }
       
       // Show success dialog instead of alert
-      console.log('🎉 Evaluation submitted successfully!');
-      
       // Manually trigger a storage event for same-tab updates
       // This helps the HR dashboard refresh even when in the same tab
       window.dispatchEvent(new StorageEvent('storage', {
@@ -494,24 +541,81 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
     }
   };
 
-  // Helper function to calculate overall rating
-  const calculateOverallRating = (data: EvaluationData): string => {
-    const scores: number[] = [];
+  // Helper function to calculate weighted overall rating (matches ViewResultsModal calculation)
+  const calculateOverallRating = (data: EvaluationData): number => {
+    // Helper to calculate average score for a category
+    const calculateScore = (scores: (string | number | undefined)[]): number => {
+      const validScores = scores
+        .filter(score => score !== undefined && score !== '' && score !== null)
+        .map(score => typeof score === 'string' ? parseFloat(score) : score)
+        .filter(score => !isNaN(score as number)) as number[];
+      
+      if (validScores.length === 0) return 0;
+      return validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
+    };
+
+    // Calculate scores for each category
+    const jobKnowledgeScore = calculateScore([
+      data.jobKnowledgeScore1,
+      data.jobKnowledgeScore2,
+      data.jobKnowledgeScore3
+    ]);
     
-    // Collect all numeric scores
-    Object.entries(data).forEach(([key, value]) => {
-      if (key.includes('Score') && typeof value === 'string' && value !== '') {
-        const numValue = parseFloat(value);
-        if (!isNaN(numValue)) {
-          scores.push(numValue);
-        }
-      }
-    });
+    const qualityOfWorkScore = calculateScore([
+      data.qualityOfWorkScore1,
+      data.qualityOfWorkScore2,
+      data.qualityOfWorkScore3,
+      data.qualityOfWorkScore4,
+      data.qualityOfWorkScore5
+    ]);
     
-    // Calculate average
-    if (scores.length === 0) return '0';
-    const average = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-    return (Math.round(average * 10) / 10).toString(); // Round to 1 decimal place and return as string
+    const adaptabilityScore = calculateScore([
+      data.adaptabilityScore1,
+      data.adaptabilityScore2,
+      data.adaptabilityScore3
+    ]);
+    
+    const teamworkScore = calculateScore([
+      data.teamworkScore1,
+      data.teamworkScore2,
+      data.teamworkScore3
+    ]);
+    
+    const reliabilityScore = calculateScore([
+      data.reliabilityScore1,
+      data.reliabilityScore2,
+      data.reliabilityScore3,
+      data.reliabilityScore4
+    ]);
+    
+    const ethicalScore = calculateScore([
+      data.ethicalScore1,
+      data.ethicalScore2,
+      data.ethicalScore3,
+      data.ethicalScore4
+    ]);
+    
+    const customerServiceScore = calculateScore([
+      data.customerServiceScore1,
+      data.customerServiceScore2,
+      data.customerServiceScore3,
+      data.customerServiceScore4,
+      data.customerServiceScore5
+    ]);
+
+    // Calculate weighted overall score (matches ViewResultsModal)
+    const overallWeightedScore = (
+      (jobKnowledgeScore * 0.20) +
+      (qualityOfWorkScore * 0.20) +
+      (adaptabilityScore * 0.10) +
+      (teamworkScore * 0.10) +
+      (reliabilityScore * 0.05) +
+      (ethicalScore * 0.05) +
+      (customerServiceScore * 0.30)
+    );
+
+    // Round to 1 decimal place
+    return Math.round(overallWeightedScore * 10) / 10;
   };
 
   const CurrentStepComponent = currentStep === 0 ? WelcomeStep : steps[currentStep - 1].component;
@@ -652,10 +756,17 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
         {currentStep === 0 ? (
           <Card key={`welcome-${welcomeAnimationKey}`} className="welcome-step-animate">
             <CardContent>
-              <CurrentStepComponent
+              <WelcomeStep
                 data={evaluationData}
                 updateDataAction={updateEvaluationData}
-                employee={employee}
+                employee={employee ? {
+                  id: employee.id,
+                  name: employee.name,
+                  email: employee.email,
+                  position: employee.position,
+                  department: employee.department,
+                  role: employee.role
+                } : undefined}
                 currentUser={currentUser}
                 onStartAction={startEvaluation}
                 onBackAction={onCloseAction}
@@ -687,7 +798,10 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
                 <CurrentStepComponent
                   data={evaluationData}
                   updateDataAction={updateEvaluationData}
-                  employee={employee}
+                  employee={employee ? {
+                    ...employee,
+                    hireDate: employee.hireDate || ''
+                  } : undefined}
                   currentUser={currentUser}
                   onStartAction={startEvaluation}
                   onNextAction={nextStep}
@@ -863,7 +977,7 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
         <DialogFooter className="flex justify-center">
           <Button
             onClick={handleSuccessDialogClose}
-            className="px-8 py-2 bg-green-600 text-white hover:bg-green-700"
+            className="px-8 py-2 bg-green-600 text-white hover:bg-green-700 cursor-pointer"
           >
             Close
           </Button>

@@ -7,7 +7,7 @@ export type ReviewTypeProbationary = "" | 3 | 5;
 // Main payload
 interface EvaluationPayload {
   hireDate: string;
-  rating: number | string;
+  rating: number | String;
   coverageFrom: string | Date;
   coverageTo: string | Date;
   reviewTypeProbationary: ReviewTypeProbationary;
@@ -74,4 +74,4 @@ interface EvaluationPayload {
   customerServiceExplanation5: string;
   created_at: string;
 }
-export default EvaluationPayload;
+export type { EvaluationPayload };

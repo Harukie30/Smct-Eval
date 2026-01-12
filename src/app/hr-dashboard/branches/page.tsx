@@ -397,7 +397,7 @@ export default function DepartmentsTab() {
             <div className="flex space-x-2">
               <Button
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 hover:text-white"
+                className="flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 hover:text-white cursor-pointer"
               >
                 <Plus className="h-5 w-5" />
                 Add Branch
@@ -406,7 +406,7 @@ export default function DepartmentsTab() {
                 variant="outline"
                 onClick={refreshData}
                 disabled={isRefreshing}
-                className="flex items-center gap-2 bg-blue-600 text-white hover:bg-green-700 hover:text-white"
+                className="flex items-center gap-2 bg-blue-600 text-white hover:bg-green-700 hover:text-white cursor-pointer"
               >
                 {isRefreshing ? (
                   <>
@@ -534,7 +534,7 @@ export default function DepartmentsTab() {
                                       setIsDeleteModalOpen(true);
                                     }}
                                     disabled={deletingBranchId !== null}
-                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -692,7 +692,7 @@ export default function DepartmentsTab() {
                 value={formData.branch}
                 onValueChange={(value) => handleInputChange("branch", value)}
               >
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 cursor-pointer">
                   <SelectValue placeholder="Select branch" />
                 </SelectTrigger>
                 <SelectContent>
@@ -726,7 +726,7 @@ export default function DepartmentsTab() {
                 value={formData.acronym}
                 onValueChange={(value) => handleInputChange("acronym", value)}
               >
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 cursor-pointer">
                   <SelectValue placeholder="Select branch" />
                 </SelectTrigger>
                 <SelectContent>
@@ -752,12 +752,13 @@ export default function DepartmentsTab() {
                   setErrors({});
                   setIsAddModalOpen(false);
                 }}
+                className="cursor-pointer"
               >
                 Cancel
               </Button>
               <Button
                 onClick={() => handleAddBranch()}
-                className="bg-green-500 text-white hover:bg-green-600 hover:text-white"
+                className="bg-green-500 text-white hover:bg-green-600 hover:text-white cursor-pointer"
               >
                 Add Branch
               </Button>
@@ -842,12 +843,12 @@ export default function DepartmentsTab() {
                   setIsDeleteModalOpen(false);
                   setBranchesToDelete(null);
                 }}
-                className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
+                className="text-white bg-blue-600 hover:text-white hover:bg-green-500 cursor-pointer"
               >
                 Cancel
               </Button>
               <Button
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-red-600 hover:bg-red-700 text-white cursor-pointer "
                 onClick={() => handleDeleteBranches()}
               >
                 ❌ Delete Permanently

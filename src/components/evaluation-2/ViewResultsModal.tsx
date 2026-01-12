@@ -187,7 +187,7 @@ export default function ViewResultsModal({ isOpen, onCloseAction, submission, on
             <h2 className="text-3xl font-bold text-gray-900">Evaluation Details</h2>
             <Button
               onClick={onCloseAction}
-              className="px-4 py-2 bg-blue-500 text-white hover:bg-red-600 hover:text-white"
+              className="px-4 py-2 bg-blue-500 text-white hover:bg-red-600 hover:text-white cursor-pointer"
             >
              🗙 Close
             </Button>

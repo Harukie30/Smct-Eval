@@ -23,7 +23,15 @@ export const useNotifications = (userRole: string): UseNotificationsReturn => {
       setLoading(true);
       setError(null);
 
-      const [notificationsData, unreadCountData] = await Promise.all([]);
+      // TODO: Implement getNotifications and getUnreadNotificationCount in apiService
+      // const [notificationsData, unreadCountData] = await Promise.all([
+      //   apiService.getNotifications(userRole),
+      //   apiService.getUnreadNotificationCount(userRole)
+      // ]);
+      
+      // Stub: Return empty data until API methods are implemented
+      const notificationsData: Notification[] = [];
+      const unreadCountData = 0;
 
       setNotifications(notificationsData);
       setUnreadCount(unreadCountData);
@@ -58,7 +66,8 @@ export const useNotifications = (userRole: string): UseNotificationsReturn => {
 
   const markAllAsRead = useCallback(async () => {
     try {
-      await apiService.markAllNotificationsAsRead(userRole);
+      // markAllNotificationsAsRead doesn't take any arguments
+      await apiService.markAllNotificationsAsRead();
 
       // Update local state
       setNotifications((prev) =>
@@ -69,7 +78,7 @@ export const useNotifications = (userRole: string): UseNotificationsReturn => {
     } catch (err) {
       console.error("Error marking all notifications as read:", err);
     }
-  }, [userRole]);
+  }, []);
 
   const refreshNotifications = useCallback(async () => {
     await fetchNotifications();

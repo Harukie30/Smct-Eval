@@ -74,7 +74,11 @@ export default function OverviewTab() {
     const fetchData = async () => {
       try {
         setIsPaginate(true);
-        const response = await apiService.evaluatorDashboard();
+        const response = await apiService.evaluatorDashboard(
+          debouncedSearchTerm,
+          currentPage,
+          itemsPerPage
+        );
 
         setData(response.myEval_as_Evaluator.data);
         setTotalEvaluations(response.total_evaluations);
@@ -96,6 +100,10 @@ export default function OverviewTab() {
   useEffect(() => {
     const debounceTimeout = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
+      // Reset to page 1 when search term changes (if there's a value)
+      if (searchTerm.trim() !== "") {
+        setCurrentPage(1);
+      }
     }, 500);
     return () => clearTimeout(debounceTimeout);
   }, [searchTerm]);
@@ -281,7 +289,7 @@ export default function OverviewTab() {
         </CardHeader>
         <CardContent className="p-0">
           {/* Search and Filter Controls */}
-          <div className="px-6 py-4 flex gap-2 border-b border-gray-200">
+          <div className="px-6 py-4 flex gap-2 w-1/2 border-b border-gray-200">
             <Input
               placeholder="Search submissions by employee name ..."
               value={searchTerm}
@@ -294,7 +302,7 @@ export default function OverviewTab() {
                 onClick={() => setSearchTerm("")}
                 className="px-3 py-2 text-white hover:text-white bg-blue-400 hover:bg-blue-500"
               >
-                ⌫ Clear
+                 Clear
               </Button>
             )}
             <Button
@@ -615,7 +623,7 @@ export default function OverviewTab() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleViewEvaluation(review)}
-                                className="bg-blue-500 hover:bg-blue-200 text-white border-blue-200"
+                                className="bg-blue-500 hover:bg-blue-200 text-white border-blue-200 cursor-pointer"
                               >
                                 <Eye className="w-4 h-4" />
                                 View

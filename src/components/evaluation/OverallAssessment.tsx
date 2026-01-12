@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -136,31 +137,6 @@ export default function OverallAssessment({
       setSubmissionError(
         "Please add your signature to your profile before submitting the evaluation."
       );
-      return;
-    }
-
-    // Validate Priority Areas for Improvement - at least one must be filled
-    const hasPriorityArea =
-      (data.priorityArea1 && data.priorityArea1.trim() !== "") ||
-      (data.priorityArea2 && data.priorityArea2.trim() !== "") ||
-      (data.priorityArea3 && data.priorityArea3.trim() !== "");
-
-    if (!hasPriorityArea) {
-      error(
-        "Please fill in at least one Priority Area for Improvement before submitting."
-      );
-      setSubmissionError(
-        "Please fill in at least one Priority Area for Improvement before submitting."
-      );
-      setValidationErrors((prev) => ({ ...prev, priorityAreas: true }));
-      return;
-    }
-
-    // Validate Remarks - must be filled
-    if (!data.remarks || data.remarks.trim() === "") {
-      error("Please fill in the Remarks field before submitting.");
-      setSubmissionError("Please fill in the Remarks field before submitting.");
-      setValidationErrors((prev) => ({ ...prev, remarks: true }));
       return;
     }
 
@@ -2692,7 +2668,7 @@ export default function OverallAssessment({
       <Card>
         <CardContent className="pt-6">
           <h4 className="font-bold text-lg text-gray-900 mb-3">
-            PRIORITY AREAS FOR IMPROVEMENT *
+            PRIORITY AREAS FOR IMPROVEMENT
           </h4>
           <p className="text-sm text-gray-600 mb-4">
             This section identifies key areas the employee can focus on for
@@ -2711,28 +2687,8 @@ export default function OverallAssessment({
                 value={data.priorityArea1 || ""}
                 onChange={(e) => {
                   updateDataAction({ priorityArea1: e.target.value });
-                  if (
-                    validationErrors.priorityAreas &&
-                    e.target.value.trim() !== ""
-                  ) {
-                    const hasAnyPriority =
-                      e.target.value.trim() !== "" ||
-                      (data.priorityArea2 &&
-                        data.priorityArea2.trim() !== "") ||
-                      (data.priorityArea3 && data.priorityArea3.trim() !== "");
-                    if (hasAnyPriority) {
-                      setValidationErrors((prev) => ({
-                        ...prev,
-                        priorityAreas: false,
-                      }));
-                    }
-                  }
                 }}
-                className={`mt-1 bg-yellow-50 ${
-                  validationErrors.priorityAreas
-                    ? "border-red-500 border-2"
-                    : "border-gray-300"
-                }`}
+                className="mt-1 bg-yellow-50 border-gray-300"
                 placeholder="Enter priority area for improvement"
               />
             </div>
@@ -2745,28 +2701,8 @@ export default function OverallAssessment({
                 value={data.priorityArea2 || ""}
                 onChange={(e) => {
                   updateDataAction({ priorityArea2: e.target.value });
-                  if (
-                    validationErrors.priorityAreas &&
-                    e.target.value.trim() !== ""
-                  ) {
-                    const hasAnyPriority =
-                      (data.priorityArea1 &&
-                        data.priorityArea1.trim() !== "") ||
-                      e.target.value.trim() !== "" ||
-                      (data.priorityArea3 && data.priorityArea3.trim() !== "");
-                    if (hasAnyPriority) {
-                      setValidationErrors((prev) => ({
-                        ...prev,
-                        priorityAreas: false,
-                      }));
-                    }
-                  }
                 }}
-                className={`mt-1 bg-yellow-50 ${
-                  validationErrors.priorityAreas
-                    ? "border-red-500 border-2"
-                    : "border-gray-300"
-                }`}
+                className="mt-1 bg-yellow-50 border-gray-300"
                 placeholder="Enter priority area for improvement"
               />
             </div>
@@ -2779,65 +2715,27 @@ export default function OverallAssessment({
                 value={data.priorityArea3 || ""}
                 onChange={(e) => {
                   updateDataAction({ priorityArea3: e.target.value });
-                  if (
-                    validationErrors.priorityAreas &&
-                    e.target.value.trim() !== ""
-                  ) {
-                    const hasAnyPriority =
-                      (data.priorityArea1 &&
-                        data.priorityArea1.trim() !== "") ||
-                      (data.priorityArea2 &&
-                        data.priorityArea2.trim() !== "") ||
-                      e.target.value.trim() !== "";
-                    if (hasAnyPriority) {
-                      setValidationErrors((prev) => ({
-                        ...prev,
-                        priorityAreas: false,
-                      }));
-                    }
-                  }
                 }}
-                className={`mt-1 bg-yellow-50 ${
-                  validationErrors.priorityAreas
-                    ? "border-red-500 border-2"
-                    : "border-gray-300"
-                }`}
+                className="mt-1 bg-yellow-50 border-gray-300"
                 placeholder="Enter priority area for improvement"
               />
             </div>
           </div>
-          {validationErrors.priorityAreas && (
-            <p className="text-sm text-red-600 mt-2">
-              ⚠️ Please fill in at least one priority area.
-            </p>
-          )}
         </CardContent>
       </Card>
 
       {/* Remarks */}
       <Card>
         <CardContent className="pt-6">
-          <h4 className="font-bold text-lg text-gray-900 mb-3">REMARKS *</h4>
+          <h4 className="font-bold text-lg text-gray-900 mb-3">REMARKS</h4>
           <textarea
             value={data.remarks || ""}
             onChange={(e) => {
               updateDataAction({ remarks: e.target.value });
-              if (validationErrors.remarks && e.target.value.trim() !== "") {
-                setValidationErrors((prev) => ({ ...prev, remarks: false }));
-              }
             }}
-            className={`w-full h-32 p-3 border rounded-md bg-yellow-50 resize-none ${
-              validationErrors.remarks
-                ? "border-red-500 border-2"
-                : "border-gray-300"
-            }`}
+            className="w-full h-32 p-3 border border-gray-300 rounded-md bg-yellow-50 resize-none"
             placeholder="Enter additional remarks or comments..."
           />
-          {validationErrors.remarks && (
-            <p className="text-sm text-red-600 mt-2">
-              ⚠️ Please fill in the remarks field.
-            </p>
-          )}
         </CardContent>
       </Card>
 
@@ -2940,24 +2838,16 @@ export default function OverallAssessment({
         <Button
           onClick={handlePrevious}
           variant="outline"
-          className="px-8 py-3 text-lg"
+          className="px-8 py-3 text-lg cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
           size="lg"
         >
+          <ArrowLeft className="h-4 w-4 mr-2" />
           Previous
         </Button>
 
         {/* Center Action Buttons */}
         <div className="flex items-center space-x-4">
-          {/* Print Button */}
-          <Button
-            // onClick={handlePrint}
-            variant="outline"
-            disabled
-            className="px-6 py-3 text-base flex items-center space-x-2"
-          >
-            <Printer className="h-4 w-4" />
-            <span>Print Evaluation</span>
-          </Button>
+          
 
           {/* Submit Button */}
           <Button

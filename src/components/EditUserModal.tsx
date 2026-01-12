@@ -30,6 +30,7 @@ interface User {
   username?: string;
   password?: string;
   contact?: string;
+  date_hired?: string;
   isActive?: boolean;
   signature?: string;
   employeeId?: number;
@@ -69,6 +70,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     username: "",
     password: "",
     contact: "",
+    date_hired: "",
     isActive: true,
     signature: "",
     employeeId: undefined,
@@ -658,22 +660,59 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         lname = (user as any).lname || user.lname || "";
       }
 
-      // Extract department value - could be string or nested in departments object/array
+      // Extract department value - could be string, object, or array
+      // IMPORTANT: We need to find the department ID (value) not the name (label)
       let departmentValue = "";
-      if (user.department && typeof user.department === "string") {
-        departmentValue = user.department;
+      let departmentNameOrId = "";
+
+      // Check for department_id first (most direct)
+      if (userAny.department_id) {
+        departmentNameOrId = String(userAny.department_id);
+      } else if (user.department && typeof user.department === "string") {
+        departmentNameOrId = user.department;
+      } else if (user.department && typeof user.department === "number") {
+        departmentNameOrId = String(user.department);
       } else if (
         userAny.departments &&
         Array.isArray(userAny.departments) &&
         userAny.departments.length > 0
       ) {
-        departmentValue =
-          userAny.departments[0]?.name || userAny.departments[0] || "";
+        // Handle array format: departments[0].id or departments[0].department_name
+        departmentNameOrId =
+          userAny.departments[0]?.id ||
+          userAny.departments[0]?.department_id ||
+          userAny.departments[0]?.department_name ||
+          userAny.departments[0]?.name ||
+          "";
       } else if (
         userAny.departments &&
         typeof userAny.departments === "object"
       ) {
-        departmentValue = userAny.departments.name || "";
+        // Handle object format: departments.id or departments.department_name
+        departmentNameOrId =
+          userAny.departments.id ||
+          userAny.departments.department_id ||
+          userAny.departments.department_name ||
+          userAny.departments.name ||
+          "";
+      }
+
+      // Find department ID from departmentsData by matching name or ID
+      if (departmentNameOrId && departments && departments.length > 0) {
+        const foundDepartment = departments.find((d: any) => {
+          const dLabel = d.label || d.name || d.department_name || "";
+          const dValue = d.value || d.id || "";
+          return (
+            dLabel === departmentNameOrId ||
+            dValue === departmentNameOrId ||
+            String(dValue) === String(departmentNameOrId) ||
+            dLabel.includes(departmentNameOrId) ||
+            departmentNameOrId.includes(dLabel)
+          );
+        });
+        departmentValue = foundDepartment?.value || foundDepartment?.id || departmentNameOrId;
+      } else {
+        departmentValue = departmentNameOrId;
       }
 
       setFormData({
@@ -690,6 +729,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         username: user.username || "",
         password: user.password || "",
         contact: user.contact || "",
+        date_hired: (user as any).date_hired || (user as any).dateHired || "",
         isActive:
           user.isActive !== undefined
             ? user.isActive
@@ -1243,6 +1283,23 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 )}
             </div>
 
+            {/* Date Hired */}
+            <div className="space-y-2 w-1/2">
+              <Label htmlFor="date_hired">Date Hired</Label>
+              <Input
+                id="date_hired"
+                type="date"
+                value={formData.date_hired || ""}
+                onChange={(e) => {
+                  handleInputChange("date_hired", e.target.value);
+                }}
+                className={errors.date_hired ? "border-red-500 cursor-pointer" : "bg-white cursor-pointer"}
+              />
+              {errors.date_hired && (
+                <p className="text-sm text-red-500">{errors.date_hired}</p>
+              )}
+            </div>
+
             {/* Position */}
             <div className="space-y-2 w-2/3">
               <Label htmlFor="position">Position *</Label>
@@ -1359,14 +1416,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <Button
               variant="outline"
               onClick={handleCancel}
-              className="px-6"
+              className="px-6 cursor-pointer"
               disabled={isSaving}
             >
               Cancel
             </Button>
             <Button
               onClick={handleSave}
-              className="bg-blue-600 hover:bg-blue-700 px-6"
+              className="bg-blue-600 hover:bg-blue-700 px-6 cursor-pointer"
               disabled={isSaving}
             >
               {isSaving ? (
