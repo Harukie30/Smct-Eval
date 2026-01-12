@@ -90,18 +90,18 @@ export default function OverviewTab() {
     year: string
   ) => {
     try {
-      const response = await clientDataService.getSubmissions(
+      const response = await apiService.getEvalAuthEvaluator(
         searchValue,
         currentPage,
         itemsPerPage,
         status,
         quarter,
-        year,
+        Number(year) || 0
       );
       
       // Add safety checks to prevent "Cannot read properties of undefined" error
-      if (!response) {
-        console.error("API response is undefined");
+      if (!response || !response.myEval_as_Evaluator) {
+        console.error("API response is undefined or missing myEval_as_Evaluator");
         setEvaluations([]);
         setOverviewTotal(0);
         setTotalPages(1);
@@ -109,16 +109,16 @@ export default function OverviewTab() {
         return;
       }
 
-      // getSubmissions now handles myEval_as_Evaluator structure and returns { data, total, last_page, per_page }
-      setEvaluations(response.data || []);
-      setOverviewTotal(response.total || 0);
-      setTotalPages(response.last_page || 1);
-      setPerPage(response.per_page || itemsPerPage);
+      // getEvalAuthEvaluator returns { myEval_as_Evaluator: { data, total, last_page, per_page } }
+      setEvaluations(response.myEval_as_Evaluator.data || []);
+      setOverviewTotal(response.myEval_as_Evaluator.total || 0);
+      setTotalPages(response.myEval_as_Evaluator.last_page || 1);
+      setPerPage(response.myEval_as_Evaluator.per_page || itemsPerPage);
       
       console.log("Evaluation Records loaded:", {
-        count: (response.data || []).length,
-        total: response.total || 0,
-        currentPage: response.last_page || 1
+        count: (response.myEval_as_Evaluator.data || []).length,
+        total: response.myEval_as_Evaluator.total || 0,
+        currentPage: response.myEval_as_Evaluator.last_page || 1
       });
     } catch (error) {
       console.error("Error loading evaluations:", error);
