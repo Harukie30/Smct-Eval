@@ -282,13 +282,13 @@ function LandingLoginPage() {
         <nav className="hidden md:flex bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 space-x-6">
           <button
             onClick={() => setIsAboutModalOpen(true)}
-            className="text-white font-semibold hover:underline-offset-4 hover:underline hover:text-blue-100 transition-colors"
+            className="text-white font-semibold hover:underline-offset-4 hover:underline hover:text-blue-100 transition-colors cursor-pointer"
           >
             About
           </button>
           <button
             onClick={() => setShowLoginGuideModal(true)}
-            className="text-white font-semibold hover:underline-offset-4 hover:underline hover:text-blue-100 transition-colors"
+            className="text-white font-semibold hover:underline-offset-4 hover:underline hover:text-blue-100 transition-colors cursor-pointer"
           >
             Get Started
           </button>
@@ -417,7 +417,7 @@ function LandingLoginPage() {
                     <button
                       type="button"
                       onClick={() => setShowLoginGuideModal(true)}
-                      className="text-sm text-blue-600 hover:underline font-medium"
+                      className="text-sm text-blue-600 hover:underline font-medium cursor-pointer"
                     >
                       New here? Get Started
                     </button>
@@ -443,7 +443,7 @@ function LandingLoginPage() {
                           <button
                             type="button"
                             onClick={() => setShowForgotPasswordModal(true)}
-                            className="text-sm text-indigo-600 hover:underline"
+                            className="text-sm text-indigo-600 hover:underline cursor-pointer"
                           >
                             Forgot password?
                           </button>
@@ -465,12 +465,12 @@ function LandingLoginPage() {
                       )}
                       <Button
                         type="submit"
-                        className="w-full bg-blue-600 text-white hover:bg-green-700"
+                        className="w-full bg-blue-600 text-white hover:bg-green-700 cursor-pointer"
                         disabled={isLoggingIn}
                       >
                         {isLoggingIn ? (
                           <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 cursor-pointer"></div>
                             Signing in...
                           </>
                         ) : (
@@ -485,7 +485,7 @@ function LandingLoginPage() {
                       Don't have an account?{" "}
                       <Link
                         href="/register"
-                        className="text-blue-600 hover:underline font-medium"
+                        className="text-blue-600 hover:underline font-medium cursor-pointer"
                       >
                         Create one here
                       </Link>
@@ -506,7 +506,7 @@ function LandingLoginPage() {
                     <Button
                       variant="outline"
                       onClick={() => setShowGoogleLoginModal(true)}
-                      className="w-full"
+                      className="w-full cursor-pointer"
                     >
                       <svg
                         className="mr-2 h-4 w-4"
@@ -553,7 +553,7 @@ function LandingLoginPage() {
                   <a
                     href="#"
                     onClick={() => setShowLoginGuideModal(true)}
-                    className="text-white hover:text-yellow-300"
+                    className="text-white hover:text-yellow-300 cursor-pointer"
                   >
                     Getting Started Guide
                   </a>
@@ -562,7 +562,7 @@ function LandingLoginPage() {
                   <a
                     href="#"
                     onClick={() => setShowContactDevsModal(true)}
-                    className="text-white hover:text-yellow-300"
+                    className="text-white hover:text-yellow-300 cursor-pointer"
                   >
                     Help Center
                   </a>
@@ -576,7 +576,7 @@ function LandingLoginPage() {
             </p>
 
             <div className="flex space-x-4 mt-4 md:mt-0">
-              <a href="#" className="text-white hover:text-yellow-300">
+              <a href="#" className="text-white hover:text-yellow-300 cursor-pointer">
                 <svg
                   className="h-6 w-6"
                   fill="currentColor"
@@ -598,7 +598,7 @@ function LandingLoginPage() {
               sessionStorage.clear();
               window.location.reload();
             }}
-            className="text-base text-white bg-blue-600 hover-text-white hover:bg-blue-700"
+            className="text-base text-white bg-blue-600 hover-text-white hover:bg-blue-700 cursor-pointer"
           >
             🔄 Clear Session & Start Fresh
           </Button>
@@ -608,7 +608,7 @@ function LandingLoginPage() {
       {/* About Modal */}
       <Dialog open={isAboutModalOpen} onOpenChangeAction={setIsAboutModalOpen}>
         <DialogContent
-          className="max-w-4xl max-h-[85vh] overflow-y-auto mx-4 my-8 p-6 animate-in zoom-in-95 duration-300 custom-scrollbar"
+          className="max-w-4xl max-h-[85vh] overflow-y-auto mx-4 my-8 p-6 animate-in zoom-in-95 duration-300 custom-scrollbar "
           style={{
             animation: isAboutModalOpen
               ? "modalPopup 0.3s ease-out"
@@ -682,7 +682,7 @@ function LandingLoginPage() {
             </div>
             <button
               onClick={() => setIsAboutModalOpen(false)}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
               aria-label="Close modal"
             >
               <svg
