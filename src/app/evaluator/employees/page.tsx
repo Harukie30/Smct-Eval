@@ -74,20 +74,60 @@ export default function EmployeesTab() {
   const [selectedEmployeeForEvaluation, setSelectedEmployeeForEvaluation] =
     useState<User | null>(null);
 
+  // Fetch all employees to get unique positions (without pagination limit)
   useEffect(() => {
-    const fetchPositions = async () => {
+    const fetchPositionsFromEmployees = async () => {
       try {
-        setIsRefreshing(true);
-        const positionsRes = await apiService.getPositions();
-        setPositions(positionsRes);
-        setIsRefreshing(false);
+        // Fetch all employees with a high limit to get all unique positions
+        const res = await apiService.getAllEmployeeByAuth(
+          "", // no search filter
+          1000, // high limit to get all employees
+          1, // first page
+          undefined // no position filter
+        );
+
+        if (!res) {
+          setPositions([]);
+          return;
+        }
+
+        let employeesData: any[] = [];
+        if (res.data && Array.isArray(res.data)) {
+          employeesData = res.data;
+        } else if (Array.isArray(res)) {
+          employeesData = res;
+        }
+
+        // Extract unique positions from employees
+        const uniquePositionsMap = new Map<number | string, { value: number | string; label: string }>();
+        
+        employeesData.forEach((employee: any) => {
+          if (employee.positions) {
+            const positionId = employee.positions.id || employee.positions.value || employee.position_id;
+            const positionLabel = employee.positions.label || employee.positions.name || employee.position;
+            
+            if (positionId && positionLabel && !uniquePositionsMap.has(positionId)) {
+              uniquePositionsMap.set(positionId, {
+                value: positionId,
+                label: positionLabel,
+              });
+            }
+          }
+        });
+
+        // Convert Map to Array and sort by label
+        const uniquePositions = Array.from(uniquePositionsMap.values()).sort((a, b) => 
+          a.label.localeCompare(b.label)
+        );
+
+        setPositions(uniquePositions);
       } catch (error) {
-        console.error("Error fetching positions:", error);
-        setIsRefreshing(false);
+        console.error("Error fetching positions from employees:", error);
+        setPositions([]);
       }
     };
-    fetchPositions();
-  }, []);
+    fetchPositionsFromEmployees();
+  }, [refreshTrigger]); // Refetch when refresh trigger changes
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -97,7 +137,7 @@ export default function EmployeesTab() {
           debouncedSearch,
           itemsPerPage,
           currentPage,
-          Number(positionFilter)
+          Number(positionFilter) || undefined
         );
 
         // Add safety checks to prevent "Cannot read properties of undefined" error
