@@ -82,13 +82,7 @@ export default function GoogleLoginModal({
       
       setLoginStep('success');
       
-      // Close modal after success and call onSuccess callback
-      setTimeout(() => {
-        onCloseAction();
-        if (onSuccess) {
-          onSuccess(googleUser);
-        }
-      }, 1500);
+      // Don't auto-close - let user click confirm button instead
       
     } catch (err) {
       console.error('Google login error:', err);
@@ -330,7 +324,7 @@ export default function GoogleLoginModal({
           <DialogTitle className="text-center text-xl font-semibold">
             {loginStep === 'select' && 'Continue with Google'}
             {loginStep === 'loading' && 'Signing you in...'}
-            {loginStep === 'success' && 'Welcome!'}
+            {loginStep === 'success' && 'Feature Under Development'}
           </DialogTitle>
         </DialogHeader>
 
@@ -435,17 +429,29 @@ export default function GoogleLoginModal({
 
           {loginStep === 'success' && (
             <>
-              <div className="flex items-center justify-center w-16 h-16 bg-green-50 rounded-full">
-                <Shield className="w-8 h-8 text-green-600" />
+              <div className="flex items-center justify-center w-16 h-16 bg-blue-50 rounded-full">
+                <Shield className="w-8 h-8 text-blue-600" />
               </div>
               
               <div className="text-center space-y-2">
                 <p className="text-gray-600 font-medium">
-                  Login successful!
+                  This feature is under development and will be updated soon.
                 </p>
                 <p className="text-sm text-gray-500">
-                  Redirecting to your dashboard...
+                  Thank you for your kind consideration.
                 </p>
+              </div>
+
+              <div className="w-full pt-4">
+                <Button
+                  onClick={() => {
+                    setLoginStep('select');
+                    onCloseAction();
+                  }}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Confirm
+                </Button>
               </div>
             </>
           )}
