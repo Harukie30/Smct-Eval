@@ -477,6 +477,9 @@ export default function ProfileModal({
           </div>
           <p className="text-sm text-gray-500">
             Update your digital signature for official documents and approvals.
+           <p className="text-sm mt-4 font-bold text-gray-500">
+            Note: If you are unsure of your new signature, clearing your signature will reset it to the default signature.
+            </p> 
           </p>
 
           {/* General Error */}
