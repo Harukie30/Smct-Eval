@@ -521,14 +521,14 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             <Button
               variant="outline"
               onClick={handleCancel}
-              className="px-6"
+              className="px-6 cursor-pointer"
               disabled={isSaving}
             >
               Cancel
             </Button>
             <Button
               onClick={handleSave}
-              className="bg-green-600 hover:bg-green-700 px-6"
+              className="bg-green-600 hover:bg-green-700 px-6 cursor-pointer"
               disabled={isSaving}
             >
               {isSaving ? (

@@ -983,7 +983,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700"
+                                      className="text-green-600 hover:text-green-700 hover:bg-green-200 cursor-pointer"
                                       onClick={() => {
                                         setEmployeeToView(employee);
                                         setIsViewEmployeeModalOpen(true);
@@ -995,7 +995,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-blue-600 hover:text-blue-700"
+                                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-200 cursor-pointer"
                                       onClick={() => openEditModal(employee)}
                                       disabled={deletingUserId !== null}
                                     >
@@ -1004,7 +1004,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-red-600 hover:text-red-700"
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-200 cursor-pointer"
                                       onClick={() => openDeleteModal(employee)}
                                       disabled={deletingUserId !== null}
                                     >
