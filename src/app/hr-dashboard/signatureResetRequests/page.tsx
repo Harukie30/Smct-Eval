@@ -537,7 +537,7 @@ export default function SignatureResetRequestsTab() {
                             variant="outline"
                             size="sm"
                             onClick={() => openRejectModal(request)}
-                            className="text-red-600 border-red-300 hover:bg-red-50"
+                            className="text-red-600 border-red-300 hover:bg-red-50 cursor-pointer"
                           >
                             <X className="h-4 w-4 mr-1" />
                             Reject Request
@@ -588,12 +588,13 @@ export default function SignatureResetRequestsTab() {
             <Button
               variant="outline"
               onClick={() => setIsApproveModalOpen(false)}
+              className="cursor-pointer"
             >
               Cancel
             </Button>
             <Button
               onClick={handleApprove}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 cursor-pointer"
             >
               <Check className="h-4 w-4 mr-2" />
               Approve
@@ -622,10 +623,11 @@ export default function SignatureResetRequestsTab() {
             <Button
               variant="outline"
               onClick={() => setIsRejectModalOpen(false)}
+              className="cursor-pointer bg-blue-600 hover:bg-green-700 text-white hover:text-white"
             >
               Cancel
             </Button>
-            <Button onClick={handleReject} variant="destructive">
+            <Button onClick={handleReject} variant="destructive" className="cursor-pointer ">
               <X className="h-4 w-4 mr-2" />
               Reject
             </Button>

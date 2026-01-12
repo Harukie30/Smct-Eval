@@ -1539,12 +1539,12 @@ export default function UserManagementTab() {
                   setIsDeleteModalOpen(false);
                   setEmployeeToDelete(null);
                 }}
-                className="text-white bg-blue-600 hover:text-white hover:bg-green-500"
+                className="text-white bg-blue-600 hover:text-white hover:bg-green-500 cursor-pointer"
               >
                 Cancel
               </Button>
               <Button
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
                 onClick={() => handleDeleteEmployee(employeeToDelete)}
               >
                 ❌ Delete Permanently

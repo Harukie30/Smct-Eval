@@ -46,8 +46,27 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
     null
   ); // Track the last drawn signature (data URL)
   const [localSignature, setLocalSignature] = useState<string | null>(null); // Store signature locally until save
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   console.log("test", user?.approvedSignatureReset);
+
+  // Refresh user data on mount if there's a pending request
+  useEffect(() => {
+    if (user?.requestSignatureReset !== 0) {
+      refreshUser();
+    }
+  }, []); // Only run on mount
+
+  // Poll for user updates when request is pending (requestSignatureReset !== 0)
+  useEffect(() => {
+    // Only poll if there's a pending request
+    if (user?.requestSignatureReset !== 0) {
+      const intervalId = setInterval(() => {
+        refreshUser();
+      }, 5000); // Poll every 5 seconds
+
+      return () => clearInterval(intervalId);
+    }
+  }, [user?.requestSignatureReset, refreshUser]);
 
   // Expose method to get current signature
   useImperativeHandle(ref, () => ({
