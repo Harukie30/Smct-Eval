@@ -746,7 +746,7 @@ export default function OverviewTab() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleViewEvaluation(review)}
-                                className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                                className="text-xs px-2 py-1 bg-green-600 hover:bg-green-500 hover:text-white text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                               >
                                 ☰ View
                               </Button>
@@ -754,7 +754,7 @@ export default function OverviewTab() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => openDeleteModal(review)}
-                                className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200 cursor-pointer"
+                                className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                                 title="Delete this evaluation record"
                               >
                                 ❌ Delete
@@ -871,12 +871,12 @@ export default function OverviewTab() {
                     setIsDeleteModalOpen(false);
                     setReviewToDelete(null);
                   }}
-                  className="text-white bg-blue-600 hover:text-white hover:bg-green-500 cursor-pointer"
+                  className="text-white bg-blue-600 hover:text-white hover:bg-green-500 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                 >
                   Cancel
                 </Button>
                 <Button
-                  className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+                  className="bg-red-600 hover:bg-red-700 text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                   onClick={() => handleDeleteClick(reviewToDelete)}
                 >
                   ❌ Delete Permanently

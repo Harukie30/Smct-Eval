@@ -97,6 +97,7 @@ export default function BranchHeadsTab() {
   const [loadingBranchHeads, setLoadingBranchHeads] = useState(true);
   const [branchHeadsRefreshing, setBranchHeadsRefreshing] = useState(false);
   const itemsPerPage = 8;
+  const [isSaving, setIsSaving] = useState(false);
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -106,7 +107,7 @@ export default function BranchHeadsTab() {
     if (!Array.isArray(data)) {
       return [];
     }
-    
+
     return data.map((item: any) => {
       // Handle branches - API returns branches array
       let branchValue = "";
@@ -117,42 +118,64 @@ export default function BranchHeadsTab() {
           .join(", ");
       } else if (item.branch) {
         if (Array.isArray(item.branch)) {
-          branchValue = item.branch.map((b: any) => b.name || b.label || b).join(", ");
+          branchValue = item.branch
+            .map((b: any) => b.name || b.label || b)
+            .join(", ");
         } else if (typeof item.branch === "object") {
-          branchValue = item.branch.name || item.branch.branch_name || item.branch.label || "";
+          branchValue =
+            item.branch.name ||
+            item.branch.branch_name ||
+            item.branch.label ||
+            "";
         } else {
           branchValue = String(item.branch);
         }
       }
-      
+
       // Handle position - API returns positions object with label
       let positionValue = "";
       if (item.positions && typeof item.positions === "object") {
-        positionValue = item.positions.label || item.positions.name || item.positions.value || "";
+        positionValue =
+          item.positions.label ||
+          item.positions.name ||
+          item.positions.value ||
+          "";
       } else if (item.position) {
         if (typeof item.position === "object") {
-          positionValue = item.position.label || item.position.name || item.position.value || "";
+          positionValue =
+            item.position.label ||
+            item.position.name ||
+            item.position.value ||
+            "";
         } else {
           positionValue = String(item.position);
         }
       } else if (item.position_id) {
         positionValue = String(item.position_id);
       }
-      
+
       // Handle department - API returns departments object with department_name
       let departmentValue = "";
       if (item.departments && typeof item.departments === "object") {
-        departmentValue = item.departments.department_name || item.departments.name || item.departments.label || "";
+        departmentValue =
+          item.departments.department_name ||
+          item.departments.name ||
+          item.departments.label ||
+          "";
       } else if (item.department) {
         if (typeof item.department === "object") {
-          departmentValue = item.department.department_name || item.department.name || item.department.label || "";
+          departmentValue =
+            item.department.department_name ||
+            item.department.name ||
+            item.department.label ||
+            "";
         } else {
           departmentValue = String(item.department);
         }
       } else if (item.department_id) {
         departmentValue = String(item.department_id);
       }
-      
+
       // Handle role - API returns roles array with name
       let roleValue = "";
       if (item.roles && Array.isArray(item.roles)) {
@@ -162,14 +185,16 @@ export default function BranchHeadsTab() {
           .join(", ");
       } else if (item.role) {
         if (Array.isArray(item.role)) {
-          roleValue = item.role.map((r: any) => r.name || r.label || r).join(", ");
+          roleValue = item.role
+            .map((r: any) => r.name || r.label || r)
+            .join(", ");
         } else if (typeof item.role === "object") {
           roleValue = item.role.name || item.role.label || "";
         } else {
           roleValue = String(item.role);
         }
       }
-      
+
       // Handle name - construct from fname/lname to ensure proper spacing
       let nameValue = "";
       const fname = item.fname || "";
@@ -184,7 +209,7 @@ export default function BranchHeadsTab() {
       } else {
         nameValue = item.username || "";
       }
-      
+
       // Handle isActive - API returns is_active as string "active" or boolean
       let isActiveValue = true;
       if (item.isActive !== undefined) {
@@ -198,7 +223,7 @@ export default function BranchHeadsTab() {
       } else if (item.status !== undefined) {
         isActiveValue = item.status !== "inactive";
       }
-      
+
       return {
         id: item.id || item.employeeId || item.user_id || item.emp_id,
         name: nameValue,
@@ -521,21 +546,18 @@ export default function BranchHeadsTab() {
                   ))
                 ) : branchHeadsPaginated.length === 0 ? (
                   <TableRow>
-                    <TableCell
-                      colSpan={3}
-                      className="text-center py-12"
-                    >
+                    <TableCell colSpan={3} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center gap-4">
                         <img
                           src="/not-found.gif"
                           alt="No data"
                           className="w-25 h-25 object-contain"
                           style={{
-                            imageRendering: 'auto',
-                            willChange: 'auto',
-                            transform: 'translateZ(0)',
-                            backfaceVisibility: 'hidden',
-                            WebkitBackfaceVisibility: 'hidden',
+                            imageRendering: "auto",
+                            willChange: "auto",
+                            transform: "translateZ(0)",
+                            backfaceVisibility: "hidden",
+                            WebkitBackfaceVisibility: "hidden",
                           }}
                         />
                         <div className="text-gray-500">
@@ -577,14 +599,16 @@ export default function BranchHeadsTab() {
                         <TableCell className="py-4 text-center">
                           {branchList.length > 0 ? (
                             <div className="flex flex-wrap justify-center gap-2">
-                              {branchList.map((branch: string, index: number) => (
-                                <Badge
-                                  key={index}
-                                  className="bg-blue-600 text-white"
-                                >
-                                  {branch.trim()}
-                                </Badge>
-                              ))}
+                              {branchList.map(
+                                (branch: string, index: number) => (
+                                  <Badge
+                                    key={index}
+                                    className="bg-blue-600 text-white"
+                                  >
+                                    {branch.trim()}
+                                  </Badge>
+                                )
+                              )}
                             </div>
                           ) : (
                             <span className="text-gray-400">N/A</span>
@@ -595,7 +619,7 @@ export default function BranchHeadsTab() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-white bg-blue-400 hover:text-blue-700 hover:bg-blue-50 cursor-pointer"
+                              className="text-white bg-blue-400 hover:text-white hover:bg-blue-500 cursor-pointer hover:scale-110 transition-transform duration-200"
                               onClick={async () => {
                                 setBranchHeadToEdit(head);
                                 setIsEditModalOpen(true);
@@ -630,7 +654,7 @@ export default function BranchHeadsTab() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-white bg-red-400 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                              className="text-white bg-red-400 hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200"
                               onClick={() => {
                                 setBranchHeadToDelete(head);
                                 setIsDeleteModalOpen(true);
@@ -688,7 +712,11 @@ export default function BranchHeadsTab() {
                       } else if (branchHeadsPage >= branchHeadsTotalPages - 2) {
                         pages.push(1);
                         pages.push("ellipsis");
-                        for (let i = branchHeadsTotalPages - 4; i <= branchHeadsTotalPages; i++) {
+                        for (
+                          let i = branchHeadsTotalPages - 4;
+                          i <= branchHeadsTotalPages;
+                          i++
+                        ) {
                           pages.push(i);
                         }
                       } else {
@@ -796,11 +824,11 @@ export default function BranchHeadsTab() {
                   alt="No data"
                   className="w-25 h-25 object-contain mb-4"
                   style={{
-                    imageRendering: 'auto',
-                    willChange: 'auto',
-                    transform: 'translateZ(0)',
-                    backfaceVisibility: 'hidden',
-                    WebkitBackfaceVisibility: 'hidden',
+                    imageRendering: "auto",
+                    willChange: "auto",
+                    transform: "translateZ(0)",
+                    backfaceVisibility: "hidden",
+                    WebkitBackfaceVisibility: "hidden",
                   }}
                 />
                 <p className="text-base font-medium mb-1">
@@ -984,9 +1012,12 @@ export default function BranchHeadsTab() {
                             selectedBranches.forEach((branch) => {
                               formData.append("branch_ids[]", branch.id);
                             });
-                            
+
                             // Use updateUserBranch API endpoint for branch assignments
-                            await apiService.updateUserBranch(selectedBranchHead.id, formData);
+                            await apiService.updateUserBranch(
+                              selectedBranchHead.id,
+                              formData
+                            );
 
                             // Close the branches modal after confirmation
                             setIsBranchesModalOpen(false);
@@ -1013,8 +1044,10 @@ export default function BranchHeadsTab() {
                             );
 
                             // Reload branch heads data to update the table
-                            const reloadedData = await apiService.getAllBranchHeads();
-                            const normalizedData = normalizeBranchHeadData(reloadedData);
+                            const reloadedData =
+                              await apiService.getAllBranchHeads();
+                            const normalizedData =
+                              normalizeBranchHeadData(reloadedData);
                             setBranchHeadsData(normalizedData);
                           },
                           {
@@ -1215,10 +1248,10 @@ export default function BranchHeadsTab() {
             </div>
           </DialogHeader>
 
-          <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
+          <div className="space-y-2 flex-1 flex flex-col min-h-0">
             {/* Current Assignment Display */}
             {branchHeadToEdit && (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex-shrink-0">
                 <p className="text-sm font-medium text-gray-700 mb-2">
                   Current Assignment:
                 </p>
@@ -1238,8 +1271,8 @@ export default function BranchHeadsTab() {
                 No branches found
               </div>
             ) : (
-              <div className="border rounded-lg overflow-hidden">
-                <div className="max-h-[60vh] overflow-y-auto">
+              <div className="border rounded-lg overflow-hidden flex-1 min-h-0 flex flex-col">
+                <div className="flex-1 overflow-y-auto">
                   <Table>
                     <TableHeader className="bg-gray-50">
                       <TableRow>
@@ -1273,8 +1306,8 @@ export default function BranchHeadsTab() {
                                 <Button
                                   className={`${
                                     isSelected
-                                      ? "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                                      : "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                                      ? "bg-green-600 hover:bg-green-700 text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                                      : "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:scale-110 transition-transform duration-200"
                                   }`}
                                   size="sm"
                                   onClick={() => {
@@ -1307,7 +1340,7 @@ export default function BranchHeadsTab() {
 
             {/* Selected Branches Summary */}
             {editSelectedBranches.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex-shrink-0">
                 <p className="text-sm font-medium text-blue-900 mb-2">
                   Selected Branches ({editSelectedBranches.length}):
                 </p>
@@ -1326,7 +1359,7 @@ export default function BranchHeadsTab() {
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button
               variant="outline"
-              className="border-gray-300 text-gray-700 hover:bg-gray-50 cursor-pointer"
+              className="bg-red-600 text-white hover:bg-red-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
               onClick={() => {
                 setIsEditModalOpen(false);
                 setBranchHeadToEdit(null);
@@ -1336,7 +1369,8 @@ export default function BranchHeadsTab() {
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+              className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-transform duration-200 flex items-center gap-2 hover:scale-110 transition-transform duration-200"
+              disabled={isSaving}
               onClick={async () => {
                 if (!branchHeadToEdit) {
                   toastMessages.generic.error(
@@ -1346,76 +1380,82 @@ export default function BranchHeadsTab() {
                   return;
                 }
 
-                await withErrorHandling(
-                  async () => {
-                    // First, remove all existing branch assignments to ensure clean state
-                    await apiService.removeUserBranches(branchHeadToEdit.id);
-                    
-                    // Then, add the selected branches using updateUserBranch API endpoint
-                    if (editSelectedBranches.length > 0) {
-                      const formData = new FormData();
-                      // Add each branch ID to the form data (ensure it's a string)
-                      editSelectedBranches.forEach((branch) => {
-                        formData.append("branch_ids[]", String(branch.id));
+                setIsSaving(true);
+
+                try {
+                  await withErrorHandling(
+                    async () => {
+                      // Remove existing branches
+                      await apiService.removeUserBranches(branchHeadToEdit.id);
+
+                      // Add selected branches
+                      if (editSelectedBranches.length > 0) {
+                        const formData = new FormData();
+                        editSelectedBranches.forEach((branch) => {
+                          formData.append("branch_ids[]", String(branch.id));
+                        });
+
+                        await apiService.updateUserBranch(
+                          branchHeadToEdit.id,
+                          formData
+                        );
+                      }
+
+                      // Update UI immediately
+                      const branchNames =
+                        editSelectedBranches.length > 0
+                          ? editSelectedBranches.map((b) => b.name).join(", ")
+                          : "";
+
+                      setBranchHeadsData((prevData) =>
+                        prevData.map((head) =>
+                          head.id === branchHeadToEdit.id
+                            ? { ...head, branch: branchNames }
+                            : head
+                        )
+                      );
+
+                      // Reload in background
+                      apiService
+                        .getAllBranchHeads()
+                        .then((reloadedData) => {
+                          setBranchHeadsData(
+                            normalizeBranchHeadData(reloadedData)
+                          );
+                        })
+                        .catch(() => {});
+
+                      setEditSuccessData({
+                        branchHead: branchHeadToEdit,
+                        branches: [...editSelectedBranches],
                       });
-                      
-                      // Use updateUserBranch API endpoint to add the selected branches
-                      await apiService.updateUserBranch(branchHeadToEdit.id, formData);
+
+                      setIsEditModalOpen(false);
+                      setBranchHeadToEdit(null);
+                      setEditSelectedBranches([]);
+                      setShowEditSuccessDialog(true);
+
+                      toastMessages.generic.success(
+                        "Branch Assignment Updated",
+                        `${branchHeadToEdit.name}'s branch assignment has been updated.`
+                      );
+                    },
+                    {
+                      errorTitle: "Update Failed",
+                      errorMessage:
+                        "Failed to update branch assignment. Please try again.",
+                      showSuccessToast: false,
                     }
-
-                    // Manually update the state for immediate UI feedback
-                    const branchNames = editSelectedBranches.length > 0 
-                      ? editSelectedBranches.map(b => b.name).join(", ")
-                      : "";
-                    setBranchHeadsData(prevData => 
-                      prevData.map(head => 
-                        head.id === branchHeadToEdit.id
-                          ? { ...head, branch: branchNames }
-                          : head
-                      )
-                    );
-
-                    // Also reload from API to ensure consistency (but don't wait for it)
-                    apiService.getAllBranchHeads()
-                      .then(reloadedData => {
-                        const normalizedData = normalizeBranchHeadData(reloadedData);
-                        setBranchHeadsData(normalizedData);
-                      })
-                      .catch(error => {
-                        console.error("Error reloading branch heads after update:", error);
-                        // Don't show error to user since we already updated the UI
-                      });
-
-                    // Store success data
-                    setEditSuccessData({
-                      branchHead: branchHeadToEdit,
-                      branches: [...editSelectedBranches],
-                    });
-
-                    // Close modal
-                    setIsEditModalOpen(false);
-                    setBranchHeadToEdit(null);
-                    setEditSelectedBranches([]);
-
-                    // Show success dialog
-                    setShowEditSuccessDialog(true);
-
-                    // Show success toast
-                    toastMessages.generic.success(
-                      "Branch Assignment Updated",
-                      `${branchHeadToEdit.name}'s branch assignment has been updated.`
-                    );
-                  },
-                  {
-                    errorTitle: "Update Failed",
-                    errorMessage:
-                      "Failed to update branch assignment. Please try again.",
-                    showSuccessToast: false, // We show custom success toast above
-                  }
-                );
+                  );
+                } finally {
+                  setIsSaving(false);
+                }
               }}
             >
-              Save Changes
+              {isSaving && (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              )}
+              {isSaving ? "Saving..." : "Save Changes"}
             </Button>
           </div>
         </DialogContent>
@@ -1511,12 +1551,12 @@ export default function BranchHeadsTab() {
                   setIsDeleteModalOpen(false);
                   setBranchHeadToDelete(null);
                 }}
-                className="text-white bg-blue-600 hover:text-white hover:bg-green-500 cursor-pointer"
+                className="text-white bg-blue-600 hover:text-white hover:bg-green-500 cursor-pointer hover:scale-110 transition-transform duration-200"
               >
                 Cancel
               </Button>
               <Button
-                className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+                className="bg-red-600 hover:bg-red-700 text-white cursor-pointer hover:scale-110 transition-transform duration-200"
                 onClick={async () => {
                   if (!branchHeadToDelete) return;
 
@@ -1524,11 +1564,14 @@ export default function BranchHeadsTab() {
                   await withErrorHandling(
                     async () => {
                       // Remove all branch assignments using dedicated API endpoint
-                      await apiService.removeUserBranches(branchHeadToDelete.id);
+                      await apiService.removeUserBranches(
+                        branchHeadToDelete.id
+                      );
 
                       // Reload branch heads data to update the table
                       const reloadedData = await apiService.getAllBranchHeads();
-                      const normalizedData = normalizeBranchHeadData(reloadedData);
+                      const normalizedData =
+                        normalizeBranchHeadData(reloadedData);
                       setBranchHeadsData(normalizedData);
 
                       // Show success message
@@ -1559,4 +1602,3 @@ export default function BranchHeadsTab() {
     </div>
   );
 }
-

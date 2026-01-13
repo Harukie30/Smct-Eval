@@ -448,7 +448,7 @@ export default function OverviewTab() {
               size="sm"
               onClick={refresh}
               disabled={isRefreshingOverview}
-              className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white cursor-pointer"
+              className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
             >
               <svg
                 className="h-4 w-4"
@@ -775,7 +775,7 @@ export default function OverviewTab() {
                           </TableCell>
                           <TableCell className="w-1/6 text-right pl-1 pr-4">
                             <Button
-                              className="bg-blue-500 text-white hover:bg-green-700 hover:text-white cursor-pointer"
+                              className="bg-blue-500 text-white hover:bg-green-700 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                               size="sm"
                               onClick={() => handleViewEvaluation(submission)}
                             >

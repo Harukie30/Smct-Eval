@@ -309,12 +309,12 @@ export default function OverviewTab() {
               size="sm"
               onClick={() => setIsRefreshing(true)}
               disabled={isRefreshing || isPaginate}
-              className="px-3 py-2 text-white hover:text-white bg-blue-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-white hover:text-white bg-blue-500 hover:bg-green-600 disabled:bg-gray-400 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
               title="Refresh submissions data"
             >
               {isRefreshing || isPaginate ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 "></div>
                   Refreshing...
                 </>
               ) : (
@@ -623,7 +623,7 @@ export default function OverviewTab() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleViewEvaluation(review)}
-                                className="bg-blue-500 hover:bg-blue-200 text-white border-blue-200 cursor-pointer"
+                                className="bg-blue-500 hover:bg-blue-500 hover:text-white text-white  cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                               >
                                 <Eye className="w-4 h-4" />
                                 View

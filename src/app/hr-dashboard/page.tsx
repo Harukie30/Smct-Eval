@@ -206,7 +206,7 @@ export default function OverviewTab() {
                 {overviewSearchTerm && (
                   <button
                     onClick={() => setOverviewSearchTerm("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors hover:scale-120 transition-transform duration-200"
                     aria-label="Clear search"
                   >
                     <svg
@@ -228,7 +228,7 @@ export default function OverviewTab() {
               <Button
                 onClick={() => setIsRefreshing(true)}
                 disabled={isRefreshing}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white hover:scale-105 transition-transform duration-200"
                 title="Refresh evaluation records"
               >
                 {isRefreshing ? (
@@ -237,7 +237,7 @@ export default function OverviewTab() {
                     <span>Refreshing...</span>
                   </div>
                 ) : (
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 cursor-pointer ">
                     <span>🔄</span>
                     <span>Refresh</span>
                   </div>
@@ -495,7 +495,7 @@ export default function OverviewTab() {
                                 setSelectedSubmission(submission);
                                 setIsViewResultsModalOpen(true);
                               }}
-                              className="text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 bg-green-600 hover:bg-green-300 text-white cursor-pointer"
+                              className="text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 bg-green-600 hover:bg-green-300 text-white cursor-pointer hover:scale-110 transition-transform duration-200"
                             >
                               ☰ View
                             </Button>

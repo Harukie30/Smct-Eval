@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { Loader2 } from "lucide-react";
+
 import {
   Card,
   CardContent,
@@ -134,6 +136,7 @@ export default function UserManagementTab() {
   const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
   const [selectedEmployeeForEvaluation, setSelectedEmployeeForEvaluation] =
     useState<User | null>(null);
+  const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
 
   // Track when page change started for pending users
   const pendingPageChangeStartTimeRef = useRef<number | null>(null);
@@ -694,7 +697,7 @@ export default function UserManagementTab() {
                     variant="outline"
                     onClick={() => refreshUserData(true)}
                     disabled={refresh}
-                    className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2 cursor-pointer"
+                    className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200"
                   >
                     {refresh ? (
                       <>
@@ -740,7 +743,7 @@ export default function UserManagementTab() {
                   </Button>
                   <Button
                     onClick={() => setIsAddUserModalOpen(true)}
-                    className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2 cursor-pointer"
+                    className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200"
                   >
                     <Plus className="h-5 w-5 font-bold " />
                     Add User
@@ -995,7 +998,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700 cursor-pointer"
+                                      className="text-green-600 hover:text-green-700 cursor-pointer hover:scale-110 transition-transform duration-200"
                                       onClick={() => {
                                         setEmployeeToView(employee);
                                         setIsViewEmployeeModalOpen(true);
@@ -1007,7 +1010,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700 cursor-pointer"
+                                      className="text-green-600 hover:text-green-700 cursor-pointer hover:scale-110 transition-transform duration-200"
                                       onClick={() => {
                                         setIsEvaluationTypeModalOpen(true);
                                         setSelectedEmployeeForEvaluation(
@@ -1021,7 +1024,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-blue-600 hover:text-blue-700 cursor-pointer"
+                                      className="text-blue-600 hover:text-blue-700 cursor-pointer hover:scale-120 transition-transform duration-200"
                                       onClick={() => openEditModal(employee)}
                                       disabled={deletingUserId !== null}
                                     >
@@ -1030,7 +1033,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-red-600 hover:text-red-700 cursor-pointer"
+                                      className="text-red-600 hover:text-red-700 cursor-pointer hover:scale-120 transition-transform duration-200"
                                       onClick={() => openDeleteModal(employee)}
                                       disabled={deletingUserId !== null}
                                     >
@@ -1141,7 +1144,7 @@ export default function UserManagementTab() {
                       variant="outline"
                       onClick={() => refreshUserData(true)}
                       disabled={refresh}
-                      className="flex items-center gap-2 cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+                      className="flex items-center gap-2 cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white hover:scale-105 transition-transform duration-200"
                     >
                       {refresh ? (
                         <>
@@ -1375,7 +1378,7 @@ export default function UserManagementTab() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="text-white bg-green-500 hover:text-white hover:bg-green-600 cursor-pointer"
+                                        className="text-white bg-green-500 hover:text-white hover:bg-green-600 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                                         onClick={() =>
                                           handleApproveRegistration(
                                             Number(account.id),
@@ -1388,7 +1391,7 @@ export default function UserManagementTab() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="text-white bg-red-500 hover:bg-red-600 hover:text-white cursor-pointer"
+                                        className="text-white bg-red-500 hover:bg-red-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                                         onClick={() =>
                                           handleRejectRegistration(
                                             Number(account.id),
@@ -1404,7 +1407,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700 cursor-pointer"
+                                      className="text-green-600 hover:text-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                                       onClick={() =>
                                         handleApproveRegistration(
                                           Number(account.id),
@@ -1539,15 +1542,36 @@ export default function UserManagementTab() {
                   setIsDeleteModalOpen(false);
                   setEmployeeToDelete(null);
                 }}
-                className="text-white bg-blue-600 hover:text-white hover:bg-green-500 cursor-pointer"
+                className="text-white bg-red-600 hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200"
               >
                 Cancel
               </Button>
               <Button
-                className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
-                onClick={() => handleDeleteEmployee(employeeToDelete)}
+                disabled={isDeletingEmployee}
+                className={`bg-blue-600 hover:bg-red-700 text-white cursor-pointer
+    hover:scale-110 transition-transform duration-200
+    ${isDeletingEmployee ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
+  `}
+                onClick={async () => {
+                  if (!employeeToDelete) return;
+
+                  setIsDeletingEmployee(true);
+
+                  try {
+                    await handleDeleteEmployee(employeeToDelete);
+                  } finally {
+                    setIsDeletingEmployee(false);
+                  }
+                }}
               >
-                ❌ Delete Permanently
+                {isDeletingEmployee ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>❌ Delete Permanently</>
+                )}
               </Button>
             </div>
           </DialogFooter>

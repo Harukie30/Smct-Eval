@@ -204,7 +204,7 @@ export default function ProfileModal({
             variant="outline"
             onClick={handleCancel}
             disabled={isLoading}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 hover:text-white text-white cursor-pointer disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-300"
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 hover:text-white text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
           >
             <X className="w-5 h-5 text-white" />
             Cancel
@@ -212,7 +212,7 @@ export default function ProfileModal({
           <Button
             type="submit"
             disabled={isLoading}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 cursor-pointer disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all duration-300"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
             onClick={handleSubmit}
           >
             {isLoading ? (
@@ -477,10 +477,11 @@ export default function ProfileModal({
           </div>
           <p className="text-sm text-gray-500">
             Update your digital signature for official documents and approvals.
-           <p className="text-sm mt-4 font-bold text-gray-500">
-            Note: If you are unsure of your new signature, clearing your signature will reset it to the default signature.
-            </p> 
+            
+           
           </p>
+          <p className="text-sm text-gray-700"><span className="font-bold">Note:</span> If you are unsure about your new signature, 
+          please do not click Save yet. Clearing your signature will reset it to the default signature</p>
 
           {/* General Error */}
           {errors.general && (

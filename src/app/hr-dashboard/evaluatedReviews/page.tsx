@@ -4,6 +4,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import clientDataService, { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { useState, useEffect, useRef } from "react";
+import { Loader2 } from "lucide-react";
+
 import {
   Card,
   CardContent,
@@ -82,6 +84,7 @@ export default function OverviewTab() {
   const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [years, setYears] = useState<any[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadEvaluations = async (
     searchValue: string,
@@ -732,7 +735,7 @@ export default function OverviewTab() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleViewEvaluation(review)}
-                                className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                                className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white cursor-pointer hover:scale-110 transition-transform duration-200"
                               >
                                 ☰ View
                               </Button>
@@ -740,7 +743,7 @@ export default function OverviewTab() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => openDeleteModal(review)}
-                                className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200 cursor-pointer"
+                                className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200 cursor-pointer hover:scale-110 transition-transform duration-200"
                                 title="Delete this evaluation record"
                               >
                                 ❌ Delete
@@ -787,9 +790,11 @@ export default function OverviewTab() {
               <DialogTitle className="text-red-800 flex items-center gap-2">
                 <span className="text-xl">⚠️</span>
                 Delete Evaluation of{" "}
-                {reviewToDelete?.employee.fname +
+                {(reviewToDelete?.employee?.fname || "") +
                   " " +
-                  reviewToDelete?.employee.lname}
+                  (reviewToDelete?.employee?.lname || "") || 
+                  reviewToDelete?.employee?.name || 
+                  "Unknown Employee"}
               </DialogTitle>
               <DialogDescription className="text-red-700">
                 This action cannot be undone. Are you sure you want to
@@ -830,15 +835,19 @@ export default function OverviewTab() {
                   <div className="mt-2 space-y-1">
                     <p>
                       <span className="font-medium">Employee Name:</span>{" "}
-                      {reviewToDelete?.employee.fname +
+                      {(reviewToDelete?.employee?.fname || "") +
                         " " +
-                        reviewToDelete?.employee.lname}
+                        (reviewToDelete?.employee?.lname || "") || 
+                        reviewToDelete?.employee?.name || 
+                        "Unknown Employee"}
                     </p>
                     <p>
                       <span className="font-medium">Evaluator Name:</span>{" "}
-                      {reviewToDelete?.evaluator.fname +
+                      {(reviewToDelete?.evaluator?.fname || "") +
                         " " +
-                        reviewToDelete?.evaluator.lname}
+                        (reviewToDelete?.evaluator?.lname || "") || 
+                        reviewToDelete?.evaluator?.name || 
+                        "Unknown Evaluator"}
                     </p>
                     <p>
                       <span className="font-medium">Branch:</span>{" "}
@@ -857,15 +866,36 @@ export default function OverviewTab() {
                     setIsDeleteModalOpen(false);
                     setReviewToDelete(null);
                   }}
-                  className="text-white bg-blue-600 hover:text-white hover:bg-green-500 cursor-pointer"
+                  className="text-white bg-red-600 hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200"
                 >
                   Cancel
                 </Button>
                 <Button
-                  className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
-                  onClick={() => handleDeleteClick(reviewToDelete)}
+                  disabled={isDeleting}
+                  className={`bg-blue-600 hover:bg-red-700 text-white cursor-pointer
+    hover:scale-110 transition-all duration-200 shadow-lg hover:shadow-xl
+    ${isDeleting ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
+  `}
+                  onClick={async () => {
+                    if (!reviewToDelete) return;
+
+                    setIsDeleting(true);
+
+                    try {
+                      await handleDeleteClick(reviewToDelete);
+                    } finally {
+                      setIsDeleting(false);
+                    }
+                  }}
                 >
-                  ❌ Delete Permanently
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>❌ Delete Permanently</>
+                  )}
                 </Button>
               </div>
             </DialogFooter>

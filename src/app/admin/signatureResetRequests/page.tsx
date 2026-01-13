@@ -71,6 +71,8 @@ export default function SignatureResetRequestsTab() {
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
 
   // Modal states
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
@@ -455,17 +457,20 @@ export default function SignatureResetRequestsTab() {
                           }}
                           onMouseDown={(e) => {
                             // Prevent default behavior on mouse down to prevent dragging
-                            if (e.button === 0) { // Left mouse button
+                            if (e.button === 0) {
+                              // Left mouse button
                               e.preventDefault();
                             }
                           }}
-                          style={{
-                            imageRendering: "auto",
-                            willChange: "auto",
-                            transform: "translateZ(0)",
-                            backfaceVisibility: "hidden",
-                            WebkitBackfaceVisibility: "hidden",
-                          } as React.CSSProperties}
+                          style={
+                            {
+                              imageRendering: "auto",
+                              willChange: "auto",
+                              transform: "translateZ(0)",
+                              backfaceVisibility: "hidden",
+                              WebkitBackfaceVisibility: "hidden",
+                            } as React.CSSProperties
+                          }
                         />
                         <div className="text-gray-500">
                           {searchTerm || statusFilter !== "0" ? (
@@ -588,15 +593,33 @@ export default function SignatureResetRequestsTab() {
             <Button
               variant="outline"
               onClick={() => setIsApproveModalOpen(false)}
+              className="text-white bg-red-600 hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
             >
               Cancel
             </Button>
             <Button
-              onClick={handleApprove}
-              className="bg-green-600 hover:bg-green-700"
+              disabled={isApproving}
+              className={`bg-blue-600 hover:bg-green-700 flex items-center gap-2 shadow-lg transition-all duration-300 ${
+                isApproving
+                  ? "cursor-not-allowed opacity-80"
+                  : "cursor-pointer hover:scale-110 hover:shadow-xl"
+              }`}
+              onClick={async () => {
+                setIsApproving(true);
+
+                try {
+                  await handleApprove();
+                } finally {
+                  setIsApproving(false);
+                }
+              }}
             >
-              <Check className="h-4 w-4 mr-2" />
-              Approve
+              {isApproving ? (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              {isApproving ? "Approving..." : "Approve"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -622,12 +645,34 @@ export default function SignatureResetRequestsTab() {
             <Button
               variant="outline"
               onClick={() => setIsRejectModalOpen(false)}
+              className="text-white bg-red-600 hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
             >
               Cancel
             </Button>
-            <Button onClick={handleReject} variant="destructive">
-              <X className="h-4 w-4 mr-2" />
-              Reject
+            <Button
+              disabled={isRejecting}
+              variant="destructive"
+              className={`text-white bg-blue-600 hover:text-white hover:bg-red-500 cursor-pointer flex items-center gap-2 shadow-lg transition-all duration-300 ${
+                isRejecting
+                  ? "cursor-not-allowed opacity-80"
+                  : "cursor-pointer hover:scale-110 hover:shadow-xl"
+              }`}
+              onClick={async () => {
+                setIsRejecting(true);
+
+                try {
+                  await handleReject();
+                } finally {
+                  setIsRejecting(false);
+                }
+              }}
+            >
+              {isRejecting ? (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <X className="h-4 w-4" />
+              )}
+              {isRejecting ? "Rejecting..." : "Reject"}
             </Button>
           </DialogFooter>
         </DialogContent>

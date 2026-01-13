@@ -76,10 +76,12 @@ export default function OverviewTab() {
         selectedYear,
         selectedQuarter
       );
-      
+
       // Add safety checks to prevent "Cannot read properties of undefined" error
       if (!response || !response.myEval_as_Employee) {
-        console.error("API response is undefined or missing myEval_as_Employee");
+        console.error(
+          "API response is undefined or missing myEval_as_Employee"
+        );
         setMyEvaluations([]);
         setOverviewTotal(0);
         setTotalPages(1);
@@ -112,7 +114,7 @@ export default function OverviewTab() {
     const loadDashboard = async () => {
       try {
         const dashboard = await apiService.employeeDashboard();
-        
+
         // Add safety checks to prevent "Cannot read properties of undefined" error
         if (!dashboard) {
           console.error("Dashboard API response is undefined");
@@ -231,8 +233,10 @@ export default function OverviewTab() {
   };
 
   const getQuarterColor = (quarter: string): string => {
-    if (quarter === "3" || quarter.includes("M3")) return "bg-indigo-100 text-indigo-800";
-    if (quarter === "5" || quarter.includes("M5")) return "bg-pink-100 text-pink-800";
+    if (quarter === "3" || quarter.includes("M3"))
+      return "bg-indigo-100 text-indigo-800";
+    if (quarter === "5" || quarter.includes("M5"))
+      return "bg-pink-100 text-pink-800";
     if (quarter.includes("Q1")) return "bg-blue-100 text-blue-800";
     if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
     if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
@@ -447,7 +451,7 @@ export default function OverviewTab() {
               size="sm"
               onClick={refresh}
               disabled={isRefreshingOverview}
-              className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white cursor-pointer"
+              className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
             >
               <svg
                 className="h-4 w-4"
@@ -526,38 +530,38 @@ export default function OverviewTab() {
           {/* Quarter Filter */}
           <div className="mb-6">
             <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-sm font-medium text-gray-700 mr-2">
+              <span className="text-sm font-medium text-gray-800 mr-2">
                 Filter by Quarter:
               </span>
+
+              {/* All Quarters */}
               <Button
-                variant={selectedQuarter === "" ? "default" : "outline"}
+                variant="outline"
                 size="sm"
                 onClick={() => setSelectedQuarter("")}
-                className={`text-xs ${
+                className={`text-xs border transition-all duration-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 ${
                   selectedQuarter === ""
-                    ? "bg-blue-600 text-white border-blue-600 shadow-md"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    ? "bg-blue-600 text-white border-blue-600 scale-105"
+                    : "bg-white text-black border-gray-400 hover:bg-gray-100"
                 }`}
               >
                 All Quarters
               </Button>
+
+              {/* Quarter Buttons */}
               {["3", "5", "Q1", "Q2", "Q3", "Q4"].map((quarter) => (
                 <Button
                   key={quarter}
-                  variant={selectedQuarter === quarter ? "default" : "outline"}
+                  variant="outline"
                   size="sm"
                   onClick={() => setSelectedQuarter(quarter)}
-                  className={`text-xs font-medium transition-all duration-200 ${
+                  className={`text-xs font-medium border transition-all duration-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 ${
                     selectedQuarter === quarter
-                      ? `${getQuarterColor(
-                          quarter
-                        )} border-2 shadow-md transform scale-110 `
-                      : `${getQuarterColor(
-                          quarter
-                        )} border border-gray-300 hover:shadow-sm hover:scale-105`
+                      ? "bg-blue-600 text-white border-blue-600 scale-105"
+                      : "bg-white text-black border-gray-400 hover:bg-gray-100 hover:scale-105"
                   }`}
                 >
-                  {quarter === "3" || quarter === "5" ? "M" + quarter : quarter}
+                  {quarter === "3" || quarter === "5" ? `M${quarter}` : quarter}
                 </Button>
               ))}
             </div>
@@ -793,7 +797,7 @@ export default function OverviewTab() {
                           </TableCell>
                           <TableCell className="w-1/6 text-center">
                             <Button
-                              className="bg-blue-500 text-white hover:bg-green-700 hover:text-white cursor-pointer"
+                              className="bg-blue-500 text-white hover:bg-green-700 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                               size="sm"
                               onClick={() => handleViewEvaluation(submission)}
                             >

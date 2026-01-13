@@ -686,11 +686,21 @@ export default function Step1({
               htmlFor="employeeId"
               className="text-base font-medium text-gray-900"
             >
-              Employee Number:
+              Employee ID:
             </Label>
             <Input
               id="employeeId"
-              value={employee?.emp_id || ""}
+              value={
+                employee?.emp_id
+                  ? (() => {
+                      const idString = employee.emp_id.toString();
+                      if (idString.length > 4) {
+                        return `${idString.slice(0, 4)}-${idString.slice(4)}`;
+                      }
+                      return idString;
+                    })()
+                  : ""
+              }
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />

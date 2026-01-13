@@ -79,6 +79,8 @@ export default function SignatureResetRequestsTab() {
     useState<SignatureResetRequest | null>(null);
 
   const { success, error: showError } = useToast();
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
 
   // Date filter options for combobox
   const statusOptions = [
@@ -455,17 +457,20 @@ export default function SignatureResetRequestsTab() {
                           }}
                           onMouseDown={(e) => {
                             // Prevent default behavior on mouse down to prevent dragging
-                            if (e.button === 0) { // Left mouse button
+                            if (e.button === 0) {
+                              // Left mouse button
                               e.preventDefault();
                             }
                           }}
-                          style={{
-                            imageRendering: "auto",
-                            willChange: "auto",
-                            transform: "translateZ(0)",
-                            backfaceVisibility: "hidden",
-                            WebkitBackfaceVisibility: "hidden",
-                          } as React.CSSProperties}
+                          style={
+                            {
+                              imageRendering: "auto",
+                              willChange: "auto",
+                              transform: "translateZ(0)",
+                              backfaceVisibility: "hidden",
+                              WebkitBackfaceVisibility: "hidden",
+                            } as React.CSSProperties
+                          }
                         />
                         <div className="text-gray-500">
                           {searchTerm || statusFilter !== "0" ? (
@@ -593,11 +598,24 @@ export default function SignatureResetRequestsTab() {
               Cancel
             </Button>
             <Button
-              onClick={handleApprove}
-              className="bg-green-600 hover:bg-green-700 cursor-pointer"
+              onClick={async () => {
+                setIsApproving(true);
+
+                try {
+                  await handleApprove();
+                } finally {
+                  setIsApproving(false);
+                }
+              }}
+              disabled={isApproving}
+              className="bg-green-600 hover:bg-green-700 cursor-pointer flex items-center gap-2"
             >
-              <Check className="h-4 w-4 mr-2" />
-              Approve
+              {isApproving ? (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              {isApproving ? "Approving..." : "Approve"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -627,9 +645,26 @@ export default function SignatureResetRequestsTab() {
             >
               Cancel
             </Button>
-            <Button onClick={handleReject} variant="destructive" className="cursor-pointer ">
-              <X className="h-4 w-4 mr-2" />
-              Reject
+            <Button
+              onClick={async () => {
+                setIsRejecting(true);
+
+                try {
+                  await handleReject();
+                } finally {
+                  setIsRejecting(false);
+                }
+              }}
+              disabled={isRejecting}
+              variant="destructive"
+              className="cursor-pointer flex items-center gap-2"
+            >
+              {isRejecting ? (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <X className="h-4 w-4" />
+              )}
+              {isRejecting ? "Rejecting..." : "Reject"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1645,14 +1645,14 @@ export default function ViewResultsModal({
           <div className="sticky top-0 z-50 flex justify-end gap-2 mb-4 -mr-6 pr-6 py-4 no-print ">
             <Button
               onClick={handlePrint}
-              className="px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300"
+              className="px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 transition-transform duration-200"
             >
               <Printer className="h-4 w-4" />
               Print
             </Button>
             <Button
               onClick={onCloseAction}
-              className="px-4 py-2 bg-blue-500 text-white hover:bg-red-600 hover:text-white cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300"
+              className="px-4 py-2 bg-red-500 text-white hover:bg-red-600 hover:text-white cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 transition-transform duration-200"
             >
               🗙 Close
             </Button>

@@ -581,7 +581,7 @@ export default function OverviewTab() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                              className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 hover:text-white text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
                               onClick={() => handleViewEvaluation(review)}
                             >
                               View

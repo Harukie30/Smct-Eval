@@ -1421,14 +1421,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <Button
               variant="outline"
               onClick={handleCancel}
-              className="px-6 cursor-pointer"
+              className="px-6 cursor-pointer hover:scale-110 transition-transform duration-200 bg-red-500 hover:bg-red-600 text-white hover:text-white"
               disabled={isSaving}
             >
               Cancel
             </Button>
             <Button
               onClick={handleSave}
-              className="bg-blue-600 hover:bg-blue-700 px-6 cursor-pointer"
+              className="bg-blue-600 hover:bg-blue-700 px-6 cursor-pointer hover:scale-110 transition-transform duration-200"
               disabled={isSaving}
             >
               {isSaving ? (

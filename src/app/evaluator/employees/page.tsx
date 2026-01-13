@@ -240,7 +240,7 @@ export default function EmployeesTab() {
                 setRefreshTrigger((prev) => prev + 1); // Trigger refresh by incrementing counter
               }}
               disabled={isRefreshing}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
               title="Refresh employee data"
             >
               {isRefreshing ? (
@@ -290,7 +290,7 @@ export default function EmployeesTab() {
               placeholder="All Positions"
               searchPlaceholder="Search positions..."
               emptyText="No positions found."
-              className="w-[180px]"
+              className="w-[180px] cursor-pointer "
             />
             {(employeeSearch || positionFilter) && (
               <Button
@@ -506,10 +506,10 @@ export default function EmployeesTab() {
                             key={employee.id}
                             className={
                               isNew
-                                ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100 hover:shadow-md transition-all duration-200 "
                                 : isRecentlyAdded
-                                ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100 hover:shadow-md transition-all duration-200 cursor-pointer"
-                                : "hover:bg-blue-100 hover:shadow-md transition-all duration-200 cursor-pointer"
+                                ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100 hover:shadow-md transition-all duration-200 "
+                                : "hover:bg-blue-100 hover:shadow-md transition-all duration-200"
                             }
                           >
                             <TableCell className="font-medium">
@@ -556,7 +556,7 @@ export default function EmployeesTab() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-blue-600 hover:text-blue-700 cursor-pointer"
+                                  className="text-blue-600 hover:text-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                                   onClick={() => {
                                     setSelectedEmployeeForView(employee);
                                     setIsViewEmployeeModalOpen(true);
@@ -568,7 +568,7 @@ export default function EmployeesTab() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-green-600 hover:text-green-700 cursor-pointer"
+                                  className="text-green-600 hover:text-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                                   onClick={() => {
                                     setIsEvaluationTypeModalOpen(true);
                                     setSelectedEmployeeForEvaluation(employee);
