@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -126,6 +127,7 @@ export default function EvaluationForm({
     customerServiceExplanation5: "",
     created_at: "",
   });
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const updateDataAction = (updates: Partial<EvaluationPayload>) => {
     setForm((prev: EvaluationPayload) => ({
@@ -190,29 +192,41 @@ export default function EvaluationForm({
           if (!hasBasicInfo) return false;
           try {
             // Convert to date strings in YYYY-MM-DD format for reliable comparison
-            const fromDateStr = typeof form.coverageFrom === "string" 
-              ? form.coverageFrom 
-              : new Date(form.coverageFrom).toISOString().split("T")[0];
-            const toDateStr = typeof form.coverageTo === "string"
-              ? form.coverageTo
-              : new Date(form.coverageTo).toISOString().split("T")[0];
-            
+            const fromDateStr =
+              typeof form.coverageFrom === "string"
+                ? form.coverageFrom
+                : new Date(form.coverageFrom).toISOString().split("T")[0];
+            const toDateStr =
+              typeof form.coverageTo === "string"
+                ? form.coverageTo
+                : new Date(form.coverageTo).toISOString().split("T")[0];
+
             // Validate date strings are in correct format
-            if (!fromDateStr || !toDateStr || fromDateStr.length !== 10 || toDateStr.length !== 10) {
+            if (
+              !fromDateStr ||
+              !toDateStr ||
+              fromDateStr.length !== 10 ||
+              toDateStr.length !== 10
+            ) {
               return false;
             }
-            
+
             // Check if fromDate is before toDate (string comparison works for YYYY-MM-DD format)
             if (fromDateStr >= toDateStr) {
               return false;
             }
-            
+
             // Check if coverageFrom is not before date hired
             if (form.hireDate) {
-              const hireDateStr = typeof form.hireDate === "string"
-                ? form.hireDate
-                : new Date(form.hireDate).toISOString().split("T")[0];
-              if (hireDateStr && hireDateStr.length === 10 && fromDateStr < hireDateStr) {
+              const hireDateStr =
+                typeof form.hireDate === "string"
+                  ? form.hireDate
+                  : new Date(form.hireDate).toISOString().split("T")[0];
+              if (
+                hireDateStr &&
+                hireDateStr.length === 10 &&
+                fromDateStr < hireDateStr
+              ) {
                 return false;
               }
             }
@@ -222,7 +236,12 @@ export default function EvaluationForm({
           }
         })();
 
-        return hasReviewType && hasJobKnowledgeScores && hasBasicInfo && hasValidCoverageDates;
+        return (
+          hasReviewType &&
+          hasJobKnowledgeScores &&
+          hasBasicInfo &&
+          hasValidCoverageDates
+        );
       case 2: // Quality of Work
         return (
           form.qualityOfWorkScore1 &&
@@ -344,24 +363,36 @@ export default function EvaluationForm({
         if (form.coverageFrom && form.coverageTo) {
           try {
             // Convert to date strings in YYYY-MM-DD format for reliable comparison
-            const fromDateStr = typeof form.coverageFrom === "string" 
-              ? form.coverageFrom 
-              : new Date(form.coverageFrom).toISOString().split("T")[0];
-            const toDateStr = typeof form.coverageTo === "string"
-              ? form.coverageTo
-              : new Date(form.coverageTo).toISOString().split("T")[0];
-            
-            if (fromDateStr && toDateStr && fromDateStr.length === 10 && toDateStr.length === 10) {
+            const fromDateStr =
+              typeof form.coverageFrom === "string"
+                ? form.coverageFrom
+                : new Date(form.coverageFrom).toISOString().split("T")[0];
+            const toDateStr =
+              typeof form.coverageTo === "string"
+                ? form.coverageTo
+                : new Date(form.coverageTo).toISOString().split("T")[0];
+
+            if (
+              fromDateStr &&
+              toDateStr &&
+              fromDateStr.length === 10 &&
+              toDateStr.length === 10
+            ) {
               // Check if fromDate is before toDate (string comparison works for YYYY-MM-DD format)
               if (fromDateStr >= toDateStr) {
                 return "Performance Coverage 'From' date must be earlier than 'To' date";
               }
               // Check if coverageFrom is before date hired
               if (form.hireDate) {
-                const hireDateStr = typeof form.hireDate === "string"
-                  ? form.hireDate
-                  : new Date(form.hireDate).toISOString().split("T")[0];
-                if (hireDateStr && hireDateStr.length === 10 && fromDateStr < hireDateStr) {
+                const hireDateStr =
+                  typeof form.hireDate === "string"
+                    ? form.hireDate
+                    : new Date(form.hireDate).toISOString().split("T")[0];
+                if (
+                  hireDateStr &&
+                  hireDateStr.length === 10 &&
+                  fromDateStr < hireDateStr
+                ) {
                   return "Performance Coverage cannot start before Date Hired";
                 }
               }
@@ -758,94 +789,112 @@ export default function EvaluationForm({
                 e.stopPropagation();
                 setShowCancelDialog(false);
               }}
-              className="px-4 bg-blue-500 text-white hover:bg-blue-600 hover:text-white"
+              className="px-4 bg-blue-500 text-white hover:bg-blue-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
             >
               Keep Editing
             </Button>
             <Button
               variant="destructive"
+              disabled={isCancelling}
+              className={`px-4 flex items-center gap-2 cursor-pointer hover:scale-110 transition-transform duration-200
+    ${isCancelling ? "opacity-70 cursor-not-allowed" : ""}`}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setShowCancelDialog(false);
-                if (onCancelAction) {
-                  onCancelAction();
-                } else if (onCloseAction) {
-                  onCloseAction();
+
+                setIsCancelling(true);
+
+                try {
+                  setShowCancelDialog(false);
+
+                  if (onCancelAction) {
+                    onCancelAction();
+                  } else if (onCloseAction) {
+                    onCloseAction();
+                  }
+
+                  setForm({
+                    hireDate: "",
+                    rating: 0,
+                    coverageFrom: "",
+                    coverageTo: "",
+                    reviewTypeProbationary: "",
+                    reviewTypeRegular: "",
+                    reviewTypeOthersImprovement: false,
+                    reviewTypeOthersCustom: "",
+                    priorityArea1: "",
+                    priorityArea2: "",
+                    priorityArea3: "",
+                    remarks: "",
+                    jobKnowledgeScore1: 0,
+                    jobKnowledgeScore2: 0,
+                    jobKnowledgeScore3: 0,
+                    jobKnowledgeComments1: "",
+                    jobKnowledgeComments2: "",
+                    jobKnowledgeComments3: "",
+                    qualityOfWorkScore1: 0,
+                    qualityOfWorkScore2: 0,
+                    qualityOfWorkScore3: 0,
+                    qualityOfWorkScore4: 0,
+                    qualityOfWorkScore5: 0,
+                    qualityOfWorkComments1: "",
+                    qualityOfWorkComments2: "",
+                    qualityOfWorkComments3: "",
+                    qualityOfWorkComments4: "",
+                    qualityOfWorkComments5: "",
+                    adaptabilityScore1: 0,
+                    adaptabilityScore2: 0,
+                    adaptabilityScore3: 0,
+                    adaptabilityComments1: "",
+                    adaptabilityComments2: "",
+                    adaptabilityComments3: "",
+                    teamworkScore1: 0,
+                    teamworkScore2: 0,
+                    teamworkScore3: 0,
+                    teamworkComments1: "",
+                    teamworkComments2: "",
+                    teamworkComments3: "",
+                    reliabilityScore1: 0,
+                    reliabilityScore2: 0,
+                    reliabilityScore3: 0,
+                    reliabilityScore4: 0,
+                    reliabilityComments1: "",
+                    reliabilityComments2: "",
+                    reliabilityComments3: "",
+                    reliabilityComments4: "",
+                    ethicalScore1: 0,
+                    ethicalScore2: 0,
+                    ethicalScore3: 0,
+                    ethicalScore4: 0,
+                    ethicalExplanation1: "",
+                    ethicalExplanation2: "",
+                    ethicalExplanation3: "",
+                    ethicalExplanation4: "",
+                    customerServiceScore1: 0,
+                    customerServiceScore2: 0,
+                    customerServiceScore3: 0,
+                    customerServiceScore4: 0,
+                    customerServiceScore5: 0,
+                    customerServiceExplanation1: "",
+                    customerServiceExplanation2: "",
+                    customerServiceExplanation3: "",
+                    customerServiceExplanation4: "",
+                    customerServiceExplanation5: "",
+                    created_at: "",
+                  });
+                } finally {
+                  setIsCancelling(false);
                 }
-                setForm({
-                  hireDate: "",
-                  rating: 0,
-                  coverageFrom: "",
-                  coverageTo: "",
-                  reviewTypeProbationary: "",
-                  reviewTypeRegular: "",
-                  reviewTypeOthersImprovement: false,
-                  reviewTypeOthersCustom: "",
-                  priorityArea1: "",
-                  priorityArea2: "",
-                  priorityArea3: "",
-                  remarks: "",
-                  jobKnowledgeScore1: 0,
-                  jobKnowledgeScore2: 0,
-                  jobKnowledgeScore3: 0,
-                  jobKnowledgeComments1: "",
-                  jobKnowledgeComments2: "",
-                  jobKnowledgeComments3: "",
-                  qualityOfWorkScore1: 0,
-                  qualityOfWorkScore2: 0,
-                  qualityOfWorkScore3: 0,
-                  qualityOfWorkScore4: 0,
-                  qualityOfWorkScore5: 0,
-                  qualityOfWorkComments1: "",
-                  qualityOfWorkComments2: "",
-                  qualityOfWorkComments3: "",
-                  qualityOfWorkComments4: "",
-                  qualityOfWorkComments5: "",
-                  adaptabilityScore1: 0,
-                  adaptabilityScore2: 0,
-                  adaptabilityScore3: 0,
-                  adaptabilityComments1: "",
-                  adaptabilityComments2: "",
-                  adaptabilityComments3: "",
-                  teamworkScore1: 0,
-                  teamworkScore2: 0,
-                  teamworkScore3: 0,
-                  teamworkComments1: "",
-                  teamworkComments2: "",
-                  teamworkComments3: "",
-                  reliabilityScore1: 0,
-                  reliabilityScore2: 0,
-                  reliabilityScore3: 0,
-                  reliabilityScore4: 0,
-                  reliabilityComments1: "",
-                  reliabilityComments2: "",
-                  reliabilityComments3: "",
-                  reliabilityComments4: "",
-                  ethicalScore1: 0,
-                  ethicalScore2: 0,
-                  ethicalScore3: 0,
-                  ethicalScore4: 0,
-                  ethicalExplanation1: "",
-                  ethicalExplanation2: "",
-                  ethicalExplanation3: "",
-                  ethicalExplanation4: "",
-                  customerServiceScore1: 0,
-                  customerServiceScore2: 0,
-                  customerServiceScore3: 0,
-                  customerServiceScore4: 0,
-                  customerServiceScore5: 0,
-                  customerServiceExplanation1: "",
-                  customerServiceExplanation2: "",
-                  customerServiceExplanation3: "",
-                  customerServiceExplanation4: "",
-                  customerServiceExplanation5: "",
-                  created_at: "",
-                });
               }}
-              className="px-4"
             >
-              Cancel Evaluation
+              {isCancelling ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                "Cancel Evaluation"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
