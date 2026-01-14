@@ -394,10 +394,10 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 onChange={(e) => {
                   // Remove all non-numeric characters
                   let value = e.target.value.replace(/\D/g, "");
-                  
+
                   // Limit to 11 digits
                   value = value.slice(0, 11);
-                  
+
                   handleInputChange("contact", value);
                 }}
                 onKeyPress={(e) => {
@@ -425,8 +425,14 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 id="date_hired"
                 type="date"
                 value={formData.date_hired || ""}
-                onChange={(e) => handleInputChange("date_hired", e.target.value)}
-                className={errors.date_hired ? "border-red-500 cursor-pointer" : "bg-white cursor-pointer"}
+                onChange={(e) =>
+                  handleInputChange("date_hired", e.target.value)
+                }
+                className={
+                  errors.date_hired
+                    ? "border-red-500 cursor-pointer"
+                    : "bg-white cursor-pointer"
+                }
               />
               {errors.date_hired && (
                 <p className="text-sm text-red-500">{errors.date_hired}</p>
@@ -528,7 +534,11 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             </Button>
             <Button
               onClick={handleSave}
-              className="bg-green-600 hover:bg-green-700 hover:text-white text-white px-6 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+              className={`bg-green-600 hover:bg-green-700 text-white px-6 
+    cursor-pointer hover:scale-110 transition-transform duration-200 
+    shadow-lg hover:shadow-xl transition-all duration-300
+    ${isSaving ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
+  `}
               disabled={isSaving}
             >
               {isSaving ? (

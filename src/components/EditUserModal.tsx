@@ -710,7 +710,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             departmentNameOrId.includes(dLabel)
           );
         });
-        departmentValue = foundDepartment?.value || foundDepartment?.id || departmentNameOrId;
+        departmentValue =
+          foundDepartment?.value || foundDepartment?.id || departmentNameOrId;
       } else {
         departmentValue = departmentNameOrId;
       }
@@ -814,13 +815,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     if (formData.contact && formData.contact.trim()) {
       const digitsOnly = formData.contact.replace(/\D/g, "");
       const digitCount = digitsOnly.length;
-      
+
       if (digitCount !== 11) {
         newErrors.contact = "Contact number must be exactly 11 digits";
       } else if (!digitsOnly.startsWith("09")) {
         newErrors.contact = "Contact number must start with '09'";
       } else if (!/^09\d{9}$/.test(digitsOnly)) {
-        newErrors.contact = "Please enter a valid phone number (must start with 09)";
+        newErrors.contact =
+          "Please enter a valid phone number (must start with 09)";
       }
     }
 
@@ -1167,14 +1169,17 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 onChange={(e) => {
                   // Only allow numbers, spaces, hyphens, and parentheses (for formatting)
                   let value = e.target.value.replace(/[^\d\s\-()]/g, "");
-                  
+
                   // Limit to 11 digits maximum
                   const digitsOnly = value.replace(/\D/g, "");
                   if (digitsOnly.length > 11) {
                     // Truncate to 11 digits
-                    value = value.slice(0, value.length - (digitsOnly.length - 11));
+                    value = value.slice(
+                      0,
+                      value.length - (digitsOnly.length - 11)
+                    );
                   }
-                  
+
                   // Auto-format: If user starts typing and first digit is not 0, prepend 0
                   const cleanDigits = value.replace(/\D/g, "");
                   if (cleanDigits.length === 1 && cleanDigits[0] !== "0") {
@@ -1184,14 +1189,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   if (cleanDigits.length === 1 && cleanDigits[0] === "0") {
                     // Allow 0, will check for 09 on next input
                   }
-                  
+
                   handleInputChange("contact", value);
-                  
+
                   // Real-time validation feedback
                   if (value.trim()) {
                     const digitCount = cleanDigits.length;
                     const startsWith09 = cleanDigits.startsWith("09");
-                    
+
                     // Clear previous error if valid
                     if (digitCount === 11 && startsWith09) {
                       if (errors.contact) {
@@ -1209,7 +1214,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   if (value) {
                     const digitsOnly = value.replace(/\D/g, "");
                     const digitCount = digitsOnly.length;
-                    
+
                     if (digitCount !== 11) {
                       setErrors((prev) => ({
                         ...prev,
@@ -1223,7 +1228,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                     } else if (!/^09\d{9}$/.test(digitsOnly)) {
                       setErrors((prev) => ({
                         ...prev,
-                        contact: "Please enter a valid phone number (must start with 09)",
+                        contact:
+                          "Please enter a valid phone number (must start with 09)",
                       }));
                     }
                   }
@@ -1262,16 +1268,20 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               {errors.contact && (
                 <p className="text-sm text-red-500">{errors.contact}</p>
               )}
-              {formData.contact && !errors.contact && formData.contact.replace(/\D/g, "").startsWith("09") && formData.contact.replace(/\D/g, "").length === 11 && (
-                <p className="text-xs text-green-600">
-                  ✓ Valid format
-                </p>
-              )}
-              {formData.contact && formData.contact.replace(/\D/g, "").length > 0 && !formData.contact.replace(/\D/g, "").startsWith("09") && !errors.contact && (
-                <p className="text-xs text-amber-600">
-                  ⚠️ Number must start with "09"
-                </p>
-              )}
+              {formData.contact &&
+                !errors.contact &&
+                formData.contact.replace(/\D/g, "").startsWith("09") &&
+                formData.contact.replace(/\D/g, "").length === 11 && (
+                  <p className="text-xs text-green-600">✓ Valid format</p>
+                )}
+              {formData.contact &&
+                formData.contact.replace(/\D/g, "").length > 0 &&
+                !formData.contact.replace(/\D/g, "").startsWith("09") &&
+                !errors.contact && (
+                  <p className="text-xs text-amber-600">
+                    ⚠️ Number must start with "09"
+                  </p>
+                )}
             </div>
 
             {/* Date Hired */}
@@ -1284,7 +1294,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 onChange={(e) => {
                   handleInputChange("date_hired", e.target.value);
                 }}
-                className={errors.date_hired ? "border-red-500 cursor-pointer" : "bg-white cursor-pointer"}
+                className={
+                  errors.date_hired
+                    ? "border-red-500 cursor-pointer"
+                    : "bg-white cursor-pointer"
+                }
               />
               {errors.date_hired && (
                 <p className="text-sm text-red-500">{errors.date_hired}</p>
@@ -1301,10 +1315,12 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                       "value" in positions[0] &&
                       "label" in positions[0]
                       ? positions // Already in correct format { value, label }
-                      : positions.map((p: any) => ({
-                          value: p?.value || p?.id || p || "",
-                          label: p?.label || p?.name || p || "",
-                        })).filter((p: any) => p.value && p.label)
+                      : positions
+                          .map((p: any) => ({
+                            value: p?.value || p?.id || p || "",
+                            label: p?.label || p?.name || p || "",
+                          }))
+                          .filter((p: any) => p.value && p.label)
                     : []
                 }
                 value={formData.position || ""}
@@ -1322,36 +1338,39 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             </div>
 
             {/* Department - Show only if branch is HO, Head Office, or none, AND position is NOT Branch Manager or Area Manager */}
-            {isBranchHOOrNone(formData.branch) && !isManagerPosition(formData.position) && (
-              <div className="space-y-2">
-                <Label htmlFor="department">Department</Label>
-                <Combobox
-                  options={
-                    Array.isArray(departments) && departments.length > 0
-                      ? typeof departments[0] === "object" &&
-                        "value" in departments[0] &&
-                        "label" in departments[0]
-                        ? departments // Already in correct format { value, label }
-                        : departments.map((d: any) => ({
-                            value: d?.value || d?.id || d?.name || d || "",
-                            label: d?.label || d?.name || d || "",
-                          })).filter((d: any) => d.value && d.label)
-                      : []
-                  }
-                  value={String(formData.department || "")}
-                  onValueChangeAction={(value) =>
-                    setFormData({ ...formData, department: value })
-                  }
-                  placeholder="Select your department"
-                  searchPlaceholder="Search departments..."
-                  emptyText="No departments found."
-                  className="w-1/2"
-                />
-                {errors?.department && (
-                  <p className="text-sm text-red-500">{errors?.department}</p>
-                )}
-              </div>
-            )}
+            {isBranchHOOrNone(formData.branch) &&
+              !isManagerPosition(formData.position) && (
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department</Label>
+                  <Combobox
+                    options={
+                      Array.isArray(departments) && departments.length > 0
+                        ? typeof departments[0] === "object" &&
+                          "value" in departments[0] &&
+                          "label" in departments[0]
+                          ? departments // Already in correct format { value, label }
+                          : departments
+                              .map((d: any) => ({
+                                value: d?.value || d?.id || d?.name || d || "",
+                                label: d?.label || d?.name || d || "",
+                              }))
+                              .filter((d: any) => d.value && d.label)
+                        : []
+                    }
+                    value={String(formData.department || "")}
+                    onValueChangeAction={(value) =>
+                      setFormData({ ...formData, department: value })
+                    }
+                    placeholder="Select your department"
+                    searchPlaceholder="Search departments..."
+                    emptyText="No departments found."
+                    className="w-1/2"
+                  />
+                  {errors?.department && (
+                    <p className="text-sm text-red-500">{errors?.department}</p>
+                  )}
+                </div>
+              )}
 
             {/* Branch */}
             <div className="space-y-2 w-1/2">
@@ -1363,11 +1382,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                       "value" in branches[0] &&
                       "label" in branches[0]
                       ? branches // Already in correct format { value, label }
-                      : typeof branches[0] === "object" && !("value" in branches[0])
-                      ? (branches as { id: string; name: string }[]).map((b) => ({
-                          value: b?.name || b?.id || "",
-                          label: b?.name || b?.id || "",
-                        })).filter((b: any) => b.value && b.label)
+                      : typeof branches[0] === "object" &&
+                        !("value" in branches[0])
+                      ? (branches as { id: string; name: string }[])
+                          .map((b) => ({
+                            value: b?.name || b?.id || "",
+                            label: b?.name || b?.id || "",
+                          }))
+                          .filter((b: any) => b.value && b.label)
                       : (branches as string[]).filter((b: any) => b)
                     : []
                 }
@@ -1410,11 +1432,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               )}
               {isManagerOrSupervisorPosition(formData.position) && (
                 <p className="text-xs text-gray-500">
-                  Role is automatically set to "Evaluator" for manager/supervisor positions
+                  Role is automatically set to "Evaluator" for
+                  manager/supervisor positions
                 </p>
               )}
             </div>
-
           </div>
 
           <DialogFooter className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
@@ -1428,8 +1450,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             </Button>
             <Button
               onClick={handleSave}
-              className="bg-blue-600 hover:bg-blue-700 px-6 cursor-pointer hover:scale-110 transition-transform duration-200"
               disabled={isSaving}
+              className={`bg-blue-600 hover:bg-blue-700 text-white px-6 
+    cursor-pointer hover:scale-110 transition-transform duration-200
+    ${isSaving ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
+  `}
             >
               {isSaving ? (
                 <div className="flex items-center space-x-2">

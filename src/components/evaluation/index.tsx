@@ -668,7 +668,7 @@ export default function EvaluationForm({
                     variant="outline"
                     onClick={prevStep}
                     disabled={currentStep === 1}
-                    className="px-6"
+                    className="px-6 cursor-pointer bg-blue-500 text-white hover:scale-110 transition-transform duration-200 hover:bg-blue-500 hover:text-white"
                   >
                     Previous
                   </Button>
@@ -680,7 +680,7 @@ export default function EvaluationForm({
                       e.stopPropagation();
                       setShowCancelDialog(true);
                     }}
-                    className="px-6 text-red-600 border-red-300 hover:bg-red-50"
+                    className="px-6 text-red-600 bg-red-500 text-white border-red-300 hover:bg-red-500 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
                   >
                     Cancel Evaluation
                   </Button>
@@ -712,7 +712,7 @@ export default function EvaluationForm({
                         <TooltipTrigger asChild>
                           <Button
                             onClick={nextStep}
-                            className="px-6 bg-blue-500 text-white hover:bg-blue-600 hover:text-white"
+                            className="px-6 bg-blue-500 text-white hover:bg-green-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
                           >
                             Next
                           </Button>
@@ -915,7 +915,7 @@ export default function EvaluationForm({
           <DialogFooter className="flex justify-center">
             <Button
               onClick={handleSuccessDialogClose}
-              className="px-8 py-2 bg-green-600 text-white hover:bg-green-700"
+              className="px-8 py-2 bg-red-600 text-white hover:bg-red-700 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
             >
               Close
             </Button>

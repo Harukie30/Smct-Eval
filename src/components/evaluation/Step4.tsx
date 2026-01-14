@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -140,6 +140,25 @@ export default function Step4({ data, updateDataAction }: Step4Props) {
               Ability to work well with others. Contribution to team goals and
               projects. Supportiveness of team members.
             </p>
+          </div>
+
+          {/* Teamwork Reset Button */}
+          <div className="flex justify-end mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                updateDataAction({
+                  teamworkScore1: 0,
+                  teamworkScore2: 0,
+                  teamworkScore3: 0,
+                });
+              }}
+              className="text-xs px-3 py-1 h-7 bg-blue-500 text-white border-gray-300 hover:text-white hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200 "
+            >
+              Clear Teamwork Scores
+            </Button>
           </div>
 
           {/* Evaluation Table */}

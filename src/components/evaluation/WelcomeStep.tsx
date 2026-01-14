@@ -250,7 +250,7 @@ export default function WelcomeStep({
             disabled={!hasSignature}
             className={`px-8 py-3 text-lg ${
               hasSignature
-                ? "bg-blue-600 hover:bg-blue-700"
+                ? "bg-blue-600 hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200"
                 : "bg-gray-400 cursor-not-allowed"
             }`}
           >

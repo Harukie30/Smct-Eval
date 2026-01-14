@@ -147,6 +147,27 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
             </p>
           </div>
 
+          {/* Quality of Work Reset Button */}
+          <div className="flex justify-end mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                updateDataAction({
+                  qualityOfWorkScore1: 0,
+                  qualityOfWorkScore2: 0,
+                  qualityOfWorkScore3: 0,
+                  qualityOfWorkScore4: 0,
+                  qualityOfWorkScore5: 0,
+                });
+              }}
+              className="text-xs px-3 py-1 h-7 bg-blue-500 text-white border-gray-300 hover:text-white hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200 "
+            >
+              Clear Quality of Work Scores
+            </Button>
+          </div>
+
           {/* Evaluation Table */}
           <div className="overflow-x-auto">
             <table className="w-full border-collapse border border-gray-300">

@@ -71,6 +71,7 @@ export default function DepartmentsTab() {
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
   const [isDeletingBranches, setIsDeletingBranches] = useState(false);
+  const [isAddingBranch, setIsAddingBranch] = useState(false);
 
   //add inputs
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -759,10 +760,29 @@ export default function DepartmentsTab() {
                 Cancel
               </Button>
               <Button
-                onClick={() => handleAddBranch()}
-                className="bg-green-500 text-white hover:bg-green-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                disabled={isAddingBranch}
+                className={`bg-green-500 hover:bg-green-600 text-white flex items-center gap-2 
+    cursor-pointer hover:scale-110 transition-transform duration-200
+    ${isAddingBranch ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
+  `}
+                onClick={async () => {
+                  setIsAddingBranch(true);
+
+                  try {
+                    await handleAddBranch();
+                  } finally {
+                    setIsAddingBranch(false);
+                  }
+                }}
               >
-                Add Branch
+                {isAddingBranch ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  "Add Branch"
+                )}
               </Button>
             </div>
           </DialogFooter>

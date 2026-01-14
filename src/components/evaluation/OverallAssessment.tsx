@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 import {
   Check,
   X,
@@ -93,6 +94,7 @@ export default function OverallAssessment({
     q4: false,
   });
   const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
+  const [isSubmittingEvaluation, setIsSubmittingEvaluation] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -100,34 +102,6 @@ export default function OverallAssessment({
     };
     load();
   }, []);
-  // Check for existing quarterly reviews when employee changes
-  // useEffect(() => {
-  //   const checkQuarterlyReviews = async () => {
-  //     if (employee?.id) {
-  //       setIsLoadingQuarters(true);
-  //       try {
-  //         const status = await getQuarterlyReviewStatus(
-  //           employee.id,
-  //           getCurrentYear()
-  //         );
-  //         setQuarterlyStatus(status);
-  //         console.log(
-  //           "Quarterly review status for employee",
-  //           employee.id,
-  //           ":",
-  //           status
-  //         );
-  //       } catch (error) {
-  //         console.error("Error checking quarterly reviews:", error);
-  //       } finally {
-  //         setIsLoadingQuarters(false);
-  //       }
-  //     }
-  //   };
-
-  //   checkQuarterlyReviews();
-  // }, [employee?.id]);
-
   const handleSubmitEvaluation = async () => {
     // Validate evaluator has a signature
     if (!user?.signature) {
@@ -2838,7 +2812,7 @@ export default function OverallAssessment({
         <Button
           onClick={handlePrevious}
           variant="outline"
-          className="px-8 py-3 text-lg cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white"
+          className="px-8 py-3 text-lg cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
           size="lg"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -2847,18 +2821,39 @@ export default function OverallAssessment({
 
         {/* Center Action Buttons */}
         <div className="flex items-center space-x-4">
-          
-
           {/* Submit Button */}
           <Button
-            onClick={() => {
-              handleSubmitEvaluation();
+            disabled={isSubmittingEvaluation}
+            onClick={async () => {
+              setIsSubmittingEvaluation(true);
+
+              try {
+                await handleSubmitEvaluation();
+              } finally {
+                setIsSubmittingEvaluation(false);
+              }
             }}
-            className="px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white"
+            className={`px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white
+    flex items-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200
+    ${
+      isSubmittingEvaluation
+        ? "opacity-70 cursor-not-allowed hover:scale-100"
+        : ""
+    }
+  `}
             size="lg"
           >
-            <Send className="h-4 w-4 mr-2" />
-            Submit Evaluation
+            {isSubmittingEvaluation ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Submitting...</span>
+              </div>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Submit Evaluation
+              </>
+            )}
           </Button>
         </div>
 

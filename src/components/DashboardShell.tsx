@@ -350,7 +350,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsClockVisible(!isClockVisible)}
-                  className={`p-2 cursor-pointer ${isClockVisible ? "bg-gray-100 hover:bg-gray-200" : "bg-blue-100 hover:bg-blue-200"}`}
+                  className={`p-2 cursor-pointer ${isClockVisible ? "bg-gray-100 hover:bg-gray-200" : " hover:bg-blue-200 hover:scale-110 transition-transform duration-200www"}`}
                 >
                   <Clock className={`h-5 w-5 ${isClockVisible ? "text-gray-500" : "text-blue-600"}`} />
                 </Button>
@@ -379,7 +379,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                     setIsNotificationPanelClosing(false);
                   }
                 }}
-                className="relative p-2 hover:bg-gray-100 cursor-pointer"
+                className="relative p-2 hover:bg-blue-300 hover:text-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200"
               >
                 <Bell className="h-5 w-5" />
                 {notificationCount > 0 && (
@@ -1064,7 +1064,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         onOpenChangeAction={setIsNotificationDetailOpen}
       >
         <DialogContent
-          className="max-w-lg w-full mx-4 p-6"
+          className="max-w-2xl w-full mx-4 p-0 overflow-hidden"
           style={{
             animation: "modalPopup 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
@@ -1081,47 +1081,91 @@ export default function DashboardShell(props: DashboardShellProps) {
               }
             }
           `}</style>
-          <DialogHeader className="pb-4 border-b mb-2">
-            <DialogTitle className="flex items-center gap-3 text-xl">
-              Notification Details
-            </DialogTitle>
-          </DialogHeader>
-
+          
           {selectedNotification && (
-            <div className="space-y-6 py-4">
-              {/* Message */}
-              <div className="space-y-2">
-                <span className="text-sm font-semibold text-gray-700 block">
-                  Message:
-                </span>
-                <p className="text-base text-gray-900 bg-gray-50 p-4 rounded-lg border border-gray-200 leading-relaxed">
-                  {selectedNotification.data.message}
-                </p>
+            <>
+              {/* Header with gradient background and faded image */}
+              <div 
+                className="relative px-2 py-5 overflow-hidden"
+                style={{
+                  backgroundImage: 'url(/smct.png)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                }}
+              >
+                {/* Faded overlay for better text readability */}
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-blue-700/90 backdrop-blur-[1px]"></div>
+                
+                {/* Content with relative positioning */}
+                <div className="relative z-10">
+                  <DialogHeader className="pb-0">
+                    <DialogTitle className="flex items-center gap-3 text-xl text-white drop-shadow-md">
+                      <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm shadow-lg">
+                        <Bell className="w-5 h-5 text-white" />
+                      </div>
+                      <span>Notification Details</span>
+                    </DialogTitle>
+                  </DialogHeader>
+                </div>
               </div>
 
-              {/* Timestamp */}
-              <div className="flex items-center gap-3 text-sm">
-                <span className="font-semibold text-gray-700 w-24">
-                  Received:
-                </span>
-                <span className="text-gray-600">
-                  {new Date(selectedNotification.created_at).toLocaleString()}
-                </span>
-              </div>
+              {/* Content */}
+              <div className="px-6 py-6 space-y-6">
+                {/* Message Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-100 rounded-md">
+                      <Clock className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                      Message
+                    </span>
+                  </div>
+                  <div className="bg-gradient-to-br from-gray-50 to-blue-50/30 p-5 rounded-xl border border-gray-200 shadow-sm">
+                    <p className="text-base text-gray-800 leading-relaxed whitespace-pre-wrap">
+                      {selectedNotification.data.message}
+                    </p>
+                  </div>
+                </div>
 
-              {/* Close Button */}
-              <div className="pt-6 border-t flex justify-end">
-                <Button
-                  onClick={async () => {
-                    setIsNotificationDetailOpen(false);
-                    setIsRefreshing(true);
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 cursor-pointer"
-                >
-                  Close
-                </Button>
+                {/* Timestamp Section */}
+                <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Clock className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">
+                      Received At
+                    </span>
+                    <span className="text-sm font-medium text-gray-700">
+                      {new Date(selectedNotification.created_at).toLocaleString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Close Button */}
+                <div className="pt-4 border-t border-gray-200 flex justify-end">
+                  <Button
+                    onClick={async () => {
+                      setIsNotificationDetailOpen(false);
+                      setIsRefreshing(true);
+                    }}
+                    className="bg-red-600 hover:bg-red-700 text-white px-8 py-2.5 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-md hover:shadow-lg font-medium"
+                  >
+                    Close
+                  </Button>
+                </div>
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
@@ -1145,7 +1189,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         <TooltipContent
           side="left"
           sideOffset={10}
-          className="bg-blue-600 text-white border-blue-500"
+          className="bg-blue-700 text-white border-red-500"
         >
           <p className="font-medium">
             {isHelpButtonsVisible ? "Hide Help Buttons" : "Show Help Buttons"}

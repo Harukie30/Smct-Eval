@@ -144,6 +144,26 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
             </p>
           </div>
 
+          {/* Ethical & Professional Behavior Reset Button */}
+          <div className="flex justify-end mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                updateDataAction({
+                  ethicalScore1: 0,
+                  ethicalScore2: 0,
+                  ethicalScore3: 0,
+                  ethicalScore4: 0,
+                });
+              }}
+              className="text-xs px-3 py-1 h-7 bg-blue-500 text-white border-gray-300 hover:text-white hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200 "
+            >
+              Clear Ethical & Professional Behavior Scores
+            </Button>
+          </div>
+
           {/* Evaluation Table */}
           <div className="overflow-x-auto">
             <table className="w-full border-collapse border border-gray-300">

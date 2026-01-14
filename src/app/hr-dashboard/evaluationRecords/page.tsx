@@ -234,12 +234,8 @@ export default function OverviewTab() {
     setReviewToDelete(review);
     setIsDeleteModalOpen(true);
   };
-  // const groupedByYear = evaluations.reduce((acc: any, item) => {
-  //   const year = new Date(item.created_at).getFullYear();
-  //   acc[year] = acc[year] || [];
-  //   acc[year].push(item);
-  //   return acc;
-  // }, {});
+  
+
 
   return (
     <div className="relative ">
@@ -718,7 +714,7 @@ export default function OverviewTab() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleViewEvaluation(review)}
-                                className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                                className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
                               >
                                 ☰ View
                               </Button>
@@ -848,7 +844,7 @@ export default function OverviewTab() {
                   Cancel
                 </Button>
                 <Button
-                  className="bg-blue-600 hover:bg-red-700 text-white cursor-pointer "
+                  className="bg-blue-600 hover:bg-red-700 text-white hover:text-white cursor-pointer "
                   onClick={() => handleDeleteClick(reviewToDelete)}
                 >
                   ❌ Delete Permanently

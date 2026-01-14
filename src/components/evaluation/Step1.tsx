@@ -281,7 +281,7 @@ export default function Step1({
                     reviewTypeOthersCustom: "",
                   });
                 }}
-                className="text-xs px-3 py-1 h-7 bg-blue-500 text-white border-gray-300 hover:text-white hover:bg-red-400"
+                className="text-xs px-3 py-1 h-7 bg-blue-500 text-white border-gray-300 hover:text-white hover:bg-red-400 cursor-pointer hover:scale-110 transition-transform duration-200"
               >
                 Clear All
               </Button>
@@ -297,7 +297,7 @@ export default function Step1({
                     type="radio"
                     id="prob3"
                     name="probationaryReview"
-                    className="rounded"
+                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
                     checked={data.reviewTypeProbationary === 3}
                     disabled={
                       probitionary3 ||
@@ -341,7 +341,7 @@ export default function Step1({
                     type="radio"
                     id="prob5"
                     name="probationaryReview"
-                    className="rounded"
+                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
                     checked={data.reviewTypeProbationary === 5}
                     disabled={
                       probitionary5 ||
@@ -397,7 +397,7 @@ export default function Step1({
                     type="radio"
                     id="q1"
                     name="regularReview"
-                    className="rounded"
+                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
                     checked={data.reviewTypeRegular === "Q1"}
                     disabled={
                       regular1 ||
@@ -439,7 +439,7 @@ export default function Step1({
                     type="radio"
                     id="q2"
                     name="regularReview"
-                    className="rounded"
+                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
                     checked={data.reviewTypeRegular === "Q2"}
                     disabled={
                       regular2 ||
@@ -481,7 +481,7 @@ export default function Step1({
                     type="radio"
                     id="q3"
                     name="regularReview"
-                    className="rounded"
+                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
                     checked={data.reviewTypeRegular === "Q3"}
                     disabled={
                       regular3 ||
@@ -523,7 +523,7 @@ export default function Step1({
                     type="radio"
                     id="q4"
                     name="regularReview"
-                    className="rounded"
+                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
                     checked={data.reviewTypeRegular === "Q4"}
                     disabled={
                       regular4 ||
@@ -571,7 +571,7 @@ export default function Step1({
                   <input
                     type="checkbox"
                     id="improvement"
-                    className="rounded"
+                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
                     checked={data.reviewTypeOthersImprovement}
                     disabled={
                       data.reviewTypeProbationary !== "" ||
@@ -859,7 +859,7 @@ export default function Step1({
                         : new Date(data.coverageTo).toISOString().split("T")[0]
                       : undefined
                   }
-                  className={`w-full bg-yellow-100 border-yellow-300 hover:bg-yellow-200 ${
+                  className={`w-full bg-yellow-100 border-yellow-300 hover:bg-yellow-200 cursor-pointer hover:scale-110 transition-transform duration-200 ${
                     coverageError && !data.coverageFrom
                       ? "border-red-500"
                       : ""
@@ -909,7 +909,7 @@ export default function Step1({
                         : new Date(data.coverageFrom).toISOString().split("T")[0]
                       : undefined
                   }
-                  className={`w-full bg-yellow-100 border-yellow-300 hover:bg-yellow-200 ${
+                  className={`w-full bg-yellow-100 border-yellow-300 hover:bg-yellow-200 cursor-pointer hover:scale-110 transition-transform duration-200 ${
                     coverageError && !data.coverageTo ? "border-red-500" : ""
                   }`}
                 />
@@ -1113,7 +1113,7 @@ export default function Step1({
                   jobKnowledgeScore3: 0,
                 });
               }}
-              className="text-xs px-3 py-1 h-7 text-gray-600 border-gray-300 hover:bg-gray-50"
+              className="text-xs px-3 py-1 h-7 bg-blue-500 text-white border-gray-300 hover:text-white hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200 "
             >
               Clear Job Knowledge Scores
             </Button>
@@ -1160,6 +1160,7 @@ export default function Step1({
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
+                    
                       value={String(data.jobKnowledgeScore1)}
                       onValueChange={(value) =>
                         updateDataAction({ jobKnowledgeScore1: Number(value) })

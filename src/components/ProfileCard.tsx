@@ -87,7 +87,7 @@ export default function ProfileCard({
             variant="ghost"
             size="sm"
             onClick={onEditProfile}
-            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 cursor-pointer"
+            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 cursor-pointer hover:scale-110 transition-transform duration-200"
             title="Edit Profile"
           >
             <Settings className="h-4 w-4" />
@@ -98,7 +98,7 @@ export default function ProfileCard({
             variant="ghost"
             size="sm"
             onClick={handleSettings}
-            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 cursor-pointer"
+            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 cursor-pointer hover:scale-110 transition-transform duration-200"
           >
             <Settings className="h-4 w-4" />
           </Button>
@@ -108,7 +108,7 @@ export default function ProfileCard({
             variant="ghost"
             size="sm"
             onClick={handleLogout}
-            className="h-8 px-3 text-white hover:bg-red-600 hover:text-white bg-red-500 text-xs cursor-pointer"
+            className="h-8 px-3 text-white hover:bg-red-600 hover:text-white bg-red-500 text-xs cursor-pointer hover:scale-110 transition-transform duration-200"
           >
             <LogOut className="h-3 w-3 mr-1" />
             Logout

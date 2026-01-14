@@ -760,25 +760,25 @@ export default function UserManagementTab() {
                   <div className="flex items-center gap-3 flex-wrap">
                     <Badge
                       variant="outline"
-                      className="bg-red-100 text-red-800 hover:bg-red-200 border-red-300"
+                      className="bg-red-700 text-white hover:bg-red-700 border-red-300"
                     >
                       Admin
                     </Badge>
                     <Badge
                       variant="outline"
-                      className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300"
+                      className="bg-blue-700 text-white hover:bg-blue-700 border-blue-300"
                     >
                       HR
                     </Badge>
                     <Badge
                       variant="outline"
-                      className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300"
+                      className="bg-green-700 text-white hover:bg-green-700 border-green-300"
                     >
                       Evaluator
                     </Badge>
                     <Badge
                       variant="outline"
-                      className="bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300"
+                      className="bg-gray-700 text-gray-100 hover:bg-gray-700 border-gray-300"
                     >
                       Employee
                     </Badge>
@@ -791,15 +791,15 @@ export default function UserManagementTab() {
                   <div className="flex items-center gap-3 flex-wrap">
                     <Badge
                       variant="outline"
-                      className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300"
-                    >
-                      ✨ New Added (≤30min)
+                      className="bg-green-700 text-white hover:bg-green-700 border-green-300"
+                      >
+                      ✨ New Added 
                     </Badge>
                     <Badge
                       variant="outline"
-                      className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300"
+                      className="bg-blue-700 text-white hover:bg-blue-700 border-blue-300"
                     >
-                      🕐 Recently Added (&gt;30min)
+                      🕐 Recently Added
                     </Badge>
                   </div>
                 </div>
@@ -998,7 +998,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700 cursor-pointer hover:scale-110 transition-transform duration-200"
+                                      className="text-green-600 hover:text-green-700 hover:bg-green-200 cursor-pointer hover:scale-110 transition-transform duration-200"
                                       onClick={() => {
                                         setEmployeeToView(employee);
                                         setIsViewEmployeeModalOpen(true);
@@ -1010,7 +1010,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700 cursor-pointer hover:scale-110 transition-transform duration-200"
+                                      className="text-green-600 hover:text-green-700 hover:bg-green-200 cursor-pointer hover:scale-110 transition-transform duration-200"
                                       onClick={() => {
                                         setIsEvaluationTypeModalOpen(true);
                                         setSelectedEmployeeForEvaluation(
@@ -1024,7 +1024,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-blue-600 hover:text-blue-700 cursor-pointer hover:scale-120 transition-transform duration-200"
+                                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-200 cursor-pointer hover:scale-120 transition-transform duration-200"
                                       onClick={() => openEditModal(employee)}
                                       disabled={deletingUserId !== null}
                                     >
@@ -1033,7 +1033,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-red-600 hover:text-red-700 cursor-pointer hover:scale-120 transition-transform duration-200"
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-200 cursor-pointer hover:scale-120 transition-transform duration-200"
                                       onClick={() => openDeleteModal(employee)}
                                       disabled={deletingUserId !== null}
                                     >

@@ -172,6 +172,27 @@ export default function Step7({
         </p>
       </div>
 
+{/* Customer Service Reset Button */}
+<div className="flex justify-end mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                updateDataAction({
+                  customerServiceScore1: 0,
+                  customerServiceScore2: 0,
+                  customerServiceScore3: 0,
+                  customerServiceScore4: 0,
+                  customerServiceScore5: 0,
+                });
+              }}
+              className="text-xs px-3 py-1 h-7 bg-blue-500 text-white border-gray-300 hover:text-white hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200 "
+            >
+              Clear Customer Service Scores
+            </Button>
+          </div>
+
       {/* Customer Service Evaluation Table */}
       <Card>
         <CardContent className="pt-6">

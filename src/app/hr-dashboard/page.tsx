@@ -495,7 +495,7 @@ export default function OverviewTab() {
                                 setSelectedSubmission(submission);
                                 setIsViewResultsModalOpen(true);
                               }}
-                              className="text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 bg-green-600 hover:bg-green-300 text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                              className="text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 bg-green-600 hover:bg-green-500 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
                             >
                               ☰ View
                             </Button>

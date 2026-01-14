@@ -143,6 +143,26 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
             </p>
           </div>
 
+{/* Reliability Reset Button */}
+<div className="flex justify-end mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                updateDataAction({
+                  reliabilityScore1: 0,
+                  reliabilityScore2: 0,
+                  reliabilityScore3: 0,
+                  reliabilityScore4: 0,
+                });
+              }}
+              className="text-xs px-3 py-1 h-7 bg-blue-500 text-white border-gray-300 hover:text-white hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200 "
+            >
+              Clear Reliability Scores
+            </Button>
+          </div>
+
           {/* Evaluation Table */}
           <div className="overflow-x-auto">
             <table className="w-full border-collapse border border-gray-300">

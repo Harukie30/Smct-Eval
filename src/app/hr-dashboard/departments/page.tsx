@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
+
 import {
   Card,
   CardContent,
@@ -59,6 +60,7 @@ export default function DepartmentsTab() {
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [isDeletingDepartment, setIsDeletingDepartment] = useState(false);
+  const [isAddingDepartment, setIsAddingDepartment] = useState(false);
 
   // Function to load data
   const loadData = async (search: string) => {
@@ -593,10 +595,29 @@ export default function DepartmentsTab() {
                 Cancel
               </Button>
               <Button
-                onClick={handleAddDepartment}
-                className="bg-green-500 text-white hover:bg-green-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                disabled={isAddingDepartment}
+                className={`bg-green-500 hover:bg-green-600 text-white flex items-center gap-2 
+    cursor-pointer hover:scale-110 transition-transform duration-200
+    ${isAddingDepartment ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
+  `}
+                onClick={async () => {
+                  setIsAddingDepartment(true);
+
+                  try {
+                    await handleAddDepartment();
+                  } finally {
+                    setIsAddingDepartment(false);
+                  }
+                }}
               >
-                Add Department
+                {isAddingDepartment ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  "Add Department"
+                )}
               </Button>
             </div>
           </DialogFooter>
