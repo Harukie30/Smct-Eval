@@ -191,6 +191,11 @@ export default function DepartmentsTab() {
           "Department Deleted revoked",
           `Deletion failed: "${departmentToDelete.department_name}" has employees linked to it.`
         );
+        // Close modal and reset state when deletion fails
+        setIsDeleteModalOpen(false);
+        setDepartmentToDelete(null);
+        // Refresh data to ensure we have the latest department info
+        await loadData(searchTerm);
         return;
       } else {
         // Set deleting state to show skeleton animation
@@ -650,8 +655,8 @@ export default function DepartmentsTab() {
                   </p>
                   <p>
                     <span className="font-medium">No. of employees:</span>{" "}
-                    {Number(departmentToDelete?.employees_count) +
-                      Number(departmentToDelete?.managers_count)}
+                    {(isNaN(Number(departmentToDelete?.employees_count)) ? 0 : Number(departmentToDelete?.employees_count)) +
+                      (isNaN(Number(departmentToDelete?.managers_count)) ? 0 : Number(departmentToDelete?.managers_count))}
                   </p>
                 </div>
               </div>

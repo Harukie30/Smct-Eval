@@ -1008,7 +1008,7 @@ function RegisterPage() {
 
                     <Button
                       type="submit"
-                      className={`w-full bg-blue-600 text-white hover:bg-green-700 transition-all duration-300 ${
+                      className={`w-full bg-blue-600 text-white hover:bg-green-700 transition-all duration-300 cursor-pointer hover:scale-110 ${
                         isRegisterButtonClicked
                           ? "transform scale-95 bg-blue-700 shadow-inner"
                           : "hover:scale-105 hover:shadow-lg active:scale-95"

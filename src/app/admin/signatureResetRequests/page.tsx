@@ -356,7 +356,7 @@ export default function SignatureResetRequestsTab() {
               size="sm"
               onClick={handleRefresh}
               disabled={refresh}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-green-700 text-white hover:text-white border-blue-600 hover:border-green-700"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-green-700 text-white hover:text-white border-blue-600 hover:border-green-700 cursor-pointer hover:scale-110 transition-all duration-300"
             >
               <RefreshCw
                 className={`h-4 w-4 ${refresh ? "animate-spin" : ""}`}
@@ -383,7 +383,7 @@ export default function SignatureResetRequestsTab() {
               placeholder="All Requests"
               searchPlaceholder="Search status..."
               emptyText="No status found."
-              className="w-[180px]"
+              className="w-[180px] cursor-pointer hover:scale-110 transition-all duration-300"
             />
           </div>
 
@@ -533,7 +533,7 @@ export default function SignatureResetRequestsTab() {
                             variant="outline"
                             size="sm"
                             onClick={() => openApproveModal(request)}
-                            className="text-green-600 border-green-300 hover:bg-green-50"
+                            className="text-green-600 bg-green-600 text-white border-green-300 hover:text-white hover:bg-green-600 cursor-pointer hover:scale-110 transition-all duration-300"
                           >
                             <Check className="h-4 w-4 mr-1" />
                             Accept Request
@@ -542,7 +542,7 @@ export default function SignatureResetRequestsTab() {
                             variant="outline"
                             size="sm"
                             onClick={() => openRejectModal(request)}
-                            className="text-red-600 border-red-300 hover:bg-red-50"
+                            className="text-red-600 bg-red-600 text-white border-red-300 hover:text-white hover:bg-red-600 cursor-pointer hover:scale-110 transition-all duration-300"
                           >
                             <X className="h-4 w-4 mr-1" />
                             Reject Request

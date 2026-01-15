@@ -147,7 +147,9 @@ export default function OverviewTab() {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      searchTerm === "" ? currentPage : setCurrentPage(1);
+      // Always reset to page 1 when any filter changes (search, status, quarter, or year)
+      // This ensures global search behavior - always start from page 1 when filtering
+      setCurrentPage(1);
       setDebouncedSearchTerm(searchTerm);
       setDebouncedStatusFilter(statusFilter);
       setDebouncedQuarterFilter(quarterFilter);

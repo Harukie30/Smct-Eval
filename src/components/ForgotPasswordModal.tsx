@@ -93,7 +93,7 @@ export default function ForgotPasswordModal({ isOpen, onCloseAction, onContactDe
                       onCloseAction();
                       onContactDevsAction();
                     }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:scale-110 transition-all duration-300"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -110,7 +110,7 @@ export default function ForgotPasswordModal({ isOpen, onCloseAction, onContactDe
                   <button
                     type="button"
                     onClick={onCloseAction}
-                    className="text-blue-600 hover:underline font-medium"
+                    className="text-blue-600 hover:underline font-medium cursor-pointer"
                   >
                     Back to Login
                   </button>

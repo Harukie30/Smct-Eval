@@ -160,6 +160,7 @@ export default function Step3({ data, updateDataAction }: Step3Props) {
               Clear Adaptability Scores
             </Button>
           </div>
+          
           {/* Evaluation Table */}
           <div className="overflow-x-auto">
             <table className="w-full border-collapse border border-gray-300">

@@ -343,7 +343,7 @@ function LandingLoginPage() {
                     </svg>
                   </div>
                   <span className="text-gray-700 group-hover/item:text-gray-800 transition-colors duration-300">
-                    Customizable evaluation templates
+                  HR-defined evaluation templates
                   </span>
                 </div>
                 <div className="flex items-center group/item hover:translate-x-2 transition-transform duration-300 cursor-default">
@@ -465,7 +465,7 @@ function LandingLoginPage() {
                       )}
                       <Button
                         type="submit"
-                        className="w-full bg-blue-600 text-white hover:bg-green-700 cursor-pointer"
+                        className="w-full bg-blue-600 text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-all duration-300"
                         disabled={isLoggingIn}
                       >
                         {isLoggingIn ? (
@@ -506,7 +506,7 @@ function LandingLoginPage() {
                     <Button
                       variant="outline"
                       onClick={() => setShowGoogleLoginModal(true)}
-                      className="w-full cursor-pointer"
+                      className="w-full cursor-pointer hover:scale-110 transition-all duration-300"
                     >
                       <svg
                         className="mr-2 h-4 w-4"
@@ -598,7 +598,7 @@ function LandingLoginPage() {
               sessionStorage.clear();
               window.location.reload();
             }}
-            className="text-base text-white bg-blue-600 hover-text-white hover:bg-blue-700 cursor-pointer"
+            className="text-base text-white bg-blue-600 hover-text-white hover:bg-blue-700 cursor-pointer hover:scale-110 transition-all duration-300"
           >
             🔄 Clear Session & Start Fresh
           </Button>
@@ -608,7 +608,7 @@ function LandingLoginPage() {
       {/* About Modal */}
       <Dialog open={isAboutModalOpen} onOpenChangeAction={setIsAboutModalOpen}>
         <DialogContent
-          className="max-w-4xl max-h-[85vh] overflow-y-auto mx-4 my-8 p-6 animate-in zoom-in-95 duration-300 custom-scrollbar "
+          className="max-w-4xl max-h-[85vh] mx-4 my-8 p-0 animate-in zoom-in-95 duration-300 flex flex-col relative"
           style={{
             animation: isAboutModalOpen
               ? "modalPopup 0.3s ease-out"
@@ -670,38 +670,44 @@ function LandingLoginPage() {
               scrollbar-color: #3b82f6 #f1f5f9;
             }
           `}</style>
-          <DialogHeader className="flex justify-between items-start">
-            <div>
-              <DialogTitle className="text-xl font-bold text-blue-600 mb-1">
+          
+          {/* Fixed Close Button - Always Visible */}
+          <button
+            onClick={() => setIsAboutModalOpen(false)}
+            className="absolute top-4 right-4 z-50 p-2 bg-white hover:bg-gray-100 rounded-full transition-colors cursor-pointer shadow-lg border border-gray-200"
+            aria-label="Close modal"
+          >
+            <svg
+              className="w-6 h-6 text-gray-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
+          
+          {/* Header */}
+          <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-gray-200">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-blue-600 mb-1 pr-8">
                 About SMCT Performance Evaluation System
               </DialogTitle>
               <DialogDescription className="text-sm text-gray-600">
                 Empowering organizations with comprehensive performance
                 management solutions
               </DialogDescription>
-            </div>
-            <button
-              onClick={() => setIsAboutModalOpen(false)}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-              aria-label="Close modal"
-            >
-              <svg
-                className="w-6 h-6 text-gray-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                ></path>
-              </svg>
-            </button>
-          </DialogHeader>
+            </DialogHeader>
+          </div>
 
-          <div className="space-y-4 py-3">
+          {/* Scrollable Content */}
+          <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-6 py-3">
+            <div className="space-y-4">
             {/* What is the Evaluation App */}
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-md border border-blue-100">
               <h3 className="text-base font-semibold text-gray-800 mb-2 flex items-center">
@@ -1010,6 +1016,7 @@ function LandingLoginPage() {
                 HR technology and organizational development, ensuring that
                 every feature serves a real business need.
               </p>
+            </div>
             </div>
           </div>
         </DialogContent>

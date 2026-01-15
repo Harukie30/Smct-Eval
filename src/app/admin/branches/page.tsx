@@ -273,6 +273,11 @@ export default function DepartmentsTab() {
             branchesToDelete.branch_name + "/ " + branchesToDelete.branch_code
           }" has employees linked to it.`
         );
+        // Close modal and reset state when deletion fails
+        setIsDeleteModalOpen(false);
+        setBranchesToDelete(null);
+        // Refresh data to ensure we have the latest branch info
+        await loadData(searchTerm);
         return;
       } else {
         // Set deleting state to show skeleton animation
@@ -820,8 +825,8 @@ export default function DepartmentsTab() {
                   </p>
                   <p>
                     <span className="font-medium">No. of employees:</span>{" "}
-                    {Number(branchesToDelete?.employees_count) +
-                      Number(branchesToDelete?.managers_count)}
+                    {(isNaN(Number(branchesToDelete?.employees_count)) ? 0 : Number(branchesToDelete?.employees_count)) +
+                      (isNaN(Number(branchesToDelete?.managers_count)) ? 0 : Number(branchesToDelete?.managers_count))}
                   </p>
                 </div>
               </div>

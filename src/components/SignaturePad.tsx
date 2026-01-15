@@ -336,7 +336,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
                   disabled={
                     hasSignature && isSavedSignature && user?.approvedSignatureReset === 0
                   }
-                  className="text-red-600 border-red-300 hover:bg-red-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-white border-red-300 hover:text-white bg-red-500 hover:bg-red-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 transition-all duration-300"
                 >
                   Clear Signature
                 </Button>
@@ -359,7 +359,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
                     disabled={user?.requestSignatureReset !== 0}
                     size="sm"
                     onClick={onRequestReset}
-                    className="text-orange-600 border-orange-300 hover:bg-orange-50 cursor-pointer disabled:cursor-not-allowed"
+                    className="text-orange-600 bg-orange-500 text-white border-orange-300 hover:text-white hover:bg-orange-500 cursor-pointer disabled:cursor-not-allowed hover:scale-110 transition-all duration-300"
                   >
                     Request Reset
                   </Button>

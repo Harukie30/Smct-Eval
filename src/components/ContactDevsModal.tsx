@@ -122,7 +122,7 @@ export default function ContactDevsModal({
           <div className="flex justify-end mt-6">
             <Button
               type="button"
-              className="bg-blue-700 hover:bg-blue-400"
+              className="bg-red-700 hover:bg-red-400 text-white cursor-pointer hover:scale-110 transition-all duration-300"
               onClick={onCloseAction}
             >
               Close
