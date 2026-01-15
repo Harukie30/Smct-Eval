@@ -350,9 +350,7 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
           return 'Please complete all job knowledge scores';
         }
         return 'Please complete all required fields';
-      case 8: // Managerial Skills
-        return 'Please complete all managerial skills scores';
-      case 9: // Overall Assessment
+      case 8: // Overall Assessment
         return 'Please complete all required fields';
       default:
         return 'Please complete all scores for this step';

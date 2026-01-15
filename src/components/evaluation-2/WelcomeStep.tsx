@@ -198,7 +198,7 @@ export default function WelcomeStep({ employee, onStartAction, onBackAction, cur
               variant="outline"
               onClick={onBackAction}
               size="lg"
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white hover:text-white text-lg flex items-center gap-2"
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white hover:text-white text-lg flex items-center gap-2 cursor-pointer hover:scale-110 transition-transform duration-200"
             >
               <ArrowLeft className="w-4 h-4" />
               Back
@@ -210,7 +210,7 @@ export default function WelcomeStep({ employee, onStartAction, onBackAction, cur
             onClick={hasSignature ? onStartAction : undefined}
             size="lg"
             disabled={!hasSignature}
-            className={`px-8 py-3 text-lg ${
+            className={`px-8 py-3 text-lg cursor-pointer hover:scale-110 transition-transform duration-200 ${
               hasSignature 
                 ? 'bg-blue-600 hover:bg-blue-700' 
                 : 'bg-gray-400 cursor-not-allowed'
