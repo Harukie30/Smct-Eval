@@ -444,7 +444,7 @@ export default function GoogleLoginModal({
                 <div className="w-full space-y-3">
                   <Button
                     onClick={handleGoogleLogin}
-                    className="w-full bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    className="w-full bg-white  border border-gray-300 text-black hover:text-white hover:bg-gray-500 cursor-pointer hover:scale-110 transition-all duration-300"
                     disabled={isLoading}
                   >
                     <img
