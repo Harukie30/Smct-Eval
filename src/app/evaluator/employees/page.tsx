@@ -636,7 +636,7 @@ export default function EmployeesTab() {
           setIsEvaluationModalOpen(true);
         }}
         onSelectManagerAction={() => {
-          const employee = selectedEmployee;
+          const employee = selectedEmployeeForEvaluation;
           if (!employee) {
             console.error("No employee selected!");
             return;
@@ -646,7 +646,11 @@ export default function EmployeesTab() {
 
           setIsEvaluationModalOpen(true);
         }}
-        employeeName={selectedEmployee?.fname + " " + selectedEmployee?.lname}
+        employeeName={
+          selectedEmployeeForEvaluation
+            ? `${selectedEmployeeForEvaluation?.fname || ""} ${selectedEmployeeForEvaluation?.lname || ""}`.trim()
+            : ""
+        }
       />
 
       <Dialog
@@ -670,25 +674,45 @@ export default function EmployeesTab() {
               }}
             />
           )}
-          {/* {selectedEmployee && evaluationType === "manager" && (
+          {selectedEmployeeForEvaluation && evaluationType === "manager" && (
             <ManagerEvaluationForm
-              key={`manager-eval-${selectedEmployee.id}-${evaluationType}`}
+              key={`manager-eval-${selectedEmployeeForEvaluation.id}-${evaluationType}`}
               employee={{
-                ...selectedEmployee,
-                name: selectedEmployee.name || "",
-                email: selectedEmployee.email || "",
-                position: selectedEmployee.position || "",
-                department: selectedEmployee.department || "",
-                role: selectedEmployee.role || "",
+                id: Number(selectedEmployeeForEvaluation.id) || 0,
+                name: `${selectedEmployeeForEvaluation?.fname || ""} ${selectedEmployeeForEvaluation?.lname || ""}`.trim(),
+                email: selectedEmployeeForEvaluation.email || "",
+                position:
+                  selectedEmployeeForEvaluation.positions?.label ||
+                  selectedEmployeeForEvaluation.positions?.name ||
+                  "",
+                department:
+                  selectedEmployeeForEvaluation.departments?.label ||
+                  selectedEmployeeForEvaluation.departments?.name ||
+                  "",
+                branch:
+                  selectedEmployeeForEvaluation.branches?.branch_name ||
+                  selectedEmployeeForEvaluation.branches?.[0]?.branch_name ||
+                  "",
+                role:
+                  selectedEmployeeForEvaluation.roles?.[0]?.name ||
+                  "employee",
+                employeeId:
+                  selectedEmployeeForEvaluation.emp_id
+                    ? String(selectedEmployeeForEvaluation.emp_id)
+                    : String(selectedEmployeeForEvaluation.id),
+                hireDate:
+                  (selectedEmployeeForEvaluation as any)?.date_hired ||
+                  (selectedEmployeeForEvaluation as any)?.dateHired ||
+                  (selectedEmployeeForEvaluation as any)?.hireDate ||
+                  "",
               }}
-              currentUser={getCurrentUserData()}
               onCloseAction={() => {
                 setIsEvaluationModalOpen(false);
                 setSelectedEmployee(null);
                 setEvaluationType(null);
               }}
             />
-          )} */}
+          )}
           {/* {selectedEmployee && !evaluationType && (
             <div className="p-8 text-center">
               <p className="text-gray-500">

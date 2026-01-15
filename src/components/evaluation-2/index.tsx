@@ -13,6 +13,7 @@ import Step4 from './Step4';
 import Step5 from './Step5';
 import Step6 from './Step6';
 import Step7 from './Step7';
+import Step8 from './Step8';
 import OverallAssessment from './OverallAssessment';
 import WelcomeStep from './WelcomeStep';
 import { EvaluationData } from './types';
@@ -28,7 +29,8 @@ const steps = [
   { id: 5, title: 'Reliability', component: Step5 },
   { id: 6, title: 'Ethical & Professional Behavior', component: Step6 },
   { id: 7, title: 'Customer Service', component: Step7 },
-  { id: 8, title: 'Overall Assessment', component: OverallAssessment },
+  { id: 8, title: 'Managerial Skills', component: Step8 },
+  { id: 9, title: 'Overall Assessment', component: OverallAssessment },
 ];
 
 interface EvaluationFormProps {
@@ -58,7 +60,7 @@ interface EvaluationFormProps {
 }
 
 export default function ManagerEvaluationForm({ employee, currentUser, onCloseAction, onCancelAction }: EvaluationFormProps) {
-  const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-8 = actual steps
+  const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-9 = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
   
   // Reset animation when returning to welcome step or on initial mount
@@ -163,6 +165,17 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
     customerServiceExplanation4: '',
     customerServiceExplanation5: '',
     customerServiceComments: '',
+    managerialSkillsScore1: '',
+    managerialSkillsScore2: '',
+    managerialSkillsScore3: '',
+    managerialSkillsScore4: '',
+    managerialSkillsScore5: '',
+    managerialSkillsExplanation1: '',
+    managerialSkillsExplanation2: '',
+    managerialSkillsExplanation3: '',
+    managerialSkillsExplanation4: '',
+    managerialSkillsExplanation5: '',
+    managerialSkillsComments: '',
     overallRating: '',
     overallComments: '',
     recommendations: '',
@@ -282,8 +295,16 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
           evaluationData.customerServiceScore4 && evaluationData.customerServiceScore4 !== '' &&
           evaluationData.customerServiceScore5 && evaluationData.customerServiceScore5 !== ''
         );
-      case 8: // Overall Assessment
-        return true; // No validation required for step 8
+      case 8: // Managerial Skills
+        return (
+          evaluationData.managerialSkillsScore1 && evaluationData.managerialSkillsScore1 !== '' &&
+          evaluationData.managerialSkillsScore2 && evaluationData.managerialSkillsScore2 !== '' &&
+          evaluationData.managerialSkillsScore3 && evaluationData.managerialSkillsScore3 !== '' &&
+          evaluationData.managerialSkillsScore4 && evaluationData.managerialSkillsScore4 !== '' &&
+          evaluationData.managerialSkillsScore5 && evaluationData.managerialSkillsScore5 !== ''
+        );
+      case 9: // Overall Assessment
+        return true; // No validation required for step 9
       default:
         return true; // For other steps, allow progression
     }
@@ -299,7 +320,8 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
       case 5: return 'Reliability';
       case 6: return 'Ethical & Professional Behavior';
       case 7: return 'Customer Service';
-      case 8: return 'Overall Assessment';
+      case 8: return 'Managerial Skills';
+      case 9: return 'Overall Assessment';
       default: return 'evaluation';
     }
   };
@@ -328,7 +350,9 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
           return 'Please complete all job knowledge scores';
         }
         return 'Please complete all required fields';
-      case 8: // Overall Assessment
+      case 8: // Managerial Skills
+        return 'Please complete all managerial skills scores';
+      case 9: // Overall Assessment
         return 'Please complete all required fields';
       default:
         return 'Please complete all scores for this step';
@@ -784,7 +808,7 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {currentStep === 8 ? (
+              {currentStep === 9 ? (
                 <OverallAssessment
                   data={evaluationData}
                   updateDataAction={updateEvaluationData}
@@ -813,8 +837,8 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
           </Card>
         )}
 
-        {/* Navigation Buttons - Only show for steps 1-7, not for Overall Assessment */}
-        {currentStep > 0 && currentStep < 8 && (
+        {/* Navigation Buttons - Only show for steps 1-8, not for Overall Assessment */}
+        {currentStep > 0 && currentStep < 9 && (
           <div className="flex justify-between mt-6">
             <div className="flex gap-3">
               <Button

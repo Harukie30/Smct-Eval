@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Briefcase, ArrowRight, Shield } from "lucide-react";
+import { Users, Briefcase, ArrowRight } from "lucide-react";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 
 interface EvaluationTypeModalProps {
@@ -29,7 +28,6 @@ export default function EvaluationTypeModal({
   employeeName,
 }: EvaluationTypeModalProps) {
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
-  const [isUnderDevelopmentOpen, setIsUnderDevelopmentOpen] = useState(false);
 
   const handleSelectEmployee = () => {
     onSelectEmployeeAction();
@@ -37,7 +35,8 @@ export default function EvaluationTypeModal({
   };
 
   const handleSelectManager = () => {
-    setIsUnderDevelopmentOpen(true);
+    onSelectManagerAction();
+    onCloseAction();
   };
 
   return (
@@ -67,7 +66,7 @@ export default function EvaluationTypeModal({
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    Employee Evaluation
+                  Rank and File I & II
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
                     Standard performance evaluation for rank and file employees.
@@ -88,7 +87,7 @@ export default function EvaluationTypeModal({
                     handleSelectEmployee();
                   }}
                 >
-                  Select Employee Evaluation
+                  Select Rank and File I & II
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </div>
@@ -107,7 +106,7 @@ export default function EvaluationTypeModal({
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    Manager Evaluation
+                    (Basic) Evaluation
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
                     Comprehensive evaluation designed specifically for managers.
@@ -116,7 +115,7 @@ export default function EvaluationTypeModal({
                   </p>
                   <ul className="text-xs text-gray-500 space-y-1 text-left mb-4">
                     <li>• Manager Performance Review</li>
-                    <li>• 7 evaluation steps</li>
+                    <li>• 8 evaluation steps</li>
                     <li>• Leadership-focused metrics</li>
                   </ul>
                 </div>
@@ -127,7 +126,7 @@ export default function EvaluationTypeModal({
                     handleSelectManager();
                   }}
                 >
-                  Select Manager Evaluation
+                  Select (Basic) Evaluation
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </div>
@@ -145,40 +144,6 @@ export default function EvaluationTypeModal({
           </Button>
         </div>
       </DialogContent>
-
-      {/* Under Development Dialog */}
-      <Dialog
-        open={isUnderDevelopmentOpen}
-        onOpenChangeAction={setIsUnderDevelopmentOpen}
-      >
-        <DialogContent className={`max-w-md ${dialogAnimationClass} p-6`}>
-          <DialogHeader className="text-center">
-            <div className="flex items-center justify-center  mx-auto mb-4">
-              <img
-                src="/devpp.gif"
-                alt="Shield animation"
-                className="w-25 h-25"
-              />
-            </div>
-
-            <DialogTitle className="text-xl font-bold text-gray-900">
-            This Feature Is Currently Under Development
-            </DialogTitle>
-            <DialogDescription className="text-base text-gray-500 mt-3">
-            This evaluation type is currently under development. Thank you for your kind consideration.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="mt-6 flex justify-center">
-            <Button
-              onClick={() => setIsUnderDevelopmentOpen(false)}
-              className="px-6 bg-blue-600 hover:bg-green-700 text-white cursor-pointer hover:scale-110 transition-transform duration-200"
-            >
-              Confirm
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </Dialog>
   );
 }

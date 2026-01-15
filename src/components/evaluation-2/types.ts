@@ -111,7 +111,20 @@ export type EvaluationData = {
   customerServiceExplanation5: string;
   customerServiceComments: string;
 
-// Step 7: Overall Rating & Comments
+// Step 8: Managerial Skills
+  managerialSkillsScore1: string;
+  managerialSkillsScore2: string;
+  managerialSkillsScore3: string;
+  managerialSkillsScore4: string;
+  managerialSkillsScore5: string;
+  managerialSkillsExplanation1: string;
+  managerialSkillsExplanation2: string;
+  managerialSkillsExplanation3: string;
+  managerialSkillsExplanation4: string;
+  managerialSkillsExplanation5: string;
+  managerialSkillsComments: string;
+
+// Step 9: Overall Rating & Comments
   overallRating: string;
   overallComments: string;
   recommendations: string;
