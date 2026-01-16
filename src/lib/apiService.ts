@@ -430,6 +430,38 @@ export const apiService = {
     return response.data;
   },
 
+  // Get head office basic employees
+  getHoBasic: async (
+    search?: string,
+    page?: number,
+    per_page?: number
+  ): Promise<any> => {
+    const response = await api.get("/HoBasic", {
+      params: {
+        search: search || "",
+        page: page || 1,
+        per_page: per_page || 10,
+      },
+    });
+    return response.data;
+  },
+
+  // Get head office rank and file employees
+  getHoRankNFile: async (
+    search?: string,
+    page?: number,
+    per_page?: number
+  ): Promise<any> => {
+    const response = await api.get("/HoRankNFile", {
+      params: {
+        search: search || "",
+        page: page || 1,
+        per_page: per_page || 10,
+      },
+    });
+    return response.data;
+  },
+
   // Get evaluations by authenticated evaluator
   getEvalAuthEvaluator: async (
     search: string,

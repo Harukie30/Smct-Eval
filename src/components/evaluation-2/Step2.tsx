@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ChevronDownIcon } from 'lucide-react';
 import { EvaluationData } from './types';
+import { useAuth } from '@/contexts/UserContext';
 
 interface Step2Props {
   data: EvaluationData;
@@ -49,7 +50,9 @@ function ScoreDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger 
-        className={`w-15 px-1 py-2 text-lg font-bold border-2 border-yellow-400 rounded-md bg-yellow-100 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm min-h-[40px] justify-between inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground ${getScoreColor(value)}`}
+        className={`w-15 px-1 py-2 text-lg font-bold border-2 border-yellow-400 rounded-md bg-yellow-100 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm min-h-[40px] 
+          justify-between inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none 
+          disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground cursor-pointer hover:scale-110 transition-transform duration-200 ${getScoreColor(value)}`}
       >
         {value || ''}
         <ChevronDownIcon className="h-4 w-4" />
@@ -57,31 +60,31 @@ function ScoreDropdown({
       <DropdownMenuContent className="w-32 min-w-[128px] bg-white border-2 border-yellow-400">
         <DropdownMenuItem
           onClick={() => onValueChange('1')}
-          className="text-lg font-bold text-red-700 hover:bg-red-50 py-2 text-center justify-center"
+          className="text-lg font-bold text-red-700 hover:bg-red-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
         >
           1
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange('2')}
-          className="text-lg font-bold text-orange-700 hover:bg-orange-50 py-2 text-center justify-center"
+          className="text-lg font-bold text-orange-700 hover:bg-orange-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
         >
           2
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange('3')}
-          className="text-lg font-bold text-yellow-700 hover:bg-yellow-50 py-2 text-center justify-center"
+          className="text-lg font-bold text-yellow-700 hover:bg-yellow-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
         >
           3
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange('4')}
-          className="text-lg font-bold text-blue-700 hover:bg-blue-50 py-2 text-center justify-center"
+          className="text-lg font-bold text-blue-700 hover:bg-blue-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
         >
           4
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange('5')}
-          className="text-lg font-bold text-green-700 hover:bg-green-50 py-2 text-center justify-center"
+          className="text-lg font-bold text-green-700 hover:bg-green-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
         >
           5
         </DropdownMenuItem>
@@ -91,6 +94,34 @@ function ScoreDropdown({
 }
 
 export default function Step2({ data, updateDataAction }: Step2Props) {
+  const { user } = useAuth();
+  
+  // Check if evaluator's branch is HO (Head Office)
+  const isEvaluatorHO = () => {
+    if (!user?.branches) return false;
+    
+    // Handle branches as array
+    if (Array.isArray(user.branches)) {
+      const branch = user.branches[0];
+      if (branch) {
+        const branchName = branch.branch_name?.toUpperCase() || "";
+        const branchCode = branch.branch_code?.toUpperCase() || "";
+        return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+      }
+    }
+    
+    // Handle branches as object
+    if (typeof user.branches === 'object') {
+      const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
+      const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
+      return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+    }
+    
+    return false;
+  };
+
+  const isHO = isEvaluatorHO();
+  
   // Calculate average score for Quality of Work
   const calculateAverageScore = () => {
     const scores = [
@@ -98,7 +129,8 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
       data.qualityOfWorkScore2,
       data.qualityOfWorkScore3,
       data.qualityOfWorkScore4,
-      data.qualityOfWorkScore5
+      // Only include score5 if not HO
+      ...(isHO ? [] : [data.qualityOfWorkScore5])
     ].filter(score => score && score !== '').map(score => parseInt(score));
 
     if (scores.length === 0) return '0.00';
@@ -125,6 +157,7 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
   };
 
   return (
+
     <div className="space-y-6">
       {/* II. QUALITY OF WORK Section */}
       <Card className="bg-white border-gray-200">
@@ -134,6 +167,32 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
             <p className="text-sm text-gray-600">
               Accuracy and precision in completing tasks. Attention to detail. Consistency in delivering high-quality results. Timely completion of tasks and projects. Effective use of resources. Ability to meet deadlines.
             </p>
+          </div>
+
+          {/* Quality of Work Reset Button */}
+          <div className="flex justify-end mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                updateDataAction({
+                  qualityOfWorkScore1: '',
+                  qualityOfWorkScore2: '',
+                  qualityOfWorkScore3: '',
+                  qualityOfWorkScore4: '',
+                  qualityOfWorkScore5: '',
+                  qualityOfWorkComments1: '',
+                  qualityOfWorkComments2: '',
+                  qualityOfWorkComments3: '',
+                  qualityOfWorkComments4: '',
+                  qualityOfWorkComments5: ''
+                });
+              }}
+              className="text-xs px-3 py-1 h-7 bg-blue-500 text-white border-gray-300 hover:text-white hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200"
+            >
+              Clear Quality of Work Scores
+            </Button>
           </div>
 
           {/* Evaluation Table */}
@@ -164,7 +223,7 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
               <tbody>
                 {/* Row 1: Meets Standards and Requirements */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-5 text-center text-sm text-black">
                     Meets Standards and Requirements
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -207,7 +266,7 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
 
                 {/* Row 2: Timeliness (L.E.A.D.E.R.) */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black">
                     "Timeliness
                     (L.E.A.D.E.R.)"
 
@@ -252,7 +311,7 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
 
                 {/* Row 3: Work Output Volume (L.E.A.D.E.R.) */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     "Work Output Volume
                     (L.E.A.D.E.R.)"
 
@@ -297,7 +356,7 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
 
                 {/* Row 4: Consistency in Performance (L.E.A.D.E.R.) */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-center text-sm text-black">
                     "Consistency in Performance
                     (L.E.A.D.E.R.)"
 
@@ -340,48 +399,50 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
                   </td>
                 </tr>
 
-                {/* Row 5: Job Targets */}
-                <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                  Job Targets
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Achieves targets set for their respective position (Sales / CCR / Mechanic / etc.)
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Consistently hits monthly targets assigned to their role.
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center">
-                    <ScoreDropdown
-                      value={data.qualityOfWorkScore5 || ''}
-                      onValueChange={(value) => updateDataAction({ qualityOfWorkScore5: value })}
-                      placeholder="-- Select --"
-                    />
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.qualityOfWorkScore5 === '5' ? 'bg-green-100 text-green-800' :
-                      data.qualityOfWorkScore5 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.qualityOfWorkScore5 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.qualityOfWorkScore5 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.qualityOfWorkScore5 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
-                      }`}>
-                      {data.qualityOfWorkScore5 === '5' ? 'Outstanding' :
-                        data.qualityOfWorkScore5 === '4' ? 'Exceeds Expectation' :
-                          data.qualityOfWorkScore5 === '3' ? 'Meets Expectations' :
-                            data.qualityOfWorkScore5 === '2' ? 'Needs Improvement' :
-                              data.qualityOfWorkScore5 === '1' ? 'Unsatisfactory' : 'Not Rated'}
-                    </div>
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3">
-                    <textarea
-                      value={data.qualityOfWorkComments5 || ''}
-                      onChange={(e) => updateDataAction({ qualityOfWorkComments5: e.target.value })}
-                      placeholder="Enter comments about this competency..."
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                      rows={3}
-                    />
-                  </td>
-                </tr>
+                {/* Row 5: Job Targets - Hidden/Disabled for HO evaluators */}
+                {!isHO && (
+                  <tr>
+                    <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                      Job Targets
+                    </td>
+                    <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                      Achieves targets set for their respective position (Sales / CCR / Mechanic / etc.)
+                    </td>
+                    <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                      Consistently hits monthly targets assigned to their role.
+                    </td>
+                    <td className="border border-gray-300 px-4 py-3 text-center">
+                      <ScoreDropdown
+                        value={data.qualityOfWorkScore5 || ''}
+                        onValueChange={(value) => updateDataAction({ qualityOfWorkScore5: value })}
+                        placeholder="-- Select --"
+                      />
+                    </td>
+                    <td className="border border-gray-300 px-4 py-3 text-center">
+                      <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.qualityOfWorkScore5 === '5' ? 'bg-green-100 text-green-800' :
+                        data.qualityOfWorkScore5 === '4' ? 'bg-blue-100 text-blue-800' :
+                          data.qualityOfWorkScore5 === '3' ? 'bg-yellow-100 text-yellow-800' :
+                            data.qualityOfWorkScore5 === '2' ? 'bg-orange-100 text-orange-800' :
+                              data.qualityOfWorkScore5 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                        }`}>
+                        {data.qualityOfWorkScore5 === '5' ? 'Outstanding' :
+                          data.qualityOfWorkScore5 === '4' ? 'Exceeds Expectation' :
+                            data.qualityOfWorkScore5 === '3' ? 'Meets Expectations' :
+                              data.qualityOfWorkScore5 === '2' ? 'Needs Improvement' :
+                                data.qualityOfWorkScore5 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      </div>
+                    </td>
+                    <td className="border border-gray-300 px-4 py-3">
+                      <textarea
+                        value={data.qualityOfWorkComments5 || ''}
+                        onChange={(e) => updateDataAction({ qualityOfWorkComments5: e.target.value })}
+                        placeholder="Enter comments about this competency..."
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                        rows={3}
+                      />
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -407,12 +468,14 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
                   <div>Timeliness: <span className="font-semibold">{data.qualityOfWorkScore2 || 'Not rated'}</span></div>
                   <div>Work Output Volume: <span className="font-semibold">{data.qualityOfWorkScore3 || 'Not rated'}</span></div>
                   <div>Consistency in Performance: <span className="font-semibold">{data.qualityOfWorkScore4 || 'Not rated'}</span></div>
-                  <div>Job Targets: <span className="font-semibold">{data.qualityOfWorkScore5 || 'Not rated'}</span></div>
+                  {!isHO && (
+                    <div>Job Targets: <span className="font-semibold">{data.qualityOfWorkScore5 || 'Not rated'}</span></div>
+                  )}
                 </div>
               </div>
             </div>
             <div className="mt-4 text-xs text-gray-500">
-              Average calculated from {[data.qualityOfWorkScore1, data.qualityOfWorkScore2, data.qualityOfWorkScore3, data.qualityOfWorkScore4, data.qualityOfWorkScore5].filter(score => score && score !== '').length} of 5 criteria
+              Average calculated from {[data.qualityOfWorkScore1, data.qualityOfWorkScore2, data.qualityOfWorkScore3, data.qualityOfWorkScore4, ...(isHO ? [] : [data.qualityOfWorkScore5])].filter(score => score && score !== '').length} of {isHO ? 4 : 5} criteria
             </div>
           </div>
         </CardContent>

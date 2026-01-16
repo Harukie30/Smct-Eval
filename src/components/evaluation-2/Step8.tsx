@@ -47,7 +47,9 @@ function ScoreDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger 
-        className={`w-15 px-1 py-2 text-lg font-bold border-2 border-yellow-400 rounded-md bg-yellow-100 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm min-h-[40px] justify-between inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground ${getScoreColor(value)}`}
+        className={`w-15 px-1 py-2 text-lg font-bold border-2 border-yellow-400 rounded-md bg-yellow-100 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm min-h-[40px] 
+        justify-between inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none 
+        disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground cursor-pointer hover:scale-110 transition-transform duration-200 ${getScoreColor(value)}`}
       >
         {value || ''}
         <ChevronDownIcon className="h-4 w-4" />
@@ -55,31 +57,31 @@ function ScoreDropdown({
       <DropdownMenuContent className="w-32 min-w-[128px] bg-white border-2 border-yellow-400">
         <DropdownMenuItem
           onClick={() => onValueChange('1')}
-          className="text-lg font-bold text-red-700 hover:bg-red-50 py-2 text-center justify-center"
+          className="text-lg font-bold text-red-700 hover:bg-red-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
         >
           1
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange('2')}
-          className="text-lg font-bold text-orange-700 hover:bg-orange-50 py-2 text-center justify-center"
+          className="text-lg font-bold text-orange-700 hover:bg-orange-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
         >
           2
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange('3')}
-          className="text-lg font-bold text-yellow-700 hover:bg-yellow-50 py-2 text-center justify-center"
+          className="text-lg font-bold text-yellow-700 hover:bg-yellow-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
         >
           3
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange('4')}
-          className="text-lg font-bold text-blue-700 hover:bg-blue-50 py-2 text-center justify-center"
+          className="text-lg font-bold text-blue-700 hover:bg-blue-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
         >
           4
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange('5')}
-          className="text-lg font-bold text-green-700 hover:bg-green-50 py-2 text-center justify-center"
+          className="text-lg font-bold text-green-700 hover:bg-green-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
         >
           5
         </DropdownMenuItem>
@@ -187,7 +189,7 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
               <tbody>
                 {/* Row 1: Leadership & Vision */}
                 <tr>
-                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black">
+                  <td className="border border-gray-300 text-center font-bold px-4 py-3 text-sm text-black">
                   Leadership 
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -230,7 +232,7 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
 
                 {/* Row 2: Team Management & Development */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 font-bold text-sm text-black">
+                  <td className="border border-gray-300 px-4 text-center py-3 font-bold text-sm text-black">
                   Motivation
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -273,7 +275,7 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
 
                 {/* Row 3: Decision-Making & Problem-Solving */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 font-bold text-sm text-black">
+                  <td className="border text-center border-gray-300 px-4 py-3 font-bold text-sm text-black">
                   Decision-Making
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -316,7 +318,7 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
 
                 {/* Row 4: Performance Management & Coaching */}
                 <tr>
-                  <td className="border border-gray-300 px-4 font-bold py-3 text-sm text-black">
+                  <td className="border border-gray-300 text-center px-4 font-bold py-3 text-sm text-black">
                   Planning & Resource Management
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -359,7 +361,7 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
 
                 {/* Row 5: Communication & Influence */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 font-bold text-sm text-black">
+                  <td className="border border-gray-300 px-4 text-center py-3 font-bold text-sm text-black">
                   Performance Feedback
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -402,7 +404,7 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
 
                 {/* Row 6: [Add your 6th managerial skill here] */}
                 <tr>
-                  <td className="border border-gray-300 px-4 font-bold py-3 text-sm text-black">
+                  <td className="border text-center border-gray-300 px-4 font-bold py-3 text-sm text-black">
                   Conflict Resolution
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">

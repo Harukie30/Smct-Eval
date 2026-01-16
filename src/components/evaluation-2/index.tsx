@@ -20,6 +20,7 @@ import { EvaluationData } from './types';
 import { storeEvaluationResult } from '@/lib/evaluationStorage';
 import { apiService } from '@/lib/apiService';
 import { createEvaluationNotification } from '@/lib/notificationUtils';
+import { useAuth } from '@/contexts/UserContext';
 
 const steps = [
   { id: 1, title: 'Employee Information / Job Knowledge', component: Step1 },
@@ -60,6 +61,37 @@ interface EvaluationFormProps {
 }
 
 export default function ManagerEvaluationForm({ employee, currentUser, onCloseAction, onCancelAction }: EvaluationFormProps) {
+  const { user } = useAuth();
+  
+  // Check if evaluator's branch is HO (Head Office)
+  const isEvaluatorHO = () => {
+    if (!user?.branches) return false;
+    
+    // Handle branches as array
+    if (Array.isArray(user.branches)) {
+      const branch = user.branches[0];
+      if (branch) {
+        const branchName = branch.branch_name?.toUpperCase() || "";
+        const branchCode = branch.branch_code?.toUpperCase() || "";
+        return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+      }
+    }
+    
+    // Handle branches as object
+    if (typeof user.branches === 'object') {
+      const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
+      const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
+      return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+    }
+    
+    return false;
+  };
+
+  const isHO = isEvaluatorHO();
+  
+  // Filter steps based on HO status - remove Step 7 for HO evaluators
+  const filteredSteps = isHO ? steps.filter(step => step.id !== 7) : steps;
+  
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-9 = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
   
@@ -277,12 +309,39 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
         
         return hasReviewType && hasJobKnowledgeScores && hasBasicInfo;
       case 2: // Quality of Work
+        // Check if evaluator is HO
+        const isEvaluatorHO = () => {
+          if (!user?.branches) return false;
+          
+          // Handle branches as array
+          if (Array.isArray(user.branches)) {
+            const branch = user.branches[0];
+            if (branch) {
+              const branchName = branch.branch_name?.toUpperCase() || "";
+              const branchCode = branch.branch_code?.toUpperCase() || "";
+              return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+            }
+          }
+          
+          // Handle branches as object
+          if (typeof user.branches === 'object') {
+            const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
+            const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
+            return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+          }
+          
+          return false;
+        };
+        
+        const isHO = isEvaluatorHO();
+        
         return (
           evaluationData.qualityOfWorkScore1 && evaluationData.qualityOfWorkScore1 !== '' &&
           evaluationData.qualityOfWorkScore2 && evaluationData.qualityOfWorkScore2 !== '' &&
           evaluationData.qualityOfWorkScore3 && evaluationData.qualityOfWorkScore3 !== '' &&
           evaluationData.qualityOfWorkScore4 && evaluationData.qualityOfWorkScore4 !== '' &&
-          evaluationData.qualityOfWorkScore5 && evaluationData.qualityOfWorkScore5 !== ''
+          // qualityOfWorkScore5 is only required if not HO
+          (isHO || (evaluationData.qualityOfWorkScore5 && evaluationData.qualityOfWorkScore5 !== ''))
         );
       case 3: // Adaptability
         return (
@@ -311,6 +370,38 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
           evaluationData.ethicalScore4 && evaluationData.ethicalScore4 !== ''
         );
       case 7: // Customer Service
+        // Check if evaluator is HO - Step 7 is not applicable for HO
+        const isEvaluatorHO_Step7 = () => {
+          if (!user?.branches) return false;
+          
+          // Handle branches as array
+          if (Array.isArray(user.branches)) {
+            const branch = user.branches[0];
+            if (branch) {
+              const branchName = branch.branch_name?.toUpperCase() || "";
+              const branchCode = branch.branch_code?.toUpperCase() || "";
+              return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+            }
+          }
+          
+          // Handle branches as object
+          if (typeof user.branches === 'object') {
+            const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
+            const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
+            return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+          }
+          
+          return false;
+        };
+        
+        const isHO_Step7 = isEvaluatorHO_Step7();
+        
+        // Step 7 is always valid for HO evaluators (not applicable)
+        if (isHO_Step7) {
+          return true;
+        }
+        
+        // For non-HO evaluators, require all customer service scores
         return (
           evaluationData.customerServiceScore1 && evaluationData.customerServiceScore1 !== '' &&
           evaluationData.customerServiceScore2 && evaluationData.customerServiceScore2 !== '' &&
@@ -384,13 +475,19 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
   };
 
   const nextStep = () => {
-    if (currentStep < steps.length) {
+    // For HO evaluators, skip Step 7 (go from Step 6 to Step 8)
+    if (isHO && currentStep === 6) {
+      setCurrentStep(8); // Skip Step 7, go directly to Step 8
+    } else if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     }
   };
 
   const prevStep = () => {
-    if (currentStep > 1) {
+    // For HO evaluators, skip Step 7 when going back (go from Step 8 to Step 6)
+    if (isHO && currentStep === 8) {
+      setCurrentStep(6); // Skip Step 7, go directly to Step 6
+    } else if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
@@ -666,7 +763,14 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
     return Math.round(overallWeightedScore * 10) / 10;
   };
 
-  const CurrentStepComponent = currentStep === 0 ? WelcomeStep : steps[currentStep - 1].component;
+  // Get the current step component - handle Step 7 skipping for HO
+  const getCurrentStepComponent = () => {
+    if (currentStep === 0) return WelcomeStep;
+    if (isHO && currentStep === 7) return Step8; // Skip Step 7 for HO
+    return steps[currentStep - 1].component;
+  };
+  
+  const CurrentStepComponent = getCurrentStepComponent();
 
   return (
     <>
@@ -759,41 +863,47 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
             <CardContent className="pt-6">
               <div className="flex justify-center mb-4">
                 <div className="flex items-center">
-                  {steps.map((step, index) => (
-                    <div key={step.id} className="flex items-center">
-                      {/* Step Circle */}
-                      <div
-                        className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold transition-all duration-200 relative z-10 ${
-                          index + 1 === currentStep
-                            ? 'bg-blue-500 text-white shadow-md scale-110'
-                            : index + 1 < currentStep
-                            ? 'bg-green-500 text-white'
-                            : 'bg-gray-200 text-gray-500'
-                        }`}
-                      >
-                        {step.id}
-                      </div>
-                      
-                      {/* Connecting Line */}
-                      {index < steps.length - 1 && (
-                        <div className="w-16 h-1 mx-2 relative">
-                          <div className="absolute inset-0 bg-gray-200 rounded-full"></div>
-                          <div 
-                            className={`absolute inset-0 rounded-full transition-all duration-500 ${
-                              index + 1 < currentStep ? 'bg-green-500' : 'bg-gray-200'
-                            }`}
-                            style={{ width: index + 1 < currentStep ? '100%' : '0%' }}
-                          ></div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                      {filteredSteps.map((step, index) => {
+                        // Determine if this step is current or completed
+                        const isCurrentStep = step.id === currentStep || (isHO && currentStep === 7 && step.id === 8);
+                        const isCompleted = step.id < currentStep || (isHO && currentStep === 7 && step.id < 8);
+                        
+                        return (
+                          <div key={step.id} className="flex items-center">
+                            {/* Step Circle */}
+                            <div
+                              className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold transition-all duration-200 relative z-10 ${
+                                isCurrentStep
+                                  ? 'bg-blue-500 text-white shadow-md scale-110'
+                                  : isCompleted
+                                  ? 'bg-green-500 text-white'
+                                  : 'bg-gray-200 text-gray-500'
+                              }`}
+                            >
+                              {step.id}
+                            </div>
+                            
+                            {/* Connecting Line */}
+                            {index < filteredSteps.length - 1 && (
+                              <div className="w-16 h-1 mx-2 relative">
+                                <div className="absolute inset-0 bg-gray-200 rounded-full"></div>
+                                <div 
+                                  className={`absolute inset-0 rounded-full transition-all duration-500 ${
+                                    isCompleted ? 'bg-green-500' : 'bg-gray-200'
+                                  }`}
+                                  style={{ width: isCompleted ? '100%' : '0%' }}
+                                ></div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                 </div>
               </div>
               
               <div className="text-center">
                 <span className="text-sm font-medium text-gray-700">
-                  Step {currentStep} of {steps.length}: {steps[currentStep - 1].title}
+                  Step {currentStep === 7 && isHO ? 8 : currentStep} of {filteredSteps.length}: {currentStep === 7 && isHO ? filteredSteps[filteredSteps.length - 1].title : steps[currentStep - 1].title}
                 </span>
               </div>
             </CardContent>
@@ -869,7 +979,7 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
                 variant="outline"
                 onClick={prevStep}
                 disabled={currentStep === 1}
-                className="px-6"
+                className="px-6 cursor-pointer text-white hover:scale-110 transition-transform duration-200 bg-blue-500 hover:bg-blue-500 hover:text-white"
               >
                 Previous
               </Button>
@@ -881,7 +991,7 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
                   e.stopPropagation();
                   setShowCancelDialog(true);
                 }}
-                className="px-6 text-red-600 border-red-300 hover:bg-red-50"
+                className="px-6 text-red-600 bg-red-500 text-white border-red-300 hover:bg-red-500 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
               >
                 Cancel Evaluation
               </Button>
@@ -911,7 +1021,7 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
                     <TooltipTrigger asChild>
                       <Button 
                         onClick={nextStep} 
-                        className="px-6 bg-blue-500 text-white hover:bg-blue-600 hover:text-white"
+                        className="px-6 bg-blue-500 text-white hover:bg-blue-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
                       >
                         Next
                       </Button>
@@ -955,7 +1065,7 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
               e.stopPropagation();
               setShowCancelDialog(false);
             }}
-            className="px-4 bg-blue-500 text-white hover:bg-blue-600 hover:text-white"
+            className="px-4 bg-blue-500 text-white hover:bg-blue-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
           >
             Keep Editing
           </Button>
@@ -971,7 +1081,7 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
                 onCloseAction();
               }
             }}
-            className="px-4"
+            className="px-4 cursor-pointer hover:scale-110 transition-transform duration-200s"
           >
             Cancel Evaluation
           </Button>

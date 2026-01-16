@@ -58,6 +58,36 @@ export default function EvaluationForm({
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-8 = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
   const { user } = useAuth();
+  
+  // Check if evaluator's branch is HO (Head Office)
+  const isEvaluatorHO = () => {
+    if (!user?.branches) return false;
+    
+    // Handle branches as array
+    if (Array.isArray(user.branches)) {
+      const branch = user.branches[0];
+      if (branch) {
+        const branchName = branch.branch_name?.toUpperCase() || "";
+        const branchCode = branch.branch_code?.toUpperCase() || "";
+        return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+      }
+    }
+    
+    // Handle branches as object
+    if (typeof user.branches === 'object') {
+      const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
+      const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
+      return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+    }
+    
+    return false;
+  };
+
+  const isHO = isEvaluatorHO();
+  
+  // Filter steps based on HO status - remove Step 7 for HO evaluators
+  const filteredSteps = isHO ? steps.filter(step => step.id !== 7) : steps;
+  
   const [form, setForm] = useState<EvaluationPayload>({
     hireDate: "",
     rating: 0,
@@ -243,6 +273,32 @@ export default function EvaluationForm({
           hasValidCoverageDates
         );
       case 2: // Quality of Work
+        // Check if evaluator is HO
+        const isEvaluatorHO = () => {
+          if (!user?.branches) return false;
+          
+          // Handle branches as array
+          if (Array.isArray(user.branches)) {
+            const branch = user.branches[0];
+            if (branch) {
+              const branchName = branch.branch_name?.toUpperCase() || "";
+              const branchCode = branch.branch_code?.toUpperCase() || "";
+              return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+            }
+          }
+          
+          // Handle branches as object
+          if (typeof user.branches === 'object') {
+            const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
+            const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
+            return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+          }
+          
+          return false;
+        };
+        
+        const isHO = isEvaluatorHO();
+        
         return (
           form.qualityOfWorkScore1 &&
           form.qualityOfWorkScore1 !== 0 &&
@@ -252,8 +308,8 @@ export default function EvaluationForm({
           form.qualityOfWorkScore3 !== 0 &&
           form.qualityOfWorkScore4 &&
           form.qualityOfWorkScore4 !== 0 &&
-          form.qualityOfWorkScore5 &&
-          form.qualityOfWorkScore5 !== 0
+          // qualityOfWorkScore5 is only required if not HO
+          (isHO || (form.qualityOfWorkScore5 && form.qualityOfWorkScore5 !== 0))
         );
       case 3: // Adaptability
         return (
@@ -296,6 +352,38 @@ export default function EvaluationForm({
           form.ethicalScore4 !== 0
         );
       case 7: // Customer Service
+        // Check if evaluator is HO - Step 7 is not applicable for HO
+        const isEvaluatorHO_Step7 = () => {
+          if (!user?.branches) return false;
+          
+          // Handle branches as array
+          if (Array.isArray(user.branches)) {
+            const branch = user.branches[0];
+            if (branch) {
+              const branchName = branch.branch_name?.toUpperCase() || "";
+              const branchCode = branch.branch_code?.toUpperCase() || "";
+              return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+            }
+          }
+          
+          // Handle branches as object
+          if (typeof user.branches === 'object') {
+            const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
+            const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
+            return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+          }
+          
+          return false;
+        };
+        
+        const isHO_Step7 = isEvaluatorHO_Step7();
+        
+        // Step 7 is always valid for HO evaluators (not applicable)
+        if (isHO_Step7) {
+          return true;
+        }
+        
+        // For non-HO evaluators, require all customer service scores
         return (
           form.customerServiceScore1 &&
           form.customerServiceScore1 !== 0 &&
@@ -421,13 +509,19 @@ export default function EvaluationForm({
   };
 
   const nextStep = () => {
-    if (currentStep < steps.length) {
+    // For HO evaluators, skip Step 7 (go from Step 6 to Step 8)
+    if (isHO && currentStep === 6) {
+      setCurrentStep(8); // Skip Step 7, go directly to Step 8
+    } else if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     }
   };
 
   const prevStep = () => {
-    if (currentStep > 1) {
+    // For HO evaluators, skip Step 7 when going back (go from Step 8 to Step 6)
+    if (isHO && currentStep === 8) {
+      setCurrentStep(6); // Skip Step 7, go directly to Step 6
+    } else if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
@@ -499,8 +593,14 @@ export default function EvaluationForm({
   //   return (Math.round(average * 10) / 10).toString(); // Round to 1 decimal place and return as string
   // };
 
-  const CurrentStepComponent =
-    currentStep === 0 ? WelcomeStep : steps[currentStep - 1].component;
+    // Get the current step component - handle Step 7 skipping for HO
+    const getCurrentStepComponent = () => {
+      if (currentStep === 0) return WelcomeStep;
+      if (isHO && currentStep === 7) return OverallAssessment; // Skip Step 7 for HO
+      return steps[currentStep - 1].component;
+    };
+    
+    const CurrentStepComponent = getCurrentStepComponent();
 
   return (
     <>
@@ -593,7 +693,7 @@ export default function EvaluationForm({
                 <CardContent className="pt-6">
                   <div className="flex justify-center mb-4">
                     <div className="flex items-center">
-                      {steps.map((step, index) => (
+                      {filteredSteps.map((step, index) => (
                         <div key={step.id} className="flex items-center">
                           {/* Step Circle */}
                           <div
@@ -632,8 +732,8 @@ export default function EvaluationForm({
 
                   <div className="text-center">
                     <span className="text-sm font-medium text-gray-700">
-                      Step {currentStep} of {steps.length}:{" "}
-                      {steps[currentStep - 1].title}
+                      Step {currentStep} of {filteredSteps.length}:{" "}
+                      {currentStep === 7 && isHO ? filteredSteps[filteredSteps.length - 1].title : steps[currentStep - 1].title}
                     </span>
                   </div>
                 </CardContent>
@@ -661,9 +761,9 @@ export default function EvaluationForm({
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <span className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
-                      {currentStep}
+                      {currentStep === 7 && isHO ? 8 : currentStep}
                     </span>
-                    {steps[currentStep - 1].title}
+                    {currentStep === 7 && isHO ? filteredSteps[filteredSteps.length - 1].title : steps[currentStep - 1].title}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

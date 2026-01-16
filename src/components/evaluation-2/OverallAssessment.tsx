@@ -1997,7 +1997,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                 <Button
                     onClick={handlePrevious}
                     variant="outline"
-                    className="px-8 py-3 text-lg cursor-pointer"
+                    className="px-8 py-3 text-lg cursor-pointer bg-blue-500 text-white hover:bg-blue-500 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
                     size="lg"
                 >
                     Previous

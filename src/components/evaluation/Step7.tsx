@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDownIcon } from "lucide-react";
 import { EvaluationPayload } from "./types";
-import { User } from "@/contexts/UserContext";
+import { User, useAuth } from "@/contexts/UserContext";
 
 interface Step7Props {  
   data: EvaluationPayload;
@@ -140,6 +140,54 @@ export default function Step7({
   updateDataAction,
   onNextAction,
 }: Step7Props) {
+  const { user } = useAuth();
+  
+  // Check if evaluator's branch is HO (Head Office)
+  const isEvaluatorHO = () => {
+    if (!user?.branches) return false;
+    
+    // Handle branches as array
+    if (Array.isArray(user.branches)) {
+      const branch = user.branches[0];
+      if (branch) {
+        const branchName = branch.branch_name?.toUpperCase() || "";
+        const branchCode = branch.branch_code?.toUpperCase() || "";
+        return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+      }
+    }
+    
+    // Handle branches as object
+    if (typeof user.branches === 'object') {
+      const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
+      const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
+      return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+    }
+    
+    return false;
+  };
+
+  const isHO = isEvaluatorHO();
+  
+  // If evaluator is HO, show a message that this step is not applicable
+  if (isHO) {
+    return (
+      <div className="space-y-6">
+        <Card className="bg-gray-50 border-gray-200">
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <h3 className="text-xl font-bold text-gray-700 mb-2">
+                VII. CUSTOMER SERVICE
+              </h3>
+              <p className="text-gray-600">
+                This evaluation step is not applicable for Head Office evaluators.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   const calculateAverageScore = () => {
     const scores = [
       data.customerServiceScore1,
