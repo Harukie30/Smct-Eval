@@ -11,6 +11,8 @@ import { EvaluationData } from './types';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/useToast';
 import { getQuarterlyReviewStatus, getCurrentYear } from '@/lib/quarterlyReviewUtils';
+import { useAuth } from '@/contexts/UserContext';
+import { CONFIG } from '../../../config/config';
 
 interface OverallAssessmentProps {
     data: EvaluationData;
@@ -70,6 +72,10 @@ const getRatingColor = (rating: string) => {
 
 export default function OverallAssessment({ data, updateDataAction, employee, currentUser, onSubmitAction, onPreviousAction, onCloseAction }: OverallAssessmentProps) {
     const { error } = useToast();
+    const { user } = useAuth();
+    
+    // Use user from auth context if available, otherwise fall back to currentUser prop
+    const evaluatorUser = user || currentUser;
     
     // Submission state management
     const [submissionError, setSubmissionError] = useState('');
@@ -84,12 +90,18 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
     });
     const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
     
-    // Auto-populate evaluator name when currentUser is available
+    // Auto-populate evaluator name when evaluatorUser is available
     useEffect(() => {
-        if (currentUser && !data.evaluatorSignature) {
-            updateDataAction({ evaluatorSignature: currentUser.name });
+        if (evaluatorUser && !data.evaluatorSignature) {
+            const evaluatorName = ('fname' in evaluatorUser && 'lname' in evaluatorUser && evaluatorUser.fname && evaluatorUser.lname)
+                ? `${evaluatorUser.fname} ${evaluatorUser.lname}`
+                : ('name' in evaluatorUser ? evaluatorUser.name : '');
+            if (evaluatorName) {
+                updateDataAction({ evaluatorSignature: evaluatorName });
+            }
         }
-    }, [currentUser, data.evaluatorSignature, updateDataAction]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [evaluatorUser]);
 
     // Check for existing quarterly reviews when employee changes
     useEffect(() => {
@@ -197,7 +209,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
 
     const handleSubmitEvaluation = async (isRetry = false) => {
         // Validate evaluator has a signature
-        if (!currentUser?.signature) {
+        if (!evaluatorUser?.signature) {
             error('Please add your signature to your profile before submitting the evaluation.');
             return;
         }
@@ -214,12 +226,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
             // Calculate the rating using the same logic as parent component
             const calculatedRating = calculateOverallRating(data);
 
+            // Get evaluator name
+            const evaluatorName = ('fname' in evaluatorUser && 'lname' in evaluatorUser && evaluatorUser.fname && evaluatorUser.lname)
+                ? `${evaluatorUser.fname} ${evaluatorUser.lname}`
+                : ('name' in evaluatorUser ? evaluatorUser.name : data.evaluatorSignature || '');
+
             // Update the data with evaluator signature and calculated rating before submitting
         const updatedData = {
             ...data,
                 rating: calculatedRating, // Include calculated rating in the payload
-            evaluatorSignatureImage: currentUser?.signature || '',
-            evaluatorSignature: currentUser?.name || data.evaluatorSignature,
+            evaluatorSignatureImage: evaluatorUser?.signature || '',
+            evaluatorSignature: evaluatorName,
             evaluatorSignatureDate: data.evaluatorSignatureDate || new Date().toISOString().split('T')[0]
         };
         
@@ -1935,12 +1952,14 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <div className="h-16 flex items-center justify-center relative">
                                         {/* Name as background text - always show */}
                                         <span className="text-md text-gray-900 font-bold">
-                                            {data.evaluatorSignature || currentUser?.name || 'Evaluator Name'}
+                                            {data.evaluatorSignature || (evaluatorUser && 'fname' in evaluatorUser && 'lname' in evaluatorUser && evaluatorUser.fname && evaluatorUser.lname
+                                                ? `${evaluatorUser.fname} ${evaluatorUser.lname}`
+                                                : (evaluatorUser && 'name' in evaluatorUser ? evaluatorUser.name : 'Evaluator Name'))}
                                         </span>
                                         {/* Signature overlay - automatically show when signature exists */}
-                                        {currentUser?.signature && (
+                                        {evaluatorUser?.signature && (
                                             <img 
-                                                src={currentUser.signature} 
+                                                src={`${CONFIG.API_URL_STORAGE}/${evaluatorUser.signature}`}
                                                 alt="Evaluator Signature" 
                                                 className="absolute top-5 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-14 max-w-full object-contain"
                                                 onError={(e) => {
@@ -1949,7 +1968,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                             />
                                         )}
                                         {/* Show message if no signature */}
-                                        {!currentUser?.signature && (
+                                        {!evaluatorUser?.signature && (
                                             <span className="text-xs text-red-600">
                                                 Please add signature to your profile
                                             </span>

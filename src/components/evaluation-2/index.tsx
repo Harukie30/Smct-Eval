@@ -86,6 +86,7 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
     branch: employee?.branch || '',
     role: employee?.role || '',
     supervisor: '',
+    hireDate: '',
     coverageFrom: '',
     coverageTo: '',
     others: '',
@@ -170,11 +171,13 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
     managerialSkillsScore3: '',
     managerialSkillsScore4: '',
     managerialSkillsScore5: '',
+    managerialSkillsScore6: '',
     managerialSkillsExplanation1: '',
     managerialSkillsExplanation2: '',
     managerialSkillsExplanation3: '',
     managerialSkillsExplanation4: '',
     managerialSkillsExplanation5: '',
+    managerialSkillsExplanation6: '',
     managerialSkillsComments: '',
     overallRating: '',
     overallComments: '',
@@ -199,17 +202,37 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
   // Update evaluation data when employee prop changes
   useEffect(() => {
     if (employee) {
-      setEvaluationData(prev => ({
-        ...prev,
-        employeeId: employee.employeeId || employee.id.toString(),
-        employeeName: employee.name,
-        position: employee.position,
-        department: employee.department,
-        branch: employee.branch || '',
-        role: employee.role,
-      }));
+      setEvaluationData(prev => {
+        // Only update if the values have actually changed to prevent infinite loops
+        const newEmployeeId = employee.employeeId || employee.id.toString();
+        const newEmployeeName = employee.name;
+        const newPosition = employee.position;
+        const newDepartment = employee.department;
+        const newBranch = employee.branch || '';
+        const newRole = employee.role;
+        
+        if (
+          prev.employeeId !== newEmployeeId ||
+          prev.employeeName !== newEmployeeName ||
+          prev.position !== newPosition ||
+          prev.department !== newDepartment ||
+          prev.branch !== newBranch ||
+          prev.role !== newRole
+        ) {
+          return {
+            ...prev,
+            employeeId: newEmployeeId,
+            employeeName: newEmployeeName,
+            position: newPosition,
+            department: newDepartment,
+            branch: newBranch,
+            role: newRole,
+          };
+        }
+        return prev; // Return previous state if nothing changed
+      });
     }
-  }, [employee]);
+  }, [employee?.id, employee?.employeeId, employee?.name, employee?.position, employee?.department, employee?.branch, employee?.role]);
 
   const updateEvaluationData = useCallback((updates: Partial<EvaluationData>) => {
     setEvaluationData(prev => {
@@ -301,7 +324,8 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
           evaluationData.managerialSkillsScore2 && evaluationData.managerialSkillsScore2 !== '' &&
           evaluationData.managerialSkillsScore3 && evaluationData.managerialSkillsScore3 !== '' &&
           evaluationData.managerialSkillsScore4 && evaluationData.managerialSkillsScore4 !== '' &&
-          evaluationData.managerialSkillsScore5 && evaluationData.managerialSkillsScore5 !== ''
+          evaluationData.managerialSkillsScore5 && evaluationData.managerialSkillsScore5 !== '' &&
+          evaluationData.managerialSkillsScore6 && evaluationData.managerialSkillsScore6 !== ''
         );
       case 9: // Overall Assessment
         return true; // No validation required for step 9
@@ -350,7 +374,9 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
           return 'Please complete all job knowledge scores';
         }
         return 'Please complete all required fields';
-      case 8: // Overall Assessment
+      case 8: // Managerial Skills
+        return 'Please complete all managerial skills scores';
+      case 9: // Overall Assessment
         return 'Please complete all required fields';
       default:
         return 'Please complete all scores for this step';

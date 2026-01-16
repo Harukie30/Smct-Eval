@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
 import { EvaluationData } from './types';
+import { useAuth } from '@/contexts/UserContext';
 
 interface WelcomeStepProps {
   data: EvaluationData;
@@ -28,10 +29,13 @@ interface WelcomeStepProps {
 }
 
 export default function WelcomeStep({ employee, onStartAction, onBackAction, currentUser }: WelcomeStepProps) {
+  const { user } = useAuth();
   // Signature can be a PNG file (base64 data URL or file path)
-  const hasSignature = currentUser?.signature && 
-    typeof currentUser.signature === 'string' && 
-    currentUser.signature.length > 0;
+  // Use user from auth context if available, otherwise fall back to currentUser prop
+  const signature = user?.signature || currentUser?.signature;
+  const hasSignature = signature && 
+    typeof signature === 'string' && 
+    signature.length > 0;
   return (
     <div className="space-y-6">
       
@@ -192,19 +196,6 @@ export default function WelcomeStep({ employee, onStartAction, onBackAction, cur
       {/* Action Buttons */}
       <div className="text-center">
         <div className="flex items-center justify-center gap-4">
-          {/* Back Button - Only show when no signature */}
-          {onBackAction && !hasSignature && (
-            <Button
-              variant="outline"
-              onClick={onBackAction}
-              size="lg"
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white hover:text-white text-lg flex items-center gap-2 cursor-pointer hover:scale-110 transition-transform duration-200"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </Button>
-          )}
-          
           {/* Start Button */}
           <Button
             onClick={hasSignature ? onStartAction : undefined}

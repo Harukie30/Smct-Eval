@@ -140,7 +140,8 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
     data.managerialSkillsScore2,
     data.managerialSkillsScore3,
     data.managerialSkillsScore4,
-    data.managerialSkillsScore5
+    data.managerialSkillsScore5,
+    data.managerialSkillsScore6
   ];
 
   const averageScore = calculateAverageScore(managerialSkillsScores);
@@ -186,14 +187,14 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
               <tbody>
                 {/* Row 1: Leadership & Vision */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Leadership & Vision
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black">
+                  Leadership 
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Provides clear direction and vision. Inspires and motivates team members to achieve organizational goals
+                  Guides the team to meet goals and improve performance	
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Sets clear expectations and communicates vision effectively. Leads by example and motivates team members to exceed performance standards. Demonstrates strategic thinking in decision-making.
+                  Encourages the team to complete a critical project ahead of the deadline while maintaining quality.		
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
@@ -229,14 +230,14 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
 
                 {/* Row 2: Team Management & Development */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Team Management & Development
+                  <td className="border border-gray-300 px-4 py-3 font-bold text-sm text-black">
+                  Motivation
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Effectively manages team dynamics. Develops team members' skills and capabilities. Fosters collaboration and teamwork
+                  Keeps the team engaged and focused on achieving goals and targets	
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Identifies and develops team members' strengths. Creates opportunities for growth and learning. Resolves conflicts effectively and maintains positive team morale. Delegates appropriately and empowers team members.
+                  Recognizes and rewards team achievements to maintain high morale and engagement.		
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
@@ -272,14 +273,14 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
 
                 {/* Row 3: Decision-Making & Problem-Solving */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Decision-Making & Problem-Solving
+                  <td className="border border-gray-300 px-4 py-3 font-bold text-sm text-black">
+                  Decision-Making
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Makes sound decisions based on analysis and judgment. Solves complex problems effectively. Takes calculated risks when appropriate
+                  Makes timely and informed decisions that benefit the department or company	
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Gathers relevant information before making decisions. Analyzes situations thoroughly and considers multiple perspectives. Makes timely decisions and takes responsibility for outcomes. Identifies root causes and implements effective solutions.
+                  Evaluates a situation, assesses needs, considers alternatives, and implements solutions that benefit the team and the company.		
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
@@ -315,14 +316,14 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
 
                 {/* Row 4: Performance Management & Coaching */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Performance Management & Coaching
+                  <td className="border border-gray-300 px-4 font-bold py-3 text-sm text-black">
+                  Planning & Resource Management
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Sets clear performance expectations. Provides regular feedback and coaching. Manages underperformance effectively
+                  Creates detailed plans and allocates resources, time, and budget efficiently	
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Establishes measurable performance goals and monitors progress. Provides constructive feedback regularly. Coaches team members to improve performance. Addresses performance issues promptly and fairly. Recognizes and rewards high performance.
+                  Develops a timeline for team deliverables, ensuring tasks are assigned based on workload and skills.		
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
@@ -358,14 +359,14 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
 
                 {/* Row 5: Communication & Influence */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Communication & Influence
+                  <td className="border border-gray-300 px-4 py-3 font-bold text-sm text-black">
+                  Performance Feedback
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Communicates effectively with all stakeholders. Influences and persuades others. Builds strong relationships across the organization
+                  Regularly monitors performance and gives constructive feedback	
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Communicates clearly and persuasively. Adapts communication style to different audiences. Builds consensus and gains buy-in for initiatives. Maintains strong relationships with peers, superiors, and subordinates. Represents the team effectively in cross-functional settings.
+                  Holds one-on-one meetings to discuss individual performance and offer guidance for improvement.		  
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
@@ -398,6 +399,49 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
                     />
                   </td>
                 </tr>
+
+                {/* Row 6: [Add your 6th managerial skill here] */}
+                <tr>
+                  <td className="border border-gray-300 px-4 font-bold py-3 text-sm text-black">
+                  Conflict Resolution
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  Resolves disagreements professionally and fairly	
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  Mediates conflict between team members, ensuring a collaborative solution that benefits the group.		
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
+                    <ScoreDropdown
+                      value={data.managerialSkillsScore6 || ''}
+                      onValueChange={(value) => handleScoreChange('managerialSkillsScore6', value)}
+                      placeholder="-- Select --"
+                    />
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.managerialSkillsScore6 === '5' ? 'bg-green-100 text-green-800' :
+                      data.managerialSkillsScore6 === '4' ? 'bg-blue-100 text-blue-800' :
+                        data.managerialSkillsScore6 === '3' ? 'bg-yellow-100 text-yellow-800' :
+                          data.managerialSkillsScore6 === '2' ? 'bg-orange-100 text-orange-800' :
+                            data.managerialSkillsScore6 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                      {data.managerialSkillsScore6 === '5' ? 'Outstanding' :
+                        data.managerialSkillsScore6 === '4' ? 'Exceeds Expectations' :
+                          data.managerialSkillsScore6 === '3' ? 'Meets Expectations' :
+                            data.managerialSkillsScore6 === '2' ? 'Needs Improvement' :
+                              data.managerialSkillsScore6 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                    </div>
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3">
+                    <textarea
+                      value={data.managerialSkillsExplanation6 || ''}
+                      onChange={(e) => handleExplanationChange('managerialSkillsExplanation6', e.target.value)}
+                      placeholder="Enter comments about this competency..."
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      rows={6}
+                    />
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -424,11 +468,12 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
                   <div>Decision-Making & Problem-Solving: <span className="font-semibold">{data.managerialSkillsScore3 || 'Not rated'}</span></div>
                   <div>Performance Management & Coaching: <span className="font-semibold">{data.managerialSkillsScore4 || 'Not rated'}</span></div>
                   <div>Communication & Influence: <span className="font-semibold">{data.managerialSkillsScore5 || 'Not rated'}</span></div>
+                  <div>[Skill Name]: <span className="font-semibold">{data.managerialSkillsScore6 || 'Not rated'}</span></div>
                 </div>
               </div>
             </div>
             <div className="mt-4 text-xs text-gray-500">
-              Average calculated from {[data.managerialSkillsScore1, data.managerialSkillsScore2, data.managerialSkillsScore3, data.managerialSkillsScore4, data.managerialSkillsScore5].filter(score => score && score !== '').length} of 5 criteria
+              Average calculated from {[data.managerialSkillsScore1, data.managerialSkillsScore2, data.managerialSkillsScore3, data.managerialSkillsScore4, data.managerialSkillsScore5, data.managerialSkillsScore6].filter(score => score && score !== '').length} of 6 criteria
             </div>
           </div>
         </CardContent>

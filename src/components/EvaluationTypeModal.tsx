@@ -66,7 +66,7 @@ export default function EvaluationTypeModal({
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  Rank and File I & II
+                    Employee Evaluation
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
                     Standard performance evaluation for rank and file employees.
@@ -87,7 +87,7 @@ export default function EvaluationTypeModal({
                     handleSelectEmployee();
                   }}
                 >
-                  Select Rank and File I & II
+                  Select Employee Evaluation
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </div>
@@ -106,7 +106,7 @@ export default function EvaluationTypeModal({
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    (Basic) Evaluation
+                    Manager Evaluation
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
                     Comprehensive evaluation designed specifically for managers.
@@ -126,7 +126,7 @@ export default function EvaluationTypeModal({
                     handleSelectManager();
                   }}
                 >
-                  Select (Basic) Evaluation
+                  Select Manager Evaluation
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </div>

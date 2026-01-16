@@ -7,6 +7,7 @@ export type EvaluationData = {
   branch: string;
   role: string;
   supervisor: string;
+  hireDate?: string;
   coverageFrom: string;
   coverageTo: string;
   others: string;
@@ -117,11 +118,13 @@ export type EvaluationData = {
   managerialSkillsScore3: string;
   managerialSkillsScore4: string;
   managerialSkillsScore5: string;
+  managerialSkillsScore6: string;
   managerialSkillsExplanation1: string;
   managerialSkillsExplanation2: string;
   managerialSkillsExplanation3: string;
   managerialSkillsExplanation4: string;
   managerialSkillsExplanation5: string;
+  managerialSkillsExplanation6: string;
   managerialSkillsComments: string;
 
 // Step 9: Overall Rating & Comments

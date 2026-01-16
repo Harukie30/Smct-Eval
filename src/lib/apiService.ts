@@ -394,6 +394,42 @@ export const apiService = {
     return response.data;
   },
 
+  // Get branch rank and file employees
+  getBranchRankNFile: async (
+    branchId?: string | number,
+    search?: string,
+    page?: number,
+    per_page?: number
+  ): Promise<any> => {
+    const response = await api.get("/BranchRankNFile", {
+      params: {
+        branch_id: branchId || "",
+        search: search || "",
+        page: page || 1,
+        per_page: per_page || 10,
+      },
+    });
+    return response.data;
+  },
+
+  // Get branch basic employees
+  getBranchBasic: async (
+    branchId?: string | number,
+    search?: string,
+    page?: number,
+    per_page?: number
+  ): Promise<any> => {
+    const response = await api.get("/BranchBasic", {
+      params: {
+        branch_id: branchId || "",
+        search: search || "",
+        page: page || 1,
+        per_page: per_page || 10,
+      },
+    });
+    return response.data;
+  },
+
   // Get evaluations by authenticated evaluator
   getEvalAuthEvaluator: async (
     search: string,

@@ -11,12 +11,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { ChevronDownIcon, CalendarIcon } from 'lucide-react';
+import { ChevronDownIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { EvaluationData } from './types';
 import { getQuarterlyReviewStatus, getCurrentYear } from '@/lib/quarterlyReviewUtils';
+import { useAuth } from '@/contexts/UserContext';
 
 interface Step1Props {
   data: EvaluationData;
@@ -29,6 +28,7 @@ interface Step1Props {
     department: string;
     branch?: string;
     role: string;
+    employeeId?: string;
   };
   currentUser?: {
     id: number;
@@ -106,6 +106,7 @@ function ScoreDropdown({
 }
 
 export default function Step1({ data, updateDataAction, employee, currentUser }: Step1Props) {
+  const { user } = useAuth();
   const [quarterlyStatus, setQuarterlyStatus] = useState({
     q1: false,
     q2: false,
@@ -113,6 +114,7 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
     q4: false
   });
   const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
+  const [coverageError, setCoverageError] = useState('');
 
   // Check if all Job Knowledge scores are complete
   const isJobKnowledgeComplete = () => {
@@ -143,18 +145,38 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
   // Auto-populate employee information when employee is selected
   useEffect(() => {
     if (employee) {
-      console.log('Employee data received:', employee); // Debug log
-      const employeeData = {
-        employeeName: employee.name,
-        employeeId: employee.id.toString(),
-        position: employee.position,
-        department: employee.department,
-        branch: employee.branch || '',
-      };
-      console.log('Updating evaluation data with:', employeeData); // Debug log
-      updateDataAction(employeeData);
+      // Use employeeId (formatted ID like "6517-197195") if available, otherwise fall back to id
+      const employeeIdValue = employee.employeeId || employee.id.toString();
+      
+      // Only update if the data has actually changed to prevent infinite loops
+      if (
+        data.employeeName !== employee.name ||
+        data.employeeId !== employeeIdValue ||
+        data.position !== employee.position ||
+        data.department !== employee.department ||
+        data.branch !== (employee.branch || '')
+      ) {
+        console.log('Employee data received:', employee); // Debug log
+        const employeeData = {
+          employeeName: employee.name,
+          employeeId: employeeIdValue,
+          position: employee.position,
+          department: employee.department,
+          branch: employee.branch || '',
+        };
+        console.log('Updating evaluation data with:', employeeData); // Debug log
+        updateDataAction(employeeData);
+      }
     }
-  }, [employee, updateDataAction]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    employee?.id ?? null,
+    employee?.employeeId ?? null,
+    employee?.name ?? null,
+    employee?.position ?? null,
+    employee?.department ?? null,
+    employee?.branch ?? null
+  ]);
 
   // Check for existing quarterly reviews when employee changes
   useEffect(() => {
@@ -183,13 +205,38 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
     checkQuarterlyReviews();
   }, [employee?.id, employee?.name]);
 
+  // Auto-populate Date Hired from employee data
+  useEffect(() => {
+    if (employee && !data.hireDate) {
+      const dateHired = (employee as any).date_hired || (employee as any).dateHired || (employee as any).hireDate;
+      if (dateHired) {
+        try {
+          // Convert to YYYY-MM-DD format for date input
+          const date = new Date(dateHired);
+          if (!isNaN(date.getTime())) {
+            const formattedDate = date.toISOString().split('T')[0];
+            updateDataAction({ hireDate: formattedDate });
+          }
+        } catch (error) {
+          console.error('Error parsing date_hired:', error);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employee?.id]);
+
   // Auto-populate supervisor information with current user
   useEffect(() => {
-    if (currentUser && !data.supervisor) {
-      console.log('Auto-populating supervisor with current user:', currentUser); // Debug log
-      updateDataAction({ supervisor: currentUser.name });
+    if (user && !data.supervisor) {
+      const supervisorName = user.fname && user.lname
+        ? `${user.fname} ${user.lname}`
+        : user.fname || user.lname || '';
+      if (supervisorName) {
+        updateDataAction({ supervisor: supervisorName });
+      }
     }
-  }, [currentUser, data.supervisor, updateDataAction]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.fname, user?.lname]);
 
   // Debug log to see current data state
   useEffect(() => {
@@ -587,11 +634,21 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
 
           <div className="space-y-2">
             <Label htmlFor="employeeId" className="text-base font-medium text-gray-900">
-              Employee Number:
+              Employee ID:
             </Label>
             <Input
               id="employeeId"
-              value={data.employeeId || ''}
+              value={
+                data.employeeId
+                  ? (() => {
+                      const idString = data.employeeId.toString().replace(/-/g, ''); // Remove existing dashes
+                      if (idString.length > 4) {
+                        return `${idString.slice(0, 4)}-${idString.slice(4)}`;
+                      }
+                      return idString;
+                    })()
+                  : ''
+              }
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
@@ -637,12 +694,30 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
         {/* Right Column */}
         <div className="space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="hireDate" className="text-base font-medium text-gray-900">
+              Date Hired:
+            </Label>
+            <Input
+              id="hireDate"
+              type="date"
+              value={data.hireDate || ''}
+              readOnly
+              className="bg-gray-100 border-gray-300 cursor-not-allowed"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="supervisor" className="text-base font-medium text-gray-900">
               Immediate Supervisor:
             </Label>
             <Input
               id="supervisor"
-              value={data.supervisor || ''}
+              value={
+                data.supervisor || 
+                (user?.fname && user?.lname
+                  ? `${user.fname} ${user.lname}`
+                  : user?.fname || user?.lname || '')
+              }
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
@@ -656,73 +731,150 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
               {/* From Date */}
               <div className="space-y-1">
                 <Label className="text-sm text-gray-600">From:</Label>
-                <Popover>
-                  <PopoverTrigger 
-                    className={`w-full justify-start text-left font-normal bg-yellow-100 border-yellow-300 hover:bg-yellow-200 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground ${
-                      data.coverageFrom ? 'text-gray-900' : 'text-muted-foreground'
-                    }`}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {data.coverageFrom ? (
-                      format(new Date(data.coverageFrom), 'MMM dd, yyyy')
-                    ) : (
-                      <span>Start date</span>
-                    )}
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={data.coverageFrom ? new Date(data.coverageFrom) : undefined}
-                      onSelect={(date) => {
-                        if (date) {
-                          updateDataAction({ coverageFrom: date.toISOString() });
-                        }
-                      }}
-                      initialFocus
-                      className="bg-white"
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  type="date"
+                  value={
+                    data.coverageFrom
+                      ? typeof data.coverageFrom === "string"
+                        ? data.coverageFrom.includes('T') 
+                          ? data.coverageFrom.split('T')[0]
+                          : data.coverageFrom
+                        : new Date(data.coverageFrom).toISOString().split("T")[0]
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const fromDate = e.target.value;
+                    const toDate = data.coverageTo
+                      ? typeof data.coverageTo === "string"
+                        ? data.coverageTo.includes('T')
+                          ? data.coverageTo.split('T')[0]
+                          : data.coverageTo
+                        : new Date(data.coverageTo).toISOString().split("T")[0]
+                      : null;
+
+                    // Always update the form data so parent validation can catch it
+                    updateDataAction({
+                      coverageFrom: fromDate,
+                    });
+
+                    // Validate: From date should be earlier than To date
+                    if (toDate && fromDate && fromDate >= toDate) {
+                      setCoverageError(
+                        "Start date must be earlier than end date"
+                      );
+                      return;
+                    }
+
+                    // Validate: From date should not be before Date Hired
+                    if (data.hireDate && fromDate) {
+                      const hireDateStr = typeof data.hireDate === "string"
+                        ? data.hireDate
+                        : new Date(data.hireDate).toISOString().split("T")[0];
+                      if (fromDate < hireDateStr) {
+                        setCoverageError(
+                          "Performance Coverage cannot start before Date Hired"
+                        );
+                        return;
+                      }
+                    }
+
+                    setCoverageError("");
+                  }}
+                  min={
+                    data.hireDate
+                      ? typeof data.hireDate === "string"
+                        ? data.hireDate
+                        : new Date(data.hireDate).toISOString().split("T")[0]
+                      : undefined
+                  }
+                  max={
+                    data.coverageTo
+                      ? typeof data.coverageTo === "string"
+                        ? data.coverageTo.includes('T')
+                          ? data.coverageTo.split('T')[0]
+                          : data.coverageTo
+                        : new Date(data.coverageTo).toISOString().split("T")[0]
+                      : undefined
+                  }
+                  className={`w-full bg-yellow-100 border-yellow-300 hover:bg-yellow-200 cursor-pointer hover:scale-110 transition-transform duration-200 ${
+                    coverageError && !data.coverageFrom
+                      ? "border-red-500"
+                      : ""
+                  }`}
+                />
               </div>
 
               {/* To Date */}
               <div className="space-y-1">
                 <Label className="text-sm text-gray-600">To:</Label>
-                <Popover>
-                  <PopoverTrigger 
-                    className={`w-full justify-start text-left font-normal bg-yellow-100 border-yellow-300 hover:bg-yellow-200 inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground ${
-                      data.coverageTo ? 'text-gray-900' : 'text-muted-foreground'
-                    }`}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {data.coverageTo ? (
-                      format(new Date(data.coverageTo), 'MMM dd, yyyy')
-                    ) : (
-                      <span>End date</span>
-                    )}
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={data.coverageTo ? new Date(data.coverageTo) : undefined}
-                      onSelect={(date) => {
-                        if (date) {
-                          updateDataAction({ coverageTo: date.toISOString() });
-                        }
-                      }}
-                      initialFocus
-                      className="bg-white"
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  type="date"
+                  value={
+                    data.coverageTo
+                      ? typeof data.coverageTo === "string"
+                        ? data.coverageTo.includes('T')
+                          ? data.coverageTo.split('T')[0]
+                          : data.coverageTo
+                        : new Date(data.coverageTo).toISOString().split("T")[0]
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const toDate = e.target.value;
+                    const fromDate = data.coverageFrom
+                      ? typeof data.coverageFrom === "string"
+                        ? data.coverageFrom.includes('T')
+                          ? data.coverageFrom.split('T')[0]
+                          : data.coverageFrom
+                        : new Date(data.coverageFrom).toISOString().split("T")[0]
+                      : null;
+
+                    // Always update the form data so parent validation can catch it
+                    updateDataAction({
+                      coverageTo: toDate,
+                    });
+
+                    // Validate: To date should be later than From date
+                    if (fromDate && toDate && toDate <= fromDate) {
+                      setCoverageError(
+                        "End date must be later than start date"
+                      );
+                      return;
+                    }
+
+                    setCoverageError("");
+                  }}
+                  min={
+                    data.coverageFrom
+                      ? typeof data.coverageFrom === "string"
+                        ? data.coverageFrom.includes('T')
+                          ? data.coverageFrom.split('T')[0]
+                          : data.coverageFrom
+                        : new Date(data.coverageFrom).toISOString().split("T")[0]
+                      : undefined
+                  }
+                  className={`w-full bg-yellow-100 border-yellow-300 hover:bg-yellow-200 cursor-pointer hover:scale-110 transition-transform duration-200 ${
+                    coverageError && !data.coverageTo ? "border-red-500" : ""
+                  }`}
+                />
               </div>
             </div>
-            
+
+            {/* Error Message */}
+            {coverageError && (
+              <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                <span className="text-sm text-red-800 font-medium">
+                  {coverageError}
+                </span>
+              </div>
+            )}
+
             {/* Display the selected range */}
-            {data.coverageFrom && data.coverageTo && (
+            {data.coverageFrom && data.coverageTo && !coverageError && (
               <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
                 <span className="text-sm text-blue-800 font-medium">
-                  Performance Period: {format(new Date(data.coverageFrom), 'MMM dd, yyyy')} - {format(new Date(data.coverageTo), 'MMM dd, yyyy')}
+                  Performance Period:{" "}
+                  {format(new Date(data.coverageFrom), "MMM dd, yyyy")} -{" "}
+                  {format(new Date(data.coverageTo), "MMM dd, yyyy")}
                 </span>
               </div>
             )}
@@ -1051,3 +1203,4 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
     </div>
   );
 }
+
