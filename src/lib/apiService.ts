@@ -396,69 +396,34 @@ export const apiService = {
 
   // Get branch rank and file employees
   getBranchRankNFile: async (
-    branchId?: string | number,
-    search?: string,
-    page?: number,
-    per_page?: number
   ): Promise<any> => {
-    const response = await api.get("/BranchRankNFile", {
-      params: {
-        branch_id: branchId || "",
-        search: search || "",
-        page: page || 1,
-        per_page: per_page || 10,
-      },
+    const response = await api.post("/BranchRankNFile", {
     });
     return response.data;
   },
 
   // Get branch basic employees
   getBranchBasic: async (
-    branchId?: string | number,
-    search?: string,
-    page?: number,
-    per_page?: number
   ): Promise<any> => {
-    const response = await api.get("/BranchBasic", {
-      params: {
-        branch_id: branchId || "",
-        search: search || "",
-        page: page || 1,
-        per_page: per_page || 10,
-      },
+    const response = await api.post("/BranchBasic", {    
     });
     return response.data;
   },
 
   // Get head office basic employees
-  getHoBasic: async (
-    search?: string,
-    page?: number,
-    per_page?: number
+  postHoBasic: async (
+    employeeId: number | string,
+    submission: EvaluationPayload
   ): Promise<any> => {
-    const response = await api.get("/HoBasic", {
-      params: {
-        search: search || "",
-        page: page || 1,
-        per_page: per_page || 10,
-      },
-    });
+    const response = await api.post(`HoBasic/${employeeId}`, submission);
     return response.data;
   },
-
   // Get head office rank and file employees
-  getHoRankNFile: async (
-    search?: string,
-    page?: number,
-    per_page?: number
+  postHoRankNFile: async (
+    employeeId: number | string,
+    submission: EvaluationPayload
   ): Promise<any> => {
-    const response = await api.get("/HoRankNFile", {
-      params: {
-        search: search || "",
-        page: page || 1,
-        per_page: per_page || 10,
-      },
-    });
+    const response = await api.post(`HoRankNFile/${employeeId}`, submission);
     return response.data;
   },
 

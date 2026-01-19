@@ -23,6 +23,32 @@ export default function WelcomeStep({
   const { user } = useAuth();
   // Signature can be a PNG file (base64 data URL or file path)
   const hasSignature = user?.signature;
+  
+  // Check if evaluator's branch is HO (Head Office)
+  const isEvaluatorHO = () => {
+    if (!user?.branches) return false;
+    
+    // Handle branches as array
+    if (Array.isArray(user.branches)) {
+      const branch = user.branches[0];
+      if (branch) {
+        const branchName = branch.branch_name?.toUpperCase() || "";
+        const branchCode = branch.branch_code?.toUpperCase() || "";
+        return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+      }
+    }
+    
+    // Handle branches as object
+    if (typeof user.branches === 'object') {
+      const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
+      const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
+      return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+    }
+    
+    return false;
+  };
+
+  const isHO = isEvaluatorHO();
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
@@ -155,16 +181,19 @@ export default function WelcomeStep({
                   </h5>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                  7
+              {/* Customer Service step - only show for non-HO users */}
+              {!isHO && (
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                    7
+                  </div>
+                  <div>
+                    <h5 className="font-medium text-gray-900">
+                      Customer Service
+                    </h5>
+                  </div>
                 </div>
-                <div>
-                  <h5 className="font-medium text-gray-900">
-                    Customer Service
-                  </h5>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </CardContent>

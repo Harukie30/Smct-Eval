@@ -72,6 +72,33 @@ interface EvaluationPayload {
   customerServiceExplanation3: string;
   customerServiceExplanation4: string;
   customerServiceExplanation5: string;
+  managerialSkillsScore1: number;
+  managerialSkillsScore2: number;
+  managerialSkillsScore3: number;
+  managerialSkillsScore4: number;
+  managerialSkillsScore5: number;
+  managerialSkillsScore6: number;
+  managerialSkillsExplanation1: string;
+  managerialSkillsExplanation2: string;
+  managerialSkillsExplanation3: string;
+  managerialSkillsExplanation4: string;
+  managerialSkillsExplanation5: string;
+  managerialSkillsExplanation6: string;
   created_at: string;
 }
 export type { EvaluationPayload };
+
+import React from "react";
+
+// Evaluation step configuration
+export interface EvaluationStepConfig {
+  id: number;
+  title: string;
+  component: React.ComponentType<any>;
+}
+
+export interface EvaluationFormConfig {
+  steps: EvaluationStepConfig[];
+  includeOverallAssessment?: boolean;
+  evaluationType?: 'rankNfile' | 'basic' | 'default';
+}

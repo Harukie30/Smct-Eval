@@ -115,8 +115,8 @@ export default function UserManagementTab() {
   const [activeSearchTerm, setActiveSearchTerm] = useState("");
   const [debouncedActiveSearchTerm, setDebouncedActiveSearchTerm] =
     useState(activeSearchTerm);
-  const [branchFilter, setBranchFilter] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("0"); // Default to "All Roles"
+  const [debouncedRoleFilter, setDebouncedRoleFilter] = useState(roleFilter);
   //filters for pending users
   const [pendingSearchTerm, setPendingSearchTerm] = useState("");
   const [debouncedPendingSearchTerm, setDebouncedPendingSearchTerm] =
@@ -178,19 +178,13 @@ export default function UserManagementTab() {
   // Track when page change started for active users
   const activePageChangeStartTimeRef = useRef<number | null>(null);
 
-  const loadActiveUsers = async (
-    searchValue: string,
-    department: string,
-    branch: string
-  ) => {
+  const loadActiveUsers = async (searchValue: string, roleFilter: string) => {
     try {
       const response = await apiService.getActiveRegistrations(
         searchValue,
-        "",
+        roleFilter,
         currentPageActive,
-        itemsPerPage,
-        branch,
-        department
+        itemsPerPage
       );
 
       setActiveRegistrations(response.data);
@@ -229,7 +223,7 @@ export default function UserManagementTab() {
         setDepartmentData(departments);
         const roles = await apiService.getAllRoles();
         setRoles(roles);
-        await loadActiveUsers(activeSearchTerm, departmentFilter, branchFilter);
+        await loadActiveUsers(activeSearchTerm, roleFilter);
         await loadPendingUsers(pendingSearchTerm, statusFilter);
       } catch (error) {
         console.error("Error refreshing data:", error);
@@ -244,7 +238,7 @@ export default function UserManagementTab() {
   useEffect(() => {
     const load = async () => {
       if (tab === "active") {
-        await loadActiveUsers(activeSearchTerm, departmentFilter, branchFilter);
+        await loadActiveUsers(activeSearchTerm, roleFilter);
       }
       if (tab === "new") {
         await loadPendingUsers(pendingSearchTerm, statusFilter);
@@ -254,37 +248,29 @@ export default function UserManagementTab() {
     load();
   }, [tab]);
 
-  //mount every activeSearchTerm changes and role
+  //mount every activeSearchTerm changes and RoleFilter
   useEffect(() => {
     const handler = setTimeout(() => {
       if (tab === "active") {
         activeSearchTerm === "" ? currentPageActive : setCurrentPageActive(1);
         setDebouncedActiveSearchTerm(activeSearchTerm);
+        setDebouncedRoleFilter(roleFilter);
       }
     }, 500);
 
     return () => clearTimeout(handler);
-  }, [activeSearchTerm]);
+  }, [activeSearchTerm, roleFilter]);
 
   // Fetch API whenever debounced active search term changes
   useEffect(() => {
     const fetchData = async () => {
       if (tab === "active") {
-        await loadActiveUsers(
-          debouncedActiveSearchTerm,
-          departmentFilter,
-          branchFilter
-        );
+        await loadActiveUsers(debouncedActiveSearchTerm, debouncedRoleFilter);
       }
     };
 
     fetchData();
-  }, [
-    debouncedActiveSearchTerm,
-    currentPageActive,
-    branchFilter,
-    departmentFilter,
-  ]);
+  }, [debouncedActiveSearchTerm, debouncedRoleFilter, currentPageActive]);
 
   //mount every pendingSearchTerm changes and statusFilter
   useEffect(() => {
@@ -323,7 +309,7 @@ export default function UserManagementTab() {
         await loadPendingUsers(pendingSearchTerm, statusFilter);
       }
       if (tab === "active") {
-        await loadActiveUsers(activeSearchTerm, departmentFilter, branchFilter);
+        await loadActiveUsers(activeSearchTerm, roleFilter);
       }
 
       if (showLoading) {
@@ -437,7 +423,7 @@ export default function UserManagementTab() {
       await apiService.deleteUser(employee.id);
 
       // Refresh data first, then reset deleting state after data loads
-      await loadActiveUsers(activeSearchTerm, departmentFilter, branchFilter);
+      await loadActiveUsers(activeSearchTerm, roleFilter);
       setDeletingUserId(null);
 
       toastMessages.user.deleted(employee.fname);
@@ -653,38 +639,31 @@ export default function UserManagementTab() {
                     )}
                   </div>
                   <div>
-                    <Combobox
-                      options={branchesData}
-                      value={branchFilter}
-                      onValueChangeAction={(value) => {
-                        setBranchFilter(String(value));
+                    <Select
+                      value={roleFilter}
+                      onValueChange={(value) => {
+                        setRoleFilter(value);
                       }}
-                      placeholder="All branches"
-                      searchPlaceholder="Search branches..."
-                      emptyText="No branches found."
-                      className="cursor-pointer"
-                    />
+                    >
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="All Roles" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">All Roles</SelectItem>
+                        {roles.map((role) => (
+                          <SelectItem key={role.id} value={String(role.id)}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <Combobox
-                      options={departmentData}
-                      value={departmentFilter}
-                      onValueChangeAction={(value) => {
-                        setDepartmentFilter(String(value));
-                      }}
-                      placeholder="All departments"
-                      searchPlaceholder="Search departments..."
-                      emptyText="No departments found."
-                      className="cursor-pointer"
-                    />
-                  </div>
-                  <div>
-                    {(branchFilter !== "" || departmentFilter !== "") && (
+                    {roleFilter !== "0" && (
                       <Button
                         variant="outline"
                         onClick={() => {
-                          setDepartmentFilter("");
-                          setBranchFilter("");
+                          setRoleFilter("0");
                         }}
                         className="text-red-500 bg-amber-50"
                       >

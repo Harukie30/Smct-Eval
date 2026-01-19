@@ -6,11 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ChevronDownIcon } from 'lucide-react';
-import { EvaluationData } from './types';
+import { EvaluationPayload } from './types';
 
 interface Step8Props {
-  data: EvaluationData;
-  updateDataAction: (updates: Partial<EvaluationData>) => void;
+  data: EvaluationPayload;
+  updateDataAction: (updates: Partial<EvaluationPayload>) => void;
   employee?: {
     id: number;
     name: string;
