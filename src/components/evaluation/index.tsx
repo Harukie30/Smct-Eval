@@ -589,7 +589,17 @@ export default function EvaluationForm({
     try {
       const empID = employee?.id;
       if (empID) {
-        const response = await apiService.createSubmission(empID, form);
+        // Use appropriate API endpoint based on evaluation type
+        if (evaluationType === 'rankNfile') {
+          // RankNfile HO evaluation - use HoRankNFile endpoint
+          const response = await apiService.postHoRankNFile(empID, form);
+        } else if (evaluationType === 'basic') {
+          // Basic HO evaluation - use HoBasic endpoint
+          const response = await apiService.postHoBasic(empID, form);
+        } else {
+          // Default evaluation - use standard createSubmission endpoint
+          const response = await apiService.createSubmission(empID, form);
+        }
       }
       setShowSuccessDialog(true);
     } catch (clientError) {
@@ -605,7 +615,9 @@ export default function EvaluationForm({
     // Get current step info
     const currentStepInfo = currentStep > 0 ? filteredSteps[currentStep - 1] : null;
     const isLastStep = currentStep === filteredSteps.length;
-    const isOverallAssessmentStep = currentStepInfo?.id === 8 || (currentStep > 0 && filteredSteps[currentStep - 1]?.component === OverallAssessment);
+    // Check if current step is Overall Assessment (any variant)
+    const isOverallAssessmentStep = isLastStep || 
+      (currentStep > 0 && filteredSteps[currentStep - 1]?.title === "Overall Assessment");
     
     // Get the current step component for rendering
     const getCurrentStepComponent = () => {
@@ -782,16 +794,7 @@ export default function EvaluationForm({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {isOverallAssessmentStep ? (
-                    <OverallAssessment
-                      data={form}
-                      updateDataAction={updateDataAction}
-                      employee={employee}
-                      onSubmitAction={handleSubmit}
-                      onPreviousAction={prevStep}
-                      onCloseAction={handleCloseAfterSubmission}
-                    />
-                  ) : currentStep === 0 ? (
+                  {currentStep === 0 ? (
                     <WelcomeStep
                       data={form}
                       updateDataAction={updateDataAction}
@@ -805,6 +808,22 @@ export default function EvaluationForm({
                     const step = filteredSteps[stepIndex];
                     if (!step) return null;
                     const StepComponent = step.component;
+                    
+                    // For Overall Assessment steps, pass additional props
+                    if (isOverallAssessmentStep) {
+                      return (
+                        <StepComponent
+                          data={form}
+                          updateDataAction={updateDataAction}
+                          employee={employee}
+                          onSubmitAction={handleSubmit}
+                          onPreviousAction={prevStep}
+                          onCloseAction={handleCloseAfterSubmission}
+                        />
+                      );
+                    }
+                    
+                    // For regular steps
                     return (
                       <StepComponent
                         data={form}

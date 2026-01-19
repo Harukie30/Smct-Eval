@@ -9,7 +9,7 @@ import Step5 from "../evaluation/Step5";
 import Step6 from "../evaluation/Step6";
 import Step7 from "../evaluation/Step7";
 import Step8 from "../evaluation/Step8";
-import OverallAssessment from "../evaluation/OverallAssessment";
+import OverallAssessmentBasic from "../evaluation/OverallAssessmentBasic";
 import { EvaluationStepConfig } from "../evaluation/types";
 import { User } from "../../contexts/UserContext";
 
@@ -24,7 +24,7 @@ const managerSteps: EvaluationStepConfig[] = [
   { id: 6, title: "Ethical & Professional Behavior", component: Step6 },
   { id: 7, title: "Customer Service", component: Step7 },
   { id: 8, title: "Managerial Skills", component: Step8 },
-  { id: 9, title: "Overall Assessment", component: OverallAssessment },
+  { id: 9, title: "Overall Assessment", component: OverallAssessmentBasic },
 ];
 
 interface ManagerEvaluationFormProps {
