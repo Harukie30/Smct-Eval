@@ -17,6 +17,7 @@ interface Step2Props {
   data: EvaluationPayload;
   updateDataAction: (updates: Partial<EvaluationPayload>) => void;
   employee?: User | null;
+  evaluationType?: 'rankNfile' | 'basic' | 'default'; // Optional: evaluation type to determine HO context
 }
 
 // Score Dropdown Component
@@ -94,7 +95,7 @@ function ScoreDropdown({
   );
 }
 
-export default function Step2({ data, updateDataAction }: Step2Props) {
+export default function Step2({ data, updateDataAction, evaluationType }: Step2Props) {
   const { user } = useAuth();
   
   // Check if evaluator's branch is HO (Head Office)
@@ -107,7 +108,14 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
       if (branch) {
         const branchName = branch.branch_name?.toUpperCase() || "";
         const branchCode = branch.branch_code?.toUpperCase() || "";
-        return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+        return (
+          branchName === "HO" || 
+          branchCode === "HO" || 
+          branchName.includes("HEAD OFFICE") ||
+          branchCode.includes("HEAD OFFICE") ||
+          branchName === "HEAD OFFICE" ||
+          branchCode === "HEAD OFFICE"
+        );
       }
     }
     
@@ -115,13 +123,25 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
     if (typeof user.branches === 'object') {
       const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
       const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
-      return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+      return (
+        branchName === "HO" || 
+        branchCode === "HO" || 
+        branchName.includes("HEAD OFFICE") ||
+        branchCode.includes("HEAD OFFICE") ||
+        branchName === "HEAD OFFICE" ||
+        branchCode === "HEAD OFFICE"
+      );
     }
     
     return false;
   };
 
-  const isHO = isEvaluatorHO();
+  // If evaluationType is 'rankNfile' or 'basic', it's definitely an HO evaluation
+  // Otherwise, check the evaluator's branch
+  const isHO = evaluationType === 'rankNfile' || evaluationType === 'basic' || isEvaluatorHO();
+  
+  // Debug: Log to verify evaluationType is being passed
+  // console.log('Step2 - evaluationType:', evaluationType, 'isHO:', isHO);
   
   // Calculate average score for Quality of Work
   const calculateAverageScore = () => {
@@ -490,7 +510,7 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
                 {/* Row 5: Job Targets - Hidden/Disabled for HO evaluators */}
                 {!isHO && (
                   <tr>
-                    <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                       Job Targets
                     </td>
                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">

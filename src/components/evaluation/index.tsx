@@ -76,7 +76,14 @@ export default function EvaluationForm({
       if (branch) {
         const branchName = branch.branch_name?.toUpperCase() || "";
         const branchCode = branch.branch_code?.toUpperCase() || "";
-        return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+        return (
+          branchName === "HO" || 
+          branchCode === "HO" || 
+          branchName.includes("HEAD OFFICE") ||
+          branchCode.includes("HEAD OFFICE") ||
+          branchName === "HEAD OFFICE" ||
+          branchCode === "HEAD OFFICE"
+        );
       }
     }
     
@@ -84,7 +91,14 @@ export default function EvaluationForm({
     if (typeof user.branches === 'object') {
       const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
       const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
-      return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+      return (
+        branchName === "HO" || 
+        branchCode === "HO" || 
+        branchName.includes("HEAD OFFICE") ||
+        branchCode.includes("HEAD OFFICE") ||
+        branchName === "HEAD OFFICE" ||
+        branchCode === "HEAD OFFICE"
+      );
     }
     
     return false;
@@ -324,7 +338,14 @@ export default function EvaluationForm({
             if (branch) {
               const branchName = branch.branch_name?.toUpperCase() || "";
               const branchCode = branch.branch_code?.toUpperCase() || "";
-              return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+              return (
+                branchName === "HO" || 
+                branchCode === "HO" || 
+                branchName.includes("HEAD OFFICE") ||
+                branchCode.includes("HEAD OFFICE") ||
+                branchName === "HEAD OFFICE" ||
+                branchCode === "HEAD OFFICE"
+              );
             }
           }
           
@@ -332,7 +353,14 @@ export default function EvaluationForm({
           if (typeof user.branches === 'object') {
             const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
             const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
-            return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+            return (
+              branchName === "HO" || 
+              branchCode === "HO" || 
+              branchName.includes("HEAD OFFICE") ||
+              branchCode.includes("HEAD OFFICE") ||
+              branchName === "HEAD OFFICE" ||
+              branchCode === "HEAD OFFICE"
+            );
           }
           
           return false;
@@ -403,7 +431,14 @@ export default function EvaluationForm({
             if (branch) {
               const branchName = branch.branch_name?.toUpperCase() || "";
               const branchCode = branch.branch_code?.toUpperCase() || "";
-              return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+              return (
+                branchName === "HO" || 
+                branchCode === "HO" || 
+                branchName.includes("HEAD OFFICE") ||
+                branchCode.includes("HEAD OFFICE") ||
+                branchName === "HEAD OFFICE" ||
+                branchCode === "HEAD OFFICE"
+              );
             }
           }
           
@@ -411,7 +446,14 @@ export default function EvaluationForm({
           if (typeof user.branches === 'object') {
             const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
             const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
-            return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+            return (
+              branchName === "HO" || 
+              branchCode === "HO" || 
+              branchName.includes("HEAD OFFICE") ||
+              branchCode.includes("HEAD OFFICE") ||
+              branchName === "HEAD OFFICE" ||
+              branchCode === "HEAD OFFICE"
+            );
           }
           
           return false;
@@ -823,14 +865,17 @@ export default function EvaluationForm({
                       );
                     }
                     
-                    // For regular steps
-                    return (
-                      <StepComponent
-                        data={form}
-                        updateDataAction={updateDataAction}
-                        employee={employee}
-                      />
-                    );
+                    // For regular steps - pass evaluationType if StepComponent accepts it
+                    const stepProps: any = {
+                      data: form,
+                      updateDataAction: updateDataAction,
+                      employee: employee,
+                    };
+                    // Pass evaluationType to Step2 (and potentially other steps that need it)
+                    if (step.id === 2) {
+                      stepProps.evaluationType = evaluationType;
+                    }
+                    return <StepComponent {...stepProps} />;
                   })()}
                 </CardContent>
               </Card>

@@ -101,6 +101,21 @@ export default function OverviewTab() {
     // await onRefresh();
   };
 
+  const handleViewEvaluation = async (submission: any) => {
+    try {
+      const fullSubmission = await apiService.getSubmissionById(submission.id);
+
+      if (fullSubmission) {
+        setSelectedSubmission(fullSubmission);
+        setIsViewResultsModalOpen(true);
+      } else {
+        console.error("Submission not found for ID:", submission.id);
+      }
+    } catch (error) {
+      console.error("Error fetching submission details:", error);
+    }
+  };
+
   return (
     <>
       <div className="flex gap-3 mb-3">
@@ -491,10 +506,7 @@ export default function OverviewTab() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                setSelectedSubmission(submission);
-                                setIsViewResultsModalOpen(true);
-                              }}
+                              onClick={() => handleViewEvaluation(submission)}
                               className="text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 bg-green-600 hover:bg-green-500 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
                             >
                               ☰ View

@@ -783,9 +783,19 @@ export default function OverallAssessmentBasic({
                 />
               </div>
               <div>
-                <Label className="font-medium">Employee Number:</Label>
+                <Label className="font-medium">Employee ID:</Label>
                 <Input
-                  value={employee?.emp_id || ""}
+                  value={
+                    employee?.emp_id
+                      ? (() => {
+                          const idString = employee.emp_id.toString();
+                          if (idString.length > 4) {
+                            return `${idString.slice(0, 4)}-${idString.slice(4)}`;
+                          }
+                          return idString;
+                        })()
+                      : ""
+                  }
                   readOnly
                   className="mt-1 bg-gray-50"
                   disabled
@@ -1256,50 +1266,7 @@ export default function OverallAssessmentBasic({
                     {data.qualityOfWorkComments4 || ""}
                   </td>
                 </tr>
-                <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Attention to Detail
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Demonstrates thoroughness and accuracy in work, catching and
-                    correcting errors.
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                    {data.qualityOfWorkScore5 || ""}
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div
-                      className={`px-2 py-1 rounded text-sm font-medium ${
-                        data.qualityOfWorkScore5 === 5
-                          ? "bg-green-100 text-green-800"
-                          : data.qualityOfWorkScore5 === 4
-                          ? "bg-blue-100 text-blue-800"
-                          : data.qualityOfWorkScore5 === 3
-                          ? "bg-yellow-100 text-yellow-800"
-                          : data.qualityOfWorkScore5 === 2
-                          ? "bg-orange-100 text-orange-800"
-                          : data.qualityOfWorkScore5 === 1
-                          ? "bg-red-100 text-red-800"
-                          : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {data.qualityOfWorkScore5 === 5
-                        ? "Outstanding"
-                        : data.qualityOfWorkScore5 === 4
-                        ? "Exceeds Expectation"
-                        : data.qualityOfWorkScore5 === 3
-                        ? "Meets Expectations"
-                        : data.qualityOfWorkScore5 === 2
-                        ? "Needs Improvement"
-                        : data.qualityOfWorkScore5 === 1
-                        ? "Unsatisfactory"
-                        : "Not Rated"}
-                    </div>
-                  </td>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                    {data.qualityOfWorkComments5 || ""}
-                  </td>
-                </tr>
+                {/* Attention to Detail (qualityOfWorkScore5/Job Targets) excluded for HO users */}
               </tbody>
             </table>
           </div>

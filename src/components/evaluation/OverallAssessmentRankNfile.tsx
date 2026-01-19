@@ -761,9 +761,19 @@ export default function OverallAssessmentRankNfile({
                 />
               </div>
               <div>
-                <Label className="font-medium">Employee Number:</Label>
+                <Label className="font-medium">Employee ID:</Label>
                 <Input
-                  value={employee?.emp_id || ""}
+                  value={
+                    employee?.emp_id
+                      ? (() => {
+                          const idString = employee.emp_id.toString();
+                          if (idString.length > 4) {
+                            return `${idString.slice(0, 4)}-${idString.slice(4)}`;
+                          }
+                          return idString;
+                        })()
+                      : ""
+                  }
                   readOnly
                   className="mt-1 bg-gray-50"
                   disabled
@@ -2488,19 +2498,19 @@ export default function OverallAssessmentRankNfile({
               }
             }}
             className={`px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white
-    flex items-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200
+    flex items-center justify-center transition-all duration-200
     ${
       isSubmittingEvaluation
         ? "opacity-70 cursor-not-allowed hover:scale-100"
-        : ""
+        : "cursor-pointer hover:scale-110"
     }
   `}
             size="lg"
           >
             {isSubmittingEvaluation ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Submitting...</span>
+              <div className="flex items-center gap-3">
+                <Loader2 className="w-5 h-5 animate-spin text-white" />
+                <span className="font-medium">Submitting Evaluation...</span>
               </div>
             ) : (
               <>
