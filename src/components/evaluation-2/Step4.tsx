@@ -108,8 +108,8 @@ export default function Step4({ data, updateDataAction }: Step4Props) {
       data.teamworkScore2,
       data.teamworkScore3,
     ]
-      .filter((score) => score && score !== "")
-      .map((score) => parseInt(score));
+      .filter((score) => score && score !== 0)
+      .map((score) => typeof score === 'number' ? score : Number(score));
 
     if (scores.length === 0) return "0.00";
     return (
@@ -159,9 +159,9 @@ export default function Step4({ data, updateDataAction }: Step4Props) {
               size="sm"
               onClick={() => {
                 updateDataAction({
-                  teamworkScore1: "",
-                  teamworkScore2: "",
-                  teamworkScore3: "",
+                  teamworkScore1: 0,
+                  teamworkScore2: 0,
+                  teamworkScore3: 0,
                   teamworkComments1: "",
                   teamworkComments2: "",
                   teamworkComments3: "",
@@ -212,9 +212,9 @@ export default function Step4({ data, updateDataAction }: Step4Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.teamworkScore1 || ""}
+                      value={String(data.teamworkScore1 || "")}
                       onValueChange={(value) =>
-                        updateDataAction({ teamworkScore1: value })
+                        updateDataAction({ teamworkScore1: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -222,28 +222,28 @@ export default function Step4({ data, updateDataAction }: Step4Props) {
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.teamworkScore1 === "5"
+                        data.teamworkScore1 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.teamworkScore1 === "4"
+                          : data.teamworkScore1 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.teamworkScore1 === "3"
+                          : data.teamworkScore1 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.teamworkScore1 === "2"
+                          : data.teamworkScore1 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.teamworkScore1 === "1"
+                          : data.teamworkScore1 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.teamworkScore1 === "5"
+                      {data.teamworkScore1 === 5
                         ? "Outstanding"
-                        : data.teamworkScore1 === "4"
+                        : data.teamworkScore1 === 4
                         ? "Exceeds Expectation"
-                        : data.teamworkScore1 === "3"
+                        : data.teamworkScore1 === 3
                         ? "Meets Expectations"
-                        : data.teamworkScore1 === "2"
+                        : data.teamworkScore1 === 2
                         ? "Needs Improvement"
-                        : data.teamworkScore1 === "1"
+                        : data.teamworkScore1 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -276,9 +276,9 @@ export default function Step4({ data, updateDataAction }: Step4Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.teamworkScore2 || ""}
+                      value={String(data.teamworkScore2 || "")}
                       onValueChange={(value) =>
-                        updateDataAction({ teamworkScore2: value })
+                        updateDataAction({ teamworkScore2: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -286,28 +286,28 @@ export default function Step4({ data, updateDataAction }: Step4Props) {
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.teamworkScore2 === "5"
+                        data.teamworkScore2 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.teamworkScore2 === "4"
+                          : data.teamworkScore2 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.teamworkScore2 === "3"
+                          : data.teamworkScore2 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.teamworkScore2 === "2"
+                          : data.teamworkScore2 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.teamworkScore2 === "1"
+                          : data.teamworkScore2 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.teamworkScore2 === "5"
+                      {data.teamworkScore2 === 5
                         ? "Outstanding"
-                        : data.teamworkScore2 === "4"
+                        : data.teamworkScore2 === 4
                         ? "Exceeds Expectation"
-                        : data.teamworkScore2 === "3"
+                        : data.teamworkScore2 === 3
                         ? "Meets Expectations"
-                        : data.teamworkScore2 === "2"
+                        : data.teamworkScore2 === 2
                         ? "Needs Improvement"
-                        : data.teamworkScore2 === "1"
+                        : data.teamworkScore2 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -340,9 +340,9 @@ export default function Step4({ data, updateDataAction }: Step4Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.teamworkScore3 || ""}
+                      value={String(data.teamworkScore3 || "")}
                       onValueChange={(value) =>
-                        updateDataAction({ teamworkScore3: value })
+                        updateDataAction({ teamworkScore3: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -350,28 +350,28 @@ export default function Step4({ data, updateDataAction }: Step4Props) {
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.teamworkScore3 === "5"
+                        data.teamworkScore3 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.teamworkScore3 === "4"
+                          : data.teamworkScore3 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.teamworkScore3 === "3"
+                          : data.teamworkScore3 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.teamworkScore3 === "2"
+                          : data.teamworkScore3 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.teamworkScore3 === "1"
+                          : data.teamworkScore3 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.teamworkScore3 === "5"
+                      {data.teamworkScore3 === 5
                         ? "Outstanding"
-                        : data.teamworkScore3 === "4"
+                        : data.teamworkScore3 === 4
                         ? "Exceeds Expectation"
-                        : data.teamworkScore3 === "3"
+                        : data.teamworkScore3 === 3
                         ? "Meets Expectations"
-                        : data.teamworkScore3 === "2"
+                        : data.teamworkScore3 === 2
                         ? "Needs Improvement"
-                        : data.teamworkScore3 === "1"
+                        : data.teamworkScore3 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -445,7 +445,7 @@ export default function Step4({ data, updateDataAction }: Step4Props) {
                   data.teamworkScore1,
                   data.teamworkScore2,
                   data.teamworkScore3,
-                ].filter((score) => score && score !== "").length
+                ].filter((score) => score && score !== 0).length
               }{" "}
               of 3 criteria
             </div>

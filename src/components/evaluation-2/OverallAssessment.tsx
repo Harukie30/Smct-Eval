@@ -447,7 +447,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
             data.jobKnowledgeScore1,
             data.jobKnowledgeScore2,
             data.jobKnowledgeScore3
-        ].filter(score => score && score !== '').map(score => parseFloat(score));
+        ].filter(score => score && score !== 0).map(score => typeof score === 'number' ? score : Number(score));
 
         if (scores.length === 0) return '0.00';
         return (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2);
@@ -460,7 +460,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
             data.qualityOfWorkScore3,
             data.qualityOfWorkScore4,
             data.qualityOfWorkScore5
-        ].filter(score => score && score !== '').map(score => parseFloat(score));
+        ].filter(score => score && score !== 0).map(score => typeof score === 'number' ? score : Number(score));
 
         if (scores.length === 0) return '0.00';
         return (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2);
@@ -471,7 +471,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
             data.adaptabilityScore1,
             data.adaptabilityScore2,
             data.adaptabilityScore3
-        ].filter(score => score && score !== '').map(score => parseFloat(score));
+        ].filter(score => score && score !== 0).map(score => typeof score === 'number' ? score : Number(score));
 
         if (scores.length === 0) return '0.00';
         return (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2);
@@ -482,7 +482,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
             data.teamworkScore1,
             data.teamworkScore2,
             data.teamworkScore3
-        ].filter(score => score && score !== '').map(score => parseFloat(score));
+        ].filter(score => score && score !== 0).map(score => typeof score === 'number' ? score : Number(score));
 
         if (scores.length === 0) return '0.00';
         return (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2);
@@ -494,7 +494,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
             data.reliabilityScore2,
             data.reliabilityScore3,
             data.reliabilityScore4
-        ].filter(score => score && score !== '').map(score => parseFloat(score));
+        ].filter(score => score && score !== 0).map(score => typeof score === 'number' ? score : Number(score));
 
         if (scores.length === 0) return '0.00';
         return (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2);
@@ -506,7 +506,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
             data.ethicalScore2,
             data.ethicalScore3,
             data.ethicalScore4
-        ].filter(score => score && score !== '').map(score => parseFloat(score));
+        ].filter(score => score && score !== 0).map(score => typeof score === 'number' ? score : Number(score));
 
         if (scores.length === 0) return '0.00';
         return (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2);
@@ -519,7 +519,7 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
             data.customerServiceScore3,
             data.customerServiceScore4,
             data.customerServiceScore5
-        ].filter(score => score && score !== '').map(score => parseFloat(score));
+        ].filter(score => score && score !== 0).map(score => typeof score === 'number' ? score : Number(score));
 
         if (scores.length === 0) return '0.00';
         return (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2);
@@ -851,17 +851,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.jobKnowledgeScore1 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.jobKnowledgeScore1 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.jobKnowledgeScore1 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.jobKnowledgeScore1 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.jobKnowledgeScore1 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.jobKnowledgeScore1 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.jobKnowledgeScore1 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.jobKnowledgeScore1 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.jobKnowledgeScore1 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.jobKnowledgeScore1 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.jobKnowledgeScore1 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.jobKnowledgeScore1 === '5' ? 'Outstanding' : 
-                                             data.jobKnowledgeScore1 === '4' ? 'Exceeds Expectation' :
-                                             data.jobKnowledgeScore1 === '3' ? 'Meets Expectations' :
-                                             data.jobKnowledgeScore1 === '2' ? 'Needs Improvement' :
-                                             data.jobKnowledgeScore1 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.jobKnowledgeScore1 === 5 ? 'Outstanding' : 
+                                             data.jobKnowledgeScore1 === 4 ? 'Exceeds Expectation' :
+                                             data.jobKnowledgeScore1 === 3 ? 'Meets Expectations' :
+                                             data.jobKnowledgeScore1 === 2 ? 'Needs Improvement' :
+                                             data.jobKnowledgeScore1 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.jobKnowledgeComments1 || ''}</td>
@@ -872,17 +872,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.jobKnowledgeScore2 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.jobKnowledgeScore2 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.jobKnowledgeScore2 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.jobKnowledgeScore2 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.jobKnowledgeScore2 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.jobKnowledgeScore2 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.jobKnowledgeScore2 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.jobKnowledgeScore2 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.jobKnowledgeScore2 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.jobKnowledgeScore2 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.jobKnowledgeScore2 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.jobKnowledgeScore2 === '5' ? 'Outstanding' : 
-                                             data.jobKnowledgeScore2 === '4' ? 'Exceeds Expectation' :
-                                             data.jobKnowledgeScore2 === '3' ? 'Meets Expectations' :
-                                             data.jobKnowledgeScore2 === '2' ? 'Needs Improvement' :
-                                             data.jobKnowledgeScore2 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.jobKnowledgeScore2 === 5 ? 'Outstanding' : 
+                                             data.jobKnowledgeScore2 === 4 ? 'Exceeds Expectation' :
+                                             data.jobKnowledgeScore2 === 3 ? 'Meets Expectations' :
+                                             data.jobKnowledgeScore2 === 2 ? 'Needs Improvement' :
+                                             data.jobKnowledgeScore2 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.jobKnowledgeComments2 || ''}</td>
@@ -893,17 +893,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.jobKnowledgeScore3 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.jobKnowledgeScore3 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.jobKnowledgeScore3 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.jobKnowledgeScore3 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.jobKnowledgeScore3 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.jobKnowledgeScore3 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.jobKnowledgeScore3 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.jobKnowledgeScore3 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.jobKnowledgeScore3 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.jobKnowledgeScore3 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.jobKnowledgeScore3 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.jobKnowledgeScore3 === '5' ? 'Outstanding' : 
-                                             data.jobKnowledgeScore3 === '4' ? 'Exceeds Expectation' :
-                                             data.jobKnowledgeScore3 === '3' ? 'Meets Expectations' :
-                                             data.jobKnowledgeScore3 === '2' ? 'Needs Improvement' :
-                                             data.jobKnowledgeScore3 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.jobKnowledgeScore3 === 5 ? 'Outstanding' : 
+                                             data.jobKnowledgeScore3 === 4 ? 'Exceeds Expectation' :
+                                             data.jobKnowledgeScore3 === 3 ? 'Meets Expectations' :
+                                             data.jobKnowledgeScore3 === 2 ? 'Needs Improvement' :
+                                             data.jobKnowledgeScore3 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.jobKnowledgeComments3 || ''}</td>
@@ -944,17 +944,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.qualityOfWorkScore1 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.qualityOfWorkScore1 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.qualityOfWorkScore1 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.qualityOfWorkScore1 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.qualityOfWorkScore1 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.qualityOfWorkScore1 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.qualityOfWorkScore1 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.qualityOfWorkScore1 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.qualityOfWorkScore1 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.qualityOfWorkScore1 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.qualityOfWorkScore1 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.qualityOfWorkScore1 === '5' ? 'Outstanding' : 
-                                             data.qualityOfWorkScore1 === '4' ? 'Exceeds Expectation' :
-                                             data.qualityOfWorkScore1 === '3' ? 'Meets Expectations' :
-                                             data.qualityOfWorkScore1 === '2' ? 'Needs Improvement' :
-                                             data.qualityOfWorkScore1 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.qualityOfWorkScore1 === 5 ? 'Outstanding' : 
+                                             data.qualityOfWorkScore1 === 4 ? 'Exceeds Expectation' :
+                                             data.qualityOfWorkScore1 === 3 ? 'Meets Expectations' :
+                                             data.qualityOfWorkScore1 === 2 ? 'Needs Improvement' :
+                                             data.qualityOfWorkScore1 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.qualityOfWorkComments1 || ''}</td>
@@ -965,17 +965,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.qualityOfWorkScore2 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.qualityOfWorkScore2 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.qualityOfWorkScore2 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.qualityOfWorkScore2 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.qualityOfWorkScore2 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.qualityOfWorkScore2 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.qualityOfWorkScore2 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.qualityOfWorkScore2 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.qualityOfWorkScore2 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.qualityOfWorkScore2 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.qualityOfWorkScore2 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.qualityOfWorkScore2 === '5' ? 'Outstanding' : 
-                                             data.qualityOfWorkScore2 === '4' ? 'Exceeds Expectation' :
-                                             data.qualityOfWorkScore2 === '3' ? 'Meets Expectations' :
-                                             data.qualityOfWorkScore2 === '2' ? 'Needs Improvement' :
-                                             data.qualityOfWorkScore2 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.qualityOfWorkScore2 === 5 ? 'Outstanding' : 
+                                             data.qualityOfWorkScore2 === 4 ? 'Exceeds Expectation' :
+                                             data.qualityOfWorkScore2 === 3 ? 'Meets Expectations' :
+                                             data.qualityOfWorkScore2 === 2 ? 'Needs Improvement' :
+                                             data.qualityOfWorkScore2 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.qualityOfWorkComments2 || ''}</td>
@@ -986,17 +986,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.qualityOfWorkScore3 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.qualityOfWorkScore3 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.qualityOfWorkScore3 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.qualityOfWorkScore3 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.qualityOfWorkScore3 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.qualityOfWorkScore3 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.qualityOfWorkScore3 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.qualityOfWorkScore3 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.qualityOfWorkScore3 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.qualityOfWorkScore3 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.qualityOfWorkScore3 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.qualityOfWorkScore3 === '5' ? 'Outstanding' : 
-                                             data.qualityOfWorkScore3 === '4' ? 'Exceeds Expectation' :
-                                             data.qualityOfWorkScore3 === '3' ? 'Meets Expectations' :
-                                             data.qualityOfWorkScore3 === '2' ? 'Needs Improvement' :
-                                             data.qualityOfWorkScore3 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.qualityOfWorkScore3 === 5 ? 'Outstanding' : 
+                                             data.qualityOfWorkScore3 === 4 ? 'Exceeds Expectation' :
+                                             data.qualityOfWorkScore3 === 3 ? 'Meets Expectations' :
+                                             data.qualityOfWorkScore3 === 2 ? 'Needs Improvement' :
+                                             data.qualityOfWorkScore3 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.qualityOfWorkComments3 || ''}</td>
@@ -1007,17 +1007,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.qualityOfWorkScore4 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.qualityOfWorkScore4 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.qualityOfWorkScore4 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.qualityOfWorkScore4 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.qualityOfWorkScore4 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.qualityOfWorkScore4 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.qualityOfWorkScore4 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.qualityOfWorkScore4 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.qualityOfWorkScore4 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.qualityOfWorkScore4 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.qualityOfWorkScore4 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.qualityOfWorkScore4 === '5' ? 'Outstanding' : 
-                                             data.qualityOfWorkScore4 === '4' ? 'Exceeds Expectation' :
-                                             data.qualityOfWorkScore4 === '3' ? 'Meets Expectations' :
-                                             data.qualityOfWorkScore4 === '2' ? 'Needs Improvement' :
-                                             data.qualityOfWorkScore4 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.qualityOfWorkScore4 === 5 ? 'Outstanding' : 
+                                             data.qualityOfWorkScore4 === 4 ? 'Exceeds Expectation' :
+                                             data.qualityOfWorkScore4 === 3 ? 'Meets Expectations' :
+                                             data.qualityOfWorkScore4 === 2 ? 'Needs Improvement' :
+                                             data.qualityOfWorkScore4 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.qualityOfWorkComments4 || ''}</td>
@@ -1028,17 +1028,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.qualityOfWorkScore5 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.qualityOfWorkScore5 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.qualityOfWorkScore5 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.qualityOfWorkScore5 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.qualityOfWorkScore5 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.qualityOfWorkScore5 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.qualityOfWorkScore5 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.qualityOfWorkScore5 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.qualityOfWorkScore5 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.qualityOfWorkScore5 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.qualityOfWorkScore5 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.qualityOfWorkScore5 === '5' ? 'Outstanding' : 
-                                             data.qualityOfWorkScore5 === '4' ? 'Exceeds Expectation' :
-                                             data.qualityOfWorkScore5 === '3' ? 'Meets Expectations' :
-                                             data.qualityOfWorkScore5 === '2' ? 'Needs Improvement' :
-                                             data.qualityOfWorkScore5 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.qualityOfWorkScore5 === 5 ? 'Outstanding' : 
+                                             data.qualityOfWorkScore5 === 4 ? 'Exceeds Expectation' :
+                                             data.qualityOfWorkScore5 === 3 ? 'Meets Expectations' :
+                                             data.qualityOfWorkScore5 === 2 ? 'Needs Improvement' :
+                                             data.qualityOfWorkScore5 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.qualityOfWorkComments5 || ''}</td>
@@ -1079,17 +1079,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.adaptabilityScore1 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.adaptabilityScore1 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.adaptabilityScore1 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.adaptabilityScore1 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.adaptabilityScore1 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.adaptabilityScore1 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.adaptabilityScore1 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.adaptabilityScore1 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.adaptabilityScore1 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.adaptabilityScore1 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.adaptabilityScore1 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.adaptabilityScore1 === '5' ? 'Outstanding' : 
-                                             data.adaptabilityScore1 === '4' ? 'Exceeds Expectation' :
-                                             data.adaptabilityScore1 === '3' ? 'Meets Expectations' :
-                                             data.adaptabilityScore1 === '2' ? 'Needs Improvement' :
-                                             data.adaptabilityScore1 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.adaptabilityScore1 === 5 ? 'Outstanding' : 
+                                             data.adaptabilityScore1 === 4 ? 'Exceeds Expectation' :
+                                             data.adaptabilityScore1 === 3 ? 'Meets Expectations' :
+                                             data.adaptabilityScore1 === 2 ? 'Needs Improvement' :
+                                             data.adaptabilityScore1 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.adaptabilityComments1 || ''}</td>
@@ -1100,17 +1100,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.adaptabilityScore2 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.adaptabilityScore2 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.adaptabilityScore2 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.adaptabilityScore2 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.adaptabilityScore2 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.adaptabilityScore2 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.adaptabilityScore2 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.adaptabilityScore2 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.adaptabilityScore2 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.adaptabilityScore2 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.adaptabilityScore2 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.adaptabilityScore2 === '5' ? 'Outstanding' : 
-                                             data.adaptabilityScore2 === '4' ? 'Exceeds Expectation' :
-                                             data.adaptabilityScore2 === '3' ? 'Meets Expectations' :
-                                             data.adaptabilityScore2 === '2' ? 'Needs Improvement' :
-                                             data.adaptabilityScore2 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.adaptabilityScore2 === 5 ? 'Outstanding' : 
+                                             data.adaptabilityScore2 === 4 ? 'Exceeds Expectation' :
+                                             data.adaptabilityScore2 === 3 ? 'Meets Expectations' :
+                                             data.adaptabilityScore2 === 2 ? 'Needs Improvement' :
+                                             data.adaptabilityScore2 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.adaptabilityComments2 || ''}</td>
@@ -1121,17 +1121,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.adaptabilityScore3 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.adaptabilityScore3 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.adaptabilityScore3 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.adaptabilityScore3 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.adaptabilityScore3 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.adaptabilityScore3 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.adaptabilityScore3 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.adaptabilityScore3 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.adaptabilityScore3 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.adaptabilityScore3 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.adaptabilityScore3 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.adaptabilityScore3 === '5' ? 'Outstanding' : 
-                                             data.adaptabilityScore3 === '4' ? 'Exceeds Expectation' :
-                                             data.adaptabilityScore3 === '3' ? 'Meets Expectations' :
-                                             data.adaptabilityScore3 === '2' ? 'Needs Improvement' :
-                                             data.adaptabilityScore3 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.adaptabilityScore3 === 5 ? 'Outstanding' : 
+                                             data.adaptabilityScore3 === 4 ? 'Exceeds Expectation' :
+                                             data.adaptabilityScore3 === 3 ? 'Meets Expectations' :
+                                             data.adaptabilityScore3 === 2 ? 'Needs Improvement' :
+                                             data.adaptabilityScore3 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.adaptabilityComments3 || ''}</td>
@@ -1172,17 +1172,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.teamworkScore1 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.teamworkScore1 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.teamworkScore1 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.teamworkScore1 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.teamworkScore1 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.teamworkScore1 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.teamworkScore1 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.teamworkScore1 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.teamworkScore1 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.teamworkScore1 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.teamworkScore1 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.teamworkScore1 === '5' ? 'Outstanding' : 
-                                             data.teamworkScore1 === '4' ? 'Exceeds Expectation' :
-                                             data.teamworkScore1 === '3' ? 'Meets Expectations' :
-                                             data.teamworkScore1 === '2' ? 'Needs Improvement' :
-                                             data.teamworkScore1 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.teamworkScore1 === 5 ? 'Outstanding' : 
+                                             data.teamworkScore1 === 4 ? 'Exceeds Expectation' :
+                                             data.teamworkScore1 === 3 ? 'Meets Expectations' :
+                                             data.teamworkScore1 === 2 ? 'Needs Improvement' :
+                                             data.teamworkScore1 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.teamworkComments1 || ''}</td>
@@ -1193,17 +1193,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.teamworkScore2 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.teamworkScore2 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.teamworkScore2 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.teamworkScore2 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.teamworkScore2 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.teamworkScore2 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.teamworkScore2 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.teamworkScore2 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.teamworkScore2 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.teamworkScore2 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.teamworkScore2 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.teamworkScore2 === '5' ? 'Outstanding' : 
-                                             data.teamworkScore2 === '4' ? 'Exceeds Expectation' :
-                                             data.teamworkScore2 === '3' ? 'Meets Expectations' :
-                                             data.teamworkScore2 === '2' ? 'Needs Improvement' :
-                                             data.teamworkScore2 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.teamworkScore2 === 5 ? 'Outstanding' : 
+                                             data.teamworkScore2 === 4 ? 'Exceeds Expectation' :
+                                             data.teamworkScore2 === 3 ? 'Meets Expectations' :
+                                             data.teamworkScore2 === 2 ? 'Needs Improvement' :
+                                             data.teamworkScore2 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.teamworkComments2 || ''}</td>
@@ -1214,17 +1214,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.teamworkScore3 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.teamworkScore3 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.teamworkScore3 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.teamworkScore3 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.teamworkScore3 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.teamworkScore3 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.teamworkScore3 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.teamworkScore3 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.teamworkScore3 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.teamworkScore3 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.teamworkScore3 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.teamworkScore3 === '5' ? 'Outstanding' : 
-                                             data.teamworkScore3 === '4' ? 'Exceeds Expectation' :
-                                             data.teamworkScore3 === '3' ? 'Meets Expectations' :
-                                             data.teamworkScore3 === '2' ? 'Needs Improvement' :
-                                             data.teamworkScore3 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.teamworkScore3 === 5 ? 'Outstanding' : 
+                                             data.teamworkScore3 === 4 ? 'Exceeds Expectation' :
+                                             data.teamworkScore3 === 3 ? 'Meets Expectations' :
+                                             data.teamworkScore3 === 2 ? 'Needs Improvement' :
+                                             data.teamworkScore3 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.teamworkComments3 || ''}</td>
@@ -1265,17 +1265,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.reliabilityScore1 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.reliabilityScore1 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.reliabilityScore1 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.reliabilityScore1 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.reliabilityScore1 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.reliabilityScore1 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.reliabilityScore1 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.reliabilityScore1 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.reliabilityScore1 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.reliabilityScore1 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.reliabilityScore1 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.reliabilityScore1 === '5' ? 'Outstanding' : 
-                                             data.reliabilityScore1 === '4' ? 'Exceeds Expectation' :
-                                             data.reliabilityScore1 === '3' ? 'Meets Expectations' :
-                                             data.reliabilityScore1 === '2' ? 'Needs Improvement' :
-                                             data.reliabilityScore1 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.reliabilityScore1 === 5 ? 'Outstanding' : 
+                                             data.reliabilityScore1 === 4 ? 'Exceeds Expectation' :
+                                             data.reliabilityScore1 === 3 ? 'Meets Expectations' :
+                                             data.reliabilityScore1 === 2 ? 'Needs Improvement' :
+                                             data.reliabilityScore1 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.reliabilityComments1 || ''}</td>
@@ -1286,17 +1286,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.reliabilityScore2 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.reliabilityScore2 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.reliabilityScore2 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.reliabilityScore2 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.reliabilityScore2 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.reliabilityScore2 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.reliabilityScore2 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.reliabilityScore2 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.reliabilityScore2 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.reliabilityScore2 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.reliabilityScore2 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.reliabilityScore2 === '5' ? 'Outstanding' : 
-                                             data.reliabilityScore2 === '4' ? 'Exceeds Expectation' :
-                                             data.reliabilityScore2 === '3' ? 'Meets Expectations' :
-                                             data.reliabilityScore2 === '2' ? 'Needs Improvement' :
-                                             data.reliabilityScore2 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.reliabilityScore2 === 5 ? 'Outstanding' : 
+                                             data.reliabilityScore2 === 4 ? 'Exceeds Expectation' :
+                                             data.reliabilityScore2 === 3 ? 'Meets Expectations' :
+                                             data.reliabilityScore2 === 2 ? 'Needs Improvement' :
+                                             data.reliabilityScore2 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.reliabilityComments2 || ''}</td>
@@ -1307,17 +1307,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.reliabilityScore3 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.reliabilityScore3 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.reliabilityScore3 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.reliabilityScore3 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.reliabilityScore3 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.reliabilityScore3 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.reliabilityScore3 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.reliabilityScore3 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.reliabilityScore3 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.reliabilityScore3 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.reliabilityScore3 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.reliabilityScore3 === '5' ? 'Outstanding' : 
-                                             data.reliabilityScore3 === '4' ? 'Exceeds Expectation' :
-                                             data.reliabilityScore3 === '3' ? 'Meets Expectations' :
-                                             data.reliabilityScore3 === '2' ? 'Needs Improvement' :
-                                             data.reliabilityScore3 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.reliabilityScore3 === 5 ? 'Outstanding' : 
+                                             data.reliabilityScore3 === 4 ? 'Exceeds Expectation' :
+                                             data.reliabilityScore3 === 3 ? 'Meets Expectations' :
+                                             data.reliabilityScore3 === 2 ? 'Needs Improvement' :
+                                             data.reliabilityScore3 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.reliabilityComments3 || ''}</td>
@@ -1328,17 +1328,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.reliabilityScore4 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.reliabilityScore4 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.reliabilityScore4 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.reliabilityScore4 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.reliabilityScore4 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.reliabilityScore4 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.reliabilityScore4 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.reliabilityScore4 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.reliabilityScore4 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.reliabilityScore4 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.reliabilityScore4 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.reliabilityScore4 === '5' ? 'Outstanding' : 
-                                             data.reliabilityScore4 === '4' ? 'Exceeds Expectation' :
-                                             data.reliabilityScore4 === '3' ? 'Meets Expectations' :
-                                             data.reliabilityScore4 === '2' ? 'Needs Improvement' :
-                                             data.reliabilityScore4 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.reliabilityScore4 === 5 ? 'Outstanding' : 
+                                             data.reliabilityScore4 === 4 ? 'Exceeds Expectation' :
+                                             data.reliabilityScore4 === 3 ? 'Meets Expectations' :
+                                             data.reliabilityScore4 === 2 ? 'Needs Improvement' :
+                                             data.reliabilityScore4 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.reliabilityComments4 || ''}</td>
@@ -1379,17 +1379,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.ethicalScore1 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.ethicalScore1 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.ethicalScore1 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.ethicalScore1 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.ethicalScore1 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.ethicalScore1 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.ethicalScore1 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.ethicalScore1 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.ethicalScore1 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.ethicalScore1 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.ethicalScore1 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.ethicalScore1 === '5' ? 'Outstanding' : 
-                                             data.ethicalScore1 === '4' ? 'Exceeds Expectation' :
-                                             data.ethicalScore1 === '3' ? 'Meets Expectations' :
-                                             data.ethicalScore1 === '2' ? 'Needs Improvement' :
-                                             data.ethicalScore1 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.ethicalScore1 === 5 ? 'Outstanding' : 
+                                             data.ethicalScore1 === 4 ? 'Exceeds Expectation' :
+                                             data.ethicalScore1 === 3 ? 'Meets Expectations' :
+                                             data.ethicalScore1 === 2 ? 'Needs Improvement' :
+                                             data.ethicalScore1 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.ethicalExplanation1 || ''}</td>
@@ -1400,17 +1400,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.ethicalScore2 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.ethicalScore2 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.ethicalScore2 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.ethicalScore2 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.ethicalScore2 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.ethicalScore2 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.ethicalScore2 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.ethicalScore2 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.ethicalScore2 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.ethicalScore2 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.ethicalScore2 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.ethicalScore2 === '5' ? 'Outstanding' : 
-                                             data.ethicalScore2 === '4' ? 'Exceeds Expectation' :
-                                             data.ethicalScore2 === '3' ? 'Meets Expectations' :
-                                             data.ethicalScore2 === '2' ? 'Needs Improvement' :
-                                             data.ethicalScore2 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.ethicalScore2 === 5 ? 'Outstanding' : 
+                                             data.ethicalScore2 === 4 ? 'Exceeds Expectation' :
+                                             data.ethicalScore2 === 3 ? 'Meets Expectations' :
+                                             data.ethicalScore2 === 2 ? 'Needs Improvement' :
+                                             data.ethicalScore2 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.ethicalExplanation2 || ''}</td>
@@ -1421,17 +1421,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.ethicalScore3 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.ethicalScore3 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.ethicalScore3 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.ethicalScore3 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.ethicalScore3 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.ethicalScore3 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.ethicalScore3 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.ethicalScore3 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.ethicalScore3 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.ethicalScore3 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.ethicalScore3 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.ethicalScore3 === '5' ? 'Outstanding' : 
-                                             data.ethicalScore3 === '4' ? 'Exceeds Expectation' :
-                                             data.ethicalScore3 === '3' ? 'Meets Expectations' :
-                                             data.ethicalScore3 === '2' ? 'Needs Improvement' :
-                                             data.ethicalScore3 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.ethicalScore3 === 5 ? 'Outstanding' : 
+                                             data.ethicalScore3 === 4 ? 'Exceeds Expectation' :
+                                             data.ethicalScore3 === 3 ? 'Meets Expectations' :
+                                             data.ethicalScore3 === 2 ? 'Needs Improvement' :
+                                             data.ethicalScore3 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.ethicalExplanation3 || ''}</td>
@@ -1442,17 +1442,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.ethicalScore4 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.ethicalScore4 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.ethicalScore4 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.ethicalScore4 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.ethicalScore4 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.ethicalScore4 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.ethicalScore4 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.ethicalScore4 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.ethicalScore4 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.ethicalScore4 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.ethicalScore4 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.ethicalScore4 === '5' ? 'Outstanding' : 
-                                             data.ethicalScore4 === '4' ? 'Exceeds Expectation' :
-                                             data.ethicalScore4 === '3' ? 'Meets Expectations' :
-                                             data.ethicalScore4 === '2' ? 'Needs Improvement' :
-                                             data.ethicalScore4 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.ethicalScore4 === 5 ? 'Outstanding' : 
+                                             data.ethicalScore4 === 4 ? 'Exceeds Expectation' :
+                                             data.ethicalScore4 === 3 ? 'Meets Expectations' :
+                                             data.ethicalScore4 === 2 ? 'Needs Improvement' :
+                                             data.ethicalScore4 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.ethicalExplanation4 || ''}</td>
@@ -1493,17 +1493,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.customerServiceScore1 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.customerServiceScore1 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.customerServiceScore1 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.customerServiceScore1 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.customerServiceScore1 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.customerServiceScore1 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.customerServiceScore1 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.customerServiceScore1 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.customerServiceScore1 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.customerServiceScore1 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.customerServiceScore1 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.customerServiceScore1 === '5' ? 'Outstanding' : 
-                                             data.customerServiceScore1 === '4' ? 'Exceeds Expectation' :
-                                             data.customerServiceScore1 === '3' ? 'Meets Expectations' :
-                                             data.customerServiceScore1 === '2' ? 'Needs Improvement' :
-                                             data.customerServiceScore1 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.customerServiceScore1 === 5 ? 'Outstanding' : 
+                                             data.customerServiceScore1 === 4 ? 'Exceeds Expectation' :
+                                             data.customerServiceScore1 === 3 ? 'Meets Expectations' :
+                                             data.customerServiceScore1 === 2 ? 'Needs Improvement' :
+                                             data.customerServiceScore1 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.customerServiceExplanation1 || ''}</td>
@@ -1514,17 +1514,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.customerServiceScore2 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.customerServiceScore2 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.customerServiceScore2 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.customerServiceScore2 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.customerServiceScore2 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.customerServiceScore2 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.customerServiceScore2 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.customerServiceScore2 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.customerServiceScore2 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.customerServiceScore2 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.customerServiceScore2 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.customerServiceScore2 === '5' ? 'Outstanding' : 
-                                             data.customerServiceScore2 === '4' ? 'Exceeds Expectation' :
-                                             data.customerServiceScore2 === '3' ? 'Meets Expectations' :
-                                             data.customerServiceScore2 === '2' ? 'Needs Improvement' :
-                                             data.customerServiceScore2 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.customerServiceScore2 === 5 ? 'Outstanding' : 
+                                             data.customerServiceScore2 === 4 ? 'Exceeds Expectation' :
+                                             data.customerServiceScore2 === 3 ? 'Meets Expectations' :
+                                             data.customerServiceScore2 === 2 ? 'Needs Improvement' :
+                                             data.customerServiceScore2 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.customerServiceExplanation2 || ''}</td>
@@ -1535,17 +1535,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.customerServiceScore3 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.customerServiceScore3 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.customerServiceScore3 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.customerServiceScore3 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.customerServiceScore3 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.customerServiceScore3 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.customerServiceScore3 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.customerServiceScore3 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.customerServiceScore3 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.customerServiceScore3 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.customerServiceScore3 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.customerServiceScore3 === '5' ? 'Outstanding' : 
-                                             data.customerServiceScore3 === '4' ? 'Exceeds Expectation' :
-                                             data.customerServiceScore3 === '3' ? 'Meets Expectations' :
-                                             data.customerServiceScore3 === '2' ? 'Needs Improvement' :
-                                             data.customerServiceScore3 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.customerServiceScore3 === 5 ? 'Outstanding' : 
+                                             data.customerServiceScore3 === 4 ? 'Exceeds Expectation' :
+                                             data.customerServiceScore3 === 3 ? 'Meets Expectations' :
+                                             data.customerServiceScore3 === 2 ? 'Needs Improvement' :
+                                             data.customerServiceScore3 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.customerServiceExplanation3 || ''}</td>
@@ -1556,17 +1556,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.customerServiceScore4 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.customerServiceScore4 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.customerServiceScore4 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.customerServiceScore4 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.customerServiceScore4 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.customerServiceScore4 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.customerServiceScore4 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.customerServiceScore4 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.customerServiceScore4 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.customerServiceScore4 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.customerServiceScore4 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.customerServiceScore4 === '5' ? 'Outstanding' : 
-                                             data.customerServiceScore4 === '4' ? 'Exceeds Expectation' :
-                                             data.customerServiceScore4 === '3' ? 'Meets Expectations' :
-                                             data.customerServiceScore4 === '2' ? 'Needs Improvement' :
-                                             data.customerServiceScore4 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.customerServiceScore4 === 5 ? 'Outstanding' : 
+                                             data.customerServiceScore4 === 4 ? 'Exceeds Expectation' :
+                                             data.customerServiceScore4 === 3 ? 'Meets Expectations' :
+                                             data.customerServiceScore4 === 2 ? 'Needs Improvement' :
+                                             data.customerServiceScore4 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.customerServiceExplanation4 || ''}</td>
@@ -1577,17 +1577,17 @@ export default function OverallAssessment({ data, updateDataAction, employee, cu
                                     <td className="border border-gray-300 px-4 py-3 text-center font-medium">{data.customerServiceScore5 || ''}</td>
                                     <td className="border border-gray-300 px-4 py-3 text-center">
                                         <div className={`px-2 py-1 rounded text-sm font-medium ${
-                                            data.customerServiceScore5 === '5' ? 'bg-green-100 text-green-800' : 
-                                            data.customerServiceScore5 === '4' ? 'bg-blue-100 text-blue-800' :
-                                            data.customerServiceScore5 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                            data.customerServiceScore5 === '2' ? 'bg-orange-100 text-orange-800' :
-                                            data.customerServiceScore5 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                                            data.customerServiceScore5 === 5 ? 'bg-green-100 text-green-800' : 
+                                            data.customerServiceScore5 === 4 ? 'bg-blue-100 text-blue-800' :
+                                            data.customerServiceScore5 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                                            data.customerServiceScore5 === 2 ? 'bg-orange-100 text-orange-800' :
+                                            data.customerServiceScore5 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                                         }`}>
-                                            {data.customerServiceScore5 === '5' ? 'Outstanding' : 
-                                             data.customerServiceScore5 === '4' ? 'Exceeds Expectation' :
-                                             data.customerServiceScore5 === '3' ? 'Meets Expectations' :
-                                             data.customerServiceScore5 === '2' ? 'Needs Improvement' :
-                                             data.customerServiceScore5 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                                            {data.customerServiceScore5 === 5 ? 'Outstanding' : 
+                                             data.customerServiceScore5 === 4 ? 'Exceeds Expectation' :
+                                             data.customerServiceScore5 === 3 ? 'Meets Expectations' :
+                                             data.customerServiceScore5 === 2 ? 'Needs Improvement' :
+                                             data.customerServiceScore5 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                                         </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">{data.customerServiceExplanation5 || ''}</td>

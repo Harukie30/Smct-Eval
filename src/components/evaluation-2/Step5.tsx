@@ -109,8 +109,8 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
       data.reliabilityScore3,
       data.reliabilityScore4,
     ]
-      .filter((score) => score && score !== "")
-      .map((score) => parseInt(score));
+      .filter((score) => score && score !== 0)
+      .map((score) => typeof score === 'number' ? score : Number(score));
 
     if (scores.length === 0) return "0.00";
     return (
@@ -160,10 +160,10 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
               size="sm"
               onClick={() => {
                 updateDataAction({
-                  reliabilityScore1: "",
-                  reliabilityScore2: "",
-                  reliabilityScore3: "",
-                  reliabilityScore4: "",
+                  reliabilityScore1: 0,
+                  reliabilityScore2: 0,
+                  reliabilityScore3: 0,
+                  reliabilityScore4: 0,
                   reliabilityComments1: "",
                   reliabilityComments2: "",
                   reliabilityComments3: "",
@@ -217,9 +217,9 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.reliabilityScore1 || ""}
+                      value={String(data.reliabilityScore1 || "")}
                       onValueChange={(value) =>
-                        updateDataAction({ reliabilityScore1: value })
+                        updateDataAction({ reliabilityScore1: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -227,28 +227,28 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.reliabilityScore1 === "5"
+                        data.reliabilityScore1 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.reliabilityScore1 === "4"
+                          : data.reliabilityScore1 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.reliabilityScore1 === "3"
+                          : data.reliabilityScore1 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.reliabilityScore1 === "2"
+                          : data.reliabilityScore1 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.reliabilityScore1 === "1"
+                          : data.reliabilityScore1 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.reliabilityScore1 === "5"
+                        {data.reliabilityScore1 === 5
                         ? "Outstanding"
-                        : data.reliabilityScore1 === "4"
+                        : data.reliabilityScore1 === 4
                         ? "Exceeds Expectation"
-                        : data.reliabilityScore1 === "3"
+                        : data.reliabilityScore1 === 3
                         ? "Meets Expectations"
-                        : data.reliabilityScore1 === "2"
+                        : data.reliabilityScore1 === 2
                         ? "Needs Improvement"
-                        : data.reliabilityScore1 === "1"
+                        : data.reliabilityScore1 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -285,9 +285,9 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.reliabilityScore2 || ""}
+                      value={String(data.reliabilityScore2 || "")}
                       onValueChange={(value) =>
-                        updateDataAction({ reliabilityScore2: value })
+                        updateDataAction({ reliabilityScore2: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -295,28 +295,28 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.reliabilityScore2 === "5"
+                        data.reliabilityScore2 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.reliabilityScore2 === "4"
+                          : data.reliabilityScore2 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.reliabilityScore2 === "3"
+                          : data.reliabilityScore2 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.reliabilityScore2 === "2"
+                          : data.reliabilityScore2 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.reliabilityScore2 === "1"
+                          : data.reliabilityScore2 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.reliabilityScore2 === "5"
+                        {data.reliabilityScore2 === 5
                         ? "Outstanding"
-                        : data.reliabilityScore2 === "4"
+                        : data.reliabilityScore2 === 4
                         ? "Exceeds Expectation"
-                        : data.reliabilityScore2 === "3"
+                        : data.reliabilityScore2 === 3
                         ? "Meets Expectations"
-                        : data.reliabilityScore2 === "2"
+                        : data.reliabilityScore2 === 2
                         ? "Needs Improvement"
-                        : data.reliabilityScore2 === "1"
+                        : data.reliabilityScore2 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -351,9 +351,9 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.reliabilityScore3 || ""}
+                      value={String(data.reliabilityScore3 || "")}
                       onValueChange={(value) =>
-                        updateDataAction({ reliabilityScore3: value })
+                        updateDataAction({ reliabilityScore3: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -361,28 +361,28 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.reliabilityScore3 === "5"
+                        data.reliabilityScore3 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.reliabilityScore3 === "4"
+                          : data.reliabilityScore3 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.reliabilityScore3 === "3"
+                          : data.reliabilityScore3 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.reliabilityScore3 === "2"
+                          : data.reliabilityScore3 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.reliabilityScore3 === "1"
+                          : data.reliabilityScore3 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.reliabilityScore3 === "5"
+                        {data.reliabilityScore3 === 5
                         ? "Outstanding"
-                        : data.reliabilityScore3 === "4"
+                        : data.reliabilityScore3 === 4
                         ? "Exceeds Expectation"
-                        : data.reliabilityScore3 === "3"
+                        : data.reliabilityScore3 === 3
                         ? "Meets Expectations"
-                        : data.reliabilityScore3 === "2"
+                        : data.reliabilityScore3 === 2
                         ? "Needs Improvement"
-                        : data.reliabilityScore3 === "1"
+                        : data.reliabilityScore3 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -418,9 +418,9 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.reliabilityScore4 || ""}
+                      value={String(data.reliabilityScore4 || "")}
                       onValueChange={(value) =>
-                        updateDataAction({ reliabilityScore4: value })
+                        updateDataAction({ reliabilityScore4: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -428,28 +428,28 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.reliabilityScore4 === "5"
+                        data.reliabilityScore4 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.reliabilityScore4 === "4"
+                          : data.reliabilityScore4 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.reliabilityScore4 === "3"
+                          : data.reliabilityScore4 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.reliabilityScore4 === "2"
+                          : data.reliabilityScore4 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.reliabilityScore4 === "1"
+                          : data.reliabilityScore4 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.reliabilityScore4 === "5"
+                        {data.reliabilityScore4 === 5
                         ? "Outstanding"
-                        : data.reliabilityScore4 === "4"
+                        : data.reliabilityScore4 === 4
                         ? "Exceeds Expectation"
-                        : data.reliabilityScore4 === "3"
+                        : data.reliabilityScore4 === 3
                         ? "Meets Expectations"
-                        : data.reliabilityScore4 === "2"
+                        : data.reliabilityScore4 === 2
                         ? "Needs Improvement"
-                        : data.reliabilityScore4 === "1"
+                        : data.reliabilityScore4 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -532,7 +532,7 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
                   data.reliabilityScore2,
                   data.reliabilityScore3,
                   data.reliabilityScore4,
-                ].filter((score) => score && score !== "").length
+                ].filter((score) => score && score !== 0).length
               }{" "}
               of 4 criteria
             </div>

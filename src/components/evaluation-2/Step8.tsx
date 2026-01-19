@@ -121,8 +121,8 @@ const getAverageScoreLabel = (average: number) => {
   return 'Unsatisfactory';
 };
 
-const calculateAverageScore = (scores: string[]) => {
-  const validScores = scores.filter(score => score !== '' && score !== null && score !== undefined).map(score => parseInt(score));
+const calculateAverageScore = (scores: (number | string)[]) => {
+  const validScores = scores.filter(score => score !== '' && score !== null && score !== undefined && score !== 0).map(score => typeof score === 'number' ? score : Number(score));
   if (validScores.length === 0) return 0;
   const average = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
   return Math.round(average * 10) / 10; // Round to 1 decimal place
@@ -130,7 +130,7 @@ const calculateAverageScore = (scores: string[]) => {
 
 export default function Step8({ data, updateDataAction, onNextAction }: Step8Props) {
   const handleScoreChange = (field: string, value: string) => {
-    updateDataAction({ [field]: value });
+    updateDataAction({ [field]: Number(value) });
   };
 
   const handleExplanationChange = (field: string, value: string) => {
@@ -200,23 +200,23 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.managerialSkillsScore1 || ''}
+                      value={String(data.managerialSkillsScore1 || '')}
                       onValueChange={(value) => handleScoreChange('managerialSkillsScore1', value)}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.managerialSkillsScore1 === '5' ? 'bg-green-100 text-green-800' :
-                      data.managerialSkillsScore1 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.managerialSkillsScore1 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.managerialSkillsScore1 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.managerialSkillsScore1 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.managerialSkillsScore1 === 5 ? 'bg-green-100 text-green-800' :
+                      data.managerialSkillsScore1 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.managerialSkillsScore1 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.managerialSkillsScore1 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.managerialSkillsScore1 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.managerialSkillsScore1 === '5' ? 'Outstanding' :
-                        data.managerialSkillsScore1 === '4' ? 'Exceeds Expectations' :
-                          data.managerialSkillsScore1 === '3' ? 'Meets Expectations' :
-                            data.managerialSkillsScore1 === '2' ? 'Needs Improvement' :
-                              data.managerialSkillsScore1 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.managerialSkillsScore1 === 5 ? 'Outstanding' :
+                        data.managerialSkillsScore1 === 4 ? 'Exceeds Expectations' :
+                          data.managerialSkillsScore1 === 3 ? 'Meets Expectations' :
+                            data.managerialSkillsScore1 === 2 ? 'Needs Improvement' :
+                              data.managerialSkillsScore1 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -243,23 +243,23 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.managerialSkillsScore2 || ''}
+                      value={String(data.managerialSkillsScore2 || '')}
                       onValueChange={(value) => handleScoreChange('managerialSkillsScore2', value)}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.managerialSkillsScore2 === '5' ? 'bg-green-100 text-green-800' :
-                      data.managerialSkillsScore2 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.managerialSkillsScore2 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.managerialSkillsScore2 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.managerialSkillsScore2 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.managerialSkillsScore2 === 5 ? 'bg-green-100 text-green-800' :
+                      data.managerialSkillsScore2 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.managerialSkillsScore2 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.managerialSkillsScore2 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.managerialSkillsScore2 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.managerialSkillsScore2 === '5' ? 'Outstanding' :
-                        data.managerialSkillsScore2 === '4' ? 'Exceeds Expectations' :
-                          data.managerialSkillsScore2 === '3' ? 'Meets Expectations' :
-                            data.managerialSkillsScore2 === '2' ? 'Needs Improvement' :
-                              data.managerialSkillsScore2 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.managerialSkillsScore2 === 5 ? 'Outstanding' :
+                        data.managerialSkillsScore2 === 4 ? 'Exceeds Expectations' :
+                          data.managerialSkillsScore2 === 3 ? 'Meets Expectations' :
+                            data.managerialSkillsScore2 === 2 ? 'Needs Improvement' :
+                              data.managerialSkillsScore2 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -286,23 +286,23 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.managerialSkillsScore3 || ''}
+                      value={String(data.managerialSkillsScore3 || '')}
                       onValueChange={(value) => handleScoreChange('managerialSkillsScore3', value)}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.managerialSkillsScore3 === '5' ? 'bg-green-100 text-green-800' :
-                      data.managerialSkillsScore3 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.managerialSkillsScore3 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.managerialSkillsScore3 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.managerialSkillsScore3 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.managerialSkillsScore3 === 5 ? 'bg-green-100 text-green-800' :
+                      data.managerialSkillsScore3 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.managerialSkillsScore3 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.managerialSkillsScore3 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.managerialSkillsScore3 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.managerialSkillsScore3 === '5' ? 'Outstanding' :
-                        data.managerialSkillsScore3 === '4' ? 'Exceeds Expectations' :
-                          data.managerialSkillsScore3 === '3' ? 'Meets Expectations' :
-                            data.managerialSkillsScore3 === '2' ? 'Needs Improvement' :
-                              data.managerialSkillsScore3 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.managerialSkillsScore3 === 5 ? 'Outstanding' :
+                        data.managerialSkillsScore3 === 4 ? 'Exceeds Expectations' :
+                          data.managerialSkillsScore3 === 3 ? 'Meets Expectations' :
+                            data.managerialSkillsScore3 === 2 ? 'Needs Improvement' :
+                              data.managerialSkillsScore3 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -329,23 +329,23 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.managerialSkillsScore4 || ''}
+                      value={String(data.managerialSkillsScore4 || '')}
                       onValueChange={(value) => handleScoreChange('managerialSkillsScore4', value)}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.managerialSkillsScore4 === '5' ? 'bg-green-100 text-green-800' :
-                      data.managerialSkillsScore4 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.managerialSkillsScore4 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.managerialSkillsScore4 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.managerialSkillsScore4 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.managerialSkillsScore4 === 5 ? 'bg-green-100 text-green-800' :
+                      data.managerialSkillsScore4 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.managerialSkillsScore4 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.managerialSkillsScore4 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.managerialSkillsScore4 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.managerialSkillsScore4 === '5' ? 'Outstanding' :
-                        data.managerialSkillsScore4 === '4' ? 'Exceeds Expectations' :
-                          data.managerialSkillsScore4 === '3' ? 'Meets Expectations' :
-                            data.managerialSkillsScore4 === '2' ? 'Needs Improvement' :
-                              data.managerialSkillsScore4 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.managerialSkillsScore4 === 5 ? 'Outstanding' :
+                        data.managerialSkillsScore4 === 4 ? 'Exceeds Expectations' :
+                          data.managerialSkillsScore4 === 3 ? 'Meets Expectations' :
+                            data.managerialSkillsScore4 === 2 ? 'Needs Improvement' :
+                              data.managerialSkillsScore4 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -372,23 +372,23 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.managerialSkillsScore5 || ''}
+                      value={String(data.managerialSkillsScore5 || '')}
                       onValueChange={(value) => handleScoreChange('managerialSkillsScore5', value)}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.managerialSkillsScore5 === '5' ? 'bg-green-100 text-green-800' :
-                      data.managerialSkillsScore5 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.managerialSkillsScore5 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.managerialSkillsScore5 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.managerialSkillsScore5 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.managerialSkillsScore5 === 5 ? 'bg-green-100 text-green-800' :
+                      data.managerialSkillsScore5 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.managerialSkillsScore5 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.managerialSkillsScore5 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.managerialSkillsScore5 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.managerialSkillsScore5 === '5' ? 'Outstanding' :
-                        data.managerialSkillsScore5 === '4' ? 'Exceeds Expectations' :
-                          data.managerialSkillsScore5 === '3' ? 'Meets Expectations' :
-                            data.managerialSkillsScore5 === '2' ? 'Needs Improvement' :
-                              data.managerialSkillsScore5 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.managerialSkillsScore5 === 5 ? 'Outstanding' :
+                        data.managerialSkillsScore5 === 4 ? 'Exceeds Expectations' :
+                          data.managerialSkillsScore5 === 3 ? 'Meets Expectations' :
+                            data.managerialSkillsScore5 === 2 ? 'Needs Improvement' :
+                              data.managerialSkillsScore5 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -415,23 +415,23 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.managerialSkillsScore6 || ''}
+                      value={String(data.managerialSkillsScore6 || '')}
                       onValueChange={(value) => handleScoreChange('managerialSkillsScore6', value)}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.managerialSkillsScore6 === '5' ? 'bg-green-100 text-green-800' :
-                      data.managerialSkillsScore6 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.managerialSkillsScore6 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.managerialSkillsScore6 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.managerialSkillsScore6 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.managerialSkillsScore6 === 5 ? 'bg-green-100 text-green-800' :
+                      data.managerialSkillsScore6 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.managerialSkillsScore6 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.managerialSkillsScore6 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.managerialSkillsScore6 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.managerialSkillsScore6 === '5' ? 'Outstanding' :
-                        data.managerialSkillsScore6 === '4' ? 'Exceeds Expectations' :
-                          data.managerialSkillsScore6 === '3' ? 'Meets Expectations' :
-                            data.managerialSkillsScore6 === '2' ? 'Needs Improvement' :
-                              data.managerialSkillsScore6 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.managerialSkillsScore6 === 5 ? 'Outstanding' :
+                        data.managerialSkillsScore6 === 4 ? 'Exceeds Expectations' :
+                          data.managerialSkillsScore6 === 3 ? 'Meets Expectations' :
+                            data.managerialSkillsScore6 === 2 ? 'Needs Improvement' :
+                              data.managerialSkillsScore6 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -475,7 +475,7 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
               </div>
             </div>
             <div className="mt-4 text-xs text-gray-500">
-              Average calculated from {[data.managerialSkillsScore1, data.managerialSkillsScore2, data.managerialSkillsScore3, data.managerialSkillsScore4, data.managerialSkillsScore5, data.managerialSkillsScore6].filter(score => score && score !== '').length} of 6 criteria
+              Average calculated from {[data.managerialSkillsScore1, data.managerialSkillsScore2, data.managerialSkillsScore3, data.managerialSkillsScore4, data.managerialSkillsScore5, data.managerialSkillsScore6].filter(score => score && score !== 0).length} of 6 criteria
             </div>
           </div>
         </CardContent>

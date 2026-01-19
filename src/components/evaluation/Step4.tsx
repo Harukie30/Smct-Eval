@@ -189,7 +189,7 @@ export default function Step4({ data, updateDataAction }: Step4Props) {
               <tbody>
                 {/* Row 1: Active Participation in Team Activities */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     Active Participation in Team Activities
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -253,7 +253,7 @@ export default function Step4({ data, updateDataAction }: Step4Props) {
 
                 {/* Row 2: Promotion of a Positive Team Culture */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     Promotion of a Positive Team Culture
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -317,7 +317,7 @@ export default function Step4({ data, updateDataAction }: Step4Props) {
 
                 {/* Row 3: Effective Communication */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     Effective Communication
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">

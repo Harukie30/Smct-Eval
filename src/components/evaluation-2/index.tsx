@@ -130,38 +130,38 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
     reviewTypeRegularQ4: false,
     reviewTypeOthersImprovement: false,
     reviewTypeOthersCustom: '',
-    jobKnowledgeScore1: '',
-    jobKnowledgeScore2: '',
-    jobKnowledgeScore3: '',
+    jobKnowledgeScore1: 0,
+    jobKnowledgeScore2: 0,
+    jobKnowledgeScore3: 0,
     jobKnowledgeComments1: '',
     jobKnowledgeComments2: '',
     jobKnowledgeComments3: '',
-    qualityOfWorkScore1: '',
-    qualityOfWorkScore2: '',
-    qualityOfWorkScore3: '',
-    qualityOfWorkScore4: '',
-    qualityOfWorkScore5: '',
+    qualityOfWorkScore1: 0,
+    qualityOfWorkScore2: 0,
+    qualityOfWorkScore3: 0,
+    qualityOfWorkScore4: 0,
+    qualityOfWorkScore5: 0,
     qualityOfWorkComments1: '',
     qualityOfWorkComments2: '',
     qualityOfWorkComments3: '',
     qualityOfWorkComments4: '',
     qualityOfWorkComments5: '',
-    adaptabilityScore1: '',
-    adaptabilityScore2: '',
-    adaptabilityScore3: '',
+    adaptabilityScore1: 0,
+    adaptabilityScore2: 0,
+    adaptabilityScore3: 0,
     adaptabilityComments1: '',
     adaptabilityComments2: '',
     adaptabilityComments3: '',
-    teamworkScore1: '',
-    teamworkScore2: '',
-    teamworkScore3: '',
+    teamworkScore1: 0,
+    teamworkScore2: 0,
+    teamworkScore3: 0,
     teamworkComments1: '',
     teamworkComments2: '',
     teamworkComments3: '',
-    reliabilityScore1: '',
-    reliabilityScore2: '',
-    reliabilityScore3: '',
-    reliabilityScore4: '',
+    reliabilityScore1: 0,
+    reliabilityScore2: 0,
+    reliabilityScore3: 0,
+    reliabilityScore4: 0,
     reliabilityComments1: '',
     reliabilityComments2: '',
     reliabilityComments3: '',
@@ -174,10 +174,10 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
     problemSolvingComments: '',
     leadership: 0,
     leadershipComments: '',
-    ethicalScore1: '',
-    ethicalScore2: '',
-    ethicalScore3: '',
-    ethicalScore4: '',
+    ethicalScore1: 0,
+    ethicalScore2: 0,
+    ethicalScore3: 0,
+    ethicalScore4: 0,
     ethicalRating1: '',
     ethicalRating2: '',
     ethicalRating3: '',
@@ -187,23 +187,23 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
     ethicalExplanation3: '',
     ethicalExplanation4: '',
     ethicalComments: '',
-    customerServiceScore1: '',
-    customerServiceScore2: '',
-    customerServiceScore3: '',
-    customerServiceScore4: '',
-    customerServiceScore5: '',
+    customerServiceScore1: 0,
+    customerServiceScore2: 0,
+    customerServiceScore3: 0,
+    customerServiceScore4: 0,
+    customerServiceScore5: 0,
     customerServiceExplanation1: '',
     customerServiceExplanation2: '',
     customerServiceExplanation3: '',
     customerServiceExplanation4: '',
     customerServiceExplanation5: '',
     customerServiceComments: '',
-    managerialSkillsScore1: '',
-    managerialSkillsScore2: '',
-    managerialSkillsScore3: '',
-    managerialSkillsScore4: '',
-    managerialSkillsScore5: '',
-    managerialSkillsScore6: '',
+    managerialSkillsScore1: 0,
+    managerialSkillsScore2: 0,
+    managerialSkillsScore3: 0,
+    managerialSkillsScore4: 0,
+    managerialSkillsScore5: 0,
+    managerialSkillsScore6: 0,
     managerialSkillsExplanation1: '',
     managerialSkillsExplanation2: '',
     managerialSkillsExplanation3: '',
@@ -237,19 +237,27 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
       setEvaluationData(prev => {
         // Only update if the values have actually changed to prevent infinite loops
         const newEmployeeId = employee.employeeId || employee.id.toString();
-        const newEmployeeName = employee.name;
-        const newPosition = employee.position;
-        const newDepartment = employee.department;
+        const newEmployeeName = employee.name || '';
+        const newPosition = employee.position || '';
+        const newDepartment = employee.department || '';
         const newBranch = employee.branch || '';
-        const newRole = employee.role;
+        const newRole = employee.role || '';
+        
+        // Normalize previous values for comparison
+        const prevEmployeeId = prev.employeeId || '';
+        const prevEmployeeName = prev.employeeName || '';
+        const prevPosition = prev.position || '';
+        const prevDepartment = prev.department || '';
+        const prevBranch = prev.branch || '';
+        const prevRole = prev.role || '';
         
         if (
-          prev.employeeId !== newEmployeeId ||
-          prev.employeeName !== newEmployeeName ||
-          prev.position !== newPosition ||
-          prev.department !== newDepartment ||
-          prev.branch !== newBranch ||
-          prev.role !== newRole
+          prevEmployeeId !== newEmployeeId ||
+          prevEmployeeName !== newEmployeeName ||
+          prevPosition !== newPosition ||
+          prevDepartment !== newDepartment ||
+          prevBranch !== newBranch ||
+          prevRole !== newRole
         ) {
           return {
             ...prev,
@@ -293,21 +301,30 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
           (evaluationData.reviewTypeOthersCustom && evaluationData.reviewTypeOthersCustom.trim() !== '')
         );
         
-        // Check if all job knowledge scores are filled
-        const hasJobKnowledgeScores = (
-          evaluationData.jobKnowledgeScore1 && evaluationData.jobKnowledgeScore1 !== '' &&
-          evaluationData.jobKnowledgeScore2 && evaluationData.jobKnowledgeScore2 !== '' &&
-          evaluationData.jobKnowledgeScore3 && evaluationData.jobKnowledgeScore3 !== ''
+        // Check if all employee information is filled
+        const hasEmployeeInfo = (
+          evaluationData.employeeName && evaluationData.employeeName.trim() !== '' &&
+          evaluationData.employeeId && evaluationData.employeeId.trim() !== '' &&
+          evaluationData.position && evaluationData.position.trim() !== '' &&
+          evaluationData.department && evaluationData.department.trim() !== '' &&
+          evaluationData.branch && evaluationData.branch.trim() !== ''
         );
         
-        // Check if basic employee information is filled
+        // Check if all job knowledge scores are filled
+        const hasJobKnowledgeScores = (
+          evaluationData.jobKnowledgeScore1 && evaluationData.jobKnowledgeScore1 !== 0 &&
+          evaluationData.jobKnowledgeScore2 && evaluationData.jobKnowledgeScore2 !== 0 &&
+          evaluationData.jobKnowledgeScore3 && evaluationData.jobKnowledgeScore3 !== 0
+        );
+        
+        // Check if basic evaluation information is filled
         const hasBasicInfo = (
           evaluationData.supervisor && evaluationData.supervisor.trim() !== '' &&
           evaluationData.coverageFrom && evaluationData.coverageFrom.trim() !== '' &&
           evaluationData.coverageTo && evaluationData.coverageTo.trim() !== ''
         );
         
-        return hasReviewType && hasJobKnowledgeScores && hasBasicInfo;
+        return hasReviewType && hasEmployeeInfo && hasJobKnowledgeScores && hasBasicInfo;
       case 2: // Quality of Work
         // Check if evaluator is HO
         const isEvaluatorHO = () => {
@@ -336,38 +353,38 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
         const isHO = isEvaluatorHO();
         
         return (
-          evaluationData.qualityOfWorkScore1 && evaluationData.qualityOfWorkScore1 !== '' &&
-          evaluationData.qualityOfWorkScore2 && evaluationData.qualityOfWorkScore2 !== '' &&
-          evaluationData.qualityOfWorkScore3 && evaluationData.qualityOfWorkScore3 !== '' &&
-          evaluationData.qualityOfWorkScore4 && evaluationData.qualityOfWorkScore4 !== '' &&
+          evaluationData.qualityOfWorkScore1 && evaluationData.qualityOfWorkScore1 !== 0 &&
+          evaluationData.qualityOfWorkScore2 && evaluationData.qualityOfWorkScore2 !== 0 &&
+          evaluationData.qualityOfWorkScore3 && evaluationData.qualityOfWorkScore3 !== 0 &&
+          evaluationData.qualityOfWorkScore4 && evaluationData.qualityOfWorkScore4 !== 0 &&
           // qualityOfWorkScore5 is only required if not HO
-          (isHO || (evaluationData.qualityOfWorkScore5 && evaluationData.qualityOfWorkScore5 !== ''))
+          (isHO || (evaluationData.qualityOfWorkScore5 && evaluationData.qualityOfWorkScore5 !== 0))
         );
       case 3: // Adaptability
         return (
-          evaluationData.adaptabilityScore1 && evaluationData.adaptabilityScore1 !== '' &&
-          evaluationData.adaptabilityScore2 && evaluationData.adaptabilityScore2 !== '' &&
-          evaluationData.adaptabilityScore3 && evaluationData.adaptabilityScore3 !== ''
+          evaluationData.adaptabilityScore1 && evaluationData.adaptabilityScore1 !== 0 &&
+          evaluationData.adaptabilityScore2 && evaluationData.adaptabilityScore2 !== 0 &&
+          evaluationData.adaptabilityScore3 && evaluationData.adaptabilityScore3 !== 0
         );
       case 4: // Teamwork
         return (
-          evaluationData.teamworkScore1 && evaluationData.teamworkScore1 !== '' &&
-          evaluationData.teamworkScore2 && evaluationData.teamworkScore2 !== '' &&
-          evaluationData.teamworkScore3 && evaluationData.teamworkScore3 !== ''
+          evaluationData.teamworkScore1 && evaluationData.teamworkScore1 !== 0 &&
+          evaluationData.teamworkScore2 && evaluationData.teamworkScore2 !== 0 &&
+          evaluationData.teamworkScore3 && evaluationData.teamworkScore3 !== 0
         );
       case 5: // Reliability
         return (
-          evaluationData.reliabilityScore1 && evaluationData.reliabilityScore1 !== '' &&
-          evaluationData.reliabilityScore2 && evaluationData.reliabilityScore2 !== '' &&
-          evaluationData.reliabilityScore3 && evaluationData.reliabilityScore3 !== '' &&
-          evaluationData.reliabilityScore4 && evaluationData.reliabilityScore4 !== '' 
+          evaluationData.reliabilityScore1 && evaluationData.reliabilityScore1 !== 0 &&
+          evaluationData.reliabilityScore2 && evaluationData.reliabilityScore2 !== 0 &&
+          evaluationData.reliabilityScore3 && evaluationData.reliabilityScore3 !== 0 &&
+          evaluationData.reliabilityScore4 && evaluationData.reliabilityScore4 !== 0 
         );
       case 6: // Ethical & Professional Behavior
         return (
-          evaluationData.ethicalScore1 && evaluationData.ethicalScore1 !== '' &&
-          evaluationData.ethicalScore2 && evaluationData.ethicalScore2 !== '' &&
-          evaluationData.ethicalScore3 && evaluationData.ethicalScore3 !== '' &&
-          evaluationData.ethicalScore4 && evaluationData.ethicalScore4 !== ''
+          evaluationData.ethicalScore1 && evaluationData.ethicalScore1 !== 0 &&
+          evaluationData.ethicalScore2 && evaluationData.ethicalScore2 !== 0 &&
+          evaluationData.ethicalScore3 && evaluationData.ethicalScore3 !== 0 &&
+          evaluationData.ethicalScore4 && evaluationData.ethicalScore4 !== 0
         );
       case 7: // Customer Service
         // Check if evaluator is HO - Step 7 is not applicable for HO
@@ -403,20 +420,20 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
         
         // For non-HO evaluators, require all customer service scores
         return (
-          evaluationData.customerServiceScore1 && evaluationData.customerServiceScore1 !== '' &&
-          evaluationData.customerServiceScore2 && evaluationData.customerServiceScore2 !== '' &&
-          evaluationData.customerServiceScore3 && evaluationData.customerServiceScore3 !== '' &&
-          evaluationData.customerServiceScore4 && evaluationData.customerServiceScore4 !== '' &&
-          evaluationData.customerServiceScore5 && evaluationData.customerServiceScore5 !== ''
+          evaluationData.customerServiceScore1 && evaluationData.customerServiceScore1 !== 0 &&
+          evaluationData.customerServiceScore2 && evaluationData.customerServiceScore2 !== 0 &&
+          evaluationData.customerServiceScore3 && evaluationData.customerServiceScore3 !== 0 &&
+          evaluationData.customerServiceScore4 && evaluationData.customerServiceScore4 !== 0 &&
+          evaluationData.customerServiceScore5 && evaluationData.customerServiceScore5 !== 0
         );
       case 8: // Managerial Skills
         return (
-          evaluationData.managerialSkillsScore1 && evaluationData.managerialSkillsScore1 !== '' &&
-          evaluationData.managerialSkillsScore2 && evaluationData.managerialSkillsScore2 !== '' &&
-          evaluationData.managerialSkillsScore3 && evaluationData.managerialSkillsScore3 !== '' &&
-          evaluationData.managerialSkillsScore4 && evaluationData.managerialSkillsScore4 !== '' &&
-          evaluationData.managerialSkillsScore5 && evaluationData.managerialSkillsScore5 !== '' &&
-          evaluationData.managerialSkillsScore6 && evaluationData.managerialSkillsScore6 !== ''
+          evaluationData.managerialSkillsScore1 && evaluationData.managerialSkillsScore1 !== 0 &&
+          evaluationData.managerialSkillsScore2 && evaluationData.managerialSkillsScore2 !== 0 &&
+          evaluationData.managerialSkillsScore3 && evaluationData.managerialSkillsScore3 !== 0 &&
+          evaluationData.managerialSkillsScore4 && evaluationData.managerialSkillsScore4 !== 0 &&
+          evaluationData.managerialSkillsScore5 && evaluationData.managerialSkillsScore5 !== 0 &&
+          evaluationData.managerialSkillsScore6 && evaluationData.managerialSkillsScore6 !== 0
         );
       case 9: // Overall Assessment
         return true; // No validation required for step 9
@@ -445,6 +462,7 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
   const getValidationMessage = () => {
     switch (currentStep) {
       case 1: // Employee Information & Job Knowledge
+        // Check review type first
         if (!evaluationData.reviewTypeProbationary3 && !evaluationData.reviewTypeProbationary5 && 
             !evaluationData.reviewTypeRegularQ1 && !evaluationData.reviewTypeRegularQ2 && 
             !evaluationData.reviewTypeRegularQ3 && !evaluationData.reviewTypeRegularQ4 && 
@@ -452,6 +470,23 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
             (!evaluationData.reviewTypeOthersCustom || evaluationData.reviewTypeOthersCustom.trim() === '')) {
           return 'Please select at least one review type';
         }
+        // Check employee information
+        if (!evaluationData.employeeName || evaluationData.employeeName.trim() === '') {
+          return 'Employee name is required';
+        }
+        if (!evaluationData.employeeId || evaluationData.employeeId.trim() === '') {
+          return 'Employee ID is required';
+        }
+        if (!evaluationData.position || evaluationData.position.trim() === '') {
+          return 'Position is required';
+        }
+        if (!evaluationData.department || evaluationData.department.trim() === '') {
+          return 'Department is required';
+        }
+        if (!evaluationData.branch || evaluationData.branch.trim() === '') {
+          return 'Branch is required';
+        }
+        // Check evaluation information
         if (!evaluationData.supervisor || evaluationData.supervisor.trim() === '') {
           return 'Please enter supervisor name';
         }
@@ -461,11 +496,159 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
         if (!evaluationData.coverageTo || evaluationData.coverageTo.trim() === '') {
           return 'Please select coverage to date';
         }
-        if (!evaluationData.jobKnowledgeScore1 || evaluationData.jobKnowledgeScore1 === '') {
-          return 'Please complete all job knowledge scores';
+        // Check job knowledge scores
+        if (!evaluationData.jobKnowledgeScore1 || evaluationData.jobKnowledgeScore1 === 0) {
+          return 'Please complete all job knowledge scores (Score 1)';
+        }
+        if (!evaluationData.jobKnowledgeScore2 || evaluationData.jobKnowledgeScore2 === 0) {
+          return 'Please complete all job knowledge scores (Score 2)';
+        }
+        if (!evaluationData.jobKnowledgeScore3 || evaluationData.jobKnowledgeScore3 === 0) {
+          return 'Please complete all job knowledge scores (Score 3)';
         }
         return 'Please complete all required fields';
+      case 2: // Quality of Work
+        if (!evaluationData.qualityOfWorkScore1 || evaluationData.qualityOfWorkScore1 === 0) {
+          return 'Please complete all quality of work scores (Score 1)';
+        }
+        if (!evaluationData.qualityOfWorkScore2 || evaluationData.qualityOfWorkScore2 === 0) {
+          return 'Please complete all quality of work scores (Score 2)';
+        }
+        if (!evaluationData.qualityOfWorkScore3 || evaluationData.qualityOfWorkScore3 === 0) {
+          return 'Please complete all quality of work scores (Score 3)';
+        }
+        if (!evaluationData.qualityOfWorkScore4 || evaluationData.qualityOfWorkScore4 === 0) {
+          return 'Please complete all quality of work scores (Score 4)';
+        }
+        // Check if evaluator is HO
+        const isEvaluatorHO_Step2 = () => {
+          if (!user?.branches) return false;
+          if (Array.isArray(user.branches)) {
+            const branch = user.branches[0];
+            if (branch) {
+              const branchName = branch.branch_name?.toUpperCase() || "";
+              const branchCode = branch.branch_code?.toUpperCase() || "";
+              return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+            }
+          }
+          if (typeof user.branches === 'object') {
+            const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
+            const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
+            return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+          }
+          return false;
+        };
+        if (!isEvaluatorHO_Step2() && (!evaluationData.qualityOfWorkScore5 || evaluationData.qualityOfWorkScore5 === 0)) {
+          return 'Please complete all quality of work scores (Score 5)';
+        }
+        return 'Please complete all quality of work scores';
+      case 3: // Adaptability
+        if (!evaluationData.adaptabilityScore1 || evaluationData.adaptabilityScore1 === 0) {
+          return 'Please complete all adaptability scores (Score 1)';
+        }
+        if (!evaluationData.adaptabilityScore2 || evaluationData.adaptabilityScore2 === 0) {
+          return 'Please complete all adaptability scores (Score 2)';
+        }
+        if (!evaluationData.adaptabilityScore3 || evaluationData.adaptabilityScore3 === 0) {
+          return 'Please complete all adaptability scores (Score 3)';
+        }
+        return 'Please complete all adaptability scores';
+      case 4: // Teamwork
+        if (!evaluationData.teamworkScore1 || evaluationData.teamworkScore1 === 0) {
+          return 'Please complete all teamwork scores (Score 1)';
+        }
+        if (!evaluationData.teamworkScore2 || evaluationData.teamworkScore2 === 0) {
+          return 'Please complete all teamwork scores (Score 2)';
+        }
+        if (!evaluationData.teamworkScore3 || evaluationData.teamworkScore3 === 0) {
+          return 'Please complete all teamwork scores (Score 3)';
+        }
+        return 'Please complete all teamwork scores';
+      case 5: // Reliability
+        if (!evaluationData.reliabilityScore1 || evaluationData.reliabilityScore1 === 0) {
+          return 'Please complete all reliability scores (Score 1)';
+        }
+        if (!evaluationData.reliabilityScore2 || evaluationData.reliabilityScore2 === 0) {
+          return 'Please complete all reliability scores (Score 2)';
+        }
+        if (!evaluationData.reliabilityScore3 || evaluationData.reliabilityScore3 === 0) {
+          return 'Please complete all reliability scores (Score 3)';
+        }
+        if (!evaluationData.reliabilityScore4 || evaluationData.reliabilityScore4 === 0) {
+          return 'Please complete all reliability scores (Score 4)';
+        }
+        return 'Please complete all reliability scores';
+      case 6: // Ethical & Professional Behavior
+        if (!evaluationData.ethicalScore1 || evaluationData.ethicalScore1 === 0) {
+          return 'Please complete all ethical & professional behavior scores (Score 1)';
+        }
+        if (!evaluationData.ethicalScore2 || evaluationData.ethicalScore2 === 0) {
+          return 'Please complete all ethical & professional behavior scores (Score 2)';
+        }
+        if (!evaluationData.ethicalScore3 || evaluationData.ethicalScore3 === 0) {
+          return 'Please complete all ethical & professional behavior scores (Score 3)';
+        }
+        if (!evaluationData.ethicalScore4 || evaluationData.ethicalScore4 === 0) {
+          return 'Please complete all ethical & professional behavior scores (Score 4)';
+        }
+        return 'Please complete all ethical & professional behavior scores';
+      case 7: // Customer Service
+        // Check if evaluator is HO - Step 7 is not applicable for HO
+        const isEvaluatorHO_Step7 = () => {
+          if (!user?.branches) return false;
+          if (Array.isArray(user.branches)) {
+            const branch = user.branches[0];
+            if (branch) {
+              const branchName = branch.branch_name?.toUpperCase() || "";
+              const branchCode = branch.branch_code?.toUpperCase() || "";
+              return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+            }
+          }
+          if (typeof user.branches === 'object') {
+            const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
+            const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
+            return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+          }
+          return false;
+        };
+        if (isEvaluatorHO_Step7()) {
+          return ''; // Step 7 is not applicable for HO
+        }
+        if (!evaluationData.customerServiceScore1 || evaluationData.customerServiceScore1 === 0) {
+          return 'Please complete all customer service scores (Score 1)';
+        }
+        if (!evaluationData.customerServiceScore2 || evaluationData.customerServiceScore2 === 0) {
+          return 'Please complete all customer service scores (Score 2)';
+        }
+        if (!evaluationData.customerServiceScore3 || evaluationData.customerServiceScore3 === 0) {
+          return 'Please complete all customer service scores (Score 3)';
+        }
+        if (!evaluationData.customerServiceScore4 || evaluationData.customerServiceScore4 === 0) {
+          return 'Please complete all customer service scores (Score 4)';
+        }
+        if (!evaluationData.customerServiceScore5 || evaluationData.customerServiceScore5 === 0) {
+          return 'Please complete all customer service scores (Score 5)';
+        }
+        return 'Please complete all customer service scores';
       case 8: // Managerial Skills
+        if (!evaluationData.managerialSkillsScore1 || evaluationData.managerialSkillsScore1 === 0) {
+          return 'Please complete all managerial skills scores (Score 1)';
+        }
+        if (!evaluationData.managerialSkillsScore2 || evaluationData.managerialSkillsScore2 === 0) {
+          return 'Please complete all managerial skills scores (Score 2)';
+        }
+        if (!evaluationData.managerialSkillsScore3 || evaluationData.managerialSkillsScore3 === 0) {
+          return 'Please complete all managerial skills scores (Score 3)';
+        }
+        if (!evaluationData.managerialSkillsScore4 || evaluationData.managerialSkillsScore4 === 0) {
+          return 'Please complete all managerial skills scores (Score 4)';
+        }
+        if (!evaluationData.managerialSkillsScore5 || evaluationData.managerialSkillsScore5 === 0) {
+          return 'Please complete all managerial skills scores (Score 5)';
+        }
+        if (!evaluationData.managerialSkillsScore6 || evaluationData.managerialSkillsScore6 === 0) {
+          return 'Please complete all managerial skills scores (Score 6)';
+        }
         return 'Please complete all managerial skills scores';
       case 9: // Overall Assessment
         return 'Please complete all required fields';
@@ -475,6 +658,14 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
   };
 
   const nextStep = () => {
+    // Validate current step before proceeding
+    if (!isCurrentStepComplete()) {
+      // Show validation message to user
+      const message = getValidationMessage();
+      alert(message || 'Please complete all required fields before proceeding to the next step.');
+      return;
+    }
+    
     // For HO evaluators, skip Step 7 (go from Step 6 to Step 8)
     if (isHO && currentStep === 6) {
       setCurrentStep(8); // Skip Step 7, go directly to Step 8
@@ -999,7 +1190,7 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
 
             <div className="flex flex-col gap-2">
               <TooltipProvider>
-                {currentStep >= 1 && currentStep <= 7 && !isCurrentStepComplete() ? (
+                {currentStep >= 1 && currentStep <= 8 && !isCurrentStepComplete() ? (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button 
@@ -1021,7 +1212,7 @@ export default function ManagerEvaluationForm({ employee, currentUser, onCloseAc
                     <TooltipTrigger asChild>
                       <Button 
                         onClick={nextStep} 
-                        className="px-6 bg-blue-500 text-white hover:bg-blue-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                        className="px-6 bg-blue-500 text-white hover:bg-green-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
                       >
                         Next
                       </Button>

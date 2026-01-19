@@ -108,8 +108,8 @@ export default function Step3({ data, updateDataAction }: Step3Props) {
       data.adaptabilityScore2,
       data.adaptabilityScore3,
     ]
-      .filter((score) => score && score !== "")
-      .map((score) => parseInt(score));
+      .filter((score) => score && score !== 0)
+      .map((score) => typeof score === 'number' ? score : Number(score));
 
     if (scores.length === 0) return "0.00";
     return (
@@ -159,9 +159,9 @@ export default function Step3({ data, updateDataAction }: Step3Props) {
               size="sm"
               onClick={() => {
                 updateDataAction({
-                  adaptabilityScore1: "",
-                  adaptabilityScore2: "",
-                  adaptabilityScore3: "",
+                  adaptabilityScore1: 0,
+                  adaptabilityScore2: 0,
+                  adaptabilityScore3: 0,
                   adaptabilityComments1: "",
                   adaptabilityComments2: "",
                   adaptabilityComments3: "",
@@ -213,9 +213,9 @@ export default function Step3({ data, updateDataAction }: Step3Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.adaptabilityScore1 || ""}
+                      value={String(data.adaptabilityScore1 || "")}
                       onValueChange={(value) =>
-                        updateDataAction({ adaptabilityScore1: value })
+                        updateDataAction({ adaptabilityScore1: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -223,28 +223,28 @@ export default function Step3({ data, updateDataAction }: Step3Props) {
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.adaptabilityScore1 === "5"
+                        data.adaptabilityScore1 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.adaptabilityScore1 === "4"
+                          : data.adaptabilityScore1 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.adaptabilityScore1 === "3"
+                          : data.adaptabilityScore1 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.adaptabilityScore1 === "2"
+                          : data.adaptabilityScore1 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.adaptabilityScore1 === "1"
+                          : data.adaptabilityScore1 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.adaptabilityScore1 === "5"
+                      {data.adaptabilityScore1 === 5
                         ? "Outstanding"
-                        : data.adaptabilityScore1 === "4"
+                        : data.adaptabilityScore1 === 4
                         ? "Exceeds Expectation"
-                        : data.adaptabilityScore1 === "3"
+                        : data.adaptabilityScore1 === 3
                         ? "Meets Expectations"
-                        : data.adaptabilityScore1 === "2"
+                        : data.adaptabilityScore1 === 2
                         ? "Needs Improvement"
-                        : data.adaptabilityScore1 === "1"
+                        : data.adaptabilityScore1 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -280,9 +280,9 @@ export default function Step3({ data, updateDataAction }: Step3Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.adaptabilityScore2 || ""}
+                      value={String(data.adaptabilityScore2 || "")}
                       onValueChange={(value) =>
-                        updateDataAction({ adaptabilityScore2: value })
+                        updateDataAction({ adaptabilityScore2: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -290,28 +290,28 @@ export default function Step3({ data, updateDataAction }: Step3Props) {
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.adaptabilityScore2 === "5"
+                        data.adaptabilityScore2 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.adaptabilityScore2 === "4"
+                          : data.adaptabilityScore2 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.adaptabilityScore2 === "3"
+                          : data.adaptabilityScore2 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.adaptabilityScore2 === "2"
+                          : data.adaptabilityScore2 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.adaptabilityScore2 === "1"
+                          : data.adaptabilityScore2 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.adaptabilityScore2 === "5"
+                      {data.adaptabilityScore2 === 5
                         ? "Outstanding"
-                        : data.adaptabilityScore2 === "4"
+                        : data.adaptabilityScore2 === 4
                         ? "Exceeds Expectation"
-                        : data.adaptabilityScore2 === "3"
+                        : data.adaptabilityScore2 === 3
                         ? "Meets Expectations"
-                        : data.adaptabilityScore2 === "2"
+                        : data.adaptabilityScore2 === 2
                         ? "Needs Improvement"
-                        : data.adaptabilityScore2 === "1"
+                        : data.adaptabilityScore2 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -347,9 +347,9 @@ export default function Step3({ data, updateDataAction }: Step3Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.adaptabilityScore3 || ""}
+                      value={String(data.adaptabilityScore3 || "")}
                       onValueChange={(value) =>
-                        updateDataAction({ adaptabilityScore3: value })
+                        updateDataAction({ adaptabilityScore3: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -357,28 +357,28 @@ export default function Step3({ data, updateDataAction }: Step3Props) {
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.adaptabilityScore3 === "5"
+                        data.adaptabilityScore3 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.adaptabilityScore3 === "4"
+                          : data.adaptabilityScore3 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.adaptabilityScore3 === "3"
+                          : data.adaptabilityScore3 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.adaptabilityScore3 === "2"
+                          : data.adaptabilityScore3 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.adaptabilityScore3 === "1"
+                          : data.adaptabilityScore3 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.adaptabilityScore3 === "5"
+                      {data.adaptabilityScore3 === 5
                         ? "Outstanding"
-                        : data.adaptabilityScore3 === "4"
+                        : data.adaptabilityScore3 === 4
                         ? "Exceeds Expectation"
-                        : data.adaptabilityScore3 === "3"
+                        : data.adaptabilityScore3 === 3
                         ? "Meets Expectations"
-                        : data.adaptabilityScore3 === "2"
+                        : data.adaptabilityScore3 === 2
                         ? "Needs Improvement"
-                        : data.adaptabilityScore3 === "1"
+                        : data.adaptabilityScore3 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -454,7 +454,7 @@ export default function Step3({ data, updateDataAction }: Step3Props) {
                   data.adaptabilityScore1,
                   data.adaptabilityScore2,
                   data.adaptabilityScore3,
-                ].filter((score) => score && score !== "").length
+                ].filter((score) => score && score !== 0).length
               }{" "}
               of 3 criteria
             </div>

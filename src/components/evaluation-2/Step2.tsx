@@ -131,7 +131,7 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
       data.qualityOfWorkScore4,
       // Only include score5 if not HO
       ...(isHO ? [] : [data.qualityOfWorkScore5])
-    ].filter(score => score && score !== '').map(score => parseInt(score));
+    ].filter(score => score && score !== 0).map(score => typeof score === 'number' ? score : Number(score));
 
     if (scores.length === 0) return '0.00';
     return (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2);
@@ -177,11 +177,11 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
               size="sm"
               onClick={() => {
                 updateDataAction({
-                  qualityOfWorkScore1: '',
-                  qualityOfWorkScore2: '',
-                  qualityOfWorkScore3: '',
-                  qualityOfWorkScore4: '',
-                  qualityOfWorkScore5: '',
+                  qualityOfWorkScore1: 0,
+                  qualityOfWorkScore2: 0,
+                  qualityOfWorkScore3: 0,
+                  qualityOfWorkScore4: 0,
+                  qualityOfWorkScore5: 0,
                   qualityOfWorkComments1: '',
                   qualityOfWorkComments2: '',
                   qualityOfWorkComments3: '',
@@ -234,23 +234,23 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.qualityOfWorkScore1 || ''}
-                      onValueChange={(value) => updateDataAction({ qualityOfWorkScore1: value })}
+                      value={String(data.qualityOfWorkScore1 || '')}
+                      onValueChange={(value) => updateDataAction({ qualityOfWorkScore1: Number(value) })}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.qualityOfWorkScore1 === '5' ? 'bg-green-100 text-green-800' :
-                      data.qualityOfWorkScore1 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.qualityOfWorkScore1 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.qualityOfWorkScore1 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.qualityOfWorkScore1 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.qualityOfWorkScore1 === 5 ? 'bg-green-100 text-green-800' :
+                      data.qualityOfWorkScore1 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.qualityOfWorkScore1 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.qualityOfWorkScore1 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.qualityOfWorkScore1 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.qualityOfWorkScore1 === '5' ? 'Outstanding' :
-                        data.qualityOfWorkScore1 === '4' ? 'Exceeds Expectation' :
-                          data.qualityOfWorkScore1 === '3' ? 'Meets Expectations' :
-                            data.qualityOfWorkScore1 === '2' ? 'Needs Improvement' :
-                              data.qualityOfWorkScore1 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.qualityOfWorkScore1 === 5 ? 'Outstanding' :
+                        data.qualityOfWorkScore1 === 4 ? 'Exceeds Expectation' :
+                          data.qualityOfWorkScore1 === 3 ? 'Meets Expectations' :
+                            data.qualityOfWorkScore1 === 2 ? 'Needs Improvement' :
+                              data.qualityOfWorkScore1 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -279,23 +279,23 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.qualityOfWorkScore2 || ''}
-                      onValueChange={(value) => updateDataAction({ qualityOfWorkScore2: value })}
+                      value={String(data.qualityOfWorkScore2 || '')}
+                      onValueChange={(value) => updateDataAction({ qualityOfWorkScore2: Number(value) })}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.qualityOfWorkScore2 === '5' ? 'bg-green-100 text-green-800' :
-                      data.qualityOfWorkScore2 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.qualityOfWorkScore2 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.qualityOfWorkScore2 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.qualityOfWorkScore2 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.qualityOfWorkScore2 === 5 ? 'bg-green-100 text-green-800' :
+                      data.qualityOfWorkScore2 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.qualityOfWorkScore2 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.qualityOfWorkScore2 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.qualityOfWorkScore2 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.qualityOfWorkScore2 === '5' ? 'Outstanding' :
-                        data.qualityOfWorkScore2 === '4' ? 'Exceeds Expectation' :
-                          data.qualityOfWorkScore2 === '3' ? 'Meets Expectations' :
-                            data.qualityOfWorkScore2 === '2' ? 'Needs Improvement' :
-                              data.qualityOfWorkScore2 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.qualityOfWorkScore2 === 5 ? 'Outstanding' :
+                        data.qualityOfWorkScore2 === 4 ? 'Exceeds Expectation' :
+                          data.qualityOfWorkScore2 === 3 ? 'Meets Expectations' :
+                            data.qualityOfWorkScore2 === 2 ? 'Needs Improvement' :
+                              data.qualityOfWorkScore2 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -324,23 +324,23 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.qualityOfWorkScore3 || ''}
-                      onValueChange={(value) => updateDataAction({ qualityOfWorkScore3: value })}
+                      value={String(data.qualityOfWorkScore3 || '')}
+                      onValueChange={(value) => updateDataAction({ qualityOfWorkScore3: Number(value) })}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.qualityOfWorkScore3 === '5' ? 'bg-green-100 text-green-800' :
-                      data.qualityOfWorkScore3 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.qualityOfWorkScore3 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.qualityOfWorkScore3 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.qualityOfWorkScore3 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.qualityOfWorkScore3 === 5 ? 'bg-green-100 text-green-800' :
+                      data.qualityOfWorkScore3 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.qualityOfWorkScore3 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.qualityOfWorkScore3 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.qualityOfWorkScore3 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.qualityOfWorkScore3 === '5' ? 'Outstanding' :
-                        data.qualityOfWorkScore3 === '4' ? 'Exceeds Expectation' :
-                          data.qualityOfWorkScore3 === '3' ? 'Meets Expectations' :
-                            data.qualityOfWorkScore3 === '2' ? 'Needs Improvement' :
-                              data.qualityOfWorkScore3 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.qualityOfWorkScore3 === 5 ? 'Outstanding' :
+                        data.qualityOfWorkScore3 === 4 ? 'Exceeds Expectation' :
+                          data.qualityOfWorkScore3 === 3 ? 'Meets Expectations' :
+                            data.qualityOfWorkScore3 === 2 ? 'Needs Improvement' :
+                              data.qualityOfWorkScore3 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -369,23 +369,23 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.qualityOfWorkScore4 || ''}
-                      onValueChange={(value) => updateDataAction({ qualityOfWorkScore4: value })}
+                      value={String(data.qualityOfWorkScore4 || '')}
+                      onValueChange={(value) => updateDataAction({ qualityOfWorkScore4: Number(value) })}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.qualityOfWorkScore4 === '5' ? 'bg-green-100 text-green-800' :
-                      data.qualityOfWorkScore4 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.qualityOfWorkScore4 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.qualityOfWorkScore4 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.qualityOfWorkScore4 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.qualityOfWorkScore4 === 5 ? 'bg-green-100 text-green-800' :
+                      data.qualityOfWorkScore4 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.qualityOfWorkScore4 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.qualityOfWorkScore4 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.qualityOfWorkScore4 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.qualityOfWorkScore4 === '5' ? 'Outstanding' :
-                        data.qualityOfWorkScore4 === '4' ? 'Exceeds Expectation' :
-                          data.qualityOfWorkScore4 === '3' ? 'Meets Expectations' :
-                            data.qualityOfWorkScore4 === '2' ? 'Needs Improvement' :
-                              data.qualityOfWorkScore4 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.qualityOfWorkScore4 === 5 ? 'Outstanding' :
+                        data.qualityOfWorkScore4 === 4 ? 'Exceeds Expectation' :
+                          data.qualityOfWorkScore4 === 3 ? 'Meets Expectations' :
+                            data.qualityOfWorkScore4 === 2 ? 'Needs Improvement' :
+                              data.qualityOfWorkScore4 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -402,7 +402,7 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
                 {/* Row 5: Job Targets - Hidden/Disabled for HO evaluators */}
                 {!isHO && (
                   <tr>
-                    <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    <td className="border border-gray-300 text-center font-bold px-4 py-3 text-sm text-black">
                       Job Targets
                     </td>
                     <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -413,23 +413,23 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
                     </td>
                     <td className="border border-gray-300 px-4 py-3 text-center">
                       <ScoreDropdown
-                        value={data.qualityOfWorkScore5 || ''}
-                        onValueChange={(value) => updateDataAction({ qualityOfWorkScore5: value })}
+                        value={String(data.qualityOfWorkScore5 || '')}
+                        onValueChange={(value) => updateDataAction({ qualityOfWorkScore5: Number(value) })}
                         placeholder="-- Select --"
                       />
                     </td>
                     <td className="border border-gray-300 px-4 py-3 text-center">
-                      <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.qualityOfWorkScore5 === '5' ? 'bg-green-100 text-green-800' :
-                        data.qualityOfWorkScore5 === '4' ? 'bg-blue-100 text-blue-800' :
-                          data.qualityOfWorkScore5 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                            data.qualityOfWorkScore5 === '2' ? 'bg-orange-100 text-orange-800' :
-                              data.qualityOfWorkScore5 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                      <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.qualityOfWorkScore5 === 5 ? 'bg-green-100 text-green-800' :
+                        data.qualityOfWorkScore5 === 4 ? 'bg-blue-100 text-blue-800' :
+                          data.qualityOfWorkScore5 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                            data.qualityOfWorkScore5 === 2 ? 'bg-orange-100 text-orange-800' :
+                              data.qualityOfWorkScore5 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                         }`}>
-                        {data.qualityOfWorkScore5 === '5' ? 'Outstanding' :
-                          data.qualityOfWorkScore5 === '4' ? 'Exceeds Expectation' :
-                            data.qualityOfWorkScore5 === '3' ? 'Meets Expectations' :
-                              data.qualityOfWorkScore5 === '2' ? 'Needs Improvement' :
-                                data.qualityOfWorkScore5 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                        {data.qualityOfWorkScore5 === 5 ? 'Outstanding' :
+                          data.qualityOfWorkScore5 === 4 ? 'Exceeds Expectation' :
+                            data.qualityOfWorkScore5 === 3 ? 'Meets Expectations' :
+                              data.qualityOfWorkScore5 === 2 ? 'Needs Improvement' :
+                                data.qualityOfWorkScore5 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                       </div>
                     </td>
                     <td className="border border-gray-300 px-4 py-3">
@@ -464,18 +464,18 @@ export default function Step2({ data, updateDataAction }: Step2Props) {
                   <strong>Score Breakdown:</strong>
                 </div>
                 <div className="space-y-1 text-sm">
-                  <div>Meets Standards and Requirements: <span className="font-semibold">{data.qualityOfWorkScore1 || 'Not rated'}</span></div>
-                  <div>Timeliness: <span className="font-semibold">{data.qualityOfWorkScore2 || 'Not rated'}</span></div>
-                  <div>Work Output Volume: <span className="font-semibold">{data.qualityOfWorkScore3 || 'Not rated'}</span></div>
-                  <div>Consistency in Performance: <span className="font-semibold">{data.qualityOfWorkScore4 || 'Not rated'}</span></div>
+                  <div>Meets Standards and Requirements: <span className="font-semibold">{data.qualityOfWorkScore1 && data.qualityOfWorkScore1 !== 0 ? data.qualityOfWorkScore1 : 'Not rated'}</span></div>
+                  <div>Timeliness: <span className="font-semibold">{data.qualityOfWorkScore2 && data.qualityOfWorkScore2 !== 0 ? data.qualityOfWorkScore2 : 'Not rated'}</span></div>
+                  <div>Work Output Volume: <span className="font-semibold">{data.qualityOfWorkScore3 && data.qualityOfWorkScore3 !== 0 ? data.qualityOfWorkScore3 : 'Not rated'}</span></div>
+                  <div>Consistency in Performance: <span className="font-semibold">{data.qualityOfWorkScore4 && data.qualityOfWorkScore4 !== 0 ? data.qualityOfWorkScore4 : 'Not rated'}</span></div>
                   {!isHO && (
-                    <div>Job Targets: <span className="font-semibold">{data.qualityOfWorkScore5 || 'Not rated'}</span></div>
+                    <div>Job Targets: <span className="font-semibold">{data.qualityOfWorkScore5 && data.qualityOfWorkScore5 !== 0 ? data.qualityOfWorkScore5 : 'Not rated'}</span></div>
                   )}
                 </div>
               </div>
             </div>
             <div className="mt-4 text-xs text-gray-500">
-              Average calculated from {[data.qualityOfWorkScore1, data.qualityOfWorkScore2, data.qualityOfWorkScore3, data.qualityOfWorkScore4, ...(isHO ? [] : [data.qualityOfWorkScore5])].filter(score => score && score !== '').length} of {isHO ? 4 : 5} criteria
+              Average calculated from {[data.qualityOfWorkScore1, data.qualityOfWorkScore2, data.qualityOfWorkScore3, data.qualityOfWorkScore4, ...(isHO ? [] : [data.qualityOfWorkScore5])].filter(score => score && score !== 0).length} of {isHO ? 4 : 5} criteria
             </div>
           </div>
         </CardContent>

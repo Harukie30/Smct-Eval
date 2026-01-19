@@ -192,7 +192,7 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
               <tbody>
                 {/* Row 1: Follows Company Policies */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     Follows Company Policies
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -259,7 +259,7 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
 
                 {/* Row 2: Professionalism (L.E.A.D.E.R.) */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     "Professionalism (L.E.A.D.E.R.)"
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -328,7 +328,7 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
 
                 {/* Row 3: Accountability for Mistakes (L.E.A.D.E.R.) */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     "Accountability for Mistakes (L.E.A.D.E.R.)"
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -398,7 +398,7 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
 
                 {/* Row 4: Respect for Others (L.E.A.D.E.R.) */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     "Respect for Others (L.E.A.D.E.R.)"
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">

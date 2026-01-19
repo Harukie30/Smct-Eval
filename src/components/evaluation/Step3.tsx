@@ -60,31 +60,31 @@ function ScoreDropdown({
       <DropdownMenuContent className="w-32 min-w-[128px] bg-white border-2 border-yellow-400">
         <DropdownMenuItem
           onClick={() => onValueChange("1")}
-          className="text-lg font-bold text-red-700 hover:bg-red-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
+          className="text-lg font-bold text-red-700 hover:bg-red-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200 hover:text-white hover:bg-red-700 cursor-pointer"
         >
           1
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange("2")}
-          className="text-lg font-bold text-orange-700 hover:bg-orange-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
+          className="text-lg font-bold text-orange-700 hover:bg-orange-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200 hover:text-white hover:bg-orange-700 cursor-pointer "
         >
           2
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange("3")}
-          className="text-lg font-bold text-yellow-700 hover:bg-yellow-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
+          className="text-lg font-bold text-yellow-700 hover:bg-yellow-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200 hover:text-white hover:bg-yellow-700 cursor-pointer"
         >
           3
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange("4")}
-          className="text-lg font-bold text-blue-700 hover:bg-blue-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
+          className="text-lg font-bold text-blue-700 hover:bg-blue-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200 hover:text-white hover:bg-blue-700 cursor-pointer"
         >
           4
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange("5")}
-          className="text-lg font-bold text-green-700 hover:bg-green-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
+          className="text-lg font-bold text-green-700 hover:bg-green-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200 hover:text-white hover:bg-green-700 cursor-pointer"
         >
           5
         </DropdownMenuItem>
@@ -189,7 +189,7 @@ export default function Step3({ data, updateDataAction }: Step3Props) {
               <tbody>
                 {/* Row 1: Openness to Change (attitude towards change) */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 text-center">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     "Openness to Change (attitude towards change)"
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -256,7 +256,7 @@ export default function Step3({ data, updateDataAction }: Step3Props) {
 
                 {/* Row 2: Flexibility in Job Role (ability to adapt to changes) */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 text-center">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     "Flexibility in Job Role (ability to adapt to changes)"
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -323,8 +323,8 @@ export default function Step3({ data, updateDataAction }: Step3Props) {
 
                 {/* Row 3: Resilience in the Face of Challenges */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 text-center">
-                    Resilience in the Face of Challenges
+                    <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
+                    "Resilience in the Face of Challenges"
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Maintains a positive attitude and performance under

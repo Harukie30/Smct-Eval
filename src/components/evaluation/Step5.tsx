@@ -191,7 +191,7 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
               <tbody>
                 {/* Row 1: Consistent Attendance */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     Consistent Attendance
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -259,7 +259,7 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
 
                 {/* Row 2: Punctuality */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     Punctuality
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -327,7 +327,7 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
 
                 {/* Row 3: Follows Through on Commitments */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     Follows Through on Commitments
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -393,7 +393,7 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
 
                 {/* Row 4: Reliable Handling of Routine Tasks */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     Reliable Handling of Routine Tasks
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">

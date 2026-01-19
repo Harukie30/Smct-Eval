@@ -23,19 +23,19 @@ export type EvaluationData = {
   reviewTypeOthersCustom: string;
   
   // Job Knowledge Evaluation
-  jobKnowledgeScore1: string;
-  jobKnowledgeScore2: string;
-  jobKnowledgeScore3: string;
+  jobKnowledgeScore1: number;
+  jobKnowledgeScore2: number;
+  jobKnowledgeScore3: number;
   jobKnowledgeComments1: string;
   jobKnowledgeComments2: string;
   jobKnowledgeComments3: string;
   
   // Quality of Work Evaluation
-  qualityOfWorkScore1: string;
-  qualityOfWorkScore2: string;
-  qualityOfWorkScore3: string;
-  qualityOfWorkScore4: string;
-  qualityOfWorkScore5: string;
+  qualityOfWorkScore1: number;
+  qualityOfWorkScore2: number;
+  qualityOfWorkScore3: number;
+  qualityOfWorkScore4: number;
+  qualityOfWorkScore5: number;
   qualityOfWorkComments1: string;
   qualityOfWorkComments2: string;
   qualityOfWorkComments3: string;
@@ -43,9 +43,9 @@ export type EvaluationData = {
   qualityOfWorkComments5: string;
   
   // Adaptability Evaluation
-  adaptabilityScore1: string;
-  adaptabilityScore2: string;
-  adaptabilityScore3: string;
+  adaptabilityScore1: number;
+  adaptabilityScore2: number;
+  adaptabilityScore3: number;
   adaptabilityComments1: string;
   adaptabilityComments2: string;
   adaptabilityComments3: string;
@@ -55,18 +55,18 @@ export type EvaluationData = {
   communicationComments: string;
   
   // Teamwork Evaluation
-  teamworkScore1: string;
-  teamworkScore2: string;
-  teamworkScore3: string;
+  teamworkScore1: number;
+  teamworkScore2: number;
+  teamworkScore3: number;
   teamworkComments1: string;
   teamworkComments2: string;
   teamworkComments3: string;
   
   // Reliability Evaluation
-  reliabilityScore1: string;
-  reliabilityScore2: string;
-  reliabilityScore3: string;
-  reliabilityScore4: string;
+  reliabilityScore1: number;
+  reliabilityScore2: number;
+  reliabilityScore3: number;
+  reliabilityScore4: number;
   reliabilityComments1: string;
   reliabilityComments2: string;
   reliabilityComments3: string;
@@ -85,10 +85,10 @@ export type EvaluationData = {
   leadershipComments: string;
   
   // Step 6: Ethical & Professional Behavior
-  ethicalScore1: string;
-  ethicalScore2: string;
-  ethicalScore3: string;
-  ethicalScore4: string;
+  ethicalScore1: number;
+  ethicalScore2: number;
+  ethicalScore3: number;
+  ethicalScore4: number;
   ethicalRating1: string;
   ethicalRating2: string;
   ethicalRating3: string;
@@ -100,11 +100,11 @@ export type EvaluationData = {
   ethicalComments: string;
 
 // Step 7: Customer Service
-  customerServiceScore1: string;
-  customerServiceScore2: string;
-  customerServiceScore3: string;
-  customerServiceScore4: string;
-  customerServiceScore5: string;
+  customerServiceScore1: number;
+  customerServiceScore2: number;
+  customerServiceScore3: number;
+  customerServiceScore4: number;
+  customerServiceScore5: number;
   customerServiceExplanation1: string;
   customerServiceExplanation2: string;
   customerServiceExplanation3: string;
@@ -113,12 +113,12 @@ export type EvaluationData = {
   customerServiceComments: string;
 
 // Step 8: Managerial Skills
-  managerialSkillsScore1: string;
-  managerialSkillsScore2: string;
-  managerialSkillsScore3: string;
-  managerialSkillsScore4: string;
-  managerialSkillsScore5: string;
-  managerialSkillsScore6: string;
+  managerialSkillsScore1: number;
+  managerialSkillsScore2: number;
+  managerialSkillsScore3: number;
+  managerialSkillsScore4: number;
+  managerialSkillsScore5: number;
+  managerialSkillsScore6: number;
   managerialSkillsExplanation1: string;
   managerialSkillsExplanation2: string;
   managerialSkillsExplanation3: string;

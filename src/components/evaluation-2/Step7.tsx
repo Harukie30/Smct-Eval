@@ -122,8 +122,8 @@ const getAverageScoreLabel = (average: number) => {
   return 'Unsatisfactory';
 };
 
-const calculateAverageScore = (scores: string[]) => {
-  const validScores = scores.filter(score => score !== '' && score !== null && score !== undefined).map(score => parseInt(score));
+const calculateAverageScore = (scores: (number | string)[]) => {
+  const validScores = scores.filter(score => score !== '' && score !== null && score !== undefined && score !== 0).map(score => typeof score === 'number' ? score : Number(score));
   if (validScores.length === 0) return 0;
   const average = validScores.reduce((sum, score) => sum + score, 0) / validScores.length;
   return Math.round(average * 10) / 10; // Round to 1 decimal place
@@ -179,7 +179,7 @@ export default function Step7({ data, updateDataAction, onNextAction }: Step7Pro
   }
   
   const handleScoreChange = (field: string, value: string) => {
-    updateDataAction({ [field]: value });
+    updateDataAction({ [field]: Number(value) });
   };
 
   const handleExplanationChange = (field: string, value: string) => {
@@ -248,23 +248,23 @@ export default function Step7({ data, updateDataAction, onNextAction }: Step7Pro
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.customerServiceScore1 || ''}
+                      value={String(data.customerServiceScore1 || '')}
                       onValueChange={(value) => handleScoreChange('customerServiceScore1', value)}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.customerServiceScore1 === '5' ? 'bg-green-100 text-green-800' :
-                      data.customerServiceScore1 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.customerServiceScore1 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.customerServiceScore1 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.customerServiceScore1 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.customerServiceScore1 === 5 ? 'bg-green-100 text-green-800' :
+                      data.customerServiceScore1 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.customerServiceScore1 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.customerServiceScore1 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.customerServiceScore1 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.customerServiceScore1 === '5' ? 'Outstanding' :
-                        data.customerServiceScore1 === '4' ? 'Exceeds Expectations' :
-                          data.customerServiceScore1 === '3' ? 'Meets Expectations' :
-                            data.customerServiceScore1 === '2' ? 'Needs Improvement' :
-                              data.customerServiceScore1 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.customerServiceScore1 === 5 ? 'Outstanding' :
+                        data.customerServiceScore1 === 4 ? 'Exceeds Expectations' :
+                          data.customerServiceScore1 === 3 ? 'Meets Expectations' :
+                            data.customerServiceScore1 === 2 ? 'Needs Improvement' :
+                              data.customerServiceScore1 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -280,7 +280,7 @@ export default function Step7({ data, updateDataAction, onNextAction }: Step7Pro
 
                 {/* Row 2: Problem-Solving for Customer Satisfaction */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     Problem-Solving for Customer Satisfaction
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -291,23 +291,23 @@ export default function Step7({ data, updateDataAction, onNextAction }: Step7Pro
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.customerServiceScore2 || ''}
+                      value={String(data.customerServiceScore2 || '')}
                       onValueChange={(value) => handleScoreChange('customerServiceScore2', value)}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.customerServiceScore2 === '5' ? 'bg-green-100 text-green-800' :
-                      data.customerServiceScore2 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.customerServiceScore2 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.customerServiceScore2 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.customerServiceScore2 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.customerServiceScore2 === 5 ? 'bg-green-100 text-green-800' :
+                      data.customerServiceScore2 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.customerServiceScore2 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.customerServiceScore2 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.customerServiceScore2 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.customerServiceScore2 === '5' ? 'Outstanding' :
-                        data.customerServiceScore2 === '4' ? 'Exceeds Expectations' :
-                          data.customerServiceScore2 === '3' ? 'Meets Expectations' :
-                            data.customerServiceScore2 === '2' ? 'Needs Improvement' :
-                              data.customerServiceScore2 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.customerServiceScore2 === 5 ? 'Outstanding' :
+                        data.customerServiceScore2 === 4 ? 'Exceeds Expectations' :
+                          data.customerServiceScore2 === 3 ? 'Meets Expectations' :
+                            data.customerServiceScore2 === 2 ? 'Needs Improvement' :
+                              data.customerServiceScore2 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -323,7 +323,7 @@ export default function Step7({ data, updateDataAction, onNextAction }: Step7Pro
 
                 {/* Row 3: Product Knowledge for Customer Support */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     Product Knowledge for Customer Support
                     (L.E.A.D.E.R.)
                   </td>
@@ -335,23 +335,23 @@ export default function Step7({ data, updateDataAction, onNextAction }: Step7Pro
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.customerServiceScore3 || ''}
+                      value={String(data.customerServiceScore3 || '')}
                       onValueChange={(value) => handleScoreChange('customerServiceScore3', value)}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.customerServiceScore3 === '5' ? 'bg-green-100 text-green-800' :
-                      data.customerServiceScore3 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.customerServiceScore3 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.customerServiceScore3 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.customerServiceScore3 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.customerServiceScore3 === 5 ? 'bg-green-100 text-green-800' :
+                      data.customerServiceScore3 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.customerServiceScore3 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.customerServiceScore3 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.customerServiceScore3 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.customerServiceScore3 === '5' ? 'Outstanding' :
-                        data.customerServiceScore3 === '4' ? 'Exceeds Expectations' :
-                          data.customerServiceScore3 === '3' ? 'Meets Expectations' :
-                            data.customerServiceScore3 === '2' ? 'Needs Improvement' :
-                              data.customerServiceScore3 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.customerServiceScore3 === 5 ? 'Outstanding' :
+                        data.customerServiceScore3 === 4 ? 'Exceeds Expectations' :
+                          data.customerServiceScore3 === 3 ? 'Meets Expectations' :
+                            data.customerServiceScore3 === 2 ? 'Needs Improvement' :
+                              data.customerServiceScore3 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -367,7 +367,7 @@ export default function Step7({ data, updateDataAction, onNextAction }: Step7Pro
 
                 {/* Row 4: Positive and Professional Attitude */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     Positive and Professional Attitude
                     (L.E.A.D.E.R.)
                   </td>
@@ -379,23 +379,23 @@ export default function Step7({ data, updateDataAction, onNextAction }: Step7Pro
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.customerServiceScore4 || ''}
+                      value={String(data.customerServiceScore4 || '')}
                       onValueChange={(value) => handleScoreChange('customerServiceScore4', value)}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.customerServiceScore4 === '5' ? 'bg-green-100 text-green-800' :
-                      data.customerServiceScore4 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.customerServiceScore4 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.customerServiceScore4 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.customerServiceScore4 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.customerServiceScore4 === 5 ? 'bg-green-100 text-green-800' :
+                      data.customerServiceScore4 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.customerServiceScore4 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.customerServiceScore4 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.customerServiceScore4 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.customerServiceScore4 === '5' ? 'Outstanding' :
-                        data.customerServiceScore4 === '4' ? 'Exceeds Expectations' :
-                          data.customerServiceScore4 === '3' ? 'Meets Expectations' :
-                            data.customerServiceScore4 === '2' ? 'Needs Improvement' :
-                              data.customerServiceScore4 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.customerServiceScore4 === 5 ? 'Outstanding' :
+                        data.customerServiceScore4 === 4 ? 'Exceeds Expectations' :
+                          data.customerServiceScore4 === 3 ? 'Meets Expectations' :
+                            data.customerServiceScore4 === 2 ? 'Needs Improvement' :
+                              data.customerServiceScore4 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -411,7 +411,7 @@ export default function Step7({ data, updateDataAction, onNextAction }: Step7Pro
 
                 {/* Row 5: Timely Resolution of Customer Issues */}
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     Timely Resolution of Customer Issues
                     (L.E.A.D.E.R.)
                   </td>
@@ -423,23 +423,23 @@ export default function Step7({ data, updateDataAction, onNextAction }: Step7Pro
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.customerServiceScore5 || ''}
+                      value={String(data.customerServiceScore5 || '')}
                       onValueChange={(value) => handleScoreChange('customerServiceScore5', value)}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.customerServiceScore5 === '5' ? 'bg-green-100 text-green-800' :
-                      data.customerServiceScore5 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.customerServiceScore5 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.customerServiceScore5 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.customerServiceScore5 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.customerServiceScore5 === 5 ? 'bg-green-100 text-green-800' :
+                      data.customerServiceScore5 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.customerServiceScore5 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.customerServiceScore5 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.customerServiceScore5 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.customerServiceScore5 === '5' ? 'Outstanding' :
-                        data.customerServiceScore5 === '4' ? 'Exceeds Expectations' :
-                          data.customerServiceScore5 === '3' ? 'Meets Expectations' :
-                            data.customerServiceScore5 === '2' ? 'Needs Improvement' :
-                              data.customerServiceScore5 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.customerServiceScore5 === 5 ? 'Outstanding' :
+                        data.customerServiceScore5 === 4 ? 'Exceeds Expectations' :
+                          data.customerServiceScore5 === 3 ? 'Meets Expectations' :
+                            data.customerServiceScore5 === 2 ? 'Needs Improvement' :
+                              data.customerServiceScore5 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -482,7 +482,7 @@ export default function Step7({ data, updateDataAction, onNextAction }: Step7Pro
               </div>
             </div>
             <div className="mt-4 text-xs text-gray-500">
-              Average calculated from {[data.customerServiceScore1, data.customerServiceScore2, data.customerServiceScore3, data.customerServiceScore4, data.customerServiceScore5].filter(score => score && score !== '').length} of 5 criteria
+              Average calculated from {[data.customerServiceScore1, data.customerServiceScore2, data.customerServiceScore3, data.customerServiceScore4, data.customerServiceScore5].filter(score => score && score !== 0).length} of 5 criteria
             </div>
           </div>
         </CardContent>

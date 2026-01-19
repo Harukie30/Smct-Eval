@@ -109,8 +109,8 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
       data.ethicalScore3,
       data.ethicalScore4,
     ]
-      .filter((score) => score && score !== "")
-      .map((score) => parseInt(score));
+      .filter((score) => score && score !== 0)
+      .map((score) => typeof score === 'number' ? score : Number(score));
 
     if (scores.length === 0) return "0.00";
     return (
@@ -161,10 +161,10 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
               size="sm"
               onClick={() => {
                 updateDataAction({
-                  ethicalScore1: "",
-                  ethicalScore2: "",
-                  ethicalScore3: "",
-                  ethicalScore4: "",
+                  ethicalScore1: 0,
+                  ethicalScore2: 0,
+                  ethicalScore3: 0,
+                  ethicalScore4: 0,
                   ethicalExplanation1: "",
                   ethicalExplanation2: "",
                   ethicalExplanation3: "",
@@ -217,9 +217,9 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.ethicalScore1 || ""}
+                      value={String(data.ethicalScore1 || "")}
                       onValueChange={(value) =>
-                        updateDataAction({ ethicalScore1: value })
+                        updateDataAction({ ethicalScore1: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -227,28 +227,28 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.ethicalScore1 === "5"
+                        data.ethicalScore1 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.ethicalScore1 === "4"
+                          : data.ethicalScore1 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.ethicalScore1 === "3"
+                          : data.ethicalScore1 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.ethicalScore1 === "2"
+                          : data.ethicalScore1 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.ethicalScore1 === "1"
+                          : data.ethicalScore1 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.ethicalScore1 === "5"
+                      {data.ethicalScore1 === 5
                         ? "Outstanding"
-                        : data.ethicalScore1 === "4"
+                        : data.ethicalScore1 === 4
                         ? "Exceeds Expectation"
-                        : data.ethicalScore1 === "3"
+                        : data.ethicalScore1 === 3
                         ? "Meets Expectations"
-                        : data.ethicalScore1 === "2"
+                        : data.ethicalScore1 === 2
                         ? "Needs Improvement"
-                        : data.ethicalScore1 === "1"
+                        : data.ethicalScore1 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -286,9 +286,9 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.ethicalScore2 || ""}
+                      value={String(data.ethicalScore2 || "")}
                       onValueChange={(value) =>
-                        updateDataAction({ ethicalScore2: value })
+                        updateDataAction({ ethicalScore2: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -296,28 +296,28 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.ethicalScore2 === "5"
+                        data.ethicalScore2 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.ethicalScore2 === "4"
+                          : data.ethicalScore2 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.ethicalScore2 === "3"
+                          : data.ethicalScore2 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.ethicalScore2 === "2"
+                          : data.ethicalScore2 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.ethicalScore2 === "1"
+                          : data.ethicalScore2 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.ethicalScore2 === "5"
+                      {data.ethicalScore2 === 5
                         ? "Outstanding"
-                        : data.ethicalScore2 === "4"
+                        : data.ethicalScore2 === 4
                         ? "Exceeds Expectation"
-                        : data.ethicalScore2 === "3"
+                        : data.ethicalScore2 === 3
                         ? "Meets Expectations"
-                        : data.ethicalScore2 === "2"
+                        : data.ethicalScore2 === 2
                         ? "Needs Improvement"
-                        : data.ethicalScore2 === "1"
+                        : data.ethicalScore2 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -356,9 +356,9 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.ethicalScore3 || ""}
+                      value={String(data.ethicalScore3 || "")}
                       onValueChange={(value) =>
-                        updateDataAction({ ethicalScore3: value })
+                        updateDataAction({ ethicalScore3: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -366,28 +366,28 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.ethicalScore3 === "5"
+                        data.ethicalScore3 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.ethicalScore3 === "4"
+                          : data.ethicalScore3 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.ethicalScore3 === "3"
+                          : data.ethicalScore3 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.ethicalScore3 === "2"
+                          : data.ethicalScore3 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.ethicalScore3 === "1"
+                          : data.ethicalScore3 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.ethicalScore3 === "5"
+                      {data.ethicalScore3 === 5
                         ? "Outstanding"
-                        : data.ethicalScore3 === "4"
+                        : data.ethicalScore3 === 4
                         ? "Exceeds Expectation"
-                        : data.ethicalScore3 === "3"
+                        : data.ethicalScore3 === 3
                         ? "Meets Expectations"
-                        : data.ethicalScore3 === "2"
+                        : data.ethicalScore3 === 2
                         ? "Needs Improvement"
-                        : data.ethicalScore3 === "1"
+                        : data.ethicalScore3 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -425,9 +425,9 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.ethicalScore4 || ""}
+                      value={String(data.ethicalScore4 || "")}
                       onValueChange={(value) =>
-                        updateDataAction({ ethicalScore4: value })
+                        updateDataAction({ ethicalScore4: Number(value) })
                       }
                       placeholder="-- Select --"
                     />
@@ -435,28 +435,28 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <div
                       className={`px-2 py-1 rounded-md text-sm font-bold ${
-                        data.ethicalScore4 === "5"
+                        data.ethicalScore4 === 5
                           ? "bg-green-100 text-green-800"
-                          : data.ethicalScore4 === "4"
+                          : data.ethicalScore4 === 4
                           ? "bg-blue-100 text-blue-800"
-                          : data.ethicalScore4 === "3"
+                          : data.ethicalScore4 === 3
                           ? "bg-yellow-100 text-yellow-800"
-                          : data.ethicalScore4 === "2"
+                          : data.ethicalScore4 === 2
                           ? "bg-orange-100 text-orange-800"
-                          : data.ethicalScore4 === "1"
+                          : data.ethicalScore4 === 1
                           ? "bg-red-100 text-red-800"
                           : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {data.ethicalScore4 === "5"
+                      {data.ethicalScore4 === 5
                         ? "Outstanding"
-                        : data.ethicalScore4 === "4"
+                        : data.ethicalScore4 === 4
                         ? "Exceeds Expectation"
-                        : data.ethicalScore4 === "3"
+                        : data.ethicalScore4 === 3
                         ? "Meets Expectations"
-                        : data.ethicalScore4 === "2"
+                        : data.ethicalScore4 === 2
                         ? "Needs Improvement"
-                        : data.ethicalScore4 === "1"
+                        : data.ethicalScore4 === 1
                         ? "Unsatisfactory"
                         : "Not Rated"}
                     </div>
@@ -539,7 +539,7 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
                   data.ethicalScore2,
                   data.ethicalScore3,
                   data.ethicalScore4,
-                ].filter((score) => score && score !== "").length
+                ].filter((score) => score && score !== 0).length
               }{" "}
               of 4 criteria
             </div>

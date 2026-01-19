@@ -121,9 +121,9 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
   // Check if all Job Knowledge scores are complete
   const isJobKnowledgeComplete = () => {
     return (
-      data.jobKnowledgeScore1 && data.jobKnowledgeScore1 !== '' &&
-      data.jobKnowledgeScore2 && data.jobKnowledgeScore2 !== '' &&
-      data.jobKnowledgeScore3 && data.jobKnowledgeScore3 !== ''
+      data.jobKnowledgeScore1 && data.jobKnowledgeScore1 !== 0 &&
+      data.jobKnowledgeScore2 && data.jobKnowledgeScore2 !== 0 &&
+      data.jobKnowledgeScore3 && data.jobKnowledgeScore3 !== 0
     );
   };
 
@@ -150,21 +150,46 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
       // Use employeeId (formatted ID like "6517-197195") if available, otherwise fall back to id
       const employeeIdValue = employee.employeeId || employee.id.toString();
       
+      // Extract department following the same pattern as old evaluation component
+      // Check departments?.department_name first, then fall back to other fields
+      const extractedDepartment = 
+        employee.department || 
+        (employee as any)?.departments?.department_name || 
+        (employee as any)?.departments?.name || 
+        (employee as any)?.departments?.label || 
+        '';
+      
+      // Normalize values to handle undefined, null, and empty strings consistently
+      const normalizedEmployeeName = employee.name || '';
+      const normalizedEmployeeId = employeeIdValue || '';
+      const normalizedPosition = employee.position || '';
+      const normalizedDepartment = extractedDepartment;
+      const normalizedBranch = employee.branch || '';
+      
+      // Normalize current data values
+      const normalizedDataName = data.employeeName || '';
+      const normalizedDataId = data.employeeId || '';
+      const normalizedDataPosition = data.position || '';
+      const normalizedDataDepartment = data.department || '';
+      const normalizedDataBranch = data.branch || '';
+      
       // Only update if the data has actually changed to prevent infinite loops
       if (
-        data.employeeName !== employee.name ||
-        data.employeeId !== employeeIdValue ||
-        data.position !== employee.position ||
-        data.department !== employee.department ||
-        data.branch !== (employee.branch || '')
+        normalizedDataName !== normalizedEmployeeName ||
+        normalizedDataId !== normalizedEmployeeId ||
+        normalizedDataPosition !== normalizedPosition ||
+        normalizedDataDepartment !== normalizedDepartment ||
+        normalizedDataBranch !== normalizedBranch
       ) {
         console.log('Employee data received:', employee); // Debug log
+        console.log('Extracted department:', extractedDepartment); // Debug log
+        console.log('Current department in data:', data.department); // Debug log
         const employeeData = {
-          employeeName: employee.name,
-          employeeId: employeeIdValue,
-          position: employee.position,
-          department: employee.department,
-          branch: employee.branch || '',
+          employeeName: normalizedEmployeeName,
+          employeeId: normalizedEmployeeId,
+          position: normalizedPosition,
+          department: normalizedDepartment,
+          branch: normalizedBranch,
         };
         console.log('Updating evaluation data with:', employeeData); // Debug log
         updateDataAction(employeeData);
@@ -172,12 +197,14 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    employee?.id ?? null,
-    employee?.employeeId ?? null,
-    employee?.name ?? null,
-    employee?.position ?? null,
-    employee?.department ?? null,
-    employee?.branch ?? null
+    employee?.id,
+    employee?.employeeId,
+    employee?.name,
+    employee?.position,
+    employee?.department,
+    employee?.branch,
+    // Include nested department fields to catch changes
+    (employee as any)?.departments
   ]);
 
   // Check for existing quarterly reviews when employee changes
@@ -249,6 +276,16 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
       department: data.department,
       branch: data.branch,
     });
+    if (employee) {
+      console.log('Employee prop in Step1:', {
+        employeeName: employee.name,
+        employeeId: employee.employeeId || employee.id,
+        position: employee.position,
+        department: employee.department,
+        branch: employee.branch,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.employeeName, data.employeeId, data.position, data.department, data.branch]);
 
   // Calculate average score for Job Knowledge
@@ -257,7 +294,7 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
       data.jobKnowledgeScore1,
       data.jobKnowledgeScore2,
       data.jobKnowledgeScore3
-    ].filter(score => score && score !== '').map(score => parseInt(score));
+    ].filter(score => score && score !== 0).map(score => typeof score === 'number' ? score : Number(score));
 
     if (scores.length === 0) return '0.00';
     return (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2);
@@ -674,7 +711,13 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
             </Label>
             <Input
               id="department"
-              value={data.department || ''}
+              value={
+                data.department || 
+                (employee as any)?.departments?.department_name || 
+                (employee as any)?.departments?.name || 
+                (employee as any)?.departments?.label || 
+                ''
+              }
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />
@@ -995,9 +1038,9 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
               size="sm"
               onClick={() => {
                 updateDataAction({
-                  jobKnowledgeScore1: '',
-                  jobKnowledgeScore2: '',
-                  jobKnowledgeScore3: '',
+                  jobKnowledgeScore1: 0,
+                  jobKnowledgeScore2: 0,
+                  jobKnowledgeScore3: 0,
                   jobKnowledgeComments1: '',
                   jobKnowledgeComments2: '',
                   jobKnowledgeComments3: ''
@@ -1050,23 +1093,23 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.jobKnowledgeScore1 || ''}
-                      onValueChange={(value) => updateDataAction({ jobKnowledgeScore1: value })}
+                      value={String(data.jobKnowledgeScore1 || '')}
+                      onValueChange={(value) => updateDataAction({ jobKnowledgeScore1: Number(value) })}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.jobKnowledgeScore1 === '5' ? 'bg-green-100 text-green-800' :
-                      data.jobKnowledgeScore1 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.jobKnowledgeScore1 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.jobKnowledgeScore1 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.jobKnowledgeScore1 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.jobKnowledgeScore1 === 5 ? 'bg-green-100 text-green-800' :
+                      data.jobKnowledgeScore1 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.jobKnowledgeScore1 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.jobKnowledgeScore1 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.jobKnowledgeScore1 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.jobKnowledgeScore1 === '5' ? 'Outstanding' :
-                        data.jobKnowledgeScore1 === '4' ? 'Exceeds Expectation' :
-                          data.jobKnowledgeScore1 === '3' ? 'Meets Expectations' :
-                            data.jobKnowledgeScore1 === '2' ? 'Needs Improvement' :
-                              data.jobKnowledgeScore1 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.jobKnowledgeScore1 === 5 ? 'Outstanding' :
+                        data.jobKnowledgeScore1 === 4 ? 'Exceeds Expectation' :
+                          data.jobKnowledgeScore1 === 3 ? 'Meets Expectations' :
+                            data.jobKnowledgeScore1 === 2 ? 'Needs Improvement' :
+                              data.jobKnowledgeScore1 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -1093,23 +1136,23 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.jobKnowledgeScore2 || ''}
-                      onValueChange={(value) => updateDataAction({ jobKnowledgeScore2: value })}
+                      value={String(data.jobKnowledgeScore2 || '')}
+                      onValueChange={(value) => updateDataAction({ jobKnowledgeScore2: Number(value) })}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.jobKnowledgeScore2 === '5' ? 'bg-green-100 text-green-800' :
-                      data.jobKnowledgeScore2 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.jobKnowledgeScore2 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.jobKnowledgeScore2 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.jobKnowledgeScore2 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.jobKnowledgeScore2 === 5 ? 'bg-green-100 text-green-800' :
+                      data.jobKnowledgeScore2 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.jobKnowledgeScore2 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.jobKnowledgeScore2 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.jobKnowledgeScore2 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.jobKnowledgeScore2 === '5' ? 'Outstanding' :
-                        data.jobKnowledgeScore2 === '4' ? 'Exceeds Expectation' :
-                          data.jobKnowledgeScore2 === '3' ? 'Meets Expectations' :
-                            data.jobKnowledgeScore2 === '2' ? 'Needs Improvement' :
-                              data.jobKnowledgeScore2 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.jobKnowledgeScore2 === 5 ? 'Outstanding' :
+                        data.jobKnowledgeScore2 === 4 ? 'Exceeds Expectation' :
+                          data.jobKnowledgeScore2 === 3 ? 'Meets Expectations' :
+                            data.jobKnowledgeScore2 === 2 ? 'Needs Improvement' :
+                              data.jobKnowledgeScore2 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -1139,23 +1182,23 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     <ScoreDropdown
-                      value={data.jobKnowledgeScore3 || ''}
-                      onValueChange={(value) => updateDataAction({ jobKnowledgeScore3: value })}
+                      value={String(data.jobKnowledgeScore3 || '')}
+                      onValueChange={(value) => updateDataAction({ jobKnowledgeScore3: Number(value) })}
                       placeholder="-- Select --"
                     />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
-                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.jobKnowledgeScore3 === '5' ? 'bg-green-100 text-green-800' :
-                      data.jobKnowledgeScore3 === '4' ? 'bg-blue-100 text-blue-800' :
-                        data.jobKnowledgeScore3 === '3' ? 'bg-yellow-100 text-yellow-800' :
-                          data.jobKnowledgeScore3 === '2' ? 'bg-orange-100 text-orange-800' :
-                            data.jobKnowledgeScore3 === '1' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
+                    <div className={`px-2 py-1 rounded-md text-sm font-bold ${data.jobKnowledgeScore3 === 5 ? 'bg-green-100 text-green-800' :
+                      data.jobKnowledgeScore3 === 4 ? 'bg-blue-100 text-blue-800' :
+                        data.jobKnowledgeScore3 === 3 ? 'bg-yellow-100 text-yellow-800' :
+                          data.jobKnowledgeScore3 === 2 ? 'bg-orange-100 text-orange-800' :
+                            data.jobKnowledgeScore3 === 1 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'
                       }`}>
-                      {data.jobKnowledgeScore3 === '5' ? 'Outstanding' :
-                        data.jobKnowledgeScore3 === '4' ? 'Exceeds Expectation' :
-                          data.jobKnowledgeScore3 === '3' ? 'Meets Expectations' :
-                            data.jobKnowledgeScore3 === '2' ? 'Needs Improvement' :
-                              data.jobKnowledgeScore3 === '1' ? 'Unsatisfactory' : 'Not Rated'}
+                      {data.jobKnowledgeScore3 === 5 ? 'Outstanding' :
+                        data.jobKnowledgeScore3 === 4 ? 'Exceeds Expectation' :
+                          data.jobKnowledgeScore3 === 3 ? 'Meets Expectations' :
+                            data.jobKnowledgeScore3 === 2 ? 'Needs Improvement' :
+                              data.jobKnowledgeScore3 === 1 ? 'Unsatisfactory' : 'Not Rated'}
                     </div>
                   </td>
                   <td className="border border-gray-300 px-4 py-3">
@@ -1190,14 +1233,14 @@ export default function Step1({ data, updateDataAction, employee, currentUser }:
                   <strong>Score Breakdown:</strong>
                 </div>
                 <div className="space-y-1 text-sm">
-                  <div>Mastery in Core Competencies: <span className="font-semibold">{data.jobKnowledgeScore1 || 'Not rated'}</span></div>
-                  <div>Documentation Management: <span className="font-semibold">{data.jobKnowledgeScore2 || 'Not rated'}</span></div>
-                  <div>Problem Solving Skills: <span className="font-semibold">{data.jobKnowledgeScore3 || 'Not rated'}</span></div>
+                  <div>Mastery in Core Competencies: <span className="font-semibold">{data.jobKnowledgeScore1 && data.jobKnowledgeScore1 !== 0 ? data.jobKnowledgeScore1 : 'Not rated'}</span></div>
+                  <div>Documentation Management: <span className="font-semibold">{data.jobKnowledgeScore2 && data.jobKnowledgeScore2 !== 0 ? data.jobKnowledgeScore2 : 'Not rated'}</span></div>
+                  <div>Problem Solving Skills: <span className="font-semibold">{data.jobKnowledgeScore3 && data.jobKnowledgeScore3 !== 0 ? data.jobKnowledgeScore3 : 'Not rated'}</span></div>
                 </div>
               </div>
             </div>
             <div className="mt-4 text-xs text-gray-500">
-              Average calculated from {[data.jobKnowledgeScore1, data.jobKnowledgeScore2, data.jobKnowledgeScore3].filter(score => score && score !== '').length} of 3 criteria
+              Average calculated from {[data.jobKnowledgeScore1, data.jobKnowledgeScore2, data.jobKnowledgeScore3].filter(score => score && score !== 0).length} of 3 criteria
             </div>
           </div>
         </CardContent>

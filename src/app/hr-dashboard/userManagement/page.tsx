@@ -1681,6 +1681,7 @@ export default function UserManagementTab() {
                   selectedEmployeeForEvaluation.positions?.name ||
                   "",
                 department:
+                  selectedEmployeeForEvaluation.departments?.department_name ||
                   selectedEmployeeForEvaluation.departments?.label ||
                   selectedEmployeeForEvaluation.departments?.name ||
                   "",
