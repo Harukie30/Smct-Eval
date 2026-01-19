@@ -45,11 +45,13 @@ import apiService from "@/lib/apiService";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewEmployeeModal from "@/components/ViewEmployeeModal";
-import { User } from "@/contexts/UserContext";
+import { User, useAuth } from "@/contexts/UserContext";
 import { Combobox } from "@/components/ui/combobox";
 import EvaluationForm from "@/components/evaluation";
 import EvaluationTypeModal from "@/components/EvaluationTypeModal";
 import ManagerEvaluationForm from "@/components/evaluation-2";
+import RankNfileHo from "@/components/evaluation/RankNfileHo";
+import BasicHo from "@/components/evaluation/BasicHo";
 
 interface Employee {
   id: number;
@@ -78,6 +80,34 @@ interface RoleType {
 }
 
 export default function UserManagementTab() {
+  const { user } = useAuth();
+  
+  // Check if evaluator's branch is HO (Head Office)
+  const isEvaluatorHO = () => {
+    if (!user?.branches) return false;
+    
+    // Handle branches as array
+    if (Array.isArray(user.branches)) {
+      const branch = user.branches[0];
+      if (branch) {
+        const branchName = branch.branch_name?.toUpperCase() || "";
+        const branchCode = branch.branch_code?.toUpperCase() || "";
+        return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+      }
+    }
+    
+    // Handle branches as object
+    if (typeof user.branches === 'object') {
+      const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
+      const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
+      return branchName === "HO" || branchCode === "HO" || branchName.includes("HEAD OFFICE");
+    }
+    
+    return false;
+  };
+
+  const isHO = isEvaluatorHO();
+  
   const [pendingRegistrations, setPendingRegistrations] = useState<User[]>([]);
 
   const [activeRegistrations, setActiveRegistrations] = useState<User[]>([]);
@@ -1639,53 +1669,79 @@ export default function UserManagementTab() {
       >
         <DialogContent className="max-w-7xl max-h-[101vh] overflow-hidden p-0 evaluation-container">
           {selectedEmployeeForEvaluation && evaluationType === "employee" && (
-            <EvaluationForm
-              employee={selectedEmployeeForEvaluation}
-              onCloseAction={() => {
-                setIsEvaluationModalOpen(false);
-                setSelectedEmployee(null);
-                setEvaluationType(null);
-              }}
-            />
+            <>
+              {isHO ? (
+                <RankNfileHo
+                  employee={selectedEmployeeForEvaluation}
+                  onCloseAction={() => {
+                    setIsEvaluationModalOpen(false);
+                    setSelectedEmployee(null);
+                    setEvaluationType(null);
+                  }}
+                />
+              ) : (
+                <EvaluationForm
+                  employee={selectedEmployeeForEvaluation}
+                  onCloseAction={() => {
+                    setIsEvaluationModalOpen(false);
+                    setSelectedEmployee(null);
+                    setEvaluationType(null);
+                  }}
+                />
+              )}
+            </>
           )}
           {selectedEmployeeForEvaluation && evaluationType === "manager" && (
-            <ManagerEvaluationForm
-              key={`manager-eval-${selectedEmployeeForEvaluation.id}-${evaluationType}`}
-              employee={{
-                id: Number(selectedEmployeeForEvaluation.id) || 0,
-                name: `${selectedEmployeeForEvaluation?.fname || ""} ${selectedEmployeeForEvaluation?.lname || ""}`.trim(),
-                email: selectedEmployeeForEvaluation.email || "",
-                position:
-                  selectedEmployeeForEvaluation.positions?.label ||
-                  selectedEmployeeForEvaluation.positions?.name ||
-                  "",
-                department:
-                  selectedEmployeeForEvaluation.departments?.department_name ||
-                  selectedEmployeeForEvaluation.departments?.label ||
-                  selectedEmployeeForEvaluation.departments?.name ||
-                  "",
-                branch:
-                  selectedEmployeeForEvaluation.branches?.branch_name ||
-                  selectedEmployeeForEvaluation.branches?.[0]?.branch_name ||
-                  "",
-                role:
-                  selectedEmployeeForEvaluation.roles?.[0]?.name || "employee",
-                employeeId:
-                  selectedEmployeeForEvaluation.emp_id
-                    ? String(selectedEmployeeForEvaluation.emp_id)
-                    : String(selectedEmployeeForEvaluation.id),
-                hireDate:
-                  (selectedEmployeeForEvaluation as any)?.date_hired ||
-                  (selectedEmployeeForEvaluation as any)?.dateHired ||
-                  (selectedEmployeeForEvaluation as any)?.hireDate ||
-                  "",
-              }}
-              onCloseAction={() => {
-                setIsEvaluationModalOpen(false);
-                setSelectedEmployee(null);
-                setEvaluationType(null);
-              }}
-            />
+            <>
+              {isHO ? (
+                <BasicHo
+                  employee={selectedEmployeeForEvaluation}
+                  onCloseAction={() => {
+                    setIsEvaluationModalOpen(false);
+                    setSelectedEmployee(null);
+                    setEvaluationType(null);
+                  }}
+                />
+              ) : (
+                <ManagerEvaluationForm
+                  key={`manager-eval-${selectedEmployeeForEvaluation.id}-${evaluationType}`}
+                  employee={{
+                    id: Number(selectedEmployeeForEvaluation.id) || 0,
+                    name: `${selectedEmployeeForEvaluation?.fname || ""} ${selectedEmployeeForEvaluation?.lname || ""}`.trim(),
+                    email: selectedEmployeeForEvaluation.email || "",
+                    position:
+                      selectedEmployeeForEvaluation.positions?.label ||
+                      selectedEmployeeForEvaluation.positions?.name ||
+                      "",
+                    department:
+                      selectedEmployeeForEvaluation.departments?.department_name ||
+                      selectedEmployeeForEvaluation.departments?.label ||
+                      selectedEmployeeForEvaluation.departments?.name ||
+                      "",
+                    branch:
+                      selectedEmployeeForEvaluation.branches?.branch_name ||
+                      selectedEmployeeForEvaluation.branches?.[0]?.branch_name ||
+                      "",
+                    role:
+                      selectedEmployeeForEvaluation.roles?.[0]?.name || "employee",
+                    employeeId:
+                      selectedEmployeeForEvaluation.emp_id
+                        ? String(selectedEmployeeForEvaluation.emp_id)
+                        : String(selectedEmployeeForEvaluation.id),
+                    hireDate:
+                      (selectedEmployeeForEvaluation as any)?.date_hired ||
+                      (selectedEmployeeForEvaluation as any)?.dateHired ||
+                      (selectedEmployeeForEvaluation as any)?.hireDate ||
+                      "",
+                  }}
+                  onCloseAction={() => {
+                    setIsEvaluationModalOpen(false);
+                    setSelectedEmployee(null);
+                    setEvaluationType(null);
+                  }}
+                />
+              )}
+            </>
           )}
           {/* {selectedEmployee && !evaluationType && (
                   <div className="p-8 text-center">

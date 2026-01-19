@@ -767,6 +767,7 @@ export default function EvaluationForm({
                     employee={employee}
                     onStartAction={startEvaluation}
                     onBackAction={onCloseAction}
+                    evaluationType={evaluationType}
                   />
                 </CardContent>
               </Card>
@@ -797,6 +798,7 @@ export default function EvaluationForm({
                       employee={employee}
                       onStartAction={startEvaluation}
                       onBackAction={onCloseAction}
+                      evaluationType={evaluationType}
                     />
                   ) : (() => {
                     const stepIndex = currentStep - 1;

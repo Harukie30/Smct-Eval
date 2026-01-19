@@ -66,7 +66,7 @@ export default function EvaluationTypeModal({
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    Employee Evaluation
+                   Rank and File Evaluation
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
                     Standard performance evaluation for rank and file employees.
@@ -87,7 +87,7 @@ export default function EvaluationTypeModal({
                     handleSelectEmployee();
                   }}
                 >
-                  Select Employee Evaluation
+                  Select Rank and File Evaluation
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </div>
@@ -106,17 +106,17 @@ export default function EvaluationTypeModal({
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    Manager Evaluation
+                    Basic Evaluation
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Comprehensive evaluation designed specifically for managers.
-                    Assesses leadership competencies, team management, strategic
-                    thinking, and overall managerial performance.
+                    Comprehensive evaluation for Head Office (HO) users. Assesses
+                    job knowledge, quality of work, adaptability, teamwork,
+                    reliability, ethical behavior, and managerial skills.
                   </p>
                   <ul className="text-xs text-gray-500 space-y-1 text-left mb-4">
-                    <li>• Manager Performance Review</li>
+                    <li>• Head Office (HO) Evaluation</li>
                     <li>• 8 evaluation steps</li>
-                    <li>• Leadership-focused metrics</li>
+                    <li>• Includes Managerial Skills assessment</li>
                   </ul>
                 </div>
                 <Button
@@ -126,7 +126,7 @@ export default function EvaluationTypeModal({
                     handleSelectManager();
                   }}
                 >
-                  Select Manager Evaluation
+                  Select Basic Evaluation
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </div>
