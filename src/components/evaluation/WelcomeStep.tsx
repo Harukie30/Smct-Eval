@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import { EvaluationPayload } from "./types";
 import { useAuth, User } from "@/contexts/UserContext";
 
@@ -53,9 +53,9 @@ export default function WelcomeStep({
   const isHO = isEvaluatorHO();
   
   // Show Step7 (Customer Service) if:
-  // - Not HO evaluator (default behavior), OR
-  // - RankNfile evaluation type (RankNfileHo includes Step7)
-  const showStep7 = !isHO || evaluationType === 'rankNfile';
+  // - Not HO evaluator (default behavior)
+  // - NOT for RankNfile evaluation type (RankNfileHo doesn't include Customer Service)
+  const showStep7 = !isHO && evaluationType !== 'rankNfile';
   
   // Define steps based on evaluation type
   const getEvaluationSteps = () => {
@@ -78,7 +78,8 @@ export default function WelcomeStep({
     }
     
     // Add Overall Assessment/End step
-    if (evaluationType === 'basic' || evaluationType === 'default') {
+    // For rankNfile, it goes directly from Step 6 to End (no Customer Service)
+    if (evaluationType === 'basic' || evaluationType === 'default' || evaluationType === 'rankNfile') {
       steps.push({ id: steps.length + 1, title: "Overall Assessment" });
     }
     
@@ -89,6 +90,22 @@ export default function WelcomeStep({
   
   return (
     <div className="space-y-6">
+      {/* Close Button */}
+      {onBackAction && (
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onBackAction}
+            className="h-10 w-20 text-white hover:text-white hover:bg-red-600 cursor-pointer hover:scale-110 transition-transform duration-200 bg-red-500"
+            aria-label="Close"
+          >
+            Close
+            <X className="h-12 w-12" />
+          </Button>
+        </div>
+      )}
+
       {/* Welcome Header */}
       <div className="text-center">
         <h3 className="text-2xl font-bold text-gray-900 mb-2">

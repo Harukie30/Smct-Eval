@@ -871,8 +871,8 @@ export default function EvaluationForm({
                       updateDataAction: updateDataAction,
                       employee: employee,
                     };
-                    // Pass evaluationType to Step2 (and potentially other steps that need it)
-                    if (step.id === 2) {
+                    // Pass evaluationType to Step1 and Step2 (and potentially other steps that need it)
+                    if (step.id === 1 || step.id === 2) {
                       stepProps.evaluationType = evaluationType;
                     }
                     return <StepComponent {...stepProps} />;

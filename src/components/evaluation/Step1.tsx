@@ -26,6 +26,7 @@ interface Step1Props {
   data: EvaluationPayload;
   updateDataAction: (updates: Partial<EvaluationPayload>) => void;
   employee?: User | null;
+  evaluationType?: 'rankNfile' | 'basic' | 'default';
 }
 
 // Score Dropdown Component
@@ -107,6 +108,7 @@ export default function Step1({
   data,
   updateDataAction,
   employee,
+  evaluationType = 'default',
 }: Step1Props) {
   const [probitionary3, setProbitionary3] = useState(false);
   const [probitionary5, setProbitionary5] = useState(false);
@@ -258,7 +260,7 @@ export default function Step1({
           Performance Review Form
         </h2>
         <h3 className="text-lg font-semibold text-gray-700 mb-6">
-          Rank and File I & II
+          {evaluationType === 'basic' ? 'Basic Evaluation' : 'Rank and File I & II'}
         </h3>
       </div>
 
