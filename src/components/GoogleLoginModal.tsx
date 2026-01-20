@@ -458,7 +458,7 @@ export default function GoogleLoginModal({
                   <Button
                     variant="outline"
                     onClick={onCloseAction}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white hover:text-white"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white hover:text-white cursor-pointer hover:scale-110 transition-all duration-300"
                     disabled={isLoading}
                   >
                     Cancel
@@ -509,7 +509,7 @@ export default function GoogleLoginModal({
                       setLoginStep("select");
                       onCloseAction();
                     }}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer hover:scale-110 transition-all duration-300"
                   >
                     Confirm
                   </Button>
