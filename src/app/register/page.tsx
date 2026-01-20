@@ -845,7 +845,7 @@ function RegisterPage() {
                         placeholder="Select your position"
                         searchPlaceholder="Search positions..."
                         emptyText="No positions found."
-                        className="w-1/2"
+                        className="w-1/2 cursor-pointer hover:scale-105 transition-all duration-300"
                       />
                       {fieldErrors?.position_id && (
                         <p className="text-sm text-red-500">
@@ -870,7 +870,7 @@ function RegisterPage() {
                         placeholder="Select your branch"
                         searchPlaceholder="Search branches..."
                         emptyText="No branches found."
-                        className="w-1/2"
+                        className="w-1/2 cursor-pointer hover:scale-105 transition-all duration-300"
                       />
                       {fieldErrors?.branch_id && (
                         <p className="text-sm text-red-500">
@@ -892,7 +892,7 @@ function RegisterPage() {
                           placeholder="Select your department"
                           searchPlaceholder="Search departments..."
                           emptyText="No departments found."
-                          className="w-1/2"
+                          className="w-1/2 cursor-pointer hover:scale-105 transition-all duration-300"
                           disabled={isManagerPosition(formData.position_id)}
                         />
                         {fieldErrors?.department_id && (

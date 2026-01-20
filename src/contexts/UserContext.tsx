@@ -89,13 +89,18 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
     }
   }
 
+  // Load user auth on mount (only once)
   useEffect(() => {
+    let isMounted = true;
     const loadUserAuth = async () => {
       try {
         const res = await apiService.authUser();
-        const userData = res?.data || res;
-        setUser(userData);
+        if (isMounted) {
+          const userData = res?.data || res;
+          setUser(userData);
+        }
       } catch (error: any) {
+        if (!isMounted) return;
         const status = error?.status || error?.response?.status;
         // If 401, user is not authenticated - clear user state
         // This is expected when no user is logged in, so we handle silently
@@ -107,12 +112,26 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           console.error("Error during session restoration:", error);
         }
       } finally {
-        setIsLoading(false);
-        setIsRefreshing(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
     loadUserAuth();
-  }, [isRefreshing]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Only run once on mount
+
+  // Handle explicit refresh requests
+  useEffect(() => {
+    if (isRefreshing) {
+      refreshUser().finally(() => {
+        setIsRefreshing(false);
+      });
+    }
+  }, [isRefreshing]); // Only run when isRefreshing changes
 
   // ⬇ Login using Sanctum
   const login = async (username: string, password: string) => {

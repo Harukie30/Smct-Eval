@@ -147,15 +147,22 @@ export function withPublicPage<P extends object>(
   return function WithPublicPageComponent(props: P) {
     // If should redirect authenticated users, wrap with redirect logic
     if (redirectIfAuthenticated) {
-      return withPage(Component, {
-        usePageTransition: true,
-        customWrapper: ({ children }) => {
-          const { isAuthenticated, user, isLoading } = require('@/contexts/UserContext').useUser();
-          const router = require('next/navigation').useRouter();
-          
-          // Redirect logged-in users to their dashboard
-          require('react').useEffect(() => {
-            if (!isLoading && isAuthenticated && user && user.role && !user.roleSelectionPending) {
+      // Create a stable wrapper component outside the render function
+      const RedirectWrapper = ({ children }: { children: React.ReactNode }) => {
+        const { isAuthenticated, user, isLoading } = require('@/contexts/UserContext').useUser();
+        const router = require('next/navigation').useRouter();
+        const hasRedirected = require('react').useRef(false);
+        const hasChecked = require('react').useRef(false);
+        
+        // Only check once when component mounts or when isLoading changes from true to false
+        require('react').useEffect(() => {
+          // Only check once after initial load completes
+          if (!isLoading && !hasChecked.current) {
+            hasChecked.current = true;
+            
+            // Only redirect once and only when loading is complete
+            if (!hasRedirected.current && isAuthenticated && user && user.role && !user.roleSelectionPending) {
+              hasRedirected.current = true;
               // User is authenticated, has a role selected, and role selection is complete
               // Redirect them to their dashboard
               const roleDashboards: Record<string, string> = {
@@ -173,30 +180,34 @@ export function withPublicPage<P extends object>(
               } else {
                 console.warn('⚠️ withPublicPage: No dashboard path found for role', user.role, '- staying on current page');
               }
-            } else if (user && user.roleSelectionPending) {
-              console.log('🔄 withPublicPage: Role selection pending, not redirecting');
             }
-          }, [isAuthenticated, user, isLoading, router]);
-          
-          // Show loading while checking
-          if (isLoading) {
-            return (
-              <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading...</p>
-                </div>
+          }
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [isLoading]); // Only depend on isLoading to prevent infinite loops
+        
+        // Show loading while checking (only once)
+        if (isLoading && !hasChecked.current) {
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading...</p>
               </div>
-            );
-          }
-          
-          // Don't render page if authenticated and has a role (will redirect)
-          if (isAuthenticated && user?.role && !user?.roleSelectionPending) {
-            return null;
-          }
-          
-          return <>{children}</>;
+            </div>
+          );
         }
+        
+        // Don't render page if authenticated and has a role (will redirect)
+        if (hasRedirected.current || (isAuthenticated && user?.role && !user?.roleSelectionPending)) {
+          return null;
+        }
+        
+        return <>{children}</>;
+      };
+      
+      return withPage(Component, {
+        usePageTransition: true,
+        customWrapper: RedirectWrapper
       })(props);
     }
     

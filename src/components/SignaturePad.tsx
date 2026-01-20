@@ -10,7 +10,6 @@ import {
 import { dataURLtoFile } from "@/utils/data-url-to-file";
 import Image from "next/image";
 import { CONFIG } from "../../config/config";
-import { profile } from "console";
 import { User } from "lucide-react";
 import { useAuth } from "@/contexts/UserContext";
 
@@ -49,24 +48,19 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
   const { user, refreshUser } = useAuth();
   console.log("test", user?.approvedSignatureReset);
 
-  // Refresh user data on mount if there's a pending request
+  // Only poll for user updates when request is pending (requestSignatureReset !== 0)
+  // Skip this entirely on register page since user is not logged in
   useEffect(() => {
-    if (user?.requestSignatureReset !== 0) {
-      refreshUser();
-    }
-  }, []); // Only run on mount
-
-  // Poll for user updates when request is pending (requestSignatureReset !== 0)
-  useEffect(() => {
-    // Only poll if there's a pending request
-    if (user?.requestSignatureReset !== 0) {
+    // Only poll if there's a pending request AND user exists (logged in)
+    if (user && user.requestSignatureReset !== 0) {
       const intervalId = setInterval(() => {
         refreshUser();
       }, 5000); // Poll every 5 seconds
 
       return () => clearInterval(intervalId);
     }
-  }, [user?.requestSignatureReset, refreshUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.requestSignatureReset]); // Only depend on requestSignatureReset
 
   // Expose method to get current signature
   useImperativeHandle(ref, () => ({
