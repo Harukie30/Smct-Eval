@@ -375,7 +375,7 @@ export function LoginRegistrationGuideModal({ isOpen, onCloseAction }: LoginRegi
               size="sm"
               onClick={() => api?.scrollPrev()}
               disabled={!canScrollPrev}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:scale-105 transition-all duration-300 cursor-pointer"
             >
               <ChevronLeft className="h-4 w-4" />
               <span className="sr-only">Previous slide</span>
@@ -385,7 +385,7 @@ export function LoginRegistrationGuideModal({ isOpen, onCloseAction }: LoginRegi
               size="sm"
               onClick={() => api?.scrollNext()}
               disabled={!canScrollNext}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 cursor-pointer hover:scale-105 transition-all duration-300"
             >
               <ChevronRight className="h-4 w-4" />
               <span className="sr-only">Next slide</span>
@@ -393,7 +393,7 @@ export function LoginRegistrationGuideModal({ isOpen, onCloseAction }: LoginRegi
           </div>
           <Button
             onClick={onCloseAction}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 hover:bg-green-700 text-white cursor-pointer hover:scale-105 transition-all duration-300"
           >
             Got it!
           </Button>
