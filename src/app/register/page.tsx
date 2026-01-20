@@ -189,6 +189,8 @@ function RegisterPage() {
       case "email":
         if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
           errors.email = "Please enter a valid email address";
+        } else {
+          delete errors.email;
         }
         break;
       case "employee_id":
@@ -750,7 +752,21 @@ function RegisterPage() {
                         placeholder="name@company.com"
                         value={formData.email}
                         onChange={(e) => {
-                          setFormData({ ...formData, email: e.target.value });
+                          const value = e.target.value;
+                          setFormData({ ...formData, email: value });
+                          // Only validate if the email looks complete (has @ and at least one character after it)
+                          // This prevents showing errors while typing
+                          if (value.includes("@") && value.length > 3) {
+                            validateField("email", value);
+                          } else if (value === "") {
+                            // Clear error if field is empty
+                            const errors = { ...fieldErrors };
+                            delete errors.email;
+                            setFieldErrors(errors);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          // Validate on blur to catch any remaining issues
                           validateField("email", e.target.value);
                         }}
                         className={fieldErrors?.email ? "border-red-500" : ""}
