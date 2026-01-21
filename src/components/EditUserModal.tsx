@@ -577,6 +577,13 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           role: "",
         }));
       }
+      // If role is evaluator but position is not manager/supervisor, clear the role
+      else if (formData.role === "evaluator" && !isManagerOrSupervisorPosition(formData.position)) {
+        setFormData((prev) => ({
+          ...prev,
+          role: "",
+        }));
+      }
     }
   }, [formData.position, formData.role]);
 
@@ -1438,7 +1445,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 placeholder="Select position"
                 searchPlaceholder="Search positions..."
                 emptyText="No positions found."
-                className={errors.position ? "border-red-500" : "bg-white"}
+                className={errors.position ? "border-red-500" : "bg-white cursor-pointer hover:scale-105 transition-all duration-300"}
               />
               {errors.position && (
                 <p className="text-sm text-red-500">{errors.position}</p>
@@ -1472,7 +1479,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                     placeholder="Select your department"
                     searchPlaceholder="Search departments..."
                     emptyText="No departments found."
-                    className="w-1/2"
+                    className="w-1/2 cursor-pointer hover:scale-105 transition-all duration-300"
                   />
                   {errors?.department && (
                     <p className="text-sm text-red-500">{errors?.department}</p>
@@ -1484,6 +1491,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
             <div className="space-y-2 w-1/2">
               <Label htmlFor="branch">Branch *</Label>
               <Combobox
+              
                 options={
                   Array.isArray(branches) && branches.length > 0
                     ? typeof branches[0] === "object" &&
@@ -1508,7 +1516,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 placeholder="Select branch"
                 searchPlaceholder="Search branches..."
                 emptyText="No branches found."
-                className={errors.branch ? "border-red-500" : ""}
+                className={errors.branch ? "border-red-500" : "cursor-pointer hover:scale-105 transition-all duration-300"}
               />
               {errors.branch && (
                 <p className="text-sm text-red-500">{errors.branch}</p>
@@ -1525,7 +1533,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   ...(isHRManagerPosition(formData.position)
                     ? [{ value: "hr", label: "HR" }]
                     : []),
-                  { value: "evaluator", label: "Evaluator" },
+                  // Only show Evaluator option if position is manager/supervisor
+                  ...(isManagerOrSupervisorPosition(formData.position)
+                    ? [{ value: "evaluator", label: "Evaluator" }]
+                    : []),
                   { value: "employee", label: "Employee" },
                 ]}
                 value={formData.role || ""}
@@ -1535,7 +1546,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 placeholder="Select role"
                 searchPlaceholder="Search roles..."
                 emptyText="No roles found."
-                className={errors.role ? "border-red-500" : ""}
+                className={errors.role ? "border-red-500" : "cursor-pointer hover:scale-105 transition-all duration-300"}
                 disabled={
                   isManagerOrSupervisorPosition(formData.position) ||
                   isHRManagerPosition(formData.position)
