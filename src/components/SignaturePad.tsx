@@ -309,7 +309,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
          )}
 
          {hasSignature && (previewImage || localSignature) ? (
-          <div className="w-full h-32 bg-white rounded border border-gray-200 flex items-center justify-center overflow-hidden">
+          <div className="w-full h-40 bg-white rounded border border-gray-200 flex items-center justify-center overflow-hidden">
             <img
               src={localSignature || previewImage}
               alt="Signature"
@@ -326,7 +326,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
         ) : (
            <canvas
              ref={canvasRef}
-             className={`w-full h-32 cursor-crosshair bg-white rounded border ${
+             className={`w-full h-40 cursor-crosshair bg-white rounded border ${
                hasError ? "border-red-300" : "border-gray-200"
              } ${showInstructions ? "cursor-not-allowed opacity-50" : "cursor-crosshair"}`}
              style={{ display: "block" }}
