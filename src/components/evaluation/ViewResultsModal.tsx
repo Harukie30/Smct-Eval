@@ -1919,13 +1919,13 @@ export default function ViewResultsModal({
                         className="font-medium text-black block mb-1 print-label"
                         style={{ fontSize: "11px" }}
                       >
-                        Employee Contact:
+                        Employee Contact #:
                       </Label>
                       <p
                         className="text-gray-900 print-value"
                         style={{ fontSize: "11px" }}
                       >
-                        {submission.evaluator.contact}
+                        {submission?.employee?.contact ?? submission?.employee?.phone ?? "Not specified"}
                       </p>
                     </div>
                     <div className="print-info-row">

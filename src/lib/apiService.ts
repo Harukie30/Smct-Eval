@@ -195,7 +195,7 @@ export const apiService = {
     employeeId: number | string,
     submission: EvaluationPayload
   ): Promise<any> => {
-    const response = await api.post(`submit/${employeeId}`, submission);
+    const response = await api.post(`/submit/${employeeId}`, submission);
     return response.data;
   },
 
@@ -415,7 +415,7 @@ export const apiService = {
     employeeId: number | string,
     submission: EvaluationPayload
   ): Promise<any> => {
-    const response = await api.post(`HoBasic/${employeeId}`, submission);
+    const response = await api.post(`/HoBasic/${employeeId}`, submission);
     return response.data;
   },
   // Get head office rank and file employees
@@ -423,7 +423,7 @@ export const apiService = {
     employeeId: number | string,
     submission: EvaluationPayload
   ): Promise<any> => {
-    const response = await api.post(`HoRankNFile/${employeeId}`, submission);
+    const response = await api.post(`/HoRankNFile/${employeeId}`, submission);
     return response.data;
   },
 

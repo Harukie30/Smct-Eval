@@ -55,14 +55,28 @@ export default function ProfileModal({
   const { refreshUser } = useAuth();
   const [open, setOpen] = useState(false);
   const signaturePadRef = useRef<SignaturePadRef>(null);
-  // Reset form data when profile changes
+  const initializedProfileIdRef = useRef<string | number | null>(null); // Track which profile ID we've initialized
+  
+  // Reset form data when modal opens or profile changes
   useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      username: profile?.username,
-      email: profile?.email,
-    }));
-  }, [isOpen]);
+    // Only initialize when modal opens and we haven't initialized yet, or when profile ID changes
+    if (isOpen && profile?.id) {
+      // Check if this is a different profile or first time opening
+      if (initializedProfileIdRef.current !== profile.id) {
+        setFormData((prev) => ({
+          ...prev,
+          username: profile?.username || "",
+          email: profile?.email || "",
+        }));
+        initializedProfileIdRef.current = profile.id; // Store profile ID to track changes
+      }
+    }
+    
+    // Reset initialization flag when modal closes
+    if (!isOpen) {
+      initializedProfileIdRef.current = null;
+    }
+  }, [isOpen, profile?.id, profile?.username, profile?.email]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -145,8 +159,14 @@ export default function ProfileModal({
       // Show success toast
       success("Profile updated successfully!");
 
-      // Refresh user profile to get updated data
-      refreshUser();
+      // Refresh user profile to get updated data (only once, after successful save)
+      // Use a small delay to ensure the API has processed the update
+      setTimeout(() => {
+        refreshUser();
+      }, 100);
+      
+      // Reset initialization flag so form reloads with new data next time
+      initializedProfileIdRef.current = null;
       onClose();
 
       // Close modal after a brief delay to ensure state is updated
@@ -166,8 +186,11 @@ export default function ProfileModal({
   };
 
   const handleCancel = () => {
-    refreshUser();
+    // Don't refresh user on cancel - it's unnecessary and can cause re-renders
+    // The profile prop will already have the latest data
     setErrors({});
+    // Reset initialization flag so form reloads with fresh data next time
+    initializedProfileIdRef.current = null;
     onClose();
   };
 
@@ -180,7 +203,11 @@ export default function ProfileModal({
       success(
         "Signature reset request submitted successfully! Please wait for admin approval. You will be able to clear your signature once approved."
       );
-      refreshUser();
+      // Refresh user after a small delay to get updated requestSignatureReset status
+      // This is needed for the SignaturePad polling to work correctly
+      setTimeout(() => {
+        refreshUser();
+      }, 100);
     } catch (error: any) {
       console.error("Error requesting signature reset:", error);
       const errorMessage =

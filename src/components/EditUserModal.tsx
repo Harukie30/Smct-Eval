@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/useToast";
 import { apiService } from "@/lib/apiService";
 import { useUser } from "@/contexts/UserContext";
 import { LazyGif } from "@/components/LazyGif";
+import { Lock, Shield, KeyRound, AlertTriangle } from "lucide-react";
 
 interface User {
   id: number;
@@ -121,6 +122,42 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       });
     }
   }, [isOpen, canEditEmployeeId, userRole, isAdmin, isHR]);
+
+  // Inject password modal popup animation styles
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const styleId = "password-modal-popup-styles";
+    if (document.getElementById(styleId)) return;
+
+    const styleElement = document.createElement("style");
+    styleElement.id = styleId;
+    styleElement.textContent = `
+      @keyframes passwordModalPopup {
+        0% {
+          transform: scale(0.7) translateY(-30px);
+          opacity: 0;
+        }
+        50% {
+          transform: scale(1.05) translateY(5px);
+          opacity: 0.9;
+        }
+        100% {
+          transform: scale(1) translateY(0);
+          opacity: 1;
+        }
+      }
+    `;
+    document.head.appendChild(styleElement);
+
+    return () => {
+      // Cleanup on unmount
+      const existingStyle = document.getElementById(styleId);
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+    };
+  }, []);
 
   // Lockout management functions
   const getLockoutKey = () => {
@@ -1562,16 +1599,34 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           }
         }}
       >
-        <DialogContent className="max-w-lg w-full mx-4 p-6">
-          <DialogHeader className="pb-4">
-            <DialogTitle className="text-xl font-semibold">
-              {isAdmin ? "Admin" : "HR"} Password Verification
-            </DialogTitle>
-            <DialogDescription className="text-gray-600 pt-2">
-              Please enter your {isAdmin ? "admin" : "HR"} password to edit the
-              Employee ID.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent 
+          className="max-w-lg w-full mx-4 p-0 overflow-hidden border-0 shadow-2xl"
+          
+        >
+          {/* Header Section with Gradient */}
+          <div className="relative px-6 pt-6 pb-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-800 to-blue-400"></div>
+            <DialogHeader className="relative z-10 pb-2">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+                  {isAdmin ? (
+                    <Shield className="h-6 w-6 text-white" />
+                  ) : (
+                    <KeyRound className="h-6 w-6 text-white" />
+                  )}
+                </div>
+                <DialogTitle className="text-2xl font-bold text-white">
+                  {isAdmin ? "Admin" : "HR"} Verification
+                </DialogTitle>
+              </div>
+              <DialogDescription className="text-white/90 text-sm pt-1">
+                Please enter your {isAdmin ? "admin" : "HR"} password to edit the Employee ID.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          {/* Content Section */}
+          <div className="bg-white px-6 pb-6">
           {(() => {
             const lockoutStatus = checkLockoutStatus();
             if (lockoutStatus.isLockedOut && lockoutStatus.lockoutUntil) {
@@ -1593,36 +1648,27 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                   </div>
 
                   {/* Lockout Message */}
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0">
-                        <svg
-                          className="h-5 w-5 text-red-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                          />
-                        </svg>
+                  <div className="bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-300 rounded-xl p-5 shadow-lg">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0 p-2 bg-red-500 rounded-lg">
+                        <Lock className="h-6 w-6 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-sm font-medium text-red-800">
+                        <h3 className="text-lg font-bold text-red-900 mb-2">
                           Account Locked
                         </h3>
-                        <p className="text-sm text-red-700 mt-1">
+                        <p className="text-sm text-red-800 mb-3 leading-relaxed">
                           Your account has been temporarily locked due to
-                          multiple failed password attempts. this is for the
-                          security of the user. if you are not the admin, please
+                          multiple failed password attempts. This is for the
+                          security of the user. If you are not the admin, please
                           log out immediately.
                         </p>
-                        <p className="text-sm text-red-700 mt-2 font-semibold">
-                          Please try again in {hoursRemaining} hour(s).
-                        </p>
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-200 rounded-lg">
+                          <AlertTriangle className="h-5 w-5 text-red-700" />
+                          <p className="text-sm font-bold text-red-900">
+                            Try again in {hoursRemaining} hour(s)
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1630,38 +1676,47 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               );
             }
             return (
-              <div className="space-y-6 py-4">
+              <div className="space-y-5 py-4">
                 <div className="space-y-3">
                   <Label
                     htmlFor="adminPassword"
-                    className="text-sm font-medium"
+                    className="text-sm font-semibold text-gray-700 flex items-center gap-2"
                   >
+                    <Lock className="h-4 w-4 text-gray-500" />
                     {isAdmin ? "Admin" : "HR"} Password
                   </Label>
-                  <Input
-                    id="adminPassword"
-                    type="password"
-                    value={adminPassword}
-                    onChange={(e) => {
-                      setAdminPassword(e.target.value);
-                      setPasswordError("");
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !isVerifyingPassword) {
-                        handleVerifyPassword();
-                      }
-                    }}
-                    placeholder={`Enter ${isAdmin ? "admin" : "HR"} password`}
-                    className={`w-full h-11 px-4 ${
-                      passwordError
-                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                        : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                    } bg-white`}
-                    disabled={isVerifyingPassword}
-                    autoFocus
-                  />
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                      <KeyRound className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <Input
+                      id="adminPassword"
+                      type="password"
+                      value={adminPassword}
+                      onChange={(e) => {
+                        setAdminPassword(e.target.value);
+                        setPasswordError("");
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !isVerifyingPassword) {
+                          handleVerifyPassword();
+                        }
+                      }}
+                      placeholder={`Enter ${isAdmin ? "admin" : "HR"} password`}
+                      className={`w-full h-12 pl-11 pr-4 ${
+                        passwordError
+                          ? "border-red-500 focus:border-red-500 focus:ring-red-500 bg-red-50"
+                          : "border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-gray-50 focus:bg-white"
+                      } transition-all duration-200 rounded-lg`}
+                      disabled={isVerifyingPassword}
+                      autoFocus
+                    />
+                  </div>
                   {passwordError && (
-                    <p className="text-sm text-red-500 mt-1">{passwordError}</p>
+                    <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-red-700">{passwordError}</p>
+                    </div>
                   )}
                   {(() => {
                     const status = checkLockoutStatus();
@@ -1671,10 +1726,12 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                       status.remainingAttempts < 6
                     ) {
                       return (
-                        <p className="text-xs text-amber-600 mt-1">
-                          ⚠️ {status.remainingAttempts} attempt(s) remaining
-                          before 24-hour lockout
-                        </p>
+                        <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                          <p className="text-xs text-amber-700">
+                            <span className="font-semibold"> Warning: Attempts are limited. Further attempts may result in a 24-hour lockout.</span>
+                          </p>
+                        </div>
                       );
                     }
                     return null;
@@ -1683,7 +1740,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               </div>
             );
           })()}
-          <DialogFooter className="flex justify-end space-x-3 pt-4 mt-4 border-t border-gray-200">
+          <DialogFooter className="flex justify-end gap-3 pt-4 mt-4 border-t border-gray-200 bg-gray-50 px-6 py-4 -mx-6 -mb-6">
             <Button
               variant="outline"
               onClick={() => {
@@ -1692,7 +1749,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 setPasswordError("");
               }}
               disabled={isVerifyingPassword}
-              className="px-6 min-w-[100px]"
+              className="px-6 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 hover:text-white text-white border-0 shadow-md hover:shadow-lg min-w-[100px] cursor-pointer hover:scale-105 transition-all duration-200 font-semibold"
             >
               {checkLockoutStatus().isLockedOut ? "Close" : "Cancel"}
             </Button>
@@ -1700,7 +1757,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <Button
                 onClick={handleVerifyPassword}
                 disabled={isVerifyingPassword || !adminPassword.trim()}
-                className="bg-blue-600 hover:bg-blue-700 px-6 min-w-[100px]"
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-green-700 hover:to-green-600 px-6 min-w-[120px] cursor-pointer hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 {isVerifyingPassword ? (
                   <div className="flex items-center justify-center space-x-2">
@@ -1712,11 +1769,15 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                     <span>Verifying...</span>
                   </div>
                 ) : (
-                  "Verify"
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    <span>Verify</span>
+                  </div>
                 )}
               </Button>
             )}
           </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

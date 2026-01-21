@@ -5,6 +5,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useCallback,
   ReactNode,
 } from "react";
 
@@ -70,7 +71,8 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
   const router = useRouter();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  async function refreshUser() {
+  // Memoize refreshUser to prevent unnecessary re-renders
+  const refreshUser = useCallback(async () => {
     try {
       const res = await apiService.authUser();
       const userData = res?.data || res;
@@ -87,7 +89,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       // Only log non-401 errors
       console.error("Error refreshing user:", error);
     }
-  }
+  }, []); // Empty dependency array since apiService is stable
 
   // Load user auth on mount (only once)
   useEffect(() => {
@@ -132,6 +134,20 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       });
     }
   }, [isRefreshing]); // Only run when isRefreshing changes
+
+  // Poll for signature reset approval status (only when there's a pending request)
+  // This runs globally once, not per component instance
+  useEffect(() => {
+    // Only poll if user is logged in and has a pending signature reset request
+    if (user && user.requestSignatureReset !== 0) {
+      // Poll every 15 seconds (reduced frequency to avoid excessive API calls)
+      const intervalId = setInterval(() => {
+        refreshUser();
+      }, 15000); // Poll every 15 seconds instead of 5
+
+      return () => clearInterval(intervalId);
+    }
+  }, [user?.requestSignatureReset, refreshUser]); // Include refreshUser in dependencies
 
   // ⬇ Login using Sanctum
   const login = async (username: string, password: string) => {

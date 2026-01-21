@@ -10,7 +10,7 @@ import {
 import { dataURLtoFile } from "@/utils/data-url-to-file";
 import Image from "next/image";
 import { CONFIG } from "../../config/config";
-import { User } from "lucide-react";
+import { User, PenTool, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/UserContext";
 
 interface SignaturePadProps {
@@ -45,22 +45,10 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
     null
   ); // Track the last drawn signature (data URL)
   const [localSignature, setLocalSignature] = useState<string | null>(null); // Store signature locally until save
-  const { user, refreshUser } = useAuth();
-  console.log("test", user?.approvedSignatureReset);
-
-  // Only poll for user updates when request is pending (requestSignatureReset !== 0)
-  // Skip this entirely on register page since user is not logged in
-  useEffect(() => {
-    // Only poll if there's a pending request AND user exists (logged in)
-    if (user && user.requestSignatureReset !== 0) {
-      const intervalId = setInterval(() => {
-        refreshUser();
-      }, 5000); // Poll every 5 seconds
-
-      return () => clearInterval(intervalId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.requestSignatureReset]); // Only depend on requestSignatureReset
+  const [showInstructions, setShowInstructions] = useState(true); // Show instructions overlay before drawing
+  const { user } = useAuth();
+  // Note: Polling for signature reset approval is now handled globally in UserContext
+  // to prevent multiple intervals from multiple SignaturePad instances
 
   // Expose method to get current signature
   useImperativeHandle(ref, () => ({
@@ -97,6 +85,8 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
 
     console.log("SignaturePad value changed:", value);
     if (value && typeof value === "string" && value.trim() !== "") {
+      // If there's an existing signature, hide instructions
+      setShowInstructions(false);
       let imageUrl = "";
       let isFromServer = false;
 
@@ -180,25 +170,49 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
     ctx.lineJoin = "round";
   }, []);
 
-  const startDrawing = (
+  // Handle instruction confirmation
+  const handleConfirmInstructions = () => {
+    setShowInstructions(false);
+  };
+
+  // Toggle drawing: click to start, click again to stop
+  const toggleDrawing = (
     e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
   ) => {
-    setIsDrawing(true);
+    // If instructions are showing, don't allow drawing
+    if (showInstructions) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const { x, y } = getCoordinates(e, canvas);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
+    if (isDrawing) {
+      // Stop drawing
+      setIsDrawing(false);
+      setHasSignature(true);
+      setIsSavedSignature(false); // Newly drawn signature, not saved yet
+
+      // Convert canvas to data URL and store locally
+      const dataURL = canvas.toDataURL("image/png");
+      setPreviewImage(dataURL);
+      setLocalSignature(dataURL); // Store locally
+      setLastDrawnSignature(dataURL); // Track this as the drawn signature
+    } else {
+      // Start drawing
+      const { x, y } = getCoordinates(e, canvas);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      setIsDrawing(true);
+    }
   };
 
   const draw = (
     e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
   ) => {
-    if (!isDrawing) return;
+    // Disable drawing if instructions are showing
+    if (!isDrawing || showInstructions) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -262,11 +276,39 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
   return (
     <div className={`space-y-3 ${className}`}>
       <div
-        className={`border-2 border-dashed rounded-lg p-4 bg-gray-50 ${
+        className={`border-2 border-dashed rounded-lg p-4 bg-gray-50 relative ${
           hasError ? "border-red-300 bg-red-50" : "border-gray-300"
         }`}
       >
-        {hasSignature && (previewImage || localSignature) ? (
+         {/* Instructions Overlay */}
+         {showInstructions && !hasSignature && !isSavedSignature && (
+           <div className="absolute inset-0 bg-white/95 backdrop-blur-sm rounded-lg z-10 flex flex-col items-center justify-center p-6 border-2 border-blue-200 shadow-lg">
+             <div className="text-center space-y-4 max-w-sm">
+               <div className="flex justify-center">
+                 <div className="p-3 bg-blue-100 rounded-full">
+                   <PenTool className="h-8 w-8 text-blue-600" />
+                 </div>
+               </div>
+               <div>
+                 <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                   How to Draw Your Signature
+                 </h3>
+                 <p className="text-sm text-gray-600 leading-relaxed">
+                   To draw a signature, click to start and click again to finish.
+                 </p>
+               </div>
+               <Button
+                 onClick={handleConfirmInstructions}
+                 className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 cursor-pointer hover:to-blue-800 text-white px-6 py-2 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 font-semibold"
+               >
+                 <CheckCircle className="h-4 w-4 mr-2" />
+                 Got it, let's start!
+               </Button>
+             </div>
+           </div>
+         )}
+
+         {hasSignature && (previewImage || localSignature) ? (
           <div className="w-full h-32 bg-white rounded border border-gray-200 flex items-center justify-center overflow-hidden">
             <img
               src={localSignature || previewImage}
@@ -282,20 +324,19 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
             />
           </div>
         ) : (
-          <canvas
-            ref={canvasRef}
-            className={`w-full h-32 cursor-crosshair bg-white rounded border ${
-              hasError ? "border-red-300" : "border-gray-200"
-            }`}
-            style={{ display: "block" }}
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
-            onTouchStart={startDrawing}
-            onTouchMove={draw}
-            onTouchEnd={stopDrawing}
-          />
+           <canvas
+             ref={canvasRef}
+             className={`w-full h-32 cursor-crosshair bg-white rounded border ${
+               hasError ? "border-red-300" : "border-gray-200"
+             } ${showInstructions ? "cursor-not-allowed opacity-50" : "cursor-crosshair"}`}
+             style={{ display: "block" }}
+             onMouseDown={showInstructions ? undefined : toggleDrawing}
+             onMouseMove={showInstructions ? undefined : draw}
+             onMouseLeave={showInstructions ? undefined : stopDrawing}
+             onTouchStart={showInstructions ? undefined : toggleDrawing}
+             onTouchMove={showInstructions ? undefined : draw}
+             onTouchEnd={showInstructions ? undefined : stopDrawing}
+           />
         )}
 
         <p
