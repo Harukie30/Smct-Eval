@@ -1090,6 +1090,7 @@ function RegisterPage() {
         type={alertDialog.type}
         onConfirm={alertDialog.onConfirm}
         confirmText="OK"
+        
       />
     </div>
   );

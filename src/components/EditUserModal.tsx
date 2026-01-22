@@ -549,43 +549,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     );
   };
 
-  // Auto-set role based on position
-  useEffect(() => {
-    if (formData.position) {
-      // If position is HR Manager, set role to HR
-      if (isHRManagerPosition(formData.position)) {
-        if (formData.role !== "hr") {
-          setFormData((prev) => ({
-            ...prev,
-            role: "hr",
-          }));
-        }
-      }
-      // If position is manager/supervisor (but not HR Manager), set role to evaluator
-      else if (isManagerOrSupervisorPosition(formData.position)) {
-        if (formData.role !== "evaluator") {
-          setFormData((prev) => ({
-            ...prev,
-            role: "evaluator",
-          }));
-        }
-      }
-      // If role is HR but position is not HR Manager, clear the role
-      else if (formData.role === "hr" && !isHRManagerPosition(formData.position)) {
-        setFormData((prev) => ({
-          ...prev,
-          role: "",
-        }));
-      }
-      // If role is evaluator but position is not manager/supervisor, clear the role
-      else if (formData.role === "evaluator" && !isManagerOrSupervisorPosition(formData.position)) {
-        setFormData((prev) => ({
-          ...prev,
-          role: "",
-        }));
-      }
-    }
-  }, [formData.position, formData.role]);
+  // Role selection is now free - users can assign any role regardless of position
 
   // Update form data when user prop changes
   useEffect(() => {
@@ -682,10 +646,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         userRole = (user.role as any).name || (user.role as any).value || "";
       }
 
-      // If position contains "manager" or "supervisor", role must be evaluator
-      if (isManagerOrSupervisorPosition(positionId)) {
-        userRole = "evaluator";
-      }
+      // Role selection is now free - use the role from user data without auto-setting
 
       // Fetch employeeId from account data if not already in user object
       const fetchEmployeeId = async () => {
@@ -892,10 +853,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     if (!roleValue) {
       newErrors.role = "Role is required";
     }
-    // Validate that HR role can only be assigned to HR Manager position
-    if (roleValue === "hr" && !isHRManagerPosition(formData.position)) {
-      newErrors.role = "HR role can only be assigned to HR Manager position";
-    }
 
     if (formData.username && !formData.username.trim()) {
       newErrors.username = "Username cannot be empty if provided";
@@ -945,48 +902,17 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
         department: "", // Clear department when branch is a regular branch (not HO/none)
       }));
     }
-    // If position is changed to HR Manager, automatically set role to HR
+    // If position is changed to Branch Manager, Branch Supervisor, or Area Manager, clear department
     else if (
       field === "position" &&
       typeof value === "string" &&
-      isHRManagerPosition(value)
+      isManagerPosition(value)
     ) {
       setFormData((prev) => ({
         ...prev,
         [field]: value,
-        role: "hr", // Auto-set role to HR for HR Manager position
+        department: "", // Clear department for Branch Manager, Branch Supervisor, or Area Manager
       }));
-    }
-    // If position is changed to any position with "manager" or "supervisor" in the name, automatically set role to evaluator
-    // If it's specifically Branch Manager, Branch Supervisor, or Area Manager, also clear department
-    else if (
-      field === "position" &&
-      typeof value === "string" &&
-      isManagerOrSupervisorPosition(value)
-    ) {
-      const newFormData: any = {
-        ...formData,
-        [field]: value,
-        role: "evaluator", // Auto-set role to evaluator for manager/supervisor positions
-      };
-      // Clear department only if it's specifically Branch Manager, Branch Supervisor, or Area Manager
-      if (isManagerPosition(value)) {
-        newFormData.department = "";
-      }
-      setFormData(newFormData);
-    }
-    // If role is changed to HR but position is not HR Manager, prevent it
-    else if (
-      field === "role" &&
-      value === "hr" &&
-      !isHRManagerPosition(formData.position)
-    ) {
-      // Don't allow HR role if position is not HR Manager
-      setErrors((prev) => ({
-        ...prev,
-        role: "HR role can only be assigned to HR Manager position",
-      }));
-      return; // Don't update the role
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -1529,14 +1455,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <Combobox
                 options={[
                   { value: "admin", label: "Admin" },
-                  // Only show HR option if position is HR Manager
-                  ...(isHRManagerPosition(formData.position)
-                    ? [{ value: "hr", label: "HR" }]
-                    : []),
-                  // Only show Evaluator option if position is manager/supervisor
-                  ...(isManagerOrSupervisorPosition(formData.position)
-                    ? [{ value: "evaluator", label: "Evaluator" }]
-                    : []),
+                  { value: "hr", label: "HR" },
+                  { value: "evaluator", label: "Evaluator" },
                   { value: "employee", label: "Employee" },
                 ]}
                 value={formData.role || ""}
@@ -1547,24 +1467,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 searchPlaceholder="Search roles..."
                 emptyText="No roles found."
                 className={errors.role ? "border-red-500" : "cursor-pointer hover:scale-105 transition-all duration-300"}
-                disabled={
-                  isManagerOrSupervisorPosition(formData.position) ||
-                  isHRManagerPosition(formData.position)
-                }
               />
               {errors.role && (
                 <p className="text-sm text-red-500">{errors.role}</p>
-              )}
-              {isHRManagerPosition(formData.position) && (
-                <p className="text-xs text-gray-500">
-                  Role is automatically set to "HR" for HR Manager position
-                </p>
-              )}
-              {isManagerOrSupervisorPosition(formData.position) && (
-                <p className="text-xs text-gray-500">
-                  Role is automatically set to "Evaluator" for
-                  manager/supervisor positions
-                </p>
               )}
             </div>
           </div>
