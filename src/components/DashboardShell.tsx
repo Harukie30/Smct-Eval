@@ -325,7 +325,21 @@ export default function DashboardShell(props: DashboardShellProps) {
   };
 
   return (
-    <div className="flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div 
+      className="flex flex-col min-h-screen relative"
+      style={{
+        backgroundImage: 'url(/smct.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }}
+    >
+      {/* Faded overlay for better content readability */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/95 to-indigo-100/95 pointer-events-none"></div>
+      
+      {/* Content wrapper with relative positioning */}
+      <div className="relative z-10 flex flex-col min-h-screen">
       {/* Header - Fixed */}
       <header className="fixed top-0 left-0 right-0 bg-white shadow-sm border-b z-50">
         <div className="flex justify-between items-center px-6 py-4">
@@ -1034,7 +1048,7 @@ export default function DashboardShell(props: DashboardShellProps) {
             </Button>
           </div>
         )}
-        <main className="flex-1 pt-5 px-5 overflow-y-auto max-h-[calc(100vh-5rem)]">
+        <main className="flex-1 pt-5 px-5 pb-20 overflow-y-auto max-h-[calc(100vh-5rem)]">
           {topSummary && activeItemId === "overview" && (
             <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {topSummary}
@@ -1043,6 +1057,29 @@ export default function DashboardShell(props: DashboardShellProps) {
           {children}
         </main>
       </div>
+
+      {/* Footer - Sticky */}
+      <footer className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-sm">
+        <div className="px-6 py-4">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-2 md:space-y-0">
+            <div className="flex items-center space-x-2">
+              <img
+                src="/smct.png"
+                alt="SMCT Group of Companies"
+                className="h-8 w-auto"
+              />
+              <p className="text-sm text-gray-600">
+                © {new Date().getFullYear()} SMCT Group of Companies. All rights reserved.
+              </p>
+            </div>
+            <div className="flex items-center space-x-4 text-sm text-gray-500">
+              <span>Performance & Ratings System</span>
+              <span className="hidden md:inline">•</span>
+              <span className="hidden md:inline">Version 1.0</span>
+            </div>
+          </div>
+        </div>
+      </footer>
 
       {/* Profile Modal */}
       <ProfileModal
@@ -1170,14 +1207,14 @@ export default function DashboardShell(props: DashboardShellProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Toggle Button for Help Buttons - Fixed Bottom Right (Always visible) */}
+      {/* Toggle Button for Help Buttons - Fixed Bottom Left (Always visible) */}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
             size="lg"
             onClick={() => setIsHelpButtonsVisible(!isHelpButtonsVisible)}
-            className="fixed bottom-20 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0 animate-bounce-small cursor-pointer"
+            className="fixed bottom-24 left-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0 animate-bounce-small cursor-pointer"
           >
             <img
               src="/question.png"
@@ -1187,7 +1224,7 @@ export default function DashboardShell(props: DashboardShellProps) {
           </Button>
         </TooltipTrigger>
         <TooltipContent
-          side="left"
+          side="right"
           sideOffset={10}
           className="bg-blue-700 text-white border-red-500"
         >
@@ -1204,7 +1241,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         size="lg"
         onClick={isHelpButtonsVisible ? () => setIsGuideModalOpen(true) : undefined}
         disabled={!isHelpButtonsVisible}
-        className={`fixed bottom-44 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+        className={`fixed bottom-48 left-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
           isHelpButtonsVisible
             ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-0 cursor-pointer"
             : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"
@@ -1230,7 +1267,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         size="lg"
         onClick={isHelpButtonsVisible ? () => setIsContactDevsModalOpen(true) : undefined}
         disabled={!isHelpButtonsVisible}
-        className={`fixed bottom-60 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+        className={`fixed bottom-64 left-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
           isHelpButtonsVisible
             ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-100 cursor-pointer"
             : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"
@@ -1269,6 +1306,7 @@ export default function DashboardShell(props: DashboardShellProps) {
           onCloseAction={() => setIsGuideModalOpen(false)}
         />
       )}
+      </div>
     </div>
   );
 }
