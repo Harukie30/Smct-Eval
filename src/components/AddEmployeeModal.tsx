@@ -208,9 +208,20 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     <>
       <Dialog open={isOpen} onOpenChangeAction={onClose}>
         <DialogContent
-          className={`max-w-3xl max-h-[90vh] overflow-y-auto p-6 bg-blue-100 ${dialogAnimationClass}`}
+          className={`max-w-3xl max-h-[90vh] overflow-hidden p-0 ${dialogAnimationClass}`}
+          style={{
+            backgroundImage: 'url(/smct.png)',
+            backgroundSize: '85%',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
         >
-          <DialogHeader className="pb-6">
+          {/* Faded overlay for better content readability */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-100/95 to-indigo-100/95 pointer-events-none"></div>
+          
+          {/* Content wrapper with relative positioning */}
+          <div className="relative z-10 max-h-[90vh] overflow-y-auto p-6">
+            <DialogHeader className="pb-6">
             <DialogTitle className="text-xl font-semibold">
               Add New Employee
             </DialogTitle>
@@ -551,6 +562,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               )}
             </Button>
           </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
