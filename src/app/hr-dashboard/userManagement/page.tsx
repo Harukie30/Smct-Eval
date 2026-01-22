@@ -49,7 +49,8 @@ import { User, useAuth } from "@/contexts/UserContext";
 import { Combobox } from "@/components/ui/combobox";
 import EvaluationForm from "@/components/evaluation";
 import EvaluationTypeModal from "@/components/EvaluationTypeModal";
-import ManagerEvaluationForm from "@/components/evaluation-2";
+import ManagerEvaluationForm from "@/components/evaluation/ManagerEvaluationForm";
+import BranchEvaluationForm from "@/components/evaluation/BranchEvaluationForm";
 import RankNfileHo from "@/components/evaluation/RankNfileHo";
 import BasicHo from "@/components/evaluation/BasicHo";
 
@@ -1680,7 +1681,7 @@ export default function UserManagementTab() {
                   }}
                 />
               ) : (
-                <EvaluationForm
+                <BranchEvaluationForm
                   employee={selectedEmployeeForEvaluation}
                   onCloseAction={() => {
                     setIsEvaluationModalOpen(false);
@@ -1703,37 +1704,8 @@ export default function UserManagementTab() {
                   }}
                 />
               ) : (
-                <ManagerEvaluationForm
-                  key={`manager-eval-${selectedEmployeeForEvaluation.id}-${evaluationType}`}
-                  employee={{
-                    id: Number(selectedEmployeeForEvaluation.id) || 0,
-                    name: `${selectedEmployeeForEvaluation?.fname || ""} ${selectedEmployeeForEvaluation?.lname || ""}`.trim(),
-                    email: selectedEmployeeForEvaluation.email || "",
-                    position:
-                      selectedEmployeeForEvaluation.positions?.label ||
-                      selectedEmployeeForEvaluation.positions?.name ||
-                      "",
-                    department:
-                      selectedEmployeeForEvaluation.departments?.department_name ||
-                      selectedEmployeeForEvaluation.departments?.label ||
-                      selectedEmployeeForEvaluation.departments?.name ||
-                      "",
-                    branch:
-                      selectedEmployeeForEvaluation.branches?.branch_name ||
-                      selectedEmployeeForEvaluation.branches?.[0]?.branch_name ||
-                      "",
-                    role:
-                      selectedEmployeeForEvaluation.roles?.[0]?.name || "employee",
-                    employeeId:
-                      selectedEmployeeForEvaluation.emp_id
-                        ? String(selectedEmployeeForEvaluation.emp_id)
-                        : String(selectedEmployeeForEvaluation.id),
-                    hireDate:
-                      (selectedEmployeeForEvaluation as any)?.date_hired ||
-                      (selectedEmployeeForEvaluation as any)?.dateHired ||
-                      (selectedEmployeeForEvaluation as any)?.hireDate ||
-                      "",
-                  }}
+                <BranchEvaluationForm
+                  employee={selectedEmployeeForEvaluation}
                   onCloseAction={() => {
                     setIsEvaluationModalOpen(false);
                     setSelectedEmployee(null);

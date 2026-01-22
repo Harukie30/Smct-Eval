@@ -1,31 +1,8 @@
 "use client";
 
-import EvaluationForm from "../evaluation";
-import Step1 from "../evaluation/Step1";
-import Step2 from "../evaluation/Step2";
-import Step3 from "../evaluation/Step3";
-import Step4 from "../evaluation/Step4";
-import Step5 from "../evaluation/Step5";
-import Step6 from "../evaluation/Step6";
-import Step7 from "../evaluation/Step7";
-import Step8 from "../evaluation/Step8";
-import OverallAssessmentBasic from "../evaluation/OverallAssessmentBasic";
-import { EvaluationStepConfig } from "../evaluation/types";
+import EvaluationForm from "./index";
+import { managerEvaluationSteps } from "./configs";
 import { User } from "../../contexts/UserContext";
-
-// Manager evaluation configuration - Steps 1-8 (all standard steps) + Step 8 (Managerial Skills) + Overall Assessment
-// Note: Step 8 here is Managerial Skills, and Step 9 would be Overall Assessment
-const managerSteps: EvaluationStepConfig[] = [
-  { id: 1, title: "Employee Information / Job Knowledge", component: Step1 },
-  { id: 2, title: "Quality of Work", component: Step2 },
-  { id: 3, title: "Adaptability", component: Step3 },
-  { id: 4, title: "Teamwork", component: Step4 },
-  { id: 5, title: "Reliability", component: Step5 },
-  { id: 6, title: "Ethical & Professional Behavior", component: Step6 },
-  { id: 7, title: "Customer Service", component: Step7 },
-  { id: 8, title: "Managerial Skills", component: Step8 },
-  { id: 9, title: "Overall Assessment", component: OverallAssessmentBasic },
-];
 
 interface ManagerEvaluationFormProps {
   employee?: {
@@ -79,7 +56,7 @@ export default function ManagerEvaluationForm({
       employee={convertedEmployee}
       onCloseAction={onCloseAction}
       onCancelAction={onCancelAction}
-      steps={managerSteps}
+      steps={managerEvaluationSteps}
       evaluationType="default"
     />
   );

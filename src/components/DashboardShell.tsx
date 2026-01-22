@@ -1059,7 +1059,7 @@ export default function DashboardShell(props: DashboardShellProps) {
       </div>
 
       {/* Footer - Sticky */}
-      <footer className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-sm">
+      <footer className="fixed bottom-0  left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-sm">
         <div className="px-6 py-4">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-2 md:space-y-0">
             <div className="flex items-center space-x-2">
@@ -1085,7 +1085,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                     variant="ghost"
                     size="lg"
                     onClick={() => setIsHelpButtonsVisible(!isHelpButtonsVisible)}
-                    className="h-12 w-12 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0 cursor-pointer"
+                    className="h-9 w-9 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0 cursor-pointer"
                   >
                     <img
                       src="/question.png"
