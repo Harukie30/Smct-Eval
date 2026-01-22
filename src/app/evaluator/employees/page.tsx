@@ -63,6 +63,43 @@ export default function EmployeesTab() {
 
   const isHO = isEvaluatorHO();
   
+  // Check if employee being evaluated is Area Manager with HO branch
+  const isEmployeeAreaManagerWithHO = (employee: User | null): boolean => {
+    if (!employee) return false;
+    
+    // Check position - look for "Area Manager" in various possible fields
+    const positionName = (
+      employee.positions?.label || 
+      employee.positions?.name || 
+      (employee as any).position ||
+      ""
+    ).toLowerCase().trim();
+    
+    const isAreaManager = positionName === "area manager" || positionName.includes("area manager");
+    
+    if (!isAreaManager) return false;
+    
+    // Check branch - look for "HO" in various possible fields
+    let branchName = "";
+    if (employee.branches) {
+      if (Array.isArray(employee.branches)) {
+        branchName = (employee.branches[0]?.branch_name || employee.branches[0]?.name || "").toUpperCase();
+      } else if (typeof employee.branches === 'object') {
+        branchName = ((employee.branches as any)?.branch_name || (employee.branches as any)?.name || "").toUpperCase();
+      }
+    } else if ((employee as any).branch) {
+      branchName = String((employee as any).branch).toUpperCase();
+    }
+    
+    const isHOBranch = 
+      branchName === "HO" || 
+      branchName === "HEAD OFFICE" ||
+      branchName.includes("HEAD OFFICE") ||
+      branchName.includes("HO");
+    
+    return isAreaManager && isHOBranch;
+  };
+  
   //refreshing state
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Add refresh trigger
@@ -696,7 +733,7 @@ export default function EmployeesTab() {
         <DialogContent className="max-w-7xl max-h-[101vh] overflow-hidden p-0 evaluation-container">
           {selectedEmployeeForEvaluation && evaluationType === "employee" && (
             <>
-              {isHO ? (
+              {isHO && !isEmployeeAreaManagerWithHO(selectedEmployeeForEvaluation) ? (
                 <RankNfileHo
                   employee={selectedEmployeeForEvaluation}
                   onCloseAction={() => {
@@ -719,7 +756,7 @@ export default function EmployeesTab() {
           )}
           {selectedEmployeeForEvaluation && evaluationType === "manager" && (
             <>
-              {isHO ? (
+              {isHO && !isEmployeeAreaManagerWithHO(selectedEmployeeForEvaluation) ? (
                 <BasicHo
                   employee={selectedEmployeeForEvaluation}
                   onCloseAction={() => {
