@@ -533,7 +533,7 @@ export default function SignatureResetRequestsTab() {
                             variant="outline"
                             size="sm"
                             onClick={() => openApproveModal(request)}
-                            className="text-green-600 border-green-300 hover:bg-green-50 cursor-pointer"
+                            className="text-green-600 border-green-300 hover:bg-green-50 cursor-pointer bg-green-600 hover:bg-green-700 text-white hover:text-white hover:bg-green-500 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
                           >
                             <Check className="h-4 w-4 mr-1" />
                             Accept Request
@@ -542,7 +542,7 @@ export default function SignatureResetRequestsTab() {
                             variant="outline"
                             size="sm"
                             onClick={() => openRejectModal(request)}
-                            className="text-red-600 border-red-300 hover:bg-red-50 cursor-pointer"
+                            className="text-red-600 border-red-300 hover:bg-red-50 cursor-pointer bg-red-600 hover:bg-red-700 text-white hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
                           >
                             <X className="h-4 w-4 mr-1" />
                             Reject Request
@@ -593,7 +593,7 @@ export default function SignatureResetRequestsTab() {
             <Button
               variant="outline"
               onClick={() => setIsApproveModalOpen(false)}
-              className="cursor-pointer"
+              className="cursor-pointer bg-blue-600 hover:bg-red-700 text-white hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
             >
               Cancel
             </Button>
@@ -608,7 +608,7 @@ export default function SignatureResetRequestsTab() {
                 }
               }}
               disabled={isApproving}
-              className="bg-green-600 hover:bg-green-700 cursor-pointer flex items-center gap-2"
+              className="bg-green-600 hover:bg-green-700 cursor-pointer flex items-center gap-2 hover:text-white hover:bg-green-500 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
             >
               {isApproving ? (
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -641,7 +641,7 @@ export default function SignatureResetRequestsTab() {
             <Button
               variant="outline"
               onClick={() => setIsRejectModalOpen(false)}
-              className="cursor-pointer bg-blue-600 hover:bg-green-700 text-white hover:text-white"
+              className="cursor-pointer bg-blue-600 hover:bg-red-700 text-white hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
             >
               Cancel
             </Button>
@@ -657,7 +657,7 @@ export default function SignatureResetRequestsTab() {
               }}
               disabled={isRejecting}
               variant="destructive"
-              className="cursor-pointer flex items-center gap-2"
+              className="cursor-pointer flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
             >
               {isRejecting ? (
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

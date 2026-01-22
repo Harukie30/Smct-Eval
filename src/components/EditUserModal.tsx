@@ -990,6 +990,56 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     }
   };
 
+  // Handle Enter key to save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only trigger if:
+      // 1. Enter key is pressed
+      // 2. Main modal is open
+      // 3. Password modal is NOT open
+      // 4. Not currently saving
+      // 5. Not verifying password
+      if (
+        e.key === "Enter" &&
+        isOpen &&
+        !isPasswordModalOpen &&
+        !isSaving &&
+        !isVerifyingPassword
+      ) {
+        const target = e.target as HTMLElement;
+        
+        // Don't trigger if:
+        // - User is typing in a textarea
+        // - User is typing in a contenteditable element
+        // - User is clicking a button (let button handle its own click)
+        // - User is in a combobox dropdown (let combobox handle its own behavior)
+        if (
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable ||
+          target.tagName === "BUTTON" ||
+          target.closest('[role="combobox"]') ||
+          target.closest('[role="listbox"]')
+        ) {
+          return;
+        }
+
+        // For input fields, allow Enter to trigger save (this is the desired behavior)
+        // But prevent default to avoid form submission
+        e.preventDefault();
+        handleSave();
+      }
+    };
+
+    if (isOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, isPasswordModalOpen, isSaving, isVerifyingPassword]);
+
   const handleCancel = () => {
     setErrors({});
     setIsEmployeeIdEditable(false);
@@ -1004,18 +1054,31 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChangeAction={onClose}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-6 bg-blue-100 animate-popup">
-          <DialogHeader className="pb-6">
-            <DialogTitle className="text-xl font-semibold">
-              Edit User Information
-            </DialogTitle>
-            <DialogDescription className="text-gray-600">
-              Update the user's information below. All fields marked with * are
-              required.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent 
+          className="max-w-3xl max-h-[90vh] overflow-hidden p-0 animate-popup relative"
+          style={{
+            backgroundImage: 'url(/smct.png)',
+            backgroundSize: '85%',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
+        >
+          {/* Faded overlay for better content readability */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-100/95 to-indigo-100/95 pointer-events-none"></div>
+          
+          {/* Content wrapper with relative positioning */}
+          <div className="relative z-10 max-h-[90vh] overflow-y-auto p-6">
+            <DialogHeader className="pb-6">
+              <DialogTitle className="text-xl font-semibold">
+                Edit User Information
+              </DialogTitle>
+              <DialogDescription className="text-gray-600">
+                Update the user's information below. All fields marked with * are
+                required.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
             {/* Employee ID - Editable for Admins and HR with Password Verification */}
             <div className="space-y-2">
               <Label htmlFor="employeeId">Employee ID</Label>
@@ -1472,35 +1535,36 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 <p className="text-sm text-red-500">{errors.role}</p>
               )}
             </div>
-          </div>
+            </div>
 
-          <DialogFooter className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-              className="px-6 cursor-pointer hover:scale-110 transition-transform duration-200 bg-red-500 hover:bg-red-600 text-white hover:text-white"
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className={`bg-blue-600 hover:bg-blue-700 text-white px-6 
-    cursor-pointer hover:scale-110 transition-transform duration-200
-    ${isSaving ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
-  `}
-            >
-              {isSaving ? (
-                <div className="flex items-center space-x-2">
-                  <LoadingAnimation size="sm" variant="spinner" color="blue" />
-                  <span>Saving...</span>
-                </div>
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                className="px-6 cursor-pointer hover:scale-110 transition-transform duration-200 bg-red-500 hover:bg-red-600 text-white hover:text-white"
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className={`bg-blue-600 hover:bg-blue-700 text-white px-6 
+      cursor-pointer hover:scale-110 transition-transform duration-200
+      ${isSaving ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
+    `}
+              >
+                {isSaving ? (
+                  <div className="flex items-center space-x-2">
+                    <LoadingAnimation size="sm" variant="spinner" color="blue" />
+                    <span>Saving...</span>
+                  </div>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -55,7 +55,7 @@ export function EvaluatorDashboardGuideModal({ isOpen, onCloseAction }: Evaluato
               variant="ghost"
               size="icon"
               onClick={onCloseAction}
-              className="h-8 w-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white"
+              className="h-8 w-8 rounded-full bg-red-600 hover:bg-red-700 text-white hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
             >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -484,7 +484,7 @@ export function EvaluatorDashboardGuideModal({ isOpen, onCloseAction }: Evaluato
               size="sm"
               onClick={() => api?.scrollPrev()}
               disabled={!canScrollPrev}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+              className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -504,7 +504,7 @@ export function EvaluatorDashboardGuideModal({ isOpen, onCloseAction }: Evaluato
               size="sm"
               onClick={() => api?.scrollNext()}
               disabled={!canScrollNext}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+              className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -522,7 +522,7 @@ export function EvaluatorDashboardGuideModal({ isOpen, onCloseAction }: Evaluato
           </div>
           <Button
             onClick={onCloseAction}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
           >
             Got it!
           </Button>

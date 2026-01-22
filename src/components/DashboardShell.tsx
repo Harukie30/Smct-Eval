@@ -1072,10 +1072,38 @@ export default function DashboardShell(props: DashboardShellProps) {
                 © {new Date().getFullYear()} SMCT Group of Companies. All rights reserved.
               </p>
             </div>
-            <div className="flex items-center space-x-4 text-sm text-gray-500">
-              <span>Performance & Ratings System</span>
-              <span className="hidden md:inline">•</span>
-              <span className="hidden md:inline">Version 1.0</span>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-4 text-sm text-gray-500">
+                <span>Performance & Ratings System</span>
+                <span className="hidden md:inline">•</span>
+                <span className="hidden md:inline">Version 1.0</span>
+              </div>
+              {/* Toggle Button for Help Buttons - In Footer */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="lg"
+                    onClick={() => setIsHelpButtonsVisible(!isHelpButtonsVisible)}
+                    className="h-12 w-12 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0 cursor-pointer"
+                  >
+                    <img
+                      src="/question.png"
+                      alt="Toggle Help"
+                      className="h-8 w-8 object-contain"
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  sideOffset={10}
+                  className="bg-blue-700 text-white border-red-500"
+                >
+                  <p className="font-medium">
+                    {isHelpButtonsVisible ? "Hide Help Buttons" : "Show Help Buttons"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
         </div>
@@ -1207,33 +1235,6 @@ export default function DashboardShell(props: DashboardShellProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Toggle Button for Help Buttons - Fixed Bottom Left (Always visible) */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="lg"
-            onClick={() => setIsHelpButtonsVisible(!isHelpButtonsVisible)}
-            className="fixed bottom-24 left-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0 animate-bounce-small cursor-pointer"
-          >
-            <img
-              src="/question.png"
-              alt="Toggle Help"
-              className="h-10 w-10 object-contain"
-            />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent
-          side="right"
-          sideOffset={10}
-          className="bg-blue-700 text-white border-red-500"
-        >
-          <p className="font-medium">
-            {isHelpButtonsVisible ? "Hide Help Buttons" : "Show Help Buttons"}
-          </p>
-        </TooltipContent>
-      </Tooltip>
-
       {/* Floating Help Buttons - Toggleable (Fixed to viewport) */}
       {/* Dashboard Guide Button */}
       <Button
@@ -1241,7 +1242,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         size="lg"
         onClick={isHelpButtonsVisible ? () => setIsGuideModalOpen(true) : undefined}
         disabled={!isHelpButtonsVisible}
-        className={`fixed bottom-48 left-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+        className={`fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
           isHelpButtonsVisible
             ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-0 cursor-pointer"
             : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"
@@ -1267,7 +1268,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         size="lg"
         onClick={isHelpButtonsVisible ? () => setIsContactDevsModalOpen(true) : undefined}
         disabled={!isHelpButtonsVisible}
-        className={`fixed bottom-64 left-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+        className={`fixed bottom-40 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
           isHelpButtonsVisible
             ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-100 cursor-pointer"
             : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"

@@ -55,7 +55,7 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
               variant="ghost"
               size="icon"
               onClick={onCloseAction}
-              className="h-8 w-8 rounded-full hover:bg-gray-100"
+              className="h-8 w-8 rounded-full bg-blue-600 hover:bg-red-700 text-white hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
             >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -358,7 +358,7 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
               size="sm"
               onClick={() => api?.scrollPrev()}
               disabled={!canScrollPrev}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+              className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
             >
               <ChevronLeft className="h-4 w-4" />
               <span className="sr-only">Previous slide</span>
@@ -368,7 +368,7 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
               size="sm"
               onClick={() => api?.scrollNext()}
               disabled={!canScrollNext}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+              className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
             >
               <ChevronRight className="h-4 w-4" />
               <span className="sr-only">Next slide</span>
@@ -376,7 +376,7 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
           </div>
           <Button
             onClick={onCloseAction}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
           >
             Got it!
           </Button>
