@@ -24,10 +24,10 @@ import { storeEvaluationResult } from "@/lib/evaluationStorage";
 import { apiService } from "@/lib/apiService";
 import { createEvaluationNotification } from "@/lib/notificationUtils";
 import { User, useAuth } from "../../contexts/UserContext";
-import { employeeEvaluationSteps } from "./configs";
+import { branchEvaluationSteps } from "./configs";
 
-// Default steps use employee evaluation configuration
-const defaultSteps: EvaluationStepConfig[] = employeeEvaluationSteps;
+// Default steps use branch evaluation configuration
+const defaultSteps: EvaluationStepConfig[] = branchEvaluationSteps;
 
 interface EvaluationFormProps {
   employee?: User | null;
