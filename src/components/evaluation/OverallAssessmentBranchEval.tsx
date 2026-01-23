@@ -1256,11 +1256,11 @@ export default function OverallAssessmentBranchEval({
                 </tr>
                 <tr>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Attention to Detail
+                    Job Targets
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Demonstrates thoroughness and accuracy in work, catching and
-                    correcting errors.
+                    Achieves targets set for their respective position (Sales /
+                    CCR / Mechanic / etc.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center font-medium">
                     {data.qualityOfWorkScore5 || ""}
