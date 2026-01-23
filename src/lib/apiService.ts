@@ -427,6 +427,24 @@ export const apiService = {
     return response.data;
   },
 
+  // Get branch basic employees
+  postBranchBasic: async (
+    employeeId: number | string,
+    submission: EvaluationPayload
+  ): Promise<any> => {
+    const response = await api.post(`/BranchBasic/${employeeId}`, submission);
+    return response.data;
+  },
+
+  // Get branch rank and file employees
+  postBranchRankNFile: async (
+    employeeId: number | string,
+    submission: EvaluationPayload
+  ): Promise<any> => {
+    const response = await api.post(`/BranchRankNFile/${employeeId}`, submission);
+    return response.data;
+  },
+
   // Get evaluations by authenticated evaluator
   getEvalAuthEvaluator: async (
     search: string,

@@ -616,16 +616,94 @@ export default function EvaluationForm({
     try {
       const empID = employee?.id;
       if (empID) {
-        // Use appropriate API endpoint based on evaluation type
-        if (evaluationType === 'rankNfile') {
-          // RankNfile HO evaluation - use HoRankNFile endpoint
-          const response = await apiService.postHoRankNFile(empID, form);
-        } else if (evaluationType === 'basic') {
-          // Basic HO evaluation - use HoBasic endpoint
-          const response = await apiService.postHoBasic(empID, form);
+        // Check if evaluator's branch is HO (Head Office)
+        const isEvaluatorHO = () => {
+          if (!user?.branches) return false;
+          
+          // Handle branches as array
+          if (Array.isArray(user.branches)) {
+            const branch = user.branches[0];
+            if (branch) {
+              const branchName = branch.branch_name?.toUpperCase() || "";
+              const branchCode = branch.branch_code?.toUpperCase() || "";
+              return (
+                branchName === "HO" || 
+                branchCode === "HO" || 
+                branchName.includes("HEAD OFFICE") ||
+                branchCode.includes("HEAD OFFICE") ||
+                branchName === "HEAD OFFICE" ||
+                branchCode === "HEAD OFFICE"
+              );
+            }
+          }
+          
+          // Handle branches as object
+          if (typeof user.branches === 'object') {
+            const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
+            const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
+            return (
+              branchName === "HO" || 
+              branchCode === "HO" || 
+              branchName.includes("HEAD OFFICE") ||
+              branchCode.includes("HEAD OFFICE") ||
+              branchName === "HEAD OFFICE" ||
+              branchCode === "HEAD OFFICE"
+            );
+          }
+          
+          return false;
+        };
+        
+        // Check if evaluator is Area Manager
+        const isAreaManager = () => {
+          if (!user?.positions) return false;
+          
+          // Get position name from various possible fields
+          const positionName = (
+            user.positions?.label || 
+            user.positions?.name || 
+            (user as any).position ||
+            ""
+          ).toLowerCase().trim();
+          
+          // Check if position is Area Manager
+          return (
+            positionName === "area manager" ||
+            positionName.includes("area manager")
+          );
+        };
+        
+        const isHO = isEvaluatorHO();
+        const isAreaMgr = isAreaManager();
+        
+        // Use appropriate API endpoint based on branch, position, and evaluation type
+        if (isHO && isAreaMgr) {
+          // Head Office Area Manager - use Branch endpoints
+          if (evaluationType === 'rankNfile') {
+            const response = await apiService.postBranchRankNFile(empID, form);
+          } else if (evaluationType === 'basic') {
+            const response = await apiService.postBranchBasic(empID, form);
+          } else {
+            const response = await apiService.createSubmission(empID, form);
+          }
+        } else if (isHO) {
+          // Head Office evaluator (not Area Manager) - use HO endpoints
+          if (evaluationType === 'rankNfile') {
+            const response = await apiService.postHoRankNFile(empID, form);
+          } else if (evaluationType === 'basic') {
+            const response = await apiService.postHoBasic(empID, form);
+          } else {
+            const response = await apiService.createSubmission(empID, form);
+          }
         } else {
-          // Default evaluation - use standard createSubmission endpoint
-          const response = await apiService.createSubmission(empID, form);
+          // Branch evaluator (not Head Office) - use Branch endpoints
+          if (evaluationType === 'rankNfile') {
+            const response = await apiService.postBranchRankNFile(empID, form);
+          } else if (evaluationType === 'basic') {
+            const response = await apiService.postBranchBasic(empID, form);
+          } else {
+            const response = await apiService.createSubmission(empID, form);
+          }
         }
       }
       setShowSuccessDialog(true);
