@@ -684,7 +684,7 @@ export default function EvaluationForm({
           } else if (evaluationType === 'basic') {
             const response = await apiService.postBranchBasic(empID, form);
           } else {
-            return console.log("Invalid evaluation type");
+            return console.log("Invalid evaluation type 1");
           }
         } else if (isHO) {
           // Head Office evaluator (not Area Manager) - use HO endpoints
@@ -692,18 +692,18 @@ export default function EvaluationForm({
             const response = await apiService.postHoRankNFile(empID, form);
           } else if (evaluationType === 'basic') {
             const response = await apiService.postHoBasic(empID, form);
-          } //else {
-           // const response = await apiService.createSubmission(empID, form);
-          //}
+          } else {
+            return console.log("Invalid evaluation type 2");
+          }
         } else {
           // Branch evaluator (not Head Office) - use Branch endpoints
           if (evaluationType === 'rankNfile') {
             const response = await apiService.postBranchRankNFile(empID, form);
           } else if (evaluationType === 'basic') {
             const response = await apiService.postBranchBasic(empID, form);
-          } //else {
-            //const response = await apiService.createSubmission(empID, form);
-          //}
+          } else {
+            return console.log("Invalid evaluation type 3");
+          }
         }
       }
       setShowSuccessDialog(true);
