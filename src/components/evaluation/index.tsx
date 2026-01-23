@@ -683,9 +683,9 @@ export default function EvaluationForm({
             const response = await apiService.postBranchRankNFile(empID, form);
           } else if (evaluationType === 'basic') {
             const response = await apiService.postBranchBasic(empID, form);
-          } //else {
-            //const response = await apiService.createSubmission(empID, form);
-          //}
+          } else {
+            return console.log("Invalid evaluation type");
+          }
         } else if (isHO) {
           // Head Office evaluator (not Area Manager) - use HO endpoints
           if (evaluationType === 'rankNfile') {
