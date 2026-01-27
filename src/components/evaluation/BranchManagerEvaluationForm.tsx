@@ -181,6 +181,53 @@ export default function BranchManagerEvaluationForm({
     }
   }, [currentStep]);
 
+  // Get validation message for incomplete steps
+  const getValidationMessage = () => {
+    switch (currentStep) {
+      case 1:
+        if (
+          !form.reviewTypeProbationary &&
+          !form.reviewTypeRegular &&
+          !form.reviewTypeOthersImprovement &&
+          (!form.reviewTypeOthersCustom || form.reviewTypeOthersCustom.trim() === "")
+        ) {
+          return "Please select at least one review type";
+        }
+        if (!form.coverageFrom || form.coverageFrom === "") {
+          return "Please select Performance Coverage 'From' date";
+        }
+        if (!form.coverageTo || form.coverageTo === "") {
+          return "Please select Performance Coverage 'To' date";
+        }
+        if (!form.jobKnowledgeScore1 || form.jobKnowledgeScore1 === 0) {
+          return "Please complete all Job Knowledge scores";
+        }
+        return "Please complete all required fields";
+      case 2:
+        if (!form.qualityOfWorkScore1 || form.qualityOfWorkScore1 === 0) {
+          return "Please complete all Quality of Work scores";
+        }
+        if (!form.jobTargetMotorcyclesScore || form.jobTargetMotorcyclesScore === 0) {
+          return "Please complete all Job Target scores";
+        }
+        return "Please complete all required fields";
+      case 3:
+        return "Please complete all Adaptability scores";
+      case 4:
+        return "Please complete all Teamwork scores";
+      case 5:
+        return "Please complete all Reliability scores";
+      case 6:
+        return "Please complete all Ethical & Professional Behavior scores";
+      case 7:
+        return "Please complete all Customer Service scores";
+      case 8:
+        return "Please complete all Managerial Skills scores";
+      default:
+        return "Please complete all required fields to continue";
+    }
+  };
+
   // Validation for Branch Manager/Supervisor - specific to their requirements
   const isCurrentStepComplete = () => {
     switch (currentStep) {
@@ -363,7 +410,9 @@ export default function BranchManagerEvaluationForm({
   };
 
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const startEvaluation = () => {
     setCurrentStep(1);
@@ -580,62 +629,254 @@ export default function BranchManagerEvaluationForm({
               </CardContent>
             </Card>
 
-            {/* Navigation Buttons */}
+            {/* Navigation Buttons - Only show for steps before Overall Assessment */}
             {currentStep > 0 && !isOverallAssessmentStep && (
-              <div className="mt-6 flex justify-between">
-                <Button
-                  onClick={prevStep}
-                  variant="outline"
-                  disabled={currentStep === 1}
-                  className="px-6 cursor-pointer hover:scale-110 transition-transform duration-200 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-50"
-                >
-                  Previous
-                </Button>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span>
-                        <Button
-                          onClick={nextStep}
-                          disabled={!isCurrentStepComplete() || isSubmitting}
-                          className="px-6 bg-blue-600 hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-50"
-                        >
-                          {isSubmitting ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Processing...
-                            </>
-                          ) : (
-                            "Next"
-                          )}
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    {!isCurrentStepComplete() && (
-                      <TooltipContent>
-                        <p>Please complete all required fields to continue</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            )}
+              <div className="flex justify-between mt-6">
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={prevStep}
+                    disabled={currentStep === 1}
+                    className="px-6 cursor-pointer bg-blue-500 text-white hover:scale-110 transition-transform duration-200 hover:bg-blue-500 hover:text-white"
+                  >
+                    Previous
+                  </Button>
 
-            {/* Cancel Button */}
-            {currentStep > 0 && !isOverallAssessmentStep && (
-              <div className="mt-4 flex justify-center">
-                <Button
-                  onClick={handleCancel}
-                  variant="ghost"
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  Cancel Evaluation
-                </Button>
+                  <Button
+                    variant="outline"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowCancelDialog(true);
+                    }}
+                    className="px-6 text-red-600 bg-red-500 text-white border-red-300 hover:bg-red-500 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                  >
+                    Cancel Evaluation
+                  </Button>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <TooltipProvider>
+                    {currentStep >= 1 &&
+                    !isOverallAssessmentStep &&
+                    !isCurrentStepComplete() ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              // Button is disabled, do nothing
+                            }}
+                            className="px-6 opacity-50 cursor-not-allowed"
+                          >
+                            Next
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{getValidationMessage()}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            onClick={nextStep}
+                            className="px-6 bg-blue-500 text-white hover:bg-green-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                          >
+                            Next
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Proceed to the next step</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </TooltipProvider>
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Cancel Evaluation Dialog */}
+      <Dialog open={showCancelDialog} onOpenChangeAction={setShowCancelDialog}>
+        <DialogContent
+          className="max-w-md m-8"
+          style={{
+            animation: "dialogPopup 0.3s ease-out",
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Cancel Evaluation
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-3 bg-red-50 p-4 mx-2 my-2">
+            <p className="text-gray-600">
+              Are you sure you want to cancel this evaluation? All progress will
+              be lost and cannot be recovered.
+            </p>
+          </div>
+          <DialogFooter className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowCancelDialog(false);
+              }}
+              className="px-4 bg-blue-500 text-white hover:bg-blue-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+            >
+              Keep Editing
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isCancelling}
+              className={`px-4 flex items-center gap-2 cursor-pointer hover:scale-110 transition-transform duration-200
+    ${isCancelling ? "opacity-70 cursor-not-allowed" : ""}`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                setIsCancelling(true);
+
+                try {
+                  setShowCancelDialog(false);
+
+                  if (onCancelAction) {
+                    onCancelAction();
+                  } else if (onCloseAction) {
+                    onCloseAction();
+                  }
+
+                  setForm({
+                    hireDate: "",
+                    rating: 0,
+                    coverageFrom: "",
+                    coverageTo: "",
+                    reviewTypeProbationary: "",
+                    reviewTypeRegular: "",
+                    reviewTypeOthersImprovement: false,
+                    reviewTypeOthersCustom: "",
+                    priorityArea1: "",
+                    priorityArea2: "",
+                    priorityArea3: "",
+                    remarks: "",
+                    jobKnowledgeScore1: 0,
+                    jobKnowledgeScore2: 0,
+                    jobKnowledgeScore3: 0,
+                    jobKnowledgeComments1: "",
+                    jobKnowledgeComments2: "",
+                    jobKnowledgeComments3: "",
+                    qualityOfWorkScore1: 0,
+                    qualityOfWorkScore2: 0,
+                    qualityOfWorkScore3: 0,
+                    qualityOfWorkScore4: 0,
+                    qualityOfWorkScore5: 0,
+                    qualityOfWorkScore6: 0,
+                    qualityOfWorkScore7: 0,
+                    qualityOfWorkScore8: 0,
+                    qualityOfWorkScore9: 0,
+                    qualityOfWorkScore10: 0,
+                    qualityOfWorkScore11: 0,
+                    qualityOfWorkScore12: 0,
+                    jobTargetMotorcyclesScore: 0,
+                    jobTargetAppliancesScore: 0,
+                    jobTargetCarsScore: 0,
+                    jobTargetTriWheelersScore: 0,
+                    jobTargetCollectionScore: 0,
+                    jobTargetSparepartsLubricantsScore: 0,
+                    jobTargetShopIncomeScore: 0,
+                    jobTargetMotorcyclesComment: "",
+                    jobTargetAppliancesComment: "",
+                    jobTargetCarsComment: "",
+                    jobTargetTriWheelersComment: "",
+                    jobTargetCollectionComment: "",
+                    jobTargetSparepartsLubricantsComment: "",
+                    jobTargetShopIncomeComment: "",
+                    qualityOfWorkComments1: "",
+                    qualityOfWorkComments2: "",
+                    qualityOfWorkComments3: "",
+                    qualityOfWorkComments4: "",
+                    qualityOfWorkComments5: "",
+                    qualityOfWorkComments6: "",
+                    qualityOfWorkComments7: "",
+                    qualityOfWorkComments8: "",
+                    qualityOfWorkComments9: "",
+                    qualityOfWorkComments10: "",
+                    qualityOfWorkComments11: "",
+                    qualityOfWorkComments12: "",
+                    adaptabilityScore1: 0,
+                    adaptabilityScore2: 0,
+                    adaptabilityScore3: 0,
+                    adaptabilityComments1: "",
+                    adaptabilityComments2: "",
+                    adaptabilityComments3: "",
+                    teamworkScore1: 0,
+                    teamworkScore2: 0,
+                    teamworkScore3: 0,
+                    teamworkComments1: "",
+                    teamworkComments2: "",
+                    teamworkComments3: "",
+                    reliabilityScore1: 0,
+                    reliabilityScore2: 0,
+                    reliabilityScore3: 0,
+                    reliabilityScore4: 0,
+                    reliabilityComments1: "",
+                    reliabilityComments2: "",
+                    reliabilityComments3: "",
+                    reliabilityComments4: "",
+                    ethicalScore1: 0,
+                    ethicalScore2: 0,
+                    ethicalScore3: 0,
+                    ethicalScore4: 0,
+                    ethicalExplanation1: "",
+                    ethicalExplanation2: "",
+                    ethicalExplanation3: "",
+                    ethicalExplanation4: "",
+                    customerServiceScore1: 0,
+                    customerServiceScore2: 0,
+                    customerServiceScore3: 0,
+                    customerServiceScore4: 0,
+                    customerServiceScore5: 0,
+                    customerServiceExplanation1: "",
+                    customerServiceExplanation2: "",
+                    customerServiceExplanation3: "",
+                    customerServiceExplanation4: "",
+                    customerServiceExplanation5: "",
+                    managerialSkillsScore1: 0,
+                    managerialSkillsScore2: 0,
+                    managerialSkillsScore3: 0,
+                    managerialSkillsScore4: 0,
+                    managerialSkillsScore5: 0,
+                    managerialSkillsScore6: 0,
+                    managerialSkillsExplanation1: "",
+                    managerialSkillsExplanation2: "",
+                    managerialSkillsExplanation3: "",
+                    managerialSkillsExplanation4: "",
+                    managerialSkillsExplanation5: "",
+                    managerialSkillsExplanation6: "",
+                    created_at: "",
+                  });
+                } finally {
+                  setIsCancelling(false);
+                }
+              }}
+            >
+              {isCancelling ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                "Cancel Evaluation"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChangeAction={setShowSuccessDialog}>
