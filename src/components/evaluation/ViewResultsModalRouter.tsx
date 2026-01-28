@@ -111,38 +111,37 @@ const isEmployeeBranch = (submission: Submission | null): boolean => {
   return false;
 };
 
-// Helper function to check if evaluator is Area Manager
-const isEvaluatorAreaManager = (submission: Submission | null): boolean => {
-  if (!submission?.evaluator?.positions) return false;
+// Helper function to check if employee is Area Manager
+const isEmployeeAreaManager = (submission: Submission | null): boolean => {
+  if (!submission?.employee?.positions) return false;
   
   const positionName = (
-    submission.evaluator.positions?.label || 
-    submission.evaluator.positions?.name || 
-    submission.evaluator.position ||
+    submission.employee.positions?.label || 
+    submission.employee.positions?.name || 
+    submission.employee.position ||
     ""
-  ).toLowerCase().trim();
+  ).toUpperCase().trim();
   
   return (
-    positionName === "area manager" ||
-    positionName.includes("area manager")
+    positionName === 'AREA MANAGER' ||
+    positionName.includes('AREA MANAGER')
   );
 };
 
-// Helper function to check if evaluator is Branch Manager or Supervisor
-const isEvaluatorBranchManagerOrSupervisor = (submission: Submission | null): boolean => {
-  if (!submission?.evaluator?.positions) return false;
+// Helper function to check if employee is a Manager or Supervisor (any manager position in branch)
+const isEmployeeBranchManagerOrSupervisor = (submission: Submission | null): boolean => {
+  if (!submission?.employee?.positions) return false;
   
-  const position = submission.evaluator.positions;
+  const position = submission.employee.positions;
   const positionLabel = typeof position === 'string' 
     ? position.toUpperCase() 
     : (position as any)?.label?.toUpperCase() || '';
-    
-  return (
-    positionLabel === 'BRANCH MANAGER' || 
-    positionLabel.includes('BRANCH MANAGER') ||
-    positionLabel === 'BRANCH SUPERVISOR' || 
-    positionLabel.includes('BRANCH SUPERVISOR')
-  );
+  
+  // Check for any manager position (excluding Area Manager which is handled separately)
+  const isManager = positionLabel.includes('MANAGER') && !positionLabel.includes('AREA MANAGER');
+  const isSupervisor = positionLabel.includes('SUPERVISOR');
+  
+  return isManager || isSupervisor;
 };
 
 // Determine evaluation type and route to appropriate component
@@ -159,9 +158,10 @@ export default function ViewResultsModalRouter({
 }: ViewResultsModalProps) {
   if (!submission) return null;
 
+  // Check employee's branch and position (not evaluator)
   const isBranchEmp = isEmployeeBranch(submission);
-  const isAreaMgr = isEvaluatorAreaManager(submission);
-  const isBranchMgrOrSup = isEvaluatorBranchManagerOrSupervisor(submission);
+  const isEmployeeAreaMgr = isEmployeeAreaManager(submission);
+  const isEmployeeBranchMgrOrSup = isEmployeeBranchManagerOrSupervisor(submission);
 
   // Determine evaluation type based on submission data
   const hasCustomerService = submission.customer_services && 
@@ -173,19 +173,53 @@ export default function ViewResultsModalRouter({
   
   let evaluationType: 'rankNfile' | 'basic' | 'default' = 'default';
   
-  // If evaluator is Area Manager, always treat as branch evaluation (default)
-  if (isAreaMgr) {
-    evaluationType = 'default'; // Area Managers use branch evaluation format
-  } else if (!hasCustomerService && hasManagerialSkills) {
+  // Determine evaluation type based on submission data
+  if (!hasCustomerService && hasManagerialSkills) {
     evaluationType = 'basic'; // Basic HO - has Managerial Skills, no Customer Service
   } else if (!hasCustomerService && !hasManagerialSkills) {
-    evaluationType = 'rankNfile'; // RankNfile HO - no Customer Service, no Managerial Skills
+    evaluationType = 'rankNfile'; // RankNfile - no Customer Service, no Managerial Skills
   } else {
     evaluationType = 'default'; // Default - has Customer Service
   }
 
-  // Route to appropriate component
-  // BranchRankNfile: branch employee + rankNfile type
+  // Route to appropriate component based on EMPLOYEE's branch and position
+  // Priority 1: Area Managers (from HO or branch) - route to BranchManager view
+  // Area Managers have both Customer Service AND Managerial Skills, so they need the BranchManager view
+  if (isEmployeeAreaMgr) {
+    return (
+      <ViewResultsModalBranchManager
+        isOpen={isOpen}
+        onCloseAction={onCloseAction}
+        submission={submission}
+        onApprove={onApprove}
+        isApproved={isApproved}
+        approvalData={approvalData}
+        currentUserName={currentUserName}
+        currentUserSignature={currentUserSignature}
+        showApprovalButton={showApprovalButton}
+      />
+    );
+  }
+
+  // Priority 2: Branch Manager/Supervisor (any manager position, excluding Area Manager) - route to BranchManager view
+  // This takes priority over evaluation type to ensure managers always get the manager view
+  if (isBranchEmp && isEmployeeBranchMgrOrSup) {
+    return (
+      <ViewResultsModalBranchManager
+        isOpen={isOpen}
+        onCloseAction={onCloseAction}
+        submission={submission}
+        onApprove={onApprove}
+        isApproved={isApproved}
+        approvalData={approvalData}
+        currentUserName={currentUserName}
+        currentUserSignature={currentUserSignature}
+        showApprovalButton={showApprovalButton}
+      />
+    );
+  }
+
+  // Priority 3: BranchRankNfile: branch employee + rankNfile type (non-manager employees)
   if (isBranchEmp && evaluationType === 'rankNfile') {
     return (
       <ViewResultsModalBranchRankNfile
@@ -202,24 +236,7 @@ export default function ViewResultsModalRouter({
     );
   }
 
-  // Branch Manager/Supervisor: branch employee + (default or basic) + evaluator is Branch Manager/Supervisor
-  if (isBranchEmp && isBranchMgrOrSup && (evaluationType === 'default' || evaluationType === 'basic')) {
-    return (
-      <ViewResultsModalBranchManager
-        isOpen={isOpen}
-        onCloseAction={onCloseAction}
-        submission={submission}
-        onApprove={onApprove}
-        isApproved={isApproved}
-        approvalData={approvalData}
-        currentUserName={currentUserName}
-        currentUserSignature={currentUserSignature}
-        showApprovalButton={showApprovalButton}
-      />
-    );
-  }
-
-  // Basic HO: has Managerial Skills, no Customer Service, not branch
+  // Priority 4: Basic HO: has Managerial Skills, no Customer Service, not branch
   if (evaluationType === 'basic') {
     return (
       <ViewResultsModalBasic
@@ -236,7 +253,7 @@ export default function ViewResultsModalRouter({
     );
   }
 
-  // Default: everything else (Area Manager evaluations, branch default, etc.)
+  // Default: everything else (branch default evaluations without manager position, etc.)
   return (
     <ViewResultsModalDefault
       isOpen={isOpen}

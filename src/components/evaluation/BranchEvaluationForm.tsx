@@ -3,7 +3,7 @@
 import EvaluationForm from "./index";
 import BranchRankNfileEvaluationForm from "./BranchRankNfileEvaluationForm";
 import BranchManagerEvaluationForm from "./BranchManagerEvaluationForm";
-import { User, useAuth } from "../../contexts/UserContext";
+import { User } from "../../contexts/UserContext";
 
 interface BranchEvaluationFormProps {
   branch?: {
@@ -18,13 +18,13 @@ interface BranchEvaluationFormProps {
   evaluationType?: 'rankNfile' | 'basic' | 'default';
 }
 
-// Helper function to check if user is HO (Head Office)
-const isEvaluatorHO = (user: User | null | undefined): boolean => {
-  if (!user?.branches) return false;
+// Helper function to check if employee is HO (Head Office)
+const isEmployeeHO = (employee: User | null | undefined): boolean => {
+  if (!employee?.branches) return false;
   
   // Handle branches as array
-  if (Array.isArray(user.branches)) {
-    const branch = user.branches[0];
+  if (Array.isArray(employee.branches)) {
+    const branch = employee.branches[0];
     if (branch) {
       const branchName = branch.branch_name?.toUpperCase() || "";
       const branchCode = branch.branch_code?.toUpperCase() || "";
@@ -40,9 +40,9 @@ const isEvaluatorHO = (user: User | null | undefined): boolean => {
   }
   
   // Handle branches as object
-  if (typeof user.branches === 'object') {
-    const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
-    const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
+  if (typeof employee.branches === 'object') {
+    const branchName = (employee.branches as any)?.branch_name?.toUpperCase() || "";
+    const branchCode = (employee.branches as any)?.branch_code?.toUpperCase() || "";
     return (
       branchName === "HO" || 
       branchCode === "HO" || 
@@ -56,24 +56,7 @@ const isEvaluatorHO = (user: User | null | undefined): boolean => {
   return false;
 };
 
-// Helper function to check if user is Branch Manager or Supervisor
-const isEvaluatorBranchManagerOrSupervisor = (user: User | null | undefined): boolean => {
-  if (!user?.positions) return false;
-  
-  const positionLabel = (
-    user.positions?.label || 
-    user.positions?.name || 
-    (user as any).position ||
-    ""
-  ).toUpperCase().trim();
-  
-  return (
-    positionLabel.includes('BRANCH MANAGER') ||
-    positionLabel.includes('BRANCH SUPERVISOR')
-  );
-};
-
-// Helper function to check if employee is Branch Manager or Supervisor
+// Helper function to check if employee is a Manager or Supervisor (any manager position in branch)
 const isEmployeeBranchManagerOrSupervisor = (employee: User | null | undefined): boolean => {
   if (!employee?.positions) return false;
   
@@ -84,9 +67,27 @@ const isEmployeeBranchManagerOrSupervisor = (employee: User | null | undefined):
     ""
   ).toUpperCase().trim();
   
+  // Check for any manager position (excluding Area Manager which is handled separately)
+  const isManager = positionLabel.includes('MANAGER') && !positionLabel.includes('AREA MANAGER');
+  const isSupervisor = positionLabel.includes('SUPERVISOR');
+  
+  return isManager || isSupervisor;
+};
+
+// Helper function to check if employee is Area Manager
+const isEmployeeAreaManager = (employee: User | null | undefined): boolean => {
+  if (!employee?.positions) return false;
+  
+  const positionLabel = (
+    employee.positions?.label || 
+    employee.positions?.name || 
+    (employee as any).position ||
+    ""
+  ).toUpperCase().trim();
+  
   return (
-    positionLabel.includes('BRANCH MANAGER') ||
-    positionLabel.includes('BRANCH SUPERVISOR')
+    positionLabel === 'AREA MANAGER' ||
+    positionLabel.includes('AREA MANAGER')
   );
 };
 
@@ -97,8 +98,6 @@ export default function BranchEvaluationForm({
   onCancelAction,
   evaluationType = 'default',
 }: BranchEvaluationFormProps) {
-  const { user } = useAuth();
-  
   // Route to dedicated BranchRankNfileEvaluationForm for rankNfile evaluations
   // This provides cleaner, more maintainable code with specific validation logic
   if (evaluationType === 'rankNfile') {
@@ -111,14 +110,14 @@ export default function BranchEvaluationForm({
     );
   }
 
-  // Route to BranchManagerEvaluationForm if:
-  // - Evaluator is Branch Manager/Supervisor (not HO)
-  // - Employee being evaluated is also Branch Manager/Supervisor
-  const isHO = isEvaluatorHO(user);
-  const isEvaluatorBranchMgrOrSup = isEvaluatorBranchManagerOrSupervisor(user);
+  // Check employee's branch and position to determine routing
+  const isHO = isEmployeeHO(employee);
   const isEmployeeBranchMgrOrSup = isEmployeeBranchManagerOrSupervisor(employee);
+  const isEmployeeAreaMgr = isEmployeeAreaManager(employee);
   
-  if (!isHO && isEvaluatorBranchMgrOrSup && isEmployeeBranchMgrOrSup) {
+  // Route to BranchManagerEvaluationForm if:
+  // - Employee is Branch Manager/Supervisor (not HO, not Area Manager)
+  if (!isHO && !isEmployeeAreaMgr && isEmployeeBranchMgrOrSup) {
     return (
       <BranchManagerEvaluationForm
         employee={employee}
