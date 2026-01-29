@@ -142,28 +142,30 @@ export default function WelcomeStep({
       { id: 6, title: "Ethical & Professional Behavior" },
     ];
     
+    let nextStepId = 7;
+    
     // For managers: Step 7 is Customer Service, Step 8 is Managerial Skills
     if (isManagerEvaluation) {
       if (showStep7) {
-        steps.push({ id: 7, title: "Customer Service" });
+        steps.push({ id: nextStepId++, title: "Customer Service" });
       }
       if (showStep8ManagerialSkills) {
-        steps.push({ id: 8, title: "Managerial Skills" });
+        steps.push({ id: nextStepId++, title: "Managerial Skills" });
       }
     }
     // For BasicHo (HO users picking basic): Step 7 is Managerial Skills
     else if (evaluationType === 'basic' && isHO) {
-      steps.push({ id: 7, title: "Managerial Skills" });
+      steps.push({ id: nextStepId++, title: "Managerial Skills" });
     }
     // For other cases: Step 7 is Customer Service (if applicable)
     else if (showStep7) {
-      steps.push({ id: 7, title: "Customer Service" });
+      steps.push({ id: nextStepId++, title: "Customer Service" });
     }
     
-    // Add Overall Assessment/End step
+    // Add Overall Assessment/End step with unique ID
     // For rankNfile, it goes directly from Step 6 to End (no Customer Service)
     if (evaluationType === 'basic' || evaluationType === 'default' || evaluationType === 'rankNfile') {
-      steps.push({ id: steps.length + 1, title: "Overall Assessment" });
+      steps.push({ id: nextStepId, title: "Overall Assessment" });
     }
     
     return steps;

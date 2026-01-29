@@ -371,15 +371,15 @@ export default function EmployeesTab() {
               <div className="flex items-center gap-3 flex-wrap">
                 <Badge
                   variant="outline"
-                  className="bg-green-100 text-green-800 hover:bg-green-200 border-green-300"
+                  className="bg-green-700 text-white hover:bg-green-800 border-green-700"
                 >
-                  ✨ New Added (≤30min)
+                  ✨ New Added 
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300"
+                  className="bg-blue-600 text-white hover:bg-blue-800 border-blue-600"
                 >
-                  🕐 Recently Added (&gt;30min)
+                  🕐 Recently Added 
                 </Badge>
               </div>
             </div>
@@ -706,6 +706,7 @@ export default function EmployeesTab() {
             ? `${selectedEmployeeForEvaluation?.fname || ""} ${selectedEmployeeForEvaluation?.lname || ""}`.trim()
             : ""
         }
+        employee={selectedEmployeeForEvaluation}
       />
 
       <Dialog
@@ -722,7 +723,7 @@ export default function EmployeesTab() {
           {selectedEmployeeForEvaluation && evaluationType === "employee" && (
             <>
               {/* If employee is HO, use HO evaluation forms (RankNfileHo) */}
-              {/* If employee is NOT HO, use BranchRankNfileEvaluationForm directly */}
+              {/* If employee is NOT HO, use BranchEvaluationForm which routes correctly */}
               {isEmployeeHO(selectedEmployeeForEvaluation) ? (
                 <RankNfileHo
                   employee={selectedEmployeeForEvaluation}
@@ -733,13 +734,14 @@ export default function EmployeesTab() {
                   }}
                 />
               ) : (
-                <BranchRankNfileEvaluationForm
+                <BranchEvaluationForm
                   employee={selectedEmployeeForEvaluation}
                   onCloseAction={() => {
                     setIsEvaluationModalOpen(false);
                     setSelectedEmployee(null);
                     setEvaluationType(null);
                   }}
+                  evaluationType="rankNfile"
                 />
               )}
             </>
@@ -747,7 +749,7 @@ export default function EmployeesTab() {
           {selectedEmployeeForEvaluation && evaluationType === "manager" && (
             <>
               {/* If employee is HO, use HO evaluation forms (BasicHo) */}
-              {/* If employee is NOT HO, use BranchManagerEvaluationForm directly */}
+              {/* If employee is NOT HO (Branch), use BranchManagerEvaluationForm directly */}
               {isEmployeeHO(selectedEmployeeForEvaluation) ? (
                 <BasicHo
                   employee={selectedEmployeeForEvaluation}
@@ -765,6 +767,7 @@ export default function EmployeesTab() {
                     setSelectedEmployee(null);
                     setEvaluationType(null);
                   }}
+                  evaluationType="default"
                 />
               )}
             </>

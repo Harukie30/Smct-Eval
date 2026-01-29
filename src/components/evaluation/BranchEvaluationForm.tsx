@@ -1,6 +1,5 @@
 "use client";
 
-import EvaluationForm from "./index";
 import BranchRankNfileEvaluationForm from "./BranchRankNfileEvaluationForm";
 import BranchManagerEvaluationForm from "./BranchManagerEvaluationForm";
 import { User } from "../../contexts/UserContext";
@@ -56,41 +55,6 @@ const isEmployeeHO = (employee: User | null | undefined): boolean => {
   return false;
 };
 
-// Helper function to check if employee is a Manager or Supervisor (any manager position in branch)
-const isEmployeeBranchManagerOrSupervisor = (employee: User | null | undefined): boolean => {
-  if (!employee?.positions) return false;
-  
-  const positionLabel = (
-    employee.positions?.label || 
-    employee.positions?.name || 
-    (employee as any).position ||
-    ""
-  ).toUpperCase().trim();
-  
-  // Check for any manager position (excluding Area Manager which is handled separately)
-  const isManager = positionLabel.includes('MANAGER') && !positionLabel.includes('AREA MANAGER');
-  const isSupervisor = positionLabel.includes('SUPERVISOR');
-  
-  return isManager || isSupervisor;
-};
-
-// Helper function to check if employee is Area Manager
-const isEmployeeAreaManager = (employee: User | null | undefined): boolean => {
-  if (!employee?.positions) return false;
-  
-  const positionLabel = (
-    employee.positions?.label || 
-    employee.positions?.name || 
-    (employee as any).position ||
-    ""
-  ).toUpperCase().trim();
-  
-  return (
-    positionLabel === 'AREA MANAGER' ||
-    positionLabel.includes('AREA MANAGER')
-  );
-};
-
 export default function BranchEvaluationForm({
   branch,
   employee,
@@ -98,8 +62,18 @@ export default function BranchEvaluationForm({
   onCancelAction,
   evaluationType = 'default',
 }: BranchEvaluationFormProps) {
-  // Route to dedicated BranchRankNfileEvaluationForm for rankNfile evaluations
-  // This provides cleaner, more maintainable code with specific validation logic
+  // Check if employee is Branch (not HO)
+  const isBranch = !isEmployeeHO(employee);
+  
+  // If employee is HO, this component shouldn't be used (HO forms are handled separately)
+  if (!isBranch) {
+    console.warn("BranchEvaluationForm: Employee is HO, should use HO-specific forms");
+    return null;
+  }
+  
+  // For Branch employees, route based on evaluationType:
+  // - rankNfile → BranchRankNfileEvaluationForm (branch employees)
+  // - default or basic → BranchManagerEvaluationForm (branch managers)
   if (evaluationType === 'rankNfile') {
     return (
       <BranchRankNfileEvaluationForm
@@ -109,28 +83,10 @@ export default function BranchEvaluationForm({
       />
     );
   }
-
-  // Check employee's branch and position to determine routing
-  const isHO = isEmployeeHO(employee);
-  const isEmployeeBranchMgrOrSup = isEmployeeBranchManagerOrSupervisor(employee);
-  const isEmployeeAreaMgr = isEmployeeAreaManager(employee);
   
-  // Route to BranchManagerEvaluationForm if:
-  // - Employee is Branch Manager/Supervisor (not HO, not Area Manager)
-  if (!isHO && !isEmployeeAreaMgr && isEmployeeBranchMgrOrSup) {
-    return (
-      <BranchManagerEvaluationForm
-        employee={employee}
-        onCloseAction={onCloseAction}
-        onCancelAction={onCancelAction}
-        evaluationType={evaluationType}
-      />
-    );
-  }
-
-  // For other evaluation types, use the main EvaluationForm
+  // For default or basic evaluation types, use BranchManagerEvaluationForm
   return (
-    <EvaluationForm
+    <BranchManagerEvaluationForm
       employee={employee}
       onCloseAction={onCloseAction}
       onCancelAction={onCancelAction}

@@ -3229,9 +3229,9 @@ export default function ViewResultsModal({
                 </Card>
               )}
 
-              {/* Step 8: Managerial Skills - Show for Basic HO evaluations OR Manager evaluations (Area Manager, Branch Manager/Supervisor) */}
-              {/* Managers should have BOTH Customer Service (Step 7) AND Managerial Skills (Step 8) */}
-              {((evaluationType === 'basic' || isManagerEvaluation) && submission.managerial_skills) && (
+              {/* Step 8: Managerial Skills - Always show for Branch Manager evaluations if data exists */}
+              {/* Branch Managers should have BOTH Customer Service (Step 7) AND Managerial Skills (Step 8) */}
+              {submission.managerial_skills && (
                 <Card className="shadow-md hide-in-print">
                   <CardHeader className="bg-teal-50 border-b border-teal-200">
                     <CardTitle className="text-xl font-semibold text-teal-900">
@@ -3802,8 +3802,8 @@ export default function ViewResultsModal({
                                 </td>
                               </tr>
 
-                              {/* Managerial Skills - Show for Basic HO OR Manager evaluations (Area Manager, Branch Manager/Supervisor) */}
-                              {((evaluationType === 'basic' || isManagerEvaluation) && submission.managerial_skills) && (
+                              {/* Managerial Skills - Always show for Branch Manager evaluations if data exists */}
+                              {submission.managerial_skills && (
                                 <tr>
                                   <td className="border-2 border-gray-400 px-4 py-3 text-sm text-gray-700 font-medium">
                                     Managerial Skills

@@ -1681,6 +1681,7 @@ export default function UserManagementTab() {
             ? `${selectedEmployeeForEvaluation?.fname || ""} ${selectedEmployeeForEvaluation?.lname || ""}`.trim()
             : ""
         }
+        employee={selectedEmployeeForEvaluation}
       />
 
       <Dialog
@@ -1697,7 +1698,7 @@ export default function UserManagementTab() {
           {selectedEmployeeForEvaluation && evaluationType === "employee" && (
             <>
               {/* If employee is HO, use HO evaluation forms (RankNfileHo) */}
-              {/* If employee is NOT HO, use BranchRankNfileEvaluationForm directly */}
+              {/* If employee is NOT HO, use BranchEvaluationForm which routes correctly */}
               {isEmployeeHO(selectedEmployeeForEvaluation) ? (
                 <RankNfileHo
                   employee={selectedEmployeeForEvaluation}
@@ -1708,13 +1709,14 @@ export default function UserManagementTab() {
                   }}
                 />
               ) : (
-                <BranchRankNfileEvaluationForm
+                <BranchEvaluationForm
                   employee={selectedEmployeeForEvaluation}
                   onCloseAction={() => {
                     setIsEvaluationModalOpen(false);
                     setSelectedEmployee(null);
                     setEvaluationType(null);
                   }}
+                  evaluationType="rankNfile"
                 />
               )}
             </>
@@ -1722,7 +1724,7 @@ export default function UserManagementTab() {
           {selectedEmployeeForEvaluation && evaluationType === "manager" && (
             <>
               {/* If employee is HO, use HO evaluation forms (BasicHo) */}
-              {/* If employee is NOT HO, use BranchManagerEvaluationForm directly */}
+              {/* If employee is NOT HO (Branch), use BranchManagerEvaluationForm directly */}
               {isEmployeeHO(selectedEmployeeForEvaluation) ? (
                 <BasicHo
                   employee={selectedEmployeeForEvaluation}
@@ -1740,6 +1742,7 @@ export default function UserManagementTab() {
                     setSelectedEmployee(null);
                     setEvaluationType(null);
                   }}
+                  evaluationType="default"
                 />
               )}
             </>

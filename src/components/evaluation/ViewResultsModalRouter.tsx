@@ -27,6 +27,7 @@ export type Submission = {
   evaluatorApprovedAt: string;
   employeeApprovedAt: string;
   created_at: string;
+  evaluationType?: string; // API evaluation type (e.g., "BranchRankNFile", "HoRankNFile", "BranchBasic", "HoBasic")
 
   //relations
   job_knowledge: any;
@@ -59,8 +60,8 @@ export interface ViewResultsModalProps {
   showApprovalButton?: boolean;
 }
 
-// Helper function to check if employee is branch (not HO)
-const isEmployeeBranch = (submission: Submission | null): boolean => {
+// Helper function to check if employee is HO (Head Office)
+const isEmployeeHO = (submission: Submission | null): boolean => {
   if (!submission?.employee) return false;
   
   // Handle branches as array
@@ -69,7 +70,7 @@ const isEmployeeBranch = (submission: Submission | null): boolean => {
     if (branch) {
       const branchName = branch.branch_name?.toUpperCase() || "";
       const branchCode = branch.branch_code?.toUpperCase() || "";
-      const isHO = (
+      return (
         branchName === "HO" || 
         branchCode === "HO" || 
         branchName.includes("HEAD OFFICE") ||
@@ -77,7 +78,6 @@ const isEmployeeBranch = (submission: Submission | null): boolean => {
         branchName === "HEAD OFFICE" ||
         branchCode === "HEAD OFFICE"
       );
-      return !isHO;
     }
   }
   
@@ -85,7 +85,7 @@ const isEmployeeBranch = (submission: Submission | null): boolean => {
   if (typeof submission.employee.branches === 'object') {
     const branchName = (submission.employee.branches as any)?.branch_name?.toUpperCase() || "";
     const branchCode = (submission.employee.branches as any)?.branch_code?.toUpperCase() || "";
-    const isHO = (
+    return (
       branchName === "HO" || 
       branchCode === "HO" || 
       branchName.includes("HEAD OFFICE") ||
@@ -93,22 +93,25 @@ const isEmployeeBranch = (submission: Submission | null): boolean => {
       branchName === "HEAD OFFICE" ||
       branchCode === "HEAD OFFICE"
     );
-    return !isHO;
   }
   
   // Fallback: check if branch field exists directly
   if ((submission.employee as any).branch) {
     const branchName = String((submission.employee as any).branch).toUpperCase();
-    const isHO = (
+    return (
       branchName === "HO" || 
       branchName === "HEAD OFFICE" ||
       branchName.includes("HEAD OFFICE") ||
       branchName.includes("/HO")
     );
-    return !isHO;
   }
   
   return false;
+};
+
+// Helper function to check if employee is branch (not HO)
+const isEmployeeBranch = (submission: Submission | null): boolean => {
+  return !isEmployeeHO(submission);
 };
 
 // Helper function to check if employee is Area Manager
@@ -144,6 +147,12 @@ const isEmployeeBranchManagerOrSupervisor = (submission: Submission | null): boo
   return isManager || isSupervisor;
 };
 
+// Helper function to normalize evaluationType from API
+const normalizeEvaluationType = (evaluationType?: string): string | null => {
+  if (!evaluationType) return null;
+  return evaluationType.trim();
+};
+
 // Determine evaluation type and route to appropriate component
 export default function ViewResultsModalRouter({
   isOpen,
@@ -158,31 +167,24 @@ export default function ViewResultsModalRouter({
 }: ViewResultsModalProps) {
   if (!submission) return null;
 
+  // Get evaluationType from API response (primary routing method)
+  const apiEvaluationType = normalizeEvaluationType(submission.evaluationType);
+
   // Check employee's branch and position (not evaluator)
+  const isHOEmp = isEmployeeHO(submission);
   const isBranchEmp = isEmployeeBranch(submission);
   const isEmployeeAreaMgr = isEmployeeAreaManager(submission);
   const isEmployeeBranchMgrOrSup = isEmployeeBranchManagerOrSupervisor(submission);
 
-  // Determine evaluation type based on submission data
+  // Fallback: Determine evaluation type based on submission data (if evaluationType not available)
   const hasCustomerService = submission.customer_services && 
     Array.isArray(submission.customer_services) && 
     submission.customer_services.length > 0;
   const hasManagerialSkills = submission.managerial_skills && 
     Array.isArray(submission.managerial_skills) && 
     submission.managerial_skills.length > 0;
-  
-  let evaluationType: 'rankNfile' | 'basic' | 'default' = 'default';
-  
-  // Determine evaluation type based on submission data
-  if (!hasCustomerService && hasManagerialSkills) {
-    evaluationType = 'basic'; // Basic HO - has Managerial Skills, no Customer Service
-  } else if (!hasCustomerService && !hasManagerialSkills) {
-    evaluationType = 'rankNfile'; // RankNfile - no Customer Service, no Managerial Skills
-  } else {
-    evaluationType = 'default'; // Default - has Customer Service
-  }
 
-  // Route to appropriate component based on EMPLOYEE's branch and position
+  // Route to appropriate component based on evaluationType from API
   // Priority 1: Area Managers (from HO or branch) - route to BranchManager view
   // Area Managers have both Customer Service AND Managerial Skills, so they need the BranchManager view
   if (isEmployeeAreaMgr) {
@@ -219,41 +221,196 @@ export default function ViewResultsModalRouter({
     );
   }
 
-  // Priority 3: BranchRankNfile: branch employee + rankNfile type (non-manager employees)
-  if (isBranchEmp && evaluationType === 'rankNfile') {
-    return (
-      <ViewResultsModalBranchRankNfile
-        isOpen={isOpen}
-        onCloseAction={onCloseAction}
-        submission={submission}
-        onApprove={onApprove}
-        isApproved={isApproved}
-        approvalData={approvalData}
-        currentUserName={currentUserName}
-        currentUserSignature={currentUserSignature}
-        showApprovalButton={showApprovalButton}
-      />
-    );
+  // Priority 3: Route based on evaluationType from API response
+  if (apiEvaluationType) {
+    const evalTypeUpper = apiEvaluationType.toUpperCase();
+    
+    // BranchRankNFile → ViewResultsModalBranchRankNfile
+    if (evalTypeUpper === "BRANCHRANKNFILE" || evalTypeUpper.includes("BRANCHRANKNFILE")) {
+      return (
+        <ViewResultsModalBranchRankNfile
+          isOpen={isOpen}
+          onCloseAction={onCloseAction}
+          submission={submission}
+          onApprove={onApprove}
+          isApproved={isApproved}
+          approvalData={approvalData}
+          currentUserName={currentUserName}
+          currentUserSignature={currentUserSignature}
+          showApprovalButton={showApprovalButton}
+        />
+      );
+    }
+    
+    // HoBasic or Basic HO → ViewResultsModalBasic
+    if (evalTypeUpper === "HOBASIC" || evalTypeUpper.includes("HOBASIC") || (evalTypeUpper.includes("BASIC") && isHOEmp)) {
+      // Only route to Basic if it's HO
+      if (isHOEmp) {
+        return (
+          <ViewResultsModalBasic
+            isOpen={isOpen}
+            onCloseAction={onCloseAction}
+            submission={submission}
+            onApprove={onApprove}
+            isApproved={isApproved}
+            approvalData={approvalData}
+            currentUserName={currentUserName}
+            currentUserSignature={currentUserSignature}
+            showApprovalButton={showApprovalButton}
+          />
+        );
+      }
+    }
+    
+    // HoRankNFile or RankNFile HO → ViewResultsModalDefault (HO rankNfile)
+    if (evalTypeUpper === "HORANKNFILE" || evalTypeUpper.includes("HORANKNFILE")) {
+      if (isHOEmp) {
+        return (
+          <ViewResultsModalDefault
+            isOpen={isOpen}
+            onCloseAction={onCloseAction}
+            submission={submission}
+            onApprove={onApprove}
+            isApproved={isApproved}
+            approvalData={approvalData}
+            currentUserName={currentUserName}
+            currentUserSignature={currentUserSignature}
+            showApprovalButton={showApprovalButton}
+          />
+        );
+      }
+    }
+    
+    // BranchBasic → ViewResultsModalBranchManager (branch manager evaluations)
+    if (evalTypeUpper === "BRANCHBASIC" || evalTypeUpper.includes("BRANCHBASIC")) {
+      if (isBranchEmp) {
+        return (
+          <ViewResultsModalBranchManager
+            isOpen={isOpen}
+            onCloseAction={onCloseAction}
+            submission={submission}
+            onApprove={onApprove}
+            isApproved={isApproved}
+            approvalData={approvalData}
+            currentUserName={currentUserName}
+            currentUserSignature={currentUserSignature}
+            showApprovalButton={showApprovalButton}
+          />
+        );
+      }
+    }
+    
+    // BranchDefault → ViewResultsModalBranchRankNfile (branch rank and file evaluations)
+    if (evalTypeUpper === "BRANCHDEFAULT" || evalTypeUpper.includes("BRANCHDEFAULT")) {
+      if (isBranchEmp) {
+        return (
+          <ViewResultsModalBranchRankNfile
+            isOpen={isOpen}
+            onCloseAction={onCloseAction}
+            submission={submission}
+            onApprove={onApprove}
+            isApproved={isApproved}
+            approvalData={approvalData}
+            currentUserName={currentUserName}
+            currentUserSignature={currentUserSignature}
+            showApprovalButton={showApprovalButton}
+          />
+        );
+      }
+    }
   }
 
-  // Priority 4: Basic HO: has Managerial Skills, no Customer Service, not branch
-  if (evaluationType === 'basic') {
-    return (
-      <ViewResultsModalBasic
-        isOpen={isOpen}
-        onCloseAction={onCloseAction}
-        submission={submission}
-        onApprove={onApprove}
-        isApproved={isApproved}
-        approvalData={approvalData}
-        currentUserName={currentUserName}
-        currentUserSignature={currentUserSignature}
-        showApprovalButton={showApprovalButton}
-      />
-    );
+  // Fallback Priority 4: HO Employees (if evaluationType not available)
+  // If HO employee has Managerial Skills → Basic HO → ViewResultsModalBasic
+  // If HO employee has NO Managerial Skills → RankNfile HO → ViewResultsModalDefault
+  if (isHOEmp) {
+    if (hasManagerialSkills) {
+      // Basic HO - has Managerial Skills, no Customer Service
+      return (
+        <ViewResultsModalBasic
+          isOpen={isOpen}
+          onCloseAction={onCloseAction}
+          submission={submission}
+          onApprove={onApprove}
+          isApproved={isApproved}
+          approvalData={approvalData}
+          currentUserName={currentUserName}
+          currentUserSignature={currentUserSignature}
+          showApprovalButton={showApprovalButton}
+        />
+      );
+    } else {
+      // RankNfile HO - no Managerial Skills, no Customer Service
+      return (
+        <ViewResultsModalDefault
+          isOpen={isOpen}
+          onCloseAction={onCloseAction}
+          submission={submission}
+          onApprove={onApprove}
+          isApproved={isApproved}
+          approvalData={approvalData}
+          currentUserName={currentUserName}
+          currentUserSignature={currentUserSignature}
+          showApprovalButton={showApprovalButton}
+        />
+      );
+    }
   }
 
-  // Default: everything else (branch default evaluations without manager position, etc.)
+  // Fallback Priority 5: Branch evaluations (if evaluationType not available)
+  // Branch employees with Customer Service → BranchDefault → ViewResultsModalBranchRankNfile
+  // Branch employees with Managerial Skills → BranchBasic → ViewResultsModalBranchManager
+  if (isBranchEmp) {
+    if (hasManagerialSkills) {
+      // BranchBasic - has Managerial Skills (branch manager)
+      return (
+        <ViewResultsModalBranchManager
+          isOpen={isOpen}
+          onCloseAction={onCloseAction}
+          submission={submission}
+          onApprove={onApprove}
+          isApproved={isApproved}
+          approvalData={approvalData}
+          currentUserName={currentUserName}
+          currentUserSignature={currentUserSignature}
+          showApprovalButton={showApprovalButton}
+        />
+      );
+    } else if (hasCustomerService) {
+      // BranchDefault - has Customer Service (branch rank and file)
+      return (
+        <ViewResultsModalBranchRankNfile
+          isOpen={isOpen}
+          onCloseAction={onCloseAction}
+          submission={submission}
+          onApprove={onApprove}
+          isApproved={isApproved}
+          approvalData={approvalData}
+          currentUserName={currentUserName}
+          currentUserSignature={currentUserSignature}
+          showApprovalButton={showApprovalButton}
+        />
+      );
+    } else {
+      // BranchRankNfile - no Customer Service, no Managerial Skills
+      return (
+        <ViewResultsModalBranchRankNfile
+          isOpen={isOpen}
+          onCloseAction={onCloseAction}
+          submission={submission}
+          onApprove={onApprove}
+          isApproved={isApproved}
+          approvalData={approvalData}
+          currentUserName={currentUserName}
+          currentUserSignature={currentUserSignature}
+          showApprovalButton={showApprovalButton}
+        />
+      );
+    }
+  }
+
+  // Default fallback: Should only be reached for HO evaluations without evaluationType
+  // This is a safety fallback
   return (
     <ViewResultsModalDefault
       isOpen={isOpen}

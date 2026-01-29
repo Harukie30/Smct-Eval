@@ -18,6 +18,7 @@ interface Step2Props {
   updateDataAction: (updates: Partial<EvaluationPayload>) => void;
   employee?: User | null;
   evaluationType?: 'rankNfile' | 'basic' | 'default'; // Optional: evaluation type to determine HO context
+  forceShowJobTargets?: boolean; // Optional: force show job targets (for BranchManagerEvaluationForm)
 }
 
 // Score Dropdown Component
@@ -95,7 +96,7 @@ function ScoreDropdown({
   );
 }
 
-export default function Step2({ data, updateDataAction, employee, evaluationType }: Step2Props) {
+export default function Step2({ data, updateDataAction, employee, evaluationType, forceShowJobTargets = false }: Step2Props) {
   const { user } = useAuth();
   
   // Check if employee being evaluated is HO (Head Office)
@@ -194,10 +195,11 @@ export default function Step2({ data, updateDataAction, employee, evaluationType
   // If evaluationType is 'rankNfile' or 'basic', it's definitely an HO evaluation
   const isHO = isEmployeeHO();
   
-  // Show Job Targets if employee is Branch Manager, Branch Supervisor, or Area Manager
-  // For Area Managers: they should see Job Targets even if from HO (since they do branch evaluations)
-  // For Branch Managers/Supervisors: only show if not HO
-  const showJobTargets = isEmployeeAreaManager() || (isEmployeeBranchManagerOrSupervisor() && !isHO);
+  // Show Job Targets if:
+  // 1. forceShowJobTargets is true (for BranchManagerEvaluationForm)
+  // 2. OR employee is Area Manager
+  // 3. OR employee is Branch Manager/Supervisor and not HO
+  const showJobTargets = forceShowJobTargets || isEmployeeAreaManager() || (isEmployeeBranchManagerOrSupervisor() && !isHO);
   
   // Debug: Log to verify evaluationType is being passed
   // console.log('Step2 - evaluationType:', evaluationType, 'isHO:', isHO);
