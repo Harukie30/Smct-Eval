@@ -309,7 +309,7 @@ export function EvaluatorDashboardGuideModal({ isOpen, onCloseAction }: Evaluato
                       </div>
                       <div className="flex-1">
                         <p className="text-gray-700 mb-4">
-                          Access comprehensive performance reviews for all employees you've evaluated.
+                        Access your own performance reviews.
                         </p>
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
@@ -318,7 +318,7 @@ export function EvaluatorDashboardGuideModal({ isOpen, onCloseAction }: Evaluato
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">Review Summary</p>
-                              <p className="text-sm text-gray-600">View overall ratings and performance breakdowns</p>
+                              <p className="text-sm text-gray-600">View overall ratings and performance breakdowns of your own evaluations</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -327,7 +327,7 @@ export function EvaluatorDashboardGuideModal({ isOpen, onCloseAction }: Evaluato
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">Historical Comparison</p>
-                              <p className="text-sm text-gray-600">Compare current performance with previous evaluations</p>
+                              <p className="text-sm text-gray-600">Compare your current performance with your previous evaluations</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -336,13 +336,13 @@ export function EvaluatorDashboardGuideModal({ isOpen, onCloseAction }: Evaluato
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">Performance Trends</p>
-                              <p className="text-sm text-gray-600">Identify improvement areas and strengths</p>
+                              <p className="text-sm text-gray-600">Identify improvement areas and strengths in your own performance</p>
                             </div>
                           </div>
                         </div>
                             <div className="mt-4 p-3 bg-blue-100 rounded-lg">
                           <p className="text-sm text-blue-800">
-                            <strong>Note:</strong> Reviews include both evaluations you've created and evaluations where you are the employee.
+                            <strong>Note:</strong> Reviews show your own performance evaluations where you are the employee being evaluated.
                           </p>
                         </div>
                       </div>
@@ -378,7 +378,7 @@ export function EvaluatorDashboardGuideModal({ isOpen, onCloseAction }: Evaluato
                       </div>
                       <div className="flex-1">
                         <p className="text-gray-700 mb-4">
-                          View a complete chronological history of all evaluations you've conducted or received.
+                          View a complete chronological history of all your own performance evaluations.
                         </p>
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
@@ -387,7 +387,7 @@ export function EvaluatorDashboardGuideModal({ isOpen, onCloseAction }: Evaluato
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">Timeline View</p>
-                              <p className="text-sm text-gray-600">See all evaluations organized by date and period</p>
+                              <p className="text-sm text-gray-600">See all your own performance evaluations organized by date and period</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -396,7 +396,7 @@ export function EvaluatorDashboardGuideModal({ isOpen, onCloseAction }: Evaluato
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">Search & Filter</p>
-                              <p className="text-sm text-gray-600">Find specific evaluations by employee, date, or status</p>
+                              <p className="text-sm text-gray-600">Find specific performance evaluations by date or period</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -405,13 +405,13 @@ export function EvaluatorDashboardGuideModal({ isOpen, onCloseAction }: Evaluato
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">Detailed Records</p>
-                              <p className="text-sm text-gray-600">Access full evaluation details and download reports</p>
+                              <p className="text-sm text-gray-600">Access full details of your own performance evaluations and download reports</p>
                             </div>
                           </div>
                         </div>
                         <div className="mt-4 p-3 bg-blue-100 rounded-lg">
                         <p className="text-sm text-blue-800">
-                            <strong>Tip:</strong> Use the history tab to track evaluation patterns and ensure timely reviews.
+                            <strong>Tip:</strong> Use the history tab to track your own performance patterns and review your evaluation history.
                           </p>
                         </div>
                       </div>
@@ -424,8 +424,16 @@ export function EvaluatorDashboardGuideModal({ isOpen, onCloseAction }: Evaluato
             {/* Slide 6: Quick Tips */}
             <CarouselItem>
               <div className="p-2">
-                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200">
-                  <CardContent className="p-6">
+                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 relative overflow-hidden">
+                  {/* Faded Background Logo - Fixed position, won't scroll */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                    <img
+                      src="/smct.png"
+                      alt="SMCT Logo"
+                      className="w-145 h-145 object-contain opacity-15"
+                    />
+                  </div>
+                  <CardContent className="p-6 relative z-10">
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <CheckCircle2 className="w-5 h-5 text-blue-600" />

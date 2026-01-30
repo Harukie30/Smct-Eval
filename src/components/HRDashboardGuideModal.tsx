@@ -378,7 +378,7 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
                       </div>
                       <div className="flex-1">
                         <p className="text-gray-700 mb-4">
-                          Access comprehensive performance reviews for all employees across the organization.
+                          Access your own performance reviews.
                         </p>
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
@@ -387,7 +387,7 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">Review Analytics</p>
-                              <p className="text-sm text-gray-600">View performance summaries and ratings across departments</p>
+                              <p className="text-sm text-gray-600">View performance summaries and ratings of your own evaluations</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -396,7 +396,7 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">Performance Trends</p>
-                              <p className="text-sm text-gray-600">Identify organizational performance patterns and improvements</p>
+                              <p className="text-sm text-gray-600">Identify patterns and improvements in your own performance</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -405,13 +405,13 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">Detailed Reviews</p>
-                              <p className="text-sm text-gray-600">Access complete evaluation details for any employee</p>
+                              <p className="text-sm text-gray-600">Access complete details of your own performance evaluations</p>
                             </div>
                           </div>
                         </div>
                         <div className="mt-4 p-3 bg-blue-100 rounded-lg">
                           <p className="text-sm text-blue-800">
-                            <strong>Note:</strong> Reviews are accessible through the Analytics section in the sidebar.
+                            <strong>Note:</strong> Reviews show your own performance evaluations where you are the employee being evaluated.
                           </p>
                         </div>
                       </div>
@@ -447,7 +447,7 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
                       </div>
                       <div className="flex-1">
                         <p className="text-gray-700 mb-4">
-                          View a complete chronological history of all evaluations across the organization.
+                          View a complete chronological history of all your own performance evaluations.
                         </p>
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
@@ -456,7 +456,7 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">Historical Timeline</p>
-                              <p className="text-sm text-gray-600">See all evaluations organized by date and period</p>
+                              <p className="text-sm text-gray-600">See all your own performance evaluations organized by date and period</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -465,7 +465,7 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">Advanced Search</p>
-                              <p className="text-sm text-gray-600">Find evaluations by employee, department, branch, or date range</p>
+                              <p className="text-sm text-gray-600">Find your own performance evaluations by date or period</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -474,13 +474,13 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">Export & Reports</p>
-                              <p className="text-sm text-gray-600">Generate reports and export evaluation data for analysis</p>
+                              <p className="text-sm text-gray-600">Generate reports and export your own evaluation data for analysis</p>
                             </div>
                           </div>
                         </div>
                         <div className="mt-4 p-3 bg-blue-100 rounded-lg">
                           <p className="text-sm text-blue-800">
-                            <strong>Tip:</strong> Use the history tab to track evaluation completion rates and identify trends.
+                            <strong>Tip:</strong> Use the history tab to track your own performance patterns and review your evaluation history.
                           </p>
                         </div>
                       </div>
@@ -493,8 +493,16 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
             {/* Slide 7: Quick Tips */}
             <CarouselItem>
               <div className="p-2">
-                <Card className="bg-gradient-to-br from-gray-50 to-blue-50 border border-gray-200">
-                  <CardContent className="p-6">
+                <Card className="bg-gradient-to-br from-gray-50 to-blue-50 border border-gray-200 relative overflow-hidden">
+                  {/* Faded Background Logo - Fixed position, won't scroll */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                    <img
+                      src="/smct.png"
+                      alt="SMCT Logo"
+                      className="w-145 h-145 object-contain opacity-15"
+                    />
+                  </div>
+                  <CardContent className="p-6 relative z-10">
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <CheckCircle2 className="w-5 h-5 text-blue-600" />

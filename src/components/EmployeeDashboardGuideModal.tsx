@@ -286,8 +286,16 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
             {/* Slide 4: Quick Tips */}
             <CarouselItem>
               <div className="p-2">
-                <Card className="bg-gradient-to-br from-gray-50 to-blue-50 border border-gray-200">
-                  <CardContent className="p-6">
+                <Card className="bg-gradient-to-br from-gray-50 to-blue-50 border border-gray-200 relative overflow-hidden">
+                  {/* Faded Background Logo - Fixed position, won't scroll */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                    <img
+                      src="/smct.png"
+                      alt="SMCT Logo"
+                      className="w-145 h-145 object-contain opacity-15"
+                    />
+                  </div>
+                  <CardContent className="p-6 relative z-10">
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <CheckCircle2 className="w-5 h-5 text-blue-600" />
