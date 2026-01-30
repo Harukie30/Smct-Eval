@@ -404,7 +404,7 @@ export default function OverallAssessmentBranchEval({
       data.qualityOfWorkScore4,
     ];
     
-    // Job Target scores (7 separate targets from newStep2)
+    // Job Target scores (7 separate targets from newStep2) - include if they exist (optional)
     const jobTargetScores = [
       data.jobTargetMotorcyclesScore,
       data.jobTargetAppliancesScore,
@@ -415,7 +415,7 @@ export default function OverallAssessmentBranchEval({
       data.jobTargetShopIncomeScore,
     ];
     
-    // Combine all scores
+    // Combine all scores (job targets are optional, so only include if they have values)
     const allScores = [...baseScores, ...jobTargetScores]
       .filter((score) => score && score !== 0)
       .map((score) => parseFloat(String(score)));
@@ -1296,8 +1296,10 @@ export default function OverallAssessmentBranchEval({
                     {data.qualityOfWorkComments4 || ""}
                   </td>
                 </tr>
+                {/* Show job target rows only if they have a score (non-zero) - each row is optional */}
                 {/* Sales Targets for MOTORCYCLES */}
-                <tr>
+                {data.jobTargetMotorcyclesScore && data.jobTargetMotorcyclesScore !== 0 ? (
+                  <tr>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Sales Targets for MOTORCYCLES
                   </td>
@@ -1340,8 +1342,11 @@ export default function OverallAssessmentBranchEval({
                     {data.jobTargetMotorcyclesComment || ""}
                   </td>
                 </tr>
+                ) : null}
+
                 {/* Sales Targets for APPLIANCES */}
-                <tr>
+                {data.jobTargetAppliancesScore && data.jobTargetAppliancesScore !== 0 ? (
+                  <tr>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Sales Targets for APPLIANCES
                   </td>
@@ -1384,8 +1389,11 @@ export default function OverallAssessmentBranchEval({
                     {data.jobTargetAppliancesComment || ""}
                   </td>
                 </tr>
+                ) : null}
+
                 {/* Sales Targets for CARS */}
-                <tr>
+                {data.jobTargetCarsScore && data.jobTargetCarsScore !== 0 ? (
+                  <tr>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Sales Targets for CARS
                   </td>
@@ -1428,8 +1436,11 @@ export default function OverallAssessmentBranchEval({
                     {data.jobTargetCarsComment || ""}
                   </td>
                 </tr>
+                ) : null}
+
                 {/* Sales Targets for TRI-WHEELERS */}
-                <tr>
+                {data.jobTargetTriWheelersScore && data.jobTargetTriWheelersScore !== 0 ? (
+                  <tr>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Sales Targets for TRI-WHEELERS (for 3S Shops only)
                   </td>
@@ -1472,8 +1483,11 @@ export default function OverallAssessmentBranchEval({
                     {data.jobTargetTriWheelersComment || ""}
                   </td>
                 </tr>
+                ) : null}
+
                 {/* Collection Targets */}
-                <tr>
+                {data.jobTargetCollectionScore && data.jobTargetCollectionScore !== 0 ? (
+                  <tr>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Collection Targets
                   </td>
@@ -1516,8 +1530,11 @@ export default function OverallAssessmentBranchEval({
                     {data.jobTargetCollectionComment || ""}
                   </td>
                 </tr>
+                ) : null}
+
                 {/* Spareparts & Lubricants Targets */}
-                <tr>
+                {data.jobTargetSparepartsLubricantsScore && data.jobTargetSparepartsLubricantsScore !== 0 ? (
+                  <tr>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Spareparts & Lubricants Targets
                   </td>
@@ -1560,8 +1577,11 @@ export default function OverallAssessmentBranchEval({
                     {data.jobTargetSparepartsLubricantsComment || ""}
                   </td>
                 </tr>
+                ) : null}
+
                 {/* Shop Income Targets */}
-                <tr>
+                {data.jobTargetShopIncomeScore && data.jobTargetShopIncomeScore !== 0 ? (
+                  <tr>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Shop Income Targets
                   </td>
@@ -1604,6 +1624,7 @@ export default function OverallAssessmentBranchEval({
                     {data.jobTargetShopIncomeComment || ""}
                   </td>
                 </tr>
+                ) : null}
               </tbody>
             </table>
           </div>
