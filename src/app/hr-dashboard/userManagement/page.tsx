@@ -166,6 +166,7 @@ export default function UserManagementTab() {
   const [userToEdit, setUserToEdit] = useState<any>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<User | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [rejectingUserId, setRejectingUserId] = useState<number | null>(null);
 
   //filters for active users
   const [activeSearchTerm, setActiveSearchTerm] = useState("");
@@ -517,11 +518,25 @@ export default function UserManagementTab() {
     registrationName: string
   ) => {
     try {
-      await apiService.rejectRegistration(registrationId);
+      // Set rejecting state to show red highlight
+      setRejectingUserId(registrationId);
+      
+      // Wait for visual feedback (500ms delay)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Delete the account when rejected
+      await apiService.deleteUser(registrationId);
+      
+      // Remove from list after deletion
       await loadPendingUsers(pendingSearchTerm, statusFilter);
+      
+      // Clear rejecting state
+      setRejectingUserId(null);
+      
       toastMessages.user.rejected(registrationName);
     } catch (error) {
       console.error("Error rejecting registration:", error);
+      setRejectingUserId(null);
       toastMessages.generic.error(
         "Rejection Error",
         "An error occurred while rejecting the registration. Please try again."
@@ -1352,12 +1367,15 @@ export default function UserManagementTab() {
                           const isNew = hoursDiff <= 24;
                           const isRecent = hoursDiff > 24 && hoursDiff <= 48;
                           const isRejected = account.is_active === "declined";
+                          const isBeingRejected = rejectingUserId === account.id;
 
                           return (
                             <TableRow
                               key={account.id}
                               className={
-                                isRejected
+                                isBeingRejected
+                                  ? "bg-red-200 border-l-4 border-l-red-600 animate-pulse transition-all duration-500"
+                                  : isRejected
                                   ? "bg-red-50 border-l-4 border-l-red-500 hover:bg-red-100"
                                   : isNew
                                   ? "bg-yellow-50 border-l-4 border-l-yellow-500 hover:bg-yellow-100"
