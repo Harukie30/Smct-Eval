@@ -1111,7 +1111,9 @@ export default function DashboardShell(props: DashboardShellProps) {
       </div>
 
       {/* Footer - Sticky */}
-      <footer className="fixed bottom-0  left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-sm">
+      <footer className={`fixed bottom-0 z-40 bg-white border-t border-gray-200 shadow-sm transition-all duration-400 ${
+        isSidebarOpen ? "left-64 right-0" : "left-0 right-0"
+      }`}>
         <div className="px-6 py-4">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-2 md:space-y-0">
             <div className="flex items-center space-x-2">
