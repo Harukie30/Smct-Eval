@@ -1991,13 +1991,13 @@ export default function ViewResultsModal({
                     </>
                   ) : evaluationType === 'basic' ? (
                     <>
-                      Performance Review Form (HEAD OFFICE)
+                      Performance Review Form(BRANCH)
                       <br />
                       Basic
                     </>
                   ) : (
                     <>
-                      Performance Review Form
+                      Performance Review Form (BRANCH MANAGER)
                     </>
                   )}
                 </h1>
