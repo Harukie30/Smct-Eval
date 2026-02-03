@@ -668,6 +668,14 @@ export default function Step2({ data, updateDataAction, employee, evaluationType
                   </td>
                 </tr>
 
+                {/* Blank row - if the evaluation is N/A then leave it blank */}
+                <tr>
+                  <td colSpan={6} className="border border-gray-300 px-4 py-3 text-center text-sm text-gray-500 italic">
+                    {/* if the evaluation is N/A then leave it blank */}
+                    <p>If the evaluation is N/A then leave it blank beyond this row</p>
+                  </td>
+                </tr>
+
                 {/* Job Targets Section - Multiple target types (Optional - always visible when showJobTargets is true) */}
                 {showJobTargets && (
                   <>
