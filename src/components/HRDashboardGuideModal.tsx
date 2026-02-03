@@ -118,7 +118,7 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
                     </p>
                     <Button
                       onClick={() => api?.scrollNext()}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-6 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 cursor-pointer hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-6 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
                     >
                       Proceed to Guide
                       <ArrowRight className="w-5 h-5" />

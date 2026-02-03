@@ -98,6 +98,7 @@ export default function UserManagementTab() {
   const [employeeToDelete, setEmployeeToDelete] = useState<User | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
   const [rejectingUserId, setRejectingUserId] = useState<number | null>(null);
+  const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<number>>(new Set());
 
   //filters for active users
   const [activeSearchTerm, setActiveSearchTerm] = useState("");
@@ -373,6 +374,19 @@ export default function UserManagementTab() {
       }
 
       await apiService.updateEmployee(formData, updatedUser.id);
+
+      // Add user to recently updated list for 10 second highlight
+      const userId = Number(updatedUser.id);
+      setRecentlyUpdatedIds(prev => new Set(prev).add(userId));
+      
+      // Remove highlight after 10 seconds with fade out
+      setTimeout(() => {
+        setRecentlyUpdatedIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(userId);
+          return newSet;
+        });
+      }, 10000);
 
       // Refresh user data to update the table immediately
       await refreshUserData(false);
@@ -885,14 +899,14 @@ export default function UserManagementTab() {
                           isRecentlyAdded = hoursDiff > 30 && hoursDiff <= 40;
                         }
 
-                        // Check if user was recently updated (within 30 minutes)
-                        if (updatedDate !== null && createdDate !== null) {
+                        // Check if user is in the recently updated set (15 second highlight)
+                        const isJustUpdated = employee.id ? recentlyUpdatedIds.has(Number(employee.id)) : false;
+                        
+                        // Check if user was recently updated (within 30 minutes) - fallback for page refresh
+                        if (!isJustUpdated && updatedDate !== null && createdDate !== null) {
                           const now = new Date();
                           const updatedMinutesDiff =
                             (now.getTime() - updatedDate.getTime()) /
-                            (1000 * 60);
-                          const createdMinutesDiff =
-                            (now.getTime() - createdDate.getTime()) /
                             (1000 * 60);
                           // Only show as updated if updated_at is different from created_at
                           // and the update was within 30 minutes
@@ -903,6 +917,11 @@ export default function UserManagementTab() {
                             isRecentlyUpdated = true;
                           }
                         }
+                        
+                        // Use the 15-second highlight if available, otherwise use timestamp check
+                        if (isJustUpdated) {
+                          isRecentlyUpdated = true;
+                        }
 
                         return (
                           <TableRow
@@ -911,11 +930,11 @@ export default function UserManagementTab() {
                               isDeleting
                                 ? "animate-slide-out-right bg-red-100 border-l-4 border-l-red-600"
                                 : isRecentlyUpdated
-                                ? "bg-yellow-50 border-l-4 border-l-yellow-500 hover:bg-yellow-100"
+                                ? "bg-yellow-100 border-l-4 border-l-yellow-600 hover:bg-yellow-200 animate-pulse transition-all duration-500 shadow-md"
                                 : isNew
-                                ? "bg-green-50 border-l-4 border-l-green-500 hover:bg-green-100"
+                                ? "bg-green-100 border-l-4 border-l-green-600 hover:bg-green-200 animate-pulse transition-all duration-300 shadow-md"
                                 : isRecentlyAdded
-                                ? "bg-blue-50 border-l-4 border-l-blue-500 hover:bg-blue-100"
+                                ? "bg-blue-100 border-l-4 border-l-blue-600 hover:bg-blue-200 transition-all duration-300"
                                 : "hover:bg-gray-50"
                             }
                           >
@@ -953,7 +972,7 @@ export default function UserManagementTab() {
                                     </span>
                                     {isRecentlyUpdated && (
                                       <Badge className="bg-yellow-500 text-white text-xs px-2 py-0.5 font-semibold">
-                                        ✏️ Updated
+                                        🔄 Updated
                                       </Badge>
                                     )}
                                     {isNew && !isRecentlyUpdated && (
