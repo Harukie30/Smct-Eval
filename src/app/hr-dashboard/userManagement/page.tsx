@@ -1850,7 +1850,7 @@ export default function UserManagementTab() {
                     setSelectedEmployee(null);
                     setEvaluationType(null);
                   }}
-                  evaluationType="default"
+                  evaluationType="basic"
                 />
               )}
             </>

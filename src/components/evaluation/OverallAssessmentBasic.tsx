@@ -757,7 +757,24 @@ export default function OverallAssessmentBasic({
                   </label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-700">Others:</label>
+                  <input
+                    type="checkbox"
+                    id="othersCustom"
+                    className="rounded"
+                    checked={
+                      data.reviewTypeOthersCustom !== "" &&
+                      data.reviewTypeOthersCustom !== null &&
+                      data.reviewTypeOthersCustom.trim() !== ""
+                    }
+                    disabled
+                    readOnly
+                  />
+                  <label
+                    htmlFor="othersCustom"
+                    className="text-sm text-gray-700"
+                  >
+                    Others:
+                  </label>
                   <input
                     type="text"
                     value={data.reviewTypeOthersCustom || ""}

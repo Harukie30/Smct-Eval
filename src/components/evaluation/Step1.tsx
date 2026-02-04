@@ -121,6 +121,60 @@ export default function Step1({
   const [isOthersCustomEnabled, setIsOthersCustomEnabled] = useState(false);
   const { user } = useAuth();
 
+  // Check if employee being evaluated is HO (Head Office)
+  // This determines the header text based on the employee being evaluated
+  const isEmployeeHO = () => {
+    if (!employee?.branches) {
+      // Fallback: if evaluationType is 'rankNfile' or 'basic', it's definitely an HO evaluation
+      return evaluationType === 'rankNfile' || evaluationType === 'basic';
+    }
+    
+    // Handle branches as array
+    if (Array.isArray(employee.branches)) {
+      const branch = employee.branches[0];
+      if (branch) {
+        const branchName = branch.branch_name?.toUpperCase() || "";
+        const branchCode = branch.branch_code?.toUpperCase() || "";
+        return (
+          branchName === "HO" || 
+          branchCode === "HO" || 
+          branchName.includes("HEAD OFFICE") ||
+          branchCode.includes("HEAD OFFICE") ||
+          branchName === "HEAD OFFICE" ||
+          branchCode === "HEAD OFFICE"
+        );
+      }
+    }
+    
+    // Handle branches as object
+    if (typeof employee.branches === 'object') {
+      const branchName = (employee.branches as any)?.branch_name?.toUpperCase() || "";
+      const branchCode = (employee.branches as any)?.branch_code?.toUpperCase() || "";
+      return (
+        branchName === "HO" || 
+        branchCode === "HO" || 
+        branchName.includes("HEAD OFFICE") ||
+        branchCode.includes("HEAD OFFICE") ||
+        branchName === "HEAD OFFICE" ||
+        branchCode === "HEAD OFFICE"
+      );
+    }
+    
+    // Fallback: check if branch field exists directly
+    if ((employee as any).branch) {
+      const branchName = String((employee as any).branch).toUpperCase();
+      return (
+        branchName === "HO" || 
+        branchName === "HEAD OFFICE" ||
+        branchName.includes("HEAD OFFICE") ||
+        branchName.includes("/HO")
+      );
+    }
+    
+    // Final fallback: if evaluationType is 'rankNfile' or 'basic', it's definitely an HO evaluation
+    return evaluationType === 'rankNfile' || evaluationType === 'basic';
+  };
+
   // Check if any "others" review is selected
   const isOthersSelected = () => {
     return (
@@ -272,7 +326,11 @@ export default function Step1({
           Performance Review Form
         </h2>
         <h3 className="text-lg font-semibold text-gray-700 mb-6">
-          {evaluationType === 'basic' ? 'Basic Evaluation' : 'Rank and File I & II'}
+          {evaluationType === 'basic' 
+            ? `Basic Evaluation (${isEmployeeHO() ? 'HO' : 'BRANCH'})` 
+            : evaluationType === 'rankNfile'
+            ? `Rank and File I & II (${isEmployeeHO() ? 'HO' : 'BRANCH'})`
+            : `Rank and File I & II (${isEmployeeHO() ? 'HO' : 'BRANCH'})`}
         </h3>
       </div>
 
