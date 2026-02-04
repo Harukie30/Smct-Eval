@@ -767,7 +767,7 @@ export default function EmployeesTab() {
                     setSelectedEmployee(null);
                     setEvaluationType(null);
                   }}
-                  evaluationType="default"
+                  evaluationType="basic"
                 />
               )}
             </>

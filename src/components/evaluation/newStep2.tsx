@@ -280,7 +280,7 @@ export default function Step2({ data, updateDataAction, employee, evaluationType
           <DialogHeader className="space-y-3 pb-4">
             <DialogTitle className="flex items-center gap-2 text-blue-600 text-xl font-semibold">
               <Info className="h-5 w-5" />
-              Job Targets - Optional Fields
+              QUALITY OF WORK - Optional Fields
             </DialogTitle>
             <DialogDescription className="text-gray-700 text-base">
               The following 7 job target rows are <strong>optional</strong> 

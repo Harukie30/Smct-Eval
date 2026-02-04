@@ -426,6 +426,20 @@ export default function ViewResultsModal({
                   font-size: 12px !important;
                   line-height: 1.2 !important;
                 }
+                .print-review-type input[type="text"] {
+                  font-family: Calibri, sans-serif !important;
+                  font-size: 12px !important;
+                  padding: 2px 4px !important;
+                  border: 1px solid #000 !important;
+                  background: transparent !important;
+                  color: #000 !important;
+                }
+                .print-review-type input[type="checkbox"] {
+                  width: 12px !important;
+                  height: 12px !important;
+                  margin: 0 !important;
+                  cursor: default !important;
+                }
                 /* Make checkboxes more visible in print */
                 .print-review-type .w-4 {
                   width: 12px !important;
@@ -2132,24 +2146,33 @@ export default function ViewResultsModal({
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <div
-                              className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                submission.reviewTypeOthersCustom
-                                  ? "bg-green-500"
-                                  : "bg-gray-300"
-                              }`}
+                            <input
+                              type="checkbox"
+                              id="othersCustom"
+                              className="rounded"
+                              checked={
+                                submission.reviewTypeOthersCustom !== "" &&
+                                submission.reviewTypeOthersCustom !== null &&
+                                submission.reviewTypeOthersCustom.trim() !== ""
+                              }
+                              disabled
+                              readOnly
+                            />
+                            <label
+                              htmlFor="othersCustom"
+                              className="text-sm text-gray-700"
                             >
-                              <div className="w-2 h-2 bg-white rounded-full"></div>
-                            </div>
-                            <span className="text-sm text-gray-700">
                               Others:
-                            </span>
+                            </label>
+                            <input
+                              type="text"
+                              value={submission.reviewTypeOthersCustom || ""}
+                              className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded bg-gray-50"
+                              placeholder="Enter custom review type"
+                              disabled
+                              readOnly
+                            />
                           </div>
-                          {submission.reviewTypeOthersCustom && (
-                            <div className="ml-2 p-2 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700">
-                              {submission.reviewTypeOthersCustom}
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>

@@ -62,30 +62,30 @@ export default function AreaManagersTab() {
   });
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [isBranchesModalOpen, setIsBranchesModalOpen] = useState(false);
-  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+  const [branches, setBranches] = useState<{ id: string; name: string; code: string }[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [selectedAreaManager, setSelectedAreaManager] =
     useState<Employee | null>(null);
   const [selectedBranches, setSelectedBranches] = useState<
-    { id: string; name: string }[]
+    { id: string; name: string; code: string }[]
   >([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successData, setSuccessData] = useState<{
     areaManager: Employee | null;
-    branches: { id: string; name: string }[];
+    branches: { id: string; name: string; code: string }[];
   }>({ areaManager: null, branches: [] });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [areaManagerToEdit, setAreaManagerToEdit] = useState<Employee | null>(
     null
   );
   const [editSelectedBranches, setEditSelectedBranches] = useState<
-    { id: string; name: string }[]
+    { id: string; name: string; code: string }[]
   >([]);
   const [showEditSuccessDialog, setShowEditSuccessDialog] = useState(false);
   const [editSuccessData, setEditSuccessData] = useState<{
     areaManager: Employee | null;
-    branches: { id: string; name: string }[];
+    branches: { id: string; name: string; code: string }[];
   }>({ areaManager: null, branches: [] });
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [areaManagerToDelete, setAreaManagerToDelete] =
@@ -97,6 +97,7 @@ export default function AreaManagersTab() {
   const [areaManagersRefreshing, setAreaManagersRefreshing] = useState(false);
   const itemsPerPage = 8;
   const [isSavingAreaManager, setIsSavingAreaManager] = useState(false);
+  const [editBranchSearchTerm, setEditBranchSearchTerm] = useState("");
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -274,6 +275,19 @@ export default function AreaManagersTab() {
     return areaManagersData;
   }, [areaManagersData]);
 
+  // Helper function to get branch code from branch name/code string
+  const getBranchCode = (branchValue: string): string => {
+    if (!branchValue || branches.length === 0) return branchValue;
+    
+    // Try to find matching branch by name or code
+    const foundBranch = branches.find(
+      (b) => b.name === branchValue.trim() || b.code === branchValue.trim()
+    );
+    
+    // Return code if found, otherwise return the original value
+    return foundBranch?.code || foundBranch?.name || branchValue;
+  };
+
   // Filter area managers based on search term
   const filteredAreaManagers = useMemo(() => {
     if (!searchTerm) return areaManagers;
@@ -300,6 +314,19 @@ export default function AreaManagersTab() {
   useEffect(() => {
     setAreaManagersPage(1);
   }, [searchTerm]);
+
+  // Filter branches for edit modal based on search term
+  const filteredBranchesForEdit = useMemo(() => {
+    if (!editBranchSearchTerm) return branches;
+
+    const searchLower = editBranchSearchTerm.toLowerCase();
+    return branches.filter((branch) => {
+      const nameMatch = branch.name?.toLowerCase().includes(searchLower);
+      const codeMatch = branch.code?.toLowerCase().includes(searchLower);
+      const idMatch = String(branch.id || "").toLowerCase().includes(searchLower);
+      return nameMatch || codeMatch || idMatch;
+    });
+  }, [branches, editBranchSearchTerm]);
 
   // Helper function to generate pagination pages
   const generatePaginationPages = (
@@ -341,7 +368,7 @@ export default function AreaManagersTab() {
   };
 
   // Load branches data
-  const loadBranches = async (): Promise<{ id: string; name: string }[]> => {
+  const loadBranches = async (): Promise<{ id: string; name: string; code: string }[]> => {
     // Don't reload if branches are already loaded
     if (branches.length > 0 && !branchesLoading) {
       return branches;
@@ -355,18 +382,24 @@ export default function AreaManagersTab() {
         // Normalize the data format - handle both {id, name} and {value, label} formats
         const normalizedBranches = branchesData.map((branch: any) => {
           if ("id" in branch && "name" in branch) {
-            return { id: branch.id, name: branch.name };
+            return { 
+              id: branch.id, 
+              name: branch.name,
+              code: branch.code || branch.branch_code || ""
+            };
           } else if ("value" in branch && "label" in branch) {
-            // Extract branch code from label if it contains " /"
+            // Extract branch name and code from label if it contains " /"
             const labelParts = branch.label.split(" /");
             return {
               id: branch.value,
               name: labelParts[0] || branch.label,
+              code: labelParts[1] || labelParts[0] || branch.label, // Use code if available, fallback to name
             };
           }
           return {
             id: String(branch.id || branch.value || ""),
             name: String(branch.name || branch.label || ""),
+            code: String(branch.code || branch.branch_code || branch.name || branch.label || ""),
           };
         });
         setBranches(normalizedBranches);
@@ -639,14 +672,17 @@ export default function AreaManagersTab() {
                           {branchList.length > 0 ? (
                             <div className="flex flex-wrap justify-center gap-2">
                               {branchList.map(
-                                (branch: string, index: number) => (
-                                  <Badge
-                                    key={index}
-                                    className="bg-blue-600 text-white"
-                                  >
-                                    {branch}
-                                  </Badge>
-                                )
+                                (branch: string, index: number) => {
+                                  const branchCode = getBranchCode(branch);
+                                  return (
+                                    <Badge
+                                      key={index}
+                                      className="bg-blue-600 text-white"
+                                    >
+                                      {branchCode}
+                                    </Badge>
+                                  );
+                                }
                               )}
                             </div>
                           ) : (
@@ -669,17 +705,17 @@ export default function AreaManagersTab() {
                                   const existingBranches = manager.branch
                                     .split(", ")
                                     .map((name: string) => {
-                                      // Try to find matching branch from loaded branches
+                                      // Try to find matching branch from loaded branches (match by name or code)
                                       const branch = loadedBranches.find(
-                                        (b: { id: string; name: string }) =>
-                                          b.name === name.trim()
+                                        (b: { id: string; name: string; code: string }) =>
+                                          b.name === name.trim() || b.code === name.trim()
                                       );
                                       return (
-                                        branch || { id: "", name: name.trim() }
+                                        branch || { id: "", name: name.trim(), code: name.trim() }
                                       );
                                     })
                                     .filter(
-                                      (b: { id: string; name: string }) =>
+                                      (b: { id: string; name: string; code: string }) =>
                                         b.id || b.name
                                     );
                                   setEditSelectedBranches(existingBranches);
@@ -963,7 +999,7 @@ export default function AreaManagersTab() {
                           >
                             <span className="text-xs text-blue-600">•</span>
                             <span className="text-sm text-blue-700 font-medium">
-                              {branch.name}
+                              {branch.code || branch.name}
                             </span>
                           </div>
                         ))}
@@ -1071,7 +1107,7 @@ export default function AreaManagersTab() {
                   <Table>
                     <TableHeader className="bg-gray-50">
                       <TableRow>
-                        <TableHead className="w-2/5">Branch Name</TableHead>
+                        <TableHead className="w-2/5">Branch Code</TableHead>
                         <TableHead className="w-2/5 text-center">
                           Branch ID
                         </TableHead>
@@ -1084,7 +1120,7 @@ export default function AreaManagersTab() {
                       {branches.map((branch) => (
                         <TableRow key={branch.id} className="hover:bg-gray-50">
                           <TableCell className="font-medium py-3">
-                            {branch.name}
+                            {branch.code || branch.name}
                           </TableCell>
                           <TableCell className="py-3 text-center">
                             {branch.id}
@@ -1204,6 +1240,7 @@ export default function AreaManagersTab() {
                   setIsEditModalOpen(false);
                   setAreaManagerToEdit(null);
                   setEditSelectedBranches([]);
+                  setEditBranchSearchTerm("");
                 }}
                 className="h-10 w-10 p-0 hover:bg-gray-100 bg-blue-600 text-white rounded-full hover:text-white hover:bg-red-700"
               >
@@ -1236,6 +1273,60 @@ export default function AreaManagersTab() {
               </div>
             )}
 
+            {/* Search Bar for Branches */}
+            <div className="flex-shrink-0">
+              <div className="relative w-full">
+                <Label
+                  htmlFor="edit-branch-search"
+                  className="text-sm font-medium mb-2 block"
+                >
+                  Search Branches
+                </Label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <svg
+                      className="h-5 w-5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                  </span>
+                  <Input
+                    id="edit-branch-search"
+                    placeholder="Search by branch code, name, or ID..."
+                    value={editBranchSearchTerm}
+                    onChange={(e) => setEditBranchSearchTerm(e.target.value)}
+                    className="w-full pr-10 pl-10"
+                  />
+                  {editBranchSearchTerm && (
+                    <button
+                      onClick={() => setEditBranchSearchTerm("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      title="Clear search"
+                      aria-label="Clear search"
+                      type="button"
+                    >
+                      <svg
+                        className="h-5 w-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Branches Selection */}
             {branchesLoading ? (
               <div className="flex items-center justify-center py-8">
@@ -1245,13 +1336,17 @@ export default function AreaManagersTab() {
               <div className="text-center py-8 text-gray-500">
                 No branches found
               </div>
+            ) : filteredBranchesForEdit.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No branches found matching "{editBranchSearchTerm}"
+              </div>
             ) : (
               <div className="border rounded-lg overflow-hidden flex-1 min-h-0 flex flex-col">
                 <div className="flex-1 overflow-y-auto">
                   <Table>
                     <TableHeader className="bg-gray-50">
                       <TableRow>
-                        <TableHead className="w-2/5">Branch Name</TableHead>
+                        <TableHead className="w-2/5">Branch Code</TableHead>
                         <TableHead className="w-2/5 text-center">
                           Branch ID
                         </TableHead>
@@ -1261,7 +1356,7 @@ export default function AreaManagersTab() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {branches.map((branch) => {
+                      {filteredBranchesForEdit.map((branch) => {
                         const isSelected = editSelectedBranches.some(
                           (b) => b.id === branch.id
                         );
@@ -1271,7 +1366,7 @@ export default function AreaManagersTab() {
                             className="hover:bg-gray-50"
                           >
                             <TableCell className="font-medium py-3">
-                              {branch.name}
+                              {branch.code || branch.name}
                             </TableCell>
                             <TableCell className="py-3 text-center">
                               {branch.id}
@@ -1325,7 +1420,7 @@ export default function AreaManagersTab() {
                       key={branch.id}
                       className="bg-blue-600 text-white cursor-pointer"
                     >
-                      {branch.name}
+                      {branch.code || branch.name}
                     </Badge>
                   ))}
                 </div>
@@ -1342,6 +1437,7 @@ export default function AreaManagersTab() {
                 setIsEditModalOpen(false);
                 setAreaManagerToEdit(null);
                 setEditSelectedBranches([]);
+                setEditBranchSearchTerm("");
               }}
             >
               Cancel
@@ -1411,7 +1507,7 @@ export default function AreaManagersTab() {
                       setIsEditModalOpen(false);
                       setAreaManagerToEdit(null);
                       setEditSelectedBranches([]);
-
+                      setEditBranchSearchTerm("");
                       setShowEditSuccessDialog(true);
 
                       toastMessages.generic.success(

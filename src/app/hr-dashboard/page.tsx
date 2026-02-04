@@ -312,32 +312,32 @@ export default function OverviewTab() {
                 <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
                   <TableRow>
                     <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[140px] md:min-w-[160px] lg:min-w-[180px] xl:min-w-[200px]">
-                      <span className="text-xs md:text-sm lg:text-base">
+                      <span className="text-sm">
                         Employee Name
                       </span>
                     </TableHead>
                     <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-left pl-0 min-w-[100px] md:min-w-[120px] lg:min-w-[140px]">
-                      <span className="text-xs md:text-sm lg:text-base">
+                      <span className="text-sm">
                         Rating
                       </span>
                     </TableHead>
                     <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[80px] md:min-w-[90px] lg:min-w-[100px]">
-                      <span className="text-xs md:text-sm lg:text-base">
+                      <span className="text-sm">
                         Quarter
                       </span>
                     </TableHead>
                     <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[90px] md:min-w-[100px] lg:min-w-[110px]">
-                      <span className="text-xs md:text-sm lg:text-base">
+                      <span className="text-sm">
                         Date
                       </span>
                     </TableHead>
                     <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[110px] md:min-w-[130px] lg:min-w-[150px]">
-                      <span className="text-xs md:text-sm lg:text-base">
+                      <span className="text-sm">
                         Approval Status
                       </span>
                     </TableHead>
                     <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[120px] md:min-w-[140px] lg:min-w-[160px]">
-                      <span className="text-xs md:text-sm lg:text-base">
+                      <span className="text-sm">
                         Actions
                       </span>
                     </TableHead>
@@ -430,28 +430,28 @@ export default function OverviewTab() {
                           <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
                             <div>
                               <div className="flex flex-wrap items-center gap-1 md:gap-2 mb-1">
-                                <span className="font-medium text-gray-900 text-xs md:text-sm lg:text-base">
+                                <span className="font-medium text-gray-900 text-sm">
                                   {submission.employee?.fname && submission.employee?.lname
                                     ? `${submission.employee.fname} ${submission.employee.lname}`
                                     : "Unknown Employee"}
                                 </span>
                                 {isNew && (
-                                  <Badge className="bg-yellow-100 text-yellow-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
+                                  <Badge className="bg-yellow-100 text-yellow-800 text-sm px-1.5 md:px-2 py-0.5 font-semibold">
                                     ⚡ NEW
                                   </Badge>
                                 )}
                                 {!isNew && isRecent && (
-                                  <Badge className="bg-blue-100 text-blue-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
+                                  <Badge className="bg-blue-100 text-blue-800 text-sm px-1.5 md:px-2 py-0.5 font-semibold">
                                     🕐 RECENT
                                   </Badge>
                                 )}
                                 {submission.status === "completed" && (
-                                  <Badge className="bg-green-100 text-green-800 text-xs px-1.5 md:px-2 py-0.5 font-semibold">
+                                  <Badge className="bg-green-100 text-green-800 text-sm px-1.5 md:px-2 py-0.5 font-semibold">
                                     ✓ APPROVED
                                   </Badge>
                                 )}
                               </div>
-                              <div className="text-xs md:text-sm text-gray-500">
+                              <div className="text-sm text-gray-500">
                                 {submission.employee?.email || ""}
                               </div>
                             </div>
@@ -459,7 +459,7 @@ export default function OverviewTab() {
                           <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-left pl-0">
                             {submission.rating && (
                               <Badge
-                                className={`text-xs md:text-sm font-semibold ${getRatingColor(
+                                className={`text-sm font-semibold ${getRatingColor(
                                   submission.rating
                                 )}`}
                               >
@@ -474,20 +474,20 @@ export default function OverviewTab() {
                               className={`${getQuarterColor(
                                 submission.reviewTypeProbationary ||
                                   submission.reviewTypeRegular
-                              )} text-xs md:text-sm`}
+                              )} text-sm`}
                             >
                               {submission.reviewTypeRegular ||
                                 "M" + submission.reviewTypeProbationary}
                             </Badge>
                           </TableCell>
-                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-xs md:text-sm text-gray-600">
+                          <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 text-sm text-gray-600">
                             {new Date(
                               submission.created_at
                             ).toLocaleDateString()}
                           </TableCell>
                           <TableCell className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3">
                             <Badge
-                              className={`text-xs md:text-sm ${
+                              className={`text-sm ${
                                 submission.status === "completed"
                                   ? "bg-green-100 text-green-800"
                                   : submission.status === "pending"
@@ -507,7 +507,7 @@ export default function OverviewTab() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleViewEvaluation(submission)}
-                              className="text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 bg-green-600 hover:bg-green-500 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                              className="text-sm px-2 md:px-3 py-1 md:py-1.5 bg-green-600 hover:bg-green-500 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
                             >
                               ☰ View
                             </Button>

@@ -118,12 +118,68 @@ export default function Step1({
   const [regular4, setRegular4] = useState(false);
   const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
   const [coverageError, setCoverageError] = useState("");
+  const [isOthersCustomEnabled, setIsOthersCustomEnabled] = useState(false);
   const { user } = useAuth();
+
+  // Check if employee being evaluated is HO (Head Office)
+  // This determines the header text based on the employee being evaluated
+  const isEmployeeHO = () => {
+    if (!employee?.branches) {
+      // Fallback: if evaluationType is 'rankNfile' or 'basic', it's definitely an HO evaluation
+      return evaluationType === 'rankNfile' || evaluationType === 'basic';
+    }
+    
+    // Handle branches as array
+    if (Array.isArray(employee.branches)) {
+      const branch = employee.branches[0];
+      if (branch) {
+        const branchName = branch.branch_name?.toUpperCase() || "";
+        const branchCode = branch.branch_code?.toUpperCase() || "";
+        return (
+          branchName === "HO" || 
+          branchCode === "HO" || 
+          branchName.includes("HEAD OFFICE") ||
+          branchCode.includes("HEAD OFFICE") ||
+          branchName === "HEAD OFFICE" ||
+          branchCode === "HEAD OFFICE"
+        );
+      }
+    }
+    
+    // Handle branches as object
+    if (typeof employee.branches === 'object') {
+      const branchName = (employee.branches as any)?.branch_name?.toUpperCase() || "";
+      const branchCode = (employee.branches as any)?.branch_code?.toUpperCase() || "";
+      return (
+        branchName === "HO" || 
+        branchCode === "HO" || 
+        branchName.includes("HEAD OFFICE") ||
+        branchCode.includes("HEAD OFFICE") ||
+        branchName === "HEAD OFFICE" ||
+        branchCode === "HEAD OFFICE"
+      );
+    }
+    
+    // Fallback: check if branch field exists directly
+    if ((employee as any).branch) {
+      const branchName = String((employee as any).branch).toUpperCase();
+      return (
+        branchName === "HO" || 
+        branchName === "HEAD OFFICE" ||
+        branchName.includes("HEAD OFFICE") ||
+        branchName.includes("/HO")
+      );
+    }
+    
+    // Final fallback: if evaluationType is 'rankNfile' or 'basic', it's definitely an HO evaluation
+    return evaluationType === 'rankNfile' || evaluationType === 'basic';
+  };
 
   // Check if any "others" review is selected
   const isOthersSelected = () => {
     return (
       data.reviewTypeOthersImprovement ||
+      isOthersCustomEnabled ||
       (data.reviewTypeOthersCustom &&
         data.reviewTypeOthersCustom.trim() !== "") ||
       false
@@ -217,6 +273,16 @@ export default function Step1({
     }
   }, [data.coverageFrom, data.coverageTo, data.hireDate]);
 
+  // Sync isOthersCustomEnabled state when data has existing value
+  useEffect(() => {
+    if (
+      data.reviewTypeOthersCustom &&
+      data.reviewTypeOthersCustom.trim() !== ""
+    ) {
+      setIsOthersCustomEnabled(true);
+    }
+  }, [data.reviewTypeOthersCustom]);
+
   // Calculate average score for Job Knowledge
   const calculateAverageScore = () => {
     const scores = [
@@ -260,7 +326,11 @@ export default function Step1({
           Performance Review Form
         </h2>
         <h3 className="text-lg font-semibold text-gray-700 mb-6">
-          {evaluationType === 'basic' ? 'Basic Evaluation' : 'Rank and File I & II'}
+          {evaluationType === 'basic' 
+            ? `Basic Evaluation (${isEmployeeHO() ? 'HO' : 'BRANCH'})` 
+            : evaluationType === 'rankNfile'
+            ? `Rank and File I & II (${isEmployeeHO() ? 'HO' : 'BRANCH'})`
+            : `Rank and File I & II (${isEmployeeHO() ? 'HO' : 'BRANCH'})`}
         </h3>
       </div>
 
@@ -278,6 +348,7 @@ export default function Step1({
                 variant="outline"
                 size="sm"
                 onClick={() => {
+                  setIsOthersCustomEnabled(false);
                   updateDataAction({
                     reviewTypeProbationary: "",
                     reviewTypeRegular: "",
@@ -311,6 +382,7 @@ export default function Step1({
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear regular and others when selecting probationary
+                        setIsOthersCustomEnabled(false);
                         updateDataAction({
                           reviewTypeProbationary: 3,
                           reviewTypeRegular: "",
@@ -355,6 +427,7 @@ export default function Step1({
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear regular and others when selecting probationary
+                        setIsOthersCustomEnabled(false);
                         updateDataAction({
                           reviewTypeProbationary: 5,
                           reviewTypeRegular: "",
@@ -411,6 +484,7 @@ export default function Step1({
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear probationary and others when selecting regular
+                        setIsOthersCustomEnabled(false);
                         updateDataAction({
                           reviewTypeRegular: "Q1",
                           reviewTypeProbationary: "",
@@ -453,6 +527,7 @@ export default function Step1({
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear probationary and others when selecting regular
+                        setIsOthersCustomEnabled(false);
                         updateDataAction({
                           reviewTypeRegular: "Q2",
                           reviewTypeProbationary: "",
@@ -495,6 +570,7 @@ export default function Step1({
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear probationary and others when selecting regular
+                        setIsOthersCustomEnabled(false);
                         updateDataAction({
                           reviewTypeRegular: "Q3",
                           reviewTypeProbationary: "",
@@ -537,6 +613,7 @@ export default function Step1({
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear probationary and others when selecting regular
+                        setIsOthersCustomEnabled(false);
                         updateDataAction({
                           reviewTypeRegular: "Q4",
                           reviewTypeProbationary: "",
@@ -580,11 +657,14 @@ export default function Step1({
                     disabled={
                       data.reviewTypeProbationary !== "" ||
                       data.reviewTypeRegular !== "" ||
-                      data.reviewTypeOthersCustom !== ""
+                      isOthersCustomEnabled ||
+                      (data.reviewTypeOthersCustom !== "" &&
+                        data.reviewTypeOthersCustom.trim() !== "")
                     }
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear probationary and regular when selecting others
+                        setIsOthersCustomEnabled(false);
                         updateDataAction({
                           reviewTypeProbationary: "",
                           reviewTypeRegular: "",
@@ -603,7 +683,9 @@ export default function Step1({
                     className={`text-sm ${
                       data.reviewTypeProbationary !== "" ||
                       data.reviewTypeRegular !== "" ||
-                      data.reviewTypeOthersCustom !== ""
+                      isOthersCustomEnabled ||
+                      (data.reviewTypeOthersCustom !== "" &&
+                        data.reviewTypeOthersCustom.trim() !== "")
                         ? "text-gray-400"
                         : "text-gray-700"
                     }`}
@@ -612,11 +694,47 @@ export default function Step1({
                   </label>
                 </div>
                 <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="othersCustom"
+                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
+                    checked={
+                      isOthersCustomEnabled ||
+                      (data.reviewTypeOthersCustom !== "" &&
+                        data.reviewTypeOthersCustom !== null &&
+                        data.reviewTypeOthersCustom.trim() !== "")
+                    }
+                    disabled={
+                      data.reviewTypeProbationary !== "" ||
+                      data.reviewTypeRegular !== "" ||
+                      data.reviewTypeOthersImprovement === true
+                    }
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        // Enable the input - clear other review types
+                        setIsOthersCustomEnabled(true);
+                        updateDataAction({
+                          reviewTypeOthersImprovement: false,
+                          reviewTypeProbationary: "",
+                          reviewTypeRegular: "",
+                          // Keep existing value or set empty string to enable input
+                          reviewTypeOthersCustom: data.reviewTypeOthersCustom || "",
+                        });
+                      } else {
+                        // Disable by clearing the value and state
+                        setIsOthersCustomEnabled(false);
+                        updateDataAction({
+                          reviewTypeOthersCustom: "",
+                        });
+                      }
+                    }}
+                  />
                   <label
+                    htmlFor="othersCustom"
                     className={`text-sm ${
                       data.reviewTypeProbationary !== "" ||
                       data.reviewTypeRegular !== "" ||
-                      data.reviewTypeOthersCustom !== ""
+                      data.reviewTypeOthersImprovement === true
                         ? "text-gray-400"
                         : "text-gray-700"
                     }`}
@@ -629,33 +747,33 @@ export default function Step1({
                     disabled={
                       data.reviewTypeProbationary !== "" ||
                       data.reviewTypeRegular !== "" ||
-                      data.reviewTypeOthersImprovement === true
+                      data.reviewTypeOthersImprovement === true ||
+                      !isOthersCustomEnabled
                     }
                     onChange={(e) => {
-                      if (e.target.value.trim() !== "") {
-                        // Clear probationary and regular when entering custom others
-                        updateDataAction({
-                          reviewTypeOthersCustom: e.target.value,
-                          reviewTypeOthersImprovement: false,
-                          reviewTypeProbationary: "",
-                          reviewTypeRegular: "",
-                        });
-                      } else {
-                        updateDataAction({
-                          reviewTypeOthersCustom: "",
-                        });
-                      }
+                      // Always update the value when user types
+                      updateDataAction({
+                        reviewTypeOthersCustom: e.target.value,
+                        reviewTypeOthersImprovement: false,
+                        reviewTypeProbationary: "",
+                        reviewTypeRegular: "",
+                      });
                     }}
                     className={`flex-1 px-2 py-1 text-sm border border-gray-300 rounded ${
                       data.reviewTypeProbationary !== "" ||
-                      data.reviewTypeRegular !== ""
-                        ? "bg-gray-100 text-gray-400"
-                        : ""
+                      data.reviewTypeRegular !== "" ||
+                      data.reviewTypeOthersImprovement === true ||
+                      !isOthersCustomEnabled
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-white"
                     }`}
                     placeholder={
                       data.reviewTypeProbationary !== "" ||
-                      data.reviewTypeRegular !== ""
+                      data.reviewTypeRegular !== "" ||
+                      data.reviewTypeOthersImprovement === true
                         ? "Disabled - other review type selected"
+                        : !isOthersCustomEnabled
+                        ? "Check the box above to enable"
                         : "Enter custom review type"
                     }
                   />

@@ -376,7 +376,7 @@ export default function DashboardShell(props: DashboardShellProps) {
       className="flex flex-col min-h-screen relative"
       style={{
         backgroundImage: 'url(/smct.png)',
-        backgroundSize: 'cover',
+        backgroundSize: '64%',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
         backgroundAttachment: 'fixed',
