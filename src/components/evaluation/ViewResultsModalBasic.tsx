@@ -1283,6 +1283,7 @@ export default function ViewResultsModal({
   };
 
   const isBranchEmp = isEmployeeBranch();
+  const isHOEmp = !isBranchEmp; // HO employee if NOT branch employee
 
   // Check if evaluator is Area Manager (from HO or branch)
   const isEvaluatorAreaManager = () => {
@@ -1854,9 +1855,17 @@ export default function ViewResultsModal({
               {/* Title */}
               <div className="text-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-900">
-                  Performance Review Form 
-                  <br />
-                  Basic
+                  {isHOEmp ? (
+                    <>
+                      (Head Office) Managers & Supervisors
+                    </>
+                  ) : (
+                    <>
+                      Performance Review Form 
+                      <br />
+                      Basic
+                    </>
+                  )}
                 </h1>
               </div>
 

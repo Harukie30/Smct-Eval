@@ -1285,6 +1285,7 @@ export default function ViewResultsModal({
   };
 
   const isBranchEmp = isEmployeeBranch();
+  const isHOEmp = !isBranchEmp; // HO employee if NOT branch employee
 
   // Check if evaluator is Area Manager (from HO or branch)
   const isEvaluatorAreaManager = () => {
@@ -2005,13 +2006,29 @@ export default function ViewResultsModal({
                     </>
                   ) : evaluationType === 'basic' ? (
                     <>
-                      Performance Review Form(BRANCH)
-                      <br />
-                      Basic
+                      {isHOEmp ? (
+                        <>
+                          (Head Office) Managers & Supervisors
+                        </>
+                      ) : (
+                        <>
+                          Performance Review Form(BRANCH)
+                          <br />
+                          Basic
+                        </>
+                      )}
                     </>
                   ) : (
                     <>
-                      Performance Review Form (BRANCH MANAGER)
+                      {isHOEmp ? (
+                        <>
+                          (Head Office) Managers & Supervisors
+                        </>
+                      ) : (
+                        <>
+                          Performance Review Form (BRANCH MANAGER)
+                        </>
+                      )}
                     </>
                   )}
                 </h1>

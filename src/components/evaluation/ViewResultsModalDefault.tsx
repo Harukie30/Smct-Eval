@@ -1870,13 +1870,29 @@ export default function ViewResultsModal({
                     </>
                   ) : evaluationType === 'basic' ? (
                     <>
-                      Performance Review Form (HEAD OFFICE)
-                      <br />
-                      Basic
+                      {isHOEmp ? (
+                        <>
+                          (Head Office) Managers & Supervisors
+                        </>
+                      ) : (
+                        <>
+                          Performance Review Form (HEAD OFFICE)
+                          <br />
+                          Basic
+                        </>
+                      )}
                     </>
                   ) : (
                     <>
-                      Performance Review Form
+                      {isHOEmp ? (
+                        <>
+                          (Head Office) Managers & Supervisors
+                        </>
+                      ) : (
+                        <>
+                          Performance Review Form
+                        </>
+                      )}
                     </>
                   )}
                 </h1>
