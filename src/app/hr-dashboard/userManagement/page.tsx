@@ -149,6 +149,36 @@ export default function UserManagementTab() {
   const [refresh, setRefresh] = useState(true);
   const [isPageLoading, setIsPageLoading] = useState(false);
 
+  // Helper function to get branch code from branch data
+  const getBranchCode = (branch: any): string => {
+    if (!branch) return "N/A";
+    
+    // If branch has branch_code directly
+    if (branch.branch_code) {
+      return branch.branch_code;
+    }
+    
+    // If branch has branch_name, try to find matching branch in branchesData
+    if (branch.branch_name && branchesData.length > 0) {
+      // branchesData comes from getBranches which returns { label: "branch_name / branch_code", value: "id" }
+      const foundBranch = branchesData.find((b: any) => {
+        if (b.label) {
+          const labelParts = b.label.split(" /");
+          return labelParts[0] === branch.branch_name;
+        }
+        return false;
+      });
+      
+      if (foundBranch?.label) {
+        const labelParts = foundBranch.label.split(" /");
+        return labelParts[1] || labelParts[0] || branch.branch_name;
+      }
+    }
+    
+    // Fallback to branch_name if code not found
+    return branch.branch_name || "N/A";
+  };
+
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -1079,10 +1109,11 @@ export default function UserManagementTab() {
                                   {employee.positions?.label || "N/A"}
                                 </TableCell>
                                 <TableCell>
-                                  {(employee.branches &&
-                                    Array.isArray(employee.branches) &&
-                                    employee.branches[0]?.branch_name) ||
-                                    "N/A"}
+                                  {employee.branches &&
+                                  Array.isArray(employee.branches) &&
+                                  employee.branches[0]
+                                    ? getBranchCode(employee.branches[0])
+                                    : "N/A"}
                                 </TableCell>
                                 <TableCell>
                                   <Badge
@@ -1636,7 +1667,11 @@ export default function UserManagementTab() {
                   </p>
                   <p>
                     <span className="font-medium">Branch:</span>{" "}
-                    {employeeToDelete?.branches?.branch_name}
+                    {employeeToDelete?.branches
+                      ? Array.isArray(employeeToDelete.branches)
+                        ? getBranchCode(employeeToDelete.branches[0])
+                        : getBranchCode(employeeToDelete.branches)
+                      : "N/A"}
                   </p>
                 </div>
               </div>
