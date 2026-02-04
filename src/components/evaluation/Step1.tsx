@@ -118,12 +118,14 @@ export default function Step1({
   const [regular4, setRegular4] = useState(false);
   const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
   const [coverageError, setCoverageError] = useState("");
+  const [isOthersCustomEnabled, setIsOthersCustomEnabled] = useState(false);
   const { user } = useAuth();
 
   // Check if any "others" review is selected
   const isOthersSelected = () => {
     return (
       data.reviewTypeOthersImprovement ||
+      isOthersCustomEnabled ||
       (data.reviewTypeOthersCustom &&
         data.reviewTypeOthersCustom.trim() !== "") ||
       false
@@ -217,6 +219,16 @@ export default function Step1({
     }
   }, [data.coverageFrom, data.coverageTo, data.hireDate]);
 
+  // Sync isOthersCustomEnabled state when data has existing value
+  useEffect(() => {
+    if (
+      data.reviewTypeOthersCustom &&
+      data.reviewTypeOthersCustom.trim() !== ""
+    ) {
+      setIsOthersCustomEnabled(true);
+    }
+  }, [data.reviewTypeOthersCustom]);
+
   // Calculate average score for Job Knowledge
   const calculateAverageScore = () => {
     const scores = [
@@ -278,6 +290,7 @@ export default function Step1({
                 variant="outline"
                 size="sm"
                 onClick={() => {
+                  setIsOthersCustomEnabled(false);
                   updateDataAction({
                     reviewTypeProbationary: "",
                     reviewTypeRegular: "",
@@ -311,6 +324,7 @@ export default function Step1({
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear regular and others when selecting probationary
+                        setIsOthersCustomEnabled(false);
                         updateDataAction({
                           reviewTypeProbationary: 3,
                           reviewTypeRegular: "",
@@ -355,6 +369,7 @@ export default function Step1({
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear regular and others when selecting probationary
+                        setIsOthersCustomEnabled(false);
                         updateDataAction({
                           reviewTypeProbationary: 5,
                           reviewTypeRegular: "",
@@ -411,6 +426,7 @@ export default function Step1({
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear probationary and others when selecting regular
+                        setIsOthersCustomEnabled(false);
                         updateDataAction({
                           reviewTypeRegular: "Q1",
                           reviewTypeProbationary: "",
@@ -453,6 +469,7 @@ export default function Step1({
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear probationary and others when selecting regular
+                        setIsOthersCustomEnabled(false);
                         updateDataAction({
                           reviewTypeRegular: "Q2",
                           reviewTypeProbationary: "",
@@ -495,6 +512,7 @@ export default function Step1({
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear probationary and others when selecting regular
+                        setIsOthersCustomEnabled(false);
                         updateDataAction({
                           reviewTypeRegular: "Q3",
                           reviewTypeProbationary: "",
@@ -537,6 +555,7 @@ export default function Step1({
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear probationary and others when selecting regular
+                        setIsOthersCustomEnabled(false);
                         updateDataAction({
                           reviewTypeRegular: "Q4",
                           reviewTypeProbationary: "",
@@ -580,11 +599,14 @@ export default function Step1({
                     disabled={
                       data.reviewTypeProbationary !== "" ||
                       data.reviewTypeRegular !== "" ||
-                      data.reviewTypeOthersCustom !== ""
+                      isOthersCustomEnabled ||
+                      (data.reviewTypeOthersCustom !== "" &&
+                        data.reviewTypeOthersCustom.trim() !== "")
                     }
                     onChange={(e) => {
                       if (e.target.checked) {
                         // Clear probationary and regular when selecting others
+                        setIsOthersCustomEnabled(false);
                         updateDataAction({
                           reviewTypeProbationary: "",
                           reviewTypeRegular: "",
@@ -603,7 +625,9 @@ export default function Step1({
                     className={`text-sm ${
                       data.reviewTypeProbationary !== "" ||
                       data.reviewTypeRegular !== "" ||
-                      data.reviewTypeOthersCustom !== ""
+                      isOthersCustomEnabled ||
+                      (data.reviewTypeOthersCustom !== "" &&
+                        data.reviewTypeOthersCustom.trim() !== "")
                         ? "text-gray-400"
                         : "text-gray-700"
                     }`}
@@ -612,11 +636,47 @@ export default function Step1({
                   </label>
                 </div>
                 <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="othersCustom"
+                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
+                    checked={
+                      isOthersCustomEnabled ||
+                      (data.reviewTypeOthersCustom !== "" &&
+                        data.reviewTypeOthersCustom !== null &&
+                        data.reviewTypeOthersCustom.trim() !== "")
+                    }
+                    disabled={
+                      data.reviewTypeProbationary !== "" ||
+                      data.reviewTypeRegular !== "" ||
+                      data.reviewTypeOthersImprovement === true
+                    }
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        // Enable the input - clear other review types
+                        setIsOthersCustomEnabled(true);
+                        updateDataAction({
+                          reviewTypeOthersImprovement: false,
+                          reviewTypeProbationary: "",
+                          reviewTypeRegular: "",
+                          // Keep existing value or set empty string to enable input
+                          reviewTypeOthersCustom: data.reviewTypeOthersCustom || "",
+                        });
+                      } else {
+                        // Disable by clearing the value and state
+                        setIsOthersCustomEnabled(false);
+                        updateDataAction({
+                          reviewTypeOthersCustom: "",
+                        });
+                      }
+                    }}
+                  />
                   <label
+                    htmlFor="othersCustom"
                     className={`text-sm ${
                       data.reviewTypeProbationary !== "" ||
                       data.reviewTypeRegular !== "" ||
-                      data.reviewTypeOthersCustom !== ""
+                      data.reviewTypeOthersImprovement === true
                         ? "text-gray-400"
                         : "text-gray-700"
                     }`}
@@ -629,33 +689,33 @@ export default function Step1({
                     disabled={
                       data.reviewTypeProbationary !== "" ||
                       data.reviewTypeRegular !== "" ||
-                      data.reviewTypeOthersImprovement === true
+                      data.reviewTypeOthersImprovement === true ||
+                      !isOthersCustomEnabled
                     }
                     onChange={(e) => {
-                      if (e.target.value.trim() !== "") {
-                        // Clear probationary and regular when entering custom others
-                        updateDataAction({
-                          reviewTypeOthersCustom: e.target.value,
-                          reviewTypeOthersImprovement: false,
-                          reviewTypeProbationary: "",
-                          reviewTypeRegular: "",
-                        });
-                      } else {
-                        updateDataAction({
-                          reviewTypeOthersCustom: "",
-                        });
-                      }
+                      // Always update the value when user types
+                      updateDataAction({
+                        reviewTypeOthersCustom: e.target.value,
+                        reviewTypeOthersImprovement: false,
+                        reviewTypeProbationary: "",
+                        reviewTypeRegular: "",
+                      });
                     }}
                     className={`flex-1 px-2 py-1 text-sm border border-gray-300 rounded ${
                       data.reviewTypeProbationary !== "" ||
-                      data.reviewTypeRegular !== ""
-                        ? "bg-gray-100 text-gray-400"
-                        : ""
+                      data.reviewTypeRegular !== "" ||
+                      data.reviewTypeOthersImprovement === true ||
+                      !isOthersCustomEnabled
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-white"
                     }`}
                     placeholder={
                       data.reviewTypeProbationary !== "" ||
-                      data.reviewTypeRegular !== ""
+                      data.reviewTypeRegular !== "" ||
+                      data.reviewTypeOthersImprovement === true
                         ? "Disabled - other review type selected"
+                        : !isOthersCustomEnabled
+                        ? "Check the box above to enable"
                         : "Enter custom review type"
                     }
                   />
