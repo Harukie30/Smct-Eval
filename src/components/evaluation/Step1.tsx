@@ -327,7 +327,9 @@ export default function Step1({
         </h2>
         <h3 className="text-lg font-semibold text-gray-700 mb-6">
           {evaluationType === 'basic' 
-            ? `Basic Evaluation (${isEmployeeHO() ? 'HO' : 'BRANCH'})` 
+            ? isEmployeeHO() 
+              ? '(Head Office) Managers & Supervisors'
+              : 'Basic Evaluation (BRANCH)'
             : evaluationType === 'rankNfile'
             ? `Rank and File I & II (${isEmployeeHO() ? 'HO' : 'BRANCH'})`
             : `Rank and File I & II (${isEmployeeHO() ? 'HO' : 'BRANCH'})`}
