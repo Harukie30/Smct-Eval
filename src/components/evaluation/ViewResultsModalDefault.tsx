@@ -872,7 +872,7 @@ export default function ViewResultsModal({
                   z-index: 1 !important;
                   line-height: 1 !important;
                 }
-                /* Show signature images in print - at the lower part, positioned to the right */
+                /* Show signature images in print - centered with the name */
                 .print-acknowledgement .h-20 img,
                 .print-acknowledgement .h-20 img[class*="top-7"],
                 .print-acknowledgement .h-20 img[class*="top-"],
@@ -884,24 +884,34 @@ export default function ViewResultsModal({
                   max-width: 100% !important;
                   object-fit: contain !important;
                   position: absolute !important;
-                  bottom: -25px !important;
+                  bottom: -26px !important;
                   top: auto !important;
-                  right: -50px !important;
-                  left: auto !important;
-                  transform: none !important;
-                  -webkit-transform: none !important;
+                  left: calc(50% + 25%) !important;
+                  right: auto !important;
+                  transform: translateX(-50%) !important;
+                  -webkit-transform: translateX(-50%) !important;
                   margin: 0 !important;
                   order: 2 !important;
                   z-index: 10 !important;
                 }
+                /* Employee signature - move up 4% and right 4% */
+                .print-acknowledgement > div:first-child .h-20 img {
+                  bottom: -18px !important;
+                  left: calc(50% + 29%) !important;
+                }
                 /* Force override any inline styles or Tailwind utilities */
                 @media print {
                   .print-acknowledgement .h-20 img {
-                    bottom: -25px !important;
+                    bottom: -26px !important;
                     top: auto !important;
-                    right: -50px !important;
-                    left: auto !important;
-                    transform: none !important;
+                    left: calc(50% + 25%) !important;
+                    right: auto !important;
+                    transform: translateX(-50%) !important;
+                    -webkit-transform: translateX(-50%) !important;
+                  }
+                  .print-acknowledgement > div:first-child .h-20 img {
+                    bottom: -18px !important;
+                    left: calc(50% + 29%) !important;
                   }
                 }
                 /* Signature line - at the bottom */
