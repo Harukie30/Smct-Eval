@@ -889,7 +889,7 @@ export default function ViewResultsModal({
                   max-width: 100% !important;
                   object-fit: contain !important;
                   position: absolute !important;
-                  bottom: -30px !important;
+                  bottom: -26px !important;
                   top: auto !important;
                   left: calc(50% + 25%) !important;
                   right: auto !important;
@@ -899,15 +899,24 @@ export default function ViewResultsModal({
                   order: 2 !important;
                   z-index: 10 !important;
                 }
+                /* Employee signature - move up 4% and right 4% */
+                .print-acknowledgement > div:first-child .h-20 img {
+                  bottom: -18px !important;
+                  left: calc(50% + 29%) !important;
+                }
                 /* Force override any inline styles or Tailwind utilities */
                 @media print {
                   .print-acknowledgement .h-20 img {
-                    bottom: -30px !important;
+                    bottom: -26px !important;
                     top: auto !important;
                     left: calc(50% + 25%) !important;
                     right: auto !important;
                     transform: translateX(-50%) !important;
                     -webkit-transform: translateX(-50%) !important;
+                  }
+                  .print-acknowledgement > div:first-child .h-20 img {
+                    bottom: -18px !important;
+                    left: calc(50% + 29%) !important;
                   }
                 }
                 /* Signature line - at the bottom */
