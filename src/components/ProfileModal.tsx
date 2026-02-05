@@ -338,9 +338,9 @@ export default function ProfileModal({
   };
   return (
     <Dialog open={isOpen} onOpenChangeAction={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto px-6 py-6 animate-popup">
-        {/* Sticky Cancel and Save Buttons - Stay at top when scrolling */}
-        <div className="sticky top-0 z-50 flex justify-end gap-2 mb-4 -mr-6 pr-6 py-4 no-print">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto px-6 py-6 animate-popup flex flex-col">
+        {/* Cancel Button - Stay at top when scrolling */}
+        <div className="sticky top-0 z-50 flex justify-end gap-2 mb-4 -mr-6 pr-6 py-4  px-6">
           <Button
             type="button"
             variant="outline"
@@ -350,24 +350,6 @@ export default function ProfileModal({
           >
             <X className="w-5 h-5 text-white" />
             Cancel
-          </Button>
-          <Button
-            type="button"
-            disabled={isLoading}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
-            onClick={handleSubmit}
-          >
-            {isLoading ? (
-              <>
-                <LoadingAnimation size="sm" variant="spinner" color="white" />
-                <span>Saving...</span>
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                <span>Save Changes</span>
-              </>
-            )}
           </Button>
         </div>
 
@@ -641,8 +623,7 @@ export default function ProfileModal({
             
            
           </p>
-          <p className="text-sm text-gray-700"><span className="font-bold">Note:</span> If you are unsure about your new signature, 
-          please do not click Save yet. Clearing your signature will reset it to the default signature</p>
+          
 
           {/* General Error */}
           {errors.general && (
@@ -652,6 +633,29 @@ export default function ProfileModal({
           )}
 
         </form>
+
+        {/* Sticky Cancel and Save Buttons - Stay at bottom when scrolling */}
+        <div className="sticky bottom-0 z-50 flex justify-end gap-2 mt-4 pt-4 pb-2 px-6">
+          
+          <Button
+            type="button"
+            disabled={isLoading}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+            onClick={handleSubmit}
+          >
+            {isLoading ? (
+              <>
+                <LoadingAnimation size="sm" variant="spinner" color="white" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>Save Changes</span>
+              </>
+            )}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
