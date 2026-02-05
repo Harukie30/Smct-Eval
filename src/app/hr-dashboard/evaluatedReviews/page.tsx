@@ -51,6 +51,8 @@ interface Review {
   evaluator: any;
   reviewTypeProbationary: number | string;
   reviewTypeRegular: number | string;
+  reviewTypeOthersImprovement?: boolean | number;
+  reviewTypeOthersCustom?: string;
   created_at: string;
   rating: number;
   status: string;
@@ -85,6 +87,72 @@ export default function OverviewTab() {
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [years, setYears] = useState<any[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [branchesData, setBranchesData] = useState<any[]>([]);
+
+  // Helper function to get branch code from branch data
+  const getBranchCode = (branch: any): string => {
+    if (!branch) return "N/A";
+    
+    // If branch has branch_code directly
+    if (branch.branch_code) {
+      return branch.branch_code;
+    }
+    
+    // If branch has code directly
+    if (branch.code) {
+      return branch.code;
+    }
+    
+    // Try to find matching branch in branchesData by id first
+    if (branch.id && branchesData.length > 0) {
+      const foundBranchById = branchesData.find((b: any) => {
+        return String(b.value) === String(branch.id);
+      });
+      
+      if (foundBranchById?.label) {
+        const labelParts = foundBranchById.label.split(" /");
+        // Return the code part (after " /") if it exists, otherwise return the name
+        return labelParts[1]?.trim() || labelParts[0]?.trim() || "N/A";
+      }
+    }
+    
+    // If branch has branch_name, try to find matching branch in branchesData by name
+    if (branch.branch_name && branchesData.length > 0) {
+      // branchesData comes from getBranches which returns { label: "branch_name / branch_code", value: "id" }
+      const foundBranch = branchesData.find((b: any) => {
+        if (b.label) {
+          const labelParts = b.label.split(" /");
+          return labelParts[0]?.trim() === branch.branch_name.trim();
+        }
+        return false;
+      });
+      
+      if (foundBranch?.label) {
+        const labelParts = foundBranch.label.split(" /");
+        // Return the code part (after " /") if it exists
+        return labelParts[1]?.trim() || labelParts[0]?.trim() || branch.branch_name;
+      }
+    }
+    
+    // If branch has name property, try to match by name
+    if (branch.name && branchesData.length > 0) {
+      const foundBranch = branchesData.find((b: any) => {
+        if (b.label) {
+          const labelParts = b.label.split(" /");
+          return labelParts[0]?.trim() === branch.name.trim();
+        }
+        return false;
+      });
+      
+      if (foundBranch?.label) {
+        const labelParts = foundBranch.label.split(" /");
+        return labelParts[1]?.trim() || labelParts[0]?.trim() || branch.name;
+      }
+    }
+    
+    // Fallback to branch_name or name if code not found
+    return branch.branch_name || branch.name || "N/A";
+  };
 
   const loadEvaluations = async (
     searchValue: string,
@@ -110,8 +178,12 @@ export default function OverviewTab() {
     const mount = async () => {
       setRefreshing(true);
       try {
-        const years = await apiService.getAllYears();
+        const [years, branches] = await Promise.all([
+          apiService.getAllYears(),
+          apiService.getBranches(),
+        ]);
         setYears(years);
+        setBranchesData(branches);
         await loadEvaluations(
           searchTerm,
           statusFilter,
@@ -645,23 +717,45 @@ export default function OverviewTab() {
                             </div>
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
-                            {review.employee?.branches[0]?.branch_name}
+                            {review.employee?.branches &&
+                            Array.isArray(review.employee.branches) &&
+                            review.employee.branches[0]
+                              ? getBranchCode(review.employee.branches[0])
+                              : "N/A"}
                           </TableCell>
                           <TableCell className="px-6 py-3">
-                            <Badge
-                              className={getQuarterColor(
-                                String(
-                                  review.reviewTypeRegular ||
-                                    review.reviewTypeProbationary
-                                )
-                              )}
-                            >
-                              {review.reviewTypeRegular ||
-                                (review.reviewTypeProbationary
-                                  ? "M" + review.reviewTypeProbationary
-                                  : "") ||
-                                "Others"}
-                            </Badge>
+                            {(() => {
+                              // Check if "Others" is selected
+                              const isOthersSelected = 
+                                review.reviewTypeOthersImprovement || 
+                                (review.reviewTypeOthersCustom && 
+                                 review.reviewTypeOthersCustom.trim() !== "");
+                              
+                              // Determine the display value
+                              let displayValue: string = "Others";
+                              if (review.reviewTypeRegular) {
+                                displayValue = String(review.reviewTypeRegular);
+                              } else if (
+                                review.reviewTypeProbationary != null &&
+                                review.reviewTypeProbationary !== "" &&
+                                review.reviewTypeProbationary !== "null"
+                              ) {
+                                displayValue = "M" + String(review.reviewTypeProbationary);
+                              } else if (isOthersSelected) {
+                                // If custom value exists, use it; otherwise use "Others"
+                                if (review.reviewTypeOthersCustom && review.reviewTypeOthersCustom.trim() !== "") {
+                                  displayValue = review.reviewTypeOthersCustom.trim();
+                                } else {
+                                  displayValue = "Others";
+                                }
+                              }
+                              
+                              return (
+                                <Badge className={getQuarterColor(displayValue)}>
+                                  {displayValue}
+                                </Badge>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
                             {new Date(review.created_at).toLocaleString(
@@ -849,7 +943,11 @@ export default function OverviewTab() {
                     </p>
                     <p>
                       <span className="font-medium">Branch:</span>{" "}
-                      {reviewToDelete?.employee?.branch_name}
+                      {reviewToDelete?.employee?.branches &&
+                      Array.isArray(reviewToDelete.employee.branches) &&
+                      reviewToDelete.employee.branches[0]
+                        ? getBranchCode(reviewToDelete.employee.branches[0])
+                        : reviewToDelete?.employee?.branch_name || "N/A"}
                     </p>
                   </div>
                 </div>

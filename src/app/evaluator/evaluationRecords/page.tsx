@@ -50,6 +50,8 @@ interface Review {
   evaluator: any;
   reviewTypeProbationary: number | string;
   reviewTypeRegular: number | string;
+  reviewTypeOthersImprovement?: boolean | number;
+  reviewTypeOthersCustom?: string;
   created_at: string;
   rating: number;
   status: string;
@@ -680,20 +682,47 @@ export default function OverviewTab() {
                             {review.employee?.branches[0]?.branch_name}
                           </TableCell>
                           <TableCell className="px-6 py-3">
-                            <Badge
-                              className={getQuarterColor(
-                                String(
-                                  review.reviewTypeRegular ||
-                                    review.reviewTypeProbationary
-                                )
-                              )}
-                            >
-                              {review.reviewTypeRegular ||
-                                (review.reviewTypeProbationary
-                                  ? "M" + review.reviewTypeProbationary
-                                  : "") ||
-                                "Others"}
-                            </Badge>
+                            {(() => {
+                              // Check if "Others" is selected
+                              const isOthersSelected = 
+                                (review.reviewTypeOthersImprovement != null && review.reviewTypeOthersImprovement !== 0) || 
+                                (review.reviewTypeOthersCustom && 
+                                 review.reviewTypeOthersCustom.trim() !== "");
+                              
+                              // Check if regular or probationary types are empty/null
+                              const hasRegular = review.reviewTypeRegular != null && 
+                                review.reviewTypeRegular !== "" && 
+                                review.reviewTypeRegular !== "null" &&
+                                String(review.reviewTypeRegular).trim() !== "" &&
+                                review.reviewTypeRegular !== 0;
+                              
+                              const hasProbationary = review.reviewTypeProbationary != null && 
+                                review.reviewTypeProbationary !== "" &&
+                                review.reviewTypeProbationary !== "null" &&
+                                String(review.reviewTypeProbationary).trim() !== "";
+                              
+                              // Determine the display value
+                              let displayValue: string = "Others";
+                              
+                              if (hasRegular) {
+                                displayValue = String(review.reviewTypeRegular).trim();
+                              } else if (hasProbationary) {
+                                displayValue = "M" + String(review.reviewTypeProbationary).trim();
+                              } else if (isOthersSelected) {
+                                // If custom value exists, use it; otherwise use "Others"
+                                if (review.reviewTypeOthersCustom && review.reviewTypeOthersCustom.trim() !== "") {
+                                  displayValue = review.reviewTypeOthersCustom.trim();
+                                } else {
+                                  displayValue = "Others";
+                                }
+                              }
+                              
+                              return (
+                                <Badge className={getQuarterColor(displayValue)}>
+                                  {displayValue}
+                                </Badge>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
                             {new Date(review.created_at).toLocaleString(

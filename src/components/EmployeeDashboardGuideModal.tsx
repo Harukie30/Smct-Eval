@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDialogAnimation } from '@/hooks/useDialogAnimation';
-import { BarChart3, FileText, History, CheckCircle2, Eye, TrendingUp, Calendar, ChevronLeft, ChevronRight, Sparkles, ArrowRight } from 'lucide-react';
+import { BarChart3, FileText, History, CheckCircle2, Eye, TrendingUp, Calendar, Sparkles, ArrowRight } from 'lucide-react';
 import {
   Carousel,
   CarouselContent,
@@ -53,7 +53,7 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
     <>
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
       <DialogContent className={`max-w-4xl max-h-[90vh] p-6 flex flex-col ${dialogAnimationClass}`}>
-        <DialogHeader className="pb-4">
+        <DialogHeader className="pb-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-2xl font-bold text-gray-900">Employee Dashboard Guide</DialogTitle>
@@ -65,7 +65,7 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
               variant="ghost"
               size="icon"
               onClick={onCloseAction}
-              className="h-8 w-8 rounded-full bg-blue-600 hover:bg-red-700 text-white hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
+              className="h-8 w-8 rounded-full bg-red-600 hover:bg-red-700 text-white hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
             >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -118,7 +118,7 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
                     </p>
                     <Button
                       onClick={() => api?.scrollNext()}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-6 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
+                      className="bg-gradient-to-r from-blue-600 cursor-pointer to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-6 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
                     >
                       Proceed to Guide
                       <ArrowRight className="w-5 h-5" />
@@ -411,36 +411,63 @@ export function EmployeeDashboardGuideModal({ isOpen, onCloseAction }: EmployeeD
         </Carousel>
         </div>
 
-        <div className="flex justify-between items-center pt-4 border-t mt-4 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => api?.scrollPrev()}
-              disabled={!canScrollPrev}
-              className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span className="sr-only">Previous slide</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => api?.scrollNext()}
-              disabled={!canScrollNext}
-              className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
-            >
-              <ChevronRight className="h-4 w-4" />
-              <span className="sr-only">Next slide</span>
-            </Button>
-          </div>
-          <Button
-            onClick={onCloseAction}
-            className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
-          >
-            Got it!
-          </Button>
-          </div>
+        <div className="flex items-center justify-between pt-4 border-t flex-shrink-0">
+          {current === 0 ? (
+            // Welcome slide - hide all buttons, only show proceed button in the card
+            <div className="w-full"></div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => api?.scrollPrev()}
+                  disabled={!canScrollPrev}
+                  className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => api?.scrollNext()}
+                  disabled={!canScrollNext}
+                  className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </Button>
+              </div>
+              <Button
+                onClick={onCloseAction}
+                className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
+              >
+                Got it!
+              </Button>
+            </>
+          )}
+        </div>
         </DialogContent>
       </Dialog>
     </>

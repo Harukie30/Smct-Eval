@@ -42,6 +42,8 @@ interface Review {
   evaluator: any;
   reviewTypeProbationary: number | string;
   reviewTypeRegular: number | string;
+  reviewTypeOthersImprovement?: boolean | number;
+  reviewTypeOthersCustom?: string;
   created_at: string;
   rating: number;
   status: string;
@@ -800,19 +802,47 @@ export default function performanceReviews() {
                                 </TableCell>
                                 <TableCell className="w-1/5 px-4 pr-23">
                                   <div className="flex justify-center">
-                                    <Badge
-                                      className={getQuarterColor(
-                                        submission.reviewTypeRegular ||
-                                          submission.reviewTypeProbationary
-                                      )}
-                                    >
-                                      {submission.reviewTypeRegular ||
-                                        (submission.reviewTypeProbationary
-                                          ? "M" +
-                                            submission.reviewTypeProbationary
-                                          : "") ||
-                                        "Others"}
-                                    </Badge>
+                                    {(() => {
+                                      // Check if "Others" is selected
+                                      const isOthersSelected = 
+                                        (submission.reviewTypeOthersImprovement != null && submission.reviewTypeOthersImprovement !== 0) || 
+                                        (submission.reviewTypeOthersCustom && 
+                                         submission.reviewTypeOthersCustom.trim() !== "");
+                                      
+                                      // Check if regular or probationary types are empty/null
+                                      const hasRegular = submission.reviewTypeRegular != null && 
+                                        submission.reviewTypeRegular !== "" && 
+                                        submission.reviewTypeRegular !== "null" &&
+                                        String(submission.reviewTypeRegular).trim() !== "" &&
+                                        submission.reviewTypeRegular !== 0;
+                                      
+                                      const hasProbationary = submission.reviewTypeProbationary != null && 
+                                        submission.reviewTypeProbationary !== "" &&
+                                        submission.reviewTypeProbationary !== "null" &&
+                                        String(submission.reviewTypeProbationary).trim() !== "";
+                                      
+                                      // Determine the display value
+                                      let displayValue: string = "Others";
+                                      
+                                      if (hasRegular) {
+                                        displayValue = String(submission.reviewTypeRegular).trim();
+                                      } else if (hasProbationary) {
+                                        displayValue = "M" + String(submission.reviewTypeProbationary).trim();
+                                      } else if (isOthersSelected) {
+                                        // If custom value exists, use it; otherwise use "Others"
+                                        if (submission.reviewTypeOthersCustom && submission.reviewTypeOthersCustom.trim() !== "") {
+                                          displayValue = submission.reviewTypeOthersCustom.trim();
+                                        } else {
+                                          displayValue = "Others";
+                                        }
+                                      }
+                                      
+                                      return (
+                                        <Badge className={getQuarterColor(displayValue)}>
+                                          {displayValue}
+                                        </Badge>
+                                      );
+                                    })()}
                                   </div>
                                 </TableCell>
                                 <TableCell className="w-1/5 text-right pl-1 pr-4">
