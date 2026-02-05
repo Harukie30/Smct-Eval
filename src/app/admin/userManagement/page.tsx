@@ -96,25 +96,60 @@ export default function UserManagementTab() {
       return branch.branch_code;
     }
     
-    // If branch has branch_name, try to find matching branch in branchesData
+    // If branch has code directly
+    if (branch.code) {
+      return branch.code;
+    }
+    
+    // Try to find matching branch in branchesData by id first
+    if (branch.id && branchesData.length > 0) {
+      const foundBranchById = branchesData.find((b: any) => {
+        return String(b.value) === String(branch.id);
+      });
+      
+      if (foundBranchById?.label) {
+        const labelParts = foundBranchById.label.split(" /");
+        // Return the code part (after " /") if it exists, otherwise return the name
+        return labelParts[1]?.trim() || labelParts[0]?.trim() || "N/A";
+      }
+    }
+    
+    // If branch has branch_name, try to find matching branch in branchesData by name
     if (branch.branch_name && branchesData.length > 0) {
       // branchesData comes from getBranches which returns { label: "branch_name / branch_code", value: "id" }
       const foundBranch = branchesData.find((b: any) => {
         if (b.label) {
           const labelParts = b.label.split(" /");
-          return labelParts[0] === branch.branch_name;
+          return labelParts[0]?.trim() === branch.branch_name.trim();
         }
         return false;
       });
       
       if (foundBranch?.label) {
         const labelParts = foundBranch.label.split(" /");
-        return labelParts[1] || labelParts[0] || branch.branch_name;
+        // Return the code part (after " /") if it exists
+        return labelParts[1]?.trim() || labelParts[0]?.trim() || branch.branch_name;
       }
     }
     
-    // Fallback to branch_name if code not found
-    return branch.branch_name || "N/A";
+    // If branch has name property, try to match by name
+    if (branch.name && branchesData.length > 0) {
+      const foundBranch = branchesData.find((b: any) => {
+        if (b.label) {
+          const labelParts = b.label.split(" /");
+          return labelParts[0]?.trim() === branch.name.trim();
+        }
+        return false;
+      });
+      
+      if (foundBranch?.label) {
+        const labelParts = foundBranch.label.split(" /");
+        return labelParts[1]?.trim() || labelParts[0]?.trim() || branch.name;
+      }
+    }
+    
+    // Fallback to branch_name or name if code not found
+    return branch.branch_name || branch.name || "N/A";
   };
 
   // Modal states

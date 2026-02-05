@@ -361,6 +361,19 @@ export default function ViewResultsModal({
                 .border-gray-300 {
                   border: none !important;
                 }
+                /* Specifically target input fields in print-review-type to remove all styling */
+                .print-review-type input[type="text"],
+                .print-review-type input[type="text"] *,
+                .print-review-type .border,
+                .print-review-type .border-gray-300,
+                .print-review-type .rounded,
+                .print-review-type .bg-gray-50 {
+                  border: none !important;
+                  border-width: 0 !important;
+                  background: transparent !important;
+                  background-color: transparent !important;
+                  border-radius: 0 !important;
+                }
                 /* Review Type - checkbox group style */
                 .print-review-type {
                   display: flex !important;
@@ -421,18 +434,37 @@ export default function ViewResultsModal({
                   align-items: center !important;
                   gap: 8px !important;
                 }
-                .print-review-type span {
+                .print-review-type span,
+                .print-review-type label {
                   font-family: Calibri, sans-serif !important;
                   font-size: 12px !important;
                   line-height: 1.2 !important;
+                  color: #000 !important;
+                  font-weight: normal !important;
                 }
-                .print-review-type input[type="text"] {
+                .print-review-type input[type="text"],
+                .print-review-type input[type="text"].border,
+                .print-review-type input[type="text"].border-gray-300,
+                .print-review-type input[type="text"].rounded,
+                .print-review-type input[type="text"].bg-gray-50 {
                   font-family: Calibri, sans-serif !important;
                   font-size: 12px !important;
-                  padding: 2px 4px !important;
-                  border: 1px solid #000 !important;
+                  line-height: 1.2 !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                  border: none !important;
+                  border-width: 0 !important;
                   background: transparent !important;
+                  background-color: transparent !important;
                   color: #000 !important;
+                  box-shadow: none !important;
+                  outline: none !important;
+                  border-radius: 0 !important;
+                  -webkit-appearance: none !important;
+                  -moz-appearance: none !important;
+                  appearance: none !important;
+                  font-weight: normal !important;
+                  display: inline !important;
                 }
                 .print-review-type input[type="checkbox"] {
                   width: 12px !important;
@@ -465,10 +497,13 @@ export default function ViewResultsModal({
                   height: 6px !important;
                   background-color: #fff !important;
                 }
-                .print-review-type span {
+                .print-review-type span,
+                .print-review-type label {
                   font-family: Calibri, sans-serif !important;
                   font-size: 12px !important;
+                  line-height: 1.2 !important;
                   color: #000 !important;
+                  font-weight: normal !important;
                 }
                 /* Grid layout for For Regular section (2x2) */
                 .print-review-type .grid {
