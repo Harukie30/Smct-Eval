@@ -1889,7 +1889,9 @@ export default function ViewResultsModal({
                 <h1 className="text-2xl font-bold text-gray-900">
                   {isHOEmp ? (
                     <>
-                      (Head Office) Managers & Supervisors
+                      Performance Review Form (HEAD OFFICE)
+                      <br />
+                      Managers & Supervisor
                     </>
                   ) : (
                     <>
