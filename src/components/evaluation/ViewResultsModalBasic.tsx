@@ -464,6 +464,23 @@ export default function ViewResultsModal({
                   font-weight: normal !important;
                   display: inline !important;
                 }
+                /* Hide placeholder text in print */
+                .print-review-type input[type="text"]::placeholder {
+                  opacity: 0 !important;
+                  color: transparent !important;
+                }
+                .print-review-type input[type="text"]::-webkit-input-placeholder {
+                  opacity: 0 !important;
+                  color: transparent !important;
+                }
+                .print-review-type input[type="text"]::-moz-placeholder {
+                  opacity: 0 !important;
+                  color: transparent !important;
+                }
+                .print-review-type input[type="text"]:-ms-input-placeholder {
+                  opacity: 0 !important;
+                  color: transparent !important;
+                }
                 .print-review-type input[type="checkbox"] {
                   width: 12px !important;
                   height: 12px !important;
