@@ -1272,13 +1272,13 @@ export default function UserManagementTab() {
                       variant="outline"
                       className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300"
                     >
-                      ⚡ New (≤24h)
+                      ⚡ New 
                     </Badge>
                     <Badge
                       variant="outline"
                       className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300"
                     >
-                      🕐 Recent (24-48h)
+                      🕐 Recent 
                     </Badge>
                     <Badge
                       variant="outline"
@@ -1296,9 +1296,7 @@ export default function UserManagementTab() {
                         <TableHead className="px-6 py-3">Name</TableHead>
                         <TableHead className="px-6 py-3">Email</TableHead>
                         <TableHead className="px-6 py-3">Position</TableHead>
-                        <TableHead className="px-6 py-3">
-                          Registration Date
-                        </TableHead>
+                        <TableHead className="px-6 py-3">Registration Date</TableHead>
                         <TableHead className="px-6 py-3">Status</TableHead>
                         <TableHead className="px-6 py-3">Actions</TableHead>
                       </TableRow>

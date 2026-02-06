@@ -282,12 +282,7 @@ export default function EmployeesTab() {
                 >
                   Total: {overviewTotal || 0}
                 </Badge>
-                <Badge
-                  variant="outline"
-                  className="px-3 py-1 text-sm font-semibold bg-green-50 text-green-700 border-green-200"
-                >
-                  New Hires: {newHiresThisMonth}
-                </Badge>
+                
               </div>
             </div>
             <Button
