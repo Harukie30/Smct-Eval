@@ -108,7 +108,7 @@ export default function EvaluationTypeModal({
           >
             {/* Background Image on Hover */}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 bg-cover bg-center bg-no-repeat"
-                 style={{ backgroundImage: 'url(/suitcase.gif)' }}>
+                 style={{ backgroundImage: 'url(/briefcase.gif)' }}>
             </div>
             <CardContent className="p-6 relative z-10">
               <div className="flex flex-col items-center text-center space-y-4">
