@@ -64,11 +64,11 @@ export function DialogContent({ className, children, ...props }: DialogContentPr
       aria-modal="true"
       className="fixed inset-0 z-50"
     >
-      {/* Backdrop with fade animation */}
+      {/* Backdrop with fade animation and blur effect */}
       <div
         aria-hidden
         className={cn(
-          "fixed inset-0 bg-black/60 transition-opacity duration-300",
+          "fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300",
           isAnimating ? "opacity-100" : "opacity-0"
         )}
         onClick={() => ctx.onOpenChangeAction(false)}
