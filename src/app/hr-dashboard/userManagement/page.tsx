@@ -84,6 +84,9 @@ interface RoleType {
 export default function UserManagementTab() {
   const { user } = useAuth();
   
+  // Hide admin users in HR dashboard (only show in admin dashboard)
+  const shouldHideAdminUsers = true; // Set to true for HR dashboard
+  
   // Helper function to check if employee is HO (Head Office)
   // This determines the evaluationType based on the employee being evaluated, not the evaluator
   const isEmployeeHO = (employee: User | null): boolean => {
@@ -765,11 +768,19 @@ export default function UserManagementTab() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="0">All Roles</SelectItem>
-                        {roles.map((role) => (
-                          <SelectItem key={role.id} value={String(role.id)}>
-                            {role.name}
-                          </SelectItem>
-                        ))}
+                        {roles
+                          .filter((role) => {
+                            // Hide admin role in HR dashboard
+                            if (shouldHideAdminUsers) {
+                              return role.name !== "admin";
+                            }
+                            return true;
+                          })
+                          .map((role) => (
+                            <SelectItem key={role.id} value={String(role.id)}>
+                              {role.name}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -994,7 +1005,18 @@ export default function UserManagementTab() {
                     ) : activeRegistrations &&
                       Array.isArray(activeRegistrations) &&
                       activeRegistrations.length > 0 ? (
-                      activeRegistrations?.map((employee) => {
+                      activeRegistrations
+                        ?.filter((employee) => {
+                          // Hide admin users in HR dashboard
+                          if (shouldHideAdminUsers) {
+                            const roleName = employee.roles &&
+                              Array.isArray(employee.roles) &&
+                              employee.roles[0]?.name;
+                            return roleName !== "admin";
+                          }
+                          return true;
+                        })
+                        .map((employee) => {
                         const isDeleting = deletingUserId === employee.id;
                         const createdDate = employee.created_at
                           ? new Date(employee.created_at)
@@ -1442,7 +1464,18 @@ export default function UserManagementTab() {
                       ) : pendingRegistrations &&
                         Array.isArray(pendingRegistrations) &&
                         pendingRegistrations.length > 0 ? (
-                        pendingRegistrations.map((account) => {
+                        pendingRegistrations
+                          .filter((account) => {
+                            // Hide admin users in HR dashboard
+                            if (shouldHideAdminUsers) {
+                              const roleName = account.roles &&
+                                Array.isArray(account.roles) &&
+                                account.roles[0]?.name;
+                              return roleName !== "admin";
+                            }
+                            return true;
+                          })
+                          .map((account) => {
                           // Check if registration is new (within 24 hours) or recent (24-48 hours)
                           if (!account.created_at) return;
                           const registrationDate = new Date(account.created_at);
@@ -1855,21 +1888,7 @@ export default function UserManagementTab() {
               )}
             </>
           )}
-          {/* {selectedEmployee && !evaluationType && (
-                  <div className="p-8 text-center">
-                    <p className="text-gray-500">
-                      Please select an evaluation type... (Debug: employee=
-                      {selectedEmployee?.name}, type={evaluationType})
-                    </p>
-                  </div>
-                )} */}
-          {/* {!selectedEmployee && (
-                  <div className="p-8 text-center">
-                    <p className="text-gray-500">
-                      No employee selected (Debug: evaluationType={evaluationType})
-                    </p>
-                  </div>
-                )} */}
+         
         </DialogContent>
       </Dialog>
     </div>
