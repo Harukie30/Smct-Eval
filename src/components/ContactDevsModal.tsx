@@ -74,11 +74,26 @@ export default function ContactDevsModal({
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
       <DialogContent className="sm:max-w-xl bg-blue-50 text-center relative overflow-hidden animate-popup">
-        <DialogHeader>
-          <DialogTitle className="flex items-center font-bold text-xl justify-center gap-3">
-            <img src="/web-server.png" alt="Team" className="w-17 h-15" />
-            Meet Our Developers
-          </DialogTitle>
+        <DialogHeader className="pb-6">
+          <div className="flex flex-col items-center gap-4 mb-2">
+            {/* Icon Container with Background */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full blur-lg opacity-50 animate-pulse"></div>
+              <div className="relative bg-gradient-to-br from-blue-700 to-blue-100 p-4 rounded-full shadow-lg border-4 border-white">
+                <img 
+                  src="/web-server.png" 
+                  alt="Team" 
+                  className="w-12 h-12 object-contain"
+                />
+              </div>
+            </div>
+            {/* Title with Better Styling */}
+            <DialogTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 bg-clip-text text-transparent">
+              Meet Our Developers
+            </DialogTitle>
+            {/* Decorative Line */}
+            <div className="w-24 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent rounded-full"></div>
+          </div>
         </DialogHeader>
         <div className="space-y-6 px-6 py-4">
           <p className="text-gray-700 leading-relaxed mb-7">
