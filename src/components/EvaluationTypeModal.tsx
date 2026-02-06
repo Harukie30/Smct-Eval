@@ -59,14 +59,10 @@ export default function EvaluationTypeModal({
         <div className="grid gap-6 mt-8 px-2 grid-cols-1 md:grid-cols-2">
           {/* Employee Evaluation Option (Rank and File) */}
           <Card
-            className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-blue-500 group relative overflow-hidden"
+            className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-blue-500 group"
             onClick={handleSelectEmployee}
           >
-            {/* Background Image on Hover */}
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 bg-cover bg-center bg-no-repeat"
-                 style={{ backgroundImage: 'url(/team.gif)' }}>
-            </div>
-            <CardContent className="p-6 relative z-10">
+            <CardContent className="p-6">
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                   <Users className="w-10 h-10 text-blue-600" />
@@ -103,14 +99,10 @@ export default function EvaluationTypeModal({
 
           {/* Manager Evaluation Option (Basic) */}
           <Card
-            className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-green-500 group relative overflow-hidden"
+            className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-green-500 group"
             onClick={handleSelectManager}
           >
-            {/* Background Image on Hover */}
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 bg-cover bg-center bg-no-repeat"
-                 style={{ backgroundImage: 'url(/briefcase.gif)' }}>
-            </div>
-            <CardContent className="p-6 relative z-10">
+            <CardContent className="p-6">
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-green-200 transition-colors">
                   <Briefcase className="w-10 h-10 text-green-600" />

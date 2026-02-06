@@ -493,20 +493,15 @@ export default function DepartmentsTab() {
                     return (
                       <Card
                         key={branch.id}
-                        className={`relative overflow-hidden group ${
+                        className={
                           isDeleting
                             ? "animate-slide-out-right bg-red-50 border-red-200"
                             : ""
-                        }`}
+                        }
                       >
-                        {/* Faded Background Logo - Shows on Hover */}
-                        <div 
-                          className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 bg-contain bg-center bg-no-repeat pointer-events-none"
-                          style={{ backgroundImage: 'url(/smct.png)', backgroundSize: '60%' }}
-                        />
                         {isDeleting ? (
                           <>
-                            <CardHeader className="relative z-10">
+                            <CardHeader>
                               <div className="flex justify-between items-center">
                                 <Skeleton className="h-6 w-32" />
                                 <div className="flex items-center gap-2">
@@ -517,7 +512,7 @@ export default function DepartmentsTab() {
                               <Skeleton className="h-4 w-40 mt-2" />
                               <Skeleton className="h-4 w-32 mt-2" />
                             </CardHeader>
-                            <CardContent className="space-y-4 relative z-10">
+                            <CardContent className="space-y-4">
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="text-center p-3 bg-gray-100 rounded-lg">
                                   <Skeleton className="h-6 w-12 mx-auto mb-2" />
@@ -532,7 +527,7 @@ export default function DepartmentsTab() {
                           </>
                         ) : (
                           <>
-                            <CardHeader className="relative z-10">
+                            <CardHeader>
                               <CardTitle className="flex justify-between items-center">
                                 {branch.branch_name + " /" + branch.branch_code}
                                 <div className="flex items-center gap-2">
@@ -560,7 +555,7 @@ export default function DepartmentsTab() {
                                 Acronym: {branch.acronym}
                               </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-4 relative z-10">
+                            <CardContent className="space-y-4">
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                                   <div className="text-lg font-bold text-blue-600">
