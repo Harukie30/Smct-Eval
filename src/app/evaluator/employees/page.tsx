@@ -772,21 +772,6 @@ export default function EmployeesTab() {
               )}
             </>
           )}
-          {/* {selectedEmployee && !evaluationType && (
-            <div className="p-8 text-center">
-              <p className="text-gray-500">
-                Please select an evaluation type... (Debug: employee=
-                {selectedEmployee?.name}, type={evaluationType})
-              </p>
-            </div>
-          )} */}
-          {/* {!selectedEmployee && (
-            <div className="p-8 text-center">
-              <p className="text-gray-500">
-                No employee selected (Debug: evaluationType={evaluationType})
-              </p>
-            </div>
-          )} */}
         </DialogContent>
       </Dialog>
     </>
