@@ -890,7 +890,7 @@ export default function Step1({
               type="date"
               value={data.hireDate || ""}
               readOnly
-              className="bg-gray-100 border-gray-300 cursor-not-allowed"
+              className="bg-gray-100 border-gray-300 cursor-not-allowed pointer-events-none"
             />
           </div>
 
