@@ -58,11 +58,15 @@ export default function EvaluationTypeModal({
 
         <div className="grid gap-6 mt-8 px-2 grid-cols-1 md:grid-cols-2">
           {/* Employee Evaluation Option (Rank and File) */}
-            <Card
-              className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-blue-500 group"
-              onClick={handleSelectEmployee}
-            >
-            <CardContent className="p-6">
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-blue-500 group relative overflow-hidden"
+            onClick={handleSelectEmployee}
+          >
+            {/* Background Image on Hover */}
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 bg-cover bg-center bg-no-repeat"
+                 style={{ backgroundImage: 'url(/team.gif)' }}>
+            </div>
+            <CardContent className="p-6 relative z-10">
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                   <Users className="w-10 h-10 text-blue-600" />
@@ -71,13 +75,13 @@ export default function EvaluationTypeModal({
                   <h3 className="text-xl font-bold text-gray-900 mb-2">
                    Rank and File Evaluation
                   </h3>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <p className="text-sm text-black mb-4">
                     Standard performance evaluation for rank and file employees.
                     Assesses job knowledge, quality of work, adaptability,
                     teamwork, reliability, ethical behavior, and customer
                     service.
                   </p>
-                  <ul className="text-xs text-gray-500 space-y-1 text-left mb-4">
+                  <ul className="text-xs text-black space-y-1 text-left mb-4">
                     <li>• Rank and File I & II</li>
                     <li>• 7 evaluation steps</li>
                     <li>• Standard performance metrics</li>
@@ -99,10 +103,14 @@ export default function EvaluationTypeModal({
 
           {/* Manager Evaluation Option (Basic) */}
           <Card
-            className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-green-500 group"
+            className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-green-500 group relative overflow-hidden"
             onClick={handleSelectManager}
           >
-            <CardContent className="p-6">
+            {/* Background Image on Hover */}
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 bg-cover bg-center bg-no-repeat"
+                 style={{ backgroundImage: 'url(/suitcase.gif)' }}>
+            </div>
+            <CardContent className="p-6 relative z-10">
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-green-200 transition-colors">
                   <Briefcase className="w-10 h-10 text-green-600" />
@@ -111,18 +119,17 @@ export default function EvaluationTypeModal({
                   <h3 className="text-xl font-bold text-gray-900 mb-2">
                     Basic Evaluation
                   </h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                Comprehensive evaluation designed exclusively for managers. Assesses
-                leadership effectiveness, job knowledge, quality of work, decision-making,
-                adaptability, teamwork, reliability, ethical behavior, and overall
-              managerial performance.
-              </p>
-
-             <ul className="text-xs text-gray-500 space-y-1 text-left mb-4">
-               <li>• Managers Only Evaluation</li>
-             <li>• 8 evaluation steps</li>
-               <li>• Focus on leadership & managerial skills</li>
-               </ul>
+                  <p className="text-sm text-black mb-4">
+                    Comprehensive evaluation designed exclusively for managers. Assesses
+                    leadership effectiveness, job knowledge, quality of work, decision-making,
+                    adaptability, teamwork, reliability, ethical behavior, and overall
+                    managerial performance.
+                  </p>
+                  <ul className="text-xs text-black space-y-1 text-left mb-4">
+                    <li>• Managers Only Evaluation</li>
+                    <li>• 8 evaluation steps</li>
+                    <li>• Focus on leadership & managerial skills</li>
+                  </ul>
                 </div>
                 <Button
                   className="w-full bg-green-600 hover:bg-green-700 text-white group-hover:scale-105 transition-transform cursor-pointer"
@@ -143,7 +150,7 @@ export default function EvaluationTypeModal({
           <Button
             variant="outline"
             onClick={onCloseAction}
-            className="px-6 bg-blue-500 hover:bg-blue-600 text-white hover:text-white cursor-pointer hover:scale-105 transition-transform duration-200"
+            className="px-6 bg-red-500 hover:bg-red-600 text-white hover:text-white cursor-pointer hover:scale-105 transition-transform duration-200"
           >
             Cancel
           </Button>
