@@ -1267,7 +1267,7 @@ export default function BranchHeadsTab() {
                   setEditSelectedBranches([]);
                   setEditBranchSearchTerm("");
                 }}
-                className="h-10 w-10 p-0 hover:bg-gray-100 bg-blue-600 text-white rounded-full hover:text-white hover:bg-red-700"
+                className="h-10 w-10 p-0 cursor-pointer hover:scale-110 transition-transform duration-200 bg-blue-600 text-white rounded-full hover:text-white hover:bg-red-700"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
