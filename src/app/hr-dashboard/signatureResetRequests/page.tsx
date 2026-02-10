@@ -356,7 +356,7 @@ export default function SignatureResetRequestsTab() {
               size="sm"
               onClick={handleRefresh}
               disabled={refresh}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-green-700 text-white hover:text-white border-blue-600 hover:border-green-700 cursor-pointer"
+              className="flex items-center hover:scale-110 transition-transform duration-200 gap-2 bg-blue-600 hover:bg-green-700 text-white hover:text-white border-blue-600 hover:border-green-700 cursor-pointer"
             >
               <RefreshCw
                 className={`h-4 w-4 ${refresh ? "animate-spin" : ""}`}
