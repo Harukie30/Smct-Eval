@@ -50,6 +50,7 @@ const getRatingIcon = (rating: string) => {
   switch (rating) {
     case "Outstanding":
     case "Exceeds Expectations":
+      
       return <Check className="h-4 w-4 text-green-600" />;
     case "Needs Improvement":
     case "Unsatisfactory":
