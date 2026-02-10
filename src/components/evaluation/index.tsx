@@ -754,9 +754,9 @@ export default function EvaluationForm({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Direct submission - no modal needed
-    confirmSubmit();
+    await confirmSubmit();
   };
 
   const handleCloseAfterSubmission = () => {

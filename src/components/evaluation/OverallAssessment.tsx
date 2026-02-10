@@ -28,12 +28,20 @@ import {
 } from "@/lib/quarterlyReviewUtils";
 import { useAuth, User as UserType } from "@/contexts/UserContext";
 import { CONFIG } from "../../../config/config";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 interface OverallAssessmentProps {
   data: EvaluationPayload;
   updateDataAction: (updates: Partial<EvaluationPayload>) => void;
   employee?: UserType | null;
-  onSubmitAction?: () => void;
+  onSubmitAction?: () => void | Promise<void>;
   onPreviousAction?: () => void;
   onCloseAction?: () => void;
 }
@@ -95,6 +103,8 @@ export default function OverallAssessment({
   });
   const [isLoadingQuarters, setIsLoadingQuarters] = useState(false);
   const [isSubmittingEvaluation, setIsSubmittingEvaluation] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showLoadingDialog, setShowLoadingDialog] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -102,6 +112,18 @@ export default function OverallAssessment({
     };
     load();
   }, []);
+
+  // Close loading dialog when submission completes
+  useEffect(() => {
+    if (!isSubmittingEvaluation && showLoadingDialog) {
+      // Add a small delay to ensure the dialog is visible for at least 1 second
+      const timer = setTimeout(() => {
+        setShowLoadingDialog(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSubmittingEvaluation, showLoadingDialog]);
+
   const handleSubmitEvaluation = async () => {
     // Validate evaluator has a signature
     if (!user?.signature) {
@@ -111,6 +133,8 @@ export default function OverallAssessment({
       setSubmissionError(
         "Please add your signature to your profile before submitting the evaluation."
       );
+      setShowLoadingDialog(false);
+      setIsSubmittingEvaluation(false);
       return;
     }
 
@@ -119,9 +143,15 @@ export default function OverallAssessment({
     setValidationErrors({ priorityAreas: false, remarks: false });
 
     if (onSubmitAction) {
-      onSubmitAction();
+      // Call onSubmitAction and await if it returns a promise
+      const result = onSubmitAction();
+      if (result instanceof Promise) {
+        await result;
+      }
     } else {
       console.log("❌ onSubmitAction not provided");
+      setShowLoadingDialog(false);
+      setIsSubmittingEvaluation(false);
     }
   };
 
@@ -2841,14 +2871,8 @@ export default function OverallAssessment({
           {/* Submit Button */}
           <Button
             disabled={isSubmittingEvaluation}
-            onClick={async () => {
-              setIsSubmittingEvaluation(true);
-
-              try {
-                await handleSubmitEvaluation();
-              } finally {
-                setIsSubmittingEvaluation(false);
-              }
+            onClick={() => {
+              setShowConfirmDialog(true);
             }}
             className={`px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white
     flex items-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200
@@ -2903,6 +2927,84 @@ export default function OverallAssessment({
       {showAutoSaveIndicator && (
         <div className="auto-save-indicator show">✓ Auto-saved</div>
       )}
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChangeAction={setShowConfirmDialog}>
+        <DialogContent className="sm:max-w-md p-6 relative">
+          <DialogHeader className="space-y-3 pb-4">
+            <DialogTitle className="flex items-center gap-2 text-gray-900 text-xl font-semibold">
+              <AlertCircle className="h-5 w-5 text-blue-600" />
+              Confirm Submission
+            </DialogTitle>
+            <DialogDescription className="text-gray-700 text-base">
+              Are you sure you want to submit this evaluation? Once submitted, you cannot make changes to this evaluation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 space-y-3">
+              <p className="text-sm text-gray-800 font-medium">
+                <strong>Employee:</strong> {employee?.fname + " " + employee?.lname || "N/A"}
+              </p>
+              <p className="text-sm text-gray-800 font-medium">
+                <strong>Overall Score:</strong> {overallPercentage}% ({getRatingLabel(parseFloat(overallWeightedScore))})
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="pt-4 flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmDialog(false)}
+              disabled={isSubmittingEvaluation}
+              className="px-6 py-2"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                setShowConfirmDialog(false);
+                setShowLoadingDialog(true);
+                setIsSubmittingEvaluation(true);
+                try {
+                  await handleSubmitEvaluation();
+                } finally {
+                  setIsSubmittingEvaluation(false);
+                }
+              }}
+              disabled={isSubmittingEvaluation}
+              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+            >
+              <div className="flex items-center gap-2">
+                <Send className="w-4 h-4" />
+                <span>Confirm & Submit</span>
+              </div>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Loading Dialog */}
+      <Dialog open={showLoadingDialog} onOpenChangeAction={() => {}}>
+        <DialogContent className="sm:max-w-md p-6 relative">
+          <div className="flex flex-col items-center justify-center space-y-4 py-8">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <img
+                  src="/smct.png"
+                  alt="SMCT Logo"
+                  className="h-8 w-8 object-contain"
+                />
+              </div>
+            </div>
+            <p className="text-lg font-medium text-gray-800">
+              Submitting evaluation...
+            </p>
+            <p className="text-sm text-gray-500 text-center">
+              Please wait while we process your submission
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
