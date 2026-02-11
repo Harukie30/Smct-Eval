@@ -409,17 +409,39 @@ export default function DashboardShell(props: DashboardShellProps) {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            {/* Clock Toggle Button */}
+            {/* Embedded Clock - Combined Display and Toggle */}
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <div
                   onClick={() => setIsClockVisible(!isClockVisible)}
-                  className={`p-2 cursor-pointer ${isClockVisible ? "bg-gray-100 hover:bg-gray-200" : " hover:bg-blue-200 hover:scale-110 transition-transform duration-200www"}`}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                    isClockVisible
+                      ? "bg-blue-600 hover:bg-blue-700 shadow-md"
+                      : "bg-gray-100 hover:bg-gray-200"
+                  }`}
                 >
-                  <Clock className={`h-5 w-5 ${isClockVisible ? "text-gray-500" : "text-blue-600"}`} />
-                </Button>
+                  <Clock className={`h-4 w-4 ${isClockVisible ? "text-white" : "text-gray-500"}`} />
+                  {isClockVisible && (
+                    <div className="flex flex-col items-start">
+                      <div className="text-sm font-semibold text-white">
+                        {currentTime.toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit', 
+                          second: '2-digit',
+                          hour12: true 
+                        })}
+                      </div>
+                      <div className="text-xs text-blue-100">
+                        {currentTime.toLocaleDateString('en-US', { 
+                          weekday: 'short', 
+                          month: 'short', 
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </TooltipTrigger>
               <TooltipContent>
                 <p>{isClockVisible ? "Hide Clock" : "Show Clock"}</p>
@@ -681,33 +703,6 @@ export default function DashboardShell(props: DashboardShellProps) {
           </div>
         </div>
       </header>
-
-      {/* Clock Display - Fixed below navbar, right edge */}
-      {isClockVisible && (
-        <div 
-          className="fixed top-20 right-6 mt-2 z-40 bg-blue-600 border border-blue-700 rounded-lg shadow-lg px-4 py-2 cursor-pointer hover:bg-blue-700 transition-colors"
-          onClick={() => setIsClockVisible(false)}
-        >
-          <div className="flex flex-col items-end">
-            <div className="text-base font-semibold text-white">
-              {currentTime.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit', 
-                second: '2-digit',
-                hour12: true 
-              })}
-            </div>
-            <div className="text-xs text-blue-100 mt-0.5">
-              {currentTime.toLocaleDateString('en-US', { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric',
-                year: 'numeric'
-              })}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Main Layout with Sidebar */}
       <div className="flex overflow-hidden mt-20">
