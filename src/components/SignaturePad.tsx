@@ -7,6 +7,14 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { dataURLtoFile } from "@/utils/data-url-to-file";
 import Image from "next/image";
 import { CONFIG } from "../../config/config";
@@ -47,6 +55,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
   const [localSignature, setLocalSignature] = useState<string | null>(null); // Store signature locally until save
   const [hasDrawingOnCanvas, setHasDrawingOnCanvas] = useState(false); // Track if there's drawing on canvas (not yet captured)
   const [showInstructions, setShowInstructions] = useState(true); // Show instructions overlay before drawing
+  const [showContactDeveloperDialog, setShowContactDeveloperDialog] = useState(false);
   const { user } = useAuth();
   // Note: Polling for signature reset approval is now handled globally in UserContext
   // to prevent multiple intervals from multiple SignaturePad instances
@@ -426,7 +435,12 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
                     variant="outline"
                     disabled={user?.requestSignatureReset !== 0}
                     size="sm"
-                    onClick={onRequestReset}
+                    onClick={() => {
+                      if (onRequestReset) {
+                        onRequestReset();
+                      }
+                      setShowContactDeveloperDialog(true);
+                    }}
                     className="text-orange-600 bg-orange-500 text-white border-orange-300 hover:text-white hover:bg-orange-500 cursor-pointer disabled:cursor-not-allowed hover:scale-110 transition-all duration-300"
                   >
                     Request Reset
@@ -461,6 +475,91 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
           </div>
         )}
       </div>
+
+      {/* Contact Developer Dialog */}
+      <Dialog
+        open={showContactDeveloperDialog}
+        onOpenChangeAction={(open) => {
+          setShowContactDeveloperDialog(open);
+        }}
+      >
+        <DialogContent 
+          className="max-w-lg p-0 overflow-hidden border-0 shadow-2xl"
+          style={{
+            backgroundImage: 'url(/smct.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          }}
+        >
+          {/* Header Section with Gradient */}
+          <div className="relative px-6 pt-6 pb-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-blue-800"></div>
+            <DialogHeader className="relative z-10 pb-2">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-lg shadow-lg">
+                  <img
+                    src="/code.png"
+                    alt="Developer Icon"
+                    className="h-6 w-6 object-contain"
+                  />
+                </div>
+                <DialogTitle className="text-2xl font-bold text-white">
+                  Contact Developer
+                </DialogTitle>
+              </div>
+            </DialogHeader>
+          </div>
+
+          {/* Content Section */}
+          <div className="bg-white px-6 pb-6 pt-6">
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                  <img
+                    src="/code.png"
+                    alt="Developer Icon"
+                    className="h-5 w-5 object-contain"
+                  />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    You can contact the developer for the request. To contact, click the{" "}
+                    <span className="font-semibold text-blue-600">developer icon</span> at the{" "}
+                    <span className="font-semibold text-blue-600">bottom right</span> of the page.
+                  </p>
+                </div>
+              </div>
+
+              {/* Visual Guide */}
+              <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-17 h-17 bg-blue-200 rounded-full mb-2 shadow-md p-2">
+                    <img
+                      src="/code.png"
+                      alt="Developer Icon"
+                      className="h-12 w-12 object-contain"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-600 mt-2">
+                    Look for this icon at the bottom right
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <DialogFooter className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+            <Button
+              onClick={() => setShowContactDeveloperDialog(false)}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-2.5 cursor-pointer hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg font-semibold"
+            >
+              Got it!
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });

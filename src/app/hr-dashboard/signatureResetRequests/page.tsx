@@ -340,6 +340,24 @@ export default function SignatureResetRequestsTab() {
     });
   };
 
+  // Helper function to get branch code from branch data
+  const getBranchCode = (branch: any): string => {
+    if (!branch) return "N/A";
+    
+    // If branch has branch_code directly
+    if (branch.branch_code) {
+      return branch.branch_code;
+    }
+    
+    // If branch has code directly
+    if (branch.code) {
+      return branch.code;
+    }
+    
+    // Fallback to branch_name if code is not available
+    return branch.branch_name || branch.name || "N/A";
+  };
+
   return (
     <div className="relative overflow-y-auto pr-2 min-h-[400px]">
       <Card>
@@ -523,7 +541,7 @@ export default function SignatureResetRequestsTab() {
                       <TableCell>
                         {request.branches?.length > 0
                           ? request.branches
-                              .map((b: any) => b.branch_name || b.name)
+                              .map((b: any) => getBranchCode(b))
                               .join(", ")
                           : "N/A"}
                       </TableCell>
