@@ -86,6 +86,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
   const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
   const [isEmployeeIdEditable, setIsEmployeeIdEditable] = useState(false);
   const [employeeIdInput, setEmployeeIdInput] = useState("");
+  const [showSaveReminderDialog, setShowSaveReminderDialog] = useState(false);
   const { success, error: errorToast } = useToast();
   const { user: currentUser } = useUser();
 
@@ -990,19 +991,21 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     }
   };
 
-  // Handle Enter key to save
+  // Handle Enter key to show reminder dialog
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only trigger if:
       // 1. Enter key is pressed
       // 2. Main modal is open
       // 3. Password modal is NOT open
-      // 4. Not currently saving
-      // 5. Not verifying password
+      // 4. Save reminder dialog is NOT open
+      // 5. Not currently saving
+      // 6. Not verifying password
       if (
         e.key === "Enter" &&
         isOpen &&
         !isPasswordModalOpen &&
+        !showSaveReminderDialog &&
         !isSaving &&
         !isVerifyingPassword
       ) {
@@ -1023,10 +1026,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           return;
         }
 
-        // For input fields, allow Enter to trigger save (this is the desired behavior)
-        // But prevent default to avoid form submission
+        // For input fields, show reminder dialog instead of saving
+        // Prevent default to avoid form submission
         e.preventDefault();
-        handleSave();
+        setShowSaveReminderDialog(true);
       }
     };
 
@@ -1038,7 +1041,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       window.removeEventListener("keydown", handleKeyDown);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, isPasswordModalOpen, isSaving, isVerifyingPassword]);
+  }, [isOpen, isPasswordModalOpen, showSaveReminderDialog, isSaving, isVerifyingPassword]);
 
   const handleCancel = () => {
     setErrors({});
@@ -1781,6 +1784,34 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           </div>
         </div>
       )}
+
+      {/* Save Reminder Dialog */}
+      <Dialog
+        open={showSaveReminderDialog}
+        onOpenChangeAction={(open) => {
+          setShowSaveReminderDialog(open);
+        }}
+      >
+        <DialogContent className="max-w-md p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Reminder
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 pt-2">
+              Please click the Save button to save your changes.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="pt-4">
+            <Button
+              onClick={() => setShowSaveReminderDialog(false)}
+              className="bg-blue-600 hover:bg-green-700 text-white px-6 cursor-pointer hover:scale-110 transition-transform duration-200"
+            >
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
