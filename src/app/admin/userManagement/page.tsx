@@ -161,6 +161,7 @@ export default function UserManagementTab() {
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [userToEdit, setUserToEdit] = useState<any>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<User | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
   const [rejectingUserId, setRejectingUserId] = useState<number | null>(null);
   const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<number>>(new Set());
@@ -473,18 +474,19 @@ export default function UserManagementTab() {
   };
 
   const handleDeleteEmployee = async (employee: any) => {
+    setIsDeleting(true);
     try {
+      // Actually delete the user (show loading spinner in button while this happens)
+      await apiService.deleteUser(employee.id);
+
       // Set deleting state to show skeleton animation
       setDeletingUserId(employee.id);
 
-      // Close modal immediately
+      // Close modal after deletion API call completes
       setIsDeleteModalOpen(false);
 
       // Wait 2 seconds to show skeleton animation
       await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Actually delete the user
-      await apiService.deleteUser(employee.id);
 
       // Refresh data first, then reset deleting state after data loads
       await loadActiveUsers(activeSearchTerm, roleFilter);
@@ -494,11 +496,13 @@ export default function UserManagementTab() {
     } catch (error) {
       console.error("Error deleting user:", error);
       setDeletingUserId(null);
+      setIsDeleteModalOpen(false);
       toastMessages.generic.error(
         "Error",
         "Failed to delete user. Please try again."
       );
     } finally {
+      setIsDeleting(false);
       setEmployeeToDelete(null);
     }
   };
@@ -1624,10 +1628,18 @@ export default function UserManagementTab() {
                 Cancel
               </Button>
               <Button
-                className="bg-blue-600 hover:bg-red-700 text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                className="bg-blue-600 hover:bg-red-700 text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 onClick={() => handleDeleteEmployee(employeeToDelete)}
+                disabled={isDeleting}
               >
-                ❌ Delete Permanently
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  "❌ Delete Permanently"
+                )}
               </Button>
             </div>
           </DialogFooter>

@@ -82,6 +82,7 @@ export default function OverviewTab() {
   const [perPage, setPerPage] = useState(0);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [years, setYears] = useState<any[]>([]);
   const [branchesData, setBranchesData] = useState<any[]>([]);
@@ -310,6 +311,7 @@ export default function OverviewTab() {
   };
 
   const handleDeleteClick = async (submission: any) => {
+    setIsDeleting(true);
     try {
       await clientDataService.deleteSubmission(submission.id);
       await handleRefresh();
@@ -319,6 +321,7 @@ export default function OverviewTab() {
     } catch (error) {
       console.error("Error deleting submission:", error);
     } finally {
+      setIsDeleting(false);
       setReviewToDelete(null);
       setIsDeleteModalOpen(false);
     }
@@ -970,10 +973,18 @@ export default function OverviewTab() {
                   Cancel
                 </Button>
                 <Button
-                  className="bg-blue-600 hover:bg-red-700 text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="bg-blue-600 hover:bg-red-700 text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                   onClick={() => handleDeleteClick(reviewToDelete)}
+                  disabled={isDeleting}
                 >
-                  ❌ Delete Permanently
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    "❌ Delete Permanently"
+                  )}
                 </Button>
               </div>
             </DialogFooter>
