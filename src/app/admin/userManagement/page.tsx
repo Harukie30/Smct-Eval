@@ -1670,7 +1670,7 @@ export default function UserManagementTab() {
           onStartEvaluationAction={() => {
             // Not used in admin, but required by component
             setIsViewEmployeeModalOpen(false);
-            setEmployeeToView(null);
+            setEmployeeToView(null);         
           }}
           onViewSubmissionAction={() => {
             // Not used in admin, but required by component
