@@ -36,6 +36,24 @@ import ViewEmployeeModal from "@/components/ViewEmployeeModal";
 export default function EmployeesTab() {
   const { user } = useAuth();
   
+  // Helper function to get branch code from branch data
+  const getBranchCode = (branch: any): string => {
+    if (!branch) return "N/A";
+    
+    // If branch has branch_code directly
+    if (branch.branch_code) {
+      return branch.branch_code;
+    }
+    
+    // If branch has code directly
+    if (branch.code) {
+      return branch.code;
+    }
+    
+    // Fallback to branch_name if code is not available
+    return branch.branch_name || "N/A";
+  };
+
   // Helper function to check if employee is HO (Head Office)
   // This determines the evaluationType based on the employee being evaluated, not the evaluator
   const isEmployeeHO = (employee: User | null): boolean => {
@@ -587,7 +605,7 @@ export default function EmployeesTab() {
                               {employee.branches &&
                               Array.isArray(employee.branches) &&
                               employee.branches.length > 0
-                                ? employee.branches[0]?.branch_name || "N/A"
+                                ? getBranchCode(employee.branches[0])
                                 : employee.branch || "N/A"}
                             </TableCell>
                             <TableCell>

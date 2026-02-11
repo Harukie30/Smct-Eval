@@ -232,6 +232,24 @@ export default function OverviewTab() {
     return "bg-purple-100 text-purple-800";
   };
 
+  // Helper function to get branch code from branch data
+  const getBranchCode = (branch: any): string => {
+    if (!branch) return "N/A";
+    
+    // If branch has branch_code directly
+    if (branch.branch_code) {
+      return branch.branch_code;
+    }
+    
+    // If branch has code directly
+    if (branch.code) {
+      return branch.code;
+    }
+    
+    // Fallback to branch_name if code is not available
+    return branch.branch_name || "N/A";
+  };
+
   const handleViewEvaluation = async (review: Review) => {
     try {
       const submission = await clientDataService.getSubmissionById(review.id);
@@ -679,7 +697,9 @@ export default function OverviewTab() {
                             </div>
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
-                            {review.employee?.branches[0]?.branch_name}
+                            {Array.isArray(review.employee?.branches) && review.employee.branches[0]
+                              ? getBranchCode(review.employee.branches[0])
+                              : review.employee?.branch_name || "N/A"}
                           </TableCell>
                           <TableCell className="px-6 py-3">
                             {(() => {
@@ -899,7 +919,9 @@ export default function OverviewTab() {
                     </p>
                     <p>
                       <span className="font-medium">Branch:</span>{" "}
-                      {reviewToDelete?.employee?.branch_name}
+                      {Array.isArray(reviewToDelete?.employee?.branches) && reviewToDelete.employee.branches[0]
+                        ? getBranchCode(reviewToDelete.employee.branches[0])
+                        : reviewToDelete?.employee?.branch_name || "N/A"}
                     </p>
                   </div>
                 </div>
