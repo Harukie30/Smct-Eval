@@ -782,9 +782,12 @@ export default function DepartmentsTab() {
         title="Cannot Delete Department"
         description={`The department "${departmentWithEmployees?.department_name}" cannot be deleted because it has ${(isNaN(Number(departmentWithEmployees?.employees_count)) ? 0 : Number(departmentWithEmployees?.employees_count)) + (isNaN(Number(departmentWithEmployees?.managers_count)) ? 0 : Number(departmentWithEmployees?.managers_count))} employee(s) assigned to it. Please remove or reassign all employees before deleting this department.`}
         type="warning"
-        confirmText= "OK" 
+        confirmText="OK"
         showCancel={false}
-        
+        backgroundImage="/smct.png"
+        size="md"
+        logoSize="cover"
+        logoOpacity={10}
         onConfirm={() => {
           setIsAlertDialogOpen(false);
           setDepartmentWithEmployees(null);
