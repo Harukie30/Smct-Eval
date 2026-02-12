@@ -71,6 +71,8 @@ interface AlertDialogProps {
   }
   // Legacy support
   customLoadingGif?: string
+  // Background image for dialog
+  backgroundImage?: string
 }
 
 export function AlertDialog({
@@ -87,7 +89,8 @@ export function AlertDialog({
   isLoading = false,
   showSuccessAnimation = false,
   loadingAnimation,
-  customLoadingGif
+  customLoadingGif,
+  backgroundImage
 }: AlertDialogProps) {
   const handleConfirm = () => {
     onConfirm?.()
@@ -137,76 +140,206 @@ export function AlertDialog({
 
   const styles = getTypeStyles()
 
+  // Get gradient color based on type
+  const getGradientColor = () => {
+    switch (type) {
+      case "success":
+        return "from-green-600 to-green-800"
+      case "error":
+        return "from-red-600 to-red-800"
+      case "warning":
+        return "from-yellow-600 to-yellow-800"
+      default:
+        return "from-blue-600 to-blue-800"
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChangeAction={onOpenChangeAction}>
-      <DialogContent className="max-w-md animate-in fade-in-0 zoom-in-95 duration-300 ease-out">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {showSuccessAnimation ? (
-              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center animate-pulse">
-                <svg 
-                  className="w-4 h-4 text-white animate-checkmark" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                  style={{
-                    strokeDasharray: '20',
-                    strokeDashoffset: '20',
-                    animation: 'drawCheckmark 0.6s ease-in-out forwards'
-                  }}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            ) : (
-              <span className="text-2xl">{styles.icon}</span>
-            )}
-            {title}
-          </DialogTitle>
-          <DialogDescription className="text-base">
-            {description}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="flex gap-2">
-          {showCancel && !isLoading && !showSuccessAnimation && (
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-              className="flex-1 transition-all text-white hover:text-white bg-blue-500 duration-200 hover:bg-blue-600 ease-out hover:scale-105 active:scale-95"
-            >
-              {cancelText}
-            </Button>
-          )}
-          <Button
-            onClick={handleConfirm}
-            disabled={isLoading || showSuccessAnimation}
-            className={cn(
-              "flex-1 transition-all duration-200 ease-out hover:scale-105 active:scale-95",
-              styles.confirmButton,
-              (isLoading || showSuccessAnimation) && "opacity-75 cursor-not-allowed"
-            )}
-          >
-            {isLoading ? (
-              <LoadingAnimation {...getLoadingProps()} />
-            ) : showSuccessAnimation ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                  <svg 
-                    className="w-3 h-3 text-green-600" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                  </svg>
+      <DialogContent 
+        className={cn(
+          "max-w-md animate-in fade-in-0 zoom-in-95 duration-300 ease-out",
+          backgroundImage && "p-0 overflow-hidden border-0 shadow-2xl"
+        )}
+        style={backgroundImage ? {
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        } : undefined}
+      >
+        {backgroundImage ? (
+          <>
+            {/* Header Section with Gradient */}
+            <div className="relative px-8 pt-7 pb-5">
+              <div className={`absolute inset-0 bg-gradient-to-br ${getGradientColor()} opacity-95`}></div>
+              <div className="absolute inset-0 bg-black/5"></div>
+              <DialogHeader className="relative z-10 pb-3">
+                <DialogTitle className="flex items-center gap-4 text-2xl font-extrabold text-white drop-shadow-xl tracking-tight">
+                  {showSuccessAnimation ? (
+                    <div className="p-3 bg-white/25 backdrop-blur-md rounded-xl shadow-xl border-2 border-white/40 ring-2 ring-white/20">
+                      <div className="w-7 h-7 bg-green-500 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                        <svg 
+                          className="w-4 h-4 text-white animate-checkmark" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                          style={{
+                            strokeDasharray: '20',
+                            strokeDashoffset: '20',
+                            animation: 'drawCheckmark 0.6s ease-in-out forwards'
+                          }}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-white/25 backdrop-blur-md rounded-xl shadow-xl border-2 border-white/40 ring-2 ring-white/20">
+                      <span className="text-2xl drop-shadow-md">{styles.icon}</span>
+                    </div>
+                  )}
+                  <span className="drop-shadow-md">{title}</span>
+                </DialogTitle>
+              </DialogHeader>
+            </div>
+
+            {/* Content Section */}
+            <div className="bg-white/98 backdrop-blur-sm px-8 pb-7 pt-7">
+              <div className="space-y-5">
+                <div className={`flex items-start gap-4 p-6 bg-gradient-to-br ${type === 'warning' ? 'from-yellow-50 via-yellow-50/80 to-orange-50 border-yellow-300' : type === 'error' ? 'from-red-50 via-red-50/80 to-pink-50 border-red-300' : type === 'success' ? 'from-green-50 via-green-50/80 to-emerald-50 border-green-300' : 'from-blue-50 via-blue-50/80 to-indigo-50 border-blue-300'} rounded-2xl border-2 shadow-lg backdrop-blur-sm`}>
+                  <div className={`p-3 ${type === 'warning' ? 'bg-yellow-200/80' : type === 'error' ? 'bg-red-200/80' : type === 'success' ? 'bg-green-200/80' : 'bg-blue-200/80'} rounded-xl flex-shrink-0 shadow-md ring-1 ring-white/50`}>
+                    <span className="text-2xl drop-shadow-sm">{styles.icon}</span>
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <DialogDescription className="text-base text-gray-800 leading-relaxed font-semibold tracking-wide">
+                      {description}
+                    </DialogDescription>
+                  </div>
                 </div>
-                <span>Success!</span>
               </div>
-            ) : (
-              confirmText
-            )}
-          </Button>
-        </DialogFooter>
+            </div>
+
+            {/* Footer */}
+            <DialogFooter className={`bg-gradient-to-b from-gray-50 via-gray-50/95 to-gray-100 px-8 py-5 border-t-2 border-gray-300/50 flex gap-4 shadow-inner`}>
+              {showCancel && !isLoading && !showSuccessAnimation && (
+                <Button
+                  variant="outline"
+                  onClick={handleCancel}
+                  className="flex-1 transition-all text-white hover:text-white bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 duration-300 ease-out hover:scale-105 active:scale-95 font-bold shadow-lg hover:shadow-xl cursor-pointer border-0 rounded-xl py-2.5 tracking-wide"
+                >
+                  {cancelText}
+                </Button>
+              )}
+              <Button
+                onClick={handleConfirm}
+                disabled={isLoading || showSuccessAnimation}
+                className={cn(
+                  "flex-1 transition-all duration-300 ease-out hover:scale-105 active:scale-95 font-bold shadow-lg hover:shadow-xl cursor-pointer border-0 rounded-xl py-2.5 tracking-wide",
+                  type === 'warning' ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white ring-2 ring-yellow-400/30' :
+                  type === 'error' ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white ring-2 ring-red-400/30' :
+                  type === 'success' ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white ring-2 ring-green-400/30' :
+                  'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white ring-2 ring-blue-400/30',
+                  (isLoading || showSuccessAnimation) && "opacity-75 cursor-not-allowed"
+                )}
+              >
+                {isLoading ? (
+                  <LoadingAnimation {...getLoadingProps()} />
+                ) : showSuccessAnimation ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                      <svg 
+                        className="w-3 h-3 text-green-600" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span>Success!</span>
+                  </div>
+                ) : (
+                  confirmText
+                )}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <DialogHeader className="px-6 pt-6 pb-4">
+              <DialogTitle className="flex items-center gap-3 text-2xl font-extrabold tracking-tight">
+                {showSuccessAnimation ? (
+                  <div className="p-2.5 bg-green-100 rounded-xl shadow-md border-2 border-green-200">
+                    <div className="w-7 h-7 bg-green-500 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                      <svg 
+                        className="w-4 h-4 text-white animate-checkmark" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                        style={{
+                          strokeDasharray: '20',
+                          strokeDashoffset: '20',
+                          animation: 'drawCheckmark 0.6s ease-in-out forwards'
+                        }}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={`p-2.5 ${type === 'warning' ? 'bg-yellow-100' : type === 'error' ? 'bg-red-100' : type === 'success' ? 'bg-green-100' : 'bg-blue-100'} rounded-xl shadow-md border-2 ${type === 'warning' ? 'border-yellow-200' : type === 'error' ? 'border-red-200' : type === 'success' ? 'border-green-200' : 'border-blue-200'}`}>
+                    <span className="text-2xl">{styles.icon}</span>
+                  </div>
+                )}
+                {title}
+              </DialogTitle>
+              <DialogDescription className="text-base text-gray-700 leading-relaxed font-medium mt-3 px-1">
+                {description}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex gap-3 px-6 pb-6">
+              {showCancel && !isLoading && !showSuccessAnimation && (
+                <Button
+                  variant="outline"
+                  onClick={handleCancel}
+                  className="flex-1 transition-all text-white hover:text-white bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 duration-300 ease-out hover:scale-105 active:scale-95 font-bold shadow-lg hover:shadow-xl cursor-pointer border-0 rounded-xl py-2.5 tracking-wide"
+                >
+                  {cancelText}
+                </Button>
+              )}
+              <Button
+                onClick={handleConfirm}
+                disabled={isLoading || showSuccessAnimation}
+                className={cn(
+                  "flex-1 transition-all duration-300 ease-out hover:scale-105 active:scale-95 font-bold shadow-lg hover:shadow-xl cursor-pointer border-0 rounded-xl py-2.5 tracking-wide",
+                  styles.confirmButton,
+                  (isLoading || showSuccessAnimation) && "opacity-75 cursor-not-allowed"
+                )}
+              >
+                {isLoading ? (
+                  <LoadingAnimation {...getLoadingProps()} />
+                ) : showSuccessAnimation ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center">
+                      <svg 
+                        className="w-3 h-3 text-green-600" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <span>Success!</span>
+                  </div>
+                ) : (
+                  confirmText
+                )}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   )
