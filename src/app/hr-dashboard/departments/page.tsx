@@ -28,6 +28,7 @@ import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import apiService from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 
 interface Department {
   id: number;
@@ -61,6 +62,8 @@ export default function DepartmentsTab() {
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [isDeletingDepartment, setIsDeletingDepartment] = useState(false);
   const [isAddingDepartment, setIsAddingDepartment] = useState(false);
+  const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
+  const [departmentWithEmployees, setDepartmentWithEmployees] = useState<Department | null>(null);
 
   // Function to load data
   const loadData = async (search: string) => {
@@ -193,12 +196,10 @@ export default function DepartmentsTab() {
           Number(departmentToDelete.managers_count) !==
         0
       ) {
-        toastMessages.generic.warning(
-          "Department Deleted revoked",
-          `Deletion failed: "${departmentToDelete.department_name}" has employees linked to it.`
-        );
-        // Close modal and reset state when deletion fails
+        // Close modal and show alert dialog instead of toast
         setIsDeleteModalOpen(false);
+        setDepartmentWithEmployees(departmentToDelete);
+        setIsAlertDialogOpen(true);
         setDepartmentToDelete(null);
         // Refresh data to ensure we have the latest department info
         await loadData(searchTerm);
@@ -458,8 +459,17 @@ export default function DepartmentsTab() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => {
-                                      setDepartmentToDelete(dept);
-                                      setIsDeleteModalOpen(true);
+                                      const totalEmployees = 
+                                        (isNaN(Number(dept.employees_count)) ? 0 : Number(dept.employees_count)) +
+                                        (isNaN(Number(dept.managers_count)) ? 0 : Number(dept.managers_count));
+                                      
+                                      if (totalEmployees > 0) {
+                                        setDepartmentWithEmployees(dept);
+                                        setIsAlertDialogOpen(true);
+                                      } else {
+                                        setDepartmentToDelete(dept);
+                                        setIsDeleteModalOpen(true);
+                                      }
                                     }}
                                     disabled={deletingDepartmentId !== null}
                                     className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:scale-120 transition-transform duration-200"
@@ -720,6 +730,23 @@ export default function DepartmentsTab() {
     }
   `}
                 onClick={async () => {
+                  if (!departmentToDelete) return;
+
+                  // Check if department has employees before proceeding
+                  const totalEmployees = 
+                    (isNaN(Number(departmentToDelete.employees_count)) ? 0 : Number(departmentToDelete.employees_count)) +
+                    (isNaN(Number(departmentToDelete.managers_count)) ? 0 : Number(departmentToDelete.managers_count));
+
+                  if (totalEmployees > 0) {
+                    // Close delete modal and show alert dialog
+                    setIsDeleteModalOpen(false);
+                    setDepartmentWithEmployees(departmentToDelete);
+                    setIsAlertDialogOpen(true);
+                    setDepartmentToDelete(null);
+                    return;
+                  }
+
+                  // Proceed with deletion if no employees
                   setIsDeletingDepartment(true);
 
                   try {
@@ -742,6 +769,27 @@ export default function DepartmentsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Alert Dialog for Departments with Employees */}
+      <AlertDialog
+        open={isAlertDialogOpen}
+        onOpenChangeAction={(open) => {
+          setIsAlertDialogOpen(open);
+          if (!open) {
+            setDepartmentWithEmployees(null);
+          }
+        }}
+        title="Cannot Delete Department"
+        description={`The department "${departmentWithEmployees?.department_name}" cannot be deleted because it has ${(isNaN(Number(departmentWithEmployees?.employees_count)) ? 0 : Number(departmentWithEmployees?.employees_count)) + (isNaN(Number(departmentWithEmployees?.managers_count)) ? 0 : Number(departmentWithEmployees?.managers_count))} employee(s) assigned to it. Please remove or reassign all employees before deleting this department.`}
+        type="warning"
+        confirmText= "OK" 
+        showCancel={false}
+        
+        onConfirm={() => {
+          setIsAlertDialogOpen(false);
+          setDepartmentWithEmployees(null);
+        }}
+      />
     </div>
   );
 }

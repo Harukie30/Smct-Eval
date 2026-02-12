@@ -2619,7 +2619,7 @@ export default function OverallAssessmentRankNfile({
               variant="outline"
               onClick={() => setShowConfirmDialog(false)}
               disabled={isSubmittingEvaluation}
-              className="px-6 py-2"
+              className="px-6 py-2 px-6 py-2 cursor-pointer text-white bg-red-500 hover:bg-red-600 hover:text-white hover:scale-110 transition-transform duration-200"
             >
               Cancel
             </Button>
