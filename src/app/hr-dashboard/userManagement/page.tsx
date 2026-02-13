@@ -777,10 +777,10 @@ export default function UserManagementTab() {
                             return true;
                           })
                           .map((role) => (
-                            <SelectItem key={role.id} value={String(role.id)}>
-                              {role.name}
-                            </SelectItem>
-                          ))}
+                          <SelectItem key={role.id} value={String(role.id)}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

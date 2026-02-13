@@ -411,6 +411,7 @@ export default function OverviewTab() {
                     <SelectItem value="Q4">Q4</SelectItem>
                     <SelectItem value="3">M3</SelectItem>
                     <SelectItem value="5">M5</SelectItem>
+                    <SelectItem value="Others">Others</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

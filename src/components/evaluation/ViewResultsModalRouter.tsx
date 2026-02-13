@@ -241,36 +241,36 @@ export default function ViewResultsModalRouter({
         if (process.env.NODE_ENV === 'development') {
           console.log('✅ Routing to:', selectedComponent);
         }
-        return (
+    return (
           <ViewResultsModalDefault
-            isOpen={isOpen}
-            onCloseAction={onCloseAction}
-            submission={submission}
-            onApprove={onApprove}
-            isApproved={isApproved}
-            approvalData={approvalData}
-            currentUserName={currentUserName}
-            currentUserSignature={currentUserSignature}
-            showApprovalButton={showApprovalButton}
-          />
-        );
-      }
+        isOpen={isOpen}
+        onCloseAction={onCloseAction}
+        submission={submission}
+        onApprove={onApprove}
+        isApproved={isApproved}
+        approvalData={approvalData}
+        currentUserName={currentUserName}
+        currentUserSignature={currentUserSignature}
+        showApprovalButton={showApprovalButton}
+      />
+    );
+  }
       // Only route to BranchRankNfile if employee is actually a branch employee
       if (isBranchEmp) {
-        return (
-          <ViewResultsModalBranchRankNfile
-            isOpen={isOpen}
-            onCloseAction={onCloseAction}
-            submission={submission}
-            onApprove={onApprove}
-            isApproved={isApproved}
-            approvalData={approvalData}
-            currentUserName={currentUserName}
-            currentUserSignature={currentUserSignature}
-            showApprovalButton={showApprovalButton}
-          />
-        );
-      }
+      return (
+        <ViewResultsModalBranchRankNfile
+          isOpen={isOpen}
+          onCloseAction={onCloseAction}
+          submission={submission}
+          onApprove={onApprove}
+          isApproved={isApproved}
+          approvalData={approvalData}
+          currentUserName={currentUserName}
+          currentUserSignature={currentUserSignature}
+          showApprovalButton={showApprovalButton}
+        />
+      );
+    }
     }
     
     // HoBasic / HoBasic / ho_basic → ViewResultsModalBasic
