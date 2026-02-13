@@ -1284,12 +1284,7 @@ export default function UserManagementTab() {
                     >
                       🕐 Recent 
                     </Badge>
-                    <Badge
-                      variant="outline"
-                      className="bg-red-100 text-red-800 hover:bg-red-200 border-red-300"
-                    >
-                      ✗ Rejected
-                    </Badge>
+                   
                   </div>
                 </div>
 

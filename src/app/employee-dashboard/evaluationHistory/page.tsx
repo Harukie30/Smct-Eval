@@ -564,6 +564,20 @@ export default function OverviewTab() {
                   {quarter === "3" || quarter === "5" ? `M${quarter}` : quarter}
                 </Button>
               ))}
+
+              {/* Others Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedQuarter("Others")}
+                className={`text-xs font-medium border transition-all duration-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                  selectedQuarter === "Others"
+                    ? "bg-blue-600 text-white border-blue-600 scale-105"
+                    : "bg-white text-black border-gray-400 hover:bg-gray-100 hover:scale-105"
+                }`}
+              >
+                Others
+              </Button>
             </div>
           </div>
         </CardHeader>
