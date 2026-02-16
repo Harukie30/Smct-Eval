@@ -73,6 +73,12 @@ interface AlertDialogProps {
   customLoadingGif?: string
   // Background image for dialog
   backgroundImage?: string
+  // Dialog size
+  size?: "sm" | "md" | "lg" | "xl" | "2xl"
+  // Background logo size
+  logoSize?: "cover" | "contain" | "auto" | number
+  // Background logo opacity (0-1)
+  logoOpacity?: number
 }
 
 export function AlertDialog({
@@ -90,7 +96,10 @@ export function AlertDialog({
   showSuccessAnimation = false,
   loadingAnimation,
   customLoadingGif,
-  backgroundImage
+  backgroundImage,
+  size = "md",
+  logoSize = "cover",
+  logoOpacity = 1
 }: AlertDialogProps) {
   const handleConfirm = () => {
     onConfirm?.()
@@ -154,24 +163,49 @@ export function AlertDialog({
     }
   }
 
+  // Get size class based on size prop
+  const getSizeClass = () => {
+    switch (size) {
+      case "sm":
+        return "max-w-sm"
+      case "md":
+        return "max-w-md"
+      case "lg":
+        return "max-w-lg"
+      case "xl":
+        return "max-w-xl"
+      case "2xl":
+        return "max-w-2xl"
+      default:
+        return "max-w-md"
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChangeAction={onOpenChangeAction}>
       <DialogContent 
         className={cn(
-          "max-w-md animate-in fade-in-0 zoom-in-95 duration-300 ease-out",
-          backgroundImage && "p-0 overflow-hidden border-0 shadow-2xl"
+          getSizeClass(),
+          "animate-in fade-in-0 zoom-in-95 duration-300 ease-out",
+          backgroundImage && "p-0 overflow-hidden border-0 shadow-2xl relative"
         )}
-        style={backgroundImage ? {
-          backgroundImage: `url(${backgroundImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        } : undefined}
       >
         {backgroundImage ? (
           <>
+            {/* Background Logo Layer */}
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                backgroundImage: `url(${backgroundImage})`,
+                backgroundSize: typeof logoSize === 'number' ? `${logoSize}%` : logoSize,
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                opacity: logoOpacity,
+                zIndex: 0,
+              }}
+            ></div>
             {/* Header Section with Gradient */}
-            <div className="relative px-8 pt-7 pb-5">
+            <div className="relative px-8 pt-7 pb-5 z-10">
               <div className={`absolute inset-0 bg-gradient-to-br ${getGradientColor()} opacity-95`}></div>
               <div className="absolute inset-0 bg-black/5"></div>
               <DialogHeader className="relative z-10 pb-3">
@@ -205,7 +239,7 @@ export function AlertDialog({
             </div>
 
             {/* Content Section */}
-            <div className="bg-white/98 backdrop-blur-sm px-8 pb-7 pt-7">
+            <div className="bg-white/98 backdrop-blur-sm px-8 pb-7 pt-7 relative z-10">
               <div className="space-y-5">
                 <div className={`flex items-start gap-4 p-6 bg-gradient-to-br ${type === 'warning' ? 'from-yellow-50 via-yellow-50/80 to-orange-50 border-yellow-300' : type === 'error' ? 'from-red-50 via-red-50/80 to-pink-50 border-red-300' : type === 'success' ? 'from-green-50 via-green-50/80 to-emerald-50 border-green-300' : 'from-blue-50 via-blue-50/80 to-indigo-50 border-blue-300'} rounded-2xl border-2 shadow-lg backdrop-blur-sm`}>
                   <div className={`p-3 ${type === 'warning' ? 'bg-yellow-200/80' : type === 'error' ? 'bg-red-200/80' : type === 'success' ? 'bg-green-200/80' : 'bg-blue-200/80'} rounded-xl flex-shrink-0 shadow-md ring-1 ring-white/50`}>
@@ -221,7 +255,7 @@ export function AlertDialog({
             </div>
 
             {/* Footer */}
-            <DialogFooter className={`bg-gradient-to-b from-gray-50 via-gray-50/95 to-gray-100 px-8 py-5 border-t-2 border-gray-300/50 flex gap-4 shadow-inner`}>
+            <DialogFooter className={`bg-gradient-to-b from-gray-50 via-gray-50/95 to-gray-100 px-8 py-5 border-t-2 border-gray-300/50 flex gap-4 shadow-inner relative z-10`}>
               {showCancel && !isLoading && !showSuccessAnimation && (
                 <Button
                   variant="outline"

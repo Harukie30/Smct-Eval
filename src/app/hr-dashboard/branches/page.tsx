@@ -35,6 +35,7 @@ import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import apiService from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 
 interface Branches {
   id: number;
@@ -72,6 +73,8 @@ export default function DepartmentsTab() {
   const [perPage, setPerPage] = useState(0);
   const [isDeletingBranches, setIsDeletingBranches] = useState(false);
   const [isAddingBranch, setIsAddingBranch] = useState(false);
+  const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
+  const [branchWithEmployees, setBranchWithEmployees] = useState<Branches | null>(null);
 
   //add inputs
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -270,14 +273,10 @@ export default function DepartmentsTab() {
           Number(branchesToDelete.managers_count) !==
         0
       ) {
-        toastMessages.generic.warning(
-          "Department Deleted revoked",
-          `Deletion failed: "${
-            branchesToDelete.branch_name + "/ " + branchesToDelete.branch_code
-          }" has employees linked to it.`
-        );
-        // Close modal and reset state when deletion fails
+        // Close modal and show alert dialog instead of toast
         setIsDeleteModalOpen(false);
+        setBranchWithEmployees(branchesToDelete);
+        setIsAlertDialogOpen(true);
         setBranchesToDelete(null);
         // Refresh data to ensure we have the latest branch info
         await loadData(searchTerm);
@@ -538,8 +537,17 @@ export default function DepartmentsTab() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => {
-                                      setBranchesToDelete(branch);
-                                      setIsDeleteModalOpen(true);
+                                      const totalEmployees = 
+                                        (isNaN(Number(branch.employees_count)) ? 0 : Number(branch.employees_count)) +
+                                        (isNaN(Number(branch.managers_count)) ? 0 : Number(branch.managers_count));
+                                      
+                                      if (totalEmployees > 0) {
+                                        setBranchWithEmployees(branch);
+                                        setIsAlertDialogOpen(true);
+                                      } else {
+                                        setBranchesToDelete(branch);
+                                        setIsDeleteModalOpen(true);
+                                      }
                                     }}
                                     disabled={deletingBranchId !== null}
                                     className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:scale-120 transition-transform duration-200"
@@ -881,6 +889,23 @@ export default function DepartmentsTab() {
     ${isDeletingBranches ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
   `}
                 onClick={async () => {
+                  if (!branchesToDelete) return;
+
+                  // Check if branch has employees before proceeding
+                  const totalEmployees = 
+                    (isNaN(Number(branchesToDelete.employees_count)) ? 0 : Number(branchesToDelete.employees_count)) +
+                    (isNaN(Number(branchesToDelete.managers_count)) ? 0 : Number(branchesToDelete.managers_count));
+
+                  if (totalEmployees > 0) {
+                    // Close delete modal and show alert dialog
+                    setIsDeleteModalOpen(false);
+                    setBranchWithEmployees(branchesToDelete);
+                    setIsAlertDialogOpen(true);
+                    setBranchesToDelete(null);
+                    return;
+                  }
+
+                  // Proceed with deletion if no employees
                   setIsDeletingBranches(true);
 
                   try {
@@ -903,6 +928,30 @@ export default function DepartmentsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Alert Dialog for Branches with Employees */}
+      <AlertDialog
+        open={isAlertDialogOpen}
+        onOpenChangeAction={(open) => {
+          setIsAlertDialogOpen(open);
+          if (!open) {
+            setBranchWithEmployees(null);
+          }
+        }}
+        title="Cannot Delete Branch"
+        description={`The branch "${branchWithEmployees?.branch_name} / ${branchWithEmployees?.branch_code}" cannot be deleted because it has ${(isNaN(Number(branchWithEmployees?.employees_count)) ? 0 : Number(branchWithEmployees?.employees_count)) + (isNaN(Number(branchWithEmployees?.managers_count)) ? 0 : Number(branchWithEmployees?.managers_count))} employee(s) assigned to it. Please remove or reassign all employees before deleting this branch.`}
+        type="warning"
+        confirmText="OK"
+        showCancel={false}
+        backgroundImage="/smct.png"
+        size="lg"
+        logoSize="cover"
+        logoOpacity={10}
+        onConfirm={() => {
+          setIsAlertDialogOpen(false);
+          setBranchWithEmployees(null);
+        }}
+      />
     </div>
   );
 }

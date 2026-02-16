@@ -35,6 +35,13 @@ import {
 import { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Review {
   id: number;
@@ -42,6 +49,8 @@ interface Review {
   evaluator: any;
   reviewTypeProbationary: number | string;
   reviewTypeRegular: number | string;
+  reviewTypeOthersImprovement?: boolean | number;
+  reviewTypeOthersCustom?: string;
   created_at: string;
   rating: number;
   status: string;
@@ -65,6 +74,10 @@ export default function performanceReviews() {
   const [recentEvaluation, setRecentEvaluation] = useState<any>([]);
   const [userEval, setUserEval] = useState<any>([]);
 
+  const [selectedYear, setSelectedYear] = useState("");
+  const [selectedQuarter, setSelectedQuarter] = useState("");
+  const [years, setYears] = useState<any>([]);
+
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
 
@@ -76,7 +89,9 @@ export default function performanceReviews() {
       const response = await apiService.getMyEvalAuthEmployee(
         "",
         currentPage,
-        itemsPerPage
+        itemsPerPage,
+        selectedYear,
+        selectedQuarter
       );
 
       // Add safety checks to prevent "Cannot read properties of undefined" error
@@ -90,6 +105,7 @@ export default function performanceReviews() {
         setPerPage(itemsPerPage);
         setIsPaginate(false);
         setLoading(false);
+        setYears([]);
         return;
       }
 
@@ -97,6 +113,7 @@ export default function performanceReviews() {
       setOverviewTotal(response.myEval_as_Employee.total || 0);
       setTotalPages(response.myEval_as_Employee.last_page || 1);
       setPerPage(response.myEval_as_Employee.per_page || itemsPerPage);
+      setYears(response.years || []);
       setIsPaginate(false);
     } catch (error) {
       console.error("Error loading submissions:", error);
@@ -105,6 +122,7 @@ export default function performanceReviews() {
       setOverviewTotal(0);
       setTotalPages(1);
       setPerPage(itemsPerPage);
+      setYears([]);
     } finally {
       setIsPaginate(false);
       setLoading(false);
@@ -145,7 +163,7 @@ export default function performanceReviews() {
 
   useEffect(() => {
     loadSubmissions();
-  }, [currentPage]);
+  }, [currentPage, selectedYear, selectedQuarter]);
 
   const handleViewEvaluation = async (review: Review) => {
     try {
@@ -270,11 +288,15 @@ export default function performanceReviews() {
   };
 
   const getQuarterColor = (quarter: string) => {
-    if (quarter === "Q1") return "bg-blue-100 text-blue-800";
-    if (quarter === "Q2") return "bg-green-100 text-green-800";
-    if (quarter === "Q3") return "bg-yellow-100 text-yellow-800";
-    if (quarter === "Q4") return "bg-purple-100 text-purple-800";
-    return "bg-purple-100 text-purple-800";
+    if (quarter === "3" || quarter.includes("M3"))
+      return "bg-indigo-100 text-indigo-800";
+    if (quarter === "5" || quarter.includes("M5"))
+      return "bg-pink-100 text-pink-800";
+    if (quarter.includes("Q1")) return "bg-blue-100 text-blue-800";
+    if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
+    if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
+    if (quarter.includes("Q4")) return "bg-purple-100 text-purple-800";
+    return "bg-gray-100 text-gray-800";
   };
 
   return (
@@ -636,6 +658,85 @@ export default function performanceReviews() {
                   </div>
                 </div>
               </CardDescription>
+              
+              {/* Year Filter */}
+              <div className="mb-6 mt-3">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-gray-700">
+                    Filter by Year:
+                  </span>
+                  <Select
+                    value={String(selectedYear)}
+                    onValueChange={(value: any) => setSelectedYear(value)}
+                  >
+                    <SelectTrigger className="w-[180px] cursor-pointer">
+                      <SelectValue placeholder="Select a year " />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">All Years</SelectItem>
+                      {years.map((year: any) => (
+                        <SelectItem key={year.year} value={String(year.year)}>
+                          {year.year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* Quarter Filter */}
+              <div className="mb-6">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-sm font-medium text-gray-800 mr-2">
+                    Filter by Quarter:
+                  </span>
+
+                  {/* All Quarters */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedQuarter("")}
+                    className={`text-xs border transition-all duration-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                      selectedQuarter === ""
+                        ? "bg-blue-600 text-white border-blue-600 scale-105"
+                        : "bg-white text-black border-gray-400 hover:bg-gray-100"
+                    }`}
+                  >
+                    All Quarters
+                  </Button>
+
+                  {/* Quarter Buttons */}
+                  {["3", "5", "Q1", "Q2", "Q3", "Q4"].map((quarter) => (
+                    <Button
+                      key={quarter}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedQuarter(quarter)}
+                      className={`text-xs font-medium border transition-all duration-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                        selectedQuarter === quarter
+                          ? "bg-blue-600 text-white border-blue-600 scale-105"
+                          : "bg-white text-black border-gray-400 hover:bg-gray-100 hover:scale-105"
+                      }`}
+                    >
+                      {quarter === "3" || quarter === "5" ? `M${quarter}` : quarter}
+                    </Button>
+                  ))}
+
+                  {/* Others Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedQuarter("Others")}
+                    className={`text-xs font-medium border transition-all duration-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                      selectedQuarter === "Others"
+                        ? "bg-blue-600 text-white border-blue-600 scale-105"
+                        : "bg-white text-black border-gray-400 hover:bg-gray-100 hover:scale-105"
+                    }`}
+                  >
+                    Others
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {submissions.length > 0 ? (
