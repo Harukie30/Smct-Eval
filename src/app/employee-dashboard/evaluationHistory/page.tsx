@@ -66,12 +66,12 @@ export default function OverviewTab() {
   const [years, setYears] = useState<any>([]);
 
   // Load approved evaluations from API
-  const loadApprovedEvaluations = async (searchValue: string) => {
+  const loadApprovedEvaluations = async (searchValue: string, page?: number) => {
     try {
       setIsPaginate(true);
       const response = await apiService.getMyEvalAuthEmployee(
         searchValue,
-        currentPage,
+        page ?? currentPage,
         itemsPerPage,
         selectedYear,
         selectedQuarter
@@ -110,7 +110,9 @@ export default function OverviewTab() {
   };
 
   useEffect(() => {
-    loadApprovedEvaluations(searchTerm);
+    // Reset to first page when filter changes
+    setCurrentPage(1);
+    loadApprovedEvaluations(searchTerm, 1);
     const loadDashboard = async () => {
       try {
         const dashboard = await apiService.employeeDashboard();
@@ -767,7 +769,8 @@ export default function OverviewTab() {
                                 className={getQuarterColor(
                                   String(
                                     submission.reviewTypeProbationary ||
-                                      submission.reviewTypeRegular
+                                      submission.reviewTypeRegular ||
+                                      "Others"
                                   )
                                 )}
                               >

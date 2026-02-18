@@ -68,12 +68,13 @@ export default function OverviewTab() {
   const [years, setYears] = useState<any>([]);
 
   // Load approved evaluations from API
-  const loadApprovedEvaluations = async (searchValue: string) => {
+  const loadApprovedEvaluations = async (searchValue: string, page?: number) => {
     try {
       setIsPaginate(true);
+      
       const response = await apiService.getMyEvalAuthEmployee(
         searchValue,
-        currentPage,
+        page ?? currentPage,
         itemsPerPage,
         selectedYear,
         selectedQuarter
@@ -112,7 +113,9 @@ export default function OverviewTab() {
   };
 
   useEffect(() => {
-    loadApprovedEvaluations(searchTerm);
+    // Reset to first page when filter changes
+    setCurrentPage(1);
+    loadApprovedEvaluations(searchTerm, 1);
     const loadDashboard = async () => {
       try {
         const dashboard = await apiService.employeeDashboard();
@@ -765,47 +768,21 @@ export default function OverviewTab() {
                           </TableCell>
                           <TableCell className="w-1/6 text-center pr-25">
                             <div className="flex justify-center">
-                              {(() => {
-                                // Check if "Others" is selected
-                                const isOthersSelected = 
-                                  (submission.reviewTypeOthersImprovement != null && submission.reviewTypeOthersImprovement !== 0) || 
-                                  (submission.reviewTypeOthersCustom && 
-                                   submission.reviewTypeOthersCustom.trim() !== "");
-                                
-                                // Check if regular or probationary types are empty/null
-                                const hasRegular = submission.reviewTypeRegular != null && 
-                                  submission.reviewTypeRegular !== "" && 
-                                  submission.reviewTypeRegular !== "null" &&
-                                  String(submission.reviewTypeRegular).trim() !== "" &&
-                                  submission.reviewTypeRegular !== 0;
-                                
-                                const hasProbationary = submission.reviewTypeProbationary != null && 
-                                  submission.reviewTypeProbationary !== "" &&
-                                  submission.reviewTypeProbationary !== "null" &&
-                                  String(submission.reviewTypeProbationary).trim() !== "";
-                                
-                                // Determine the display value
-                                let displayValue: string = "Others";
-                                
-                                if (hasRegular) {
-                                  displayValue = String(submission.reviewTypeRegular).trim();
-                                } else if (hasProbationary) {
-                                  displayValue = "M" + String(submission.reviewTypeProbationary).trim();
-                                } else if (isOthersSelected) {
-                                  // If custom value exists, use it; otherwise use "Others"
-                                  if (submission.reviewTypeOthersCustom && submission.reviewTypeOthersCustom.trim() !== "") {
-                                    displayValue = submission.reviewTypeOthersCustom.trim();
-                                  } else {
-                                    displayValue = "Others";
-                                  }
-                                }
-                                
-                                return (
-                                  <Badge className={getQuarterColor(displayValue)}>
-                                    {displayValue}
-                                  </Badge>
-                                );
-                              })()}
+                              <Badge
+                                className={getQuarterColor(
+                                  String(
+                                    submission.reviewTypeProbationary ||
+                                      submission.reviewTypeRegular ||
+                                      "Others"
+                                  )
+                                )}
+                              >
+                                {submission.reviewTypeRegular ||
+                                  (submission.reviewTypeProbationary
+                                    ? "M" + submission.reviewTypeProbationary
+                                    : "") ||
+                                  "Others"}
+                              </Badge>
                             </div>
                           </TableCell>
                           <TableCell className="w-1/6 text-center">

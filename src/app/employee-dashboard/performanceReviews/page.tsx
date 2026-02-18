@@ -171,7 +171,7 @@ export default function performanceReviews() {
 
       if (submission) {
         setSelectedSubmission(submission);
-        setIsViewResultsModalOpen(true);
+        setIsViewResultsModalOpen(true); 
       } else {
         console.error("Submission not found for review ID:", review.id);
       }
