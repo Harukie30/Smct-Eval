@@ -68,23 +68,13 @@ export default function OverviewTab() {
   const [years, setYears] = useState<any>([]);
 
   // Load approved evaluations from API
-  const loadApprovedEvaluations = async (searchValue: string) => {
+  const loadApprovedEvaluations = async (searchValue: string, page?: number) => {
     try {
       setIsPaginate(true);
       
-      // Debug logging
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Evaluator EvaluationHistory - Filter values:', {
-          selectedYear,
-          selectedQuarter,
-          searchValue,
-          currentPage
-        });
-      }
-      
       const response = await apiService.getMyEvalAuthEmployee(
         searchValue,
-        currentPage,
+        page ?? currentPage,
         itemsPerPage,
         selectedYear,
         selectedQuarter
@@ -102,47 +92,6 @@ export default function OverviewTab() {
         setIsPaginate(false);
         setYears([]);
         return;
-      }
-
-      // Debug logging for "Others" filter
-      if (process.env.NODE_ENV === 'development' && selectedQuarter === "Others") {
-        console.log('Evaluator EvaluationHistory - Filtered data for Others:', {
-          total: response.myEval_as_Employee.total,
-          count: (response.myEval_as_Employee.data || []).length,
-          sampleData: (response.myEval_as_Employee.data || []).slice(0, 3).map((s: any) => ({
-            id: s.id,
-            reviewTypeRegular: s.reviewTypeRegular,
-            reviewTypeProbationary: s.reviewTypeProbationary,
-            reviewTypeOthersImprovement: s.reviewTypeOthersImprovement,
-            reviewTypeOthersCustom: s.reviewTypeOthersCustom
-          })),
-          allData: (response.myEval_as_Employee.data || []).map((s: any) => ({
-            id: s.id,
-            reviewTypeRegular: s.reviewTypeRegular,
-            reviewTypeProbationary: s.reviewTypeProbationary,
-            reviewTypeOthersImprovement: s.reviewTypeOthersImprovement,
-            reviewTypeOthersCustom: s.reviewTypeOthersCustom,
-            isOthers: !s.reviewTypeRegular && !s.reviewTypeProbationary
-          }))
-        });
-      }
-      
-      // Also log when no filter to see what data exists
-      if (process.env.NODE_ENV === 'development' && selectedQuarter === "") {
-        const othersCount = (response.myEval_as_Employee.data || []).filter((s: any) => 
-          !s.reviewTypeRegular && !s.reviewTypeProbationary
-        ).length;
-        console.log('Evaluator EvaluationHistory - All data (no filter):', {
-          total: response.myEval_as_Employee.total,
-          count: (response.myEval_as_Employee.data || []).length,
-          othersCount: othersCount,
-          sampleQuarters: (response.myEval_as_Employee.data || []).slice(0, 5).map((s: any) => ({
-            id: s.id,
-            reviewTypeRegular: s.reviewTypeRegular,
-            reviewTypeProbationary: s.reviewTypeProbationary,
-            display: s.reviewTypeRegular || (s.reviewTypeProbationary ? "M" + s.reviewTypeProbationary : "") || "Others"
-          }))
-        });
       }
 
       setMyEvaluations(response.myEval_as_Employee.data || []);
@@ -164,7 +113,9 @@ export default function OverviewTab() {
   };
 
   useEffect(() => {
-    loadApprovedEvaluations(searchTerm);
+    // Reset to first page when filter changes
+    setCurrentPage(1);
+    loadApprovedEvaluations(searchTerm, 1);
     const loadDashboard = async () => {
       try {
         const dashboard = await apiService.employeeDashboard();
@@ -821,7 +772,8 @@ export default function OverviewTab() {
                                 className={getQuarterColor(
                                   String(
                                     submission.reviewTypeProbationary ||
-                                      submission.reviewTypeRegular
+                                      submission.reviewTypeRegular ||
+                                      "Others"
                                   )
                                 )}
                               >
