@@ -71,6 +71,17 @@ export default function OverviewTab() {
   const loadApprovedEvaluations = async (searchValue: string) => {
     try {
       setIsPaginate(true);
+      
+      // Debug logging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Evaluator EvaluationHistory - Filter values:', {
+          selectedYear,
+          selectedQuarter,
+          searchValue,
+          currentPage
+        });
+      }
+      
       const response = await apiService.getMyEvalAuthEmployee(
         searchValue,
         currentPage,
@@ -91,6 +102,47 @@ export default function OverviewTab() {
         setIsPaginate(false);
         setYears([]);
         return;
+      }
+
+      // Debug logging for "Others" filter
+      if (process.env.NODE_ENV === 'development' && selectedQuarter === "Others") {
+        console.log('Evaluator EvaluationHistory - Filtered data for Others:', {
+          total: response.myEval_as_Employee.total,
+          count: (response.myEval_as_Employee.data || []).length,
+          sampleData: (response.myEval_as_Employee.data || []).slice(0, 3).map((s: any) => ({
+            id: s.id,
+            reviewTypeRegular: s.reviewTypeRegular,
+            reviewTypeProbationary: s.reviewTypeProbationary,
+            reviewTypeOthersImprovement: s.reviewTypeOthersImprovement,
+            reviewTypeOthersCustom: s.reviewTypeOthersCustom
+          })),
+          allData: (response.myEval_as_Employee.data || []).map((s: any) => ({
+            id: s.id,
+            reviewTypeRegular: s.reviewTypeRegular,
+            reviewTypeProbationary: s.reviewTypeProbationary,
+            reviewTypeOthersImprovement: s.reviewTypeOthersImprovement,
+            reviewTypeOthersCustom: s.reviewTypeOthersCustom,
+            isOthers: !s.reviewTypeRegular && !s.reviewTypeProbationary
+          }))
+        });
+      }
+      
+      // Also log when no filter to see what data exists
+      if (process.env.NODE_ENV === 'development' && selectedQuarter === "") {
+        const othersCount = (response.myEval_as_Employee.data || []).filter((s: any) => 
+          !s.reviewTypeRegular && !s.reviewTypeProbationary
+        ).length;
+        console.log('Evaluator EvaluationHistory - All data (no filter):', {
+          total: response.myEval_as_Employee.total,
+          count: (response.myEval_as_Employee.data || []).length,
+          othersCount: othersCount,
+          sampleQuarters: (response.myEval_as_Employee.data || []).slice(0, 5).map((s: any) => ({
+            id: s.id,
+            reviewTypeRegular: s.reviewTypeRegular,
+            reviewTypeProbationary: s.reviewTypeProbationary,
+            display: s.reviewTypeRegular || (s.reviewTypeProbationary ? "M" + s.reviewTypeProbationary : "") || "Others"
+          }))
+        });
       }
 
       setMyEvaluations(response.myEval_as_Employee.data || []);
@@ -765,47 +817,20 @@ export default function OverviewTab() {
                           </TableCell>
                           <TableCell className="w-1/6 text-center pr-25">
                             <div className="flex justify-center">
-                              {(() => {
-                                // Check if "Others" is selected
-                                const isOthersSelected = 
-                                  (submission.reviewTypeOthersImprovement != null && submission.reviewTypeOthersImprovement !== 0) || 
-                                  (submission.reviewTypeOthersCustom && 
-                                   submission.reviewTypeOthersCustom.trim() !== "");
-                                
-                                // Check if regular or probationary types are empty/null
-                                const hasRegular = submission.reviewTypeRegular != null && 
-                                  submission.reviewTypeRegular !== "" && 
-                                  submission.reviewTypeRegular !== "null" &&
-                                  String(submission.reviewTypeRegular).trim() !== "" &&
-                                  submission.reviewTypeRegular !== 0;
-                                
-                                const hasProbationary = submission.reviewTypeProbationary != null && 
-                                  submission.reviewTypeProbationary !== "" &&
-                                  submission.reviewTypeProbationary !== "null" &&
-                                  String(submission.reviewTypeProbationary).trim() !== "";
-                                
-                                // Determine the display value
-                                let displayValue: string = "Others";
-                                
-                                if (hasRegular) {
-                                  displayValue = String(submission.reviewTypeRegular).trim();
-                                } else if (hasProbationary) {
-                                  displayValue = "M" + String(submission.reviewTypeProbationary).trim();
-                                } else if (isOthersSelected) {
-                                  // If custom value exists, use it; otherwise use "Others"
-                                  if (submission.reviewTypeOthersCustom && submission.reviewTypeOthersCustom.trim() !== "") {
-                                    displayValue = submission.reviewTypeOthersCustom.trim();
-                                  } else {
-                                    displayValue = "Others";
-                                  }
-                                }
-                                
-                                return (
-                                  <Badge className={getQuarterColor(displayValue)}>
-                                    {displayValue}
-                                  </Badge>
-                                );
-                              })()}
+                              <Badge
+                                className={getQuarterColor(
+                                  String(
+                                    submission.reviewTypeProbationary ||
+                                      submission.reviewTypeRegular
+                                  )
+                                )}
+                              >
+                                {submission.reviewTypeRegular ||
+                                  (submission.reviewTypeProbationary
+                                    ? "M" + submission.reviewTypeProbationary
+                                    : "") ||
+                                  "Others"}
+                              </Badge>
                             </div>
                           </TableCell>
                           <TableCell className="w-1/6 text-center">
