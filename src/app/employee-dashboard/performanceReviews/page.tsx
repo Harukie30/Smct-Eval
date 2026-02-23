@@ -287,7 +287,8 @@ export default function performanceReviews() {
     },
   };
 
-  const getQuarterColor = (quarter: string) => {
+  const getQuarterColor = (quarter: string | null | undefined) => {
+    if (quarter == null || typeof quarter !== "string") return "bg-gray-100 text-gray-800";
     if (quarter === "3" || quarter.includes("M3"))
       return "bg-indigo-100 text-indigo-800";
     if (quarter === "5" || quarter.includes("M5"))

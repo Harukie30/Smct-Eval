@@ -712,9 +712,9 @@ export default function DashboardShell(props: DashboardShellProps) {
             isSidebarOpen ? "w-64" : "w-0"
           }`}
         >
-          <aside className="bg-blue-600 text-blue-50 min-h-[calc(100vh-5rem)] w-64 rounded-bl-lg">
+          <aside className="relative bg-blue-600 text-blue-50 min-h-[calc(100vh-5rem)] w-64 rounded-bl-lg">
             <div
-              className={`p-6 transition-opacity duration-400 ${
+              className={`relative p-6 transition-opacity duration-400 ${
                 isSidebarOpen ? "opacity-100" : "opacity-0"
               }`}
             >
@@ -1077,6 +1077,39 @@ export default function DashboardShell(props: DashboardShellProps) {
                 })()}
               </nav>
             </div>
+            {/* Faded employee icon at bottom - employee dashboard only */}
+            {isEmployeeDashboard && (
+              <div
+                className="absolute bottom-0 left-0 right-0 h-50 bg-no-repeat bg-center bg-contain pointer-events-none"
+                style={{
+                  backgroundImage: "url(/emp.png)",
+                  opacity: 0.25,
+                }}
+                aria-hidden
+              />
+            )}
+            {/* Faded evaluator icon at bottom - evaluator dashboard only */}
+            {isEvaluatorDashboard && (
+              <div
+                className="absolute bottom-0 left-0 right-0 h-50 bg-no-repeat bg-center bg-contain pointer-events-none"
+                style={{
+                  backgroundImage: "url(/survey.png)",
+                  opacity: 0.25,
+                }}
+                aria-hidden
+              />
+            )}
+            {/* Faded HR icon at bottom - HR dashboard only */}
+            {isHRDashboard && (
+              <div
+                className="absolute bottom-0 left-0 right-0 h-45 bg-no-repeat bg-center bg-contain pointer-events-none"
+                style={{
+                  backgroundImage: "url(/human.png)",
+                  opacity: 0.25,
+                }}
+                aria-hidden
+              />
+            )}
           </aside>
         </div>
 
