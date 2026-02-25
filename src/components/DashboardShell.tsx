@@ -1100,12 +1100,12 @@ export default function DashboardShell(props: DashboardShellProps) {
               />
             )}
             {/* Faded HR icon at bottom - HR dashboard only */}
-              {isHRDashboard && (
-                <div
-                  className="absolute bottom-0 left-0 right-0 h-45 bg-no-repeat bg-center bg-contain pointer-events-none"
-                  style={{
-                    backgroundImage: "url(/human.png)",
-                    opacity: 0.25,
+            {isHRDashboard && (
+              <div
+                className="absolute bottom-0 left-0 right-0 h-45 bg-no-repeat bg-center bg-contain pointer-events-none"
+                style={{
+                  backgroundImage: "url(/human.png)",
+                  opacity: 0.25,
                 }}
                 aria-hidden
               />
