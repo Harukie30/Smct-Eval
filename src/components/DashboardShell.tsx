@@ -1080,7 +1080,7 @@ export default function DashboardShell(props: DashboardShellProps) {
             {/* Faded employee icon at bottom - employee dashboard only */}
             {isEmployeeDashboard && (
               <div
-                className="absolute bottom-0 left-0 right-0 h-50 bg-no-repeat bg-center bg-contain pointer-events-none"
+                className="absolute bottom-2 left-0 right-0 h-50 bg-no-repeat bg-center bg-contain pointer-events-none"
                 style={{
                   backgroundImage: "url(/emp.png)",
                   opacity: 0.25,
@@ -1091,7 +1091,7 @@ export default function DashboardShell(props: DashboardShellProps) {
             {/* Faded evaluator icon at bottom - evaluator dashboard only */}
             {isEvaluatorDashboard && (
               <div
-                className="absolute bottom-0 left-0 right-0 h-50 bg-no-repeat bg-center bg-contain pointer-events-none"
+                className="absolute bottom-3 left-0 right-0 h-50 bg-no-repeat bg-center bg-contain pointer-events-none"
                 style={{
                   backgroundImage: "url(/survey.png)",
                   opacity: 0.25,
@@ -1102,10 +1102,10 @@ export default function DashboardShell(props: DashboardShellProps) {
             {/* Faded HR icon at bottom - HR dashboard only */}
             {isHRDashboard && (
               <div
-                className="absolute bottom-0 left-0 right-0 h-45 bg-no-repeat bg-center bg-contain pointer-events-none"
+                className="absolute bottom-1 left-0 right-0 h-45 bg-no-repeat bg-center bg-contain pointer-events-none"
                 style={{
                   backgroundImage: "url(/human.png)",
-                  opacity: 0.25,
+                  opacity: 0.13,
                 }}
                 aria-hidden
               />
