@@ -864,12 +864,7 @@ export default function UserManagementTab() {
                     Role Indicators:
                   </span>
                   <div className="flex items-center gap-3 flex-wrap">
-                    <Badge
-                      variant="outline"
-                      className="bg-red-700 text-white hover:bg-red-700 border-red-300"
-                    >
-                      Admin
-                    </Badge>
+                    
                     <Badge
                       variant="outline"
                       className="bg-blue-700 text-white hover:bg-blue-700 border-blue-300"
