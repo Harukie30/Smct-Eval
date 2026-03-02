@@ -1012,50 +1012,33 @@ export default function UserManagementTab() {
                           return true;
                         })
                         .map((employee) => {
-                        const isDeleting = deletingUserId === employee.id;
-                        const createdDate = employee.created_at
-                          ? new Date(employee.created_at)
-                          : null;
-                        const updatedDate = (employee as any).updated_at
-                          ? new Date((employee as any).updated_at)
-                          : null;
-                        let isNew = false;
-                        let isRecentlyAdded = false;
-                        let isRecentlyUpdated = false;
+                       const isDeleting = deletingUserId === employee.id;
+                       const createdDate = employee.created_at
+                         ? new Date(employee.created_at)
+                         : null;
+                       let isNew = false;
+                       let isRecentlyAdded = false;
+                       let isRecentlyUpdated = false;
 
-                        if (createdDate !== null) {
-                          const now = new Date();
-                          const minutesDiff =
-                            (now.getTime() - createdDate.getTime()) /
-                            (1000 * 60);
-                          const hoursDiff = minutesDiff / 60;
-                          isNew = hoursDiff <= 30;
-                          isRecentlyAdded = hoursDiff > 30 && hoursDiff <= 40;
-                        }
+                       if (createdDate !== null) {
+                         const now = new Date();
+                         const minutesDiff =
+                           (now.getTime() - createdDate.getTime()) /
+                           (1000 * 60);
+                         const hoursDiff = minutesDiff / 60;
+                         isNew = hoursDiff <= 30;
+                         isRecentlyAdded = hoursDiff > 30 && hoursDiff <= 40;
+                       }
 
-                        // Check if user is in the recently updated set (15 second highlight)
-                        const isJustUpdated = employee.id ? recentlyUpdatedIds.has(Number(employee.id)) : false;
-                        
-                        // Check if user was recently updated (within 30 minutes) - fallback for page refresh
-                        if (!isJustUpdated && updatedDate !== null && createdDate !== null) {
-                          const now = new Date();
-                          const updatedMinutesDiff =
-                            (now.getTime() - updatedDate.getTime()) /
-                            (1000 * 60);
-                          // Only show as updated if updated_at is different from created_at
-                          // and the update was within 30 minutes
-                          if (
-                            updatedDate.getTime() !== createdDate.getTime() &&
-                            updatedMinutesDiff <= 30
-                          ) {
-                            isRecentlyUpdated = true;
-                          }
-                        }
-                        
-                        // Use the 15-second highlight if available, otherwise use timestamp check
-                        if (isJustUpdated) {
-                          isRecentlyUpdated = true;
-                        }
+                       // Check if user is in the recently updated set (explicit front-end edit)
+                       // This is only set when saving from the Edit User modal, so approving
+                       // a new registration will not mistakenly show as "Updated".
+                       const isJustUpdated = employee.id
+                         ? recentlyUpdatedIds.has(Number(employee.id))
+                         : false;
+                       if (isJustUpdated) {
+                         isRecentlyUpdated = true;
+                       }
 
                         return (
                           <TableRow
