@@ -1110,6 +1110,17 @@ export default function DashboardShell(props: DashboardShellProps) {
                 aria-hidden
               />
             )}
+            {/* Faded Admin icon at bottom - Admin dashboard only */}
+            {isAdminDashboard && (
+              <div
+                className="absolute bottom-3 left-0 right-0 h-50 bg-no-repeat bg-center bg-contain pointer-events-none"
+                style={{
+                  backgroundImage: "url(/admin.png)",
+                  opacity: 0.13,
+                }}
+                aria-hidden
+              />
+            )}
           </aside>
         </div>
 
