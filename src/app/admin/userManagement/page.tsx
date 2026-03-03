@@ -951,9 +951,6 @@ export default function UserManagementTab() {
                         const createdDate = employee.created_at
                           ? new Date(employee.created_at)
                           : null;
-                        const updatedDate = (employee as any).updated_at
-                          ? new Date((employee as any).updated_at)
-                          : null;
                         let isNew = false;
                         let isRecentlyAdded = false;
                         let isRecentlyUpdated = false;
@@ -968,26 +965,10 @@ export default function UserManagementTab() {
                           isRecentlyAdded = hoursDiff > 30 && hoursDiff <= 40;
                         }
 
-                        // Check if user is in the recently updated set (15 second highlight)
+                        // Check if user is in the recently updated set (only set when explicitly edited via Edit modal)
                         const isJustUpdated = employee.id ? recentlyUpdatedIds.has(Number(employee.id)) : false;
                         
-                        // Check if user was recently updated (within 30 minutes) - fallback for page refresh
-                        if (!isJustUpdated && updatedDate !== null && createdDate !== null) {
-                          const now = new Date();
-                          const updatedMinutesDiff =
-                            (now.getTime() - updatedDate.getTime()) /
-                            (1000 * 60);
-                          // Only show as updated if updated_at is different from created_at
-                          // and the update was within 30 minutes
-                          if (
-                            updatedDate.getTime() !== createdDate.getTime() &&
-                            updatedMinutesDiff <= 30
-                          ) {
-                            isRecentlyUpdated = true;
-                          }
-                        }
-                        
-                        // Use the 15-second highlight if available, otherwise use timestamp check
+                        // Only show as updated if user was explicitly edited via Edit modal
                         if (isJustUpdated) {
                           isRecentlyUpdated = true;
                         }
