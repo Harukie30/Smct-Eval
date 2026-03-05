@@ -1329,31 +1329,33 @@ export default function DashboardShell(props: DashboardShellProps) {
       </Dialog>
 
       {/* Floating Help Buttons - Toggleable (Fixed to viewport) */}
-      {/* Dashboard Guide Button */}
-      <Button
-        variant="ghost"
-        size="lg"
-        onClick={isHelpButtonsVisible ? handleManualGuideModalOpen : undefined}
-        disabled={!isHelpButtonsVisible}
-        className={`fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
-          isHelpButtonsVisible
-            ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-0 cursor-pointer"
-            : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"
-        }`}
-        title="Dashboard Guide"
-        tabIndex={isHelpButtonsVisible ? 0 : -1}
-        aria-hidden={!isHelpButtonsVisible}
-        style={{ 
-          pointerEvents: isHelpButtonsVisible ? "auto" : "none",
-          cursor: isHelpButtonsVisible ? "pointer" : "default"
-        }}
-      >
-        <img
-          src="/faq.png"
-          alt="Help"
-          className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
-        />
-      </Button>
+      {/* Dashboard Guide Button - Hidden in Admin Dashboard */}
+      {!isAdminDashboard && (
+        <Button
+          variant="ghost"
+          size="lg"
+          onClick={isHelpButtonsVisible ? handleManualGuideModalOpen : undefined}
+          disabled={!isHelpButtonsVisible}
+          className={`fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+            isHelpButtonsVisible
+              ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-0 cursor-pointer"
+              : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"
+          }`}
+          title="Dashboard Guide"
+          tabIndex={isHelpButtonsVisible ? 0 : -1}
+          aria-hidden={!isHelpButtonsVisible}
+          style={{ 
+            pointerEvents: isHelpButtonsVisible ? "auto" : "none",
+            cursor: isHelpButtonsVisible ? "pointer" : "default"
+          }}
+        >
+          <img
+            src="/faq.png"
+            alt="Help"
+            className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
+          />
+        </Button>
+      )}
 
       {/* Contact Developers Button */}
       <Button
