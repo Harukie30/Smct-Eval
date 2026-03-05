@@ -14,51 +14,61 @@ export default function NotFound() {
 
   if (isLoading) return <RealLoadingScreen />;
   return (
-    <div className="fixed top-0 bottom-0 left-0 right-0 z-40 flex items-center justify-center bg-white">
-      <div className="max-w-md w-full rounded-xl overflow-hidden">
-        <div className="p-8">
-          <div className="text-center mb-6">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-20 w-20 mx-auto text-yellow-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <h2 className="text-xl font-semibold text-gray-800 mt-4">
-              Oops! Page Not Found?
-            </h2>
-            <p className="text-gray-600 mt-2">
-              The page you're looking for doesn't exist or has been moved. Let's
-              get you back on track.
-            </p>
-          </div>
-          <div className="space-y-4">
-            {isLoading ? null : isAuthenticated ? (
-              <Link
-                href={dashboardPath}
-                className="block w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-medium rounded-lg text-center transition duration-200"
-              >
-                Return to Dashboard
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                className="block w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-medium rounded-lg text-center transition duration-200"
-              >
-                Return to Login
-              </Link>
-            )}
-          </div>
-        </div>
+    <div className="fixed inset-0 z-40 flex items-center justify-center overflow-hidden bg-slate-50">
+
+  {/* Abstract Background */}
+  <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-blue-400/30 rounded-full blur-3xl"></div>
+  <div className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-cyan-400/30 rounded-full blur-3xl"></div>
+  <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] bg-purple-400/20 rounded-full blur-3xl"></div>
+
+  {/* Content Card */}
+  <div className="relative w-full max-w-md rounded-2xl bg-white/90 backdrop-blur shadow-xl border border-gray-100 overflow-hidden">
+    <div className="p-10">
+
+      {/* Icon */}
+      <div className="flex justify-center mb-6">
+  <div className="flex items-center justify-center w-20 h-20 rounded-full bg-yellow-100 overflow-hidden">
+    <img
+      src="/search-file.gif"
+      alt="Not found animation"
+      className="w-30 h-30 object-contain"
+    />
+  </div>
+</div>
+
+      {/* Text */}
+      <div className="text-center space-y-3">
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Oops! Page Not Found
+        </h2>
+
+        <p className="text-gray-500 text-sm leading-relaxed">
+          The page you're looking for might have been removed, renamed,
+          or is temporarily unavailable.
+        </p>
       </div>
+
+      {/* Button */}
+      <div className="mt-8">
+        {isLoading ? null : isAuthenticated ? (
+          <Link
+            href={dashboardPath}
+            className="block w-full py-3 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium text-center shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-200"
+          >
+            Return to Dashboard
+          </Link>
+        ) : (
+          <Link
+            href="/"
+            className="block w-full py-3 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium text-center shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-200"
+          >
+            Return to Login
+          </Link>
+        )}
+      </div>
+
     </div>
+  </div>
+</div>
   );
 }
