@@ -17,9 +17,10 @@ import { LazyGif } from '@/components/LazyGif';
 interface LoginRegistrationGuideModalProps {
   isOpen: boolean;
   onCloseAction: () => void;
+  initialSlide?: number; // Optional prop to specify which slide to start on (0-indexed)
 }
 
-export function LoginRegistrationGuideModal({ isOpen, onCloseAction }: LoginRegistrationGuideModalProps) {
+export function LoginRegistrationGuideModal({ isOpen, onCloseAction, initialSlide = 0 }: LoginRegistrationGuideModalProps) {
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [api, setApi] = useState<CarouselApi>();
   const [canScrollPrev, setCanScrollPrev] = useState(false);
@@ -38,6 +39,16 @@ export function LoginRegistrationGuideModal({ isOpen, onCloseAction }: LoginRegi
       setCanScrollNext(api.canScrollNext());
     });
   }, [api]);
+
+  // Auto-scroll to initial slide when modal opens
+  useEffect(() => {
+    if (isOpen && api && initialSlide !== undefined) {
+      // Small delay to ensure carousel is fully rendered
+      setTimeout(() => {
+        api.scrollTo(initialSlide);
+      }, 100);
+    }
+  }, [isOpen, api, initialSlide]);
 
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
