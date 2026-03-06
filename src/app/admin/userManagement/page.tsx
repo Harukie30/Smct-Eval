@@ -1190,8 +1190,7 @@ export default function UserManagementTab() {
                         <SelectItem value="0">All Status</SelectItem>
                         <SelectItem value="pending">
                           Pending Verification
-                        </SelectItem>
-                        <SelectItem value="declined">Rejected</SelectItem>
+                        </SelectItem>                       
                       </SelectContent>
                     </Select>
                   </div>
