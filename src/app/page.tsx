@@ -47,6 +47,7 @@ function LandingLoginPage() {
   const [showContactDevsModal, setShowContactDevsModal] = useState(false);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [showLoginGuideModal, setShowLoginGuideModal] = useState(false);
+  const [showLoginGuideModalFromLink, setShowLoginGuideModalFromLink] = useState(false);
 
   const { login, isLoading, user } = useUser();
   const router = useRouter();
@@ -423,7 +424,10 @@ function LandingLoginPage() {
                   <div className="text-center mt-2">
                     <button
                       type="button"
-                      onClick={() => setShowLoginGuideModal(true)}
+                      onClick={() => {
+                        setShowLoginGuideModalFromLink(true);
+                        setShowLoginGuideModal(true);
+                      }}
                       className="text-sm text-blue-600 hover:underline font-medium cursor-pointer"
                     >
                       New here? Get Started
@@ -779,15 +783,15 @@ function LandingLoginPage() {
                   <div className="flex items-start space-x-3">
                     <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0">
                       <span className="text-base">📋</span>
-                    </div>
+                  </div>
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-800 mb-1 text-sm">
-                        Customizable Templates
-                      </h4>
-                      <p className="text-gray-600 text-xs">
-                        Create and customize evaluation forms tailored to
-                        different roles and departments
-                      </p>
+                     <h4 className="font-medium text-gray-800 mb-1 text-sm">
+                        Company-Specific Templates
+                     </h4>
+                        <p className="text-gray-600 text-xs">
+                          Predefined evaluation templates designed for the company, with separate
+                          formats for branch offices and the head office.
+                        </p>
                     </div>
                   </div>
                 </div>
@@ -1070,7 +1074,11 @@ function LandingLoginPage() {
       {/* Login & Registration Guide Modal */}
       <LoginRegistrationGuideModal
         isOpen={showLoginGuideModal}
-        onCloseAction={() => setShowLoginGuideModal(false)}
+        onCloseAction={() => {
+          setShowLoginGuideModal(false);
+          setShowLoginGuideModalFromLink(false); // Reset when modal closes
+        }}
+        initialSlide={showLoginGuideModalFromLink ? 1 : 0} // Slide 1 = Registration (0-indexed)
       />
 
       {/* Incorrect Password Dialog */}
