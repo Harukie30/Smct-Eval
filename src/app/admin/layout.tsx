@@ -20,8 +20,8 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
       },
       {
         id: "evaluated-reviews",
-        label: "Evaluation Records",
-        icon: "📋",
+        label: "All Evaluation Records",
+        icon: "🗂️",
         path: "/admin/evaluatedReviews",
       },
       {

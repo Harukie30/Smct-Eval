@@ -16,7 +16,7 @@ function HRLayout({ children }: { children: React.ReactNode }) {
       { id: "overview", label: "Overview", icon: "📊", path: "/hr-dashboard" },
       {
         id: "evaluated-reviews",
-        label: "Evaluation Records",
+        label: "All Evaluation Records",
         icon: "🗂️",
         path: "/hr-dashboard/evaluatedReviews",
       },
