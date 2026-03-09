@@ -50,6 +50,7 @@ export default function OverviewTab() {
   const [totalEvaluations, setTotalEvaluations] = useState(0);
   const [totalPending, setTotalPending] = useState(0);
   const [totalApproved, setTotalApproved] = useState(0);
+  const [totalEmployees, setTotalEmployees] = useState(0);
 
   //filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -90,6 +91,31 @@ export default function OverviewTab() {
         setOverviewTotal(response.myEval_as_Evaluator.total);
         setTotalPages(response.myEval_as_Evaluator.last_page);
         setPerPage(response.myEval_as_Evaluator.per_page);
+        
+        // Fetch total employees count
+        try {
+          const employeesRes = await apiService.getAllEmployeeByAuth(
+            "",
+            1, // per_page
+            1  // page
+          );
+          // getAllEmployeeByAuth returns: { data: [...], total, last_page, per_page }
+          if (employeesRes && employeesRes.total !== undefined) {
+            setTotalEmployees(employeesRes.total);
+          } else if (employeesRes && Array.isArray(employeesRes)) {
+            // Fallback: if response is an array, use its length
+            setTotalEmployees(employeesRes.length);
+          } else if (response.total_employees !== undefined) {
+            setTotalEmployees(response.total_employees);
+          }
+        } catch (error) {
+          console.error("Error fetching total employees:", error);
+          // If API response has total_employees, use it as fallback
+          if (response.total_employees !== undefined) {
+            setTotalEmployees(response.total_employees);
+          }
+        }
+        
         setIsPaginate(false);
         setIsRefreshing(false);
       } catch (error) {
@@ -172,7 +198,7 @@ export default function OverviewTab() {
       <>
         {isRefreshing ? (
           // Skeleton cards for overview
-          <div className="flex">
+          <div className="flex gap-5">
             <Card className="w-1/4">
               <CardHeader className="pb-2">
                 <Skeleton className="h-3 w-20" />
@@ -194,6 +220,16 @@ export default function OverviewTab() {
                 <Skeleton className="h-6 w-12" />
                 <Skeleton className="h-3 w-16 mt-1" />
                 <Skeleton className="h-1.5 w-full mt-2" />
+              </CardContent>
+            </Card>
+
+            <Card className="w-1/4">
+              <CardHeader className="pb-2">
+                <Skeleton className="h-3 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-6 w-8" />
+                <Skeleton className="h-3 w-20 mt-1" />
               </CardContent>
             </Card>
 
@@ -259,6 +295,20 @@ export default function OverviewTab() {
                   {totalApproved ? totalApproved : 0}
                 </div>
                 <p className="text-sm text-gray-500 mt-1">Completed & signed</p>
+              </CardContent>
+            </Card>
+
+            <Card className="w-1/4">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  👥 Total Employees
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-blue-600">
+                  {totalEmployees ? totalEmployees : 0}
+                </div>
+                <p className="text-sm text-gray-500 mt-1">All registered employees</p>
               </CardContent>
             </Card>
           </div>

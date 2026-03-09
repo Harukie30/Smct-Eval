@@ -240,6 +240,20 @@ export default function OverviewTab() {
             </p>
           </CardContent>
         </Card>
+
+        <Card className="w-1/4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              👥 Total Employees
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-blue-600">
+              {dashboardTotals?.total_users || 0}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">All registered employees</p>
+          </CardContent>
+        </Card>
       </div>
       <div className="space-y-6">
         {/* Main Container Div (replacing Card) */}
