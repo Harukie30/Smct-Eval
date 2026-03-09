@@ -19,13 +19,13 @@ function EmployeeLayout({ children }: { children: React.ReactNode }) {
       },
       {
         id: "reviews",
-        label: "Performance Reviews",
+        label: "My Performance Reviews",
         icon: "📝",
         path: "/employee-dashboard/performanceReviews",
       },
       {
         id: "history",
-        label: "Evaluation History",
+        label: "My Evaluation History",
         icon: "📈",
         path: "/employee-dashboard/evaluationHistory",
       },

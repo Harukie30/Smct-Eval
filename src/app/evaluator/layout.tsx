@@ -28,13 +28,13 @@ function EvaluatorLayout({ children }: { children: React.ReactNode }) {
       },
       {
         id: "reviews",
-        label: "Performance Reviews",
+        label: "My Performance Reviews",
         icon: "📝",
         path: "/evaluator/performanceReviews",
       },
       {
         id: "history",
-        label: "Evaluation History",
+        label: "My Evaluation History",
         icon: "📈",
         path: "/evaluator/evaluationHistory",
       },
