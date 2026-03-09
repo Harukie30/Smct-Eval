@@ -28,13 +28,13 @@ function HRLayout({ children }: { children: React.ReactNode }) {
       },
       {
         id: "reviews",
-        label: "Performance Reviews",
+        label: "My Performance Reviews",
         icon: "📝",
         path: "/hr-dashboard/performanceReviews",
       },
       {
         id: "history",
-        label: "Evaluation History",
+        label: "My Evaluation History",
         icon: "📈",
         path: "/hr-dashboard/evaluationHistory",
       },
