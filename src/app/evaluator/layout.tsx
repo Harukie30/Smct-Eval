@@ -22,7 +22,7 @@ function EvaluatorLayout({ children }: { children: React.ReactNode }) {
       },
       {
         id: "feedback",
-        label: "Evaluation Records",
+        label: "All Evaluation Records",
         icon: "🗂️",
         path: "/evaluator/evaluationRecords",
       },
