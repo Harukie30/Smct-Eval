@@ -1363,7 +1363,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         size="lg"
         onClick={isHelpButtonsVisible ? () => setIsContactDevsModalOpen(true) : undefined}
         disabled={!isHelpButtonsVisible}
-        className={`fixed bottom-40 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+        className={`fixed bottom-25 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
           isHelpButtonsVisible
             ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-100 cursor-pointer"
             : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"
