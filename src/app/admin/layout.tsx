@@ -14,7 +14,7 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
       { id: "overview", label: "Overview", icon: "📊", path: "/admin" },
       {
         id: "users",
-        label: "User Management",
+        label: "Employees",
         icon: "👥",
         path: "/admin/userManagement",
       },
