@@ -1438,6 +1438,9 @@ export default function ViewResultsModal({
     ((finalRatingRounded / 5) * 100).toFixed(2)
   );
   const finalIsPass = finalRatingRounded >= 3.0;
+  // Only show PASS/FAIL indicators for probationary reviews (M3 / M5)
+  const showPassFailIndicators =
+    submission.reviewTypeProbationary === 3 || submission.reviewTypeProbationary === 5;
 
   // Handle approval API call
   const handleApproveEvaluation = async () => {
@@ -3805,13 +3808,15 @@ export default function ViewResultsModal({
                               Performance Score
                             </div>
                           </div>
-                          <div
-                            className={`px-8 py-4 rounded-lg font-bold text-white text-xl ${
-                              finalIsPass ? "bg-green-600" : "bg-red-600"
-                            }`}
-                          >
-                            {finalIsPass ? "PASS" : "FAIL"}
-                          </div>
+                          {showPassFailIndicators && (
+                            <div
+                              className={`px-8 py-4 rounded-lg font-bold text-white text-xl ${
+                                finalIsPass ? "bg-green-600" : "bg-red-600"
+                              }`}
+                            >
+                              {finalIsPass ? "PASS" : "FAIL"}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>
