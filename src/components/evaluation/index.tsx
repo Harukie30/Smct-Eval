@@ -317,7 +317,6 @@ export default function EvaluationForm({
         // Check if at least one review type is selected
         const hasReviewType =
           form.reviewTypeProbationary ||
-          form.reviewTypeProbationary ||
           form.reviewTypeRegular ||
           form.reviewTypeOthersImprovement ||
           (form.reviewTypeOthersCustom &&
@@ -331,6 +330,12 @@ export default function EvaluationForm({
           form.jobKnowledgeScore2 !== 0 &&
           form.jobKnowledgeScore3 &&
           form.jobKnowledgeScore3 !== 0;
+
+        // Require comments for all Job Knowledge items before proceeding
+        const hasJobKnowledgeComments =
+          !!form.jobKnowledgeComments1?.trim() &&
+          !!form.jobKnowledgeComments2?.trim() &&
+          !!form.jobKnowledgeComments3?.trim();
 
         // Check if basic employee information is filled
         const hasBasicInfo =
@@ -391,6 +396,7 @@ export default function EvaluationForm({
         return (
           hasReviewType &&
           hasJobKnowledgeScores &&
+          hasJobKnowledgeComments &&
           hasBasicInfo &&
           hasValidCoverageDates
         );
@@ -466,10 +472,22 @@ export default function EvaluationForm({
         if (isBranchRankNfile && (!form.qualityOfWorkScore5 || form.qualityOfWorkScore5 === 0)) {
           return false; // Explicitly require qualityOfWorkScore5 for BranchRankNfile
         }
+
+        // Comments requirement
+        // - Always require base comments (rows 1-4)
+        // - Only require row-5 comment when row-5 score is required/visible (non-HO and not using detailed job targets)
+        const hasBaseComments =
+          !!form.qualityOfWorkComments1?.trim() &&
+          !!form.qualityOfWorkComments2?.trim() &&
+          !!form.qualityOfWorkComments3?.trim() &&
+          !!form.qualityOfWorkComments4?.trim();
+
+        const requiresQualityOfWorkRow5 = !isHO && !showJobTargets;
+        const hasRow5Comment = !requiresQualityOfWorkRow5 || !!form.qualityOfWorkComments5?.trim();
         
         // Only require base scores and qualityOfWorkScore5 (if applicable)
         // Job targets are optional
-        return hasBaseScores && hasQualityOfWorkScore5;
+        return hasBaseScores && hasQualityOfWorkScore5 && hasBaseComments && hasRow5Comment;
       case 3: // Adaptability
         return (
           form.adaptabilityScore1 &&
@@ -477,7 +495,10 @@ export default function EvaluationForm({
           form.adaptabilityScore2 &&
           form.adaptabilityScore2 !== 0 &&
           form.adaptabilityScore3 &&
-          form.adaptabilityScore3 !== 0
+          form.adaptabilityScore3 !== 0 &&
+          !!form.adaptabilityComments1?.trim() &&
+          !!form.adaptabilityComments2?.trim() &&
+          !!form.adaptabilityComments3?.trim()
         );
       case 4: // Teamwork
         return (
@@ -486,7 +507,10 @@ export default function EvaluationForm({
           form.teamworkScore2 &&
           form.teamworkScore2 !== 0 &&
           form.teamworkScore3 &&
-          form.teamworkScore3 !== 0
+          form.teamworkScore3 !== 0 &&
+          !!form.teamworkComments1?.trim() &&
+          !!form.teamworkComments2?.trim() &&
+          !!form.teamworkComments3?.trim()
         );
       case 5: // Reliability
         return (
@@ -497,7 +521,11 @@ export default function EvaluationForm({
           form.reliabilityScore3 &&
           form.reliabilityScore3 !== 0 &&
           form.reliabilityScore4 &&
-          form.reliabilityScore4 !== 0
+          form.reliabilityScore4 !== 0 &&
+          !!form.reliabilityComments1?.trim() &&
+          !!form.reliabilityComments2?.trim() &&
+          !!form.reliabilityComments3?.trim() &&
+          !!form.reliabilityComments4?.trim()
         );
       case 6: // Ethical & Professional Behavior
         return (
@@ -508,7 +536,11 @@ export default function EvaluationForm({
           form.ethicalScore3 &&
           form.ethicalScore3 !== 0 &&
           form.ethicalScore4 &&
-          form.ethicalScore4 !== 0
+          form.ethicalScore4 !== 0 &&
+          !!form.ethicalExplanation1?.trim() &&
+          !!form.ethicalExplanation2?.trim() &&
+          !!form.ethicalExplanation3?.trim() &&
+          !!form.ethicalExplanation4?.trim()
         );
       case 7: // Could be Customer Service or Managerial Skills depending on evaluation type
         // Check the actual step ID and title to determine what step 7 is
@@ -529,7 +561,13 @@ export default function EvaluationForm({
             form.managerialSkillsScore5 &&
             form.managerialSkillsScore5 !== 0 &&
             form.managerialSkillsScore6 &&
-            form.managerialSkillsScore6 !== 0
+            form.managerialSkillsScore6 !== 0 &&
+            !!form.managerialSkillsExplanation1?.trim() &&
+            !!form.managerialSkillsExplanation2?.trim() &&
+            !!form.managerialSkillsExplanation3?.trim() &&
+            !!form.managerialSkillsExplanation4?.trim() &&
+            !!form.managerialSkillsExplanation5?.trim() &&
+            !!form.managerialSkillsExplanation6?.trim()
           );
         }
         
@@ -590,7 +628,12 @@ export default function EvaluationForm({
           form.customerServiceScore4 &&
           form.customerServiceScore4 !== 0 &&
           form.customerServiceScore5 &&
-          form.customerServiceScore5 !== 0
+          form.customerServiceScore5 !== 0 &&
+          !!form.customerServiceExplanation1?.trim() &&
+          !!form.customerServiceExplanation2?.trim() &&
+          !!form.customerServiceExplanation3?.trim() &&
+          !!form.customerServiceExplanation4?.trim() &&
+          !!form.customerServiceExplanation5?.trim()
         );
       case 8: // Could be Managerial Skills or Overall Assessment depending on evaluation type
         // Check the actual step ID to determine what step 8 is
@@ -611,7 +654,13 @@ export default function EvaluationForm({
             form.managerialSkillsScore5 &&
             form.managerialSkillsScore5 !== 0 &&
             form.managerialSkillsScore6 &&
-            form.managerialSkillsScore6 !== 0
+            form.managerialSkillsScore6 !== 0 &&
+            !!form.managerialSkillsExplanation1?.trim() &&
+            !!form.managerialSkillsExplanation2?.trim() &&
+            !!form.managerialSkillsExplanation3?.trim() &&
+            !!form.managerialSkillsExplanation4?.trim() &&
+            !!form.managerialSkillsExplanation5?.trim() &&
+            !!form.managerialSkillsExplanation6?.trim()
           );
         }
         
@@ -726,14 +775,53 @@ export default function EvaluationForm({
           form.jobKnowledgeScore1 === 0 ||
           !form.jobKnowledgeScore2 ||
           form.jobKnowledgeScore2 === 0 ||
-          !form.jobKnowledgeScore1 ||
+          !form.jobKnowledgeScore3 ||
           form.jobKnowledgeScore3 === 0
         ) {
           return "Please complete all job knowledge scores";
         }
 
+        if (
+          !form.jobKnowledgeComments1 ||
+          form.jobKnowledgeComments1.trim() === "" ||
+          !form.jobKnowledgeComments2 ||
+          form.jobKnowledgeComments2.trim() === "" ||
+          !form.jobKnowledgeComments3 ||
+          form.jobKnowledgeComments3.trim() === ""
+        ) {
+          return "Please provide comments for all Job Knowledge items";
+        }
+
         return "Please complete all required fields";
-      case 8: // Overall Assessment
+      case 2: // Quality of Work
+        if (
+          !form.qualityOfWorkComments1?.trim() ||
+          !form.qualityOfWorkComments2?.trim() ||
+          !form.qualityOfWorkComments3?.trim() ||
+          !form.qualityOfWorkComments4?.trim()
+        ) {
+          return "Please provide comments for all Quality of Work items";
+        }
+        // If the single Job Targets row is used (Step2.tsx), require its comment too
+        if (
+          form.qualityOfWorkScore5 &&
+          form.qualityOfWorkScore5 !== 0 &&
+          (!form.qualityOfWorkComments5 || form.qualityOfWorkComments5.trim() === "")
+        ) {
+          return "Please provide a comment for Job Targets";
+        }
+        return "Please complete all required fields";
+      case 3: // Adaptability
+        return "Please complete all Adaptability scores and comments";
+      case 4: // Teamwork
+        return "Please complete all Teamwork scores and comments";
+      case 5: // Reliability
+        return "Please complete all Reliability scores and comments";
+      case 6: // Ethical & Professional Behavior
+        return "Please complete all Ethical & Professional Behavior scores and explanations";
+      case 7: // Customer Service or Managerial Skills (depends on evaluation type)
+        return "Please complete all required scores and explanations for this step";
+      case 8: // Managerial Skills or Overall Assessment (depends on evaluation type)
         return "Please complete all required fields";
       default:
         return "Please complete all scores for this step";

@@ -69,6 +69,59 @@ export default function OverviewTab() {
   const loadApprovedEvaluations = async (searchValue: string, page?: number) => {
     try {
       setIsPaginate(true);
+      
+      // Handle "Probationary" filter - fetch both M3 and M5 data
+      if (selectedQuarter === "Probationary") {
+        // Fetch both M3 and M5 evaluations
+        const [responseM3, responseM5] = await Promise.all([
+          apiService.getMyEvalAuthEmployee(
+            searchValue,
+            page ?? currentPage,
+            itemsPerPage,
+            selectedYear,
+            "3"
+          ),
+          apiService.getMyEvalAuthEmployee(
+            searchValue,
+            page ?? currentPage,
+            itemsPerPage,
+            selectedYear,
+            "5"
+          ),
+        ]);
+
+        // Combine results from both calls
+        const combinedData = [
+          ...(responseM3?.myEval_as_Employee?.data || []),
+          ...(responseM5?.myEval_as_Employee?.data || []),
+        ];
+
+        // Sort by created_at (most recent first)
+        combinedData.sort((a: any, b: any) => {
+          const dateA = new Date(a.created_at).getTime();
+          const dateB = new Date(b.created_at).getTime();
+          return dateB - dateA;
+        });
+
+        // Calculate combined totals
+        const totalM3 = responseM3?.myEval_as_Employee?.total || 0;
+        const totalM5 = responseM5?.myEval_as_Employee?.total || 0;
+        const combinedTotal = totalM3 + totalM5;
+
+        // Use years from first response (they should be the same)
+        const years = responseM3?.years || responseM5?.years || [];
+
+        setMyEvaluations(combinedData);
+        setOverviewTotal(combinedTotal);
+        // Calculate pages based on combined total
+        setTotalPages(Math.ceil(combinedTotal / itemsPerPage));
+        setPerPage(itemsPerPage);
+        setIsPaginate(false);
+        setYears(years);
+        return;
+      }
+
+      // Normal API call for other quarters
       const response = await apiService.getMyEvalAuthEmployee(
         searchValue,
         page ?? currentPage,
@@ -235,7 +288,7 @@ export default function OverviewTab() {
   };
 
   const getQuarterColor = (quarter: string): string => {
-    if (quarter === "3" || quarter.includes("M3"))
+    if (quarter === "3" || quarter.includes("M3") || quarter === "Probationary")
       return "bg-indigo-100 text-indigo-800";
     if (quarter === "5" || quarter.includes("M5"))
       return "bg-pink-100 text-pink-800";
@@ -550,8 +603,22 @@ export default function OverviewTab() {
                 All Quarters
               </Button>
 
+              {/* Probationary Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedQuarter("Probationary")}
+                className={`text-xs font-medium border transition-all duration-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                  selectedQuarter === "Probationary"
+                    ? "bg-blue-600 text-white border-blue-600 scale-105"
+                    : "bg-white text-black border-gray-400 hover:bg-gray-100 hover:scale-105"
+                }`}
+              >
+                Probationary
+              </Button>
+
               {/* Quarter Buttons */}
-              {["3", "5", "Q1", "Q2", "Q3", "Q4"].map((quarter) => (
+              {["Q1", "Q2", "Q3", "Q4"].map((quarter) => (
                 <Button
                   key={quarter}
                   variant="outline"
@@ -563,7 +630,7 @@ export default function OverviewTab() {
                       : "bg-white text-black border-gray-400 hover:bg-gray-100 hover:scale-105"
                   }`}
                 >
-                  {quarter === "3" || quarter === "5" ? `M${quarter}` : quarter}
+                  {quarter}
                 </Button>
               ))}
 
