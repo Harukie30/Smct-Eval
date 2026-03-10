@@ -331,7 +331,7 @@ export default function Step2({ data, updateDataAction, employee, evaluationType
                 {/* Row 2: Timeliness (L.E.A.D.E.R.) */}
                 <tr>
                   <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
-                    "Timeliness (L.E.A.D.E.R.)"
+                    Timeliness (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Completes tasks and projects within specified deadlines
@@ -397,7 +397,7 @@ export default function Step2({ data, updateDataAction, employee, evaluationType
                 {/* Row 3: Work Output Volume (L.E.A.D.E.R.) */}
                 <tr>
                   <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
-                    "Work Output Volume (L.E.A.D.E.R.)"
+                    Work Output Volume (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Produces a high volume of quality work within a given time
@@ -462,7 +462,7 @@ export default function Step2({ data, updateDataAction, employee, evaluationType
                 {/* Row 4: Consistency in Performance (L.E.A.D.E.R.) */}
                 <tr>
                   <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
-                    "Consistency in Performance (L.E.A.D.E.R.)"
+                    Consistency in Performance (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Maintains a consistent level of productivity over time
@@ -596,80 +596,7 @@ export default function Step2({ data, updateDataAction, employee, evaluationType
         </CardContent>
       </Card>
 
-      {/* Average Score Section */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="text-center">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Quality of Work - Average Score
-            </h3>
-            <div className="flex justify-center items-center gap-6">
-              <div
-                className={`px-6 py-4 rounded-lg border-2 ${getAverageScoreColor(
-                  averageScoreNumber
-                )}`}
-              >
-                <div className="text-3xl font-bold">{averageScore}</div>
-                <div className="text-sm font-medium mt-1">
-                  {getAverageScoreLabel(averageScoreNumber)}
-                </div>
-              </div>
-              <div className="text-left">
-                <div className="text-sm text-gray-600 mb-2">
-                  <strong>Score Breakdown:</strong>
-                </div>
-                <div className="space-y-1 text-sm">
-                  <div>
-                    Meets Standards and Requirements:{" "}
-                    <span className="font-semibold">
-                      {data.qualityOfWorkScore1 || "Not rated"}
-                    </span>
-                  </div>
-                  <div>
-                    Timeliness:{" "}
-                    <span className="font-semibold">
-                      {data.qualityOfWorkScore2 || "Not rated"}
-                    </span>
-                  </div>
-                  <div>
-                    Work Output Volume:{" "}
-                    <span className="font-semibold">
-                      {data.qualityOfWorkScore3 || "Not rated"}
-                    </span>
-                  </div>
-                  <div>
-                    Consistency in Performance:{" "}
-                    <span className="font-semibold">
-                      {data.qualityOfWorkScore4 || "Not rated"}
-                    </span>
-                  </div>
-                  {!isHO && (
-                    <div>
-                      Job Targets:{" "}
-                      <span className="font-semibold">
-                        {data.qualityOfWorkScore5 || "Not rated"}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 text-xs text-gray-500">
-              Average calculated from{" "}
-              {
-                [
-                  data.qualityOfWorkScore1,
-                  data.qualityOfWorkScore2,
-                  data.qualityOfWorkScore3,
-                  data.qualityOfWorkScore4,
-                  ...(isHO ? [] : [data.qualityOfWorkScore5]),
-                ].filter((score) => score && score !== 0).length
-              }{" "}
-              of {isHO ? 4 : 5} criteria
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      
     </div>
   );
 }

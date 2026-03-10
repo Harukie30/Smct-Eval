@@ -260,7 +260,7 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
                 {/* Row 2: Professionalism (L.E.A.D.E.R.) */}
                 <tr>
                   <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
-                    "Professionalism (L.E.A.D.E.R.)"
+                    Professionalism (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Maintains a high level of professionalism in all work
@@ -329,7 +329,7 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
                 {/* Row 3: Accountability for Mistakes (L.E.A.D.E.R.) */}
                 <tr>
                   <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
-                    "Accountability for Mistakes (L.E.A.D.E.R.)"
+                    Accountability for Mistakes (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Takes responsibility for errors and actively works to
@@ -399,7 +399,7 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
                 {/* Row 4: Respect for Others (L.E.A.D.E.R.) */}
                 <tr>
                   <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
-                    "Respect for Others (L.E.A.D.E.R.)"
+                    Respect for Others (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Treats all individuals fairly and with respect, regardless
@@ -470,71 +470,7 @@ export default function Step6({ data, updateDataAction }: Step6Props) {
         </CardContent>
       </Card>
 
-      {/* Average Score Section */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="text-center">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Ethical & Professional Behavior - Average Score
-            </h3>
-            <div className="flex justify-center items-center gap-6">
-              <div
-                className={`px-6 py-4 rounded-lg border-2 ${getAverageScoreColor(
-                  averageScoreNumber
-                )}`}
-              >
-                <div className="text-3xl font-bold">{averageScore}</div>
-                <div className="text-sm font-medium mt-1">
-                  {getAverageScoreLabel(averageScoreNumber)}
-                </div>
-              </div>
-              <div className="text-left">
-                <div className="text-sm text-gray-600 mb-2">
-                  <strong>Score Breakdown:</strong>
-                </div>
-                <div className="space-y-1 text-sm">
-                  <div>
-                    Follows Company Policies:{" "}
-                    <span className="font-semibold">
-                      {data.ethicalScore1 || "Not rated"}
-                    </span>
-                  </div>
-                  <div>
-                    Professionalism (L.E.A.D.E.R.):{" "}
-                    <span className="font-semibold">
-                      {data.ethicalScore2 || "Not rated"}
-                    </span>
-                  </div>
-                  <div>
-                    Accountability for Mistakes (L.E.A.D.E.R.):{" "}
-                    <span className="font-semibold">
-                      {data.ethicalScore3 || "Not rated"}
-                    </span>
-                  </div>
-                  <div>
-                    Respect for Others (L.E.A.D.E.R.):{" "}
-                    <span className="font-semibold">
-                      {data.ethicalScore4 || "Not rated"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 text-xs text-gray-500">
-              Average calculated from{" "}
-              {
-                [
-                  data.ethicalScore1,
-                  data.ethicalScore2,
-                  data.ethicalScore3,
-                  data.ethicalScore4,
-                ].filter((score) => score && score !== 0).length
-              }{" "}
-              of 4 criteria
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      
     </div>
   );
 }
