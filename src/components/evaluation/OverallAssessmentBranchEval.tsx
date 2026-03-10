@@ -94,6 +94,10 @@ export default function OverallAssessmentBranchEval({
   });
   const { user } = useAuth();
 
+  // Only show PASS/FAIL indicators for probationary reviews (M3 / M5)
+  const showPassFailIndicators =
+    data.reviewTypeProbationary === 3 || data.reviewTypeProbationary === 5;
+
   // Quarterly review status
   const [quarterlyStatus, setQuarterlyStatus] = useState({
     q1: false,
@@ -327,9 +331,13 @@ export default function OverallAssessmentBranchEval({
                 <div class="print-results">
                     <div class="print-percentage">${overallPercentage}%</div>
                     <div style="margin-bottom: 8px;">Performance Score</div>
-                    <div class="print-status ${isPass ? "pass" : "fail"}">${
-      isPass ? "PASS" : "FAIL"
-    }</div>
+                    ${
+                      showPassFailIndicators
+                        ? `<div class="print-status ${isPass ? "pass" : "fail"}">${
+                            isPass ? "PASS" : "FAIL"
+                          }</div>`
+                        : ""
+                    }
                 </div>
             </div>
 
@@ -3353,13 +3361,15 @@ export default function OverallAssessmentBranchEval({
               </div>
               <div className="text-sm text-gray-500">Performance Score</div>
             </div>
-            <div
-              className={`px-6 py-3 rounded-lg font-bold text-white ${
-                isPass ? "bg-green-600" : "bg-red-600"
-              }`}
-            >
-              {isPass ? "PASS" : "FAIL"}
-            </div>
+            {showPassFailIndicators && (
+              <div
+                className={`px-6 py-3 rounded-lg font-bold text-white ${
+                  isPass ? "bg-green-600" : "bg-red-600"
+                }`}
+              >
+                {isPass ? "PASS" : "FAIL"}
+              </div>
+            )}
           </div>
 
           <div className="mt-4 text-sm text-gray-600">
@@ -3631,6 +3641,11 @@ export default function OverallAssessmentBranchEval({
               <p className="text-sm text-gray-800 font-medium">
                 <strong>Overall Score:</strong> {overallPercentage}% ({getRatingLabel(parseFloat(overallWeightedScore))})
               </p>
+              {showPassFailIndicators && (
+                <p className="text-sm text-gray-800 font-medium">
+                  <strong>Result:</strong> {isPass ? "PASS" : "FAIL"}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter className="pt-4 flex gap-3">
