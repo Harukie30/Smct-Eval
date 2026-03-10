@@ -1227,7 +1227,7 @@ export default function Step1({
                     Rating
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
-                    Comments
+                  Explanation (Required)
                   </th>
                 </tr>
               </thead>

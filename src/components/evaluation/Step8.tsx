@@ -182,7 +182,7 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
                     Rating
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-1/4">
-                    Explanation
+                    Explanation (Required)
                   </th>
                 </tr>
               </thead>
