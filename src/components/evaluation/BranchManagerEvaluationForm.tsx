@@ -202,24 +202,42 @@ export default function BranchManagerEvaluationForm({
         if (!form.jobKnowledgeScore1 || form.jobKnowledgeScore1 === 0) {
           return "Please complete all Job Knowledge scores";
         }
+        if (
+          !form.jobKnowledgeComments1 ||
+          form.jobKnowledgeComments1.trim() === "" ||
+          !form.jobKnowledgeComments2 ||
+          form.jobKnowledgeComments2.trim() === "" ||
+          !form.jobKnowledgeComments3 ||
+          form.jobKnowledgeComments3.trim() === ""
+        ) {
+          return "Please provide comments for all Job Knowledge items";
+        }
         return "Please complete all required fields";
       case 2:
         if (!form.qualityOfWorkScore1 || form.qualityOfWorkScore1 === 0) {
           return "Please complete all Quality of Work scores (Job Targets are optional)";
         }
+        if (
+          !form.qualityOfWorkComments1?.trim() ||
+          !form.qualityOfWorkComments2?.trim() ||
+          !form.qualityOfWorkComments3?.trim() ||
+          !form.qualityOfWorkComments4?.trim()
+        ) {
+          return "Please provide comments for all Quality of Work items";
+        }
         return "Please complete all required fields";
       case 3:
-        return "Please complete all Adaptability scores";
+        return "Please complete all Adaptability scores and comments";
       case 4:
-        return "Please complete all Teamwork scores";
+        return "Please complete all Teamwork scores and comments";
       case 5:
-        return "Please complete all Reliability scores";
+        return "Please complete all Reliability scores and comments";
       case 6:
-        return "Please complete all Ethical & Professional Behavior scores";
+        return "Please complete all Ethical & Professional Behavior scores and explanations";
       case 7:
-        return "Please complete all Customer Service scores";
+        return "Please complete all Customer Service scores and explanations";
       case 8:
-        return "Please complete all Managerial Skills scores";
+        return "Please complete all Managerial Skills scores and explanations";
       default:
         return "Please complete all required fields to continue";
     }
@@ -242,6 +260,11 @@ export default function BranchManagerEvaluationForm({
           form.jobKnowledgeScore2 !== 0 &&
           form.jobKnowledgeScore3 &&
           form.jobKnowledgeScore3 !== 0;
+
+        const hasJobKnowledgeComments =
+          !!form.jobKnowledgeComments1?.trim() &&
+          !!form.jobKnowledgeComments2?.trim() &&
+          !!form.jobKnowledgeComments3?.trim();
 
         const hasBasicInfo =
           form.coverageFrom &&
@@ -296,6 +319,7 @@ export default function BranchManagerEvaluationForm({
         return (
           hasReviewType &&
           hasJobKnowledgeScores &&
+          hasJobKnowledgeComments &&
           hasBasicInfo &&
           hasValidCoverageDates
         );
@@ -316,7 +340,13 @@ export default function BranchManagerEvaluationForm({
         // Job target scores are optional - no validation required
         // Only the 4 base Quality of Work scores are required to proceed
         
-        return hasBaseScores;
+        const hasQualityOfWorkComments =
+          !!form.qualityOfWorkComments1?.trim() &&
+          !!form.qualityOfWorkComments2?.trim() &&
+          !!form.qualityOfWorkComments3?.trim() &&
+          !!form.qualityOfWorkComments4?.trim();
+
+        return hasBaseScores && hasQualityOfWorkComments;
       case 3: // Adaptability
         return (
           form.adaptabilityScore1 &&
@@ -324,7 +354,10 @@ export default function BranchManagerEvaluationForm({
           form.adaptabilityScore2 &&
           form.adaptabilityScore2 !== 0 &&
           form.adaptabilityScore3 &&
-          form.adaptabilityScore3 !== 0
+          form.adaptabilityScore3 !== 0 &&
+          !!form.adaptabilityComments1?.trim() &&
+          !!form.adaptabilityComments2?.trim() &&
+          !!form.adaptabilityComments3?.trim()
         );
       case 4: // Teamwork
         return (
@@ -333,7 +366,10 @@ export default function BranchManagerEvaluationForm({
           form.teamworkScore2 &&
           form.teamworkScore2 !== 0 &&
           form.teamworkScore3 &&
-          form.teamworkScore3 !== 0
+          form.teamworkScore3 !== 0 &&
+          !!form.teamworkComments1?.trim() &&
+          !!form.teamworkComments2?.trim() &&
+          !!form.teamworkComments3?.trim()
         );
       case 5: // Reliability
         return (
@@ -344,7 +380,11 @@ export default function BranchManagerEvaluationForm({
           form.reliabilityScore3 &&
           form.reliabilityScore3 !== 0 &&
           form.reliabilityScore4 &&
-          form.reliabilityScore4 !== 0
+          form.reliabilityScore4 !== 0 &&
+          !!form.reliabilityComments1?.trim() &&
+          !!form.reliabilityComments2?.trim() &&
+          !!form.reliabilityComments3?.trim() &&
+          !!form.reliabilityComments4?.trim()
         );
       case 6: // Ethical & Professional Behavior
         return (
@@ -355,7 +395,11 @@ export default function BranchManagerEvaluationForm({
           form.ethicalScore3 &&
           form.ethicalScore3 !== 0 &&
           form.ethicalScore4 &&
-          form.ethicalScore4 !== 0
+          form.ethicalScore4 !== 0 &&
+          !!form.ethicalExplanation1?.trim() &&
+          !!form.ethicalExplanation2?.trim() &&
+          !!form.ethicalExplanation3?.trim() &&
+          !!form.ethicalExplanation4?.trim()
         );
       case 7: // Customer Service
         return (
@@ -368,7 +412,12 @@ export default function BranchManagerEvaluationForm({
           form.customerServiceScore4 &&
           form.customerServiceScore4 !== 0 &&
           form.customerServiceScore5 &&
-          form.customerServiceScore5 !== 0
+          form.customerServiceScore5 !== 0 &&
+          !!form.customerServiceExplanation1?.trim() &&
+          !!form.customerServiceExplanation2?.trim() &&
+          !!form.customerServiceExplanation3?.trim() &&
+          !!form.customerServiceExplanation4?.trim() &&
+          !!form.customerServiceExplanation5?.trim()
         );
       case 8: // Managerial Skills
         return (
@@ -383,7 +432,13 @@ export default function BranchManagerEvaluationForm({
           form.managerialSkillsScore5 &&
           form.managerialSkillsScore5 !== 0 &&
           form.managerialSkillsScore6 &&
-          form.managerialSkillsScore6 !== 0
+          form.managerialSkillsScore6 !== 0 &&
+          !!form.managerialSkillsExplanation1?.trim() &&
+          !!form.managerialSkillsExplanation2?.trim() &&
+          !!form.managerialSkillsExplanation3?.trim() &&
+          !!form.managerialSkillsExplanation4?.trim() &&
+          !!form.managerialSkillsExplanation5?.trim() &&
+          !!form.managerialSkillsExplanation6?.trim()
         );
       case 9: // Overall Assessment
         return true; // No validation required

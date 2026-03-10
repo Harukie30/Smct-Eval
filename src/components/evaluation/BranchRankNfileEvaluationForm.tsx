@@ -168,6 +168,11 @@ export default function BranchRankNfileEvaluationForm({
           form.jobKnowledgeScore3 &&
           form.jobKnowledgeScore3 !== 0;
 
+        const hasJobKnowledgeComments =
+          !!form.jobKnowledgeComments1?.trim() &&
+          !!form.jobKnowledgeComments2?.trim() &&
+          !!form.jobKnowledgeComments3?.trim();
+
         const hasBasicInfo =
           form.coverageFrom &&
           form.coverageFrom !== "" &&
@@ -221,6 +226,7 @@ export default function BranchRankNfileEvaluationForm({
         return (
           hasReviewType &&
           hasJobKnowledgeScores &&
+          hasJobKnowledgeComments &&
           hasBasicInfo &&
           hasValidCoverageDates
         );
@@ -240,7 +246,14 @@ export default function BranchRankNfileEvaluationForm({
         // qualityOfWorkScore5 (Job Targets row) is REQUIRED for BranchRankNfile
         const hasQualityOfWorkScore5 = form.qualityOfWorkScore5 && form.qualityOfWorkScore5 !== 0;
         
-        return hasBaseScores && hasQualityOfWorkScore5;
+        const hasQualityOfWorkComments =
+          !!form.qualityOfWorkComments1?.trim() &&
+          !!form.qualityOfWorkComments2?.trim() &&
+          !!form.qualityOfWorkComments3?.trim() &&
+          !!form.qualityOfWorkComments4?.trim() &&
+          !!form.qualityOfWorkComments5?.trim();
+
+        return hasBaseScores && hasQualityOfWorkScore5 && hasQualityOfWorkComments;
       case 3: // Adaptability
         return (
           form.adaptabilityScore1 &&
@@ -248,7 +261,10 @@ export default function BranchRankNfileEvaluationForm({
           form.adaptabilityScore2 &&
           form.adaptabilityScore2 !== 0 &&
           form.adaptabilityScore3 &&
-          form.adaptabilityScore3 !== 0
+          form.adaptabilityScore3 !== 0 &&
+          !!form.adaptabilityComments1?.trim() &&
+          !!form.adaptabilityComments2?.trim() &&
+          !!form.adaptabilityComments3?.trim()
         );
       case 4: // Teamwork
         return (
@@ -257,7 +273,10 @@ export default function BranchRankNfileEvaluationForm({
           form.teamworkScore2 &&
           form.teamworkScore2 !== 0 &&
           form.teamworkScore3 &&
-          form.teamworkScore3 !== 0
+          form.teamworkScore3 !== 0 &&
+          !!form.teamworkComments1?.trim() &&
+          !!form.teamworkComments2?.trim() &&
+          !!form.teamworkComments3?.trim()
         );
       case 5: // Reliability
         return (
@@ -268,7 +287,11 @@ export default function BranchRankNfileEvaluationForm({
           form.reliabilityScore3 &&
           form.reliabilityScore3 !== 0 &&
           form.reliabilityScore4 &&
-          form.reliabilityScore4 !== 0
+          form.reliabilityScore4 !== 0 &&
+          !!form.reliabilityComments1?.trim() &&
+          !!form.reliabilityComments2?.trim() &&
+          !!form.reliabilityComments3?.trim() &&
+          !!form.reliabilityComments4?.trim()
         );
       case 6: // Ethical & Professional Behavior
         return (
@@ -279,7 +302,11 @@ export default function BranchRankNfileEvaluationForm({
           form.ethicalScore3 &&
           form.ethicalScore3 !== 0 &&
           form.ethicalScore4 &&
-          form.ethicalScore4 !== 0
+          form.ethicalScore4 !== 0 &&
+          !!form.ethicalExplanation1?.trim() &&
+          !!form.ethicalExplanation2?.trim() &&
+          !!form.ethicalExplanation3?.trim() &&
+          !!form.ethicalExplanation4?.trim()
         );
       case 7: // Customer Service
         return (
@@ -292,7 +319,12 @@ export default function BranchRankNfileEvaluationForm({
           form.customerServiceScore4 &&
           form.customerServiceScore4 !== 0 &&
           form.customerServiceScore5 &&
-          form.customerServiceScore5 !== 0
+          form.customerServiceScore5 !== 0 &&
+          !!form.customerServiceExplanation1?.trim() &&
+          !!form.customerServiceExplanation2?.trim() &&
+          !!form.customerServiceExplanation3?.trim() &&
+          !!form.customerServiceExplanation4?.trim() &&
+          !!form.customerServiceExplanation5?.trim()
         );
       case 8: // Overall Assessment
         return true; // No validation required
@@ -333,6 +365,16 @@ export default function BranchRankNfileEvaluationForm({
         if (!form.jobKnowledgeScore1 || form.jobKnowledgeScore1 === 0) {
           return "Please complete all Job Knowledge scores";
         }
+        if (
+          !form.jobKnowledgeComments1 ||
+          form.jobKnowledgeComments1.trim() === "" ||
+          !form.jobKnowledgeComments2 ||
+          form.jobKnowledgeComments2.trim() === "" ||
+          !form.jobKnowledgeComments3 ||
+          form.jobKnowledgeComments3.trim() === ""
+        ) {
+          return "Please provide comments for all Job Knowledge items";
+        }
         return "Please complete all required fields";
       case 2:
         if (!form.qualityOfWorkScore1 || form.qualityOfWorkScore1 === 0) {
@@ -341,17 +383,26 @@ export default function BranchRankNfileEvaluationForm({
         if (!form.qualityOfWorkScore5 || form.qualityOfWorkScore5 === 0) {
           return "Please complete the Job Targets score";
         }
+        if (
+          !form.qualityOfWorkComments1?.trim() ||
+          !form.qualityOfWorkComments2?.trim() ||
+          !form.qualityOfWorkComments3?.trim() ||
+          !form.qualityOfWorkComments4?.trim() ||
+          !form.qualityOfWorkComments5?.trim()
+        ) {
+          return "Please provide comments for all Quality of Work items";
+        }
         return "Please complete all required fields";
       case 3:
-        return "Please complete all Adaptability scores";
+        return "Please complete all Adaptability scores and comments";
       case 4:
-        return "Please complete all Teamwork scores";
+        return "Please complete all Teamwork scores and comments";
       case 5:
-        return "Please complete all Reliability scores";
+        return "Please complete all Reliability scores and comments";
       case 6:
-        return "Please complete all Ethical & Professional Behavior scores";
+        return "Please complete all Ethical & Professional Behavior scores and explanations";
       case 7:
-        return "Please complete all Customer Service scores";
+        return "Please complete all Customer Service scores and explanations";
       default:
         return "Please complete all required fields to continue";
     }
