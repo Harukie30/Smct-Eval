@@ -184,7 +184,7 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
                     Rating
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
-                    Comments
+                  Explanation (Required)
                   </th>
                 </tr>
               </thead>
