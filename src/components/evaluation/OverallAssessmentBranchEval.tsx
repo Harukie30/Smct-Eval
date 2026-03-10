@@ -1170,7 +1170,7 @@ export default function OverallAssessmentBranchEval({
                     Rating
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                    Comments
+                  Explanation (Required)
                   </th>
                 </tr>
               </thead>
@@ -1897,7 +1897,7 @@ export default function OverallAssessmentBranchEval({
                     Rating
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                    Comments
+                  Explanation (Required)
                   </th>
                 </tr>
               </thead>
@@ -2078,7 +2078,7 @@ export default function OverallAssessmentBranchEval({
                     Rating
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                    Comments
+                  Explanation (Required)
                   </th>
                 </tr>
               </thead>
@@ -2301,7 +2301,7 @@ export default function OverallAssessmentBranchEval({
                     Rating
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                    Comments
+                  Explanation (Required)
                   </th>
                 </tr>
               </thead>
@@ -2522,7 +2522,7 @@ export default function OverallAssessmentBranchEval({
                     Rating
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                    Comments
+                  Explanation (Required)
                   </th>
                 </tr>
               </thead>
@@ -2787,7 +2787,7 @@ export default function OverallAssessmentBranchEval({
                     Rating
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                    Explanation
+                  Explanation (Required)
                   </th>
                 </tr>
               </thead>
