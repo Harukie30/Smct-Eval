@@ -488,71 +488,7 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
         </CardContent>
       </Card>
 
-      {/* Average Score Section */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="text-center">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Reliability - Average Score
-            </h3>
-            <div className="flex justify-center items-center gap-6">
-              <div
-                className={`px-6 py-4 rounded-lg border-2 ${getAverageScoreColor(
-                  averageScoreNumber
-                )}`}
-              >
-                <div className="text-3xl font-bold">{averageScore}</div>
-                <div className="text-sm font-medium mt-1">
-                  {getAverageScoreLabel(averageScoreNumber)}
-                </div>
-              </div>
-              <div className="text-left">
-                <div className="text-sm text-gray-600 mb-2">
-                  <strong>Score Breakdown:</strong>
-                </div>
-                <div className="space-y-1 text-sm">
-                  <div>
-                    Consistent Attendance:{" "}
-                    <span className="font-semibold">
-                      {data.reliabilityScore1 || "Not rated"}
-                    </span>
-                  </div>
-                  <div>
-                    Punctuality:{" "}
-                    <span className="font-semibold">
-                      {data.reliabilityScore2 || "Not rated"}
-                    </span>
-                  </div>
-                  <div>
-                    Follows Through on Commitments:{" "}
-                    <span className="font-semibold">
-                      {data.reliabilityScore3 || "Not rated"}
-                    </span>
-                  </div>
-                  <div>
-                    Reliable Handling of Routine Tasks:{" "}
-                    <span className="font-semibold">
-                      {data.reliabilityScore4 || "Not rated"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 text-xs text-gray-500">
-              Average calculated from{" "}
-              {
-                [
-                  data.reliabilityScore1,
-                  data.reliabilityScore2,
-                  data.reliabilityScore3,
-                  data.reliabilityScore4,
-                ].filter((score) => score && score !== 0).length
-              }{" "}
-              of 4 criteria
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      
     </div>
   );
 }

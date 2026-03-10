@@ -384,64 +384,7 @@ export default function Step4({ data, updateDataAction }: Step4Props) {
         </CardContent>
       </Card>
 
-      {/* Average Score Section */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="text-center">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Teamwork - Average Score
-            </h3>
-            <div className="flex justify-center items-center gap-6">
-              <div
-                className={`px-6 py-4 rounded-lg border-2 ${getAverageScoreColor(
-                  averageScoreNumber
-                )}`}
-              >
-                <div className="text-3xl font-bold">{averageScore}</div>
-                <div className="text-sm font-medium mt-1">
-                  {getAverageScoreLabel(averageScoreNumber)}
-                </div>
-              </div>
-              <div className="text-left">
-                <div className="text-sm text-gray-600 mb-2">
-                  <strong>Score Breakdown:</strong>
-                </div>
-                <div className="space-y-1 text-sm">
-                  <div>
-                    Active Participation in Team Activities:{" "}
-                    <span className="font-semibold">
-                      {data.teamworkScore1 || "Not rated"}
-                    </span>
-                  </div>
-                  <div>
-                    Promotion of a Positive Team Culture:{" "}
-                    <span className="font-semibold">
-                      {data.teamworkScore2 || "Not rated"}
-                    </span>
-                  </div>
-                  <div>
-                    Effective Communication:{" "}
-                    <span className="font-semibold">
-                      {data.teamworkScore3 || "Not rated"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 text-xs text-gray-500">
-              Average calculated from{" "}
-              {
-                [
-                  data.teamworkScore1,
-                  data.teamworkScore2,
-                  data.teamworkScore3,
-                ].filter((score) => score && score !== 0).length
-              }{" "}
-              of 3 criteria
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      
     </div>
   );
 }

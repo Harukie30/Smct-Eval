@@ -1063,44 +1063,9 @@ export default function Step1({
         </div>
       </div>
 
-      {/* Purpose Section */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <div className="font-bold text-gray-900 min-w-[80px]">PURPOSE</div>
-            <div className="text-sm text-gray-700">
-              Each employee is subject to a performance review based on actual
-              responsibilities and behaviors exhibited. These are essential in
-              the achievement of goals and for alignment with company values and
-              policies. The results of this review will be the basis for changes
-              in employment status, promotions, salary adjustments, and/or
-              computations of yearly bonus (among other rewards).
-              <strong>
-                NOTE: For probationary employees, a minimum score of 55% is
-                required for regularization.
-              </strong>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      
 
-      {/* Instructions Section */}
-      <Card className="bg-yellow-50 border-yellow-200">
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <div className="font-bold text-gray-900 min-w-[80px]">
-              INSTRUCTIONS
-            </div>
-            <div className="text-sm text-gray-700">
-              Only put answers in the{" "}
-              <span className="bg-yellow-200 px-1 rounded">
-                YELLOW HIGHLIGHTED CELLS
-              </span>
-              .
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      
 
       {/* Rating Scale Section */}
       <Card className="bg-gray-50 border-gray-200">
@@ -1270,8 +1235,8 @@ export default function Step1({
                 {/* Row 1: Mastery in Core Competencies */}
                 <tr>
                   <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
-                    "Mastery in Core Competencies and Job Understanding
-                    (L.E.A.D.E.R.)"
+                    Mastery in Core Competencies and Job Understanding
+                    (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Exhibits mastery in essential skills and competencies
@@ -1473,64 +1438,7 @@ export default function Step1({
         </CardContent>
       </Card>
 
-      {/* Average Score Section */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="text-center">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Job Knowledge - Average Score
-            </h3>
-            <div className="flex justify-center items-center gap-6">
-              <div
-                className={`px-6 py-4 rounded-lg border-2 ${getAverageScoreColor(
-                  averageScoreNumber
-                )}`}
-              >
-                <div className="text-3xl font-bold">{averageScore}</div>
-                <div className="text-sm font-medium mt-1">
-                  {getAverageScoreLabel(averageScoreNumber)}
-                </div>
-              </div>
-              <div className="text-left">
-                <div className="text-sm text-gray-600 mb-2">
-                  <strong>Score Breakdown:</strong>
-                </div>
-                <div className="space-y-1 text-sm">
-                  <div>
-                    Mastery in Core Competencies:{" "}
-                    <span className="font-semibold">
-                      {data.jobKnowledgeScore1 || "Not rated"}
-                    </span>
-                  </div>
-                  <div>
-                    Documentation Management:{" "}
-                    <span className="font-semibold">
-                      {data.jobKnowledgeScore2 || "Not rated"}
-                    </span>
-                  </div>
-                  <div>
-                    Problem Solving Skills:{" "}
-                    <span className="font-semibold">
-                      {data.jobKnowledgeScore3 || "Not rated"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 text-xs text-gray-500">
-              Average calculated from{" "}
-              {
-                [
-                  data.jobKnowledgeScore1,
-                  data.jobKnowledgeScore2,
-                  data.jobKnowledgeScore3,
-                ].filter((score) => score && score !== 0).length
-              }{" "}
-              of 3 criteria
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      
     </div>
   );
 }

@@ -450,36 +450,7 @@ export default function Step8({ data, updateDataAction, onNextAction }: Step8Pro
         </CardContent>
       </Card>
 
-      {/* Average Score Section */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="text-center">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Managerial Skills - Average Score</h3>
-            <div className="flex justify-center items-center gap-6">
-              <div className={`px-6 py-4 rounded-lg border-2 ${getAverageScoreColor(averageScoreNumber)}`}>
-                <div className="text-3xl font-bold">{displayAverageScore}</div>
-                <div className="text-sm font-medium mt-1">{getAverageScoreLabel(averageScoreNumber)}</div>
-              </div>
-              <div className="text-left">
-                <div className="text-sm text-gray-600 mb-2">
-                  <strong>Score Breakdown:</strong>
-                </div>
-                <div className="space-y-1 text-sm">
-                  <div>Leadership & Vision: <span className="font-semibold">{data.managerialSkillsScore1 || 'Not rated'}</span></div>
-                  <div>Team Management & Development: <span className="font-semibold">{data.managerialSkillsScore2 || 'Not rated'}</span></div>
-                  <div>Decision-Making & Problem-Solving: <span className="font-semibold">{data.managerialSkillsScore3 || 'Not rated'}</span></div>
-                  <div>Performance Management & Coaching: <span className="font-semibold">{data.managerialSkillsScore4 || 'Not rated'}</span></div>
-                  <div>Communication & Influence: <span className="font-semibold">{data.managerialSkillsScore5 || 'Not rated'}</span></div>
-                  <div>[Skill Name]: <span className="font-semibold">{data.managerialSkillsScore6 || 'Not rated'}</span></div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 text-xs text-gray-500">
-              Average calculated from {[data.managerialSkillsScore1, data.managerialSkillsScore2, data.managerialSkillsScore3, data.managerialSkillsScore4, data.managerialSkillsScore5, data.managerialSkillsScore6].filter(score => score && score !== 0).length} of 6 criteria
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      
     </div>
   );
 }
