@@ -15,17 +15,18 @@ function EvaluatorLayout({ children }: { children: React.ReactNode }) {
     return [
       { id: "overview", label: "Overview", icon: "📊", path: "/evaluator" },
       {
-        id: "employees",
-        label: "Employees",
-        icon: "👥",
-        path: "/evaluator/employees",
-      },
-      {
         id: "feedback",
         label: "All Evaluation Records",
         icon: "🗂️",
         path: "/evaluator/evaluationRecords",
       },
+      {
+        id: "employees",
+        label: "Employees",
+        icon: "👥",
+        path: "/evaluator/employees",
+      },
+      
       {
         id: "reviews",
         label: "My Performance Reviews",
