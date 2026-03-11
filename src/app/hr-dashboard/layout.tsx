@@ -16,25 +16,25 @@ function HRLayout({ children }: { children: React.ReactNode }) {
       { id: "overview", label: "Overview", icon: "📊", path: "/hr-dashboard" },
       {
         id: "evaluated-reviews",
-        label: "All Evaluation Records",
+        label: "All Evaluations",
         icon: "🗂️",
         path: "/hr-dashboard/evaluatedReviews",
       },
       {
         id: "users",
-        label: "Employees",
+        label: "Employee",
         icon: "👥",
         path: "/hr-dashboard/userManagement",
       },
       {
         id: "reviews",
-        label: "My Performance Reviews",
+        label: "My Performance",
         icon: "📝",
         path: "/hr-dashboard/performanceReviews",
       },
       {
         id: "history",
-        label: "My Evaluation History",
+        label: "My Evaluations",
         icon: "📈",
         path: "/hr-dashboard/evaluationHistory",
       },
@@ -64,7 +64,7 @@ function HRLayout({ children }: { children: React.ReactNode }) {
       },
       {
         id: "signature-reset",
-        label: "Signature Reset Requests",
+        label: "Signature Requests",
         icon: "✍️",
         path: "/hr-dashboard/signatureResetRequests",
       },
