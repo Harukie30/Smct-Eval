@@ -146,6 +146,21 @@ export default function OverallAssessmentBranchEval({
     setSubmissionError("");
     setValidationErrors({ priorityAreas: false, remarks: false });
 
+    // Validate Priority Areas for Improvement: each field needs minimum characters
+    const PRIORITY_AREA_MIN_CHARS = 20;
+    const p1 = (data.priorityArea1 || "").trim().length;
+    const p2 = (data.priorityArea2 || "").trim().length;
+    const p3 = (data.priorityArea3 || "").trim().length;
+    if (p1 < PRIORITY_AREA_MIN_CHARS && p2 < PRIORITY_AREA_MIN_CHARS && p3 < PRIORITY_AREA_MIN_CHARS) {
+      setValidationErrors((prev) => ({ ...prev, priorityAreas: true }));
+      error(
+        `Please enter at least one of the 3 Priority Areas for Improvement.`
+      );
+      setShowLoadingDialog(false);
+      setIsSubmittingEvaluation(false);
+      return;
+    }
+
     if (onSubmitAction) {
       // Call onSubmitAction and await if it returns a promise
       const result = onSubmitAction();
@@ -3391,6 +3406,11 @@ export default function OverallAssessmentBranchEval({
             performance and align with branch or company goals. Keep the
             feedback clear, helpful, and easy to act on.
           </p>
+          {validationErrors.priorityAreas && (
+            <p className="text-sm text-red-600 mb-3">
+              Please enter at least 20 characters in at least one of the 3 priority areas.
+            </p>
+          )}
           <div className="space-y-3">
             <div>
               <Label htmlFor="priority1" className="text-sm font-medium">
@@ -3400,10 +3420,11 @@ export default function OverallAssessmentBranchEval({
                 id="priority1"
                 value={data.priorityArea1 || ""}
                 onChange={(e) => {
+                  setValidationErrors((prev) => ({ ...prev, priorityAreas: false }));
                   updateDataAction({ priorityArea1: e.target.value });
                 }}
-                className="mt-1 bg-yellow-50 border-gray-300"
-                placeholder="Enter priority area for improvement"
+                className={`mt-1 bg-yellow-50 ${validationErrors.priorityAreas ? "border-red-500" : "border-gray-300"}`}
+                placeholder="Enter priority area (at least one with min. 20 characters)"
               />
             </div>
             <div>
@@ -3414,10 +3435,11 @@ export default function OverallAssessmentBranchEval({
                 id="priority2"
                 value={data.priorityArea2 || ""}
                 onChange={(e) => {
+                  setValidationErrors((prev) => ({ ...prev, priorityAreas: false }));
                   updateDataAction({ priorityArea2: e.target.value });
                 }}
-                className="mt-1 bg-yellow-50 border-gray-300"
-                placeholder="Enter priority area for improvement"
+                className={`mt-1 bg-yellow-50 ${validationErrors.priorityAreas ? "border-red-500" : "border-gray-300"}`}
+                placeholder="Enter priority area (at least one with min. 20 characters)"
               />
             </div>
             <div>
@@ -3428,10 +3450,11 @@ export default function OverallAssessmentBranchEval({
                 id="priority3"
                 value={data.priorityArea3 || ""}
                 onChange={(e) => {
+                  setValidationErrors((prev) => ({ ...prev, priorityAreas: false }));
                   updateDataAction({ priorityArea3: e.target.value });
                 }}
-                className="mt-1 bg-yellow-50 border-gray-300"
-                placeholder="Enter priority area for improvement"
+                className={`mt-1 bg-yellow-50 ${validationErrors.priorityAreas ? "border-red-500" : "border-gray-300"}`}
+                placeholder="Enter priority area (at least one with min. 20 characters)"
               />
             </div>
           </div>

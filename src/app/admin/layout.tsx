@@ -13,16 +13,16 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
     () => [
       { id: "overview", label: "Overview", icon: "📊", path: "/admin" },
       {
+        id: "evaluated-reviews",
+        label: "All Evaluation",
+        icon: "🗂️",
+        path: "/admin/evaluatedReviews",
+      },
+      {
         id: "users",
         label: "Employees",
         icon: "👥",
         path: "/admin/userManagement",
-      },
-      {
-        id: "evaluated-reviews",
-        label: "All Evaluation Records",
-        icon: "🗂️",
-        path: "/admin/evaluatedReviews",
       },
       {
         id: "departments",
@@ -50,7 +50,7 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
       },
       {
         id: "signature-reset",
-        label: "Signature Reset Requests",
+        label: "Signature Requests",
         icon: "✍️",
         path: "/admin/signatureResetRequests",
       },
