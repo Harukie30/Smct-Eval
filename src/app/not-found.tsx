@@ -44,7 +44,7 @@ export default function NotFound() {
     {/* Text */}
     <div className="text-center space-y-3">
       <h2 className="text-2xl font-semibold text-red-400">
-        Oops! Page Not Found
+        Oops! Page Not Found.
       </h2>
 
       <p className="text-gray-800 text-sm leading-relaxed">
