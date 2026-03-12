@@ -155,7 +155,9 @@ export const apiService = {
     perPage?: number,
     status?: string,
     quarter?: string,
-    year?: string
+    year?: string,
+    rating?: string,
+    branch?: string
   ): Promise<any> => {
     const response = await api.get(`/allEvaluations`, {
       params: {
@@ -165,6 +167,8 @@ export const apiService = {
         status: status || "",
         quarter: quarter || "",
         year: year || "",
+        rating: rating || "",
+        branch: branch || "",
       },
     });
 

@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import { setQuarter } from "date-fns";
@@ -67,6 +68,8 @@ export default function OverviewTab() {
   const [statusFilter, setStatusFilter] = useState("");
   const [quarterFilter, setQuarterFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
+  const [ratingFilter, setRatingFilter] = useState("");
+  const [branchFilter, setBranchFilter] = useState("");
   //debounce filters
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
   const [debouncedStatusFilter, setDebouncedStatusFilter] =
@@ -74,6 +77,10 @@ export default function OverviewTab() {
   const [debouncedQuarterFilter, setDebouncedQuarterFilter] =
     useState(quarterFilter);
   const [debouncedYearFilter, setDebouncedYearFilter] = useState(yearFilter);
+  const [debouncedRatingFilter, setDebouncedRatingFilter] =
+    useState(ratingFilter);
+  const [debouncedBranchFilter, setDebouncedBranchFilter] =
+    useState(branchFilter);
 
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
@@ -158,15 +165,25 @@ export default function OverviewTab() {
     searchValue: string,
     status: string,
     quarter: string,
-    year: string
+    year: string,
+    rating: string,
+    branch: string
   ) => {
+    const normalizedStatus = status === "0" ? "" : status;
+    const normalizedQuarter = quarter === "0" ? "" : quarter;
+    const normalizedYear = year === "0" ? "" : year;
+    const normalizedRating = rating === "0" ? "" : rating;
+    const normalizedBranch = branch === "0" ? "" : branch;
+
     const response = await clientDataService.getSubmissions(
       searchValue,
       currentPage,
       itemsPerPage,
-      status,
-      quarter,
-      year
+      normalizedStatus,
+      normalizedQuarter,
+      normalizedYear,
+      normalizedRating,
+      normalizedBranch
     );
     setEvaluations(response.data);
     setOverviewTotal(response.total);
@@ -188,7 +205,9 @@ export default function OverviewTab() {
           searchTerm,
           statusFilter,
           quarterFilter,
-          yearFilter
+          yearFilter,
+          ratingFilter,
+          branchFilter
         );
       } catch (error) {
         console.log(error);
@@ -202,17 +221,18 @@ export default function OverviewTab() {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      // Always reset to page 1 when any filter changes (search, status, quarter, or year)
-      // This ensures global search behavior - always start from page 1 when filtering
+      // Always reset to page 1 when any filter changes
       setCurrentPage(1);
       setDebouncedSearchTerm(searchTerm);
       setDebouncedStatusFilter(statusFilter);
       setDebouncedQuarterFilter(quarterFilter);
       setDebouncedYearFilter(yearFilter);
+      setDebouncedRatingFilter(ratingFilter);
+      setDebouncedBranchFilter(branchFilter);
     }, 500);
 
     return () => clearTimeout(handler);
-  }, [searchTerm, statusFilter, quarterFilter, yearFilter]);
+  }, [searchTerm, statusFilter, quarterFilter, yearFilter, ratingFilter, branchFilter]);
 
   // Track when page change started
   const pageChangeStartTimeRef = useRef<number | null>(null);
@@ -225,7 +245,9 @@ export default function OverviewTab() {
           debouncedSearchTerm,
           debouncedStatusFilter,
           debouncedQuarterFilter,
-          debouncedYearFilter
+          debouncedYearFilter,
+          debouncedRatingFilter,
+          debouncedBranchFilter
         );
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -245,12 +267,14 @@ export default function OverviewTab() {
     };
 
     fetchData();
-  }, [
+  },   [
     debouncedSearchTerm,
     currentPage,
     debouncedStatusFilter,
     debouncedQuarterFilter,
     debouncedYearFilter,
+    debouncedRatingFilter,
+    debouncedBranchFilter,
   ]);
 
   const handleRefresh = async () => {
@@ -261,7 +285,9 @@ export default function OverviewTab() {
         debouncedSearchTerm,
         debouncedStatusFilter,
         debouncedQuarterFilter,
-        debouncedYearFilter
+        debouncedYearFilter,
+        debouncedRatingFilter,
+        debouncedBranchFilter
       );
     } catch (error) {
       console.error("Error refreshing data:", error);
@@ -455,6 +481,53 @@ export default function OverviewTab() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Rating Filter */}
+              <div className="w-full md:w-48">
+                <Label
+                  htmlFor="records-rating"
+                  className="text-sm font-medium"
+                >
+                  Rating
+                </Label>
+                <Select
+                  value={ratingFilter}
+                  onValueChange={(value) => setRatingFilter(value)}
+                >
+                  <SelectTrigger className="w-48 cursor-pointer">
+                    <SelectValue placeholder="Filter by rating" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">All Ratings</SelectItem>
+                    <SelectItem value="poor">Poor (&lt;2.5)</SelectItem>
+                    <SelectItem value="low">Low (&lt;3.0)</SelectItem>
+                    <SelectItem value="good">Good (3.0-3.9)</SelectItem>
+                    <SelectItem value="excellent">Excellent (≥4.0)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Branch Filter */}
+              <div className="w-full md:w-48">
+                <Label
+                  htmlFor="records-branch"
+                  className="text-sm font-medium"
+                >
+                  Branch
+                </Label>
+                <Combobox
+                  options={[
+                    { value: "0", label: "All Branches" },
+                    ...branchesData,
+                  ]}
+                  value={branchFilter}
+                  onValueChangeAction={(value) => setBranchFilter(String(value))}
+                  placeholder="Filter by branch"
+                  searchPlaceholder="Search branches..."
+                  emptyText="No branch found."
+                  className="w-48 mt-1"
+                />
               </div>
 
               {/* Refresh Button */}
