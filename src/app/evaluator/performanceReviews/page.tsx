@@ -27,11 +27,6 @@ import {
 } from "@/components/ui/chart";
 import { Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
 import { useUser } from "@/contexts/UserContext";
-import { useToast } from "@/hooks/useToast";
-import {
-  getQuarterFromEvaluationData,
-  getQuarterColor,
-} from "@/lib/quarterUtils";
 import { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
@@ -40,7 +35,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue,  
 } from "@/components/ui/select";
 
 interface Review {
@@ -85,6 +80,52 @@ export default function performanceReviews() {
   const loadSubmissions = async () => {
     try {
       setIsPaginate(true);
+      // Handle "Probationary" filter - fetch both M3 and M5 data (same behavior as "My Evaluations")
+      if (selectedQuarter === "Probationary") {
+        const [responseM3, responseM5] = await Promise.all([
+          apiService.getMyEvalAuthEmployee(
+            "",
+            currentPage,
+            itemsPerPage,
+            selectedYear,
+            "3"
+          ),
+          apiService.getMyEvalAuthEmployee(
+            "",
+            currentPage,
+            itemsPerPage,
+            selectedYear,
+            "5"
+          ),
+        ]);
+
+        const combinedData = [
+          ...(responseM3?.myEval_as_Employee?.data || []),
+          ...(responseM5?.myEval_as_Employee?.data || []),
+        ];
+
+        combinedData.sort((a: any, b: any) => {
+          const dateA = new Date(a.created_at).getTime();
+          const dateB = new Date(b.created_at).getTime();
+          return dateB - dateA;
+        });
+
+        const totalM3 = responseM3?.myEval_as_Employee?.total || 0;
+        const totalM5 = responseM5?.myEval_as_Employee?.total || 0;
+        const combinedTotal = totalM3 + totalM5;
+
+        const years = responseM3?.years || responseM5?.years || [];
+
+        setSubmissions(combinedData);
+        setOverviewTotal(combinedTotal);
+        setTotalPages(Math.ceil(combinedTotal / itemsPerPage));
+        setPerPage(itemsPerPage);
+        setIsPaginate(false);
+        setLoading(false);
+        setYears(years);
+        return;
+      }
+
       // Use employee-specific endpoint
       const response = await apiService.getMyEvalAuthEmployee(
         "",
@@ -702,7 +743,7 @@ export default function performanceReviews() {
                   </Button>
 
                   {/* Quarter Buttons */}
-                  {["3", "5", "Q1", "Q2", "Q3", "Q4"].map((quarter) => (
+                  {["Probationary", "Q1", "Q2", "Q3", "Q4"].map((quarter) => (
                     <Button
                       key={quarter}
                       variant="outline"
@@ -714,7 +755,7 @@ export default function performanceReviews() {
                           : "bg-white text-black border-gray-400 hover:bg-gray-100 hover:scale-105"
                       }`}
                     >
-                      {quarter === "3" || quarter === "5" ? `M${quarter}` : quarter}
+                      {quarter}
                     </Button>
                   ))}
 
