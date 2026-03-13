@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -37,7 +38,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Eye, FileText, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, FileText, Pencil, Plus, Trash2, BarChart2 } from "lucide-react";
 import EditUserModal from "@/components/EditUserModal";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import { toastMessages } from "@/lib/toastMessages";
@@ -182,6 +183,15 @@ export default function UserManagementTab() {
     return branch.branch_name || "N/A";
   };
 
+  const getEmployeeBranchDisplay = (emp: User | null): string => {
+    if (!emp?.branches) return "N/A";
+    const b = Array.isArray(emp.branches) ? emp.branches[0] : (emp.branches as any);
+    if (!b) return "N/A";
+    const name = b.branch_name || b.name || "";
+    const code = b.branch_code || b.code || getBranchCode(b);
+    return code ? `${name || code} (${code})` : name || "N/A";
+  };
+
   // Modal states
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -226,6 +236,13 @@ export default function UserManagementTab() {
   //data to view
   const [employeeToView, setEmployeeToView] = useState<User | null>(null);
   const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
+  const [employeeForAverage, setEmployeeForAverage] = useState<User | null>(null);
+  const [isAverageModalOpen, setIsAverageModalOpen] = useState(false);
+  const [recordedYearsForAverage, setRecordedYearsForAverage] = useState<{ year: number }[]>([]);
+  const [loadingRecordedYears, setLoadingRecordedYears] = useState(false);
+  const [averageModalYear, setAverageModalYear] = useState<string>("");
+  const [averageTableData, setAverageTableData] = useState<{ rows: { quarter: string; rating: number }[]; average: number } | null>(null);
+  const [loadingAverageTable, setLoadingAverageTable] = useState(false);
   const [selectedEmployeeForEvaluation, setSelectedEmployeeForEvaluation] =
     useState<User | null>(null);
   const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
@@ -431,6 +448,83 @@ export default function UserManagementTab() {
     setEmployeeToDelete(employee);
     setIsDeleteModalOpen(true);
   };
+
+  const loadAverageTableForYear = async () => {
+    if (!employeeForAverage?.id || !averageModalYear) return;
+    setLoadingAverageTable(true);
+    setAverageTableData(null);
+    try {
+      const employeeName = `${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim();
+      const response = await apiService.getSubmissions(
+        employeeName,
+        1,
+        100,
+        "",
+        "",
+        averageModalYear,
+        "",
+        ""
+      );
+      const list: any[] = response?.data || [];
+      const employeeId = Number(employeeForAverage.id);
+      const forEmployee = list.filter((ev: any) => {
+        const evEmpId = ev.employee?.id != null ? Number(ev.employee.id) : null;
+        return evEmpId === employeeId || (ev.employee?.fname && ev.employee?.lname && `${ev.employee.fname} ${ev.employee.lname}`.trim() === employeeName);
+      });
+      const getQuarter = (ev: any): string => {
+        if (ev.reviewTypeOthersImprovement || (ev.reviewTypeOthersCustom && String(ev.reviewTypeOthersCustom).trim())) return "Others";
+        if (ev.reviewTypeProbationary != null && ev.reviewTypeProbationary !== "" && ev.reviewTypeProbationary !== "null") return `M${ev.reviewTypeProbationary}`;
+        if (ev.reviewTypeRegular) return String(ev.reviewTypeRegular);
+        const d = new Date(ev.created_at || ev.submittedAt);
+        const m = d.getMonth() + 1;
+        return `Q${Math.ceil(m / 3)}`;
+      };
+      const rows = forEmployee.map((ev: any) => ({
+        quarter: getQuarter(ev),
+        rating: Number(ev.rating) || 0,
+      }));
+      const sum = rows.reduce((acc: number, r: { quarter: string; rating: number }) => acc + r.rating, 0);
+      const average = rows.length > 0 ? sum / rows.length : 0;
+      setAverageTableData({ rows, average });
+    } catch {
+      setAverageTableData({ rows: [], average: 0 });
+    } finally {
+      setLoadingAverageTable(false);
+    }
+  };
+
+  // Load recorded years when Average modal opens (years that have evaluation data)
+  useEffect(() => {
+    if (!isAverageModalOpen) {
+      setRecordedYearsForAverage([]);
+      setAverageModalYear("");
+      setAverageTableData(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingRecordedYears(true);
+    apiService
+      .getAllYears()
+      .then((years: { year: number }[]) => {
+        if (cancelled || !Array.isArray(years)) return;
+        const sorted = [...years].sort((a, b) => b.year - a.year);
+        setRecordedYearsForAverage(sorted);
+        if (sorted.length > 0) {
+          setAverageModalYear(String(sorted[0].year));
+        } else {
+          setAverageModalYear("");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setRecordedYearsForAverage([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingRecordedYears(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAverageModalOpen]);
 
   const handleSaveUser = async (updatedUser: any) => {
     try {
@@ -1161,6 +1255,19 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
+                                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-200 cursor-pointer hover:scale-110 transition-transform duration-200"
+                                      onClick={() => {
+                                        setEmployeeForAverage(employee);
+                                        setIsAverageModalOpen(true);
+                                      }}
+                                      disabled={deletingUserId !== null}
+                                      title="View employee average"
+                                    >
+                                      <BarChart2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                       className="text-blue-600 hover:text-blue-700 hover:bg-blue-200 cursor-pointer hover:scale-120 transition-transform duration-200"
                                       onClick={() => openEditModal(employee)}
                                       disabled={deletingUserId !== null}
@@ -1730,6 +1837,129 @@ export default function UserManagementTab() {
               </Button>
             </div>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Employee Average Modal */}
+      <Dialog
+        open={isAverageModalOpen}
+        onOpenChangeAction={(open) => {
+          if (!open) {
+            setIsAverageModalOpen(false);
+            setEmployeeForAverage(null);
+          }
+        }}
+      >
+        <DialogContent className={`p-6 ${dialogAnimationClass} ${averageTableData ? "max-w-2xl" : "max-w-md"}`}>
+          <DialogHeader>
+            <DialogTitle>Employee Average</DialogTitle>
+            <DialogDescription>
+              {employeeForAverage
+                ? `View average for ${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim()
+                : "Select a year to view the employee's average."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-6">
+            <div className="space-y-2">
+              <Label htmlFor="average-year">Year</Label>
+              {loadingRecordedYears ? (
+                <div className="flex items-center gap-2 py-2 text-sm text-gray-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading recorded years...
+                </div>
+              ) : recordedYearsForAverage.length === 0 ? (
+                <p className="text-sm text-gray-500 py-2">No recorded years available.</p>
+              ) : (
+                <Select
+                  value={averageModalYear}
+                  onValueChange={setAverageModalYear}
+                >
+                  <SelectTrigger id="average-year" className="w-full cursor-pointer">
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {recordedYearsForAverage.map((y) => (
+                      <SelectItem key={y.year} value={String(y.year)}>
+                        {y.year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAverageModalOpen(false);
+                  setEmployeeForAverage(null);
+                }}
+                className="cursor-pointer bg-red-600 hover:bg-red-700 hover:text-white text-white"
+              >
+                Close
+              </Button>
+              <Button
+                onClick={loadAverageTableForYear}
+                disabled={loadingRecordedYears || recordedYearsForAverage.length === 0 || !averageModalYear || loadingAverageTable}
+                className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loadingAverageTable ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  "Confirm"
+                )}
+              </Button>
+            </div>
+
+            {averageTableData && (
+              <div className="border rounded-lg overflow-hidden mt-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="font-semibold">Name</TableHead>
+                      <TableHead className="font-semibold">Branch</TableHead>
+                      <TableHead className="font-semibold">Quarters</TableHead>
+                      <TableHead className="font-semibold">Rating</TableHead>
+                      <TableHead className="font-semibold">Average</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {averageTableData.rows.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-gray-500 py-4">
+                          No evaluations recorded for {averageModalYear}.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      <>
+                        {averageTableData.rows.map((row, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>
+                              {employeeForAverage
+                                ? `${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim()
+                                : "—"}
+                            </TableCell>
+                            <TableCell>{employeeForAverage ? getEmployeeBranchDisplay(employeeForAverage) : "—"}</TableCell>
+                            <TableCell>{row.quarter}</TableCell>
+                            <TableCell>{row.rating > 0 ? `${row.rating}/5` : "—"}</TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow className="bg-gray-50 font-medium">
+                          <TableCell colSpan={3} className="text-right">Average</TableCell>
+                          <TableCell>{averageTableData.average.toFixed(2)}/5</TableCell>
+                          <TableCell>{averageTableData.average.toFixed(2)}</TableCell>
+                        </TableRow>
+                      </>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
