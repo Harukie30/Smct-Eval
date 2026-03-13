@@ -240,6 +240,7 @@ export default function UserManagementTab() {
   const [employeeForAverage, setEmployeeForAverage] = useState<User | null>(null);
   const [isAverageModalOpen, setIsAverageModalOpen] = useState(false);
   const [showNoDataAlert, setShowNoDataAlert] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [recordedYearsForAverage, setRecordedYearsForAverage] = useState<{ year: number }[]>([]);
   const [loadingRecordedYears, setLoadingRecordedYears] = useState(false);
   const [averageModalYear, setAverageModalYear] = useState<string>("");
@@ -1849,36 +1850,49 @@ export default function UserManagementTab() {
           }
         }}
       >
-        <DialogContent className={`p-6 ${dialogAnimationClass} ${averageTableData ? "max-w-2xl" : "max-w-md"} relative`}>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => {
-              setIsAverageModalOpen(false);
-              setEmployeeForAverage(null);
-            }}
-            className="absolute top-3 right-3 cursor-pointer bg-red-600 hover:bg-red-700 hover:text-white text-white h-8 w-8"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-          <DialogHeader>
-            <DialogTitle>Employee Average</DialogTitle>
-            <DialogDescription>
-              {employeeForAverage
-                ? `View average for ${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim()
-                : "Select a year to view the employee's average."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-6">
-            <div className="space-y-2 text-">
-              <Label htmlFor="average-year">Year</Label>
+        <DialogContent className={`p-0 ${dialogAnimationClass} ${averageTableData ? "max-w-2xl" : "max-w-md"} relative overflow-hidden`}>
+          {/* Header Section */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 text-white">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setIsAverageModalOpen(false);
+                setEmployeeForAverage(null);
+              }}
+              className="absolute top-3 right-3 cursor-pointer hover:bg-white/20 text-white h-8 w-8 rounded-full"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-lg">
+                <BarChart2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Employee Average</h2>
+                <p className="text-blue-100 text-sm">
+                  {employeeForAverage
+                    ? `${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim()
+                    : "Select a year to view averages"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Content Section */}
+          <div className="p-6 space-y-4">
+            {/* Year Selector */}
+            <div className="flex items-center gap-4">
+              <Label htmlFor="average-year" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                Select Year:
+              </Label>
               {loadingRecordedYears ? (
-                <div className="flex items-center gap-2 py-2 text-sm text-gray-500">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading recorded years...
+                  Loading...
                 </div>
               ) : recordedYearsForAverage.length === 0 ? (
-                <p className="text-sm text-gray-500 py-2">No recorded years available.</p>
+                <p className="text-sm text-gray-500">No recorded years available.</p>
               ) : (
                 <Select
                   value={averageModalYear}
@@ -1887,7 +1901,7 @@ export default function UserManagementTab() {
                     loadAverageTableForYear(val);
                   }}
                 >
-                  <SelectTrigger id="average-year" className="w-1/3 cursor-pointer">
+                  <SelectTrigger id="average-year" className="w-32 cursor-pointer border-gray-300 focus:ring-blue-500">
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1901,16 +1915,19 @@ export default function UserManagementTab() {
               )}
             </div>
 
+            {/* Empty State */}
             {!averageModalYear && !loadingAverageTable && !averageTableData && (
-              <div className="text-center py-6 text-gray-500">
-                <p className="text-sm">Select year to view averages</p>
+              <div className="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
+                <BarChart2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm font-medium">Select a year to view averages</p>
+                <p className="text-xs mt-1">Choose from the dropdown above</p>
               </div>
             )}
 
             {loadingAverageTable && (
-              <div className="flex items-center justify-center gap-2 py-4 text-sm text-gray-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading evaluations...
+              <div className="flex flex-col items-center justify-center gap-3 py-10 text-gray-500">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <p className="text-sm font-medium">Loading evaluations...</p>
               </div>
             )}
 
@@ -1919,12 +1936,14 @@ export default function UserManagementTab() {
                 {/* Export Button */}
                 <div className="flex justify-end">
                   <Button
-                    onClick={() => {
+                    onClick={async () => {
                       if (!averageTableData || !employeeForAverage) return;
                       if (averageTableData.rows.length === 0) {
                         setShowNoDataAlert(true);
                         return;
                       }
+                      setIsExporting(true);
+                      await new Promise((resolve) => setTimeout(resolve, 1000));
                       const employeeName = `${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim();
                       const branch = getEmployeeBranchDisplay(employeeForAverage);
                       const csvRows = [
@@ -1945,49 +1964,68 @@ export default function UserManagementTab() {
                       link.download = `${employeeName.replace(/\s+/g, "_")}_Average_${averageModalYear}.csv`;
                       link.click();
                       URL.revokeObjectURL(url);
+                      setIsExporting(false);
                     }}
-                    className="cursor-pointer bg-green-600 hover:bg-green-700 text-white"
+                    disabled={isExporting}
+                    className="cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    Export
+                    Export CSV
                   </Button>
                 </div>
 
                 {/* Table */}
-                <div className="border rounded-lg overflow-hidden">
+                <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-blue-200 hover:bg-blue-200 text-black">
-                        <TableHead className="font-semibold text-black">Name</TableHead>
-                        <TableHead className="font-semibold text-black">Branch</TableHead>
-                        <TableHead className="font-semibold text-black">Quarters</TableHead>
-                        <TableHead className="font-semibold text-black">Rating</TableHead>
+                      <TableRow className="bg-gradient-to-r from-blue-50 to-blue-100">
+                        <TableHead className="font-semibold text-blue-800">Name</TableHead>
+                        <TableHead className="font-semibold text-blue-800">Branch</TableHead>
+                        <TableHead className="font-semibold text-blue-800">Quarter</TableHead>
+                        <TableHead className="font-semibold text-blue-800">Rating</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {averageTableData.rows.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-gray-500 py-4">
-                            No evaluations recorded for {averageModalYear}.
+                          <TableCell colSpan={4} className="text-center text-gray-500 py-8">
+                            <p className="font-medium">No evaluations recorded</p>
+                            <p className="text-xs mt-1">No data available for {averageModalYear}</p>
                           </TableCell>
                         </TableRow>
                       ) : (
                         <>
                           {averageTableData.rows.map((row, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell>
+                            <TableRow key={idx} className="hover:bg-gray-50 transition-colors">
+                              <TableCell className="font-medium text-gray-800">
                                 {employeeForAverage
                                   ? `${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim()
                                   : "—"}
                               </TableCell>
-                              <TableCell>{employeeForAverage ? getEmployeeBranchDisplay(employeeForAverage) : "—"}</TableCell>
-                              <TableCell>{row.quarter}</TableCell>
-                              <TableCell>{row.rating > 0 ? row.rating : "—"}</TableCell>
+                              <TableCell className="text-gray-600">{employeeForAverage ? getEmployeeBranchDisplay(employeeForAverage) : "—"}</TableCell>
+                              <TableCell>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {row.quarter}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  row.rating >= 4 ? "bg-green-100 text-green-800" :
+                                  row.rating >= 3 ? "bg-blue-100 text-blue-800" :
+                                  row.rating >= 2.5 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"
+                                }`}>
+                                  {row.rating > 0 ? row.rating.toFixed(2) : "—"}
+                                </span>
+                              </TableCell>
                             </TableRow>
                           ))}
-                          <TableRow className="bg-blue-600 hover:bg-blue-600 text-white font-medium">
-                            <TableCell colSpan={3} className="text-right">Average</TableCell>
-                            <TableCell>{averageTableData.average.toFixed(2)}</TableCell>
+                          <TableRow className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold">
+                            <TableCell colSpan={3} className="text-right">Overall Average</TableCell>
+                            <TableCell>
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-white/20">
+                                {averageTableData.average.toFixed(2)}
+                              </span>
+                            </TableCell>
                           </TableRow>
                         </>
                       )}
@@ -2107,6 +2145,30 @@ export default function UserManagementTab() {
             >
               Got it
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Exporting Dialog */}
+      <Dialog open={isExporting} onOpenChangeAction={() => {}}>
+        <DialogContent className="max-w-xs p-8 text-center">
+          <div className="flex flex-col items-center">
+            <div className="mb-4">
+              <img
+                src="/smct.png"
+                alt="SMCT Logo"
+                className="w-24 h-auto object-contain"
+              />
+            </div>
+            <div className="mb-4">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+            <h2 className="text-lg font-semibold text-gray-800 mb-2">
+              Exporting Data
+            </h2>
+            <p className="text-gray-500 text-sm">
+              Please wait while we prepare your file...
+            </p>
           </div>
         </DialogContent>
       </Dialog>
