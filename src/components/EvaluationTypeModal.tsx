@@ -9,17 +9,18 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Briefcase, ArrowRight } from "lucide-react";
+import { Users, Briefcase, ArrowRight, Building2, ClipboardCheck, X } from "lucide-react";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
-import { User } from "@/contexts/UserContext";
+import { User, useUser } from "@/contexts/UserContext";
 
 interface EvaluationTypeModalProps {
   isOpen: boolean;
   onCloseAction: () => void;
   onSelectEmployeeAction: () => void;
   onSelectManagerAction: () => void;
+  onSelectAreaManagerAction?: () => void;
   employeeName?: string;
-  employee?: User | null; // Add employee prop to check their role
+  employee?: User | null;
 }
 
 export default function EvaluationTypeModal({
@@ -27,10 +28,12 @@ export default function EvaluationTypeModal({
   onCloseAction,
   onSelectEmployeeAction,
   onSelectManagerAction,
+  onSelectAreaManagerAction,
   employeeName,
   employee,
 }: EvaluationTypeModalProps) {
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
+  const { user } = useUser();
 
   const handleSelectEmployee = () => {
     onSelectEmployeeAction();
@@ -42,110 +45,207 @@ export default function EvaluationTypeModal({
     onCloseAction();
   };
 
+  const handleSelectAreaManager = () => {
+    if (onSelectAreaManagerAction) {
+      onSelectAreaManagerAction();
+      onCloseAction();
+    }
+  };
+
+  // Check if BOTH conditions are met:
+  // 1. Logged-in user is AVP - Sales & Marketing
+  // 2. Employee being evaluated is Area Manager
+  const showAreaManagerOption = (() => {
+    // Check logged-in user's position
+    const userPositionName = (
+      user?.positions?.label ||
+      user?.positions?.name ||
+      ""
+    ).toLowerCase();
+    const isUserAVP = userPositionName.includes("avp - sales & marketing") || userPositionName.includes("avp sales marketing");
+
+    // Check employee's position (the one being evaluated)
+    const employeePositionName = (
+      employee?.positions?.label ||
+      employee?.positions?.name ||
+      ""
+    ).toLowerCase();
+    const isEmployeeAreaManager = employeePositionName.includes("area manager");
+
+    // Both conditions must be true
+    return isUserAVP && isEmployeeAreaManager;
+  })();
+
   return (
     <Dialog open={isOpen} onOpenChangeAction={onCloseAction}>
-      <DialogContent className={`max-w-4xl ${dialogAnimationClass} p-8`}>
-        <DialogHeader className="px-2">
-          <DialogTitle className="text-2xl font-bold text-gray-900">
-            Select Evaluation Type
-          </DialogTitle>
-          <DialogDescription className="text-base text-gray-600 mt-2">
-            {employeeName
-              ? `Choose the type of evaluation for ${employeeName}`
-              : "Choose the type of evaluation you want to start"}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid gap-6 mt-8 px-2 grid-cols-1 md:grid-cols-2">
-          {/* Employee Evaluation Option (Rank and File) */}
-          <Card
-            className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-blue-500 group"
-            onClick={handleSelectEmployee}
+      <DialogContent className={`${showAreaManagerOption ? "max-w-5xl" : "max-w-3xl"} ${dialogAnimationClass} p-0 overflow-hidden`}>
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 px-8 py-6 text-white relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onCloseAction}
+            className="absolute top-4 right-4 cursor-pointer hover:bg-white/20 text-white h-8 w-8 rounded-full"
           >
-            <CardContent className="p-6">
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                  <Users className="w-10 h-10 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">
-                   Rank and File Evaluation
-                  </h3>
-                  <p className="text-sm text-black mb-4">
-                    Standard performance evaluation for rank and file employees.
-                    Assesses job knowledge, quality of work, adaptability,
-                    teamwork, reliability, ethical behavior, and customer
-                    service.
-                  </p>
-                  <ul className="text-xs text-black space-y-1 text-left mb-4">
-                    <li>• Rank and File I & II</li>
-                    <li>• 7 evaluation steps</li>
-                    <li>• Standard performance metrics</li>
-                  </ul>
-                </div>
-                <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white group-hover:scale-105 transition-transform cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSelectEmployee();
-                  }}
-                >
-                  Select Rank and File Evaluation
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Manager Evaluation Option (Basic) */}
-          <Card
-            className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-green-500 group"
-            onClick={handleSelectManager}
-          >
-            <CardContent className="p-6">
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                  <Briefcase className="w-10 h-10 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    Basic Evaluation
-                  </h3>
-                  <p className="text-sm text-black mb-4">
-                    Comprehensive evaluation designed exclusively for managers. Assesses
-                    leadership effectiveness, job knowledge, quality of work, decision-making,
-                    adaptability, teamwork, reliability, ethical behavior, and overall
-                    managerial performance.
-                  </p>
-                  <ul className="text-xs text-black space-y-1 text-left mb-4">
-                    <li>• Managers Only Evaluation</li>
-                    <li>• 8 evaluation steps</li>
-                    <li>• Focus on leadership & managerial skills</li>
-                  </ul>
-                </div>
-                <Button
-                  className="w-full bg-green-600 hover:bg-green-700 text-white group-hover:scale-105 transition-transform cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSelectManager();
-                  }}
-                >
-                  Select Basic Evaluation
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            <X className="h-4 w-4" />
+          </Button>
+          <div className="flex items-center gap-4">
+            <div className="bg-white/20 p-3 rounded-xl">
+              <ClipboardCheck className="h-8 w-8" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold">Select Evaluation Type</h2>
+              <p className="text-blue-100 mt-1">
+                {employeeName
+                  ? `Choose the type of evaluation for ${employeeName}`
+                  : "Choose the type of evaluation you want to start"}
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="mt-8 flex justify-end px-2">
-          <Button
-            variant="outline"
-            onClick={onCloseAction}
-            className="px-6 bg-red-500 hover:bg-red-600 text-white hover:text-white cursor-pointer hover:scale-105 transition-transform duration-200"
-          >
-            Cancel
-          </Button>
+        {/* Cards Section */}
+        <div className="p-8">
+          <div className={`grid gap-6 grid-cols-1 ${showAreaManagerOption ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+            {/* Employee Evaluation Option (Rank and File) */}
+            <Card
+              className="cursor-pointer hover:shadow-xl transition-all duration-300 border-0 shadow-md group overflow-hidden relative"
+              onClick={handleSelectEmployee}
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-blue-600"></div>
+              <CardContent className="p-6">
+                <div className="flex flex-col items-center text-center space-y-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                    <Users className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">
+                      Rank and File
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                      Standard performance evaluation for rank and file employees.
+                      Assesses job knowledge, quality of work, and teamwork.
+                    </p>
+                    <div className="flex flex-wrap gap-2 justify-center mb-4">
+                      <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full font-medium">
+                        Rank & File I & II
+                      </span>
+                      <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full font-medium">
+                        7 Steps
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectEmployee();
+                    }}
+                  >
+                    Select
+                    <ArrowRight className="ml-2 w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Manager Evaluation Option (Basic) */}
+            <Card
+              className="cursor-pointer hover:shadow-xl transition-all duration-300 border-0 shadow-md group overflow-hidden relative"
+              onClick={handleSelectManager}
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-green-600"></div>
+              <CardContent className="p-6">
+                <div className="flex flex-col items-center text-center space-y-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                    <Briefcase className="w-8 h-8 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">
+                      Basic Evaluation
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                      Comprehensive evaluation for managers. Assesses leadership,
+                      decision-making, and managerial performance.
+                    </p>
+                    <div className="flex flex-wrap gap-2 justify-center mb-4">
+                      <span className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
+                        Managers Only
+                      </span>
+                      <span className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
+                        8 Steps
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectManager();
+                    }}
+                  >
+                    Select
+                    <ArrowRight className="ml-2 w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Area Manager Evaluation Option - Only shown when user is AVP and employee is Area Manager */}
+            {showAreaManagerOption && (
+              <Card
+                className="cursor-pointer hover:shadow-xl transition-all duration-300 border-0 shadow-md group overflow-hidden relative"
+                onClick={handleSelectAreaManager}
+              >
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-purple-600"></div>
+                <CardContent className="p-6">
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                      <Building2 className="w-8 h-8 text-purple-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 mb-2">
+                        Area Manager
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                        Specialized evaluation for Area Managers overseeing multiple
+                        branches. Assesses regional oversight and leadership.
+                      </p>
+                      <div className="flex flex-wrap gap-2 justify-center mb-4">
+                        <span className="px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-full font-medium">
+                          Area Managers
+                        </span>
+                        <span className="px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-full font-medium">
+                          Regional
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectAreaManager();
+                      }}
+                    >
+                      Select
+                      <ArrowRight className="ml-2 w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="mt-8 flex justify-end">
+            <Button
+              variant="outline"
+              onClick={onCloseAction}
+              className="px-6 border-gray-300 text-gray-700 hover:bg-gray-100 cursor-pointer transition-all"
+            >
+              Cancel
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
