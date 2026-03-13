@@ -241,6 +241,7 @@ export default function UserManagementTab() {
   const [isAverageModalOpen, setIsAverageModalOpen] = useState(false);
   const [showNoDataAlert, setShowNoDataAlert] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showExportError, setShowExportError] = useState(false);
   const [recordedYearsForAverage, setRecordedYearsForAverage] = useState<{ year: number }[]>([]);
   const [loadingRecordedYears, setLoadingRecordedYears] = useState(false);
   const [averageModalYear, setAverageModalYear] = useState<string>("");
@@ -1943,28 +1944,33 @@ export default function UserManagementTab() {
                         return;
                       }
                       setIsExporting(true);
-                      await new Promise((resolve) => setTimeout(resolve, 1000));
-                      const employeeName = `${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim();
-                      const branch = getEmployeeBranchDisplay(employeeForAverage);
-                      const csvRows = [
-                        ["Name", "Branch", "Quarters", "Rating"],
-                        ...averageTableData.rows.map((row) => [
-                          employeeName,
-                          branch,
-                          row.quarter,
-                          row.rating > 0 ? row.rating.toString() : "—",
-                        ]),
-                        ["", "", "Average", averageTableData.average.toFixed(2)],
-                      ];
-                      const csvContent = csvRows.map((row) => row.join(",")).join("\n");
-                      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-                      const url = URL.createObjectURL(blob);
-                      const link = document.createElement("a");
-                      link.href = url;
-                      link.download = `${employeeName.replace(/\s+/g, "_")}_Average_${averageModalYear}.csv`;
-                      link.click();
-                      URL.revokeObjectURL(url);
-                      setIsExporting(false);
+                      try {
+                        await new Promise((resolve) => setTimeout(resolve, 1000));
+                        const employeeName = `${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim();
+                        const branch = getEmployeeBranchDisplay(employeeForAverage);
+                        const csvRows = [
+                          ["Name", "Branch", "Quarters", "Rating"],
+                          ...averageTableData.rows.map((row) => [
+                            employeeName,
+                            branch,
+                            row.quarter,
+                            row.rating > 0 ? row.rating.toString() : "—",
+                          ]),
+                          ["", "", "Average", averageTableData.average.toFixed(2)],
+                        ];
+                        const csvContent = csvRows.map((row) => row.join(",")).join("\n");
+                        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.download = `${employeeName.replace(/\s+/g, "_")}_Average_${averageModalYear}.csv`;
+                        link.click();
+                        URL.revokeObjectURL(url);
+                      } catch {
+                        setShowExportError(true);
+                      } finally {
+                        setIsExporting(false);
+                      }
                     }}
                     disabled={isExporting}
                     className="cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
@@ -2169,6 +2175,38 @@ export default function UserManagementTab() {
             <p className="text-gray-500 text-sm">
               Please wait while we prepare your file...
             </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Error Dialog */}
+      <Dialog
+        open={showExportError}
+        onOpenChangeAction={(open) => {
+          if (!open) setShowExportError(false);
+        }}
+      >
+        <DialogContent className="max-w-sm p-8 text-center">
+          <div className="flex flex-col items-center">
+            <div className="mb-4">
+              <img
+                src="/no-data2.gif"
+                alt="Error"
+                className="w-32 h-32 object-contain"
+              />
+            </div>
+            <h2 className="text-xl font-bold text-red-600 mb-2">
+              Something Went Wrong
+            </h2>
+            <p className="text-gray-600 text-sm mb-6 max-w-xs">
+              We encountered an error while exporting your data. Please try again later.
+            </p>
+            <Button
+              onClick={() => setShowExportError(false)}
+              className="px-8 py-2 cursor-pointer bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+            >
+              Close
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
