@@ -120,7 +120,7 @@ const getQuarterFromDate = (dateString: string): string => {
   }
 };
 
-export default function ViewResultsModal({
+export default function ViewResultsModalAreaManager({
   isOpen,
   onCloseAction,
   submission,
@@ -1444,26 +1444,8 @@ export default function ViewResultsModal({
   
   const shouldShowDetailedJobTargets = hasJobTargetData;
 
-  // Determine evaluation type based on submission data
-  const hasCustomerService = submission.customer_services && 
-    Array.isArray(submission.customer_services) && 
-    submission.customer_services.length > 0;
-  const hasManagerialSkills = submission.managerial_skills && 
-    Array.isArray(submission.managerial_skills) && 
-    submission.managerial_skills.length > 0;
-  
-  let evaluationType: 'rankNfile' | 'basic' | 'default' = 'default';
-  
-  // If evaluator is Area Manager, always treat as branch evaluation (default)
-  if (isAreaMgr) {
-    evaluationType = 'default'; // Area Managers use branch evaluation format
-  } else if (!hasCustomerService && hasManagerialSkills) {
-    evaluationType = 'basic'; // Basic HO - has Managerial Skills, no Customer Service
-  } else if (!hasCustomerService && !hasManagerialSkills) {
-    evaluationType = 'rankNfile'; // RankNfile HO - no Customer Service, no Managerial Skills
-  } else {
-    evaluationType = 'default'; // Default - has Customer Service
-  }
+  // Area Manager evaluation: no Customer Service, fixed weights
+  // Weights: Job Knowledge 22%, Quality of Work 30%, Adaptability 3%, Teamwork 10%, Reliability 10%, Ethical 3%, Managerial Skills 22%
 
   // Use stored rating from backend if available to match evaluation records table
   const finalRatingRaw =
@@ -1500,80 +1482,24 @@ export default function ViewResultsModal({
               String(item.score)
             )
           );
+          const managerial_skillsScore = submission.managerial_skills
+            ? calculateScore(
+                (submission.managerial_skills || []).map((item: any) =>
+                  String(item.score)
+                )
+              )
+            : 0;
 
-          // Calculate overall weighted score based on evaluation type
-          if (evaluationType === 'rankNfile') {
-            // RankNfile HO: 25%, 25%, 15%, 15%, 10%, 10% (no Customer Service)
-            return (
-              job_knowledgeScore * 0.25 +
-              quality_of_workScore * 0.25 +
-              adaptabilityScore * 0.15 +
-              teamworkScore * 0.15 +
-              reliabilityScore * 0.1 +
-              ethicalScore * 0.1
-            );
-          } else if (evaluationType === 'basic') {
-            // Basic HO: 25%, 25%, 15%, 15%, 10%, 10% + Managerial Skills 30%
-            const managerial_skillsScore = submission.managerial_skills
-              ? calculateScore(
-                  (submission.managerial_skills || []).map((item: any) =>
-                    String(item.score)
-                  )
-                )
-              : 0;
-            return (
-              job_knowledgeScore * 0.25 +
-              quality_of_workScore * 0.25 +
-              adaptabilityScore * 0.15 +
-              teamworkScore * 0.15 +
-              reliabilityScore * 0.1 +
-              ethicalScore * 0.1 +
-              managerial_skillsScore * 0.3
-            );
-          } else {
-            // Default: 20%, 20%, 10%, 10%, 5%, 5%, 30% (with Customer Service)
-            // For managers (Area Manager, Branch Manager): 15%, 15%, 10%, 10%, 5%, 5%, 25% (Customer Service), 15% (Managerial Skills)
-            const customer_serviceScore = submission.customer_services
-              ? calculateScore(
-                  (submission.customer_services || []).map((item: any) =>
-                    String(item.score)
-                  )
-                )
-              : 0;
-            const managerial_skillsScore = submission.managerial_skills
-              ? calculateScore(
-                  (submission.managerial_skills || []).map((item: any) =>
-                    String(item.score)
-                  )
-                )
-              : 0;
-            
-            // If this is a manager evaluation and has both Customer Service and Managerial Skills,
-            // use adjusted weights: 15%, 15%, 10%, 10%, 5%, 5%, 25% (CS), 15% (MS)
-            // Otherwise, use standard weights: 20%, 20%, 10%, 10%, 5%, 5%, 30% (CS)
-            if (isManagerEvaluation && managerial_skillsScore > 0 && customer_serviceScore > 0) {
-              return (
-                job_knowledgeScore * 0.15 +
-                quality_of_workScore * 0.15 +
-                adaptabilityScore * 0.1 +
-                teamworkScore * 0.1 +
-                reliabilityScore * 0.05 +
-                ethicalScore * 0.05 +
-                customer_serviceScore * 0.25 +
-                managerial_skillsScore * 0.15
-              );
-            } else {
-              return (
-                job_knowledgeScore * 0.2 +
-                quality_of_workScore * 0.2 +
-                adaptabilityScore * 0.1 +
-                teamworkScore * 0.1 +
-                reliabilityScore * 0.05 +
-                ethicalScore * 0.05 +
-                customer_serviceScore * 0.3
-              );
-            }
-          }
+          // Area Manager weights: 22%, 30%, 3%, 10%, 10%, 3%, 22% (no Customer Service)
+          return (
+            job_knowledgeScore * 0.22 +
+            quality_of_workScore * 0.30 +
+            adaptabilityScore * 0.03 +
+            teamworkScore * 0.10 +
+            reliabilityScore * 0.10 +
+            ethicalScore * 0.03 +
+            managerial_skillsScore * 0.22
+          );
         })();
 
   const finalRating = Number.isFinite(finalRatingRaw)
@@ -2063,41 +1989,9 @@ export default function ViewResultsModal({
               {/* Title */}
               <div className="text-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-900">
-                  {evaluationType === 'rankNfile' ? (
-                    <>
-                      Performance Review Form (HEAD OFFICE)
-                      <br />
-                      Rank and File I & II
-                    </>
-                  ) : evaluationType === 'basic' ? (
-                    <>
-                      {isHOEmp ? (
-                        <>
-                          (Head Office) Managers & Supervisors
-                        </>
-                      ) : (
-                        <>
-                          Performance Review Form(BRANCH)
-                          <br />
-                          Basic
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      {isHOEmp ? (
-                        <>
-                          (Head Office) Managers & Supervisors
-                        </>
-                      ) : (
-                        <>
-                          Performance Review Form (BRANCHES)
-                          <br />
-                          Managers & Supervisors
-                        </>
-                      )}
-                    </>
-                  )}
+                  Performance Review Form (BRANCHES)
+                  <br />
+                  Area Manager
                 </h1>
               </div>
 
@@ -3152,95 +3046,12 @@ export default function ViewResultsModal({
                 </Card>
               )}
 
-              {/* Step 7: Customer Service - Show for default evaluations (branch evaluations) */}
-              {evaluationType === 'default' && submission.customer_services && (
-                <Card className="shadow-md hide-in-print">
-                  <CardHeader className="bg-teal-50 border-b border-teal-200">
-                    <CardTitle className="text-xl font-semibold text-teal-900">
-                      VII. CUSTOMER SERVICE
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <p className="text-sm text-gray-600 mb-4">
-                      Customer satisfaction. Responsiveness to customer needs.
-                      Professional and positive interactions with customers.
-                    </p>
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border border-gray-300">
-                        <thead>
-                          <tr className="bg-gray-100">
-                            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900"></th>
-                            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                              Behavioral Indicators
-                            </th>
-                            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                              Example
-                            </th>
-                            <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                              Score
-                            </th>
-                            <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
-                              Rating
-                            </th>
-                            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                            Explanation (Required) 
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(submission.customer_services || []).map(
-                            (item: {
-                              question_number: 1 | 2 | 3 | 4 | 5;
-                              score: number;
-                              explanation: string;
-                            }) => {
-                              const indicators =
-                                CUSTOMER_SERVICE[item.question_number];
-
-                              return (
-                                <tr key={item.question_number}>
-                                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                                    {indicators.title}
-                                  </td>
-                                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                                    {indicators.indicator}
-                                  </td>
-                                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                                    {indicators.example}
-                                  </td>
-                                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
-                                    {item.score}
-                                  </td>
-                                  <td className="border border-gray-300 px-4 py-3 text-center">
-                                    <div
-                                      className={`px-2 py-1 rounded text-sm font-medium ${ratingBG(
-                                        item.score
-                                      )}`}
-                                    >
-                                      {rating(item.score)}
-                                    </div>
-                                  </td>
-                                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 bg-yellow-50">
-                                    {item.explanation || ""}
-                                  </td>
-                                </tr>
-                              );
-                            }
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Step 8: Managerial Skills - Always show for Branch Manager evaluations if data exists */}
-              {/* Branch Managers should have BOTH Customer Service (Step 7) AND Managerial Skills (Step 8) */}
+              {/* Step 7: Managerial Skills - Area Manager evaluation (no Customer Service step) */}
               {submission.managerial_skills && (
                 <Card className="shadow-md hide-in-print">
                   <CardHeader className="bg-teal-50 border-b border-teal-200">
                     <CardTitle className="text-xl font-semibold text-teal-900">
-                      VIII. MANAGERIAL SKILLS
+                      VII. MANAGERIAL SKILLS
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-6">
@@ -3402,30 +3213,18 @@ export default function ViewResultsModal({
                                   ) / 10}
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                  {evaluationType === 'rankNfile' || evaluationType === 'basic' ? '25%' : '20%'}
+                                  22%
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                  {evaluationType === 'rankNfile' || evaluationType === 'basic' ? (
-                                    (calculateScore(
+                                  {(
+                                    calculateScore(
                                       (submission.job_knowledge || []).map(
                                         (item: any) => {
                                           return String(item.score || 0);
                                         }
                                       )
-                                    ) * 0.25).toFixed(2)
-                                  ) : (
-                                    Math.round(
-                                      calculateScore(
-                                        (submission.job_knowledge || []).map(
-                                          (item: any) => {
-                                            return String(item.score || 0);
-                                          }
-                                        )
-                                      ) *
-                                        0.2 *
-                                        10
-                                    ) / 10
-                                  )}
+                                    ) * 0.22
+                                  ).toFixed(2)}
                                 </td>
                               </tr>
 
@@ -3482,38 +3281,18 @@ export default function ViewResultsModal({
                                   ).toFixed(2)}
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                  {evaluationType === 'rankNfile' || evaluationType === 'basic' 
-                                    ? '25%' 
-                                    : (isManagerEvaluation && submission.managerial_skills && submission.customer_services) 
-                                      ? '15%' 
-                                      : '20%'}
+                                  30%
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                  {evaluationType === 'rankNfile' || evaluationType === 'basic' ? (
-                                    (calculateScore(
+                                  {(
+                                    calculateScore(
                                       (submission.quality_of_works || []).map(
                                         (item: any) => {
                                           return String(item.score || 0);
                                         }
                                       )
-                                    ) * 0.25).toFixed(2)
-                                  ) : (isManagerEvaluation && submission.managerial_skills && submission.customer_services) ? (
-                                    (calculateScore(
-                                      (submission.quality_of_works || []).map(
-                                        (item: any) => {
-                                          return String(item.score || 0);
-                                        }
-                                      )
-                                    ) * 0.15).toFixed(2)
-                                  ) : (
-                                    (calculateScore(
-                                      (submission.quality_of_works || []).map(
-                                        (item: any) => {
-                                          return String(item.score || 0);
-                                        }
-                                      )
-                                    ) * 0.2).toFixed(2)
-                                  )}
+                                    ) * 0.30
+                                  ).toFixed(2)}
                                 </td>
                               </tr>
 
@@ -3568,26 +3347,18 @@ export default function ViewResultsModal({
                                   ).toFixed(2)}
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                  {evaluationType === 'rankNfile' || evaluationType === 'basic' ? '15%' : '10%'}
+                                  3%
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                  {evaluationType === 'rankNfile' || evaluationType === 'basic' ? (
-                                    (calculateScore(
+                                  {(
+                                    calculateScore(
                                       (submission.adaptability || []).map(
                                         (item: any) => {
                                           return String(item.score || 0);
                                         }
                                       )
-                                    ) * 0.15).toFixed(2)
-                                  ) : (
-                                    (calculateScore(
-                                      (submission.adaptability || []).map(
-                                        (item: any) => {
-                                          return String(item.score || 0);
-                                        }
-                                      )
-                                    ) * 0.1).toFixed(2)
-                                  )}
+                                    ) * 0.03
+                                  ).toFixed(2)}
                                 </td>
                               </tr>
 
@@ -3642,22 +3413,16 @@ export default function ViewResultsModal({
                                   ).toFixed(2)}
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                  {evaluationType === 'rankNfile' || evaluationType === 'basic' ? '15%' : '10%'}
+                                  10%
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                  {evaluationType === 'rankNfile' || evaluationType === 'basic' ? (
-                                    (calculateScore(
+                                  {(
+                                    calculateScore(
                                       (submission.teamworks || []).map((item: any) => {
                                         return String(item.score || 0);
                                       })
-                                    ) * 0.15).toFixed(2)
-                                  ) : (
-                                    (calculateScore(
-                                      (submission.teamworks || []).map((item: any) => {
-                                        return String(item.score || 0);
-                                      })
-                                    ) * 0.1).toFixed(2)
-                                  )}
+                                    ) * 0.10
+                                  ).toFixed(2)}
                                 </td>
                               </tr>
 
@@ -3714,26 +3479,18 @@ export default function ViewResultsModal({
                                   ).toFixed(2)}
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                  {evaluationType === 'rankNfile' || evaluationType === 'basic' ? '10%' : '5%'}
+                                  10%
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                  {evaluationType === 'rankNfile' || evaluationType === 'basic' ? (
-                                    (calculateScore(
+                                  {(
+                                    calculateScore(
                                       (submission.reliabilities || []).map(
                                         (item: any) => {
                                           return String(item.score || 0);
                                         }
                                       )
-                                    ) * 0.1).toFixed(2)
-                                  ) : (
-                                    (calculateScore(
-                                      (submission.reliabilities || []).map(
-                                        (item: any) => {
-                                          return String(item.score || 0);
-                                        }
-                                      )
-                                    ) * 0.05).toFixed(2)
-                                  )}
+                                    ) * 0.10
+                                  ).toFixed(2)}
                                 </td>
                               </tr>
 
@@ -3788,26 +3545,20 @@ export default function ViewResultsModal({
                                   ).toFixed(2)}
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                  {evaluationType === 'rankNfile' || evaluationType === 'basic' ? '10%' : '5%'}
+                                  3%
                                 </td>
                                 <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                  {evaluationType === 'rankNfile' || evaluationType === 'basic' ? (
-                                    (calculateScore(
+                                  {(
+                                    calculateScore(
                                       (submission.ethicals || []).map((item: any) => {
                                         return String(item.score || 0);
                                       })
-                                    ) * 0.1).toFixed(2)
-                                  ) : (
-                                    (calculateScore(
-                                      (submission.ethicals || []).map((item: any) => {
-                                        return String(item.score || 0);
-                                      })
-                                    ) * 0.05).toFixed(2)
-                                  )}
+                                    ) * 0.03
+                                  ).toFixed(2)}
                                 </td>
                               </tr>
 
-                              {/* Managerial Skills - Always show for Branch Manager evaluations if data exists */}
+                              {/* Managerial Skills - Area Manager evaluation */}
                               {submission.managerial_skills && (
                                 <tr>
                                   <td className="border-2 border-gray-400 px-4 py-3 text-sm text-gray-700 font-medium">
@@ -3859,7 +3610,7 @@ export default function ViewResultsModal({
                                     ).toFixed(2)}
                                   </td>
                                   <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                    {isManagerEvaluation && submission.customer_services ? '15%' : '30%'}
+                                    22%
                                   </td>
                                   <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                     {(
@@ -3867,77 +3618,7 @@ export default function ViewResultsModal({
                                         (submission.managerial_skills || []).map((item: any) => {
                                           return String(item.score || 0);
                                         })
-                                      ) * (isManagerEvaluation && submission.customer_services ? 0.15 : 0.3)
-                                    ).toFixed(2)}
-                                  </td>
-                                </tr>
-                              )}
-
-                              {/* Customer Service - Show for Default evaluations (branch evaluations) */}
-                              {evaluationType === 'default' && submission.customer_services && (
-                                <tr>
-                                  <td className="border-2 border-gray-400 px-4 py-3 text-sm text-gray-700 font-medium">
-                                    Customer Service
-                                  </td>
-                                  <td className="border-2 border-gray-400 px-4 py-3 text-center">
-                                    <div className="flex items-center justify-center space-x-1">
-                                      <span
-                                        className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(
-                                          getRatingLabel(
-                                            calculateScore(
-                                              (submission.customer_services || []).map(
-                                                (item: any) => {
-                                                  return String(item.score || 0);
-                                                }
-                                              )
-                                            )
-                                          )
-                                        )}`}
-                                      >
-                                        {getRatingLabel(
-                                          calculateScore(
-                                            (submission.customer_services || []).map(
-                                              (item: any) => {
-                                                return String(item.score || 0);
-                                              }
-                                            )
-                                          )
-                                        )}
-                                      </span>
-                                      <span className="print-rating-text">
-                                        {getRatingLabel(
-                                          calculateScore(
-                                            (submission.customer_services || []).map(
-                                              (item: any) => {
-                                                return String(item.score || 0);
-                                              }
-                                            )
-                                          )
-                                        )}
-                                      </span>
-                                    </div>
-                                  </td>
-                                  <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                    {calculateScore(
-                                      (submission.customer_services || []).map(
-                                        (item: any) => {
-                                          return String(item.score || 0);
-                                        }
-                                      )
-                                    ).toFixed(2)}
-                                  </td>
-                                  <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                    {isManagerEvaluation && submission.managerial_skills ? '25%' : '30%'}
-                                  </td>
-                                  <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
-                                    {(
-                                      calculateScore(
-                                        (submission.customer_services || []).map(
-                                          (item: any) => {
-                                            return String(item.score || 0);
-                                          }
-                                        )
-                                      ) * (isManagerEvaluation && submission.managerial_skills ? 0.25 : 0.3)
+                                      ) * 0.22
                                     ).toFixed(2)}
                                   </td>
                                 </tr>

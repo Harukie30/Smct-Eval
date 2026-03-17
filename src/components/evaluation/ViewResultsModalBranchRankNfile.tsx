@@ -1920,7 +1920,7 @@ export default function ViewResultsModal({
                     </>
                   ) : (
                     <>
-                      Performance Review Form (BRANCH)
+                      Performance Review Form (BRANCHES)
                       <br />
                       Rank and File I & II
                     </>

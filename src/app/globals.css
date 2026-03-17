@@ -156,12 +156,24 @@
   animation: float 6s ease-in-out infinite;
 }
 
+.animation-delay-300 {
+  animation-delay: 300ms;
+}
+
+.animation-delay-600 {
+  animation-delay: 600ms;
+}
+
 .animation-delay-1000 {
   animation-delay: 1s;
 }
 
 .animation-delay-2000 {
   animation-delay: 2s;
+}
+
+.animation-delay-3000 {
+  animation-delay: 3s;
 }
 
 /* Prevent dragging and copying of images/GIFs */
@@ -220,6 +232,20 @@ body {
 
 .animate-fade-in-up {
   animation: fade-in-up 0.8s ease-out forwards;
+  opacity: 0;
+}
+
+/* Fade-in-up with delay (delay must be in shorthand or it gets reset) - snappy version */
+.animate-fade-in-up-delay-1s {
+  animation: fade-in-up 0.4s ease-out 0.2s forwards;
+  opacity: 0;
+}
+.animate-fade-in-up-delay-2s {
+  animation: fade-in-up 0.4s ease-out 0.4s forwards;
+  opacity: 0;
+}
+.animate-fade-in-up-delay-3s {
+  animation: fade-in-up 0.4s ease-out 0.6s forwards;
   opacity: 0;
 }
 

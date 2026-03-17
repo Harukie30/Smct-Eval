@@ -319,6 +319,12 @@ export const apiService = {
     return response.data;
   },
 
+  // Bulk register users (Excel/CSV upload)
+  bulkRegisterUser: async (formData: FormData): Promise<any> => {
+    const response = await api.post("/bulkRegisterUser", formData);
+    return response.data;
+  },
+
   // Update branches for specific user
   updateUserBranch: async (
     userId: string | number,
@@ -437,6 +443,15 @@ export const apiService = {
     submission: EvaluationPayload
   ): Promise<any> => {
     const response = await api.post(`/BranchBasic/${employeeId}`, submission);
+    return response.data;
+  },
+
+  // Area Manager evaluation (BranchBasicAreaManager)
+  postBranchBasicAreaManager: async (
+    employeeId: number | string,
+    submission: EvaluationPayload
+  ): Promise<any> => {
+    const response = await api.post(`/BranchBasicAreaManager/${employeeId}`, submission);
     return response.data;
   },
 

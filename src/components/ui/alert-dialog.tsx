@@ -79,6 +79,8 @@ interface AlertDialogProps {
   logoSize?: "cover" | "contain" | "auto" | number
   // Background logo opacity (0-1)
   logoOpacity?: number
+  // Optional image or GIF shown in the dialog content (above title/description)
+  contentImage?: string
 }
 
 export function AlertDialog({
@@ -99,7 +101,8 @@ export function AlertDialog({
   backgroundImage,
   size = "md",
   logoSize = "cover",
-  logoOpacity = 1
+  logoOpacity = 1,
+  contentImage
 }: AlertDialogProps) {
   const handleConfirm = () => {
     onConfirm?.()
@@ -241,6 +244,15 @@ export function AlertDialog({
             {/* Content Section */}
             <div className="bg-white/98 backdrop-blur-sm px-8 pb-7 pt-7 relative z-10">
               <div className="space-y-5">
+                {contentImage && (
+                  <div className="flex justify-center">
+                    <img
+                      src={contentImage}
+                      alt=""
+                      className="max-h-40 w-auto object-contain rounded-lg"
+                    />
+                  </div>
+                )}
                 <div className={`flex items-start gap-4 p-6 bg-gradient-to-br ${type === 'warning' ? 'from-yellow-50 via-yellow-50/80 to-orange-50 border-yellow-300' : type === 'error' ? 'from-red-50 via-red-50/80 to-pink-50 border-red-300' : type === 'success' ? 'from-green-50 via-green-50/80 to-emerald-50 border-green-300' : 'from-blue-50 via-blue-50/80 to-indigo-50 border-blue-300'} rounded-2xl border-2 shadow-lg backdrop-blur-sm`}>
                   <div className={`p-3 ${type === 'warning' ? 'bg-yellow-200/80' : type === 'error' ? 'bg-red-200/80' : type === 'success' ? 'bg-green-200/80' : 'bg-blue-200/80'} rounded-xl flex-shrink-0 shadow-md ring-1 ring-white/50`}>
                     <span className="text-2xl drop-shadow-sm">{styles.icon}</span>
@@ -301,6 +313,15 @@ export function AlertDialog({
           </>
         ) : (
           <>
+            {contentImage && (
+              <div className="flex justify-center items-center pt-6 px-6 min-h-[120px] bg-gray-50/80 rounded-t-lg border-b border-gray-200">
+                <img
+                  src={contentImage}
+                  alt=""
+                  className="max-h-40 w-auto object-contain rounded-lg"
+                />
+              </div>
+            )}
             <DialogHeader className="px-6 pt-6 pb-4">
               <DialogTitle className="flex items-center gap-3 text-2xl font-extrabold tracking-tight">
                 {showSuccessAnimation ? (

@@ -3,6 +3,7 @@
 import React from "react";
 import ViewResultsModalBranchRankNfile from "./ViewResultsModalBranchRankNfile";
 import ViewResultsModalBranchManager from "./ViewResultsModalBranchManager";
+import ViewResultsModalAreaManager from "./ViewResultsModalAreaManager";
 import ViewResultsModalDefault from "./ViewResultsModalDefault";
 import ViewResultsModalBasic from "./ViewResultsModalBasic";
 
@@ -329,8 +330,34 @@ export default function ViewResultsModalRouter({
       }
     }
     
+    // AreaManager / BranchAreaManager → ViewResultsModalAreaManager (AVP evaluating Area Manager, no Customer Service)
+    if (
+      (evalTypeNormalized === "AREAMANAGER" || evalTypeNormalized.includes("AREAMANAGER") ||
+       evalTypeNormalized === "BRANCHAREAMANAGER" || evalTypeNormalized.includes("BRANCHAREAMANAGER")) &&
+      isEmployeeAreaMgr
+    ) {
+      selectedComponent = 'ViewResultsModalAreaManager (Area Manager)';
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Routing to:', selectedComponent);
+      }
+      return (
+        <ViewResultsModalAreaManager
+          isOpen={isOpen}
+          onCloseAction={onCloseAction}
+          submission={submission}
+          onApprove={onApprove}
+          isApproved={isApproved}
+          approvalData={approvalData}
+          currentUserName={currentUserName}
+          currentUserSignature={currentUserSignature}
+          showApprovalButton={showApprovalButton}
+        />
+      );
+    }
+    
     // BranchBasic / branch_basic → ViewResultsModalBranchManager (branch manager evaluations)
     // BUT: If employee is HO, route to HO Basic (ViewResultsModalBasic) instead
+    // BUT: If employee is Area Manager and no Customer Service data, route to ViewResultsModalAreaManager
     if (
       evalTypeNormalized === "BRANCHBASIC" || 
       evalTypeNormalized.includes("BRANCHBASIC") ||
@@ -358,6 +385,26 @@ export default function ViewResultsModalRouter({
       }
       // Only route to BranchManager if employee is actually a branch employee
       if (isBranchEmp) {
+        // Area Manager evaluation: employee is Area Manager and has no Customer Service data → use Area Manager view
+        if (isEmployeeAreaMgr && !hasCustomerService) {
+          selectedComponent = 'ViewResultsModalAreaManager (Branch Basic - Area Manager)';
+          if (process.env.NODE_ENV === 'development') {
+            console.log('✅ Routing to:', selectedComponent);
+          }
+          return (
+            <ViewResultsModalAreaManager
+              isOpen={isOpen}
+              onCloseAction={onCloseAction}
+              submission={submission}
+              onApprove={onApprove}
+              isApproved={isApproved}
+              approvalData={approvalData}
+              currentUserName={currentUserName}
+              currentUserSignature={currentUserSignature}
+              showApprovalButton={showApprovalButton}
+            />
+          );
+        }
         selectedComponent = 'ViewResultsModalBranchManager (Branch Basic)';
         if (process.env.NODE_ENV === 'development') {
           console.log('✅ Routing to:', selectedComponent);
@@ -467,9 +514,25 @@ export default function ViewResultsModalRouter({
 
   // Fallback Priority 5: Branch evaluations (if evaluationType not available)
   // Branch employees with Customer Service → BranchDefault → ViewResultsModalBranchRankNfile
-  // Branch employees with Managerial Skills → BranchBasic → ViewResultsModalBranchManager
+  // Branch employees with Managerial Skills → BranchBasic → ViewResultsModalBranchManager (or Area Manager if no Customer Service)
   if (isBranchEmp) {
     if (hasManagerialSkills) {
+      // Area Manager: has Managerial Skills but no Customer Service data
+      if (isEmployeeAreaMgr && !hasCustomerService) {
+        return (
+          <ViewResultsModalAreaManager
+            isOpen={isOpen}
+            onCloseAction={onCloseAction}
+            submission={submission}
+            onApprove={onApprove}
+            isApproved={isApproved}
+            approvalData={approvalData}
+            currentUserName={currentUserName}
+            currentUserSignature={currentUserSignature}
+            showApprovalButton={showApprovalButton}
+          />
+        );
+      }
       // BranchBasic - has Managerial Skills (branch manager)
       return (
         <ViewResultsModalBranchManager

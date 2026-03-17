@@ -54,6 +54,7 @@ import EvaluationTypeModal from "@/components/EvaluationTypeModal";
 import BranchEvaluationForm from "@/components/evaluation/BranchEvaluationForm";
 import BranchRankNfileEvaluationForm from "@/components/evaluation/BranchRankNfileEvaluationForm";
 import BranchManagerEvaluationForm from "@/components/evaluation/BranchManagerEvaluationForm";
+import AreaManagerEvaluationForm from "@/components/evaluation/AreaManagerEvaluationForm";
 import RankNfileHo from "@/components/evaluation/RankNfileHo";
 import BasicHo from "@/components/evaluation/BasicHo";
 
@@ -202,7 +203,7 @@ export default function UserManagementTab() {
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
   const [evaluationType, setEvaluationType] = useState<
-    "employee" | "manager" | null
+    "employee" | "manager" | "areaManager" | null
   >(null);
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
@@ -2273,6 +2274,17 @@ export default function UserManagementTab() {
 
           setIsEvaluationModalOpen(true);
         }}
+        onSelectAreaManagerAction={() => {
+          const employee = selectedEmployeeForEvaluation;
+          if (!employee) {
+            console.error("No employee selected!");
+            return;
+          }
+          setEvaluationType("areaManager");
+          setIsEvaluationTypeModalOpen(false);
+
+          setIsEvaluationModalOpen(true);
+        }}
         employeeName={
           selectedEmployeeForEvaluation
             ? `${selectedEmployeeForEvaluation?.fname || ""} ${selectedEmployeeForEvaluation?.lname || ""}`.trim()
@@ -2344,7 +2356,16 @@ export default function UserManagementTab() {
               )}
             </>
           )}
-         
+          {selectedEmployeeForEvaluation && evaluationType === "areaManager" && (
+            <AreaManagerEvaluationForm
+              employee={selectedEmployeeForEvaluation}
+              onCloseAction={() => {
+                setIsEvaluationModalOpen(false);
+                setSelectedEmployee(null);
+                setEvaluationType(null);
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
