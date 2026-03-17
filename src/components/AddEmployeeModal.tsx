@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,8 @@ import { Combobox } from "@/components/ui/combobox";
 import LoadingAnimation from "@/components/LoadingAnimation";
 import { useToast } from "@/hooks/useToast";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
+import { FileSpreadsheet, Upload, X } from "lucide-react";
+import { apiService } from "@/lib/apiService";
 import {
   Select,
   SelectContent,
@@ -44,6 +46,7 @@ interface AddEmployeeModalProps {
   branches: any;
   positions: any;
   roles: any;
+  onBulkUploadClick?: () => void;
 }
 
 const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
@@ -54,6 +57,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   branches,
   positions,
   roles,
+  onBulkUploadClick,
 }) => {
   const [formData, setFormData] = useState<User>({
     employee_id: "",
@@ -73,7 +77,13 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [bulkFileError, setBulkFileError] = useState<string>("");
+  const [isBulkUploading, setIsBulkUploading] = useState(false);
+  const bulkFileInputRef = useRef<HTMLInputElement | null>(null);
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
+  const toast = useToast();
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -94,8 +104,62 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       });
       setErrors({});
       setShowPassword(false);
+      setIsBulkUploadOpen(false);
+      setBulkFile(null);
+      setBulkFileError("");
     }
   }, [isOpen]);
+
+  const handleBulkUploadClick = () => {
+    if (onBulkUploadClick) {
+      onBulkUploadClick();
+      return;
+    }
+    setIsBulkUploadOpen(true);
+  };
+
+  const validateBulkFile = (file: File | null) => {
+    if (!file) {
+      setBulkFileError("Please choose an Excel file to upload.");
+      return false;
+    }
+    const name = file.name.toLowerCase();
+    const isExcel =
+      name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv");
+    if (!isExcel) {
+      setBulkFileError("Supported files: .xlsx, .xls, .csv");
+      return false;
+    }
+    setBulkFileError("");
+    return true;
+  };
+
+  const submitBulkUpload = async () => {
+    if (!validateBulkFile(bulkFile)) return;
+    if (!bulkFile) return;
+
+    setIsBulkUploading(true);
+    const formDataToUpload = new FormData();
+    formDataToUpload.append("file", bulkFile);
+
+    try {
+      await toast.promise(apiService.bulkRegisterUser(formDataToUpload), {
+        loading: "Uploading file...",
+        success: "Bulk upload submitted",
+        error: (err) =>
+          err?.response?.data?.message ||
+          err?.message ||
+          "Bulk upload failed. Please try again.",
+      });
+
+      setIsBulkUploadOpen(false);
+      setBulkFile(null);
+      setBulkFileError("");
+      if (bulkFileInputRef.current) bulkFileInputRef.current.value = "";
+    } finally {
+      setIsBulkUploading(false);
+    }
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -534,35 +598,178 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             </div>
           </div>
 
-          <DialogFooter className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
-            <Button
-              variant="outline"
-              onClick={handleCancel}
-              className="px-6 bg-red-600 hover:bg-red-700 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              className={`bg-green-600 hover:bg-green-700 text-white px-6 
+          <DialogFooter className="flex justify-end gap-3 pt-6 mt-6 border-t border-gray-200">
+            {/* Primary actions */}
+            <div className="flex flex-wrap justify-end gap-3 w-full md:w-auto">
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                className="px-6 bg-red-600 hover:bg-red-700 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleBulkUploadClick}
+                className="px-4 bg-blue-500 text-white hover:bg-blue-600 hover:text-white cursor-pointer hover:scale-105 transition-transform duration-200"
+                disabled={isSaving}
+              >
+                Upload User
+              </Button>
+              <Button
+                onClick={handleSave}
+                className={`bg-green-600 hover:bg-green-700 text-white px-6 
     cursor-pointer hover:scale-110 transition-transform duration-200 
     shadow-lg hover:shadow-xl transition-all duration-300
     ${isSaving ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
   `}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <div className="flex items-center space-x-2">
-                  <LoadingAnimation size="sm" variant="spinner" color="green" />
-                  <span>Adding...</span>
-                </div>
-              ) : (
-                "Add Employee"
-              )}
-            </Button>
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <div className="flex items-center space-x-2">
+                    <LoadingAnimation size="sm" variant="spinner" color="green" />
+                    <span>Adding...</span>
+                  </div>
+                ) : (
+                  "Add Employee"
+                )}
+              </Button>
+            </div>
           </DialogFooter>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Upload Modal (UI only; backend route can be added later) */}
+      <Dialog
+        open={isBulkUploadOpen}
+        onOpenChangeAction={(open) => {
+          setIsBulkUploadOpen(open);
+          if (!open) {
+            setBulkFile(null);
+            setBulkFileError("");
+          }
+        }}
+      >
+        <DialogContent className={`max-w-xl p-0 overflow-hidden ${dialogAnimationClass}`}>
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 px-6 py-5 text-white">
+            <DialogHeader>
+              <div className="flex items-start gap-4">
+                <div className="bg-white/15 p-3 rounded-xl">
+                  <FileSpreadsheet className="h-7 w-7" />
+                </div>
+                <div className="flex-1">
+                  <DialogTitle className="text-xl">Bulk Upload Accounts</DialogTitle>
+                  <DialogDescription className="text-blue-100">
+                    Upload an Excel/CSV file to create multiple employee accounts.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+          </div>
+
+          {/* Body */}
+          <div className="p-6 space-y-5 bg-gradient-to-br from-blue-50 to-indigo-50">
+            <div className="rounded-lg border border-blue-200 bg-white/80 p-4">
+              <p className="text-sm font-semibold text-gray-900">Before you upload</p>
+              <ul className="mt-2 text-sm text-gray-700 space-y-1">
+                <li>1) Prepare your file using the required columns.</li>
+                <li>2) Choose the file below.</li>
+                <li>3) Click <span className="font-semibold">Continue</span> (backend hook will be added later).</li>
+              </ul>
+              <p className="mt-2 text-xs text-gray-500">
+                Supported formats: <span className="font-medium">.xlsx</span>, <span className="font-medium">.xls</span>, <span className="font-medium">.csv</span>
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bulk_upload_file">Upload file</Label>
+
+              {/* Hidden input + styled picker */}
+              <Input
+                ref={bulkFileInputRef}
+                id="bulk_upload_file"
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  setBulkFile(file);
+                  validateBulkFile(file);
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => bulkFileInputRef.current?.click()}
+                className={`w-full cursor-pointer rounded-xl border-2 border-dashed p-5 text-left transition-all
+                  ${bulkFileError ? "border-red-400 bg-red-50" : "border-blue-300 bg-white hover:bg-blue-50/50"}
+                `}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`${bulkFileError ? "bg-red-100" : "bg-blue-100"} p-2 rounded-lg`}>
+                    <Upload className={`${bulkFileError ? "text-red-600" : "text-blue-700"} h-5 w-5`} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {bulkFile ? "Change file" : "Choose a file to upload"}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      {bulkFile ? "Click to select a different file" : "Click to browse (.xlsx, .xls, .csv)"}
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {bulkFileError && <p className="text-sm text-red-600">{bulkFileError}</p>}
+
+              {bulkFile && !bulkFileError && (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-white px-3 py-2">
+                  <p className="text-sm text-gray-800 truncate">
+                    Selected: <span className="font-medium">{bulkFile.name}</span>
+                  </p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full hover:bg-blue-50"
+                    onClick={() => {
+                      setBulkFile(null);
+                      setBulkFileError("");
+                      if (bulkFileInputRef.current) bulkFileInputRef.current.value = "";
+                    }}
+                  >
+                    <X className="h-4 w-4 text-gray-600" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsBulkUploadOpen(false)}
+              className="px-6 cursor-pointer bg-red-600 hover:bg-red-700 text-white hover:text-white hover:scale-110 transition-transform duration-200"
+              disabled={isSaving || isBulkUploading}
+            >
+              Close
+            </Button>
+            <Button
+              type="button"
+              className="px-6 bg-blue-600 cursor-pointer hover:scale-110 transition-transform duration-200 hover:bg-blue-700 text-white"
+              onClick={() => {
+                submitBulkUpload();
+              }}
+              disabled={isSaving || isBulkUploading}
+            >
+              {isBulkUploading ? "Uploading..." : "Continue"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

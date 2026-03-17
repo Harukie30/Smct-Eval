@@ -319,6 +319,12 @@ export const apiService = {
     return response.data;
   },
 
+  // Bulk register users (Excel/CSV upload)
+  bulkRegisterUser: async (formData: FormData): Promise<any> => {
+    const response = await api.post("/bulkRegisterUser", formData);
+    return response.data;
+  },
+
   // Update branches for specific user
   updateUserBranch: async (
     userId: string | number,
