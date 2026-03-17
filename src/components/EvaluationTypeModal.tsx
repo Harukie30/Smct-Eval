@@ -109,7 +109,7 @@ export default function EvaluationTypeModal({
           <div className={`grid gap-6 grid-cols-1 ${showAreaManagerOption ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
             {/* Employee Evaluation Option (Rank and File) */}
             <Card
-              className="cursor-pointer hover:shadow-xl transition-all duration-300 border-0 shadow-md group overflow-hidden relative"
+              className="cursor-pointer hover:shadow-xl transition-all duration-300 border-0 shadow-md group overflow-hidden relative animate-fade-in-up-delay-1s"
               onClick={handleSelectEmployee}
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-blue-600"></div>
@@ -151,7 +151,7 @@ export default function EvaluationTypeModal({
 
             {/* Manager Evaluation Option (Basic) */}
             <Card
-              className="cursor-pointer hover:shadow-xl transition-all duration-300 border-0 shadow-md group overflow-hidden relative"
+              className="cursor-pointer hover:shadow-xl transition-all duration-300 border-0 shadow-md group overflow-hidden relative animate-fade-in-up-delay-2s"
               onClick={handleSelectManager}
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-green-600"></div>
@@ -194,14 +194,14 @@ export default function EvaluationTypeModal({
             {/* Area Manager Evaluation Option - Only shown when user is AVP and employee is Area Manager */}
             {showAreaManagerOption && (
               <Card
-                className="cursor-pointer hover:shadow-xl transition-all duration-300 border-0 shadow-md group overflow-hidden relative"
+                className="cursor-pointer hover:shadow-xl transition-all duration-300 border-0 shadow-md group overflow-hidden relative animate-fade-in-up-delay-3s"
                 onClick={handleSelectAreaManager}
               >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-purple-600"></div>
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-green-600"></div>
                 <CardContent className="p-6">
                   <div className="flex flex-col items-center text-center space-y-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                      <Building2 className="w-8 h-8 text-purple-600" />
+                    <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                      <Building2 className="w-8 h-8 text-green-600" />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900 mb-2">
@@ -212,16 +212,16 @@ export default function EvaluationTypeModal({
                         branches. Assesses regional oversight and leadership.
                       </p>
                       <div className="flex flex-wrap gap-2 justify-center mb-4">
-                        <span className="px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-full font-medium">
+                        <span className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
                           Area Managers
                         </span>
-                        <span className="px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-full font-medium">
-                          Regional
+                        <span className="px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
+                          8 Steps
                         </span>
                       </div>
                     </div>
                     <Button
-                      className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
+                      className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-md hover:shadow-lg transition-all cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleSelectAreaManager();
@@ -238,13 +238,7 @@ export default function EvaluationTypeModal({
 
           {/* Footer */}
           <div className="mt-8 flex justify-end">
-            <Button
-              variant="outline"
-              onClick={onCloseAction}
-              className="px-6 border-gray-300 text-gray-700 hover:bg-gray-100 cursor-pointer transition-all"
-            >
-              Cancel
-            </Button>
+            
           </div>
         </div>
       </DialogContent>

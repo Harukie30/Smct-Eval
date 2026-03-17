@@ -440,6 +440,15 @@ export const apiService = {
     return response.data;
   },
 
+  // Area Manager evaluation (BranchBasicAreaManager)
+  postBranchBasicAreaManager: async (
+    employeeId: number | string,
+    submission: EvaluationPayload
+  ): Promise<any> => {
+    const response = await api.post(`/BranchBasicAreaManager/${employeeId}`, submission);
+    return response.data;
+  },
+
   // Get branch rank and file employees
   postBranchRankNFile: async (
     employeeId: number | string,

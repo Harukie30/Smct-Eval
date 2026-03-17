@@ -28,6 +28,7 @@ import EvaluationTypeModal from "@/components/EvaluationTypeModal";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import BranchEvaluationForm from "@/components/evaluation/BranchEvaluationForm";
 import BranchManagerEvaluationForm from "@/components/evaluation/BranchManagerEvaluationForm";
+import AreaManagerEvaluationForm from "@/components/evaluation/AreaManagerEvaluationForm";
 import RankNfileHo from "@/components/evaluation/RankNfileHo";
 import BasicHo from "@/components/evaluation/BasicHo";
 import EvaluationsPagination from "@/components/paginationComponent";
@@ -135,7 +136,7 @@ export default function EmployeesTab() {
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<User | null>(null);
   const [evaluationType, setEvaluationType] = useState<
-    "employee" | "manager" | null
+    "employee" | "manager" | "areaManager" | null
   >(null);
   const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
 
@@ -712,6 +713,17 @@ export default function EmployeesTab() {
 
           setIsEvaluationModalOpen(true);
         }}
+        onSelectAreaManagerAction={() => {
+          const employee = selectedEmployeeForEvaluation;
+          if (!employee) {
+            console.error("No employee selected!");
+            return;
+          }
+          setEvaluationType("areaManager");
+          setIsEvaluationTypeModalOpen(false);
+
+          setIsEvaluationModalOpen(true);
+        }}
         employeeName={
           selectedEmployeeForEvaluation
             ? `${selectedEmployeeForEvaluation?.fname || ""} ${selectedEmployeeForEvaluation?.lname || ""}`.trim()
@@ -782,6 +794,16 @@ export default function EmployeesTab() {
                 />
               )}
             </>
+          )}
+          {selectedEmployeeForEvaluation && evaluationType === "areaManager" && (
+            <AreaManagerEvaluationForm
+              employee={selectedEmployeeForEvaluation}
+              onCloseAction={() => {
+                setIsEvaluationModalOpen(false);
+                setSelectedEmployee(null);
+                setEvaluationType(null);
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>

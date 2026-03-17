@@ -158,7 +158,14 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
       await refreshUser();
       return res;
     } catch (err: any) {
-      return { error: err.response?.data?.message || "Login failed" };
+      const isServerUnreachable =
+        err?.code === "ERR_NETWORK" ||
+        err?.message === "Network Error" ||
+        !err?.response;
+      return {
+        error: err.response?.data?.message || (isServerUnreachable ? "Server not found" : "Something went wrong"),
+        isServerUnreachable: !!isServerUnreachable,
+      };
     } finally {
       setIsLoading(false);
     }

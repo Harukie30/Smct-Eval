@@ -31,6 +31,8 @@ import { toastMessages } from "@/lib/toastMessages";
 import ContactDevsModal from "@/components/ContactDevsModal";
 import { HowItWorksModal } from "@/components/HowItWorksModal";
 import { LoginRegistrationGuideModal } from "@/components/LoginRegistrationGuideModal";
+import { AlertDialog } from "@/components/ui/alert-dialog";
+import { api } from "@/lib/api";
 import { withPublicPage } from "@/hoc";
 
 function LandingLoginPage() {
@@ -48,6 +50,11 @@ function LandingLoginPage() {
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [showLoginGuideModal, setShowLoginGuideModal] = useState(false);
   const [showLoginGuideModalFromLink, setShowLoginGuideModalFromLink] = useState(false);
+  const [showServerErrorDialog, setShowServerErrorDialog] = useState(false);
+  const [serverErrorTitle, setServerErrorTitle] = useState("Something went wrong");
+  const [serverErrorDescription, setServerErrorDescription] = useState(
+    "We couldn't complete your request. Please try again later."
+  );
 
   const { login, isLoading, user } = useUser();
   const router = useRouter();
@@ -64,6 +71,29 @@ function LandingLoginPage() {
     };
   }, [isAboutModalOpen]);
 
+  // Check server availability when page is ready (after initial auth check)
+  useEffect(() => {
+    if (isLoading) return;
+    let cancelled = false;
+    api.get("/profile").catch((err: any) => {
+      if (cancelled) return;
+      const isServerUnreachable =
+        err?.code === "ERR_NETWORK" ||
+        err?.message === "Network Error" ||
+        !err?.response;
+      if (isServerUnreachable) {
+        setServerErrorTitle("Server not found");
+        setServerErrorDescription(
+          "We couldn't reach the server. Please check your connection and try again."
+        );
+        setShowServerErrorDialog(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoading]);
+
   // Remove automatic redirect - let users stay on login page even if authenticated
   // This allows users to see the login form and choose to log in again or navigate elsewhere
 
@@ -78,10 +108,21 @@ function LandingLoginPage() {
       const result = await login(username, password);
 
       if (result?.error) {
-        // Show backend error
         setLoginError(result.error);
         toastMessages.login.error(result.error);
         setShowLoadingScreen(false);
+        if (result?.isServerUnreachable) {
+          setServerErrorTitle("Server not found");
+          setServerErrorDescription(
+            "We couldn't reach the server. Please check your connection and try again."
+          );
+        } else {
+          setServerErrorTitle("Something went wrong");
+          setServerErrorDescription(
+            result.error || "We couldn't complete your request. Please try again later."
+          );
+        }
+        setShowServerErrorDialog(true);
         return;
       }
 
@@ -118,6 +159,11 @@ function LandingLoginPage() {
       setLoginError(error.message || "Something went wrong");
       toastMessages.login.error(error.message);
       setShowLoadingScreen(false);
+      setServerErrorTitle("Something went wrong");
+      setServerErrorDescription(
+        error.message || "We couldn't complete your request. Please try again later."
+      );
+      setShowServerErrorDialog(true);
     }
   };
 
@@ -1176,6 +1222,16 @@ function LandingLoginPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Server / connection error alert */}
+      <AlertDialog
+        open={showServerErrorDialog}
+        onOpenChangeAction={setShowServerErrorDialog}
+        title={serverErrorTitle}
+        description={serverErrorDescription}
+        type="error"
+        confirmText="OK"
+      />
     </div>
   );
 }
