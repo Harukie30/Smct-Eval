@@ -109,7 +109,7 @@ export default function EvaluationTypeModal({
           <div className={`grid gap-6 grid-cols-1 ${showAreaManagerOption ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
             {/* Employee Evaluation Option (Rank and File) */}
             <Card
-              className="cursor-pointer hover:shadow-xl transition-all duration-300 border-0 shadow-md group overflow-hidden relative animate-fade-in-up-delay-1s"
+              className="cursor-pointer hover:shadow-xl transition-all hover:bg-blue-500/20 duration-300 border-0 shadow-md group overflow-hidden relative animate-fade-in-up-delay-1s"
               onClick={handleSelectEmployee}
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-blue-600"></div>
@@ -151,7 +151,7 @@ export default function EvaluationTypeModal({
 
             {/* Manager Evaluation Option (Basic) */}
             <Card
-              className="cursor-pointer hover:shadow-xl transition-all duration-300 border-0 shadow-md group overflow-hidden relative animate-fade-in-up-delay-2s"
+              className="cursor-pointer hover:shadow-xl transition-all hover:bg-green-500/20 duration-300 border-0 shadow-md group overflow-hidden relative animate-fade-in-up-delay-2s"
               onClick={handleSelectManager}
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-green-600"></div>
@@ -194,7 +194,7 @@ export default function EvaluationTypeModal({
             {/* Area Manager Evaluation Option - Only shown when user is AVP and employee is Area Manager */}
             {showAreaManagerOption && (
               <Card
-                className="cursor-pointer hover:shadow-xl transition-all duration-300 border-0 shadow-md group overflow-hidden relative animate-fade-in-up-delay-3s"
+                className="cursor-pointer hover:shadow-xl transition-all hover:bg-green-500/20 duration-300 border-0 shadow-md group overflow-hidden relative animate-fade-in-up-delay-3s"
                 onClick={handleSelectAreaManager}
               >
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-green-600"></div>
