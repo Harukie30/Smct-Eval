@@ -612,7 +612,7 @@ export default function AreaManagerEvaluationForm({
                     employee: employee,
                   };
                   if (step.id === 1 || step.id === 2) {
-                    stepProps.evaluationType = "basic";
+                    stepProps.evaluationType = "areaManager";
                   }
                   if (step.id === 2) {
                     stepProps.forceShowJobTargets = true;

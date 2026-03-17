@@ -1989,7 +1989,7 @@ export default function ViewResultsModalAreaManager({
               {/* Title */}
               <div className="text-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-900">
-                  Performance Review Form (BRANCH)
+                  Performance Review Form (BRANCHES)
                   <br />
                   Area Manager
                 </h1>

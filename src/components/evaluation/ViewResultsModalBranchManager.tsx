@@ -2091,7 +2091,7 @@ export default function ViewResultsModal({
                         </>
                       ) : (
                         <>
-                          Performance Review Form (BRANCH)
+                          Performance Review Form (BRANCHES)
                           <br />
                           Managers & Supervisors
                         </>

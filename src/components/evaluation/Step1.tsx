@@ -329,7 +329,7 @@ export default function Step1({
           {evaluationType === 'basic' 
             ? isEmployeeHO() 
               ? '(Head Office) Managers & Supervisors'
-              : 'Basic Evaluation (BRANCH)'
+              : 'Managers & Supervisors (BRANCHES)'
             : evaluationType === 'rankNfile'
             ? `Rank and File I & II (${isEmployeeHO() ? 'HO' : 'BRANCH'})`
             : `Rank and File I & II (${isEmployeeHO() ? 'HO' : 'BRANCH'})`}
