@@ -194,7 +194,7 @@ export default function EvaluationTypeModal({
             {/* Area Manager Evaluation Option - Only shown when user is AVP and employee is Area Manager */}
             {showAreaManagerOption && (
               <Card
-                className="cursor-pointer hover:shadow-xl transition-all hover:bg-green-500/20 duration-300 border-0 shadow-md group overflow-hidden relative animate-fade-in-up-delay-3s"
+                className="cursor-pointer hover:shadow-xl transition-all hover:bg-green-500/20 sduration-300 border-0 shadow-md group overflow-hidden relative animate-fade-in-up-delay-3s"
                 onClick={handleSelectAreaManager}
               >
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-green-600"></div>
