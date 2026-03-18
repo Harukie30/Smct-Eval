@@ -354,6 +354,35 @@ export default function ViewResultsModalRouter({
         />
       );
     }
+
+    // BranchBasicAreaManager → always ViewResultsModalAreaManager
+    // This evaluationType is specifically for AVP evaluating Area Managers on the branch-basic form.
+    // Route directly to the Area Manager view without extra guards so it cannot fall through to BranchBasic.
+    if (
+      evalTypeNormalized === "BRANCHBASICAREAMANAGER" ||
+      (evalTypeNormalized.includes("BRANCH") &&
+        evalTypeNormalized.includes("BASIC") &&
+        evalTypeNormalized.includes("AREAMANAGER"))
+    ) {
+      selectedComponent =
+        "ViewResultsModalAreaManager (BranchBasicAreaManager explicit)";
+      if (process.env.NODE_ENV === "development") {
+        console.log("✅ Routing to:", selectedComponent);
+      }
+      return (
+        <ViewResultsModalAreaManager
+          isOpen={isOpen}
+          onCloseAction={onCloseAction}
+          submission={submission}
+          onApprove={onApprove}
+          isApproved={isApproved}
+          approvalData={approvalData}
+          currentUserName={currentUserName}
+          currentUserSignature={currentUserSignature}
+          showApprovalButton={showApprovalButton}
+        />
+      );
+    }
     
     // BranchBasic / branch_basic → ViewResultsModalBranchManager (branch manager evaluations)
     // BUT: If employee is HO, route to HO Basic (ViewResultsModalBasic) instead

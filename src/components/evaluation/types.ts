@@ -114,6 +114,12 @@ interface EvaluationPayload {
   managerialSkillsExplanation4: string;
   managerialSkillsExplanation5: string;
   managerialSkillsExplanation6: string;
+  // Normalized relation-style payload (used by results modals / backend relations)
+  managerial_skills?: Array<{
+    question_number: 1 | 2 | 3 | 4 | 5 | 6;
+    score: number;
+    explanation: string;
+  }>;
   created_at: string;
 }
 

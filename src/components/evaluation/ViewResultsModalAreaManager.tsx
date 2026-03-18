@@ -44,7 +44,83 @@ type Submission = {
   ethicals: any;
   customer_services: any;
   managerial_skills?: any; // For Basic HO evaluations
+  // Flat fields when backend doesn't return managerial_skills relation (e.g. Area Manager)
+  managerialSkillsScore1?: number;
+  managerialSkillsScore2?: number;
+  managerialSkillsScore3?: number;
+  managerialSkillsScore4?: number;
+  managerialSkillsScore5?: number;
+  managerialSkillsScore6?: number;
+  managerialSkillsExplanation1?: string;
+  managerialSkillsExplanation2?: string;
+  managerialSkillsExplanation3?: string;
+  managerialSkillsExplanation4?: string;
+  managerialSkillsExplanation5?: string;
+  managerialSkillsExplanation6?: string;
 };
+
+type ManagerialSkillItem = {
+  question_number: 1 | 2 | 3 | 4 | 5 | 6;
+  score: number;
+  explanation: string;
+};
+
+/** Derive managerial_skills from relation array OR from flat score/explanation fields (so view works when backend doesn't return the relation). */
+function normalizeManagerialSkills(
+  submission: Submission | null
+): ManagerialSkillItem[] | null {
+  if (!submission) return null;
+
+  const raw =
+    (submission as any).managerial_skills ??
+    (submission as any).managerialSkills ??
+    null;
+
+  if (Array.isArray(raw) && raw.length > 0) {
+    const mapped = raw
+      .map((item: any) => {
+        const q = item?.question_number ?? item?.questionNumber ?? item?.q;
+        const score = Number(item?.score ?? item?.value ?? 0);
+        const explanation = String(item?.explanation ?? item?.comment ?? "");
+        const qNum = Number(q);
+        if (![1, 2, 3, 4, 5, 6].includes(qNum) || !score) return null;
+        return {
+          question_number: qNum as 1 | 2 | 3 | 4 | 5 | 6,
+          score,
+          explanation,
+        };
+      })
+      .filter(Boolean) as ManagerialSkillItem[];
+    return mapped.length ? mapped : null;
+  }
+
+  const derived: ManagerialSkillItem[] = [];
+  const sub = submission as any;
+  const data = sub?.data ?? sub?.evaluation ?? sub;
+  for (let i = 1; i <= 6; i++) {
+    const score = Number(
+      sub[`managerialSkillsScore${i}`] ??
+        sub[`managerial_skills_score_${i}`] ??
+        data?.[`managerialSkillsScore${i}`] ??
+        data?.[`managerial_skills_score_${i}`] ??
+        0
+    );
+    const explanation = String(
+      sub[`managerialSkillsExplanation${i}`] ??
+        sub[`managerial_skills_explanation_${i}`] ??
+        data?.[`managerialSkillsExplanation${i}`] ??
+        data?.[`managerial_skills_explanation_${i}`] ??
+        ""
+    );
+    if (score > 0)
+      derived.push({
+        question_number: i as 1 | 2 | 3 | 4 | 5 | 6,
+        score,
+        explanation,
+      });
+  }
+  return derived.length ? derived : null;
+}
 
 interface ApprovalData {
   id: string;
@@ -158,6 +234,9 @@ export default function ViewResultsModalAreaManager({
 
   // Compute isApproved status based on current approval data
   const computedIsApproved = isApproved || !!submission?.employee?.signature;
+
+  // Derive managerial skills from relation or flat fields so section shows when backend doesn't return relation
+  const managerialSkills = normalizeManagerialSkills(submission);
 
   // Automatic refresh when approval changes are detected in localStorage
   useEffect(() => {
@@ -1482,11 +1561,9 @@ export default function ViewResultsModalAreaManager({
               String(item.score)
             )
           );
-          const managerial_skillsScore = submission.managerial_skills
+          const managerial_skillsScore = managerialSkills
             ? calculateScore(
-                (submission.managerial_skills || []).map((item: any) =>
-                  String(item.score)
-                )
+                (managerialSkills || []).map((item: any) => String(item.score))
               )
             : 0;
 
@@ -3047,7 +3124,7 @@ export default function ViewResultsModalAreaManager({
               )}
 
               {/* Step 7: Managerial Skills - Area Manager evaluation (no Customer Service step) */}
-              {submission.managerial_skills && (
+              {!!managerialSkills?.length && (
                 <Card className="shadow-md hide-in-print">
                   <CardHeader className="bg-teal-50 border-b border-teal-200">
                     <CardTitle className="text-xl font-semibold text-teal-900">
@@ -3081,7 +3158,7 @@ export default function ViewResultsModalAreaManager({
                           </tr>
                         </thead>
                         <tbody>
-                          {(submission.managerial_skills || []).map(
+                          {(managerialSkills || []).map(
                             (item: {
                               question_number: 1 | 2 | 3 | 4 | 5 | 6;
                               score: number;
@@ -3559,7 +3636,7 @@ export default function ViewResultsModalAreaManager({
                               </tr>
 
                               {/* Managerial Skills - Area Manager evaluation */}
-                              {submission.managerial_skills && (
+                              {!!managerialSkills?.length && (
                                 <tr>
                                   <td className="border-2 border-gray-400 px-4 py-3 text-sm text-gray-700 font-medium">
                                     Managerial Skills
@@ -3570,7 +3647,7 @@ export default function ViewResultsModalAreaManager({
                                         className={`px-2 py-1 rounded text-sm font-bold screen-rating-badge ${getRatingColorForLabel(
                                           getRatingLabel(
                                             calculateScore(
-                                              (submission.managerial_skills || []).map(
+                                              (managerialSkills || []).map(
                                                 (item: any) => {
                                                   return String(item.score || 0);
                                                 }
@@ -3581,7 +3658,7 @@ export default function ViewResultsModalAreaManager({
                                       >
                                         {getRatingLabel(
                                           calculateScore(
-                                            (submission.managerial_skills || []).map(
+                                            (managerialSkills || []).map(
                                               (item: any) => {
                                                 return String(item.score || 0);
                                               }
@@ -3592,7 +3669,7 @@ export default function ViewResultsModalAreaManager({
                                       <span className="print-rating-text">
                                         {getRatingLabel(
                                           calculateScore(
-                                            (submission.managerial_skills || []).map(
+                                            (managerialSkills || []).map(
                                               (item: any) => {
                                                 return String(item.score || 0);
                                               }
@@ -3604,7 +3681,7 @@ export default function ViewResultsModalAreaManager({
                                   </td>
                                   <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                     {calculateScore(
-                                      (submission.managerial_skills || []).map((item: any) => {
+                                      (managerialSkills || []).map((item: any) => {
                                         return String(item.score || 0);
                                       })
                                     ).toFixed(2)}
@@ -3615,7 +3692,7 @@ export default function ViewResultsModalAreaManager({
                                   <td className="border-2 border-gray-400 px-4 py-3 text-center font-bold text-base">
                                     {(
                                       calculateScore(
-                                        (submission.managerial_skills || []).map((item: any) => {
+                                        (managerialSkills || []).map((item: any) => {
                                           return String(item.score || 0);
                                         })
                                       ) * 0.22
