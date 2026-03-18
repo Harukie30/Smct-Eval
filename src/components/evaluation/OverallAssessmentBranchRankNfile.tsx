@@ -962,26 +962,27 @@ export default function OverallAssessmentBranchRankNfile({
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-16"></th>
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                     Behavioral Indicators
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                     Example
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                    Score
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                    SCORE
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                     Rating
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                  Explanation (Required)
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
+                    Explanation (Required)
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     Mastery in Core Competencies and Job Functions
                     (L.E.A.D.E.R.)
                   </td>
@@ -989,7 +990,11 @@ export default function OverallAssessmentBranchRankNfile({
                     Demonstrates comprehensive understanding of job requirements
                     and applies knowledge effectively.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Consistently performs tasks accurately and with precision,
+                    showing a deep understanding of core job functions.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.jobKnowledgeScore1 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1026,14 +1031,18 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Keeps Documentation Updated
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Maintains current and accurate documentation for projects
                     and processes.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Ensures that procedures, guidelines, and documentation are
+                    current; contributing to organizational efficiency.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.jobKnowledgeScore2 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1070,14 +1079,18 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Problem Solving
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Effectively identifies and resolves work-related challenges
                     using job knowledge.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Identifies and resolves issues in advance, effectively
+                    preventing potential disruptions.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.jobKnowledgeScore3 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1143,33 +1156,39 @@ export default function OverallAssessmentBranchRankNfile({
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-16"></th>
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                     Behavioral Indicators
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                     Example
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                    Score
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                    SCORE
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                     Rating
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                  Explanation (Required)
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
+                    Explanation (Required)
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Meets Standards and Requirements
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Consistently delivers work that meets or exceeds established
                     standards and requirements.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Complies with industry regulations and project
+                    specifications; delivers reliable, high-quality work, and
+                    accurate work.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.qualityOfWorkScore1 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1206,14 +1225,17 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Timeliness (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Completes tasks and projects within established deadlines
                     and timeframes.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Submits work on time without compromising quality.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.qualityOfWorkScore2 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1250,14 +1272,17 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Work Output Volume (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Produces an appropriate volume of work output relative to
                     role expectations.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Handles a substantial workload without sacrificing quality.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.qualityOfWorkScore3 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1294,14 +1319,18 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Consistency in Performance (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Maintains consistent quality and performance standards
                     across all tasks and projects.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Meets productivity expectations reliably, without
+                    significant fluctuations.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.qualityOfWorkScore4 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1338,13 +1367,17 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Job Targets
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Achieves targets set for their respective position (Sales / CCR / Mechanic / etc.)
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Meets or exceeds the agreed targets consistently, and
+                    reports progress clearly.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.qualityOfWorkScore5 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1408,33 +1441,38 @@ export default function OverallAssessmentBranchRankNfile({
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-16"></th>
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                     Behavioral Indicators
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                     Example
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                    Score
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                    SCORE
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                     Rating
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                  Explanation (Required)
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
+                    Explanation (Required)
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Openness to Change (attitude towards change)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Demonstrates a positive attitude and openness to new ideas
                     and major changes at work
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Embraces new processes or policies, shows willingness to
+                    adjust, and stays optimistic during changes.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.adaptabilityScore1 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1471,14 +1509,18 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Flexibility in Job Role (ability to adapt to changes)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Adapts to changes in job responsibilities and willingly
                     takes on new tasks
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Handles shifting priorities smoothly and takes on new tasks
+                    as needed without hesitation.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.adaptabilityScore2 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1515,14 +1557,18 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Resilience in the Face of Challenges
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Maintains a positive attitude and performance under
                     challenging or difficult conditions
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Remains productive and composed under pressure, learns from
+                    setbacks, and continues moving forward.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.adaptabilityScore3 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1584,26 +1630,27 @@ export default function OverallAssessmentBranchRankNfile({
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-16"></th>
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                     Behavioral Indicators
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                     Example
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                    Score
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                    SCORE
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                     Rating
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                  Explanation (Required)
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
+                    Explanation (Required)
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Active Participation in Team Activities
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -1611,7 +1658,11 @@ export default function OverallAssessmentBranchRankNfile({
                     Contributes ideas and feedback during discussions. Engages
                     in team tasks to achieve group goals.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Attends team meetings regularly, contributes ideas, and
+                    actively supports team projects and initiatives.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.teamworkScore1 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1648,7 +1699,7 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Promotion of a Positive Team Culture
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -1656,7 +1707,11 @@ export default function OverallAssessmentBranchRankNfile({
                     culture. Provides support and constructive feedback.
                     Promotes teamwork and camaraderie.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Demonstrates respect, supports colleagues, and helps create
+                    a cooperative and inclusive team environment.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.teamworkScore2 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1693,7 +1748,7 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Effective Communication
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -1701,7 +1756,11 @@ export default function OverallAssessmentBranchRankNfile({
                     information and updates in a timely manner. Ensures
                     important details are communicated clearly.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Shares updates clearly and listens actively, ensuring the
+                    whole team stays aligned and informed.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.teamworkScore3 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1765,33 +1824,38 @@ export default function OverallAssessmentBranchRankNfile({
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-16"></th>
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                     Behavioral Indicators
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                     Example
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                    Score
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                    SCORE
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                     Rating
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                  Explanation (Required)
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
+                    Explanation (Required)
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Consistent Attendance
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Demonstrates regular attendance by being present at work as
                     scheduled
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Minimal absences; follows leave protocols and informs
+                    supervisor in advance when needed.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.reliabilityScore1 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1828,14 +1892,18 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Punctuality
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Arrives at work and meetings on time or before the scheduled
                     time
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Arrives on time consistently and is prepared to work or
+                    participate in meetings.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.reliabilityScore2 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1872,14 +1940,18 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Follows Through on Commitments
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Follows through on assignments from and commitments made to
                     coworkers or superiors
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Completes assigned tasks as promised, meets deadlines, and
+                    communicates early if issues arise.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.reliabilityScore3 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1916,14 +1988,18 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Reliable Handling of Routine Tasks
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Demonstrates reliability in completing routine tasks without
                     oversight
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Performs daily responsibilities independently and
+                    consistently, ensuring tasks are completed correctly.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.reliabilityScore4 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1988,32 +2064,37 @@ export default function OverallAssessmentBranchRankNfile({
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-16"></th>
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                     Behavioral Indicators
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                     Example
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                    Score
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                    SCORE
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                     Rating
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                  Explanation (Required)
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
+                    Explanation (Required)
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Follows Company Policies
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Complies with company rules, regulations, and memorandums
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Consistently follows policies and procedures and helps
+                    ensure compliance across the team.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.ethicalScore1 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2050,14 +2131,18 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Professionalism (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Maintains a high level of professionalism in all work
                     interactions
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Maintains proper conduct, communicates respectfully, and
+                    represents the company well at all times.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.ethicalScore2 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2094,14 +2179,18 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Accountability for Mistakes (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Takes responsibility for errors and actively works to
                     correct mistakes
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Owns errors, communicates impact, and implements corrective
+                    actions to prevent recurrence.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.ethicalScore3 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2138,14 +2227,18 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Respect for Others (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Treats all individuals fairly and with respect, regardless
                     of background or position
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Demonstrates fairness, empathy, and respect in all
+                    interactions; avoids discriminatory behavior.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.ethicalScore4 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2209,33 +2302,38 @@ export default function OverallAssessmentBranchRankNfile({
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-16"></th>
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                     Behavioral Indicators
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                     Example
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                    Score
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                    SCORE
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                     Rating
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                  Explanation (Required)
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
+                    Explanation (Required)
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Listening & Understanding
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Listens to customers and displays understanding of customer
                     needs and concerns
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Asks clarifying questions, acknowledges concerns, and
+                    confirms understanding before responding.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.customerServiceScore1 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2272,14 +2370,18 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Problem-Solving for Customer Satisfaction
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Proactively identifies and solves customer problems to
                     ensure satisfaction
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Provides clear options/solutions, takes ownership, and
+                    follows up until the issue is resolved.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.customerServiceScore2 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2316,14 +2418,18 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Product Knowledge for Customer Support (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Possesses comprehensive product knowledge to assist
                     customers effectively
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Explains products/services accurately, answers questions
+                    confidently, and recommends the right solution.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.customerServiceScore3 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2360,14 +2466,18 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Positive and Professional Attitude (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Maintains a positive and professional demeanor, particularly
                     during customer interactions
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Stays calm, courteous, and professional even with difficult
+                    customers or complaints.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.customerServiceScore4 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2404,13 +2514,17 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Timely Resolution of Customer Issues (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Resolves customer issues promptly and efficiently
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Resolves concerns within expected timelines, communicates
+                    status updates, and ensures closure.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.customerServiceScore5 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">

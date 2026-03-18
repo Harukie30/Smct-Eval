@@ -965,26 +965,27 @@ export default function OverallAssessmentAreaManager({
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-left font-bold text-black">
+                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-16"></th>
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                     Behavioral Indicators
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                     Example
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                    Score
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                    SCORE
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                     Rating
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                  Explanation (Required)
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
+                    Explanation (Required)
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                     Mastery in Core Competencies and Job Functions
                     (L.E.A.D.E.R.)
                   </td>
@@ -992,7 +993,11 @@ export default function OverallAssessmentAreaManager({
                     Demonstrates comprehensive understanding of job requirements
                     and applies knowledge effectively.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Consistently performs tasks accurately and with precision,
+                    showing a deep understanding of core job functions.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.jobKnowledgeScore1 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1029,14 +1034,18 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Keeps Documentation Updated
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Maintains current and accurate documentation for projects
                     and processes.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Ensures that procedures, guidelines, and documentation are
+                    current; contributing to organizational efficiency.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.jobKnowledgeScore2 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1073,14 +1082,18 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Problem Solving
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Effectively identifies and resolves work-related challenges
                     using job knowledge.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Identifies and resolves issues in advance, effectively
+                    preventing potential disruptions.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.jobKnowledgeScore3 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1146,33 +1159,39 @@ export default function OverallAssessmentAreaManager({
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-left font-bold text-black">
+                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-16"></th>
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                     Behavioral Indicators
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                     Example
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                    Score
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                    SCORE
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                     Rating
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                  Explanation (Required)
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
+                    Explanation (Required)
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Meets Standards and Requirements
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Consistently delivers work that meets or exceeds established
                     standards and requirements.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Complies with industry regulations and project
+                    specifications; delivers reliable, high-quality work, and
+                    accurate work.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.qualityOfWorkScore1 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1209,14 +1228,17 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Timeliness (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Completes tasks and projects within established deadlines
                     and timeframes.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Submits work on time without compromising quality.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.qualityOfWorkScore2 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1253,14 +1275,17 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Work Output Volume (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Produces an appropriate volume of work output relative to
                     role expectations.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Handles a substantial workload without sacrificing quality.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.qualityOfWorkScore3 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1297,14 +1322,18 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Consistency in Performance (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Maintains consistent quality and performance standards
                     across all tasks and projects.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Meets productivity expectations reliably, without
+                    significant fluctuations.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.qualityOfWorkScore4 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1344,13 +1373,17 @@ export default function OverallAssessmentAreaManager({
                 {/* Sales Targets for MOTORCYCLES */}
                 {data.jobTargetMotorcyclesScore && data.jobTargetMotorcyclesScore !== 0 ? (
                   <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Sales Targets for MOTORCYCLES
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Achieves branch sales targets for motorcycles
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Meets or exceeds the agreed motorcycle sales target
+                    consistently and tracks progress regularly.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.jobTargetMotorcyclesScore || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1391,13 +1424,17 @@ export default function OverallAssessmentAreaManager({
                 {/* Sales Targets for APPLIANCES */}
                 {data.jobTargetAppliancesScore && data.jobTargetAppliancesScore !== 0 ? (
                   <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Sales Targets for APPLIANCES
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Achieves branch sales targets for appliances
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Meets or exceeds the agreed appliances sales target and
+                    maintains consistent sales performance.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.jobTargetAppliancesScore || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1438,13 +1475,17 @@ export default function OverallAssessmentAreaManager({
                 {/* Sales Targets for CARS */}
                 {data.jobTargetCarsScore && data.jobTargetCarsScore !== 0 ? (
                   <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Sales Targets for CARS
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Achieves branch sales targets for cars
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Meets or exceeds the agreed car sales target and reports
+                    progress to leadership regularly.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.jobTargetCarsScore || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1485,13 +1526,17 @@ export default function OverallAssessmentAreaManager({
                 {/* Sales Targets for TRI-WHEELERS */}
                 {data.jobTargetTriWheelersScore && data.jobTargetTriWheelersScore !== 0 ? (
                   <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Sales Targets for TRI-WHEELERS (for 3S Shops only)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Achieves branch sales targets for tri-wheelers
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Meets or exceeds the tri-wheelers sales target and supports
+                    the team in achieving monthly goals.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.jobTargetTriWheelersScore || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1532,13 +1577,17 @@ export default function OverallAssessmentAreaManager({
                 {/* Collection Targets */}
                 {data.jobTargetCollectionScore && data.jobTargetCollectionScore !== 0 ? (
                   <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Collection Targets
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Achieves branch collection targets
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Meets or exceeds the collection target by tracking accounts
+                    and following up consistently.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.jobTargetCollectionScore || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1579,13 +1628,17 @@ export default function OverallAssessmentAreaManager({
                 {/* Spareparts & Lubricants Targets */}
                 {data.jobTargetSparepartsLubricantsScore && data.jobTargetSparepartsLubricantsScore !== 0 ? (
                   <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Spareparts & Lubricants Targets
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Achieves branch spareparts and lubricants targets
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Meets or exceeds the spareparts/lubricants target and
+                    monitors sales performance consistently.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.jobTargetSparepartsLubricantsScore || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1626,13 +1679,17 @@ export default function OverallAssessmentAreaManager({
                 {/* Shop Income Targets */}
                 {data.jobTargetShopIncomeScore && data.jobTargetShopIncomeScore !== 0 ? (
                   <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Shop Income Targets
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Achieves branch shop income targets
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Meets or exceeds the shop income target and tracks service
+                    income sources to sustain results.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.jobTargetShopIncomeScore || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1697,33 +1754,38 @@ export default function OverallAssessmentAreaManager({
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-left font-bold text-black">
+                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-16"></th>
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                     Behavioral Indicators
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                     Example
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                    Score
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                    SCORE
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                     Rating
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                    Comments
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
+                    Explanation (Required)
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Openness to Change (attitude towards change)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Demonstrates a positive attitude and openness to new ideas
                     and major changes at work
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Embraces new processes or policies, shows willingness to
+                    adjust, and stays optimistic during changes.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.adaptabilityScore1 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1760,14 +1822,18 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Flexibility in Job Role (ability to adapt to changes)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Adapts to changes in job responsibilities and willingly
                     takes on new tasks
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Handles shifting priorities smoothly and takes on new tasks
+                    as needed without hesitation.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.adaptabilityScore2 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1804,14 +1870,18 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Resilience in the Face of Challenges
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Maintains a positive attitude and performance under
                     challenging or difficult conditions
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Remains productive and composed under pressure, learns from
+                    setbacks, and continues moving forward.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.adaptabilityScore3 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1873,26 +1943,27 @@ export default function OverallAssessmentAreaManager({
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-left font-bold text-black">
+                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-16"></th>
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                     Behavioral Indicators
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                     Example
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                    Score
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                    SCORE
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                     Rating
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                  Explanation (Required)
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
+                    Explanation (Required)
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Active Participation in Team Activities
                   </td>
                   <td className="border border-gray-300  px-4 py-3 text-sm text-gray-700">
@@ -1900,7 +1971,11 @@ export default function OverallAssessmentAreaManager({
                     Contributes ideas and feedback during discussions. Engages
                     in team tasks to achieve group goals.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Attends team meetings regularly, contributes ideas, and
+                    actively supports team projects and initiatives.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.teamworkScore1 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1937,7 +2012,7 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Promotion of a Positive Team Culture
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -1945,7 +2020,11 @@ export default function OverallAssessmentAreaManager({
                     culture. Provides support and constructive feedback.
                     Promotes teamwork and camaraderie.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Demonstrates respect, supports colleagues, and helps create
+                    a cooperative and inclusive team environment.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.teamworkScore2 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -1982,7 +2061,7 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Effective Communication
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -1990,7 +2069,11 @@ export default function OverallAssessmentAreaManager({
                     information and updates in a timely manner. Ensures
                     important details are communicated clearly.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Shares updates clearly and listens actively, ensuring the
+                    whole team stays aligned and informed.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.teamworkScore3 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2054,33 +2137,38 @@ export default function OverallAssessmentAreaManager({
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-left font-bold text-black">
+                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-16"></th>
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                     Behavioral Indicators
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                     Example
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                    Score
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                    SCORE
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                     Rating
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                  Explanation (Required)
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
+                    Explanation (Required)
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Consistent Attendance
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Demonstrates regular attendance by being present at work as
                     scheduled
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Minimal absences; follows leave protocols and informs
+                    supervisor in advance when needed.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.reliabilityScore1 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2117,14 +2205,18 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Punctuality
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Arrives at work and meetings on time or before the scheduled
                     time
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Arrives on time consistently and is prepared to work or
+                    participate in meetings.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.reliabilityScore2 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2161,14 +2253,18 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Follows Through on Commitments
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Follows through on assignments from and commitments made to
                     coworkers or superiors
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Completes assigned tasks as promised, meets deadlines, and
+                    communicates early if issues arise.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.reliabilityScore3 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2205,14 +2301,18 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Reliable Handling of Routine Tasks
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Demonstrates reliability in completing routine tasks without
                     oversight
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Performs daily responsibilities independently and
+                    consistently, ensuring tasks are completed correctly.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.reliabilityScore4 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2277,32 +2377,37 @@ export default function OverallAssessmentAreaManager({
             <table className="w-full border-collapse border border-gray-300">
               <thead>
                 <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-3 text-left font-bold text-black">
+                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-16"></th>
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                     Behavioral Indicators
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                     Example
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                    Score
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                    SCORE
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                     Rating
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                  Explanation (Required)
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
+                    Explanation (Required)
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Follows Company Policies
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Complies with company rules, regulations, and memorandums
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Consistently follows policies and procedures and helps
+                    ensure compliance across the team.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.ethicalScore1 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2339,14 +2444,18 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Professionalism (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Maintains a high level of professionalism in all work
                     interactions
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Maintains proper conduct, communicates respectfully, and
+                    represents the company well at all times.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.ethicalScore2 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2383,14 +2492,18 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Accountability for Mistakes (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Takes responsibility for errors and actively works to
                     correct mistakes
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Owns errors, communicates impact, and implements corrective
+                    actions to prevent recurrence.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.ethicalScore3 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2427,14 +2540,18 @@ export default function OverallAssessmentAreaManager({
                   </td>
                 </tr>
                 <tr>
-                  <td className="border border-gray-300  px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Respect for Others (L.E.A.D.E.R.)
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Treats all individuals fairly and with respect, regardless
                     of background or position
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                    Demonstrates fairness, empathy, and respect in all
+                    interactions; avoids discriminatory behavior.
+                  </td>
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.ethicalScore4 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2501,11 +2618,11 @@ export default function OverallAssessmentAreaManager({
                   <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                     Behavioral Indicators
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/3">
+                  <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                     Example
                   </th>
-                  <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                    Score
+                  <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                    SCORE
                   </th>
                   <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                     Rating
@@ -2518,7 +2635,7 @@ export default function OverallAssessmentAreaManager({
               <tbody>
                 {/* Row 1: Leadership */}
                 <tr>
-                  <td className="border border-gray-300 text-center px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Leadership
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -2527,7 +2644,7 @@ export default function OverallAssessmentAreaManager({
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Encourages the team to complete a critical project ahead of the deadline while maintaining quality.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.managerialSkillsScore1 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2565,7 +2682,7 @@ export default function OverallAssessmentAreaManager({
                 </tr>
                 {/* Row 2: Motivation */}
                 <tr>
-                  <td className="border border-gray-300 text-center px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Motivation
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -2574,7 +2691,7 @@ export default function OverallAssessmentAreaManager({
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Recognizes and rewards team achievements to maintain high morale and engagement.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.managerialSkillsScore2 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2612,7 +2729,7 @@ export default function OverallAssessmentAreaManager({
                 </tr>
                 {/* Row 3: Decision-Making */}
                 <tr>
-                  <td className="border border-gray-300 text-center px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Decision-Making
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -2621,7 +2738,7 @@ export default function OverallAssessmentAreaManager({
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Evaluates a situation, assesses needs, considers alternatives, and implements solutions that benefit the team and the company.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.managerialSkillsScore3 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2659,7 +2776,7 @@ export default function OverallAssessmentAreaManager({
                 </tr>
                 {/* Row 4: Planning & Resource Management */}
                 <tr>
-                  <td className="border border-gray-300 text-center px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Planning & Resource Management
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -2668,7 +2785,7 @@ export default function OverallAssessmentAreaManager({
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Develops a timeline for team deliverables, ensuring tasks are assigned based on workload and skills.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.managerialSkillsScore4 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2706,7 +2823,7 @@ export default function OverallAssessmentAreaManager({
                 </tr>
                 {/* Row 5: Performance Feedback */}
                 <tr>
-                  <td className="border border-gray-300 text-center px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Performance Feedback
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -2715,7 +2832,7 @@ export default function OverallAssessmentAreaManager({
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Holds one-on-one meetings to discuss individual performance and offer guidance for improvement.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.managerialSkillsScore5 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2753,7 +2870,7 @@ export default function OverallAssessmentAreaManager({
                 </tr>
                 {/* Row 6: Conflict Resolution */}
                 <tr>
-                  <td className="border border-gray-300 text-center px-4 py-3 text-sm text-gray-700">
+                  <td className="border border-gray-300 font-bold text-center px-4 py-3 text-sm text-black">
                     Conflict Resolution
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
@@ -2762,7 +2879,7 @@ export default function OverallAssessmentAreaManager({
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Mediates conflict between team members, ensuring a collaborative solution that benefits the group.
                   </td>
-                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                  <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.managerialSkillsScore6 || ""}
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">

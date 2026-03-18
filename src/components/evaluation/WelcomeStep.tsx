@@ -49,10 +49,9 @@ export default function WelcomeStep({
   // For HO evaluations:
   // - RankNFile: Steps 1-6, Overall Assessment (no Customer Service, no Managerial Skills)
   // - Basic: Steps 1-6, Step 7 (Managerial Skills), Overall Assessment
-  // - Area Manager: Steps 1-6, Step 7 (Customer Service), Step 8 (Managerial Skills), Overall Assessment
-  const showStep7CustomerService = isAreaMgr; // Only Area Managers get Customer Service in HO
-  const showStep7ManagerialSkills = evaluationType === 'basic'; // Basic HO gets Managerial Skills as Step 7
-  const showStep8ManagerialSkills = isAreaMgr; // Area Managers get Managerial Skills as Step 8
+  // - Area Manager: Steps 1-6, Step 7 (Managerial Skills), Overall Assessment (no Customer Service)
+  const showStep7ManagerialSkills =
+    evaluationType === 'basic' || isAreaMgr; // Basic HO and Area Managers get Managerial Skills as Step 7
   
   // Define steps based on evaluation type (HO only)
   const getEvaluationSteps = () => {
@@ -67,17 +66,8 @@ export default function WelcomeStep({
     
     let nextStepId = 7;
     
-    // For Area Managers: Step 7 is Customer Service, Step 8 is Managerial Skills
-    if (isAreaMgr) {
-      if (showStep7CustomerService) {
-        steps.push({ id: nextStepId++, title: "Customer Service" });
-      }
-      if (showStep8ManagerialSkills) {
-        steps.push({ id: nextStepId++, title: "Managerial Skills" });
-      }
-    }
-    // For BasicHo (HO users picking basic): Step 7 is Managerial Skills
-    else if (showStep7ManagerialSkills) {
+    // For Basic Ho and Area Managers: Step 7 is Managerial Skills
+    if (showStep7ManagerialSkills) {
       steps.push({ id: nextStepId++, title: "Managerial Skills" });
     }
     // For RankNFile: No additional steps, goes directly to Overall Assessment
@@ -117,7 +107,7 @@ export default function WelcomeStep({
           {evaluationType === 'basic'
             ? "This comprehensive evaluation for Head Office includes managerial skills assessment and will help evaluate performance across multiple dimensions."
             : isAreaMgr
-            ? "This comprehensive evaluation for Head Office Area Managers includes customer service and managerial skills assessment and will help evaluate performance across multiple dimensions."
+            ? "This comprehensive evaluation for Head Office Area Managers includes managerial skills assessment and will help evaluate performance across multiple dimensions."
             : "This comprehensive evaluation for Head Office will help assess performance across multiple dimensions."}
         </p>
       </div>
