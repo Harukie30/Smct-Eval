@@ -1787,21 +1787,24 @@ export default function ViewResultsModalAreaManager({
   const TEAMWORK = {
     1: {
       title: "Active Participation in Team Activities",
-      indicator: "Active Participation in Team Activities",
+      indicator:
+        "Actively participates in team meetings and projects. Contributes ideas and feedback during discussions. Engages in team tasks to achieve group goals.",
       example:
-        "  Actively participates in team meetings and projects. Contributes ideas and feedback during discussions. Engages in team tasks to achieve group goals.",
+        "Attends team meetings regularly, contributes ideas, and actively supports team projects and initiatives.",
     },
     2: {
       title: "Promotion of a Positive Team Culture",
-      indicator: "Promotion of a Positive Team Culture",
+      indicator:
+        "Interacts positively with coworkers. Fosters inclusive team culture. Provides support and constructive feedback. Promotes teamwork and camaraderie.",
       example:
-        "  Interacts positively with coworkers. Fosters inclusive team culture. Provides support and constructive feedback. Promotes teamwork and camaraderie.",
+        "Demonstrates respect, supports colleagues, and helps create a cooperative and inclusive team environment.",
     },
     3: {
       title: "  Effective Communication",
-      indicator: "  Effective Communication",
+      indicator:
+        "Communicates openly and clearly with team members. Shares information and updates in a timely manner. Ensures important details are communicated clearly.",
       example:
-        " Communicates openly and clearly with team members. Shares information and updates in a timely manner. Ensures important details are communicated clearly.",
+        "Shares updates clearly and listens actively, ensuring the whole team stays aligned and informed.",
     },
   };
 
@@ -1811,29 +1814,66 @@ export default function ViewResultsModalAreaManager({
       indicator:
         " Demonstrates regular attendance by being present at work as scheduled",
       example:
-        " Has not taken any unplanned absences and follows the company's attendance policy.",
+        "Has not taken any unplanned absences and follows the company's attendance policy.\n\nGrading Guide:\n(1) 5+ absences in a month\n(2) 3-4 absences in a month\n(3) 1-2 absences in a month\n(4) 2 absences in a quarter\n(5) 1 absence or no absence in a quarter",
     },
     2: {
       title: " Punctuality",
       indicator:
         "Arrives at work and meetings on time or before the scheduled time",
       example:
-        "Consistently arrives at work on time, ready to begin work promptly.",
+        "Consistently arrives at work on time, ready to begin work promptly.\n\nGrading Guide:\n(1) 10+ lates in a month\n(2) 7-9 lates in a month\n(3) 4-6 lates in a month\n(4) 2-3 lates in a month\n(5) 1 late or never late in a month",
     },
     3: {
       title: "Follows Through on Commitments",
-      indicator: "Follows Through on Commitments",
+      indicator:
+        "Follows through on assignments from and commitments made to coworkers or superiors",
       example:
-        " Follows through on assignments from and commitments made to coworkers or superiors",
+        "Completes assigned tasks as promised, meets deadlines, and communicates early if issues arise.",
     },
     4: {
       title: "Reliable Handling of Routine Tasks",
       indicator:
         " Demonstrates reliability in completing routine tasks without oversight",
       example:
-        "Delivers on commitments, ensuring that expectations are met or exceeded.",
+        "Performs daily responsibilities independently and consistently, ensuring tasks are completed correctly.",
     },
   };
+
+  const RELIABILITY_GUIDE_MARKER = "Grading Guide:";
+
+  function renderReliabilityExample(example: string) {
+    const idx = example.indexOf(RELIABILITY_GUIDE_MARKER);
+    if (idx === -1) {
+      return <div className="whitespace-pre-line">{example}</div>;
+    }
+
+    const before = example.slice(0, idx).trim();
+    const after = example
+      .slice(idx + RELIABILITY_GUIDE_MARKER.length)
+      .replace(/^\s*:\s*/, "")
+      .trim();
+
+    const lines = after
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    return (
+      <div className="space-y-3">
+        <div className="whitespace-pre-line">{before}</div>
+        <div className="space-y-1">
+          <div className="font-semibold text-gray-900">
+            {RELIABILITY_GUIDE_MARKER}
+          </div>
+          <div className="space-y-0.5">
+            {lines.map((line, idx2) => (
+              <div key={`${idx2}-${line}`}>{line}</div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const ETHICAL = {
     1: {
@@ -2429,21 +2469,21 @@ export default function ViewResultsModalAreaManager({
                       <table className="w-full border-collapse border border-gray-300">
                         <thead>
                           <tr className="bg-gray-100">
-                            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900"></th>
-                            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                            <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-16"></th>
+                            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
                               Behavioral Indicators
                             </th>
-                            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
+                            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/5">
                               Example
                             </th>
-                            <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-24">
-                              Score
+                            <th className="border border-gray-300 px-4 py-3 text-center font-bold text-gray-900 w-32 bg-yellow-200">
+                              SCORE
                             </th>
                             <th className="border border-gray-300 px-4 py-3 text-center font-semibold text-gray-900 w-32">
                               Rating
                             </th>
-                            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900">
-                            Explanation (Required) 
+                            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 w-1/4">
+                              Explanation (Required)
                             </th>
                           </tr>
                         </thead>
@@ -2459,16 +2499,16 @@ export default function ViewResultsModalAreaManager({
 
                               return (
                                 <tr key={item.question_number}>
-                                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  <td className="border border-gray-300 font-bold px-4 py-3 text-sm text-black text-center">
                                     {indicators.title}
                                   </td>
                                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                                     {indicators.indicator}
                                   </td>
-                                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
+                                  <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700 whitespace-pre-line">
                                     {indicators.example}
                                   </td>
-                                  <td className="border border-gray-300 px-4 py-3 text-center font-medium">
+                                  <td className="border border-gray-300 px-4 py-3 text-center">
                                     {item.score}
                                   </td>
                                   <td className="border border-gray-300 px-4 py-3 text-center">
@@ -2490,6 +2530,7 @@ export default function ViewResultsModalAreaManager({
                         </tbody>
                       </table>
                     </div>
+
                   </CardContent>
                 </Card>
               )}
@@ -2791,6 +2832,7 @@ export default function ViewResultsModalAreaManager({
                         </tbody>
                       </table>
                     </div>
+
                   </CardContent>
                 </Card>
               )}
@@ -3013,7 +3055,7 @@ export default function ViewResultsModalAreaManager({
                                     {indicators.indicator}
                                   </td>
                                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                                    {indicators.example}
+                                    {renderReliabilityExample(indicators.example)}
                                   </td>
                                   <td className="border border-gray-300 px-4 py-3 text-center font-medium">
                                     {item.score}

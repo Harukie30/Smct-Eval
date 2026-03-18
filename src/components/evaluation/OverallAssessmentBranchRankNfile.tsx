@@ -1853,7 +1853,23 @@ export default function OverallAssessmentBranchRankNfile({
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Minimal absences; follows leave protocols and informs
-                    supervisor in advance when needed.
+                    supervisor in advance when needed. 
+
+                    <br />
+                    <br />
+                    Grading Guide:
+                    <br />
+                    (1) 5+ absences in a month
+                    <br />
+                    (2) 3-4 absences in a month
+                    <br />
+                    (3) 1-2 absences in a month
+                    <br />
+                    (4) 2 absences in a quarter
+                    <br />
+                    (5) 1 absence or no absence in a quarter
+                    <br />
+                    <br />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.reliabilityScore1 || ""}
@@ -1902,6 +1918,22 @@ export default function OverallAssessmentBranchRankNfile({
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
                     Arrives on time consistently and is prepared to work or
                     participate in meetings.
+
+                    <br />
+                    <br />
+                    Grading Guide:
+                    <br />
+                    (1) 10+ lates in a month
+                    <br />
+                    (2) 7-9 lates in a month
+                    <br />
+                    (3) 4-6 lates in a month
+                    <br />
+                    (4) 2-3 lates in a month
+                    <br />
+                    (5) 1 late or never late in a month
+                    <br />
+                    <br />
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.reliabilityScore2 || ""}
