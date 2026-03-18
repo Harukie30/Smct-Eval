@@ -81,6 +81,8 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkFileError, setBulkFileError] = useState<string>("");
   const [isBulkUploading, setIsBulkUploading] = useState(false);
+  const [isBulkErrorDialogOpen, setIsBulkErrorDialogOpen] = useState(false);
+  const [bulkErrorMessage, setBulkErrorMessage] = useState<string>("");
   const bulkFileInputRef = useRef<HTMLInputElement | null>(null);
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const toast = useToast();
@@ -120,16 +122,25 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
   const validateBulkFile = (file: File | null) => {
     if (!file) {
-      setBulkFileError("Please choose an Excel file to upload.");
+      const message = "Please choose an Excel file to upload.";
+      setBulkFileError(message);
+      setBulkErrorMessage(message);
+      setIsBulkErrorDialogOpen(true);
       return false;
     }
+
     const name = file.name.toLowerCase();
     const isExcel =
       name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".csv");
+
     if (!isExcel) {
-      setBulkFileError("Supported files: .xlsx, .xls, .csv");
+      const message = "Unsupported file type. Supported files: .xlsx, .xls, .csv";
+      setBulkFileError(message);
+      setBulkErrorMessage(message);
+      setIsBulkErrorDialogOpen(true);
       return false;
     }
+
     setBulkFileError("");
     return true;
   };
@@ -145,17 +156,21 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     try {
       await toast.promise(apiService.bulkRegisterUser(formDataToUpload), {
         loading: "Uploading file...",
-        success: "Bulk upload submitted",
-        error: (err) =>
-          err?.response?.data?.message ||
-          err?.message ||
-          "Bulk upload failed. Please try again.",
+        success: "upload submitted",
+        error: "upload failed. Please check the details and try again.",
       });
 
       setIsBulkUploadOpen(false);
       setBulkFile(null);
       setBulkFileError("");
       if (bulkFileInputRef.current) bulkFileInputRef.current.value = "";
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "An unexpected server error occurred during upload. Please try again later.";
+      setBulkErrorMessage(message);
+      setIsBulkErrorDialogOpen(true);
     } finally {
       setIsBulkUploading(false);
     }
@@ -678,7 +693,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               <ul className="mt-2 text-sm text-gray-700 space-y-1">
                 <li>1) Prepare your file using the required columns.</li>
                 <li>2) Choose the file below.</li>
-                <li>3) Click <span className="font-semibold">Continue</span> (backend hook will be added later).</li>
+                <li>3) Click <span className="font-bold">Continue</span>.</li>
               </ul>
               <p className="mt-2 text-xs text-gray-500">
                 Supported formats: <span className="font-medium">.xlsx</span>, <span className="font-medium">.xls</span>, <span className="font-medium">.csv</span>
@@ -793,6 +808,42 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
           </div>
         </div>
       )}
+
+      {/* Bulk Upload Error Dialog with GIF */}
+      <Dialog open={isBulkErrorDialogOpen} onOpenChangeAction={setIsBulkErrorDialogOpen}>
+        <DialogContent className={`max-w-md ${dialogAnimationClass}`}>
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-red-600">
+              Upload Failed
+            </DialogTitle>
+            <DialogDescription>
+              Something went wrong with the upload.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center gap-4 py-2">
+            {/* Replace src with your own GIF path */}
+            <img
+              src="/error2.gif"
+              alt="Upload error"
+              className="max-h-40 w-auto object-contain rounded-md"
+            />
+            <p className="text-sm text-gray-700 text-center">
+              {bulkErrorMessage}
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              className="px-6 bg-red-600 hover:bg-red-700 text-white cursor-pointer hover:scale-105 transition-transform duration-200"
+              onClick={() => setIsBulkErrorDialogOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
