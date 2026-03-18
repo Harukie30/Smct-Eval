@@ -26,7 +26,7 @@ interface Step1Props {
   data: EvaluationPayload;
   updateDataAction: (updates: Partial<EvaluationPayload>) => void;
   employee?: User | null;
-  evaluationType?: 'rankNfile' | 'basic' | 'default';
+  evaluationType?: 'rankNfile' | 'basic' | 'areaManager' | 'default';
 }
 
 // Score Dropdown Component
@@ -326,7 +326,9 @@ export default function Step1({
           Performance Review Form
         </h2>
         <h3 className="text-lg font-semibold text-gray-700 mb-6">
-          {evaluationType === 'basic' 
+          {evaluationType === 'areaManager'
+            ? 'Area Manager'
+            : evaluationType === 'basic' 
             ? isEmployeeHO() 
               ? '(Head Office) Managers & Supervisors'
               : 'Managers & Supervisors (BRANCHES)'

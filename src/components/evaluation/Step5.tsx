@@ -284,7 +284,7 @@ export default function Step5({ data, updateDataAction }: Step5Props) {
                     promptly. 
                     <br />
                     <br />
-                    Guide Guide: 
+                    Grading Guide:
                     <br />
                      (1) 10+ lates in a month
                      <br />

@@ -18,7 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { AlertTriangle } from "lucide-react";
-import WelcomeStepBranch from "./WelcomeStepBranch";
+import WelcomeStepAreaManager from "./WelcomeStepAreaManager";
 import { EvaluationPayload } from "./types";
 import { storeEvaluationResult } from "@/lib/evaluationStorage";
 import { apiService } from "@/lib/apiService";
@@ -617,13 +617,12 @@ export default function AreaManagerEvaluationForm({
               )}
               <CardContent>
                 {currentStep === 0 ? (
-                  <WelcomeStepBranch
+                  <WelcomeStepAreaManager
                     data={form}
                     updateDataAction={updateDataAction}
                     employee={employee}
                     onStartAction={startEvaluation}
                     onBackAction={onCloseAction}
-                    evaluationType="basic"
                   />
                 ) : (() => {
                   const stepIndex = currentStep - 1;

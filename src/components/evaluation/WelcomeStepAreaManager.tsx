@@ -7,79 +7,36 @@ import { ArrowLeft, X } from "lucide-react";
 import { EvaluationPayload } from "./types";
 import { useAuth, User } from "@/contexts/UserContext";
 
-interface WelcomeStepProps {
+interface WelcomeStepAreaManagerProps {
   data: EvaluationPayload;
   updateDataAction: (updates: Partial<EvaluationPayload>) => void;
   employee?: User | null;
   onStartAction: () => void;
   onBackAction?: () => void;
-  evaluationType?: 'rankNfile' | 'basic' | 'default'; // Optional: evaluation type to determine which steps to show
 }
 
-export default function WelcomeStep({
+export default function WelcomeStepAreaManager({
   employee,
   onStartAction,
   onBackAction,
-  evaluationType = 'default',
-}: WelcomeStepProps) {
+}: WelcomeStepAreaManagerProps) {
   const { user } = useAuth();
   // Signature can be a PNG file (base64 data URL or file path)
   const hasSignature = user?.signature;
-  
-  // This component is for HO (Head Office) evaluations only
-  // For branch evaluations, use WelcomeStepBranch component
-  
-  // Check if employee is Area Manager (HO only)
-  const isEmployeeAreaManager = () => {
-    if (!employee?.positions) return false;
-    
-    const position = employee.positions;
-    const positionLabel = typeof position === 'string' 
-      ? position.toUpperCase() 
-      : (position as any)?.label?.toUpperCase() || '';
-      
-    return (
-      positionLabel === 'AREA MANAGER' || 
-      positionLabel.includes('AREA MANAGER')
-    );
-  };
 
-  const isAreaMgr = isEmployeeAreaManager();
-  
-  // For HO evaluations:
-  // - RankNFile: Steps 1-6, Overall Assessment (no Customer Service, no Managerial Skills)
-  // - Basic: Steps 1-6, Step 7 (Managerial Skills), Overall Assessment
-  // - Area Manager: Steps 1-6, Step 7 (Managerial Skills), Overall Assessment (no Customer Service)
-  const showStep7ManagerialSkills =
-    evaluationType === 'basic' || isAreaMgr; // Basic HO and Area Managers get Managerial Skills as Step 7
-  
-  // Define steps based on evaluation type (HO only)
-  const getEvaluationSteps = () => {
-    const steps = [
-      { id: 1, title: "Employee Information/Job Knowledge" },
-      { id: 2, title: "Quality of Work" },
-      { id: 3, title: "Adaptability" },
-      { id: 4, title: "Teamwork" },
-      { id: 5, title: "Reliability" },
-      { id: 6, title: "Ethical & Professional Behavior" },
-    ];
-    
-    let nextStepId = 7;
-    
-    // For Basic Ho and Area Managers: Step 7 is Managerial Skills
-    if (showStep7ManagerialSkills) {
-      steps.push({ id: nextStepId++, title: "Managerial Skills" });
-    }
-    // For RankNFile: No additional steps, goes directly to Overall Assessment
-    
-    // Add Overall Assessment/End step with unique ID
-    steps.push({ id: nextStepId, title: "Overall Assessment" });
-    
-    return steps;
-  };
-  
-  const evaluationSteps = getEvaluationSteps();
-  
+  // Steps for Area Manager (branch-based) evaluation:
+  // 1–6 core competencies, 7 Managerial Skills, then Overall Assessment (no Customer Service step)
+  const evaluationSteps = [
+    { id: 1, title: "Employee Information / Job Knowledge" },
+    { id: 2, title: "Quality of Work" },
+    { id: 3, title: "Adaptability" },
+    { id: 4, title: "Teamwork" },
+    { id: 5, title: "Reliability" },
+    { id: 6, title: "Ethical & Professional Behavior" },
+    { id: 7, title: "Managerial Skills" },
+    { id: 8, title: "Overall Assessment" },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Close Button */}
@@ -104,11 +61,8 @@ export default function WelcomeStep({
           Welcome to Performance Evaluation
         </h3>
         <p className="text-gray-600 mb-6">
-          {evaluationType === 'basic'
-            ? "This comprehensive evaluation for Head Office includes managerial skills assessment and will help evaluate performance across multiple dimensions."
-            : isAreaMgr
-            ? "This comprehensive evaluation for Head Office Area Managers includes managerial skills assessment and will help evaluate performance across multiple dimensions."
-            : "This comprehensive evaluation for Head Office will help assess performance across multiple dimensions."}
+          This comprehensive evaluation for Area Managers focuses on leadership,
+          regional performance, and managerial skills across multiple dimensions.
         </p>
       </div>
 
@@ -120,8 +74,10 @@ export default function WelcomeStep({
               <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
                 <span className="text-2xl font-bold text-blue-600">
                   {(() => {
-                    // Handle fname/lname format
-                    const nameToUse = (employee.fname && employee.lname ? `${employee.fname} ${employee.lname}` : employee.fname || employee.lname || 'N/A');
+                    const nameToUse =
+                      employee.fname && employee.lname
+                        ? `${employee.fname} ${employee.lname}`
+                        : employee.fname || employee.lname || "N/A";
                     return nameToUse
                       .split(" ")
                       .map((n: string) => n[0])
@@ -131,9 +87,11 @@ export default function WelcomeStep({
                 </span>
               </div>
               <h4 className="text-xl font-semibold text-gray-900">
-                {(employee.fname && employee.lname ? `${employee.fname} ${employee.lname}` : employee.fname || employee.lname || 'N/A')}
+                {employee.fname && employee.lname
+                  ? `${employee.fname} ${employee.lname}`
+                  : employee.fname || employee.lname || "N/A"}
               </h4>
-              <p className="text-gray-600">{employee.email || 'N/A'}</p>
+              <p className="text-gray-600">{employee.email || "N/A"}</p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -142,7 +100,9 @@ export default function WelcomeStep({
                   Position
                 </Badge>
                 <p className="text-sm text-gray-900">
-                  {employee.positions?.label || employee.positions?.name || "N/A"}
+                  {employee.positions?.label ||
+                    employee.positions?.name ||
+                    "N/A"}
                 </p>
               </div>
               <div>
@@ -150,7 +110,9 @@ export default function WelcomeStep({
                   Department
                 </Badge>
                 <p className="text-sm text-gray-900">
-                  {employee.departments?.department_name || employee.departments?.name || "N/A"}
+                  {employee.departments?.department_name ||
+                    employee.departments?.name ||
+                    "N/A"}
                 </p>
               </div>
               <div>
@@ -176,7 +138,10 @@ export default function WelcomeStep({
             {/* First Column */}
             <div className="space-y-3">
               {evaluationSteps
-                .filter((_, index) => index < Math.ceil(evaluationSteps.length / 2))
+                .filter(
+                  (_, index) =>
+                    index < Math.ceil(evaluationSteps.length / 2)
+                )
                 .map((step) => {
                   const isLastStep = step.title === "Overall Assessment";
                   return (
@@ -202,7 +167,10 @@ export default function WelcomeStep({
             {/* Second Column */}
             <div className="space-y-3">
               {evaluationSteps
-                .filter((_, index) => index >= Math.ceil(evaluationSteps.length / 2))
+                .filter(
+                  (_, index) =>
+                    index >= Math.ceil(evaluationSteps.length / 2)
+                )
                 .map((step) => {
                   const isLastStep = step.title === "Overall Assessment";
                   return (
@@ -241,8 +209,8 @@ export default function WelcomeStep({
                 </h4>
                 <p className="text-sm text-red-700 mb-3">
                   You must have a signature saved in your profile to start an
-                  evaluation. Please add your signature in your profile settings
-                  before proceeding.
+                  evaluation. Please add your signature in your profile
+                  settings before proceeding.
                 </p>
                 <div className="bg-red-100 p-3 rounded-md">
                   <p className="text-sm text-red-800 font-medium">
@@ -266,10 +234,10 @@ export default function WelcomeStep({
               </h4>
               <ul className="text-sm text-yellow-700 space-y-1">
                 <li>
-                  • This evaluation will take approximately 15-20 minutes to
+                  • This evaluation will take approximately 20–30 minutes to
                   complete
                 </li>
-                <li>• All ratings are on a scale of 1-5 (Poor to Excellent)</li>
+                <li>• All ratings are on a scale of 1–5 (Poor to Excellent)</li>
                 <li>
                   • You can navigate back to previous steps to make changes
                 </li>
@@ -319,10 +287,11 @@ export default function WelcomeStep({
 
         <p className="text-sm text-gray-500 mt-2">
           {hasSignature
-            ? "Click to begin the performance evaluation process"
+            ? "Click to begin the Area Manager performance evaluation"
             : "Add your signature in profile settings to start evaluation"}
         </p>
       </div>
     </div>
   );
 }
+
