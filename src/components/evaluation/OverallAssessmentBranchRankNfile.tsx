@@ -2018,8 +2018,7 @@ export default function OverallAssessmentBranchRankNfile({
                     oversight
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Performs daily responsibilities independently and
-                    consistently, ensuring tasks are completed correctly.
+                  Consistently manages day-to-day responsibilities without requiring constant supervision. Ensures regular tasks are handled on schedule with no reminders needed.		
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.reliabilityScore4 || ""}
