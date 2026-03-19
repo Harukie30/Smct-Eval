@@ -320,8 +320,8 @@ export const apiService = {
   },
 
   // Bulk register users (Excel/CSV upload)
-  bulkRegisterUser: async (formData: FormData): Promise<any> => {
-    const response = await api.post("/bulkRegisterUser", formData);
+  bulkRegisterUser: async (payload: Record<string, any>): Promise<any> => {
+    const response = await api.post("/bulkRegisterUser", payload);
     return response.data;
   },
 
