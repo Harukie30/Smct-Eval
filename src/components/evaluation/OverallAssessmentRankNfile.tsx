@@ -1588,12 +1588,10 @@ export default function OverallAssessmentRankNfile({
                     Active Participation in Team Activities
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Active Participation in Team Activities
+                  Actively participates in team meetings, projects, and collaborative activities	
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Actively participates in team meetings and projects.
-                    Contributes ideas and feedback during discussions. Engages
-                    in team tasks to achieve group goals.
+                  Regularly contributes ideas, suggestions, and feedback during team discussions. Actively engages in team tasks, helping to achieve group goals.		
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.teamworkScore1 || ""}

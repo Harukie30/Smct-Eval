@@ -1821,16 +1821,16 @@ export default function ViewResultsModal({
     1: {
       title: "Active Participation in Team Activities",
       indicator:
-        "Actively participates in team meetings and projects. Contributes ideas and feedback during discussions. Engages in team tasks to achieve group goals.",
+        "Actively participates in team meetings, projects, and collaborative activities",
       example:
-        "Attends team meetings regularly, contributes ideas, and actively supports team projects and initiatives.",
+        "Regularly contributes ideas, suggestions, and feedback during team discussions. Actively engages in team tasks, helping to achieve group goals.	",
     },
     2: {
       title: "Promotion of a Positive Team Culture",
       indicator:
-        "Interacts positively with coworkers. Fosters inclusive team culture. Provides support and constructive feedback. Promotes teamwork and camaraderie.",
+        "Interacts with coworkers in a positive and constructive manner. Contributes to fostering a positive and inclusive team culture	",
       example:
-        "Demonstrates respect, supports colleagues, and helps create a cooperative and inclusive team environment.",
+        "Provides support, encouragement, and constructive feedback to coworkers. Promotes teamwork, camaraderie, and a supportive atmosphere within the team.",
     },
     3: {
       title: "  Effective Communication",
@@ -1858,16 +1858,16 @@ export default function ViewResultsModal({
     },
     3: {
       title: "Follows Through on Commitments",
-      indicator: "Follows Through on Commitments",
+      indicator: "Follows through on assignments from and commitments made to coworkers or superiors	",
       example:
-        " Follows through on assignments from and commitments made to coworkers or superiors",
+        "Delivers on commitments, ensuring that expectations are met or exceeded.",
     },
     4: {
       title: "Reliable Handling of Routine Tasks",
       indicator:
         " Demonstrates reliability in completing routine tasks without oversight",
       example:
-        "Delivers on commitments, ensuring that expectations are met or exceeded.",
+        "Consistently manages day-to-day responsibilities without requiring constant supervision. Ensures regular tasks are handled on schedule with no reminders needed.		",
     },
   };
 

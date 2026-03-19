@@ -1712,7 +1712,7 @@ export default function ViewResultsModal({
     },
     3: {
       title: "Follows Through on Commitments",
-      indicator: "Follows Through on Commitments",
+      indicator: "Follows through on assignments from and commitments made to coworkers or superiors	",
       example:
         " Follows through on assignments from and commitments made to coworkers or superiors",
     },
