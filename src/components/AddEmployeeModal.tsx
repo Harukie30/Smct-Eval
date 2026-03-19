@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/useToast";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { FileSpreadsheet, Upload, X } from "lucide-react";
 import { apiService } from "@/lib/apiService";
+import * as XLSX from "xlsx";
 import {
   Select,
   SelectContent,
@@ -150,11 +151,74 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     if (!bulkFile) return;
 
     setIsBulkUploading(true);
-    const formDataToUpload = new FormData();
-    formDataToUpload.append("file", bulkFile);
 
     try {
-      await toast.promise(apiService.bulkRegisterUser(formDataToUpload), {
+      const arrayBuffer = await bulkFile.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: "array" });
+      const firstSheetName = workbook.SheetNames[0];
+      if (!firstSheetName) {
+        throw new Error("The selected file does not contain any sheets.");
+      }
+
+      const worksheet = workbook.Sheets[firstSheetName];
+      const rawRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, {
+        defval: "",
+      });
+
+      const normalizeKey = (key: string) =>
+        String(key || "")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "_")
+          .replace(/^_+|_+$/g, "");
+
+      const getValue = (row: Record<string, any>, candidates: string[]) => {
+        for (const candidate of candidates) {
+          const value = row[candidate];
+          if (value !== undefined && value !== null && String(value).trim() !== "") {
+            return String(value).trim();
+          }
+        }
+        return "";
+      };
+
+      const parsedUsers = rawRows
+        .map((row) => {
+          const normalizedRow: Record<string, any> = {};
+          Object.keys(row).forEach((k) => {
+            normalizedRow[normalizeKey(k)] = row[k];
+          });
+
+          return {
+            employee_id: getValue(normalizedRow, ["employee_id", "employeeid", "id"]),
+            fname: getValue(normalizedRow, ["fname", "first_name", "firstname"]),
+            lname: getValue(normalizedRow, ["lname", "last_name", "lastname"]),
+            email: getValue(normalizedRow, ["email", "email_address"]),
+            position_id: getValue(normalizedRow, ["position_id", "positionid", "position"]),
+            department_id: getValue(normalizedRow, ["department_id", "departmentid", "department"]),
+            branch_id: getValue(normalizedRow, ["branch_id", "branchid", "branch"]),
+            role_id: getValue(normalizedRow, ["role_id", "roleid", "role"]),
+            username: getValue(normalizedRow, ["username", "user_name"]),
+            password: getValue(normalizedRow, ["password"]),
+            contact: getValue(normalizedRow, ["contact", "contact_number", "mobile", "phone"]),
+            date_hired: getValue(normalizedRow, ["date_hired", "datehired", "hired_date"]),
+          };
+        })
+        .filter((row) =>
+          Object.values(row).some((value) => String(value || "").trim() !== "")
+        );
+
+      if (parsedUsers.length === 0) {
+        throw new Error(
+          "No valid rows were found. Please check your file headers and data."
+        );
+      }
+
+      await toast.promise(
+        apiService.bulkRegisterUser({
+          users: parsedUsers,
+        } as any),
+        {
         loading: "Uploading file...",
         success: "upload submitted",
         error: "upload failed. Please check the details and try again.",
