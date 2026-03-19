@@ -1714,14 +1714,14 @@ export default function ViewResultsModal({
       title: "Follows Through on Commitments",
       indicator: "Follows through on assignments from and commitments made to coworkers or superiors	",
       example:
-        " Follows through on assignments from and commitments made to coworkers or superiors",
+        "Delivers on commitments, ensuring that expectations are met or exceeded.",
     },
     4: {
       title: "Reliable Handling of Routine Tasks",
       indicator:
         " Demonstrates reliability in completing routine tasks without oversight",
       example:
-        "Delivers on commitments, ensuring that expectations are met or exceeded.",
+        "Consistently manages day-to-day responsibilities without requiring constant supervision. Ensures regular tasks are handled on schedule with no reminders needed.",
     },
   };
 

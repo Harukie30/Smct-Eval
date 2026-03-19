@@ -1612,7 +1612,7 @@ export default function OverallAssessmentBasic({
                   Actively participates in team meetings, projects, and collaborative Activities
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                  regularly contributes ideas, suggestions, and feedback during team discussions. actively engages in team tasks, helping to achieve group goals.
+                  Regularly contributes ideas, suggestions, and feedback during team discussions. Actively engages in team tasks, helping to achieve group goals.		
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.teamworkScore1 || ""}
@@ -1655,12 +1655,10 @@ export default function OverallAssessmentBasic({
                     Promotion of a Positive Team Culture
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Promotion of a Positive Team Culture
+                  Interacts with coworkers in a positive and constructive manner. Contributes to fostering a positive and inclusive team culture	
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Interacts positively with coworkers. Fosters inclusive team
-                    culture. Provides support and constructive feedback.
-                    Promotes teamwork and camaraderie.
+                  Provides support, encouragement, and constructive feedback to coworkers. Promotes teamwork, camaraderie, and a supportive atmosphere within the team.		
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.teamworkScore2 || ""}
@@ -1703,12 +1701,10 @@ export default function OverallAssessmentBasic({
                     Effective Communication
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Effective Communication
+                  Shares clear expectations, updates, and feedback with the team	
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Communicates openly and clearly with team members. Shares
-                    information and updates in a timely manner. Ensures
-                    important details are communicated clearly.
+                  Shares information, updates, and progress in a transparent and timely manner. Ensures important details are communicated clearly, helping others stay informed. Holds regular meetings to align on objectives.		
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.teamworkScore3 || ""}

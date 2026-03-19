@@ -248,6 +248,26 @@ export default function UserManagementTab() {
   const [averageModalYear, setAverageModalYear] = useState<string>("");
   const [averageTableData, setAverageTableData] = useState<{ rows: { quarter: string; rating: number }[]; average: number } | null>(null);
   const [loadingAverageTable, setLoadingAverageTable] = useState(false);
+  const [isBranchQuarterModalOpen, setIsBranchQuarterModalOpen] = useState(false);
+  const [recordedYearsForBranchQuarter, setRecordedYearsForBranchQuarter] = useState<{ year: number }[]>([]);
+  const [loadingRecordedYearsForBranchQuarter, setLoadingRecordedYearsForBranchQuarter] = useState(false);
+  const [branchQuarterYear, setBranchQuarterYear] = useState<string>("");
+  const [branchQuarterBranchId, setBranchQuarterBranchId] = useState<string>("");
+  const [loadingBranchQuarterTable, setLoadingBranchQuarterTable] = useState(false);
+  const [branchQuarterTableRows, setBranchQuarterTableRows] = useState<
+    | {
+        employeeId: number;
+        name: string;
+        branch: string;
+        position: string;
+        q1: number | null;
+        q2: number | null;
+        q3: number | null;
+        q4: number | null;
+        average: number | null;
+      }[]
+    | null
+  >(null);
   const [selectedEmployeeForEvaluation, setSelectedEmployeeForEvaluation] =
     useState<User | null>(null);
   const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
@@ -496,6 +516,254 @@ export default function UserManagementTab() {
       setAverageTableData({ rows: [], average: 0 });
     } finally {
       setLoadingAverageTable(false);
+    }
+  };
+
+  // Load branch quarterly data for all employees in that branch+year.
+  // Table shows Q1-Q4 and an average over only the quarters that exist.
+  const loadBranchQuarterTable = async () => {
+    const targetYear = branchQuarterYear;
+    const targetBranchId = branchQuarterBranchId;
+
+    if (!targetYear || !targetBranchId) return;
+
+    setLoadingBranchQuarterTable(true);
+    setBranchQuarterTableRows(null);
+
+    try {
+      // Fetch all active users in this branch, then keep only HR/Evaluator/Employee roles.
+      const userResp = await apiService.getActiveRegistrations(
+        "",
+        "0",
+        1,
+        2000,
+        targetBranchId
+      );
+
+      const usersList: any[] = Array.isArray(userResp)
+        ? userResp
+        : userResp?.data || userResp?.users || [];
+
+      const allowedRoleNames = new Set(["employee", "hr", "evaluator"]);
+      const employeesList = usersList.filter((u: any) => {
+        const roleName =
+          u?.roles && Array.isArray(u.roles) ? u.roles[0]?.name : "";
+        const normalized = String(roleName || "").toLowerCase();
+        // Exclude Admin (and anything else we don't explicitly want)
+        if (!allowedRoleNames.has(normalized)) return false;
+        return true;
+      });
+
+      // 2) Fetch all evaluations for this branch+year.
+      const evalResp = await apiService.getSubmissions(
+        "",
+        1,
+        5000,
+        "",
+        "",
+        targetYear,
+        "",
+        targetBranchId
+      );
+
+      const evaluationsList: any[] = Array.isArray(evalResp)
+        ? evalResp
+        : evalResp?.data || [];
+
+      const quarterMap: Record<
+        number,
+        { q1: number | null; q2: number | null; q3: number | null; q4: number | null }
+      > = {};
+
+      const getQuarter = (ev: any): "Q1" | "Q2" | "Q3" | "Q4" | null => {
+        const regular = ev?.reviewTypeRegular;
+        if (typeof regular === "string") {
+          if (regular.includes("Q1")) return "Q1";
+          if (regular.includes("Q2")) return "Q2";
+          if (regular.includes("Q3")) return "Q3";
+          if (regular.includes("Q4")) return "Q4";
+        }
+
+        const dt = ev?.created_at || ev?.submittedAt || ev?.createdAt;
+        if (!dt) return null;
+        const d = new Date(dt);
+        if (isNaN(d.getTime())) return null;
+        const month = d.getMonth() + 1;
+
+        if (month >= 1 && month <= 3) return "Q1";
+        if (month >= 4 && month <= 6) return "Q2";
+        if (month >= 7 && month <= 9) return "Q3";
+        return "Q4";
+      };
+
+      const ensureBucket = (employeeId: number) => {
+        if (!quarterMap[employeeId]) {
+          quarterMap[employeeId] = { q1: null, q2: null, q3: null, q4: null };
+        }
+        return quarterMap[employeeId];
+      };
+
+      evaluationsList.forEach((ev: any) => {
+        const emp = ev?.employee || {};
+        const idRaw =
+          emp?.id ?? ev?.employee_id ?? ev?.employeeId ?? ev?.emp_id;
+        const employeeId = idRaw != null ? Number(idRaw) : NaN;
+        if (!Number.isFinite(employeeId)) return;
+
+        const quarter = getQuarter(ev);
+        if (!quarter) return;
+
+        const ratingVal = Number(ev?.rating);
+        // Treat missing/0 as no rating => render as "-"
+        if (!Number.isFinite(ratingVal) || ratingVal <= 0) return;
+
+        const bucket = ensureBucket(employeeId);
+        if (quarter === "Q1") bucket.q1 = ratingVal;
+        if (quarter === "Q2") bucket.q2 = ratingVal;
+        if (quarter === "Q3") bucket.q3 = ratingVal;
+        if (quarter === "Q4") bucket.q4 = ratingVal;
+      });
+
+      const rows = employeesList.map((emp: any) => {
+        const employeeId = emp?.id != null ? Number(emp.id) : NaN;
+        const bucket =
+          quarterMap[Number.isFinite(employeeId) ? employeeId : -1] || {
+            q1: null,
+            q2: null,
+            q3: null,
+            q4: null,
+          };
+
+        const ratings = [bucket.q1, bucket.q2, bucket.q3, bucket.q4].filter(
+          (v): v is number => typeof v === "number" && !isNaN(v)
+        );
+        const averageVal =
+          ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
+
+        return {
+          employeeId,
+          name: `${emp?.fname || ""} ${emp?.lname || ""}`.trim(),
+          branch: getEmployeeBranchDisplay(emp as any),
+          position:
+            emp?.positions?.label ||
+            emp?.position ||
+            emp?.positions?.name ||
+            "N/A",
+          q1: bucket.q1,
+          q2: bucket.q2,
+          q3: bucket.q3,
+          q4: bucket.q4,
+          average:
+            averageVal != null ? Number(averageVal.toFixed(2)) : null,
+        };
+      });
+
+      setBranchQuarterTableRows(rows);
+    } catch (error) {
+      console.error("Error loading branch quarter table:", error);
+      setBranchQuarterTableRows([]);
+    } finally {
+      setLoadingBranchQuarterTable(false);
+    }
+  };
+
+  // Load recorded years for the branch quarterly report modal.
+  useEffect(() => {
+    if (!isBranchQuarterModalOpen) {
+      setRecordedYearsForBranchQuarter([]);
+      setBranchQuarterYear("");
+      setBranchQuarterBranchId("");
+      setBranchQuarterTableRows(null);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingRecordedYearsForBranchQuarter(true);
+    apiService
+      .getAllYears()
+      .then((years: { year: number }[]) => {
+        if (cancelled || !Array.isArray(years)) return;
+        const sorted = [...years].sort((a, b) => b.year - a.year);
+        setRecordedYearsForBranchQuarter(sorted);
+
+        const currentYear = new Date().getFullYear();
+        const match = sorted.find((y) => Number(y.year) === currentYear);
+        setBranchQuarterYear(match ? String(match.year) : "");
+      })
+      .catch(() => {
+        if (!cancelled) setRecordedYearsForBranchQuarter([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingRecordedYearsForBranchQuarter(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBranchQuarterModalOpen]);
+
+  // Load the quarterly table when Year+Branch are selected.
+  useEffect(() => {
+    if (!isBranchQuarterModalOpen) return;
+    if (!branchQuarterYear || !branchQuarterBranchId) return;
+    void loadBranchQuarterTable();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBranchQuarterModalOpen, branchQuarterYear, branchQuarterBranchId]);
+
+  const handleExportBranchQuarterCSV = async () => {
+    if (!branchQuarterTableRows || branchQuarterTableRows.length === 0) {
+      setShowNoDataAlert(true);
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const branchLabel =
+        branchesData?.find(
+          (b: any) => String(b.value) === String(branchQuarterBranchId)
+        )?.label || branchQuarterBranchId || "Branch";
+      const safeYear = branchQuarterYear || "Year";
+
+      const csvRows: string[][] = [
+        ["Name", "Branch", "Position", "Q1", "Q2", "Q3", "Q4", "Average"],
+        ...branchQuarterTableRows.map((row) => [
+          row.name,
+          row.branch,
+          row.position,
+          row.q1 != null ? row.q1.toFixed(2) : "-",
+          row.q2 != null ? row.q2.toFixed(2) : "-",
+          row.q3 != null ? row.q3.toFixed(2) : "-",
+          row.q4 != null ? row.q4.toFixed(2) : "-",
+          row.average != null ? row.average.toFixed(2) : "-",
+        ]),
+      ];
+
+      const escapeCell = (cell: string) => {
+        const str = String(cell ?? "");
+        return `"${str.replace(/"/g, '""')}"`;
+      };
+
+      const csvContent = csvRows
+        .map((row) => row.map(escapeCell).join(","))
+        .join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const filenameSafe = `${branchLabel.replace(/\s+/g, "_")}_QuarterSummary_${safeYear}`.replace(
+        /[<>:"/\\|?*]+/g,
+        ""
+      );
+      link.download = `${filenameSafe}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error exporting branch quarter CSV:", error);
+      setShowExportError(true);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -894,12 +1162,12 @@ export default function UserManagementTab() {
                     )}
                   </div>
                 </div>
-                <div className="flex space-x-2 w-1/6">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <Button
                     variant="outline"
                     onClick={() => refreshUserData(true)}
                     disabled={refresh}
-                    className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200"
+                    className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200 whitespace-nowrap"
                   >
                     {refresh ? (
                       <>
@@ -945,10 +1213,26 @@ export default function UserManagementTab() {
                   </Button>
                   <Button
                     onClick={() => setIsAddUserModalOpen(true)}
-                    className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200"
+                    className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200 whitespace-nowrap"
                   >
                     <Plus className="h-5 w-5 font-bold " />
                     Add User
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setIsBranchQuarterModalOpen(true);
+                      setBranchQuarterTableRows(null);
+                      setBranchQuarterYear("");
+                      setBranchQuarterBranchId(
+                        branchesData && branchesData.length > 0
+                          ? String(branchesData[0].value)
+                          : ""
+                      );
+                    }}
+                    className="flex items-center bg-green-600 text-white hover:bg-green-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200 whitespace-nowrap"
+                  >
+                    <Download className="h-5 w-5 font-bold" />
+                    Export User
                   </Button>
                 </div>
               </div>
@@ -2117,6 +2401,223 @@ export default function UserManagementTab() {
         </DialogContent>
       </Dialog>
 
+      {/* Branch Quarterly Report Modal */}
+      <Dialog
+        open={isBranchQuarterModalOpen}
+        onOpenChangeAction={(open) => {
+          if (!open) {
+            setIsBranchQuarterModalOpen(false);
+            setBranchQuarterTableRows(null);
+            setBranchQuarterYear("");
+            setBranchQuarterBranchId("");
+          }
+        }}
+      >
+        <DialogContent className={`p-0 ${dialogAnimationClass} max-w-5xl max-h-[85vh] overflow-hidden relative`}>
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 text-white">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                setIsBranchQuarterModalOpen(false);
+                setBranchQuarterTableRows(null);
+                setBranchQuarterYear("");
+                setBranchQuarterBranchId("");
+              }}
+              className="absolute top-3 right-3 cursor-pointer hover:bg-white/20 text-white h-8 w-8 rounded-full"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-lg">
+                <BarChart2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Branch Quarterly Report</h2>
+                <p className="text-blue-100 text-sm">
+                  Select Year and Branch to export
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable content */}
+          <div className="overflow-y-auto p-6 space-y-4">
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-4">
+                <Label
+                  htmlFor="branch-quarter-year"
+                  className="text-sm font-medium text-gray-700 whitespace-nowrap"
+                >
+                  Year:
+                </Label>
+                {loadingRecordedYearsForBranchQuarter ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading...
+                  </div>
+                ) : (
+                  <Combobox
+                    options={recordedYearsForBranchQuarter.map((y) => ({
+                      value: String(y.year),
+                      label: String(y.year),
+                    }))}
+                    value={branchQuarterYear}
+                    onValueChangeAction={(value) => {
+                      setBranchQuarterYear(String(value));
+                    }}
+                    placeholder="Select year"
+                    searchPlaceholder="Search years..."
+                    emptyText="No years found."
+                    className="w-32"
+                  />
+                )}
+              </div>
+
+              <div className="flex items-center gap-4">
+                <Label
+                  htmlFor="branch-quarter-branch"
+                  className="text-sm font-medium text-gray-700 whitespace-nowrap"
+                >
+                  Branch:
+                </Label>
+                <Combobox
+                  options={branchesData.map((b: any) => ({
+                    value: String(b.value),
+                    label: b.label,
+                  }))}
+                  value={branchQuarterBranchId}
+                  onValueChangeAction={(value) => {
+                    setBranchQuarterBranchId(String(value));
+                  }}
+                  placeholder="Select branch"
+                  searchPlaceholder="Search branches..."
+                  emptyText="No branches found."
+                  className="w-64"
+                />
+              </div>
+            </div>
+
+            {/* Empty state */}
+            {!branchQuarterYear || !branchQuarterBranchId ? (
+              <div className="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
+                <BarChart2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm font-medium">Select a year and branch</p>
+                <p className="text-xs mt-1">Then the table will load automatically</p>
+              </div>
+            ) : null}
+
+            {/* Loading */}
+            {loadingBranchQuarterTable ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-10 text-gray-500">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <p className="text-sm font-medium">Loading quarterly data...</p>
+              </div>
+            ) : null}
+
+            {/* Table */}
+            {branchQuarterTableRows && !loadingBranchQuarterTable ? (
+              <div className="space-y-3">
+                {/* Export */}
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleExportBranchQuarterCSV}
+                    disabled={isExporting}
+                    className="cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
+                </div>
+
+                <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gradient-to-r from-blue-50 to-blue-100">
+                        <TableHead className="font-semibold text-blue-800">
+                          Name
+                        </TableHead>
+                        <TableHead className="font-semibold text-blue-800">
+                          Position
+                        </TableHead>
+                        <TableHead className="font-semibold text-blue-800">
+                          Branch
+                        </TableHead>
+                        
+                        <TableHead className="font-semibold text-blue-800">
+                          Q1
+                        </TableHead>
+                        <TableHead className="font-semibold text-blue-800">
+                          Q2
+                        </TableHead>
+                        <TableHead className="font-semibold text-blue-800">
+                          Q3
+                        </TableHead>
+                        <TableHead className="font-semibold text-blue-800">
+                          Q4
+                        </TableHead>
+                        <TableHead className="font-semibold text-blue-800">
+                          Average
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+
+                    <TableBody>
+                      {branchQuarterTableRows.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={8}
+                            className="text-center text-gray-500 py-8"
+                          >
+                            No employees found for this branch/year.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        branchQuarterTableRows.map((row) => (
+                          <TableRow
+                            key={row.employeeId}
+                            className="hover:bg-gray-50 transition-colors"
+                          >
+                            <TableCell className="font-medium text-gray-800">
+                              {row.name}
+                            </TableCell>
+                            <TableCell className="text-gray-700">
+                              {row.position}
+                            </TableCell>
+                            <TableCell className="text-gray-700">
+                              {row.branch}
+                            </TableCell>
+                           
+                            <TableCell>
+                              {row.q1 != null ? row.q1.toFixed(2) : "—"}
+                            </TableCell>
+                            <TableCell>
+                              {row.q2 != null ? row.q2.toFixed(2) : "—"}
+                            </TableCell>
+                            <TableCell>
+                              {row.q3 != null ? row.q3.toFixed(2) : "—"}
+                            </TableCell>
+                            <TableCell>
+                              {row.q4 != null ? row.q4.toFixed(2) : "—"}
+                            </TableCell>
+                            <TableCell>
+                              {row.average != null ? row.average.toFixed(2) : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* No Data Alert Dialog */}
       <Dialog
         open={showNoDataAlert}
@@ -2142,7 +2643,7 @@ export default function UserManagementTab() {
             
             {/* Description */}
             <p className="text-gray-600 text-sm mb-6 max-w-xs">
-              There are no evaluations recorded for the selected year. Please select a different year with available data.
+              There are no evaluations recorded for the selected year and branch. Please select a different year/branch with available data.
             </p>
             
             {/* Button */}

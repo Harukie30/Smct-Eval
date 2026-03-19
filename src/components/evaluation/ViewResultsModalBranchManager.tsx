@@ -1835,9 +1835,9 @@ export default function ViewResultsModal({
     3: {
       title: "  Effective Communication",
       indicator:
-        "Communicates openly and clearly with team members. Shares information and updates in a timely manner. Ensures important details are communicated clearly.",
+        "Shares clear expectations, updates, and feedback with the team	",
       example:
-        "Shares updates clearly and listens actively, ensuring the whole team stays aligned and informed.",
+        "Shares information, updates, and progress in a transparent and timely manner. Ensures important details are communicated clearly, helping others stay informed. Holds regular meetings to align on objectives.",
     },
   };
 
@@ -1867,7 +1867,7 @@ export default function ViewResultsModal({
       indicator:
         " Demonstrates reliability in completing routine tasks without oversight",
       example:
-        "Consistently manages day-to-day responsibilities without requiring constant supervision. Ensures regular tasks are handled on schedule with no reminders needed.		",
+        "Consistently manages day-to-day responsibilities without requiring constant supervision. Ensures regular tasks are handled on schedule with no reminders needed.",
     },
   };
 
