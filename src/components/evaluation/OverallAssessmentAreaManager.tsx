@@ -1967,13 +1967,11 @@ export default function OverallAssessmentAreaManager({
                     Active Participation in Team Activities
                   </td>
                   <td className="border border-gray-300  px-4 py-3 text-sm text-gray-700">
-                    Actively participates in team meetings and projects.
-                    Contributes ideas and feedback during discussions. Engages
-                    in team tasks to achieve group goals.
+                  Actively participates in team meetings, projects, and collaborative Activities
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Attends team meetings regularly, contributes ideas, and
-                    actively supports team projects and initiatives.
+                  regularly contributes ideas, suggestions, and feedback during team discussions. actively engages in team tasks, helping to achieve group goals.
+
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.teamworkScore1 || ""}
@@ -2016,13 +2014,10 @@ export default function OverallAssessmentAreaManager({
                     Promotion of a Positive Team Culture
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Interacts positively with coworkers. Fosters inclusive team
-                    culture. Provides support and constructive feedback.
-                    Promotes teamwork and camaraderie.
+                  Interacts with coworkers in a positive and constructive manner. Contributes to fostering a positive and inclusive team culture	
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Demonstrates respect, supports colleagues, and helps create
-                    a cooperative and inclusive team environment.
+                  Provides support, encouragement, and constructive feedback to coworkers. Promotes teamwork, camaraderie, and a supportive atmosphere within the team.		
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.teamworkScore2 || ""}
@@ -2065,13 +2060,10 @@ export default function OverallAssessmentAreaManager({
                     Effective Communication
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Communicates openly and clearly with team members. Shares
-                    information and updates in a timely manner. Ensures
-                    important details are communicated clearly.
+                  Shares clear expectations, updates, and feedback with the team	
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Shares updates clearly and listens actively, ensuring the
-                    whole team stays aligned and informed.
+                  Shares information, updates, and progress in a transparent and timely manner. Ensures important details are communicated clearly, helping others stay informed. Holds regular meetings to align on objectives.		
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.teamworkScore3 || ""}
@@ -2257,12 +2249,10 @@ export default function OverallAssessmentAreaManager({
                     Follows Through on Commitments
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Follows through on assignments from and commitments made to
-                    coworkers or superiors
+                  Follows through on assignments from and commitments made to coworkers or superiors	
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-sm text-gray-700">
-                    Completes assigned tasks as promised, meets deadlines, and
-                    communicates early if issues arise.
+                  Delivers on commitments, ensuring that expectations are met or exceeded.		
                   </td>
                   <td className="border border-gray-300 px-4 py-3 text-center">
                     {data.reliabilityScore3 || ""}
