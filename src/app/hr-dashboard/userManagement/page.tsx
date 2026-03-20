@@ -1375,7 +1375,7 @@ export default function UserManagementTab() {
                       className="flex items-center bg-green-600 text-white hover:bg-green-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200 whitespace-nowrap"
                     >
                       <Download className="h-5 w-5 font-bold" />
-                      Export User
+                      Export Users
                     </Button>
                   </div>
                 </div>
