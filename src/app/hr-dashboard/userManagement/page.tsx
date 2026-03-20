@@ -47,11 +47,6 @@ import {
   BarChart2,
   X,
   Download,
-  AlertCircle,
-  Sparkles,
-  BookOpen,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import EditUserModal from "@/components/EditUserModal";
@@ -63,13 +58,6 @@ import EvaluationsPagination from "@/components/paginationComponent";
 import ViewEmployeeModal from "@/components/ViewEmployeeModal";
 import { User, useAuth } from "@/contexts/UserContext";
 import { Combobox } from "@/components/ui/combobox";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  type CarouselApi,
-} from "@/components/ui/carousel";
-import { cn } from "@/lib/utils";
 import EvaluationForm from "@/components/evaluation";
 import EvaluationTypeModal from "@/components/EvaluationTypeModal";
 import BranchEvaluationForm from "@/components/evaluation/BranchEvaluationForm";
@@ -289,11 +277,6 @@ export default function UserManagementTab() {
   const [averageTableData, setAverageTableData] = useState<{ rows: { quarter: string; rating: number }[]; average: number } | null>(null);
   const [loadingAverageTable, setLoadingAverageTable] = useState(false);
   const [isBranchQuarterModalOpen, setIsBranchQuarterModalOpen] = useState(false);
-  const [isActiveUsersFeaturesInfoOpen, setIsActiveUsersFeaturesInfoOpen] = useState(false);
-  const [featuresInfoCarouselApi, setFeaturesInfoCarouselApi] = useState<CarouselApi>();
-  const [featuresInfoSlide, setFeaturesInfoSlide] = useState(0);
-  const [featuresInfoCanPrev, setFeaturesInfoCanPrev] = useState(false);
-  const [featuresInfoCanNext, setFeaturesInfoCanNext] = useState(false);
   const [recordedYearsForBranchQuarter, setRecordedYearsForBranchQuarter] = useState<{ year: number }[]>([]);
   const [loadingRecordedYearsForBranchQuarter, setLoadingRecordedYearsForBranchQuarter] = useState(false);
   const [branchQuarterYear, setBranchQuarterYear] = useState<string>("");
@@ -775,32 +758,6 @@ export default function UserManagementTab() {
       setBranchQuarterDepartmentId("");
     }
   }, [showDepartmentInBranchQuarter, branchQuarterDepartmentId]);
-
-  const FEATURES_INFO_SLIDE_COUNT = 4;
-
-  useEffect(() => {
-    if (!featuresInfoCarouselApi) return;
-    const sync = () => {
-      setFeaturesInfoSlide(featuresInfoCarouselApi.selectedScrollSnap());
-      setFeaturesInfoCanPrev(featuresInfoCarouselApi.canScrollPrev());
-      setFeaturesInfoCanNext(featuresInfoCarouselApi.canScrollNext());
-    };
-    sync();
-    featuresInfoCarouselApi.on("select", sync);
-    featuresInfoCarouselApi.on("reInit", sync);
-    return () => {
-      featuresInfoCarouselApi.off("select", sync);
-      featuresInfoCarouselApi.off("reInit", sync);
-    };
-  }, [featuresInfoCarouselApi]);
-
-  useEffect(() => {
-    if (!isActiveUsersFeaturesInfoOpen || !featuresInfoCarouselApi) return;
-    const id = requestAnimationFrame(() => {
-      featuresInfoCarouselApi.scrollTo(0);
-    });
-    return () => cancelAnimationFrame(id);
-  }, [isActiveUsersFeaturesInfoOpen, featuresInfoCarouselApi]);
 
   // Load the quarterly table when Year+Branch are selected.
   useEffect(() => {
@@ -1293,19 +1250,7 @@ export default function UserManagementTab() {
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-5.5">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    title="About these features: averages & branch export"
-                    aria-label="Learn about Employee Average and Branch Quarterly Report"
-                    onClick={() => setIsActiveUsersFeaturesInfoOpen(true)}
-                    className="h-8 w-8 shrink-0 rounded-full border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-900 cursor-pointer hover:scale-105 transition-transform duration-200"
-                  >
-                    <AlertCircle className="h-4 w-4" />
-                  </Button>
-                  <div className="flex items-center justify-end gap-2 flex-nowrap">
+                <div className="flex items-center justify-end gap-2 flex-nowrap">
                     <Button
                       variant="outline"
                       onClick={() => refreshUserData(true)}
@@ -1377,7 +1322,6 @@ export default function UserManagementTab() {
                       <Download className="h-5 w-5 font-bold" />
                       Export Users
                     </Button>
-                  </div>
                 </div>
               </div>
 
@@ -2292,18 +2236,20 @@ export default function UserManagementTab() {
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-blue-700/90 backdrop-blur-[1px]" />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setIsAverageModalOpen(false);
-                setEmployeeForAverage(null);
-              }}
-              className="absolute top-3 right-3 z-20 cursor-pointer hover:bg-white/20 text-white h-8 w-8 rounded-full"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            <div className="relative z-10 pr-10">
+            <div className="absolute top-3 right-3 z-20">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setIsAverageModalOpen(false);
+                  setEmployeeForAverage(null);
+                }}
+                className="cursor-pointer hover:bg-red-500 hover:text-white text-white h-8 w-8 rounded-full shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="relative z-10 pr-12 sm:pr-14">
               <DialogHeader className="pb-0 text-left">
                 <DialogTitle className="flex items-center gap-3 text-xl text-white drop-shadow-md">
                   <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm shadow-lg">
@@ -2356,6 +2302,53 @@ export default function UserManagementTab() {
               )}
             </div>
 
+            {averageTableData && !loadingAverageTable && (
+              <div className="flex justify-end">
+                <Button
+                  onClick={async () => {
+                    if (!averageTableData || !employeeForAverage) return;
+                    if (averageTableData.rows.length === 0) {
+                      setShowNoDataAlert(true);
+                      return;
+                    }
+                    setIsExporting(true);
+                    try {
+                      await new Promise((resolve) => setTimeout(resolve, 1000));
+                      const employeeName = `${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim();
+                      const branch = getEmployeeBranchDisplay(employeeForAverage);
+                      const csvRows = [
+                        ["Name", "Branch", "Quarters", "Rating"],
+                        ...averageTableData.rows.map((row) => [
+                          employeeName,
+                          branch,
+                          row.quarter,
+                          row.rating > 0 ? row.rating.toString() : "—",
+                        ]),
+                        ["", "", "Average", averageTableData.average.toFixed(2)],
+                      ];
+                      const csvContent = csvRows.map((row) => row.join(",")).join("\n");
+                      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement("a");
+                      link.href = url;
+                      link.download = `${employeeName.replace(/\s+/g, "_")}_Average_${averageModalYear}.csv`;
+                      link.click();
+                      URL.revokeObjectURL(url);
+                    } catch {
+                      setShowExportError(true);
+                    } finally {
+                      setIsExporting(false);
+                    }
+                  }}
+                  disabled={isExporting}
+                  className="cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+              </div>
+            )}
+
             {/* Empty State */}
             {!averageModalYear && !loadingAverageTable && !averageTableData && (
               <div className="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
@@ -2374,52 +2367,6 @@ export default function UserManagementTab() {
 
             {averageTableData && !loadingAverageTable && (
               <div className="mt-4 space-y-3">
-                {/* Export Button */}
-                <div className="flex justify-end">
-                  <Button
-                    onClick={async () => {
-                      if (!averageTableData || !employeeForAverage) return;
-                      if (averageTableData.rows.length === 0) {
-                        setShowNoDataAlert(true);
-                        return;
-                      }
-                      setIsExporting(true);
-                      try {
-                        await new Promise((resolve) => setTimeout(resolve, 1000));
-                        const employeeName = `${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim();
-                        const branch = getEmployeeBranchDisplay(employeeForAverage);
-                        const csvRows = [
-                          ["Name", "Branch", "Quarters", "Rating"],
-                          ...averageTableData.rows.map((row) => [
-                            employeeName,
-                            branch,
-                            row.quarter,
-                            row.rating > 0 ? row.rating.toString() : "—",
-                          ]),
-                          ["", "", "Average", averageTableData.average.toFixed(2)],
-                        ];
-                        const csvContent = csvRows.map((row) => row.join(",")).join("\n");
-                        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement("a");
-                        link.href = url;
-                        link.download = `${employeeName.replace(/\s+/g, "_")}_Average_${averageModalYear}.csv`;
-                        link.click();
-                        URL.revokeObjectURL(url);
-                      } catch {
-                        setShowExportError(true);
-                      } finally {
-                        setIsExporting(false);
-                      }
-                    }}
-                    disabled={isExporting}
-                    className="cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export CSV
-                  </Button>
-                </div>
-
                 {/* Table */}
                 <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                   <Table>
@@ -2556,220 +2503,6 @@ export default function UserManagementTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Active users: quick info on new report tools (carousel; button above Refresh / Add / Export) */}
-      <Dialog
-        open={isActiveUsersFeaturesInfoOpen}
-        onOpenChangeAction={(open) => {
-          if (!open) setIsActiveUsersFeaturesInfoOpen(false);
-        }}
-      >
-        <DialogContent
-          className={cn(
-            "max-w-lg gap-0 p-0 overflow-hidden border-0 shadow-2xl",
-            dialogAnimationClass
-          )}
-        >
-          {/* Header — same pattern as notification detail modal in DashboardShell */}
-          <div
-            className="relative overflow-hidden rounded-t-lg px-1 py-1"
-            style={{
-              backgroundImage: "url(/smct.png)",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
-            }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-blue-700/90 backdrop-blur-[1px]" />
-            <div className="relative z-10">
-              <DialogHeader className="pb-0 text-left">
-                <DialogTitle className="flex items-center gap-3 text-xl text-white drop-shadow-md">
-                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm shadow-lg">
-                    <AlertCircle className="h-5 w-5 text-white" />
-                  </div>
-                  <span>Features on this page</span>
-                </DialogTitle>
-                <p className="mt-3 text-sm text-white/90 leading-snug">
-                  Slide {featuresInfoSlide + 1} of {FEATURES_INFO_SLIDE_COUNT} — added tools you can use from this table
-                </p>
-              </DialogHeader>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-b from-slate-50 to-white px-1 pt-2 pb-0">
-            <Carousel
-              setApi={setFeaturesInfoCarouselApi}
-              opts={{ align: "start", loop: false }}
-              className="w-full"
-            >
-              <CarouselContent className="-ml-0">
-                <CarouselItem className="pl-0 basis-full">
-                  <div className="mx-4 mb-2 flex min-h-[240px] flex-col items-center justify-center rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/90 to-blue-50/80 px-6 py-8 text-center shadow-sm">
-                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 to-blue-500 text-white shadow-lg">
-                      <Sparkles className="h-8 w-8" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Two features to know about
-                    </h3>
-                    <p className="mt-2 max-w-sm text-sm leading-relaxed text-gray-600">
-                      This screen includes <strong>per-employee averages</strong> (by year) and a{" "}
-                      <strong>branch quarterly report</strong> you can export as CSV — both from this table.
-                    </p>
-                    <p className="mt-4 text-xs font-medium text-blue-800/90">
-                      Use <strong>Next</strong> or the dots below to browse each feature.
-                    </p>
-                  </div>
-                </CarouselItem>
-
-                <CarouselItem className="pl-0 basis-full">
-                  <div className="mx-4 mb-2 min-h-[240px] rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/90 to-violet-50/80 p-6 shadow-sm">
-                    <div className="mb-4 flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md">
-                        <BarChart2 className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-indigo-950">
-                          Employee Average
-                        </h3>
-                        <p className="text-xs text-blue-700/80">Per person, by year</p>
-                      </div>
-                    </div>
-                    <ul className="space-y-3 text-sm text-gray-700">
-                      <li className="flex gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
-                        <span>
-                          In each row, click the <strong>bar chart</strong> icon (
-                          <span className="italic">View employee average</span>).
-                        </span>
-                      </li>
-                      <li className="flex gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
-                        <span>
-                          Choose a <strong>year</strong> to load quarterly ratings and the overall average. Missing quarters show as a dash.
-                        </span>
-                      </li>
-                    </ul>
-                  </div>
-                </CarouselItem>
-
-                <CarouselItem className="pl-0 basis-full">
-                  <div className="mx-4 mb-2 min-h-[240px] rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/90 to-blue-50/80 p-6 shadow-sm">
-                    <div className="mb-4 flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md">
-                        <Download className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-emerald-950">
-                          Branch Quarterly Report
-                        </h3>
-                        <p className="text-xs text-emerald-800/80">Export many users at once</p>
-                      </div>
-                    </div>
-                    <ul className="space-y-3 text-sm text-gray-700">
-                      <li className="flex gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
-                        <span>
-                          Click <strong>Export User</strong> (next to Refresh / Add User) to open the report.
-                        </span>
-                      </li>
-                      <li className="flex gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
-                        <span>
-                          Read the short steps, then pick <strong>Year</strong> and <strong>Branch</strong>. For <strong>HO</strong>, you can filter by <strong>Department</strong>.
-                        </span>
-                      </li>
-                      <li className="flex gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
-                        <span>
-                          <strong>Export CSV</strong> downloads the table. If any quarter is missing for someone, you&apos;ll get a warning before export.
-                        </span>
-                      </li>
-                    </ul>
-                  </div>
-                </CarouselItem>
-
-                <CarouselItem className="pl-0 basis-full">
-                  <div className="mx-4 mb-2 flex min-h-[240px] flex-col justify-center rounded-2xl border border-blue-200 bg-white px-6 py-6 shadow-sm">
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-md">
-                        <BookOpen className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          Need more detail?
-                        </h3>
-                        <p className="text-xs text-gray-500">Full walkthrough in the dashboard guide</p>
-                      </div>
-                    </div>
-                    <p className="text-sm leading-relaxed text-gray-600">
-                      Open the <strong>HR Dashboard Guide</strong> from the dashboard help — it includes these tools with extra context.
-                    </p>
-                    <p className="mt-4 text-sm font-medium text-blue-700">
-                      You&apos;re all set — click "Got it" when ready or go back to review a slide.
-                    </p>
-                  </div>
-                </CarouselItem>
-              </CarouselContent>
-            </Carousel>
-          </div>
-
-          <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/90 px-4 py-3">
-            <div className="flex items-center justify-between gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 gap-1 border-slate-200 bg-blue-500 text-white hover:bg-red-400 cursor-pointer hover:scale-105 transition-transform duration-200 hover:text-white"
-                disabled={!featuresInfoCanPrev}
-                onClick={() => featuresInfoCarouselApi?.scrollPrev()}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </Button>
-              <div className="flex flex-1 items-center justify-center gap-1.5 px-2">
-                {Array.from({ length: FEATURES_INFO_SLIDE_COUNT }, (_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    aria-label={`Go to slide ${i + 1}`}
-                    onClick={() => featuresInfoCarouselApi?.scrollTo(i)}
-                    className={cn(
-                      "h-2 rounded-full transition-all duration-300",
-                      featuresInfoSlide === i
-                        ? "w-6 bg-gradient-to-r from-yellow-500 to-yellow-500"
-                        : "w-2 bg-blue-300 hover:bg-blue-400"
-                    )}
-                  />
-                ))}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 gap-1 border-slate-200 bg-blue-500 text-white hover:bg-green-400 cursor-pointer hover:scale-105 transition-transform duration-200 hover:text-white"
-                disabled={!featuresInfoCanNext}
-                onClick={() => featuresInfoCarouselApi?.scrollNext()}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-            <DialogFooter className="sm:justify-center gap-2 pt-0">
-              <Button
-                type="button"
-                className="w-full cursor-pointer bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white shadow-md sm:w-auto sm:min-w-[140px]"
-                onClick={() => setIsActiveUsersFeaturesInfoOpen(false)}
-              >
-                Got it
-              </Button>
-            </DialogFooter>
-          </div>
-
-          <DialogDescription className="sr-only">
-            Carousel explaining the Employee Average and Branch Quarterly Report features on User Management.
-          </DialogDescription>
-        </DialogContent>
-      </Dialog>
-
       {/* Branch Quarterly Report Modal */}
       <Dialog
         open={isBranchQuarterModalOpen}
@@ -2794,20 +2527,22 @@ export default function UserManagementTab() {
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-blue-700/90 backdrop-blur-[1px]" />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setIsBranchQuarterModalOpen(false);
-                setBranchQuarterTableRows(null);
-                setBranchQuarterYear("");
-                setBranchQuarterBranchId("");
-              }}
-              className="absolute top-3 right-3 z-20 cursor-pointer hover:bg-white/20 text-white h-8 w-8 rounded-full"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            <div className="relative z-10 pr-10">
+            <div className="absolute top-3 right-3 z-20">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setIsBranchQuarterModalOpen(false);
+                  setBranchQuarterTableRows(null);
+                  setBranchQuarterYear("");
+                  setBranchQuarterBranchId("");
+                }}
+                className="cursor-pointer hover:bg-white/20 text-white h-8 w-8 rounded-full shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="relative z-10 pr-12 sm:pr-14">
               <DialogHeader className="pb-0 text-left">
                 <DialogTitle className="flex items-center gap-3 text-xl text-white drop-shadow-md">
                   <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm shadow-lg">
@@ -2922,6 +2657,19 @@ export default function UserManagementTab() {
               </div>
             </div>
 
+            {branchQuarterTableRows && !loadingBranchQuarterTable && (
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleExportBranchQuarterCSV}
+                  disabled={isExporting}
+                  className="cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+              </div>
+            )}
+
             {/* Empty state */}
             {!branchQuarterYear || !branchQuarterBranchId ? (
               <div className="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
@@ -2942,18 +2690,6 @@ export default function UserManagementTab() {
             {/* Table */}
             {branchQuarterTableRows && !loadingBranchQuarterTable ? (
               <div className="space-y-3">
-                {/* Export */}
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleExportBranchQuarterCSV}
-                    disabled={isExporting}
-                    className="cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export CSV
-                  </Button>
-                </div>
-
                 <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                   <Table>
                     <TableHeader>
