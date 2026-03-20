@@ -38,7 +38,16 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Eye, FileText, Pencil, Plus, Trash2, BarChart2, X, Download } from "lucide-react";
+import {
+  Eye,
+  FileText,
+  Pencil,
+  Plus,
+  Trash2,
+  BarChart2,
+  X,
+  Download,
+} from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import EditUserModal from "@/components/EditUserModal";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
@@ -1242,77 +1251,77 @@ export default function UserManagementTab() {
                   </div>
                 </div>
                 <div className="flex items-center justify-end gap-2 flex-nowrap">
-                  <Button
-                    variant="outline"
-                    onClick={() => refreshUserData(true)}
-                    disabled={refresh}
-                    className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200 whitespace-nowrap"
-                  >
-                    {refresh ? (
-                      <>
-                        <svg
-                          className="animate-spin h-5 w-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
+                    <Button
+                      variant="outline"
+                      onClick={() => refreshUserData(true)}
+                      disabled={refresh}
+                      className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200 whitespace-nowrap"
+                    >
+                      {refresh ? (
+                        <>
+                          <svg
+                            className="animate-spin h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Refreshing...
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="h-5 w-5 font-bold"
+                            fill="none"
                             stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                        Refreshing...
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          className="h-5 w-5 font-bold"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                          />
-                        </svg>
-                        Refresh
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    onClick={() => setIsAddUserModalOpen(true)}
-                    className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200 whitespace-nowrap"
-                  >
-                    <Plus className="h-5 w-5 font-bold " />
-                    Add User
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setIsBranchQuarterModalOpen(true);
-                      setBranchQuarterTableRows(null);
-                      setBranchQuarterYear("");
-                      setBranchQuarterBranchId(
-                        branchesData && branchesData.length > 0
-                          ? String(branchesData[0].value)
-                          : ""
-                      );
-                    }}
-                    className="flex items-center bg-green-600 text-white hover:bg-green-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200 whitespace-nowrap"
-                  >
-                    <Download className="h-5 w-5 font-bold" />
-                    Export User
-                  </Button>
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
+                          Refresh
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={() => setIsAddUserModalOpen(true)}
+                      className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200 whitespace-nowrap"
+                    >
+                      <Plus className="h-5 w-5 font-bold " />
+                      Add User
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setIsBranchQuarterModalOpen(true);
+                        setBranchQuarterTableRows(null);
+                        setBranchQuarterYear("");
+                        setBranchQuarterBranchId(
+                          branchesData && branchesData.length > 0
+                            ? String(branchesData[0].value)
+                            : ""
+                        );
+                      }}
+                      className="flex items-center bg-green-600 text-white hover:bg-green-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200 whitespace-nowrap"
+                    >
+                      <Download className="h-5 w-5 font-bold" />
+                      Export Users
+                    </Button>
                 </div>
               </div>
 
@@ -2216,31 +2225,44 @@ export default function UserManagementTab() {
         }}
       >
         <DialogContent className={`p-0 ${dialogAnimationClass} ${averageTableData ? "max-w-2xl" : "max-w-md"} relative overflow-hidden`}>
-          {/* Header Section */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 text-white">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setIsAverageModalOpen(false);
-                setEmployeeForAverage(null);
-              }}
-              className="absolute top-3 right-3 cursor-pointer hover:bg-white/20 text-white h-8 w-8 rounded-full"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-lg">
-                <BarChart2 className="h-6 w-6" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold">Employee Average</h2>
-                <p className="text-blue-100 text-sm">
+          {/* Header — same pattern as notification modal (DashboardShell) */}
+          <div
+            className="relative overflow-hidden px-6 py-5"
+            style={{
+              backgroundImage: "url(/smct.png)",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-blue-700/90 backdrop-blur-[1px]" />
+            <div className="absolute top-3 right-3 z-20">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setIsAverageModalOpen(false);
+                  setEmployeeForAverage(null);
+                }}
+                className="cursor-pointer hover:bg-red-500 hover:text-white text-white h-8 w-8 rounded-full shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="relative z-10 pr-12 sm:pr-14">
+              <DialogHeader className="pb-0 text-left">
+                <DialogTitle className="flex items-center gap-3 text-xl text-white drop-shadow-md">
+                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm shadow-lg">
+                    <BarChart2 className="h-5 w-5 text-white" />
+                  </div>
+                  <span>Employee Average</span>
+                </DialogTitle>
+                <p className="mt-2 text-sm text-white/90 leading-snug">
                   {employeeForAverage
                     ? `${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim()
                     : "Select a year to view averages"}
                 </p>
-              </div>
+              </DialogHeader>
             </div>
           </div>
 
@@ -2280,6 +2302,53 @@ export default function UserManagementTab() {
               )}
             </div>
 
+            {averageTableData && !loadingAverageTable && (
+              <div className="flex justify-end">
+                <Button
+                  onClick={async () => {
+                    if (!averageTableData || !employeeForAverage) return;
+                    if (averageTableData.rows.length === 0) {
+                      setShowNoDataAlert(true);
+                      return;
+                    }
+                    setIsExporting(true);
+                    try {
+                      await new Promise((resolve) => setTimeout(resolve, 1000));
+                      const employeeName = `${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim();
+                      const branch = getEmployeeBranchDisplay(employeeForAverage);
+                      const csvRows = [
+                        ["Name", "Branch", "Quarters", "Rating"],
+                        ...averageTableData.rows.map((row) => [
+                          employeeName,
+                          branch,
+                          row.quarter,
+                          row.rating > 0 ? row.rating.toString() : "—",
+                        ]),
+                        ["", "", "Average", averageTableData.average.toFixed(2)],
+                      ];
+                      const csvContent = csvRows.map((row) => row.join(",")).join("\n");
+                      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement("a");
+                      link.href = url;
+                      link.download = `${employeeName.replace(/\s+/g, "_")}_Average_${averageModalYear}.csv`;
+                      link.click();
+                      URL.revokeObjectURL(url);
+                    } catch {
+                      setShowExportError(true);
+                    } finally {
+                      setIsExporting(false);
+                    }
+                  }}
+                  disabled={isExporting}
+                  className="cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+              </div>
+            )}
+
             {/* Empty State */}
             {!averageModalYear && !loadingAverageTable && !averageTableData && (
               <div className="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
@@ -2298,52 +2367,6 @@ export default function UserManagementTab() {
 
             {averageTableData && !loadingAverageTable && (
               <div className="mt-4 space-y-3">
-                {/* Export Button */}
-                <div className="flex justify-end">
-                  <Button
-                    onClick={async () => {
-                      if (!averageTableData || !employeeForAverage) return;
-                      if (averageTableData.rows.length === 0) {
-                        setShowNoDataAlert(true);
-                        return;
-                      }
-                      setIsExporting(true);
-                      try {
-                        await new Promise((resolve) => setTimeout(resolve, 1000));
-                        const employeeName = `${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim();
-                        const branch = getEmployeeBranchDisplay(employeeForAverage);
-                        const csvRows = [
-                          ["Name", "Branch", "Quarters", "Rating"],
-                          ...averageTableData.rows.map((row) => [
-                            employeeName,
-                            branch,
-                            row.quarter,
-                            row.rating > 0 ? row.rating.toString() : "—",
-                          ]),
-                          ["", "", "Average", averageTableData.average.toFixed(2)],
-                        ];
-                        const csvContent = csvRows.map((row) => row.join(",")).join("\n");
-                        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement("a");
-                        link.href = url;
-                        link.download = `${employeeName.replace(/\s+/g, "_")}_Average_${averageModalYear}.csv`;
-                        link.click();
-                        URL.revokeObjectURL(url);
-                      } catch {
-                        setShowExportError(true);
-                      } finally {
-                        setIsExporting(false);
-                      }
-                    }}
-                    disabled={isExporting}
-                    className="cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export CSV
-                  </Button>
-                </div>
-
                 {/* Table */}
                 <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                   <Table>
@@ -2493,32 +2516,44 @@ export default function UserManagementTab() {
         }}
       >
         <DialogContent className={`p-0 ${dialogAnimationClass} max-w-5xl max-h-[85vh] overflow-hidden relative`}>
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 text-white">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                setIsBranchQuarterModalOpen(false);
-                setBranchQuarterTableRows(null);
-                setBranchQuarterYear("");
-                setBranchQuarterBranchId("");
-              }}
-              className="absolute top-3 right-3 cursor-pointer hover:bg-white/20 text-white h-8 w-8 rounded-full"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-lg">
-                <BarChart2 className="h-6 w-6" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold">Branch Quarterly Report</h2>
-                <p className="text-blue-100 text-sm">
+          {/* Header — same pattern as notification modal (DashboardShell) */}
+          <div
+            className="relative overflow-hidden px-6 py-5"
+            style={{
+              backgroundImage: "url(/smct.png)",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-blue-700/90 backdrop-blur-[1px]" />
+            <div className="absolute top-3 right-3 z-20">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setIsBranchQuarterModalOpen(false);
+                  setBranchQuarterTableRows(null);
+                  setBranchQuarterYear("");
+                  setBranchQuarterBranchId("");
+                }}
+                className="cursor-pointer hover:bg-white/20 text-white h-8 w-8 rounded-full shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="relative z-10 pr-12 sm:pr-14">
+              <DialogHeader className="pb-0 text-left">
+                <DialogTitle className="flex items-center gap-3 text-xl text-white drop-shadow-md">
+                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm shadow-lg">
+                    <BarChart2 className="h-5 w-5 text-white" />
+                  </div>
+                  <span>Branch Quarterly Report</span>
+                </DialogTitle>
+                <p className="mt-2 text-sm text-white/90 leading-snug">
                   Select Year and Branch to export
                 </p>
-              </div>
+              </DialogHeader>
             </div>
           </div>
 
@@ -2622,6 +2657,19 @@ export default function UserManagementTab() {
               </div>
             </div>
 
+            {branchQuarterTableRows && !loadingBranchQuarterTable && (
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleExportBranchQuarterCSV}
+                  disabled={isExporting}
+                  className="cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+              </div>
+            )}
+
             {/* Empty state */}
             {!branchQuarterYear || !branchQuarterBranchId ? (
               <div className="text-center py-10 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
@@ -2642,18 +2690,6 @@ export default function UserManagementTab() {
             {/* Table */}
             {branchQuarterTableRows && !loadingBranchQuarterTable ? (
               <div className="space-y-3">
-                {/* Export */}
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleExportBranchQuarterCSV}
-                    disabled={isExporting}
-                    className="cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export CSV
-                  </Button>
-                </div>
-
                 <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                   <Table>
                     <TableHeader>
