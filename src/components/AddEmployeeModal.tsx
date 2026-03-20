@@ -17,6 +17,7 @@ import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { FileSpreadsheet, Upload, X } from "lucide-react";
 import { apiService } from "@/lib/apiService";
 import * as XLSX from "xlsx";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -82,6 +83,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkFileError, setBulkFileError] = useState<string>("");
   const [isBulkUploading, setIsBulkUploading] = useState(false);
+  const [bulkUploadProgress, setBulkUploadProgress] = useState(0);
   const [isBulkErrorDialogOpen, setIsBulkErrorDialogOpen] = useState(false);
   const [bulkErrorMessage, setBulkErrorMessage] = useState<string>("");
   const bulkFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -146,13 +148,34 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     return true;
   };
 
+  // Since upload progress from the backend isn't available here, simulate a smooth progress UI
+  // while the upload request is in-flight.
+  useEffect(() => {
+    if (!isBulkUploading) return;
+
+    setBulkUploadProgress(5);
+    const start = Date.now();
+    const interval = window.setInterval(() => {
+      const elapsed = Date.now() - start;
+      // Ramp to ~90% quickly, then stop short until the request resolves.
+      const simulated = Math.min(90, Math.round((elapsed / 1800) * 90));
+      setBulkUploadProgress(simulated);
+    }, 150);
+
+    return () => window.clearInterval(interval);
+  }, [isBulkUploading]);
+
   const submitBulkUpload = async () => {
     if (!validateBulkFile(bulkFile)) return;
     if (!bulkFile) return;
 
     setIsBulkUploading(true);
+    setBulkUploadProgress(5);
 
     try {
+      // Give React a moment to paint the progress UI before heavy parsing starts.
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
       const arrayBuffer = await bulkFile.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: "array" });
       const firstSheetName = workbook.SheetNames[0];
@@ -214,6 +237,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         );
       }
 
+      // Optional small pause so the UI doesn't feel "instant" under load.
+      await new Promise((resolve) => setTimeout(resolve, 250));
+
       await toast.promise(
         apiService.bulkRegisterUser({
           users: parsedUsers,
@@ -237,6 +263,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       setIsBulkErrorDialogOpen(true);
     } finally {
       setIsBulkUploading(false);
+      setBulkUploadProgress(100);
     }
   };
 
@@ -825,6 +852,21 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   </Button>
                 </div>
               )}
+
+              {isBulkUploading && (
+                <div className="pt-3">
+                  <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+                    <span>Uploading & processing...</span>
+                    <span className="font-medium text-gray-800">
+                      {bulkUploadProgress}%
+                    </span>
+                  </div>
+                  <Progress value={bulkUploadProgress} />
+                  <p className="mt-2 text-xs text-gray-500">
+                    This can take a few moments depending on file size.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -844,7 +886,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               onClick={() => {
                 submitBulkUpload();
               }}
-              disabled={isSaving || isBulkUploading}
+              disabled={isSaving || isBulkUploading || !bulkFile || !!bulkFileError}
             >
               {isBulkUploading ? "Uploading..." : "Continue"}
             </Button>
