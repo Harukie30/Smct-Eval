@@ -17,6 +17,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import Link from "next/link";
 import PageTransition from "@/components/PageTransition";
@@ -31,7 +32,6 @@ import { toastMessages } from "@/lib/toastMessages";
 import ContactDevsModal from "@/components/ContactDevsModal";
 import { HowItWorksModal } from "@/components/HowItWorksModal";
 import { LoginRegistrationGuideModal } from "@/components/LoginRegistrationGuideModal";
-import { AlertDialog } from "@/components/ui/alert-dialog";
 import { api } from "@/lib/api";
 import { withPublicPage } from "@/hoc";
 
@@ -1223,15 +1223,68 @@ function LandingLoginPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Server / connection error alert */}
-      <AlertDialog
+      {/* Server / connection error dialog */}
+      <Dialog
         open={showServerErrorDialog}
         onOpenChangeAction={setShowServerErrorDialog}
-        title={serverErrorTitle}
-        description={serverErrorDescription}
-        type="error"
-        confirmText="OK"
-      />
+      >
+        <DialogContent className="max-w-lg p-0 overflow-hidden border border-red-100 shadow-2xl rounded-xl bg-white">
+          <div className="px-6 py-4 bg-gradient-to-r from-red-500/15 via-amber-500/10 to-orange-500/15 border-b border-red-100">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 p-2 rounded-xl bg-red-50 border border-red-200">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 8v4" />
+                  <path d="M12 16h.01" />
+                </svg>
+              </div>
+
+              <div className="flex-1">
+                <DialogHeader className="pb-0">
+                  <DialogTitle className="text-red-700 text-lg font-bold">
+                    {serverErrorTitle}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-red-800/90">
+                    {serverErrorDescription}
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-1 py-1">
+            <div className=" bg-gradient-to-b from-red-50/30 to-white p-4">
+              {/* Replace `/question.png` with your GIF in `public/` */}
+              <div className="flex items-center justify-center">
+                <img
+                  src="/no-data2.gif"
+                  alt="Illustration placeholder"
+                  className="w-full max-w-[200px] h-auto rounded-lg bg-gray-100 object-contain"
+                />
+              </div>
+              
+            </div>
+          </div>
+
+          <DialogFooter className="px-6 pb-6 pt-0">
+            <Button
+              type="button"
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 cursor-pointer hover:scale-110 transition-all duration-300"
+              onClick={() => setShowServerErrorDialog(false)}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
