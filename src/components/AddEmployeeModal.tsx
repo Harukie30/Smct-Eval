@@ -177,7 +177,8 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       const arrayBuffer = await bulkFile.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: "array" });
+      const workbook = XLSX.read(arrayBuffer, { type: "array",
+        cellDates: true, });
       const firstSheetName = workbook.SheetNames[0];
       if (!firstSheetName) {
         throw new Error("The selected file does not contain any sheets.");
@@ -224,8 +225,14 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             username: getValue(normalizedRow, ["username", "user_name"]),
             password: getValue(normalizedRow, ["password"]),
             contact: getValue(normalizedRow, ["contact", "contact_number", "mobile", "phone"]),
-            date_hired: getValue(normalizedRow, ["date_hired", "datehired", "hired_date"]),
-          };
+            date_hired: new Date(
+              getValue(normalizedRow, [
+              "date_hired",
+              "datehired",
+              "hired_date",
+              ]),
+              ).toISOString(),
+              };
         })
         .filter((row) =>
           Object.values(row).some((value) => String(value || "").trim() !== "")
