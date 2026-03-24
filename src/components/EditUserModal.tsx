@@ -34,7 +34,7 @@ interface User {
   date_hired?: string;
   isActive?: boolean;
   signature?: string;
-  employeeId?: number;
+  employeeId?: string | number;
 }
 
 interface EditUserModalProps {
@@ -239,11 +239,13 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     localStorage.removeItem(attemptsKey);
   };
 
-  // Format employee ID as 10-digit number with dash (e.g., 1234-567890)
-  const formatEmployeeId = (employeeId: number | undefined): string => {
-    if (!employeeId) return "";
-    // Convert to string and pad to 10 digits if needed
-    const idString = employeeId.toString().padStart(10, "0");
+  // Format employee ID as 10-digit string with dash (e.g., 1234-567890)
+  const formatEmployeeId = (employeeId: string | number | undefined): string => {
+    if (employeeId === undefined || employeeId === null || String(employeeId).trim() === "") {
+      return "";
+    }
+    // Keep digits only and pad to 10 to preserve leading zeros
+    const idString = String(employeeId).replace(/\D/g, "").padStart(10, "0").slice(0, 10);
     // Format as 1234-567890 (4 digits, dash, 6 digits)
     if (idString.length >= 10) {
       return `${idString.slice(0, 4)}-${idString.slice(4, 10)}`;
@@ -251,22 +253,16 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     return idString;
   };
 
-  // Parse formatted employee ID back to number (e.g., "1234-567890" -> 1234567890)
-  const parseEmployeeId = (formattedId: string): number | undefined => {
+  // Parse formatted employee ID back to plain digits string (preserves leading zeros)
+  const parseEmployeeId = (formattedId: string): string | undefined => {
     if (!formattedId || formattedId.trim() === "") return undefined;
-    // Remove dashes and convert to number
-    const numericString = formattedId.replace(/-/g, "");
+    // Remove non-digits and keep as string so leading zero is preserved
+    const numericString = formattedId.replace(/\D/g, "");
     // Don't parse if it's empty after cleaning
     if (numericString === "") {
       return undefined;
     }
-    // Allow "0" to be parsed, but only if it's part of a longer number (e.g., "0123-456789")
-    // If it's just "0" alone, return undefined to prevent premature updates
-    if (numericString === "0" && formattedId.length <= 1) {
-      return undefined;
-    }
-    const parsed = parseInt(numericString, 10);
-    return isNaN(parsed) ? undefined : parsed;
+    return numericString;
   };
 
   // Verify admin/HR password using login endpoint (handles password hashing correctly)
@@ -412,8 +408,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     if (isEmployeeIdEditable) {
       if (employeeIdInput && employeeIdInput.trim() !== "") {
         const parsedId = parseEmployeeId(employeeIdInput);
-        // Only update if parsedId is not undefined and not NaN
-        if (parsedId !== undefined && !isNaN(parsedId)) {
+        // Only update if parsedId has at least one digit
+        if (parsedId !== undefined && parsedId.length > 0) {
           setFormData((prev) => ({ ...prev, employeeId: parsedId }));
         } else {
           // Keep the current employeeId if parsing fails (user is still typing)
@@ -883,8 +879,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
     }
 
     // Validate Employee ID format if it was edited (should be 10 digits)
-    if (formData.employeeId) {
-      const employeeIdString = formData.employeeId.toString();
+    if (formData.employeeId !== undefined && String(formData.employeeId).trim() !== "") {
+      const employeeIdString = String(formData.employeeId).replace(/\D/g, "");
       if (employeeIdString.length !== 10) {
         newErrors.employeeId = "Employee ID must be exactly 10 digits";
       }

@@ -49,6 +49,7 @@ interface AddEmployeeModalProps {
   positions: any;
   roles: any;
   onBulkUploadClick?: () => void;
+  onBulkUploadSuccess?: () => void;
 }
 
 const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
@@ -60,6 +61,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   positions,
   roles,
   onBulkUploadClick,
+  onBulkUploadSuccess,
 }) => {
   const [formData, setFormData] = useState<User>({
     employee_id: "",
@@ -261,6 +263,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       setBulkFile(null);
       setBulkFileError("");
       if (bulkFileInputRef.current) bulkFileInputRef.current.value = "";
+      onBulkUploadSuccess?.();
     } catch (err: any) {
       const message =
         err?.response?.data?.message ||
