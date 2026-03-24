@@ -157,8 +157,39 @@ export default function OverviewTab() {
       }
     }
     
+    // If branch is an ID/value directly, match by branchesData value
+    const branchId = String(branch).trim();
+    if (branchId && branchesData.length > 0) {
+      const foundBranchByValue = branchesData.find(
+        (b: any) => String(b?.value) === branchId
+      );
+      if (foundBranchByValue?.label) {
+        const labelParts = String(foundBranchByValue.label).split(" /");
+        return labelParts[1]?.trim() || labelParts[0]?.trim() || "N/A";
+      }
+    }
+
     // Fallback to branch_name or name if code not found
     return branch.branch_name || branch.name || "N/A";
+  };
+
+  const getEmployeeBranchCode = (employee: any): string => {
+    if (!employee) return "N/A";
+
+    if (employee.branches) {
+      const branchData = Array.isArray(employee.branches)
+        ? employee.branches[0]
+        : employee.branches;
+      const codeFromBranches = getBranchCode(branchData);
+      if (codeFromBranches !== "N/A") return codeFromBranches;
+    }
+
+    const branchIdOrValue = employee.branch_id ?? employee.branch;
+    if (branchIdOrValue !== undefined && branchIdOrValue !== null && branchIdOrValue !== "") {
+      return getBranchCode(branchIdOrValue);
+    }
+
+    return employee.branch_name || "N/A";
   };
 
   const loadEvaluations = async (
@@ -790,11 +821,7 @@ export default function OverviewTab() {
                             </div>
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
-                            {review.employee?.branches &&
-                            Array.isArray(review.employee.branches) &&
-                            review.employee.branches[0]
-                              ? getBranchCode(review.employee.branches[0])
-                              : "N/A"}
+                            {getEmployeeBranchCode(review.employee)}
                           </TableCell>
                           <TableCell className="px-6 py-3">
                             {(() => {
@@ -1016,11 +1043,7 @@ export default function OverviewTab() {
                     </p>
                     <p>
                       <span className="font-medium">Branch:</span>{" "}
-                      {reviewToDelete?.employee?.branches &&
-                      Array.isArray(reviewToDelete.employee.branches) &&
-                      reviewToDelete.employee.branches[0]
-                        ? getBranchCode(reviewToDelete.employee.branches[0])
-                        : reviewToDelete?.employee?.branch_name || "N/A"}
+                      {getEmployeeBranchCode(reviewToDelete?.employee)}
                     </p>
                   </div>
                 </div>

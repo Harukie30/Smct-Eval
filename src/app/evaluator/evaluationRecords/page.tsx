@@ -246,8 +246,32 @@ export default function OverviewTab() {
       return branch.code;
     }
     
+    // If a raw branch id/value is provided, return it as fallback display
+    if (typeof branch === "string" || typeof branch === "number") {
+      return String(branch);
+    }
+
     // Fallback to branch_name if code is not available
     return branch.branch_name || "N/A";
+  };
+
+  const getEmployeeBranchCode = (employee: any): string => {
+    if (!employee) return "N/A";
+
+    if (employee.branches) {
+      const branchData = Array.isArray(employee.branches)
+        ? employee.branches[0]
+        : employee.branches;
+      const codeFromBranches = getBranchCode(branchData);
+      if (codeFromBranches !== "N/A") return codeFromBranches;
+    }
+
+    const branchIdOrValue = employee.branch_id ?? employee.branch;
+    if (branchIdOrValue !== undefined && branchIdOrValue !== null && branchIdOrValue !== "") {
+      return getBranchCode(branchIdOrValue);
+    }
+
+    return employee.branch_name || "N/A";
   };
 
   const handleViewEvaluation = async (review: Review) => {
@@ -698,9 +722,7 @@ export default function OverviewTab() {
                             </div>
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
-                            {Array.isArray(review.employee?.branches) && review.employee.branches[0]
-                              ? getBranchCode(review.employee.branches[0])
-                              : review.employee?.branch_name || "N/A"}
+                            {getEmployeeBranchCode(review.employee)}
                           </TableCell>
                           <TableCell className="px-6 py-3">
                             {(() => {
@@ -920,9 +942,7 @@ export default function OverviewTab() {
                     </p>
                     <p>
                       <span className="font-medium">Branch:</span>{" "}
-                      {Array.isArray(reviewToDelete?.employee?.branches) && reviewToDelete.employee.branches[0]
-                        ? getBranchCode(reviewToDelete.employee.branches[0])
-                        : reviewToDelete?.employee?.branch_name || "N/A"}
+                      {getEmployeeBranchCode(reviewToDelete?.employee)}
                     </p>
                   </div>
                 </div>

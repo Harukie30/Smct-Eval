@@ -561,7 +561,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
       const userAny = user as any;
       let branchNameOrId = "";
 
-      if (user.branch && typeof user.branch === "string") {
+      if (userAny.branch_id !== undefined && userAny.branch_id !== null) {
+        branchNameOrId = String(userAny.branch_id);
+      } else if (userAny.branchId !== undefined && userAny.branchId !== null) {
+        branchNameOrId = String(userAny.branchId);
+      } else if (user.branch && typeof user.branch === "string") {
         branchNameOrId = user.branch;
       } else if (
         userAny.branches &&

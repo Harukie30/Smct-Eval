@@ -51,8 +51,33 @@ export default function EmployeesTab() {
       return branch.code;
     }
     
+    // If a raw branch id/value is provided, return it as fallback display
+    if (typeof branch === "string" || typeof branch === "number") {
+      return String(branch);
+    }
+
     // Fallback to branch_name if code is not available
     return branch.branch_name || "N/A";
+  };
+
+  const getEmployeeBranchCode = (employee: User | null): string => {
+    if (!employee) return "N/A";
+
+    if (employee.branches) {
+      const branchData = Array.isArray(employee.branches)
+        ? employee.branches[0]
+        : (employee.branches as any);
+      const codeFromBranches = getBranchCode(branchData);
+      if (codeFromBranches !== "N/A") return codeFromBranches;
+    }
+
+    const employeeAny = employee as any;
+    const branchIdOrValue = employeeAny.branch_id ?? employeeAny.branch;
+    if (branchIdOrValue !== undefined && branchIdOrValue !== null && branchIdOrValue !== "") {
+      return getBranchCode(branchIdOrValue);
+    }
+
+    return "N/A";
   };
 
   // Helper function to check if employee is HO (Head Office)
@@ -102,6 +127,19 @@ export default function EmployeesTab() {
       );
     }
     
+    const employeeAny = employee as any;
+    const branchIdOrValue = employeeAny.branch_id ?? employeeAny.branch;
+    if (branchIdOrValue !== undefined && branchIdOrValue !== null && branchIdOrValue !== "") {
+      const branchUpper = String(branchIdOrValue).toUpperCase();
+      return (
+        branchUpper === "126" ||
+        branchUpper === "HO" ||
+        branchUpper === "HEAD OFFICE" ||
+        branchUpper.includes("HEAD OFFICE") ||
+        branchUpper.includes("/HO")
+      );
+    }
+
     return false;
   };
   
@@ -602,13 +640,7 @@ export default function EmployeesTab() {
                                 employee.position ||
                                 "N/A"}
                             </TableCell>
-                            <TableCell>
-                              {employee.branches &&
-                              Array.isArray(employee.branches) &&
-                              employee.branches.length > 0
-                                ? getBranchCode(employee.branches[0])
-                                : employee.branch || "N/A"}
-                            </TableCell>
+                            <TableCell>{getEmployeeBranchCode(employee)}</TableCell>
                             <TableCell>
                               <Badge variant="outline">
                                 {employee.roles &&

@@ -190,8 +190,40 @@ export default function UserManagementTab() {
       }
     }
     
+    // If branch is an ID, find branch in branchesData
+    const branchId = Number(branch);
+    if (!Number.isNaN(branchId) && branchesData.length > 0) {
+      const foundBranch = branchesData.find(
+        (b: any) => Number(b?.value) === branchId
+      );
+      if (foundBranch?.label) {
+        const labelParts = String(foundBranch.label).split(" /");
+        return (labelParts[1] || labelParts[0] || "N/A").trim();
+      }
+    }
+
     // Fallback to branch_name if code not found
     return branch.branch_name || "N/A";
+  };
+
+  const getUserBranchCode = (employee: User | null): string => {
+    if (!employee) return "N/A";
+
+    if (employee.branches) {
+      const branchData = Array.isArray(employee.branches)
+        ? employee.branches[0]
+        : employee.branches;
+      const codeFromBranches = getBranchCode(branchData);
+      if (codeFromBranches !== "N/A") return codeFromBranches;
+    }
+
+    const employeeAny = employee as any;
+    const branchIdOrValue = employeeAny.branch_id ?? employeeAny.branch;
+    if (branchIdOrValue !== undefined && branchIdOrValue !== null && branchIdOrValue !== "") {
+      return getBranchCode(branchIdOrValue);
+    }
+
+    return "N/A";
   };
 
   const getEmployeeBranchDisplay = (emp: User | null): string => {
@@ -1576,13 +1608,7 @@ export default function UserManagementTab() {
                                 <TableCell>
                                   {employee.positions?.label || "N/A"}
                                 </TableCell>
-                                <TableCell>
-                                  {employee.branches &&
-                                  Array.isArray(employee.branches) &&
-                                  employee.branches[0]
-                                    ? getBranchCode(employee.branches[0])
-                                    : "N/A"}
-                                </TableCell>
+                                <TableCell>{getUserBranchCode(employee)}</TableCell>
                                 <TableCell>
                                   <Badge
                                     variant="outline"
@@ -2159,11 +2185,7 @@ export default function UserManagementTab() {
                   </p>
                   <p>
                     <span className="font-medium">Branch:</span>{" "}
-                    {employeeToDelete?.branches
-                      ? Array.isArray(employeeToDelete.branches)
-                        ? getBranchCode(employeeToDelete.branches[0])
-                        : getBranchCode(employeeToDelete.branches)
-                      : "N/A"}
+                    {getUserBranchCode(employeeToDelete)}
                   </p>
                 </div>
               </div>
