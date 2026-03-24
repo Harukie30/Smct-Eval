@@ -177,7 +177,8 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       const arrayBuffer = await bulkFile.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: "array" });
+      const workbook = XLSX.read(arrayBuffer, { type: "array",
+        cellDates: true, });
       const firstSheetName = workbook.SheetNames[0];
       if (!firstSheetName) {
         throw new Error("The selected file does not contain any sheets.");
@@ -224,8 +225,14 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
             username: getValue(normalizedRow, ["username", "user_name"]),
             password: getValue(normalizedRow, ["password"]),
             contact: getValue(normalizedRow, ["contact", "contact_number", "mobile", "phone"]),
-            date_hired: getValue(normalizedRow, ["date_hired", "datehired", "hired_date"]),
-          };
+            date_hired: new Date(
+              getValue(normalizedRow, [
+              "date_hired",
+              "datehired",
+              "hired_date",
+              ]),
+              ).toISOString(),
+              };
         })
         .filter((row) =>
           Object.values(row).some((value) => String(value || "").trim() !== "")
@@ -632,7 +639,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 placeholder="Select position"
                 searchPlaceholder="Search positions..."
                 emptyText="No positions found."
-                className={errors.position_id ? "border-red-500" : "bg-white"}
+                className={errors.position_id ? "border-red-500" : "bg-white cursor-pointer hover:scale-105 transition-all duration-300"}
               />
               {errors.position_id && (
                 <p className="text-sm text-red-500">{errors.position_id}</p>
@@ -651,7 +658,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 placeholder="Select branch"
                 searchPlaceholder="Search branches..."
                 emptyText="No branches found."
-                className={errors.branch_id ? "border-red-500" : ""}
+                className={errors.branch_id ? "border-red-500 cursor-pointer hover:scale-105 transition-all duration-300" : "cursor-pointer hover:scale-105 transition-all duration-300"}
               />
               {errors.branch_id && (
                 <p className="text-sm text-red-500">{errors.branch_id}</p>
@@ -672,7 +679,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   searchPlaceholder="Search departments..."
                   emptyText="No departments found."
                   className={
-                    errors.department_id ? "border-red-500" : "bg-white"
+                    errors.department_id ? "border-red-500" : "bg-white cursor-pointer hover:scale-105 transition-all duration-300"
                   }
                 />
                 {errors.department_id && (
@@ -687,7 +694,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               <Select
                 onValueChange={(value) => handleInputChange("role_id", value)}
               >
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-48 cursor-pointer hover:scale-105 transition-all duration-300">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
