@@ -3008,8 +3008,6 @@ export default function UserManagementTab() {
                     </span>
                   </div>
               </div>
-              Upload Successful
-            </h2>
                 <h2 className="text-xl font-bold text-green-700 mb-2">
                   Upload Successful
                 </h2>
