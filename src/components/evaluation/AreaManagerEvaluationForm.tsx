@@ -25,6 +25,7 @@ import { apiService } from "@/lib/apiService";
 import { createEvaluationNotification } from "@/lib/notificationUtils";
 import { User, useAuth } from "../../contexts/UserContext";
 import { areaManagerEvaluationSteps } from "./configs/areaManagerEvaluationConfig";
+import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 
 interface AreaManagerEvaluationFormProps {
   employee?: User | null;
@@ -40,6 +41,8 @@ export default function AreaManagerEvaluationForm({
   const [currentStep, setCurrentStep] = useState(0);
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
   const { user } = useAuth();
+  const { branchOptions, isLoading: branchListLoading } =
+    useBranchesForEvaluation();
   
   // Area Manager uses areaManagerEvaluationSteps (excludes Customer Service)
   const filteredSteps = areaManagerEvaluationSteps;
@@ -623,6 +626,8 @@ export default function AreaManagerEvaluationForm({
                     employee={employee}
                     onStartAction={startEvaluation}
                     onBackAction={onCloseAction}
+                    branchOptions={branchOptions}
+                    branchListLoading={branchListLoading}
                   />
                 ) : (() => {
                   const stepIndex = currentStep - 1;

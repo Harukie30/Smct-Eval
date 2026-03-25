@@ -6,6 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, X } from "lucide-react";
 import { EvaluationPayload } from "./types";
 import { useAuth, User } from "@/contexts/UserContext";
+import {
+  getEmployeeBranchWelcomeDisplay,
+  type BranchOption,
+} from "./employeeBranchLabel";
 
 interface WelcomeStepProps {
   data: EvaluationPayload;
@@ -14,6 +18,10 @@ interface WelcomeStepProps {
   onStartAction: () => void;
   onBackAction?: () => void;
   evaluationType?: 'rankNfile' | 'basic' | 'default'; // Optional: evaluation type to determine which steps to show
+  /** From getBranches(); used to turn branch_id into a readable label */
+  branchOptions?: BranchOption[];
+  /** While true, ID-only branch payloads show "Loading…" instead of a number */
+  branchListLoading?: boolean;
 }
 
 export default function WelcomeStep({
@@ -21,6 +29,8 @@ export default function WelcomeStep({
   onStartAction,
   onBackAction,
   evaluationType = 'default',
+  branchOptions,
+  branchListLoading = false,
 }: WelcomeStepProps) {
   const { user } = useAuth();
   // Signature can be a PNG file (base64 data URL or file path)
@@ -151,6 +161,18 @@ export default function WelcomeStep({
                 </Badge>
                 <p className="text-sm text-gray-900">
                   {employee.departments?.department_name || employee.departments?.name || "N/A"}
+                </p>
+              </div>
+              <div>
+                <Badge className="bg-amber-100 text-amber-900 mb-1">
+                  Branch
+                </Badge>
+                <p className="text-sm text-gray-900">
+                  {getEmployeeBranchWelcomeDisplay(
+                    employee,
+                    branchOptions,
+                    branchListLoading
+                  )}
                 </p>
               </div>
               <div>

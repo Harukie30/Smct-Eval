@@ -44,6 +44,8 @@ import { setQuarter } from "date-fns";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { toastMessages } from "@/lib/toastMessages";
 import { Loader2 } from "lucide-react";
+import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
+import { getEmployeeBranchWelcomeDisplay } from "@/components/evaluation/employeeBranchLabel";
 interface Review {
   id: number;
   employee: any;
@@ -58,6 +60,9 @@ interface Review {
 }
 
 export default function OverviewTab() {
+  const { branchOptions, isLoading: branchListLoading } =
+    useBranchesForEvaluation();
+
   const [evaluations, setEvaluations] = useState<Review[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(false);
@@ -230,48 +235,6 @@ export default function OverviewTab() {
     if (quarter.includes("Q2")) return "bg-green-100 text-green-800";
     if (quarter.includes("Q3")) return "bg-yellow-100 text-yellow-800";
     return "bg-purple-100 text-purple-800";
-  };
-
-  // Helper function to get branch code from branch data
-  const getBranchCode = (branch: any): string => {
-    if (!branch) return "N/A";
-    
-    // If branch has branch_code directly
-    if (branch.branch_code) {
-      return branch.branch_code;
-    }
-    
-    // If branch has code directly
-    if (branch.code) {
-      return branch.code;
-    }
-    
-    // If a raw branch id/value is provided, return it as fallback display
-    if (typeof branch === "string" || typeof branch === "number") {
-      return String(branch);
-    }
-
-    // Fallback to branch_name if code is not available
-    return branch.branch_name || "N/A";
-  };
-
-  const getEmployeeBranchCode = (employee: any): string => {
-    if (!employee) return "N/A";
-
-    if (employee.branches) {
-      const branchData = Array.isArray(employee.branches)
-        ? employee.branches[0]
-        : employee.branches;
-      const codeFromBranches = getBranchCode(branchData);
-      if (codeFromBranches !== "N/A") return codeFromBranches;
-    }
-
-    const branchIdOrValue = employee.branch_id ?? employee.branch;
-    if (branchIdOrValue !== undefined && branchIdOrValue !== null && branchIdOrValue !== "") {
-      return getBranchCode(branchIdOrValue);
-    }
-
-    return employee.branch_name || "N/A";
   };
 
   const handleViewEvaluation = async (review: Review) => {
@@ -722,7 +685,11 @@ export default function OverviewTab() {
                             </div>
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
-                            {getEmployeeBranchCode(review.employee)}
+                            {getEmployeeBranchWelcomeDisplay(
+                              review.employee,
+                              branchOptions,
+                              branchListLoading
+                            )}
                           </TableCell>
                           <TableCell className="px-6 py-3">
                             {(() => {
@@ -942,7 +909,11 @@ export default function OverviewTab() {
                     </p>
                     <p>
                       <span className="font-medium">Branch:</span>{" "}
-                      {getEmployeeBranchCode(reviewToDelete?.employee)}
+                      {getEmployeeBranchWelcomeDisplay(
+                        reviewToDelete?.employee ?? null,
+                        branchOptions,
+                        branchListLoading
+                      )}
                     </p>
                   </div>
                 </div>

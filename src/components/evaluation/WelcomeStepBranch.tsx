@@ -6,6 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, X } from "lucide-react";
 import { EvaluationPayload } from "./types";
 import { useAuth, User } from "@/contexts/UserContext";
+import {
+  getEmployeeBranchWelcomeDisplay,
+  type BranchOption,
+} from "./employeeBranchLabel";
 
 interface WelcomeStepBranchProps {
   data: EvaluationPayload;
@@ -14,6 +18,8 @@ interface WelcomeStepBranchProps {
   onStartAction: () => void;
   onBackAction?: () => void;
   evaluationType?: 'rankNfile' | 'basic' | 'default'; // For branch: 'rankNfile' = BranchRankNFile, 'default' or 'basic' = BranchManager
+  branchOptions?: BranchOption[];
+  branchListLoading?: boolean;
 }
 
 export default function WelcomeStepBranch({
@@ -21,6 +27,8 @@ export default function WelcomeStepBranch({
   onStartAction,
   onBackAction,
   evaluationType = 'default',
+  branchOptions,
+  branchListLoading = false,
 }: WelcomeStepBranchProps) {
   const { user } = useAuth();
   // Signature can be a PNG file (base64 data URL or file path)
@@ -159,9 +167,11 @@ export default function WelcomeStepBranch({
                   Branch
                 </Badge>
                 <p className="text-sm text-gray-900">
-                  {Array.isArray(employee.branches) 
-                    ? employee.branches[0]?.branch_name || employee.branches[0]?.branch_code || "N/A"
-                    : (employee.branches as any)?.branch_name || (employee.branches as any)?.branch_code || "N/A"}
+                  {getEmployeeBranchWelcomeDisplay(
+                    employee,
+                    branchOptions,
+                    branchListLoading
+                  )}
                 </p>
               </div>
               <div>

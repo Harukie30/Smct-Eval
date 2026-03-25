@@ -33,52 +33,13 @@ import RankNfileHo from "@/components/evaluation/RankNfileHo";
 import BasicHo from "@/components/evaluation/BasicHo";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewEmployeeModal from "@/components/ViewEmployeeModal";
+import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
+import { getEmployeeBranchWelcomeDisplay } from "@/components/evaluation/employeeBranchLabel";
 
 export default function EmployeesTab() {
   const { user } = useAuth();
-  
-  // Helper function to get branch code from branch data
-  const getBranchCode = (branch: any): string => {
-    if (!branch) return "N/A";
-    
-    // If branch has branch_code directly
-    if (branch.branch_code) {
-      return branch.branch_code;
-    }
-    
-    // If branch has code directly
-    if (branch.code) {
-      return branch.code;
-    }
-    
-    // If a raw branch id/value is provided, return it as fallback display
-    if (typeof branch === "string" || typeof branch === "number") {
-      return String(branch);
-    }
-
-    // Fallback to branch_name if code is not available
-    return branch.branch_name || "N/A";
-  };
-
-  const getEmployeeBranchCode = (employee: User | null): string => {
-    if (!employee) return "N/A";
-
-    if (employee.branches) {
-      const branchData = Array.isArray(employee.branches)
-        ? employee.branches[0]
-        : (employee.branches as any);
-      const codeFromBranches = getBranchCode(branchData);
-      if (codeFromBranches !== "N/A") return codeFromBranches;
-    }
-
-    const employeeAny = employee as any;
-    const branchIdOrValue = employeeAny.branch_id ?? employeeAny.branch;
-    if (branchIdOrValue !== undefined && branchIdOrValue !== null && branchIdOrValue !== "") {
-      return getBranchCode(branchIdOrValue);
-    }
-
-    return "N/A";
-  };
+  const { branchOptions, isLoading: branchListLoading } =
+    useBranchesForEvaluation();
 
   // Helper function to check if employee is HO (Head Office)
   // This determines the evaluationType based on the employee being evaluated, not the evaluator
@@ -640,7 +601,13 @@ export default function EmployeesTab() {
                                 employee.position ||
                                 "N/A"}
                             </TableCell>
-                            <TableCell>{getEmployeeBranchCode(employee)}</TableCell>
+                            <TableCell>
+                              {getEmployeeBranchWelcomeDisplay(
+                                employee,
+                                branchOptions,
+                                branchListLoading
+                              )}
+                            </TableCell>
                             <TableCell>
                               <Badge variant="outline">
                                 {employee.roles &&

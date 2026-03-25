@@ -24,6 +24,7 @@ import { storeEvaluationResult } from "@/lib/evaluationStorage";
 import { apiService } from "@/lib/apiService";
 import { createEvaluationNotification } from "@/lib/notificationUtils";
 import { User, useAuth } from "../../contexts/UserContext";
+import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 import { branchRankNfileSteps } from "./configs/branchRankNfileConfig";
 
 interface BranchRankNfileEvaluationFormProps {
@@ -40,7 +41,9 @@ export default function BranchRankNfileEvaluationForm({
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-N = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
   const { user } = useAuth();
-  
+  const { branchOptions, isLoading: branchListLoading } =
+    useBranchesForEvaluation();
+
   // BranchRankNfile uses branchRankNfileSteps (fixed configuration)
   const filteredSteps = branchRankNfileSteps;
   
@@ -592,6 +595,8 @@ export default function BranchRankNfileEvaluationForm({
                     onStartAction={startEvaluation}
                     onBackAction={onCloseAction}
                     evaluationType="rankNfile"
+                    branchOptions={branchOptions}
+                    branchListLoading={branchListLoading}
                   />
                 ) : (() => {
                   const stepIndex = currentStep - 1;

@@ -25,6 +25,7 @@ import { apiService } from "@/lib/apiService";
 import { createEvaluationNotification } from "@/lib/notificationUtils";
 import { User, useAuth } from "../../contexts/UserContext";
 import { branchEvaluationSteps } from "./configs/branchEvaluationConfig";
+import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 
 interface BranchManagerEvaluationFormProps {
   employee?: User | null;
@@ -42,6 +43,8 @@ export default function BranchManagerEvaluationForm({
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-N = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
   const { user } = useAuth();
+  const { branchOptions, isLoading: branchListLoading } =
+    useBranchesForEvaluation();
   
   // Branch Manager/Supervisor uses branchEvaluationSteps (includes Customer Service + Managerial Skills)
   const filteredSteps = branchEvaluationSteps;
@@ -631,6 +634,8 @@ export default function BranchManagerEvaluationForm({
                     onStartAction={startEvaluation}
                     onBackAction={onCloseAction}
                     evaluationType={evaluationType}
+                    branchOptions={branchOptions}
+                    branchListLoading={branchListLoading}
                   />
                 ) : (() => {
                   const stepIndex = currentStep - 1;

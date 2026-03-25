@@ -25,6 +25,7 @@ import { apiService } from "@/lib/apiService";
 import { createEvaluationNotification } from "@/lib/notificationUtils";
 import { User, useAuth } from "../../contexts/UserContext";
 import { branchEvaluationSteps, branchRankNfileSteps } from "./configs";
+import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 
 // Default steps use branch evaluation configuration
 const defaultSteps: EvaluationStepConfig[] = branchEvaluationSteps;
@@ -47,6 +48,8 @@ export default function EvaluationForm({
   const [currentStep, setCurrentStep] = useState(0); // 0 = welcome step, 1-N = actual steps
   const [welcomeAnimationKey, setWelcomeAnimationKey] = useState(0);
   const { user } = useAuth();
+  const { branchOptions, isLoading: branchListLoading } =
+    useBranchesForEvaluation();
   
   // Check if employee being evaluated is HO (Head Office)
   // This determines the evaluationType based on the employee being evaluated, not the evaluator
@@ -868,103 +871,33 @@ export default function EvaluationForm({
     try {
       const empID = employee?.id;
       if (empID) {
-        // Check if evaluator's branch is HO (Head Office)
-        const isEvaluatorHO = () => {
-          if (!user?.branches) return false;
-          
-          // Handle branches as array
-          if (Array.isArray(user.branches)) {
-            const branch = user.branches[0];
-            if (branch) {
-              const branchName = branch.branch_name?.toUpperCase() || "";
-              const branchCode = branch.branch_code?.toUpperCase() || "";
-              return (
-                branchName === "HO" || 
-                branchCode === "HO" || 
-                branchName.includes("HEAD OFFICE") ||
-                branchCode.includes("HEAD OFFICE") ||
-                branchName === "HEAD OFFICE" ||
-                branchCode === "HEAD OFFICE"
-              );
-            }
-          }
-          
-          // Handle branches as object
-          if (typeof user.branches === 'object') {
-            const branchName = (user.branches as any)?.branch_name?.toUpperCase() || "";
-            const branchCode = (user.branches as any)?.branch_code?.toUpperCase() || "";
-            return (
-              branchName === "HO" || 
-              branchCode === "HO" || 
-              branchName.includes("HEAD OFFICE") ||
-              branchCode.includes("HEAD OFFICE") ||
-              branchName === "HEAD OFFICE" ||
-              branchCode === "HEAD OFFICE"
-            );
-          }
-          
-          return false;
-        };
-        
-        // Check if evaluator is Area Manager
-        const isAreaManager = () => {
-          if (!user?.positions) return false;
-          
-          // Get position name from various possible fields
-          const positionName = (
-            user.positions?.label || 
-            user.positions?.name || 
-            (user as any).position ||
-            ""
-          ).toLowerCase().trim();
-          
-          // Check if position is Area Manager
-          return (
-            positionName === "area manager" ||
-            positionName.includes("area manager")
-          );
-        };
-        
-        const isHO = isEvaluatorHO();
-        const isAreaMgr = isAreaManager();
-        
+        // Route by the *employee being evaluated* (HO vs branch), not the evaluator.
+        // RankNfileHo/BasicHo omit Customer Service and (for rank-and-file) Job Targets row 5;
+        // posting those payloads to branch endpoints caused backend validation errors
+        // (e.g. customerServiceExplanation1–5, qualityOfWorkComments5 required).
+
         // Debug: Verify Shop Income (Q12) is being sent to backend
         if (form.qualityOfWorkScore12 !== undefined && form.qualityOfWorkScore12 !== 0) {
           console.log('✅ Frontend: qualityOfWorkScore12 is being sent to backend:', form.qualityOfWorkScore12);
         } else {
           console.warn('⚠️ Frontend: qualityOfWorkScore12 is missing or zero');
         }
-        
-        // Use appropriate API endpoint based on branch, position, and evaluation type
-        if (isHO && isAreaMgr) {
-          // Head Office Area Manager - use Branch endpoints
+
+        if (isHO) {
           if (evaluationType === 'rankNfile') {
-            const response = await apiService.postBranchRankNFile(empID, form);
+            await apiService.postHoRankNFile(empID, form);
           } else if (evaluationType === 'basic') {
-            const response = await apiService.postBranchBasic(empID, form);
+            await apiService.postHoBasic(empID, form);
           } else {
-            // Default evaluation for HO Area Manager - use standard createSubmission endpoint
-            const response = await apiService.createSubmission(empID, form);
-          }
-        } else if (isHO) {
-          // Head Office evaluator (not Area Manager) - use HO endpoints
-          if (evaluationType === 'rankNfile') {
-            const response = await apiService.postHoRankNFile(empID, form);
-          } else if (evaluationType === 'basic') {
-            const response = await apiService.postHoBasic(empID, form);
-          } else {
-            // Default evaluation for HO - use standard createSubmission endpoint
-            const response = await apiService.createSubmission(empID, form);
+            await apiService.createSubmission(empID, form);
           }
         } else {
-          // Branch evaluator (not Head Office) - use Branch endpoints
           if (evaluationType === 'rankNfile') {
-            const response = await apiService.postBranchRankNFile(empID, form);
+            await apiService.postBranchRankNFile(empID, form);
           } else if (evaluationType === 'basic') {
-            const response = await apiService.postBranchBasic(empID, form);
+            await apiService.postBranchBasic(empID, form);
           } else {
-            // Default evaluation for branch - use BranchBasic endpoint
-            const response = await apiService.postBranchBasic(empID, form);
+            await apiService.postBranchBasic(empID, form);
           }
         }
       }
@@ -1147,6 +1080,8 @@ export default function EvaluationForm({
                     onStartAction={startEvaluation}
                     onBackAction={onCloseAction}
                     evaluationType={evaluationType}
+                    branchOptions={branchOptions}
+                    branchListLoading={branchListLoading}
                   />
                 </CardContent>
               </Card>
@@ -1169,6 +1104,8 @@ export default function EvaluationForm({
                       onStartAction={startEvaluation}
                       onBackAction={onCloseAction}
                       evaluationType={evaluationType}
+                      branchOptions={branchOptions}
+                      branchListLoading={branchListLoading}
                     />
                   ) : (() => {
                     const stepIndex = currentStep - 1;

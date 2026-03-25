@@ -6,6 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, X } from "lucide-react";
 import { EvaluationPayload } from "./types";
 import { useAuth, User } from "@/contexts/UserContext";
+import {
+  getEmployeeBranchWelcomeDisplay,
+  type BranchOption,
+} from "./employeeBranchLabel";
 
 interface WelcomeStepAreaManagerProps {
   data: EvaluationPayload;
@@ -13,12 +17,16 @@ interface WelcomeStepAreaManagerProps {
   employee?: User | null;
   onStartAction: () => void;
   onBackAction?: () => void;
+  branchOptions?: BranchOption[];
+  branchListLoading?: boolean;
 }
 
 export default function WelcomeStepAreaManager({
   employee,
   onStartAction,
   onBackAction,
+  branchOptions,
+  branchListLoading = false,
 }: WelcomeStepAreaManagerProps) {
   const { user } = useAuth();
   // Signature can be a PNG file (base64 data URL or file path)
@@ -113,6 +121,18 @@ export default function WelcomeStepAreaManager({
                   {employee.departments?.department_name ||
                     employee.departments?.name ||
                     "N/A"}
+                </p>
+              </div>
+              <div>
+                <Badge className="bg-amber-100 text-amber-900 mb-1">
+                  Branch
+                </Badge>
+                <p className="text-sm text-gray-900">
+                  {getEmployeeBranchWelcomeDisplay(
+                    employee,
+                    branchOptions,
+                    branchListLoading
+                  )}
                 </p>
               </div>
               <div>
