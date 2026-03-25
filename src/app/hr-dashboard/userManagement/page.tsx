@@ -314,6 +314,7 @@ export default function UserManagementTab() {
   const [isExporting, setIsExporting] = useState(false);
   const [showExportError, setShowExportError] = useState(false);
   const [isBulkUploadSuccessModalOpen, setIsBulkUploadSuccessModalOpen] = useState(false);
+  const [isBulkUploadProcessing, setIsBulkUploadProcessing] = useState(false);
   const [recordedYearsForAverage, setRecordedYearsForAverage] = useState<{ year: number }[]>([]);
   const [loadingRecordedYears, setLoadingRecordedYears] = useState(false);
   const [averageModalYear, setAverageModalYear] = useState<string>("");
@@ -2960,44 +2961,77 @@ export default function UserManagementTab() {
         branches={branchesData}
         positions={positionsData}
         roles={roles}
-        onBulkUploadSuccess={() => setIsBulkUploadSuccessModalOpen(true)}
+        onBulkUploadStart={() => {
+          setIsBulkUploadSuccessModalOpen(true);
+          setIsBulkUploadProcessing(true);
+        }}
+        onBulkUploadSuccess={() => {
+          setIsBulkUploadProcessing(false);
+          setIsBulkUploadSuccessModalOpen(true);
+        }}
+        onBulkUploadError={() => {
+          setIsBulkUploadProcessing(false);
+          setIsBulkUploadSuccessModalOpen(false);
+        }}
       />
 
       {/* Bulk Upload Success Modal */}
       <Dialog
         open={isBulkUploadSuccessModalOpen}
-        onOpenChangeAction={(open) => setIsBulkUploadSuccessModalOpen(open)}
+        onOpenChangeAction={(open) => {
+          if (!isBulkUploadProcessing) {
+            setIsBulkUploadSuccessModalOpen(open);
+          }
+        }}
       >
         <DialogContent className={`max-w-md p-8 text-center ${dialogAnimationClass}`}>
           <div className="flex flex-col items-center">
-            <div className="relative mb-4">
-              <span className="absolute inset-0 rounded-full bg-green-200 animate-ping opacity-60" />
-              <div className="relative flex items-center justify-center w-24 h-24 rounded-full bg-green-100 border-4 border-green-500 shadow-md">
-                <span className="text-5xl text-green-600 font-bold leading-none animate-pulse">
-                  ✓
-                </span>
+            {isBulkUploadProcessing ? (
+              <>
+                <div className="relative mb-4 flex items-center justify-center w-24 h-24 rounded-full bg-blue-50 border-4 border-blue-200 shadow-md">
+                  <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+                </div>
+                <h2 className="text-xl font-bold text-blue-700 mb-2">
+                  Uploading Users...
+                </h2>
+                <p className="text-gray-600 text-sm mb-2 max-w-xs">
+                  Please wait while your bulk upload is being processed.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="relative mb-4">
+                  <span className="absolute inset-0 rounded-full bg-green-200 animate-ping opacity-60" />
+                  <div className="relative flex items-center justify-center w-24 h-24 rounded-full bg-green-100 border-4 border-green-500 shadow-md">
+                    <span className="text-5xl text-green-600 font-bold leading-none animate-pulse">
+                      ✓
+                    </span>
+                  </div>
               </div>
-            </div>
-            <h2 className="text-xl font-bold text-green-700 mb-2">
               Upload Successful
             </h2>
-            <p className="text-gray-600 text-sm mb-6 max-w-xs">
-              Bulk user upload completed successfully. The user list has been refreshed.
-            </p>
-            <Button
-              onClick={async () => {
-                setIsBulkUploadSuccessModalOpen(false);
-                setIsAddUserModalOpen(false);
-                setIsDeleteModalOpen(false);
-                setIsEditModalOpen(false);
-                setIsViewEmployeeModalOpen(false);
-                setEmployeeToView(null);
-                await refreshUserData(true);
-              }}
-              className="px-8 py-2 cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
-            >
-              OK
-            </Button>
+                <h2 className="text-xl font-bold text-green-700 mb-2">
+                  Upload Successful
+                </h2>
+                <p className="text-gray-600 text-sm mb-6 max-w-xs">
+                  Bulk user upload completed successfully. The user list has been refreshed.
+                </p>
+                <Button
+                  onClick={async () => {
+                    setIsBulkUploadSuccessModalOpen(false);
+                    setIsAddUserModalOpen(false);
+                    setIsDeleteModalOpen(false);
+                    setIsEditModalOpen(false);
+                    setIsViewEmployeeModalOpen(false);
+                    setEmployeeToView(null);
+                    await refreshUserData(true);
+                  }}
+                  className="px-8 py-2 cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  OK
+                </Button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

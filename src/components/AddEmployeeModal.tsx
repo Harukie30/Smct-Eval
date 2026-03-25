@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
 import LoadingAnimation from "@/components/LoadingAnimation";
-import { useToast } from "@/hooks/useToast";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { FileSpreadsheet, Upload, X } from "lucide-react";
 import { apiService } from "@/lib/apiService";
@@ -49,7 +48,9 @@ interface AddEmployeeModalProps {
   positions: any;
   roles: any;
   onBulkUploadClick?: () => void;
+  onBulkUploadStart?: () => void;
   onBulkUploadSuccess?: () => void;
+  onBulkUploadError?: () => void;
 }
 
 const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
@@ -61,7 +62,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   positions,
   roles,
   onBulkUploadClick,
+  onBulkUploadStart,
   onBulkUploadSuccess,
+  onBulkUploadError,
 }) => {
   const [formData, setFormData] = useState<User>({
     employee_id: "",
@@ -90,7 +93,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const [bulkErrorMessage, setBulkErrorMessage] = useState<string>("");
   const bulkFileInputRef = useRef<HTMLInputElement | null>(null);
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
-  const toast = useToast();
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -171,6 +173,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     if (!validateBulkFile(bulkFile)) return;
     if (!bulkFile) return;
 
+    onBulkUploadStart?.();
     setIsBulkUploading(true);
     setBulkUploadProgress(5);
 
@@ -249,15 +252,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       // Optional small pause so the UI doesn't feel "instant" under load.
       await new Promise((resolve) => setTimeout(resolve, 250));
 
-      await toast.promise(
-        apiService.bulkRegisterUser({
-          users: parsedUsers,
-        } as any),
-        {
-        loading: "Uploading file...",
-        success: "upload submitted",
-        error: "upload failed. Please check the details and try again.",
-      });
+      await apiService.bulkRegisterUser({
+        users: parsedUsers,
+      } as any);
 
       setIsBulkUploadOpen(false);
       setBulkFile(null);
@@ -265,6 +262,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       if (bulkFileInputRef.current) bulkFileInputRef.current.value = "";
       onBulkUploadSuccess?.();
     } catch (err: any) {
+      onBulkUploadError?.();
       const message =
         err?.response?.data?.message ||
         err?.message ||
