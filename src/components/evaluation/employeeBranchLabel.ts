@@ -25,12 +25,12 @@ export function getEmployeeBranchLabel(
 ): string {
   if (!employee) return "N/A";
 
-  const anyEmp = employee as Record<string, unknown>;
+  const anyEmp = employee as unknown as Record<string, unknown>;
 
   if (employee.branches) {
     const b = Array.isArray(employee.branches)
       ? employee.branches[0]
-      : (employee.branches as Record<string, unknown>);
+      : (employee.branches as unknown as Record<string, unknown>);
     if (b && typeof b === "object") {
       const rec = b as Record<string, unknown>;
       const name = String(
@@ -87,7 +87,7 @@ export function employeeBranchNeedsLookup(
 ): boolean {
   if (!employee) return false;
 
-  const anyEmp = employee as Record<string, unknown>;
+  const anyEmp = employee as unknown as Record<string, unknown>;
 
   if (anyEmp.branch_name != null && String(anyEmp.branch_name).trim() !== "") {
     return false;
@@ -96,7 +96,7 @@ export function employeeBranchNeedsLookup(
   if (employee.branches) {
     const b = Array.isArray(employee.branches)
       ? employee.branches[0]
-      : (employee.branches as Record<string, unknown>);
+      : (employee.branches as unknown as Record<string, unknown>);
     if (b && typeof b === "object") {
       const rec = b as Record<string, unknown>;
       const name = String(rec.branch_name || rec.name || "").trim();
