@@ -124,55 +124,52 @@ export default function Step1({
   // Check if employee being evaluated is HO (Head Office)
   // This determines the header text based on the employee being evaluated
   const isEmployeeHO = () => {
-    if (!employee?.branches) {
-      // Fallback: if evaluationType is 'rankNfile' or 'basic', it's definitely an HO evaluation
-      return evaluationType === 'rankNfile' || evaluationType === 'basic';
-    }
-    
-    // Handle branches as array
-    if (Array.isArray(employee.branches)) {
-      const branch = employee.branches[0];
-      if (branch) {
-        const branchName = branch.branch_name?.toUpperCase() || "";
-        const branchCode = branch.branch_code?.toUpperCase() || "";
-        return (
-          branchName === "HO" || 
-          branchCode === "HO" || 
-          branchName.includes("HEAD OFFICE") ||
-          branchCode.includes("HEAD OFFICE") ||
-          branchName === "HEAD OFFICE" ||
-          branchCode === "HEAD OFFICE"
-        );
-      }
-    }
-    
-    // Handle branches as object
-    if (typeof employee.branches === 'object') {
-      const branchName = (employee.branches as any)?.branch_name?.toUpperCase() || "";
-      const branchCode = (employee.branches as any)?.branch_code?.toUpperCase() || "";
+    const isHoBranchObj = (branchObj: unknown): boolean => {
+      if (!branchObj || typeof branchObj !== "object") return false;
+      const b = branchObj as any;
+      const branchName = String(b.branch_name ?? b.name ?? "").toUpperCase().trim();
+      const branchCode = String(b.branch_code ?? b.code ?? b.acronym ?? "")
+        .toUpperCase()
+        .trim();
       return (
-        branchName === "HO" || 
-        branchCode === "HO" || 
-        branchName.includes("HEAD OFFICE") ||
-        branchCode.includes("HEAD OFFICE") ||
+        branchName === "HO" ||
+        branchCode === "HO" ||
+        branchCode === "126" ||
         branchName === "HEAD OFFICE" ||
-        branchCode === "HEAD OFFICE"
-      );
-    }
-    
-    // Fallback: check if branch field exists directly
-    if ((employee as any).branch) {
-      const branchName = String((employee as any).branch).toUpperCase();
-      return (
-        branchName === "HO" || 
-        branchName === "HEAD OFFICE" ||
+        branchCode === "HEAD OFFICE" ||
         branchName.includes("HEAD OFFICE") ||
-        branchName.includes("/HO")
+        branchCode.includes("HEAD OFFICE")
       );
+    };
+
+    if (!employee) return false;
+
+    // Prefer direct `employee.branch` (your API shape)
+    const branchVal = (employee as any).branch;
+    if (branchVal !== undefined && branchVal !== null && branchVal !== "") {
+      if (isHoBranchObj(branchVal)) return true;
+      const s = String(branchVal).toUpperCase().trim();
+      return s === "HO" || s === "126" || s === "HEAD OFFICE" || s.includes("HEAD OFFICE");
     }
-    
-    // Final fallback: if evaluationType is 'rankNfile' or 'basic', it's definitely an HO evaluation
-    return evaluationType === 'rankNfile' || evaluationType === 'basic';
+
+    // Scan `employee.branches` for an HO entry
+    const branchesVal = (employee as any).branches;
+    if (Array.isArray(branchesVal)) {
+      return branchesVal.some((b: any) => isHoBranchObj(b));
+    }
+    if (branchesVal && typeof branchesVal === "object") {
+      return isHoBranchObj(branchesVal);
+    }
+
+    // Legacy `branch_id` / `branchId`
+    const branchIdOrValue = (employee as any).branch_id ?? (employee as any).branchId;
+    if (branchIdOrValue !== undefined && branchIdOrValue !== null && branchIdOrValue !== "") {
+      const s = String(branchIdOrValue).toUpperCase().trim();
+      return s === "HO" || s === "126" || s === "HEAD OFFICE" || s.includes("HEAD OFFICE");
+    }
+
+    // Final fallback: if evaluationType implies HO route
+    return evaluationType === "rankNfile" || evaluationType === "basic";
   };
 
   // Check if any "others" review is selected

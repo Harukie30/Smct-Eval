@@ -37,6 +37,8 @@ import { RefreshCw, Check, X } from "lucide-react";
 import apiService from "@/lib/apiService";
 import { useToast } from "@/hooks/useToast";
 import EvaluationsPagination from "@/components/paginationComponent";
+import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
+import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
 
 interface SignatureResetRequest {
   id: number;
@@ -71,6 +73,9 @@ export default function SignatureResetRequestsTab() {
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [perPage, setPerPage] = useState(0);
+
+  const { branchOptions, isLoading: branchListLoading } =
+    useBranchesForEvaluation();
 
   // Modal states
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
@@ -343,19 +348,15 @@ export default function SignatureResetRequestsTab() {
   // Helper function to get branch code from branch data
   const getBranchCode = (branch: any): string => {
     if (!branch) return "N/A";
-    
-    // If branch has branch_code directly
-    if (branch.branch_code) {
-      return branch.branch_code;
-    }
-    
-    // If branch has code directly
-    if (branch.code) {
-      return branch.code;
-    }
-    
-    // Fallback to branch_name if code is not available
-    return branch.branch_name || branch.name || "N/A";
+
+    // Reuse the shared mapping to support:
+    // - API payloads that include `branch_code` directly
+    // - API payloads that provide only an id/value (resolved using branchOptions)
+    return getEmployeeBranchCodeDisplay(
+      { branch } as any,
+      branchOptions,
+      branchListLoading
+    );
   };
 
   return (

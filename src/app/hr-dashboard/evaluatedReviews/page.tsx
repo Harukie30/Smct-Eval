@@ -176,6 +176,29 @@ export default function OverviewTab() {
   const getEmployeeBranchCode = (employee: any): string => {
     if (!employee) return "N/A";
 
+    // 1) Prefer the direct `employee.branch` object (new API shape)
+    if (employee.branch) {
+      const branchVal = employee.branch;
+      if (typeof branchVal === "object") {
+        // Prefer branch_code (HO tends to be `branch_code: "HO"` or similar)
+        const code =
+          (branchVal as any).branch_code ??
+          (branchVal as any).code ??
+          (branchVal as any).acronym ??
+          "";
+        const codeStr = String(code).trim();
+        if (codeStr) return codeStr;
+
+        const fromObjName = String(
+          (branchVal as any).branch_name ?? (branchVal as any).name ?? ""
+        ).trim();
+        if (fromObjName) return fromObjName;
+      } else if (branchVal !== null && branchVal !== undefined && branchVal !== "") {
+        return getBranchCode(branchVal);
+      }
+    }
+
+    // 2) Legacy `employee.branches` (array or object)
     if (employee.branches) {
       const branchData = Array.isArray(employee.branches)
         ? employee.branches[0]
@@ -184,11 +207,17 @@ export default function OverviewTab() {
       if (codeFromBranches !== "N/A") return codeFromBranches;
     }
 
+    // 3) branch_id / branch
     const branchIdOrValue = employee.branch_id ?? employee.branch;
-    if (branchIdOrValue !== undefined && branchIdOrValue !== null && branchIdOrValue !== "") {
+    if (
+      branchIdOrValue !== undefined &&
+      branchIdOrValue !== null &&
+      branchIdOrValue !== ""
+    ) {
       return getBranchCode(branchIdOrValue);
     }
 
+    // 4) Fallback
     return employee.branch_name || "N/A";
   };
 

@@ -37,6 +37,8 @@ import { RefreshCw, Check, X } from "lucide-react";
 import apiService from "@/lib/apiService";
 import { useToast } from "@/hooks/useToast";
 import EvaluationsPagination from "@/components/paginationComponent";
+import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
+import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
 
 interface SignatureResetRequest {
   id: number;
@@ -73,6 +75,9 @@ export default function SignatureResetRequestsTab() {
   const [perPage, setPerPage] = useState(0);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+
+  const { branchOptions, isLoading: branchListLoading } =
+    useBranchesForEvaluation();
 
   // Modal states
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
@@ -523,7 +528,13 @@ export default function SignatureResetRequestsTab() {
                       <TableCell>
                         {request.branches?.length > 0
                           ? request.branches
-                              .map((b: any) => b.branch_name || b.name)
+                              .map((b: any) =>
+                                getEmployeeBranchCodeDisplay(
+                                  { branch: b } as any,
+                                  branchOptions,
+                                  branchListLoading
+                                )
+                              )
                               .join(", ")
                           : "N/A"}
                       </TableCell>

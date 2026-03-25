@@ -43,6 +43,7 @@ import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import { setQuarter } from "date-fns";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { toastMessages } from "@/lib/toastMessages";
+import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
 interface Review {
   id: number;
   employee: any;
@@ -86,71 +87,6 @@ export default function OverviewTab() {
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [years, setYears] = useState<any[]>([]);
   const [branchesData, setBranchesData] = useState<any[]>([]);
-
-  // Helper function to get branch code from branch data
-  const getBranchCode = (branch: any): string => {
-    if (!branch) return "N/A";
-    
-    // If branch has branch_code directly
-    if (branch.branch_code) {
-      return branch.branch_code;
-    }
-    
-    // If branch has code directly
-    if (branch.code) {
-      return branch.code;
-    }
-    
-    // Try to find matching branch in branchesData by id first
-    if (branch.id && branchesData.length > 0) {
-      const foundBranchById = branchesData.find((b: any) => {
-        return String(b.value) === String(branch.id);
-      });
-      
-      if (foundBranchById?.label) {
-        const labelParts = foundBranchById.label.split(" /");
-        // Return the code part (after " /") if it exists, otherwise return the name
-        return labelParts[1]?.trim() || labelParts[0]?.trim() || "N/A";
-      }
-    }
-    
-    // If branch has branch_name, try to find matching branch in branchesData by name
-    if (branch.branch_name && branchesData.length > 0) {
-      // branchesData comes from getBranches which returns { label: "branch_name / branch_code", value: "id" }
-      const foundBranch = branchesData.find((b: any) => {
-        if (b.label) {
-          const labelParts = b.label.split(" /");
-          return labelParts[0]?.trim() === branch.branch_name.trim();
-        }
-        return false;
-      });
-      
-      if (foundBranch?.label) {
-        const labelParts = foundBranch.label.split(" /");
-        // Return the code part (after " /") if it exists
-        return labelParts[1]?.trim() || labelParts[0]?.trim() || branch.branch_name;
-      }
-    }
-    
-    // If branch has name property, try to match by name
-    if (branch.name && branchesData.length > 0) {
-      const foundBranch = branchesData.find((b: any) => {
-        if (b.label) {
-          const labelParts = b.label.split(" /");
-          return labelParts[0]?.trim() === branch.name.trim();
-        }
-        return false;
-      });
-      
-      if (foundBranch?.label) {
-        const labelParts = foundBranch.label.split(" /");
-        return labelParts[1]?.trim() || labelParts[0]?.trim() || branch.name;
-      }
-    }
-    
-    // Fallback to branch_name or name if code not found
-    return branch.branch_name || branch.name || "N/A";
-  };
 
   const loadEvaluations = async (
     searchValue: string,
@@ -742,11 +678,11 @@ export default function OverviewTab() {
                             </div>
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
-                            {review.employee?.branches &&
-                            Array.isArray(review.employee.branches) &&
-                            review.employee.branches[0]
-                              ? getBranchCode(review.employee.branches[0])
-                              : "N/A"}
+                            {getEmployeeBranchCodeDisplay(
+                              review.employee,
+                              branchesData,
+                              refreshing
+                            )}
                           </TableCell>
                           <TableCell className="px-6 py-3">
                             {(() => {
@@ -949,11 +885,13 @@ export default function OverviewTab() {
                     </p>
                     <p>
                       <span className="font-medium">Branch:</span>{" "}
-                      {reviewToDelete?.employee?.branches &&
-                      Array.isArray(reviewToDelete.employee.branches) &&
-                      reviewToDelete.employee.branches[0]
-                        ? getBranchCode(reviewToDelete.employee.branches[0])
-                        : reviewToDelete?.employee?.branch_name || "N/A"}
+                      {reviewToDelete?.employee
+                        ? getEmployeeBranchCodeDisplay(
+                            reviewToDelete.employee,
+                            branchesData,
+                            refreshing
+                          )
+                        : "N/A"}
                     </p>
                   </div>
                 </div>
@@ -979,8 +917,7 @@ export default function OverviewTab() {
                 >
                   {isDeleting ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Deleting...
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>                      Deleting...
                     </>
                   ) : (
                     "❌ Delete Permanently"

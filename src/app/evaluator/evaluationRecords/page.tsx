@@ -45,7 +45,9 @@ import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { toastMessages } from "@/lib/toastMessages";
 import { Loader2 } from "lucide-react";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
-import { getEmployeeBranchWelcomeDisplay } from "@/components/evaluation/employeeBranchLabel";
+import {
+  getEmployeeBranchCodeDisplay,
+} from "@/components/evaluation/employeeBranchLabel";
 interface Review {
   id: number;
   employee: any;
@@ -685,7 +687,7 @@ export default function OverviewTab() {
                             </div>
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
-                            {getEmployeeBranchWelcomeDisplay(
+                            {getEmployeeBranchCodeDisplay(
                               review.employee,
                               branchOptions,
                               branchListLoading
@@ -909,7 +911,7 @@ export default function OverviewTab() {
                     </p>
                     <p>
                       <span className="font-medium">Branch:</span>{" "}
-                      {getEmployeeBranchWelcomeDisplay(
+                      {getEmployeeBranchCodeDisplay(
                         reviewToDelete?.employee ?? null,
                         branchOptions,
                         branchListLoading

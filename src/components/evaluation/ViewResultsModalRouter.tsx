@@ -64,49 +64,68 @@ export interface ViewResultsModalProps {
 // Helper function to check if employee is HO (Head Office)
 const isEmployeeHO = (submission: Submission | null): boolean => {
   if (!submission?.employee) return false;
-  
-  // Handle branches as array
-  if (Array.isArray(submission.employee.branches)) {
-    const branch = submission.employee.branches[0];
-    if (branch) {
-      const branchName = branch.branch_name?.toUpperCase() || "";
-      const branchCode = branch.branch_code?.toUpperCase() || "";
-      return (
-        branchName === "HO" || 
-        branchCode === "HO" || 
-        branchName.includes("HEAD OFFICE") ||
-        branchCode.includes("HEAD OFFICE") ||
-        branchName === "HEAD OFFICE" ||
-        branchCode === "HEAD OFFICE"
-      );
-    }
-  }
-  
-  // Handle branches as object
-  if (typeof submission.employee.branches === 'object') {
-    const branchName = (submission.employee.branches as any)?.branch_name?.toUpperCase() || "";
-    const branchCode = (submission.employee.branches as any)?.branch_code?.toUpperCase() || "";
+
+  const employee = submission.employee as any;
+
+  const isHoBranchObj = (branchObj: unknown): boolean => {
+    if (!branchObj || typeof branchObj !== "object") return false;
+    const b = branchObj as any;
+
+    const branchName = String(b.branch_name ?? b.name ?? "")
+      .toUpperCase()
+      .trim();
+    const branchCode = String(
+      b.branch_code ?? b.code ?? b.acronym ?? ""
+    )
+      .toUpperCase()
+      .trim();
+
     return (
-      branchName === "HO" || 
-      branchCode === "HO" || 
-      branchName.includes("HEAD OFFICE") ||
-      branchCode.includes("HEAD OFFICE") ||
+      branchName === "HO" ||
+      branchCode === "HO" ||
+      branchCode === "126" ||
       branchName === "HEAD OFFICE" ||
-      branchCode === "HEAD OFFICE"
+      branchCode === "HEAD OFFICE" ||
+      branchName.includes("HEAD OFFICE") ||
+      branchCode.includes("HEAD OFFICE")
+    );
+  };
+
+  // 1) Prefer direct `employee.branch` object/value
+  const branchVal = employee.branch;
+  if (branchVal !== undefined && branchVal !== null && branchVal !== "") {
+    if (isHoBranchObj(branchVal)) return true;
+    const s = String(branchVal).toUpperCase().trim();
+    return (
+      s === "HO" || s === "126" || s === "HEAD OFFICE" || s.includes("HEAD OFFICE")
     );
   }
-  
-  // Fallback: check if branch field exists directly
-  if ((submission.employee as any).branch) {
-    const branchName = String((submission.employee as any).branch).toUpperCase();
+
+  // 2) If `employee.branches` exists, scan it for an HO entry
+  const branchesVal = employee.branches;
+  if (Array.isArray(branchesVal)) {
+    return branchesVal.some((b: unknown) => isHoBranchObj(b));
+  }
+  if (branchesVal && typeof branchesVal === "object") {
+    return isHoBranchObj(branchesVal);
+  }
+
+  // 3) Legacy: `branch_id` / `branchId`
+  const branchIdOrValue = employee.branch_id ?? employee.branchId;
+  if (
+    branchIdOrValue !== undefined &&
+    branchIdOrValue !== null &&
+    branchIdOrValue !== ""
+  ) {
+    const s = String(branchIdOrValue).toUpperCase().trim();
     return (
-      branchName === "HO" || 
-      branchName === "HEAD OFFICE" ||
-      branchName.includes("HEAD OFFICE") ||
-      branchName.includes("/HO")
+      s === "HO" ||
+      s === "126" ||
+      s === "HEAD OFFICE" ||
+      s.includes("HEAD OFFICE")
     );
   }
-  
+
   return false;
 };
 

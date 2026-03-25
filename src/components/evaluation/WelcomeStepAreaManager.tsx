@@ -7,7 +7,7 @@ import { ArrowLeft, X } from "lucide-react";
 import { EvaluationPayload } from "./types";
 import { useAuth, User } from "@/contexts/UserContext";
 import {
-  getEmployeeBranchWelcomeDisplay,
+  getEmployeeBranchCodeDisplay,
   type BranchOption,
 } from "./employeeBranchLabel";
 
@@ -128,7 +128,7 @@ export default function WelcomeStepAreaManager({
                   Branch
                 </Badge>
                 <p className="text-sm text-gray-900">
-                  {getEmployeeBranchWelcomeDisplay(
+                  {getEmployeeBranchCodeDisplay(
                     employee,
                     branchOptions,
                     branchListLoading

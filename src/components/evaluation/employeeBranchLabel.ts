@@ -14,6 +14,38 @@ function findBranchLabel(
   return label ? label : null;
 }
 
+function getBranchCodeFromObj(branchObj: unknown): string | null {
+  if (branchObj == null || typeof branchObj !== "object") return null;
+  const rec = branchObj as Record<string, unknown>;
+  const code = String(rec.branch_code || rec.code || rec.acronym || "").trim();
+  return code ? code : null;
+}
+
+function getBranchNameFromObj(branchObj: unknown): string | null {
+  if (branchObj == null || typeof branchObj !== "object") return null;
+  const rec = branchObj as Record<string, unknown>;
+  const name = String(rec.branch_name || rec.name || "").trim();
+  return name ? name : null;
+}
+
+function parseCodeFromLabel(label: string): string | null {
+  const s = label.trim();
+  if (!s) return null;
+
+  // Prefer parentheses code: "ALANO (ALAD)"
+  const paren = s.match(/\(([^)]+)\)\s*$/);
+  if (paren?.[1]) return paren[1].trim();
+
+  // Prefer last part after slash: "Makati / MK"
+  if (s.includes("/")) {
+    const parts = s.split("/");
+    const last = parts[parts.length - 1]?.trim();
+    if (last) return last;
+  }
+
+  return null;
+}
+
 /**
  * Human-readable branch for welcome / summary UIs.
  * Supports nested branches, branch_id-only payloads, and optional branch list
@@ -60,14 +92,32 @@ export function getEmployeeBranchLabel(
     return String(branchId);
   }
 
-  const branch = anyEmp.branch;
-  if (branch !== undefined && branch !== null && String(branch).trim() !== "") {
-    const s = String(branch).trim();
-    if (/^\d+$/.test(s)) {
-      const fromList = findBranchLabel(s, branchOptions);
-      if (fromList) return fromList;
+  // Prefer full branch object if provided by API.
+  const branchObj = anyEmp.branch;
+  if (branchObj !== undefined && branchObj !== null) {
+    if (typeof branchObj === "object") {
+      const name = getBranchNameFromObj(branchObj);
+      const code = getBranchCodeFromObj(branchObj);
+      if (name && code) return `${name} (${code})`;
+      if (name) return name;
+      if (code) return code;
+
+      const nestedId = (branchObj as Record<string, unknown>).id ?? (branchObj as Record<string, unknown>).branch_id;
+      if (nestedId !== undefined && nestedId !== null && String(nestedId).trim() !== "") {
+        const fromList = findBranchLabel(nestedId, branchOptions);
+        if (fromList) return fromList;
+        return String(nestedId);
+      }
+    } else {
+      const s = String(branchObj).trim();
+      if (s) {
+        if (/^\d+$/.test(s)) {
+          const fromList = findBranchLabel(s, branchOptions);
+          if (fromList) return fromList;
+        }
+        return s;
+      }
     }
-    return s;
   }
 
   const branchName = anyEmp.branch_name;
@@ -114,10 +164,22 @@ export function employeeBranchNeedsLookup(
     return true;
   }
 
-  const branch = anyEmp.branch;
-  if (branch != null && String(branch).trim() !== "") {
-    if (/^\d+$/.test(String(branch).trim())) {
-      return true;
+  const branchObj = anyEmp.branch;
+  if (branchObj != null) {
+    if (typeof branchObj === "object") {
+      const name = getBranchNameFromObj(branchObj);
+      const code = getBranchCodeFromObj(branchObj);
+      if (name || code) return false;
+
+      const nestedId =
+        (branchObj as Record<string, unknown>).id ??
+        (branchObj as Record<string, unknown>).branch_id;
+      if (nestedId != null && String(nestedId).trim() !== "") {
+        return true;
+      }
+    } else {
+      const s = String(branchObj).trim();
+      if (s && /^\d+$/.test(s)) return true;
     }
   }
 
@@ -135,4 +197,78 @@ export function getEmployeeBranchWelcomeDisplay(
     return "Loading\u2026";
   }
   return getEmployeeBranchLabel(employee, branchOptions);
+}
+
+/** Branch column display: prefer branch_code (e.g. "ALAD"), fallback to resolved labels. */
+export function getEmployeeBranchCodeDisplay(
+  employee: User | null | undefined,
+  branchOptions: BranchOption[] | undefined | null,
+  branchListLoading: boolean
+): string {
+  if (!employee) return "N/A";
+  if (branchListLoading && employeeBranchNeedsLookup(employee)) return "Loading\u2026";
+
+  const anyEmp = employee as unknown as Record<string, unknown>;
+
+  // 1) Full branch object from API
+  const branchObj = anyEmp.branch;
+  if (branchObj && typeof branchObj === "object") {
+    const code = getBranchCodeFromObj(branchObj);
+    if (code) return code;
+
+    const nestedId =
+      (branchObj as Record<string, unknown>).id ??
+      (branchObj as Record<string, unknown>).branch_id;
+    if (nestedId != null && String(nestedId).trim() !== "") {
+      const fromList = findBranchLabel(nestedId, branchOptions);
+      if (fromList) return parseCodeFromLabel(fromList) || fromList;
+      return String(nestedId);
+    }
+  }
+
+  // 2) Legacy nested branches shape
+  if (employee.branches) {
+    const b = Array.isArray(employee.branches)
+      ? employee.branches[0]
+      : (employee.branches as unknown as Record<string, unknown>);
+    if (b && typeof b === "object") {
+      const rec = b as Record<string, unknown>;
+      const code = String(rec.branch_code || rec.code || "").trim();
+      if (code) return code;
+
+      const nestedId = rec.id ?? rec.branch_id;
+      if (nestedId != null && String(nestedId).trim() !== "") {
+        const fromList = findBranchLabel(nestedId, branchOptions);
+        if (fromList) return parseCodeFromLabel(fromList) || fromList;
+        return String(nestedId);
+      }
+    }
+  }
+
+  // 3) branch_id / branchId
+  const branchId = anyEmp.branch_id ?? anyEmp.branchId;
+  if (branchId != null && String(branchId).trim() !== "") {
+    const fromList = findBranchLabel(branchId, branchOptions);
+    if (fromList) return parseCodeFromLabel(fromList) || fromList;
+    return String(branchId);
+  }
+
+  // 4) primitive branch value
+  const primitiveBranch = anyEmp.branch;
+  if (primitiveBranch != null && typeof primitiveBranch !== "object") {
+    const s = String(primitiveBranch).trim();
+    if (s) {
+      if (/^\d+$/.test(s)) {
+        const fromList = findBranchLabel(s, branchOptions);
+        if (fromList) return parseCodeFromLabel(fromList) || fromList;
+      }
+      return s;
+    }
+  }
+
+  // Final fallback
+  const directCode = anyEmp.branch_code ?? anyEmp.branchCode;
+  if (directCode != null && String(directCode).trim() !== "") return String(directCode);
+
+  return "N/A";
 }

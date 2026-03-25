@@ -28,6 +28,7 @@ import {
 } from "@/lib/quarterlyReviewUtils";
 import { useAuth, User as UserType } from "@/contexts/UserContext";
 import { CONFIG } from "../../../config/config";
+import { getEmployeeBranchCodeDisplay } from "./employeeBranchLabel";
 import {
   Dialog,
   DialogContent,
@@ -268,7 +269,7 @@ export default function OverallAssessmentBranchEval({
                     <div class="print-field">
                         <div class="print-label">Branch & Supervisor:</div>
                         <div class="print-value">${
-                          employee?.branches[0]?.branch_name || "Branch: N/A"
+                      getEmployeeBranchCodeDisplay(employee, null, false) || "Branch: N/A"
                         } | ${
       user?.fname + " " + user?.lname || "Sup: N/A"
     }</div>
@@ -926,7 +927,7 @@ export default function OverallAssessmentBranchEval({
               <div>
                 <Label className="font-medium">Branch:</Label>
                 <Input
-                  value={employee?.branches[0]?.branch_name || ""}
+                  value={getEmployeeBranchCodeDisplay(employee, null, false) || ""}
                   readOnly
                   className="mt-1 bg-gray-50"
                   disabled

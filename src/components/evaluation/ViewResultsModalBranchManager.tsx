@@ -10,6 +10,7 @@ import { Printer } from "lucide-react";
 import { useUser } from "@/contexts/UserContext";
 import { CONFIG } from "../../../config/config";
 import apiService from "@/lib/apiService";
+import { getEmployeeBranchCodeDisplay } from "./employeeBranchLabel";
 
 type Submission = {
   id: number;
@@ -2376,7 +2377,9 @@ export default function ViewResultsModal({
                         className="text-gray-900 print-value"
                         style={{ fontSize: "11px" }}
                       >
-                        {submission?.employee?.branches?.[0]?.branch_name || "Not specified"}
+                        {submission?.employee
+                          ? getEmployeeBranchCodeDisplay(submission.employee, null, false)
+                          : "Not specified"}
                       </p>
                     </div>
                     <div className="print-info-row">
