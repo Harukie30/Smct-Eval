@@ -282,7 +282,10 @@ export default function BranchHeadsTab() {
     
     // Try to find matching branch by name or code
     const foundBranch = branches.find(
-      (b) => b.name === branchValue.trim() || b.code === branchValue.trim()
+      (b) =>
+        b.name === branchValue.trim() ||
+        b.code === branchValue.trim() ||
+        String(b.id) === branchValue.trim()
     );
     
     // Return code if found, otherwise return the original value
