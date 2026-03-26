@@ -310,6 +310,11 @@ export default function UserManagementTab() {
   const [isAverageModalOpen, setIsAverageModalOpen] = useState(false);
   const [showNoDataAlert, setShowNoDataAlert] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  /** Shown after Employee Average → Export CSV completes successfully (separate from branch-quarter export). */
+  const [showAverageExportSuccess, setShowAverageExportSuccess] = useState(false);
+  /** Shown after Branch / Quarter summary → Export CSV completes successfully. */
+  const [showBranchQuarterExportSuccess, setShowBranchQuarterExportSuccess] =
+    useState(false);
   const [showExportError, setShowExportError] = useState(false);
   const [isBulkUploadSuccessModalOpen, setIsBulkUploadSuccessModalOpen] = useState(false);
   const [isBulkUploadProcessing, setIsBulkUploadProcessing] = useState(false);
@@ -765,6 +770,7 @@ export default function UserManagementTab() {
       setBranchQuarterBranchId("");
       setBranchQuarterDepartmentId("");
       setBranchQuarterTableRows(null);
+      setShowBranchQuarterExportSuccess(false);
       return;
     }
 
@@ -873,6 +879,7 @@ export default function UserManagementTab() {
       link.download = `${filenameSafe}.csv`;
       link.click();
       URL.revokeObjectURL(url);
+      setShowBranchQuarterExportSuccess(true);
     } catch (error) {
       console.error("Error exporting branch quarter CSV:", error);
       setShowExportError(true);
@@ -903,6 +910,7 @@ export default function UserManagementTab() {
       setRecordedYearsForAverage([]);
       setAverageModalYear("");
       setAverageTableData(null);
+      setShowAverageExportSuccess(false);
       return;
     }
     let cancelled = false;
@@ -925,6 +933,18 @@ export default function UserManagementTab() {
       cancelled = true;
     };
   }, [isAverageModalOpen]);
+
+  useEffect(() => {
+    if (!showAverageExportSuccess) return;
+    const id = window.setTimeout(() => setShowAverageExportSuccess(false), 3000);
+    return () => window.clearTimeout(id);
+  }, [showAverageExportSuccess]);
+
+  useEffect(() => {
+    if (!showBranchQuarterExportSuccess) return;
+    const id = window.setTimeout(() => setShowBranchQuarterExportSuccess(false), 3000);
+    return () => window.clearTimeout(id);
+  }, [showBranchQuarterExportSuccess]);
 
   const handleSaveUser = async (updatedUser: any) => {
     try {
@@ -2366,6 +2386,7 @@ export default function UserManagementTab() {
                       link.download = `${employeeName.replace(/\s+/g, "_")}_Average_${averageModalYear}.csv`;
                       link.click();
                       URL.revokeObjectURL(url);
+                      setShowAverageExportSuccess(true);
                     } catch {
                       setShowExportError(true);
                     } finally {
@@ -2916,6 +2937,103 @@ export default function UserManagementTab() {
         </DialogContent>
       </Dialog>
 
+      {/* Employee Average: CSV export success (same check animation as Add Position / bulk upload) */}
+      <Dialog
+        open={showAverageExportSuccess}
+        onOpenChangeAction={setShowAverageExportSuccess}
+      >
+        <DialogContent className="max-w-sm w-[90vw] px-6 py-6 text-center">
+          <DialogHeader className="border-0 pb-0 text-center sm:text-center">
+            <div className="relative mx-auto mb-5 flex h-[5.75rem] w-[5.75rem] items-center justify-center">
+              <span
+                className="absolute inset-0 rounded-full bg-emerald-400/30 motion-safe:animate-ping"
+                style={{ animationDuration: "2.4s" }}
+                aria-hidden
+              />
+              <div
+                className="absolute inset-[3px] rounded-full bg-gradient-to-br from-emerald-100/90 to-green-50 blur-[1px]"
+                aria-hidden
+              />
+              <div className="relative flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 via-green-500 to-emerald-700 shadow-[0_12px_40px_-8px_rgba(16,185,129,0.55)] ring-4 ring-white animate-success-badge-pop">
+                <svg
+                  className="h-11 w-11 text-white drop-shadow-sm"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden
+                >
+                  <path
+                    className="animate-success-check-draw"
+                    d="M6.5 12.5l3.8 3.8L17.8 8.8"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+            </div>
+            <DialogTitle className="text-xl font-bold text-gray-900">
+              Export Successful
+            </DialogTitle>
+            <DialogDescription className="text-gray-700">
+              Your average report CSV has been downloaded.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
+            
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Branch / Quarter summary: CSV export success */}
+      <Dialog
+        open={showBranchQuarterExportSuccess}
+        onOpenChangeAction={setShowBranchQuarterExportSuccess}
+      >
+        <DialogContent className="max-w-sm w-[90vw] px-6 py-6 text-center">
+          <DialogHeader className="border-0 pb-0 text-center sm:text-center">
+            <div className="relative mx-auto mb-5 flex h-[5.75rem] w-[5.75rem] items-center justify-center">
+              <span
+                className="absolute inset-0 rounded-full bg-emerald-400/30 motion-safe:animate-ping"
+                style={{ animationDuration: "2.4s" }}
+                aria-hidden
+              />
+              <div
+                className="absolute inset-[3px] rounded-full bg-gradient-to-br from-emerald-100/90 to-green-50 blur-[1px]"
+                aria-hidden
+              />
+              <div className="relative flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 via-green-500 to-emerald-700 shadow-[0_12px_40px_-8px_rgba(16,185,129,0.55)] ring-4 ring-white animate-success-badge-pop">
+                <svg
+                  className="h-11 w-11 text-white drop-shadow-sm"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden
+                >
+                  <path
+                    className="animate-success-check-draw"
+                    d="M6.5 12.5l3.8 3.8L17.8 8.8"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+            </div>
+            <DialogTitle className="text-xl font-bold text-gray-900">
+              Export Successful
+            </DialogTitle>
+            <DialogDescription className="text-gray-700">
+              Your branch quarter summary CSV has been downloaded.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Export Error Dialog */}
       <Dialog
         open={showExportError}
@@ -2982,53 +3100,67 @@ export default function UserManagementTab() {
           }
         }}
       >
-        <DialogContent className={`max-w-md p-8 text-center ${dialogAnimationClass}`}>
-          <div className="flex flex-col items-center">
-            {isBulkUploadProcessing ? (
-              <>
-                <div className="relative mb-4 flex items-center justify-center w-24 h-24 rounded-full bg-blue-50 border-4 border-blue-200 shadow-md">
-                  <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
-                </div>
-                <h2 className="text-xl font-bold text-blue-700 mb-2">
-                  Uploading Users...
-                </h2>
-                <p className="text-gray-600 text-sm mb-2 max-w-xs">
-                  Please wait while your bulk upload is being processed.
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="relative mb-4">
-                  <span className="absolute inset-0 rounded-full bg-green-200 animate-ping opacity-60" />
-                  <div className="relative flex items-center justify-center w-24 h-24 rounded-full bg-green-100 border-4 border-green-500 shadow-md">
-                    <span className="text-5xl text-green-600 font-bold leading-none animate-pulse">
-                      ✓
-                    </span>
-                  </div>
+        <DialogContent
+          className={
+            isBulkUploadProcessing
+              ? `max-w-md p-8 text-center ${dialogAnimationClass}`
+              : `max-w-sm w-[90vw] px-6 py-6 text-center ${dialogAnimationClass}`
+          }
+        >
+          {isBulkUploadProcessing ? (
+            <div className="flex flex-col items-center">
+              <div className="relative mb-4 flex h-24 w-24 items-center justify-center rounded-full border-4 border-blue-200 bg-blue-50 shadow-md">
+                <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
               </div>
-                <h2 className="text-xl font-bold text-green-700 mb-2">
+              <h2 className="mb-2 text-xl font-bold text-blue-700">Uploading Users...</h2>
+              <p className="mb-2 max-w-xs text-sm text-gray-600">
+                Please wait while your bulk upload is being processed.
+              </p>
+            </div>
+          ) : (
+            <>
+              <DialogHeader className="border-0 pb-0 text-center sm:text-center">
+                <div className="relative mx-auto mb-5 flex h-[5.75rem] w-[5.75rem] items-center justify-center">
+                  <span
+                    className="absolute inset-0 rounded-full bg-emerald-400/30 motion-safe:animate-ping"
+                    style={{ animationDuration: "2.4s" }}
+                    aria-hidden
+                  />
+                  <div
+                    className="absolute inset-[3px] rounded-full bg-gradient-to-br from-emerald-100/90 to-green-50 blur-[1px]"
+                    aria-hidden
+                  />
+                  <div className="relative flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 via-green-500 to-emerald-700 shadow-[0_12px_40px_-8px_rgba(16,185,129,0.55)] ring-4 ring-white animate-success-badge-pop">
+                    <svg
+                      className="h-11 w-11 text-white drop-shadow-sm"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-hidden
+                    >
+                      <path
+                        className="animate-success-check-draw"
+                        d="M6.5 12.5l3.8 3.8L17.8 8.8"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <DialogTitle className="text-xl font-bold text-gray-900">
                   Upload Successful
-                </h2>
-                <p className="text-gray-600 text-sm mb-6 max-w-xs">
+                </DialogTitle>
+                <DialogDescription className="text-gray-700">
                   Bulk user upload completed successfully. The user list has been refreshed.
-                </p>
-                <Button
-                  onClick={async () => {
-                    setIsBulkUploadSuccessModalOpen(false);
-                    setIsAddUserModalOpen(false);
-                    setIsDeleteModalOpen(false);
-                    setIsEditModalOpen(false);
-                    setIsViewEmployeeModalOpen(false);
-                    setEmployeeToView(null);
-                    await refreshUserData(true);
-                  }}
-                  className="px-8 py-2 cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
-                >
-                  OK
-                </Button>
-              </>
-            )}
-          </div>
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
+                
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

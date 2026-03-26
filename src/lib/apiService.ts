@@ -133,12 +133,35 @@ export const apiService = {
     }));
   },
 
-  getPositions: async (): Promise<{ label: string; value: string }[]> => {
+  getPositions: async (): Promise<
+    {
+      label: string;
+      value: string;
+      created_at?: string | null;
+      updated_at?: string | null;
+    }[]
+  > => {
     const response = await api.get("/positions");
     return response.data.positions.map((position: any) => ({
       value: position.id,
       label: position.label,
+      created_at: position.created_at ?? null,
+      updated_at: position.updated_at ?? null,
     }));
+  },
+
+  // Add new position (HR/management maintenance)
+  addPosition: async (label: string): Promise<any> => {
+    const response = await api.post("/addPosition", {
+      label,
+    });
+    return response.data;
+  },
+
+  // Delete position by id (HR/management maintenance)
+  deletePosition: async (positionId: string | number): Promise<any> => {
+    const response = await api.post(`/deletePosition/${positionId}`);
+    return response.data;
   },
 
   getBranches: async (): Promise<{ label: string; value: string }[]> => {

@@ -761,6 +761,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                               "departments",
                               "branches",
                               "branch-heads",
+                              "positions",
                               "area-managers",
                             ].includes(id)
                         )
@@ -784,6 +785,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         "departments",
                         "branches",
                         "branch-heads",
+                        "positions",
                         "area-managers",
                       ]
                     : ["departments", "branches"];

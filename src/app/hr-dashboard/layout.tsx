@@ -45,6 +45,12 @@ function HRLayout({ children }: { children: React.ReactNode }) {
         path: "/hr-dashboard/departments",
       },
       {
+        id: "positions",
+        label: "Positions",
+        icon: "🧑‍💼",
+        path: "/hr-dashboard/positions",
+      },
+      {
         id: "branches",
         label: "Branches",
         icon: "📍",

@@ -319,6 +319,42 @@ body {
   animation: popUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* Success confirmation badge (e.g. add position) */
+@keyframes success-badge-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes success-check-draw {
+  0% {
+    stroke-dashoffset: 40;
+    opacity: 0.85;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+.animate-success-badge-pop {
+  animation: success-badge-pop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-success-check-draw {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: success-check-draw 0.5s cubic-bezier(0.45, 0, 0.2, 1) 0.32s forwards;
+}
+
 .animate-popdown {
   animation: popDown 0.4s cubic-bezier(0.36, 0, 0.66, -0.56);
 }
