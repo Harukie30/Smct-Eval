@@ -112,24 +112,68 @@ export default function BranchHeadsTab() {
     return data.map((item: any) => {
       // Handle branches - API returns branches array
       let branchValue = "";
+
+      // Extract a single branch token (code/name/id) into a string.
+      // This supports multiple API shapes, including the new nested:
+      //   branch: { branch_code, branch_name, acronym, id, ... }
+      const extractBranchToken = (b: any): string => {
+        if (b === null || b === undefined || b === "") return "";
+        if (typeof b === "string" || typeof b === "number") return String(b).trim();
+        if (typeof b !== "object") return "";
+
+        const nested = b.branch && typeof b.branch === "object" ? b.branch : null;
+        const src = nested ?? b;
+
+        const code = String(src.branch_code ?? src.code ?? src.acronym ?? "").trim();
+        const name = String(src.branch_name ?? src.name ?? src.label ?? "").trim();
+        const id = String(src.id ?? src.branch_id ?? "").trim();
+
+        return code || name || id || "";
+      };
+
       if (item.branches && Array.isArray(item.branches)) {
-        branchValue = item.branches
-          .map((b: any) => b.name || b.branch_name || b.label || b.code || b)
-          .filter((b: any) => b) // Remove empty values
+        const extracted = item.branches
+          .map((b: any) => extractBranchToken(b))
+          .filter((b: any) => b)
           .join(", ");
-      } else if (item.branch) {
+        if (extracted) branchValue = extracted;
+      }
+
+      if (!branchValue && item.branch) {
         if (Array.isArray(item.branch)) {
           branchValue = item.branch
-            .map((b: any) => b.name || b.label || b)
+            .map((b: any) => extractBranchToken(b))
+            .filter((b: any) => b)
             .join(", ");
         } else if (typeof item.branch === "object") {
-          branchValue =
-            item.branch.name ||
-            item.branch.branch_name ||
-            item.branch.label ||
-            "";
+          branchValue = extractBranchToken(item.branch);
         } else {
-          branchValue = String(item.branch);
+          branchValue = String(item.branch).trim();
+        }
+      }
+
+      if (
+        !branchValue &&
+        (
+        item.branch_id !== undefined ||
+        item.branchId !== undefined ||
+        item.branch_code !== undefined ||
+        item.branchCode !== undefined ||
+        item.acronym !== undefined
+        )
+      ) {
+        // Root-level branch data (id/code/acronym) fallback
+        const rootBranchId = item.branch_id ?? item.branchId;
+        if (
+          rootBranchId !== undefined &&
+          rootBranchId !== null &&
+          rootBranchId !== ""
+        ) {
+          branchValue = String(rootBranchId);
+        } else {
+          const rootCode = (item.branch_code ?? item.branchCode ?? item.acronym ?? "").toString().trim();
+          const rootName = (item.branch_name ?? item.branchName ?? "").toString().trim();
+          branchValue = rootCode || rootName || "";
         }
       }
 
