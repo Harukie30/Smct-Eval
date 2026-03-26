@@ -217,10 +217,11 @@ export default function DashboardShell(props: DashboardShellProps) {
 
   // Auto-open collapsible groups when their items are active
   useEffect(() => {
-    // For admin dashboard, handle management group (departments, branches) and leadership group (branch-heads, area-managers)
+    // For admin dashboard, handle management group (departments, branches, positions)
+    // and leadership group (branch-heads, area-managers)
     if (isAdminDashboard) {
       if (
-        ["departments", "branches"].includes(activeItemId) &&
+        ["departments", "branches", "positions"].includes(activeItemId) &&
         !isManagementOpen
       ) {
         setIsManagementOpen(true);
@@ -246,10 +247,7 @@ export default function DashboardShell(props: DashboardShellProps) {
       return;
     }
 
-    if (
-      ["departments", "branches"].includes(activeItemId) &&
-      !isManagementOpen
-    ) {
+    if (["departments", "branches", "positions"].includes(activeItemId) && !isManagementOpen) {
       setIsManagementOpen(true);
     }
 
@@ -739,7 +737,8 @@ export default function DashboardShell(props: DashboardShellProps) {
                   // For employee dashboard: overview, reviews
                   // For evaluator dashboard: overview, employees, feedback, reviews
                   // For HR dashboard: overview, evaluation-records, employees (management items go in collapsible group)
-                  // For admin dashboard: all items except departments, branches, branch-heads, and area-managers (they go in collapsible groups)
+                  // For admin dashboard: all items except departments, branches, positions,
+                  // branch-heads, and area-managers (they go in collapsible groups)
                   const visibleItems = isAdminDashboard
                     ? sidebarItems
                         .map((item) => item.id)
@@ -748,6 +747,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                             ![
                               "departments",
                               "branches",
+                              "positions",
                               "branch-heads",
                               "area-managers",
                             ].includes(id)
@@ -778,8 +778,10 @@ export default function DashboardShell(props: DashboardShellProps) {
                     : ["overview", "evaluation-records", "employees"];
 
                   // Define collapsible groups
-                  // For HR dashboard, management includes departments, branches, branch-heads, and area-managers
-                  // For admin dashboard, management includes departments and branches, leadership includes branch-heads and area-managers
+                  // For HR dashboard, management includes departments, branches, positions,
+                  // branch-heads, and area-managers.
+                  // For admin dashboard, management includes departments, branches, positions;
+                  // leadership includes branch-heads and area-managers.
                   const managementItems = isHRDashboard
                     ? [
                         "departments",
@@ -788,7 +790,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         "positions",
                         "area-managers",
                       ]
-                    : ["departments", "branches"];
+                    : ["departments", "branches", "positions"];
                   const leadershipItems = ["branch-heads", "area-managers"];
                   // Analytics items vary by dashboard type - exclude items that are already visible
                   const analyticsItems = isEmployeeDashboard

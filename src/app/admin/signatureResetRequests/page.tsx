@@ -526,17 +526,11 @@ export default function SignatureResetRequestsTab() {
                           "N/A"}
                       </TableCell>
                       <TableCell>
-                        {request.branches?.length > 0
-                          ? request.branches
-                              .map((b: any) =>
-                                getEmployeeBranchCodeDisplay(
-                                  { branch: b } as any,
-                                  branchOptions,
-                                  branchListLoading
-                                )
-                              )
-                              .join(", ")
-                          : "N/A"}
+                        {getEmployeeBranchCodeDisplay(
+                          request as any,
+                          branchOptions,
+                          branchListLoading
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">

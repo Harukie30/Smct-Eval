@@ -37,6 +37,12 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
         path: "/admin/branches",
       },
       {
+        id: "positions",
+        label: "Positions",
+        icon: "🧑‍💼",
+        path: "/admin/positions",
+      },
+      {
         id: "branch-heads",
         label: "Branch Heads",
         icon: "👔",

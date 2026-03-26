@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock, Lightbulb, Plus, Trash2, X } from "lucide-react";
+import { Clock, Lightbulb, Pencil, Plus, Trash2, X } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { toastMessages } from "@/lib/toastMessages";
 import apiService from "@/lib/apiService";
 import AddPositionModal from "@/components/hr/AddPositionModal";
 import DeletePositionModal, { Position } from "@/components/hr/DeletePositionModal";
+import UpdatePositionModal from "@/components/hr/UpdatePositionModal";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { cn } from "@/lib/utils";
 
@@ -62,6 +63,9 @@ export default function PositionsTab() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [positionToDelete, setPositionToDelete] = useState<Position | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [positionToEdit, setPositionToEdit] = useState<Position | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const loadPositions = async () => {
     setLoading(true);
@@ -298,18 +302,32 @@ export default function PositionsTab() {
                     </div>
                     <div className="text-xs text-gray-500">ID: {p.id}</div>
                   </div>
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      setPositionToDelete(p);
-                      setIsDeleteModalOpen(true);
-                    }}
-                    className="flex items-center gap-2 cursor-pointer hover:scale-110 transition-transform duration-200"
-                    disabled={isDeleting}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setPositionToEdit(p);
+                        setIsUpdateModalOpen(true);
+                      }}
+                      className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                      disabled={isDeleting || isUpdating}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Update
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        setPositionToDelete(p);
+                        setIsDeleteModalOpen(true);
+                      }}
+                      className="flex items-center gap-2 cursor-pointer hover:scale-110 transition-transform duration-200"
+                      disabled={isDeleting || isUpdating}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               );
               })
@@ -346,6 +364,17 @@ export default function PositionsTab() {
           await refreshPositions();
         }}
         onDeletingChange={setIsDeleting}
+      />
+
+      <UpdatePositionModal
+        open={isUpdateModalOpen}
+        onOpenChangeAction={(open) => {
+          setIsUpdateModalOpen(open);
+          if (!open) setPositionToEdit(null);
+        }}
+        positionToEdit={positionToEdit}
+        onUpdated={refreshPositions}
+        onUpdatingChange={setIsUpdating}
       />
     </div>
   );

@@ -288,6 +288,10 @@ export default function UserManagementTab() {
     useState(activeSearchTerm);
   const [roleFilter, setRoleFilter] = useState("0"); // Default to "All Roles"
   const [debouncedRoleFilter, setDebouncedRoleFilter] = useState(roleFilter);
+  const [activeBranchFilter, setActiveBranchFilter] = useState("all"); // Active table only
+  const [debouncedActiveBranchFilter, setDebouncedActiveBranchFilter] =
+    useState(activeBranchFilter);
+  const [showActiveFilterHighlight, setShowActiveFilterHighlight] = useState(false);
   //filters for pending users
   const [pendingSearchTerm, setPendingSearchTerm] = useState("");
   const [debouncedPendingSearchTerm, setDebouncedPendingSearchTerm] =
@@ -349,6 +353,7 @@ export default function UserManagementTab() {
   const [selectedEmployeeForEvaluation, setSelectedEmployeeForEvaluation] =
     useState<User | null>(null);
   const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
+  const activeFilterHighlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Track when page change started for pending users
   const pendingPageChangeStartTimeRef = useRef<number | null>(null);
@@ -389,13 +394,20 @@ export default function UserManagementTab() {
   // Track when page change started for active users
   const activePageChangeStartTimeRef = useRef<number | null>(null);
 
-  const loadActiveUsers = async (searchValue: string, roleFilter: string) => {
+  const loadActiveUsers = async (
+    searchValue: string,
+    roleFilterValue: string,
+    branchFilterValue: string
+  ) => {
     try {
+      const normalizedBranch =
+        branchFilterValue === "all" ? "" : branchFilterValue;
       const response = await apiService.getActiveRegistrations(
         searchValue,
-        roleFilter,
+        roleFilterValue,
         currentPageActive,
-        itemsPerPage
+        itemsPerPage,
+        normalizedBranch
       );
 
       setActiveRegistrations(response.data);
@@ -434,7 +446,7 @@ export default function UserManagementTab() {
         setDepartmentData(departments);
         const roles = await apiService.getAllRoles();
         setRoles(roles);
-        await loadActiveUsers(activeSearchTerm, roleFilter);
+        await loadActiveUsers(activeSearchTerm, roleFilter, activeBranchFilter);
         await loadPendingUsers(pendingSearchTerm, statusFilter);
       } catch (error) {
         console.error("Error refreshing data:", error);
@@ -449,7 +461,7 @@ export default function UserManagementTab() {
   useEffect(() => {
     const load = async () => {
       if (tab === "active") {
-        await loadActiveUsers(activeSearchTerm, roleFilter);
+        await loadActiveUsers(activeSearchTerm, roleFilter, activeBranchFilter);
       }
       if (tab === "new") {
         await loadPendingUsers(pendingSearchTerm, statusFilter);
@@ -459,29 +471,67 @@ export default function UserManagementTab() {
     load();
   }, [tab]);
 
-  //mount every activeSearchTerm changes and RoleFilter
+  //mount every activeSearchTerm, roleFilter, or branchFilter changes
   useEffect(() => {
     const handler = setTimeout(() => {
       if (tab === "active") {
         activeSearchTerm === "" ? currentPageActive : setCurrentPageActive(1);
         setDebouncedActiveSearchTerm(activeSearchTerm);
         setDebouncedRoleFilter(roleFilter);
+        setDebouncedActiveBranchFilter(activeBranchFilter);
       }
     }, 500);
 
     return () => clearTimeout(handler);
-  }, [activeSearchTerm, roleFilter]);
+  }, [activeSearchTerm, roleFilter, activeBranchFilter]);
+
+  // Briefly highlight Active Users table when a non-default filter is applied.
+  useEffect(() => {
+    const hasActiveFilter = roleFilter !== "0" || activeBranchFilter !== "all";
+
+    if (activeFilterHighlightTimeoutRef.current) {
+      clearTimeout(activeFilterHighlightTimeoutRef.current);
+      activeFilterHighlightTimeoutRef.current = null;
+    }
+
+    if (!hasActiveFilter) {
+      setShowActiveFilterHighlight(false);
+      return;
+    }
+
+    setShowActiveFilterHighlight(true);
+    activeFilterHighlightTimeoutRef.current = setTimeout(() => {
+      setShowActiveFilterHighlight(false);
+      activeFilterHighlightTimeoutRef.current = null;
+    }, 5000);
+
+    return () => {
+      if (activeFilterHighlightTimeoutRef.current) {
+        clearTimeout(activeFilterHighlightTimeoutRef.current);
+        activeFilterHighlightTimeoutRef.current = null;
+      }
+    };
+  }, [roleFilter, activeBranchFilter]);
 
   // Fetch API whenever debounced active search term changes
   useEffect(() => {
     const fetchData = async () => {
       if (tab === "active") {
-        await loadActiveUsers(debouncedActiveSearchTerm, debouncedRoleFilter);
+        await loadActiveUsers(
+          debouncedActiveSearchTerm,
+          debouncedRoleFilter,
+          debouncedActiveBranchFilter
+        );
       }
     };
 
     fetchData();
-  }, [debouncedActiveSearchTerm, debouncedRoleFilter, currentPageActive]);
+  }, [
+    debouncedActiveSearchTerm,
+    debouncedRoleFilter,
+    debouncedActiveBranchFilter,
+    currentPageActive,
+  ]);
 
   //mount every pendingSearchTerm changes and statusFilter
   useEffect(() => {
@@ -520,7 +570,7 @@ export default function UserManagementTab() {
         await loadPendingUsers(pendingSearchTerm, statusFilter);
       }
       if (tab === "active") {
-        await loadActiveUsers(activeSearchTerm, roleFilter);
+        await loadActiveUsers(activeSearchTerm, roleFilter, activeBranchFilter);
       }
 
       if (showLoading) {
@@ -1041,7 +1091,7 @@ export default function UserManagementTab() {
       await apiService.deleteUser(employee.id);
 
       // Refresh data first, then reset deleting state after data loads
-      await loadActiveUsers(activeSearchTerm, roleFilter);
+      await loadActiveUsers(activeSearchTerm, roleFilter, activeBranchFilter);
       setDeletingUserId(null);
 
       toastMessages.user.deleted(employee.fname);
@@ -1299,11 +1349,31 @@ export default function UserManagementTab() {
                     </Select>
                   </div>
                   <div>
-                    {roleFilter !== "0" && (
+                    <Combobox
+                      options={[
+                        { value: "all", label: "All Branches" },
+                        ...branchesData.map((b: any) => ({
+                          value: String(b.value),
+                          label: String(b.label),
+                        })),
+                      ]}
+                      value={activeBranchFilter}
+                      onValueChangeAction={(value) => {
+                        setActiveBranchFilter(String(value));
+                      }}
+                      placeholder="All Branches"
+                      searchPlaceholder="Search branches..."
+                      emptyText="No branches found."
+                      className="w-[220px]"
+                    />
+                  </div>
+                  <div>
+                    {(roleFilter !== "0" || activeBranchFilter !== "all") && (
                       <Button
                         variant="outline"
                         onClick={() => {
                           setRoleFilter("0");
+                          setActiveBranchFilter("all");
                         }}
                         className="text-red-500 bg-amber-50"
                       >
@@ -1576,6 +1646,8 @@ export default function UserManagementTab() {
                             className={
                               isDeleting
                                 ? "animate-slide-out-right bg-red-100 border-l-4 border-l-red-600"
+                                : showActiveFilterHighlight
+                                ? "bg-green-50 border-l-4 border-l-green-600 hover:bg-green-100 animate-pulse transition-all duration-500 shadow-md"
                                 : isRecentlyUpdated
                                 ? "bg-yellow-100 border-l-4 border-l-yellow-600 hover:bg-yellow-200 animate-pulse transition-all duration-500 shadow-md"
                                 : isNew
@@ -3056,12 +3128,7 @@ export default function UserManagementTab() {
             <p className="text-gray-600 text-sm mb-6 max-w-xs">
               We encountered an error while exporting your data. Please try again later.
             </p>
-            <Button
-              onClick={() => setShowExportError(false)}
-              className="px-8 py-2 cursor-pointer bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
-            >
-              Close
-            </Button>
+            
           </div>
         </DialogContent>
       </Dialog>
@@ -3157,7 +3224,20 @@ export default function UserManagementTab() {
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
-                
+                <Button
+                  onClick={async () => {
+                    setIsBulkUploadSuccessModalOpen(false);
+                    setIsAddUserModalOpen(false);
+                    setIsDeleteModalOpen(false);
+                    setIsEditModalOpen(false);
+                    setIsViewEmployeeModalOpen(false);
+                    setEmployeeToView(null);
+                    await refreshUserData(true);
+                  }}
+                  className="cursor-pointer rounded-lg bg-green-600 px-8 py-2 font-medium text-white transition-colors hover:bg-green-700"
+                >
+                  OK
+                </Button>
               </DialogFooter>
             </>
           )}

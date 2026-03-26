@@ -158,6 +158,17 @@ export const apiService = {
     return response.data;
   },
 
+  // Update position by id (HR/management maintenance)
+  updatePosition: async (
+    positionId: string | number,
+    label: string
+  ): Promise<any> => {
+    const response = await api.post(`/updatePosition/${positionId}`, {
+      label,
+    });
+    return response.data;
+  },
+
   // Delete position by id (HR/management maintenance)
   deletePosition: async (positionId: string | number): Promise<any> => {
     const response = await api.post(`/deletePosition/${positionId}`);
