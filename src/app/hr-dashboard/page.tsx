@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -49,34 +49,61 @@ export default function OverviewTab() {
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   //refresh state
   const [isRefreshing, setIsRefreshing] = useState(true);
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const submissionsInFlightKeyRef = useRef<string | null>(null);
+  const submissionsInFlightPromiseRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     const loadSubmissions = async () => {
-      try {
-        const res = await apiService.getSubmissions(
-          overviewSearchTerm,
-          currentPage,
-          itemsPerPage
-        );
-        setSubmissions(res.data);
-        setOverviewTotal(res.total);
-        setTotalPages(res.last_page);
-        setPerPage(res.per_page);
+      const requestKey = JSON.stringify({
+        debouncedSearchTerm,
+        currentPage,
+        itemsPerPage,
+      });
 
-        const dashboard = await apiService.hrDashboard();
-        setNewEval(dashboard.new_eval);
-        setPendingEval(dashboard.pending_eval);
-        setCompletedEval(dashboard.completed_eval);
-        setTotalEmployees(dashboard.total_users);
-      } catch (error) {
-        console.log(error);
-        setIsRefreshing(false);
-      } finally {
-        setIsRefreshing(false);
+      if (
+        submissionsInFlightKeyRef.current === requestKey &&
+        submissionsInFlightPromiseRef.current
+      ) {
+        await submissionsInFlightPromiseRef.current;
+        return;
       }
+
+      const requestPromise = (async () => {
+        setIsRefreshing(true);
+        try {
+          const res = await apiService.getSubmissions(
+            debouncedSearchTerm,
+            currentPage,
+            itemsPerPage
+          );
+          setSubmissions(res.data);
+          setOverviewTotal(res.total);
+          setTotalPages(res.last_page);
+          setPerPage(res.per_page);
+
+          const dashboard = await apiService.hrDashboard();
+          setNewEval(dashboard.new_eval);
+          setPendingEval(dashboard.pending_eval);
+          setCompletedEval(dashboard.completed_eval);
+          setTotalEmployees(dashboard.total_users);
+        } catch (error) {
+          console.log(error);
+        } finally {
+          setIsRefreshing(false);
+          if (submissionsInFlightKeyRef.current === requestKey) {
+            submissionsInFlightKeyRef.current = null;
+            submissionsInFlightPromiseRef.current = null;
+          }
+        }
+      })();
+
+      submissionsInFlightKeyRef.current = requestKey;
+      submissionsInFlightPromiseRef.current = requestPromise;
+      await requestPromise;
     };
     loadSubmissions();
-  }, [isRefreshing, debouncedSearchTerm, currentPage]);
+  }, [debouncedSearchTerm, currentPage, refreshNonce]);
 
   useEffect(() => {
     const debounceTimeout = setTimeout(() => {
@@ -241,7 +268,7 @@ export default function OverviewTab() {
               </div>
               {/* Refresh Button */}
               <Button
-                onClick={() => setIsRefreshing(true)}
+                onClick={() => setRefreshNonce((prev) => prev + 1)}
                 disabled={isRefreshing}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white hover:scale-105 transition-transform duration-200"
                 title="Refresh evaluation records"
@@ -559,7 +586,6 @@ export default function OverviewTab() {
                 perPage={perPage}
                 onPageChange={(page) => {
                   setCurrentPage(page);
-                  setIsRefreshing(true);
                 }}
               />
             )}

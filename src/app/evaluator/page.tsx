@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { RefreshCw, Eye } from "lucide-react";
 import {
   Card,
@@ -72,58 +72,84 @@ export default function OverviewTab() {
   //refreshing state
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isPaginate, setIsPaginate] = useState(false);
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const dashboardInFlightKeyRef = useRef<string | null>(null);
+  const dashboardInFlightPromiseRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        setIsPaginate(true);
-        const response = await apiService.evaluatorDashboard(
-          debouncedSearchTerm,
-          currentPage,
-          itemsPerPage
-        );
+      const requestKey = JSON.stringify({
+        debouncedSearchTerm,
+        currentPage,
+        itemsPerPage,
+      });
+      if (
+        dashboardInFlightKeyRef.current === requestKey &&
+        dashboardInFlightPromiseRef.current
+      ) {
+        await dashboardInFlightPromiseRef.current;
+        return;
+      }
 
-        setData(response.myEval_as_Evaluator.data);
-        setTotalEvaluations(response.total_evaluations);
-        setTotalPending(response.total_pending);
-        setTotalApproved(response.total_approved);
-
-        setOverviewTotal(response.myEval_as_Evaluator.total);
-        setTotalPages(response.myEval_as_Evaluator.last_page);
-        setPerPage(response.myEval_as_Evaluator.per_page);
-        
-        // Fetch total employees count
+      const requestPromise = (async () => {
         try {
-          const employeesRes = await apiService.getAllEmployeeByAuth(
-            "",
-            1, // per_page
-            1  // page
+          setIsPaginate(true);
+          const response = await apiService.evaluatorDashboard(
+            debouncedSearchTerm,
+            currentPage,
+            itemsPerPage
           );
-          // getAllEmployeeByAuth returns: { data: [...], total, last_page, per_page }
-          if (employeesRes && employeesRes.total !== undefined) {
-            setTotalEmployees(employeesRes.total);
-          } else if (employeesRes && Array.isArray(employeesRes)) {
-            // Fallback: if response is an array, use its length
-            setTotalEmployees(employeesRes.length);
-          } else if (response.total_employees !== undefined) {
-            setTotalEmployees(response.total_employees);
+
+          setData(response.myEval_as_Evaluator.data);
+          setTotalEvaluations(response.total_evaluations);
+          setTotalPending(response.total_pending);
+          setTotalApproved(response.total_approved);
+
+          setOverviewTotal(response.myEval_as_Evaluator.total);
+          setTotalPages(response.myEval_as_Evaluator.last_page);
+          setPerPage(response.myEval_as_Evaluator.per_page);
+
+          // Fetch total employees count
+          try {
+            const employeesRes = await apiService.getAllEmployeeByAuth(
+              "",
+              1, // per_page
+              1  // page
+            );
+            // getAllEmployeeByAuth returns: { data: [...], total, last_page, per_page }
+            if (employeesRes && employeesRes.total !== undefined) {
+              setTotalEmployees(employeesRes.total);
+            } else if (employeesRes && Array.isArray(employeesRes)) {
+              // Fallback: if response is an array, use its length
+              setTotalEmployees(employeesRes.length);
+            } else if (response.total_employees !== undefined) {
+              setTotalEmployees(response.total_employees);
+            }
+          } catch (error) {
+            console.error("Error fetching total employees:", error);
+            // If API response has total_employees, use it as fallback
+            if (response.total_employees !== undefined) {
+              setTotalEmployees(response.total_employees);
+            }
           }
         } catch (error) {
-          console.error("Error fetching total employees:", error);
-          // If API response has total_employees, use it as fallback
-          if (response.total_employees !== undefined) {
-            setTotalEmployees(response.total_employees);
+          console.error("Error fetching dashboard data:", error);
+        } finally {
+          setIsPaginate(false);
+          setIsRefreshing(false);
+          if (dashboardInFlightKeyRef.current === requestKey) {
+            dashboardInFlightKeyRef.current = null;
+            dashboardInFlightPromiseRef.current = null;
           }
         }
-        
-        setIsPaginate(false);
-        setIsRefreshing(false);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      }
+      })();
+
+      dashboardInFlightKeyRef.current = requestKey;
+      dashboardInFlightPromiseRef.current = requestPromise;
+      await requestPromise;
     };
     fetchData();
-  }, [isRefreshing, currentPage, debouncedSearchTerm]);
+  }, [currentPage, debouncedSearchTerm, refreshNonce]);
 
   useEffect(() => {
     const debounceTimeout = setTimeout(() => {
@@ -359,7 +385,10 @@ export default function OverviewTab() {
             )}
             <Button
               size="sm"
-              onClick={() => setIsRefreshing(true)}
+              onClick={() => {
+                setIsRefreshing(true);
+                setRefreshNonce((prev) => prev + 1);
+              }}
               disabled={isRefreshing || isPaginate}
               className="px-3 py-2 text-white hover:text-white bg-blue-500 hover:bg-green-600 disabled:bg-gray-400 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
               title="Refresh submissions data"

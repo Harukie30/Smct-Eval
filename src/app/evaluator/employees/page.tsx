@@ -135,70 +135,36 @@ export default function EmployeesTab() {
   const employeesInFlightKeyRef = useRef<string | null>(null);
   const employeesInFlightPromiseRef = useRef<Promise<void> | null>(null);
 
-  // Fetch all employees to get unique positions (without pagination limit)
+  // Fetch positions directly (avoid duplicate getAllEmployeeByAuth call)
   useEffect(() => {
-    const fetchPositionsFromEmployees = async () => {
+    const fetchPositions = async () => {
       if (positionsInFlightPromiseRef.current) {
         await positionsInFlightPromiseRef.current;
         return;
       }
 
       const requestPromise = (async () => {
-      try {
-        // Fetch all employees with a high limit to get all unique positions
-        const res = await apiService.getAllEmployeeByAuth(
-          "", // no search filter
-          1000, // high limit to get all employees
-          1, // first page
-          undefined // no position filter
-        );
-
-        if (!res) {
-          setPositions([]);
-          return;
-        }
-
-        let employeesData: any[] = [];
-        if (res.data && Array.isArray(res.data)) {
-          employeesData = res.data;
-        } else if (Array.isArray(res)) {
-          employeesData = res;
-        }
-
-        // Extract unique positions from employees
-        const uniquePositionsMap = new Map<number | string, { value: number | string; label: string }>();
-        
-        employeesData.forEach((employee: any) => {
-          if (employee.positions) {
-            const positionId = employee.positions.id || employee.positions.value || employee.position_id;
-            const positionLabel = employee.positions.label || employee.positions.name || employee.position;
-            
-            if (positionId && positionLabel && !uniquePositionsMap.has(positionId)) {
-              uniquePositionsMap.set(positionId, {
-                value: positionId,
-                label: positionLabel,
-              });
-            }
+        try {
+          const res = await apiService.getPositions();
+          if (!Array.isArray(res)) {
+            setPositions([]);
+            return;
           }
-        });
-
-        // Convert Map to Array and sort by label
-        const uniquePositions = Array.from(uniquePositionsMap.values()).sort((a, b) => 
-          a.label.localeCompare(b.label)
-        );
-
-        setPositions(uniquePositions);
-      } catch (error) {
-        console.error("Error fetching positions from employees:", error);
-        setPositions([]);
-      } finally {
-        positionsInFlightPromiseRef.current = null;
-      }
+          const sortedPositions = [...res].sort((a, b) =>
+            String(a.label || "").localeCompare(String(b.label || ""))
+          );
+          setPositions(sortedPositions);
+        } catch (error) {
+          console.error("Error fetching positions:", error);
+          setPositions([]);
+        } finally {
+          positionsInFlightPromiseRef.current = null;
+        }
       })();
       positionsInFlightPromiseRef.current = requestPromise;
       await requestPromise;
     };
-    fetchPositionsFromEmployees();
+    fetchPositions();
   }, [refreshTrigger]); // Refetch when refresh trigger changes
 
   useEffect(() => {

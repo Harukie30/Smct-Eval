@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Eye, X } from "lucide-react";
 import {
   Card,
@@ -57,48 +57,74 @@ export default function OverviewTab() {
   const [totalEvaluations, setTotalEvaluations] = useState<any>(0);
   const [average, setAverage] = useState<any>(0);
   const [recentEvaluation, setRecentEvaluation] = useState<any>([]);
+  const approvedEvalsInFlightKeyRef = useRef<string | null>(null);
+  const approvedEvalsInFlightPromiseRef = useRef<Promise<void> | null>(null);
 
   const { user } = useAuth();
 
   // Load approved evaluations from API
   const loadApprovedEvaluations = async (searchValue: string) => {
-    try {
-      setIsPaginate(true);
-      const response = await apiService.getMyEvalAuthEmployee(
-        searchValue,
-        currentPage,
-        itemsPerPage
-      );
-      
-      // Add safety checks to prevent "Cannot read properties of undefined" error
-      if (!response || !response.myEval_as_Employee) {
-        console.error("API response is undefined or missing myEval_as_Employee");
+    const requestKey = JSON.stringify({
+      searchValue,
+      currentPage,
+      itemsPerPage,
+    });
+
+    if (
+      approvedEvalsInFlightKeyRef.current === requestKey &&
+      approvedEvalsInFlightPromiseRef.current
+    ) {
+      await approvedEvalsInFlightPromiseRef.current;
+      return;
+    }
+
+    const requestPromise = (async () => {
+      try {
+        setIsPaginate(true);
+        const response = await apiService.getMyEvalAuthEmployee(
+          searchValue,
+          currentPage,
+          itemsPerPage
+        );
+
+        // Add safety checks to prevent "Cannot read properties of undefined" error
+        if (!response || !response.myEval_as_Employee) {
+          console.error("API response is undefined or missing myEval_as_Employee");
+          setMyEvaluations([]);
+          setOverviewTotal(0);
+          setTotalPages(1);
+          setPerPage(itemsPerPage);
+          setIsPaginate(false);
+          return;
+        }
+
+        setMyEvaluations(response.myEval_as_Employee.data || []);
+        setOverviewTotal(response.myEval_as_Employee.total || 0);
+        setTotalPages(response.myEval_as_Employee.last_page || 1);
+        setPerPage(response.myEval_as_Employee.per_page || itemsPerPage);
+        setIsPaginate(false);
+      } catch (error) {
+        console.error("Error loading approved evaluations:", error);
+        // Set default values on error to prevent crashes
         setMyEvaluations([]);
         setOverviewTotal(0);
         setTotalPages(1);
         setPerPage(itemsPerPage);
         setIsPaginate(false);
-        return;
+      } finally {
+        if (approvedEvalsInFlightKeyRef.current === requestKey) {
+          approvedEvalsInFlightKeyRef.current = null;
+          approvedEvalsInFlightPromiseRef.current = null;
+        }
       }
+    })();
 
-      setMyEvaluations(response.myEval_as_Employee.data || []);
-      setOverviewTotal(response.myEval_as_Employee.total || 0);
-      setTotalPages(response.myEval_as_Employee.last_page || 1);
-      setPerPage(response.myEval_as_Employee.per_page || itemsPerPage);
-      setIsPaginate(false);
-    } catch (error) {
-      console.error("Error loading approved evaluations:", error);
-      // Set default values on error to prevent crashes
-      setMyEvaluations([]);
-      setOverviewTotal(0);
-      setTotalPages(1);
-      setPerPage(itemsPerPage);
-      setIsPaginate(false);
-    }
+    approvedEvalsInFlightKeyRef.current = requestKey;
+    approvedEvalsInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
   useEffect(() => {
-    loadApprovedEvaluations(searchTerm);
     const loadDashboard = async () => {
       try {
         const dashboard = await apiService.employeeDashboard();
