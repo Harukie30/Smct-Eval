@@ -72,12 +72,29 @@ export default function performanceReviews() {
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedQuarter, setSelectedQuarter] = useState("");
   const [years, setYears] = useState<any>([]);
+  const submissionsInFlightKeyRef = useRef<string | null>(null);
+  const submissionsInFlightPromiseRef = useRef<Promise<void> | null>(null);
 
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
 
   // Load submissions data from API
   const loadSubmissions = async () => {
+    const requestKey = JSON.stringify({
+      currentPage,
+      itemsPerPage,
+      selectedYear,
+      selectedQuarter,
+    });
+    if (
+      submissionsInFlightKeyRef.current === requestKey &&
+      submissionsInFlightPromiseRef.current
+    ) {
+      await submissionsInFlightPromiseRef.current;
+      return;
+    }
+
+    const requestPromise = (async () => {
     try {
       setIsPaginate(true);
       // Handle "Probationary" filter - fetch both M3 and M5 data (same behavior as "My Evaluations")
@@ -167,12 +184,19 @@ export default function performanceReviews() {
     } finally {
       setIsPaginate(false);
       setLoading(false);
+      if (submissionsInFlightKeyRef.current === requestKey) {
+        submissionsInFlightKeyRef.current = null;
+        submissionsInFlightPromiseRef.current = null;
+      }
     }
+    })();
+    submissionsInFlightKeyRef.current = requestKey;
+    submissionsInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
   // Initial load
   useEffect(() => {
-    loadSubmissions();
     const loadDashboard = async () => {
       try {
         const dashboard = await apiService.employeeDashboard();
