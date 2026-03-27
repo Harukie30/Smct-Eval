@@ -175,14 +175,14 @@ export default function UpdatePositionModal({
               variant="outline"
               onClick={() => onOpenChangeAction(false)}
               disabled={isSubmitting}
-              className="px-6 border-amber-200 text-gray-700 hover:bg-amber-50 hover:text-amber-900"
+              className="px-6 border-red-200 bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200 text-white cursor-pointer hover:bg-red-600 hover:text-white"
             >
               Cancel
             </Button>
             <Button
               onClick={handleUpdate}
               disabled={isSubmitting || !positionToEdit}
-              className="bg-amber-600 hover:bg-amber-700 text-white cursor-pointer px-6 hover:scale-110 transition-transform duration-200"
+              className="bg-green-600 hover:bg-green-700 text-white cursor-pointer px-6 hover:scale-110 transition-transform duration-200"
             >
               {isSubmitting ? (
                 <span className="inline-flex items-center gap-2">

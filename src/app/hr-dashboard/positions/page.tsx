@@ -255,7 +255,7 @@ export default function PositionsTab() {
                 variant="outline"
                 onClick={refreshPositions}
                 disabled={isRefreshing}
-                className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200"
+                className="flex items-center gap-2 bg-blue-600 text-white hover:text-white hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200"
               >
                 {isRefreshing ? "Refreshing..." : "Refresh"}
               </Button>

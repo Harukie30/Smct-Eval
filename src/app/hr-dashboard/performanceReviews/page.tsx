@@ -68,65 +68,90 @@ export default function performanceReviews() {
 
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const submissionsInFlightKeyRef = useRef<string | null>(null);
+  const submissionsInFlightPromiseRef = useRef<Promise<void> | null>(null);
 
   // Load submissions data from API
   const loadSubmissions = async () => {
-    try {
-      setIsPaginate(true);
-      // Handle "Probationary" filter - fetch both M3 and M5 data (same behavior as "My Evaluations")
-      if (selectedQuarter === "Probationary") {
-        const [responseM3, responseM5] = await Promise.all([
-          apiService.getMyEvalAuthEmployee("", currentPage, itemsPerPage, "", "3"),
-          apiService.getMyEvalAuthEmployee("", currentPage, itemsPerPage, "", "5"),
-        ]);
+    const requestKey = JSON.stringify({
+      currentPage,
+      itemsPerPage,
+      selectedQuarter,
+    });
 
-        const combinedData = [
-          ...(responseM3?.myEval_as_Employee?.data || []),
-          ...(responseM5?.myEval_as_Employee?.data || []),
-        ];
-
-        combinedData.sort((a: any, b: any) => {
-          const dateA = new Date(a.created_at).getTime();
-          const dateB = new Date(b.created_at).getTime();
-          return dateB - dateA;
-        });
-
-        const totalM3 = responseM3?.myEval_as_Employee?.total || 0;
-        const totalM5 = responseM5?.myEval_as_Employee?.total || 0;
-        const combinedTotal = totalM3 + totalM5;
-
-        setSubmissions(combinedData);
-        setOverviewTotal(combinedTotal);
-        setTotalPages(Math.ceil(combinedTotal / itemsPerPage));
-        setPerPage(itemsPerPage);
-        setIsPaginate(false);
-        return;
-      }
-
-      // Use employee-specific endpoint
-      const response = await apiService.getMyEvalAuthEmployee(
-        "",
-        currentPage,
-        itemsPerPage,
-        "",
-        selectedQuarter
-      );
-      setSubmissions(response.myEval_as_Employee.data);
-      setOverviewTotal(response.myEval_as_Employee.total);
-      setTotalPages(response.myEval_as_Employee.last_page);
-      setPerPage(response.myEval_as_Employee.per_page);
-      setIsPaginate(false);
-    } catch (error) {
-      console.error("Error loading submissions:", error);
-    } finally {
-      setIsPaginate(false);
-      setLoading(false);
+    if (
+      submissionsInFlightKeyRef.current === requestKey &&
+      submissionsInFlightPromiseRef.current
+    ) {
+      await submissionsInFlightPromiseRef.current;
+      return;
     }
+
+    const requestPromise = (async () => {
+      try {
+        setIsPaginate(true);
+        // Handle "Probationary" filter - fetch both M3 and M5 data (same behavior as "My Evaluations")
+        if (selectedQuarter === "Probationary") {
+          const [responseM3, responseM5] = await Promise.all([
+            apiService.getMyEvalAuthEmployee("", currentPage, itemsPerPage, "", "3"),
+            apiService.getMyEvalAuthEmployee("", currentPage, itemsPerPage, "", "5"),
+          ]);
+
+          const combinedData = [
+            ...(responseM3?.myEval_as_Employee?.data || []),
+            ...(responseM5?.myEval_as_Employee?.data || []),
+          ];
+
+          combinedData.sort((a: any, b: any) => {
+            const dateA = new Date(a.created_at).getTime();
+            const dateB = new Date(b.created_at).getTime();
+            return dateB - dateA;
+          });
+
+          const totalM3 = responseM3?.myEval_as_Employee?.total || 0;
+          const totalM5 = responseM5?.myEval_as_Employee?.total || 0;
+          const combinedTotal = totalM3 + totalM5;
+
+          setSubmissions(combinedData);
+          setOverviewTotal(combinedTotal);
+          setTotalPages(Math.ceil(combinedTotal / itemsPerPage));
+          setPerPage(itemsPerPage);
+          setIsPaginate(false);
+          return;
+        }
+
+        // Use employee-specific endpoint
+        const response = await apiService.getMyEvalAuthEmployee(
+          "",
+          currentPage,
+          itemsPerPage,
+          "",
+          selectedQuarter
+        );
+        setSubmissions(response.myEval_as_Employee.data);
+        setOverviewTotal(response.myEval_as_Employee.total);
+        setTotalPages(response.myEval_as_Employee.last_page);
+        setPerPage(response.myEval_as_Employee.per_page);
+        setIsPaginate(false);
+      } catch (error) {
+        console.error("Error loading submissions:", error);
+      } finally {
+        setIsPaginate(false);
+        setLoading(false);
+        if (submissionsInFlightKeyRef.current === requestKey) {
+          submissionsInFlightKeyRef.current = null;
+          submissionsInFlightPromiseRef.current = null;
+        }
+      }
+    })();
+
+    submissionsInFlightKeyRef.current = requestKey;
+    submissionsInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
   // Initial load
   useEffect(() => {
-    loadSubmissions();
     const loadDashboard = async () => {
       const dashboard = await apiService.employeeDashboard();
       setTotalEvaluations(dashboard.total_evaluations);

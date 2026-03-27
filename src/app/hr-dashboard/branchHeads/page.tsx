@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -99,6 +99,11 @@ export default function BranchHeadsTab() {
   const itemsPerPage = 8;
   const [isSaving, setIsSaving] = useState(false);
   const [editBranchSearchTerm, setEditBranchSearchTerm] = useState("");
+  const branchHeadsInFlightPromiseRef = useRef<Promise<void> | null>(null);
+  const branchesInFlightPromiseRef = useRef<
+    Promise<{ id: string; name: string; code: string }[]>
+    | null
+  >(null);
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -285,19 +290,30 @@ export default function BranchHeadsTab() {
 
   // Load branch heads from API
   const loadBranchHeads = async () => {
-    setLoadingBranchHeads(true);
-    try {
-      const data = await apiService.getAllBranchHeads();
-      // Ensure data is an array before mapping
-      const normalizedData = normalizeBranchHeadData(data);
-      setBranchHeadsData(normalizedData);
-    } catch (error) {
-      console.error("Error loading branch heads:", error);
-      // Set empty array if API fails - no fallback needed
-      setBranchHeadsData([]);
-    } finally {
-      setLoadingBranchHeads(false);
+    if (branchHeadsInFlightPromiseRef.current) {
+      await branchHeadsInFlightPromiseRef.current;
+      return;
     }
+
+    const requestPromise = (async () => {
+      setLoadingBranchHeads(true);
+      try {
+        const data = await apiService.getAllBranchHeads();
+        // Ensure data is an array before mapping
+        const normalizedData = normalizeBranchHeadData(data);
+        setBranchHeadsData(normalizedData);
+      } catch (error) {
+        console.error("Error loading branch heads:", error);
+        // Set empty array if API fails - no fallback needed
+        setBranchHeadsData([]);
+      } finally {
+        setLoadingBranchHeads(false);
+        branchHeadsInFlightPromiseRef.current = null;
+      }
+    })();
+
+    branchHeadsInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
   // Load branch heads on mount
@@ -383,41 +399,51 @@ export default function BranchHeadsTab() {
       return branches;
     }
 
-    setBranchesLoading(true);
-    try {
-      const branchesData = await apiService.getBranches();
-      // Normalize the data format - handle both {id, name} and {value, label} formats
-      const normalizedBranches = branchesData.map((branch: any) => {
-        if ("id" in branch && "name" in branch) {
-          return { 
-            id: branch.id, 
-            name: branch.name,
-            code: branch.code || branch.branch_code || ""
-          };
-        } else if ("value" in branch && "label" in branch) {
-          // Extract branch name and code from label if it contains " /"
-          const labelParts = branch.label.split(" /");
-          return {
-            id: branch.value,
-            name: labelParts[0] || branch.label,
-            code: labelParts[1] || labelParts[0] || branch.label, // Use code if available, fallback to name
-          };
-        }
-        return {
-          id: String(branch.id || branch.value || ""),
-          name: String(branch.name || branch.label || ""),
-          code: String(branch.code || branch.branch_code || branch.name || branch.label || ""),
-        };
-      });
-      setBranches(normalizedBranches);
-      return normalizedBranches;
-    } catch (error) {
-      console.error("Error loading branches:", error);
-      setBranches([]);
-      return [];
-    } finally {
-      setBranchesLoading(false);
+    if (branchesInFlightPromiseRef.current) {
+      return branchesInFlightPromiseRef.current;
     }
+
+    const requestPromise = (async () => {
+      setBranchesLoading(true);
+      try {
+        const branchesData = await apiService.getBranches();
+        // Normalize the data format - handle both {id, name} and {value, label} formats
+        const normalizedBranches = branchesData.map((branch: any) => {
+          if ("id" in branch && "name" in branch) {
+            return {
+              id: branch.id,
+              name: branch.name,
+              code: branch.code || branch.branch_code || ""
+            };
+          } else if ("value" in branch && "label" in branch) {
+            // Extract branch name and code from label if it contains " /"
+            const labelParts = branch.label.split(" /");
+            return {
+              id: branch.value,
+              name: labelParts[0] || branch.label,
+              code: labelParts[1] || labelParts[0] || branch.label, // Use code if available, fallback to name
+            };
+          }
+          return {
+            id: String(branch.id || branch.value || ""),
+            name: String(branch.name || branch.label || ""),
+            code: String(branch.code || branch.branch_code || branch.name || branch.label || ""),
+          };
+        });
+        setBranches(normalizedBranches);
+        return normalizedBranches;
+      } catch (error) {
+        console.error("Error loading branches:", error);
+        setBranches([]);
+        return [];
+      } finally {
+        setBranchesLoading(false);
+        branchesInFlightPromiseRef.current = null;
+      }
+    })();
+
+    branchesInFlightPromiseRef.current = requestPromise;
+    return requestPromise;
   };
 
   // Auto-close success dialog after 2 seconds

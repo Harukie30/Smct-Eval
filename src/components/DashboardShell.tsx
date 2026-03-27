@@ -45,6 +45,7 @@ import { apiService } from "@/lib/apiService";
 import { useRouter } from "next/navigation";
 import { toastMessages } from "@/lib/toastMessages";
 import echo from "@/utils/echo";
+import appMeta from "../../package.json";
 
 export type SidebarItem = {
   id: string;
@@ -65,6 +66,8 @@ type DashboardShellProps = {
   topSummary?: React.ReactNode;
   dashboardType?: "hr" | "admin" | "employee" | "evaluator";
 };
+
+const APP_VERSION = String((appMeta as { version?: string })?.version ?? "1.0.0");
 
 export default function DashboardShell(props: DashboardShellProps) {
   const {
@@ -1173,7 +1176,7 @@ export default function DashboardShell(props: DashboardShellProps) {
               <div className="flex items-center space-x-4 text-sm text-gray-500">
                 <span>Performance & Ratings System</span>
                 <span className="hidden md:inline">•</span>
-                <span className="hidden md:inline">Version 1.0</span>
+                <span className="hidden md:inline">Version {APP_VERSION}</span>
               </div>
               {/* Toggle Button for Help Buttons - In Footer */}
               <Tooltip>

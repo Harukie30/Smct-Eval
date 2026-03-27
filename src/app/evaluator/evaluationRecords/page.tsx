@@ -93,6 +93,8 @@ export default function OverviewTab() {
   const [deletingReviewId, setDeletingReviewId] = useState<number | null>(null);
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [years, setYears] = useState<any[]>([]);
+  const evaluationsInFlightKeyRef = useRef<string | null>(null);
+  const evaluationsInFlightPromiseRef = useRef<Promise<void> | null>(null);
 
   const loadEvaluations = async (
     searchValue: string,
@@ -100,45 +102,73 @@ export default function OverviewTab() {
     quarter: string,
     year: string
   ) => {
-    try {
-      const response = await apiService.getEvalAuthEvaluator(
-        searchValue,
-        currentPage,
-        itemsPerPage,
-        status,
-        quarter,
-        Number(year) || 0
-      );
-      
-      // Add safety checks to prevent "Cannot read properties of undefined" error
-      if (!response || !response.myEval_as_Evaluator) {
-        console.error("API response is undefined or missing myEval_as_Evaluator");
+    const requestKey = JSON.stringify({
+      searchValue,
+      currentPage,
+      itemsPerPage,
+      status,
+      quarter,
+      year: Number(year) || 0,
+    });
+
+    if (
+      evaluationsInFlightKeyRef.current === requestKey &&
+      evaluationsInFlightPromiseRef.current
+    ) {
+      await evaluationsInFlightPromiseRef.current;
+      return;
+    }
+
+    const requestPromise = (async () => {
+      try {
+        const response = await apiService.getEvalAuthEvaluator(
+          searchValue,
+          currentPage,
+          itemsPerPage,
+          status,
+          quarter,
+          Number(year) || 0
+        );
+
+        // Add safety checks to prevent "Cannot read properties of undefined" error
+        if (!response || !response.myEval_as_Evaluator) {
+          console.error("API response is undefined or missing myEval_as_Evaluator");
+          setEvaluations([]);
+          setOverviewTotal(0);
+          setTotalPages(1);
+          setPerPage(itemsPerPage);
+          return;
+        }
+
+        // getEvalAuthEvaluator returns { myEval_as_Evaluator: { data, total, last_page, per_page } }
+        setEvaluations(response.myEval_as_Evaluator.data || []);
+        setOverviewTotal(response.myEval_as_Evaluator.total || 0);
+        setTotalPages(response.myEval_as_Evaluator.last_page || 1);
+        setPerPage(response.myEval_as_Evaluator.per_page || itemsPerPage);
+
+        console.log("Evaluation Records loaded:", {
+          count: (response.myEval_as_Evaluator.data || []).length,
+          total: response.myEval_as_Evaluator.total || 0,
+          currentPage: response.myEval_as_Evaluator.last_page || 1
+        });
+      } catch (error) {
+        console.error("Error loading evaluations:", error);
+        // Set default values on error
         setEvaluations([]);
         setOverviewTotal(0);
         setTotalPages(1);
         setPerPage(itemsPerPage);
-        return;
+      } finally {
+        if (evaluationsInFlightKeyRef.current === requestKey) {
+          evaluationsInFlightKeyRef.current = null;
+          evaluationsInFlightPromiseRef.current = null;
+        }
       }
+    })();
 
-      // getEvalAuthEvaluator returns { myEval_as_Evaluator: { data, total, last_page, per_page } }
-      setEvaluations(response.myEval_as_Evaluator.data || []);
-      setOverviewTotal(response.myEval_as_Evaluator.total || 0);
-      setTotalPages(response.myEval_as_Evaluator.last_page || 1);
-      setPerPage(response.myEval_as_Evaluator.per_page || itemsPerPage);
-      
-      console.log("Evaluation Records loaded:", {
-        count: (response.myEval_as_Evaluator.data || []).length,
-        total: response.myEval_as_Evaluator.total || 0,
-        currentPage: response.myEval_as_Evaluator.last_page || 1
-      });
-    } catch (error) {
-      console.error("Error loading evaluations:", error);
-      // Set default values on error
-      setEvaluations([]);
-      setOverviewTotal(0);
-      setTotalPages(1);
-      setPerPage(itemsPerPage);
-    }
+    evaluationsInFlightKeyRef.current = requestKey;
+    evaluationsInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
   useEffect(() => {
@@ -147,12 +177,6 @@ export default function OverviewTab() {
       try {
         const years = await apiService.getAllYears();
         setYears(years);
-        await loadEvaluations(
-          searchTerm,
-          statusFilter,
-          quarterFilter,
-          yearFilter
-        );
       } catch (error) {
         console.log(error);
         setRefreshing(false);

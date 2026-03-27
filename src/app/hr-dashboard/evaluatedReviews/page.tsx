@@ -95,6 +95,8 @@ export default function OverviewTab() {
   const [years, setYears] = useState<any[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [branchesData, setBranchesData] = useState<any[]>([]);
+  const submissionsInFlightKeyRef = useRef<string | null>(null);
+  const submissionsInFlightPromiseRef = useRef<Promise<void> | null>(null);
 
   // Helper function to get branch code from branch data
   const getBranchCode = (branch: any): string => {
@@ -235,7 +237,7 @@ export default function OverviewTab() {
     const normalizedRating = rating === "0" ? "" : rating;
     const normalizedBranch = branch === "0" ? "" : branch;
 
-    const response = await clientDataService.getSubmissions(
+    const requestKey = JSON.stringify({
       searchValue,
       currentPage,
       itemsPerPage,
@@ -243,12 +245,44 @@ export default function OverviewTab() {
       normalizedQuarter,
       normalizedYear,
       normalizedRating,
-      normalizedBranch
-    );
-    setEvaluations(response.data);
-    setOverviewTotal(response.total);
-    setTotalPages(response.last_page);
-    setPerPage(response.per_page);
+      normalizedBranch,
+    });
+
+    if (
+      submissionsInFlightKeyRef.current === requestKey &&
+      submissionsInFlightPromiseRef.current
+    ) {
+      await submissionsInFlightPromiseRef.current;
+      return;
+    }
+
+    const requestPromise = (async () => {
+      try {
+        const response = await clientDataService.getSubmissions(
+          searchValue,
+          currentPage,
+          itemsPerPage,
+          normalizedStatus,
+          normalizedQuarter,
+          normalizedYear,
+          normalizedRating,
+          normalizedBranch
+        );
+        setEvaluations(response.data);
+        setOverviewTotal(response.total);
+        setTotalPages(response.last_page);
+        setPerPage(response.per_page);
+      } finally {
+        if (submissionsInFlightKeyRef.current === requestKey) {
+          submissionsInFlightKeyRef.current = null;
+          submissionsInFlightPromiseRef.current = null;
+        }
+      }
+    })();
+
+    submissionsInFlightKeyRef.current = requestKey;
+    submissionsInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
   useEffect(() => {
@@ -261,14 +295,6 @@ export default function OverviewTab() {
         ]);
         setYears(years);
         setBranchesData(branches);
-        await loadEvaluations(
-          searchTerm,
-          statusFilter,
-          quarterFilter,
-          yearFilter,
-          ratingFilter,
-          branchFilter
-        );
       } catch (error) {
         console.log(error);
         setRefreshing(false);

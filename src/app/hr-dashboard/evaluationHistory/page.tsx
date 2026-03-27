@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Eye, X } from "lucide-react";
 import {
   Card,
@@ -64,108 +64,137 @@ export default function OverviewTab() {
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedQuarter, setSelectedQuarter] = useState("");
   const [years, setYears] = useState<any>([]);
+  const approvedEvalsInFlightKeyRef = useRef<string | null>(null);
+  const approvedEvalsInFlightPromiseRef = useRef<Promise<void> | null>(null);
 
   // Load approved evaluations from API
   const loadApprovedEvaluations = async (searchValue: string, page?: number) => {
-    try {
-      setIsPaginate(true);
-      
-      // Handle "Probationary" filter - fetch both M3 and M5 data
-      if (selectedQuarter === "Probationary") {
-        // Fetch both M3 and M5 evaluations
-        const [responseM3, responseM5] = await Promise.all([
-          apiService.getMyEvalAuthEmployee(
-            searchValue,
-            page ?? currentPage,
-            itemsPerPage,
-            selectedYear,
-            "3"
-          ),
-          apiService.getMyEvalAuthEmployee(
-            searchValue,
-            page ?? currentPage,
-            itemsPerPage,
-            selectedYear,
-            "5"
-          ),
-        ]);
+    const targetPage = page ?? currentPage;
+    const requestKey = JSON.stringify({
+      searchValue,
+      targetPage,
+      itemsPerPage,
+      selectedYear,
+      selectedQuarter,
+    });
 
-        // Combine results from both calls
-        const combinedData = [
-          ...(responseM3?.myEval_as_Employee?.data || []),
-          ...(responseM5?.myEval_as_Employee?.data || []),
-        ];
+    if (
+      approvedEvalsInFlightKeyRef.current === requestKey &&
+      approvedEvalsInFlightPromiseRef.current
+    ) {
+      await approvedEvalsInFlightPromiseRef.current;
+      return;
+    }
 
-        // Sort by created_at (most recent first)
-        combinedData.sort((a: any, b: any) => {
-          const dateA = new Date(a.created_at).getTime();
-          const dateB = new Date(b.created_at).getTime();
-          return dateB - dateA;
-        });
+    const requestPromise = (async () => {
+      try {
+        setIsPaginate(true);
 
-        // Calculate combined totals
-        const totalM3 = responseM3?.myEval_as_Employee?.total || 0;
-        const totalM5 = responseM5?.myEval_as_Employee?.total || 0;
-        const combinedTotal = totalM3 + totalM5;
+        // Handle "Probationary" filter - fetch both M3 and M5 data
+        if (selectedQuarter === "Probationary") {
+          // Fetch both M3 and M5 evaluations
+          const [responseM3, responseM5] = await Promise.all([
+            apiService.getMyEvalAuthEmployee(
+              searchValue,
+              targetPage,
+              itemsPerPage,
+              selectedYear,
+              "3"
+            ),
+            apiService.getMyEvalAuthEmployee(
+              searchValue,
+              targetPage,
+              itemsPerPage,
+              selectedYear,
+              "5"
+            ),
+          ]);
 
-        // Use years from first response (they should be the same)
-        const years = responseM3?.years || responseM5?.years || [];
+          // Combine results from both calls
+          const combinedData = [
+            ...(responseM3?.myEval_as_Employee?.data || []),
+            ...(responseM5?.myEval_as_Employee?.data || []),
+          ];
 
-        setMyEvaluations(combinedData);
-        setOverviewTotal(combinedTotal);
-        // Calculate pages based on combined total
-        setTotalPages(Math.ceil(combinedTotal / itemsPerPage));
-        setPerPage(itemsPerPage);
-        setIsPaginate(false);
-        setYears(years);
-        return;
-      }
+          // Sort by created_at (most recent first)
+          combinedData.sort((a: any, b: any) => {
+            const dateA = new Date(a.created_at).getTime();
+            const dateB = new Date(b.created_at).getTime();
+            return dateB - dateA;
+          });
 
-      // Normal API call for other quarters
-      const response = await apiService.getMyEvalAuthEmployee(
-        searchValue,
-        page ?? currentPage,
-        itemsPerPage,
-        selectedYear,
-        selectedQuarter
-      );
-      
-      // Add safety checks to prevent "Cannot read properties of undefined" error
-      if (!response || !response.myEval_as_Employee) {
-        console.error(
-          "API response is undefined or missing myEval_as_Employee"
+          // Calculate combined totals
+          const totalM3 = responseM3?.myEval_as_Employee?.total || 0;
+          const totalM5 = responseM5?.myEval_as_Employee?.total || 0;
+          const combinedTotal = totalM3 + totalM5;
+
+          // Use years from first response (they should be the same)
+          const years = responseM3?.years || responseM5?.years || [];
+
+          setMyEvaluations(combinedData);
+          setOverviewTotal(combinedTotal);
+          // Calculate pages based on combined total
+          setTotalPages(Math.ceil(combinedTotal / itemsPerPage));
+          setPerPage(itemsPerPage);
+          setIsPaginate(false);
+          setYears(years);
+          return;
+        }
+
+        // Normal API call for other quarters
+        const response = await apiService.getMyEvalAuthEmployee(
+          searchValue,
+          targetPage,
+          itemsPerPage,
+          selectedYear,
+          selectedQuarter
         );
+
+        // Add safety checks to prevent "Cannot read properties of undefined" error
+        if (!response || !response.myEval_as_Employee) {
+          console.error(
+            "API response is undefined or missing myEval_as_Employee"
+          );
+          setMyEvaluations([]);
+          setOverviewTotal(0);
+          setTotalPages(1);
+          setPerPage(itemsPerPage);
+          setIsPaginate(false);
+          setYears([]);
+          return;
+        }
+
+        setMyEvaluations(response.myEval_as_Employee.data || []);
+        setOverviewTotal(response.myEval_as_Employee.total || 0);
+        setTotalPages(response.myEval_as_Employee.last_page || 1);
+        setPerPage(response.myEval_as_Employee.per_page || itemsPerPage);
+        setIsPaginate(false);
+        setYears(response.years || []);
+      } catch (error) {
+        console.error("Error loading approved evaluations:", error);
+        // Set default values on error
         setMyEvaluations([]);
         setOverviewTotal(0);
         setTotalPages(1);
         setPerPage(itemsPerPage);
         setIsPaginate(false);
         setYears([]);
-        return;
+      } finally {
+        if (approvedEvalsInFlightKeyRef.current === requestKey) {
+          approvedEvalsInFlightKeyRef.current = null;
+          approvedEvalsInFlightPromiseRef.current = null;
+        }
       }
-      
-      setMyEvaluations(response.myEval_as_Employee.data || []);
-      setOverviewTotal(response.myEval_as_Employee.total || 0);
-      setTotalPages(response.myEval_as_Employee.last_page || 1);
-      setPerPage(response.myEval_as_Employee.per_page || itemsPerPage);
-      setIsPaginate(false);
-      setYears(response.years || []);
-    } catch (error) {
-      console.error("Error loading approved evaluations:", error);
-      // Set default values on error
-      setMyEvaluations([]);
-      setOverviewTotal(0);
-      setTotalPages(1);
-      setPerPage(itemsPerPage);
-      setIsPaginate(false);
-      setYears([]);
-    }
+    })();
+
+    approvedEvalsInFlightKeyRef.current = requestKey;
+    approvedEvalsInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
   useEffect(() => {
     // Reset to first page when filter changes
     setCurrentPage(1);
-    loadApprovedEvaluations(searchTerm, 1);
     const loadDashboard = async () => {
       try {
         const dashboard = await apiService.employeeDashboard();
@@ -211,7 +240,7 @@ export default function OverviewTab() {
       await loadApprovedEvaluations(debouncedSearchTerm);
     };
     debounceData();
-  }, [debouncedSearchTerm, currentPage]);
+  }, [debouncedSearchTerm, currentPage, selectedQuarter, selectedYear]);
 
   const refresh = async () => {
     setIsRefreshingOverview(true);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -98,6 +98,11 @@ export default function AreaManagersTab() {
   const itemsPerPage = 8;
   const [isSavingAreaManager, setIsSavingAreaManager] = useState(false);
   const [editBranchSearchTerm, setEditBranchSearchTerm] = useState("");
+  const areaManagersInFlightPromiseRef = useRef<Promise<void> | null>(null);
+  const branchesInFlightPromiseRef = useRef<
+    Promise<{ id: string; name: string; code: string }[]>
+    | null
+  >(null);
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -282,18 +287,29 @@ export default function AreaManagersTab() {
 
   // Load area managers from API
   const loadAreaManagers = async () => {
-    setLoadingAreaManagers(true);
-    try {
-      const data = await apiService.getAllAreaManager();
-      const normalizedData = normalizeAreaManagerData(data);
-      setAreaManagersData(normalizedData);
-    } catch (error) {
-      console.error("Error loading area managers:", error);
-      // Set empty array if API fails - no fallback needed
-      setAreaManagersData([]);
-    } finally {
-      setLoadingAreaManagers(false);
+    if (areaManagersInFlightPromiseRef.current) {
+      await areaManagersInFlightPromiseRef.current;
+      return;
     }
+
+    const requestPromise = (async () => {
+      setLoadingAreaManagers(true);
+      try {
+        const data = await apiService.getAllAreaManager();
+        const normalizedData = normalizeAreaManagerData(data);
+        setAreaManagersData(normalizedData);
+      } catch (error) {
+        console.error("Error loading area managers:", error);
+        // Set empty array if API fails - no fallback needed
+        setAreaManagersData([]);
+      } finally {
+        setLoadingAreaManagers(false);
+        areaManagersInFlightPromiseRef.current = null;
+      }
+    })();
+
+    areaManagersInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
   // Load area managers on mount
@@ -418,46 +434,59 @@ export default function AreaManagersTab() {
       return branches;
     }
 
-    setBranchesLoading(true);
+    if (branchesInFlightPromiseRef.current) {
+      return branchesInFlightPromiseRef.current;
+    }
 
-    const result = await withErrorHandling(
-      async () => {
-        const branchesData = await apiService.getBranches();
-        // Normalize the data format - handle both {id, name} and {value, label} formats
-        const normalizedBranches = branchesData.map((branch: any) => {
-          if ("id" in branch && "name" in branch) {
-            return { 
-              id: branch.id, 
-              name: branch.name,
-              code: branch.code || branch.branch_code || ""
-            };
-          } else if ("value" in branch && "label" in branch) {
-            // Extract branch name and code from label if it contains " /"
-            const labelParts = branch.label.split(" /");
-            return {
-              id: branch.value,
-              name: labelParts[0] || branch.label,
-              code: labelParts[1] || labelParts[0] || branch.label, // Use code if available, fallback to name
-            };
+    const requestPromise = (async () => {
+      setBranchesLoading(true);
+
+      try {
+        const result = await withErrorHandling(
+          async () => {
+            const branchesData = await apiService.getBranches();
+            // Normalize the data format - handle both {id, name} and {value, label} formats
+            const normalizedBranches = branchesData.map((branch: any) => {
+              if ("id" in branch && "name" in branch) {
+                return {
+                  id: branch.id,
+                  name: branch.name,
+                  code: branch.code || branch.branch_code || ""
+                };
+              } else if ("value" in branch && "label" in branch) {
+                // Extract branch name and code from label if it contains " /"
+                const labelParts = branch.label.split(" /");
+                return {
+                  id: branch.value,
+                  name: labelParts[0] || branch.label,
+                  code: labelParts[1] || labelParts[0] || branch.label, // Use code if available, fallback to name
+                };
+              }
+              return {
+                id: String(branch.id || branch.value || ""),
+                name: String(branch.name || branch.label || ""),
+                code: String(branch.code || branch.branch_code || branch.name || branch.label || ""),
+              };
+            });
+            setBranches(normalizedBranches);
+            return normalizedBranches;
+          },
+          {
+            errorTitle: "Failed to Load Branches",
+            errorMessage: "Unable to load branches. Please try again.",
+            showSuccessToast: false,
           }
-          return {
-            id: String(branch.id || branch.value || ""),
-            name: String(branch.name || branch.label || ""),
-            code: String(branch.code || branch.branch_code || branch.name || branch.label || ""),
-          };
-        });
-        setBranches(normalizedBranches);
-        return normalizedBranches;
-      },
-      {
-        errorTitle: "Failed to Load Branches",
-        errorMessage: "Unable to load branches. Please try again.",
-        showSuccessToast: false,
-      }
-    );
+        );
 
-    setBranchesLoading(false);
-    return result || [];
+        return result || [];
+      } finally {
+        setBranchesLoading(false);
+        branchesInFlightPromiseRef.current = null;
+      }
+    })();
+
+    branchesInFlightPromiseRef.current = requestPromise;
+    return requestPromise;
   };
 
   // Add custom CSS for success dialog content animations (checkmark, ripple, etc.)

@@ -98,7 +98,30 @@ export default function UserManagementTab() {
   
   // Hide admin users in HR dashboard (only show in admin dashboard)
   const shouldHideAdminUsers = true; // Set to true for HR dashboard
-  
+
+  /** True if any role is admin (do not rely on roles[0] — order varies). */
+  const userHasAdminRole = (u: User | null | undefined): boolean => {
+    if (!u?.roles || !Array.isArray(u.roles)) return false;
+    return u.roles.some(
+      (r: { name?: string }) =>
+        String(r?.name ?? "").toLowerCase() === "admin"
+    );
+  };
+
+  /** Role label for table/badge: prefer a non-admin role when multiple exist. */
+  const getDisplayRoleName = (u: User | null | undefined): string | undefined => {
+    if (!u?.roles || !Array.isArray(u.roles) || u.roles.length === 0)
+      return undefined;
+    const nonAdmin = u.roles.find(
+      (r: { name?: string }) =>
+        String(r?.name ?? "").toLowerCase() !== "admin"
+    );
+    return (nonAdmin ?? u.roles[0])?.name;
+  };
+
+  // NOTE: Filtering admins only on the client breaks pagination (sparse pages, wrong totals).
+  // Prefer excluding admins in GET /getAllActiveUsers when the caller is HR, if the API supports it.
+
   // Helper function to check if employee is HO (Head Office)
   // This determines the evaluationType based on the employee being evaluated, not the evaluator
   const isEmployeeHO = (employee: User | null): boolean => {
@@ -393,42 +416,71 @@ export default function UserManagementTab() {
 
   // Track when page change started for active users
   const activePageChangeStartTimeRef = useRef<number | null>(null);
+  const activeUsersInFlightKeyRef = useRef<string | null>(null);
+  const activeUsersInFlightPromiseRef = useRef<Promise<void> | null>(null);
 
   const loadActiveUsers = async (
     searchValue: string,
     roleFilterValue: string,
     branchFilterValue: string
   ) => {
-    try {
-      const normalizedBranch =
-        branchFilterValue === "all" ? "" : branchFilterValue;
-      const response = await apiService.getActiveRegistrations(
-        searchValue,
-        roleFilterValue,
-        currentPageActive,
-        itemsPerPage,
-        normalizedBranch
-      );
+    const normalizedBranch = branchFilterValue === "all" ? "" : branchFilterValue;
+    const requestKey = JSON.stringify({
+      searchValue,
+      roleFilterValue,
+      normalizedBranch,
+      currentPageActive,
+      itemsPerPage,
+    });
 
-      setActiveRegistrations(response.data);
-      setActiveTotalItems(response.total);
-      setTotalActivePages(response.last_page);
-      setPerPage(response.per_page);
-    } catch (error) {
-      console.error("Error loading active users:", error);
-    } finally {
-      // If this was a page change, ensure minimum display time (2 seconds)
-      if (activePageChangeStartTimeRef.current !== null) {
-        const elapsed = Date.now() - activePageChangeStartTimeRef.current;
-        const minDisplayTime = 2000; // 2 seconds
-        const remainingTime = Math.max(0, minDisplayTime - elapsed);
-
-        setTimeout(() => {
-          setIsPageLoading(false);
-          activePageChangeStartTimeRef.current = null;
-        }, remainingTime);
-      }
+    // Deduplicate identical concurrent requests (same query params + pagination).
+    if (
+      activeUsersInFlightKeyRef.current === requestKey &&
+      activeUsersInFlightPromiseRef.current
+    ) {
+      await activeUsersInFlightPromiseRef.current;
+      return;
     }
+
+    const requestPromise = (async () => {
+      try {
+        const response = await apiService.getActiveRegistrations(
+          searchValue,
+          roleFilterValue,
+          currentPageActive,
+          itemsPerPage,
+          normalizedBranch
+        );
+
+        setActiveRegistrations(response.data);
+        setActiveTotalItems(response.total);
+        setTotalActivePages(response.last_page);
+        setPerPage(response.per_page);
+      } catch (error) {
+        console.error("Error loading active users:", error);
+      } finally {
+        // If this was a page change, ensure minimum display time (2 seconds)
+        if (activePageChangeStartTimeRef.current !== null) {
+          const elapsed = Date.now() - activePageChangeStartTimeRef.current;
+          const minDisplayTime = 2000; // 2 seconds
+          const remainingTime = Math.max(0, minDisplayTime - elapsed);
+
+          setTimeout(() => {
+            setIsPageLoading(false);
+            activePageChangeStartTimeRef.current = null;
+          }, remainingTime);
+        }
+
+        if (activeUsersInFlightKeyRef.current === requestKey) {
+          activeUsersInFlightKeyRef.current = null;
+          activeUsersInFlightPromiseRef.current = null;
+        }
+      }
+    })();
+
+    activeUsersInFlightKeyRef.current = requestKey;
+    activeUsersInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
   //render when page reload not loading not everySearch or Filters
@@ -446,8 +498,6 @@ export default function UserManagementTab() {
         setDepartmentData(departments);
         const roles = await apiService.getAllRoles();
         setRoles(roles);
-        await loadActiveUsers(activeSearchTerm, roleFilter, activeBranchFilter);
-        await loadPendingUsers(pendingSearchTerm, statusFilter);
       } catch (error) {
         console.error("Error refreshing data:", error);
         setRefresh(false);
@@ -457,19 +507,6 @@ export default function UserManagementTab() {
     };
     mountData();
   }, []);
-
-  useEffect(() => {
-    const load = async () => {
-      if (tab === "active") {
-        await loadActiveUsers(activeSearchTerm, roleFilter, activeBranchFilter);
-      }
-      if (tab === "new") {
-        await loadPendingUsers(pendingSearchTerm, statusFilter);
-      }
-    };
-
-    load();
-  }, [tab]);
 
   //mount every activeSearchTerm, roleFilter, or branchFilter changes
   useEffect(() => {
@@ -527,6 +564,7 @@ export default function UserManagementTab() {
 
     fetchData();
   }, [
+    tab,
     debouncedActiveSearchTerm,
     debouncedRoleFilter,
     debouncedActiveBranchFilter,
@@ -560,7 +598,7 @@ export default function UserManagementTab() {
     };
 
     fetchData();
-  }, [debouncedPendingSearchTerm, debouncedStatusFilter, currentPagePending]);
+  }, [tab, debouncedPendingSearchTerm, debouncedStatusFilter, currentPagePending]);
 
   // Function to refresh user data
   const refreshUserData = async (showLoading = false) => {
@@ -679,12 +717,11 @@ export default function UserManagementTab() {
 
       const allowedRoleNames = new Set(["employee", "hr", "evaluator"]);
       const employeesList = usersList.filter((u: any) => {
-        const roleName =
-          u?.roles && Array.isArray(u.roles) ? u.roles[0]?.name : "";
-        const normalized = String(roleName || "").toLowerCase();
-        // Exclude Admin (and anything else we don't explicitly want)
-        if (!allowedRoleNames.has(normalized)) return false;
-        return true;
+        if (shouldHideAdminUsers && userHasAdminRole(u)) return false;
+        const rolesArr = u?.roles && Array.isArray(u.roles) ? u.roles : [];
+        return rolesArr.some((r: { name?: string }) =>
+          allowedRoleNames.has(String(r?.name || "").toLowerCase())
+        );
       });
 
       // 2) Fetch all evaluations for this branch+year.
@@ -1546,9 +1583,6 @@ export default function UserManagementTab() {
                           <TableCell className="px-6 py-3">
                             <Skeleton className="h-6 w-24" />
                           </TableCell>
-                          <TableCell className="px-6 py-3">
-                            <Skeleton className="h-6 w-24" />
-                          </TableCell>
                         </TableRow>
                       ))
                     ) : activeRegistrations &&
@@ -1585,11 +1619,11 @@ export default function UserManagementTab() {
                               ) : (
                                 <>
                                   <p className="text-base font-medium mb-1">
-                                    No evaluation records to display
+                                    No employees to display
                                   </p>
                                   <p className="text-sm text-gray-400">
-                                    Records will appear here when evaluations
-                                    are submitted
+                                    Active employees will appear here when they
+                                    exist for the current filters
                                   </p>
                                 </>
                               )}
@@ -1602,12 +1636,8 @@ export default function UserManagementTab() {
                       activeRegistrations.length > 0 ? (
                       activeRegistrations
                         ?.filter((employee) => {
-                          // Hide admin users in HR dashboard
-                          if (shouldHideAdminUsers) {
-                            const roleName = employee.roles &&
-                              Array.isArray(employee.roles) &&
-                              employee.roles[0]?.name;
-                            return roleName !== "admin";
+                          if (shouldHideAdminUsers && userHasAdminRole(employee)) {
+                            return false;
                           }
                           return true;
                         })
@@ -1714,16 +1744,9 @@ export default function UserManagementTab() {
                                 <TableCell>
                                   <Badge
                                     variant="outline"
-                                    className={getRoleColor(
-                                      employee.roles &&
-                                        Array.isArray(employee.roles) &&
-                                        employee.roles[0]?.name
-                                    )}
+                                    className={getRoleColor(getDisplayRoleName(employee))}
                                   >
-                                    {(employee.roles &&
-                                      Array.isArray(employee.roles) &&
-                                      employee.roles[0]?.name) ||
-                                      "N/A"}
+                                    {getDisplayRoleName(employee) || "N/A"}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
@@ -2053,18 +2076,14 @@ export default function UserManagementTab() {
                         pendingRegistrations.length > 0 ? (
                         pendingRegistrations
                           .filter((account) => {
-                            // Hide admin users in HR dashboard
-                            if (shouldHideAdminUsers) {
-                              const roleName = account.roles &&
-                                Array.isArray(account.roles) &&
-                                account.roles[0]?.name;
-                              return roleName !== "admin";
+                            if (shouldHideAdminUsers && userHasAdminRole(account)) {
+                              return false;
                             }
                             return true;
                           })
                           .map((account) => {
                           // Check if registration is new (within 24 hours) or recent (24-48 hours)
-                          if (!account.created_at) return;
+                          if (!account.created_at) return null;
                           const registrationDate = new Date(account.created_at);
                           const now = new Date();
                           const hoursDiff =

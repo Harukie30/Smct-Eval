@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Eye, FileText } from "lucide-react";
 import {
   Card,
@@ -131,10 +131,19 @@ export default function EmployeesTab() {
     useState<User | null>(null);
   const [selectedEmployeeForEvaluation, setSelectedEmployeeForEvaluation] =
     useState<User | null>(null);
+  const positionsInFlightPromiseRef = useRef<Promise<void> | null>(null);
+  const employeesInFlightKeyRef = useRef<string | null>(null);
+  const employeesInFlightPromiseRef = useRef<Promise<void> | null>(null);
 
   // Fetch all employees to get unique positions (without pagination limit)
   useEffect(() => {
     const fetchPositionsFromEmployees = async () => {
+      if (positionsInFlightPromiseRef.current) {
+        await positionsInFlightPromiseRef.current;
+        return;
+      }
+
+      const requestPromise = (async () => {
       try {
         // Fetch all employees with a high limit to get all unique positions
         const res = await apiService.getAllEmployeeByAuth(
@@ -182,13 +191,34 @@ export default function EmployeesTab() {
       } catch (error) {
         console.error("Error fetching positions from employees:", error);
         setPositions([]);
+      } finally {
+        positionsInFlightPromiseRef.current = null;
       }
+      })();
+      positionsInFlightPromiseRef.current = requestPromise;
+      await requestPromise;
     };
     fetchPositionsFromEmployees();
   }, [refreshTrigger]); // Refetch when refresh trigger changes
 
   useEffect(() => {
     const fetchEmployees = async () => {
+      const requestKey = JSON.stringify({
+        debouncedSearch,
+        itemsPerPage,
+        currentPage,
+        positionFilter: Number(positionFilter) || undefined,
+        refreshTrigger,
+      });
+      if (
+        employeesInFlightKeyRef.current === requestKey &&
+        employeesInFlightPromiseRef.current
+      ) {
+        await employeesInFlightPromiseRef.current;
+        return;
+      }
+
+      const requestPromise = (async () => {
       try {
         setIsRefreshing(true);
         const res = await apiService.getAllEmployeeByAuth(
@@ -243,7 +273,16 @@ export default function EmployeesTab() {
         setTotalPages(1);
         setPerPage(itemsPerPage);
         setIsRefreshing(false);
+      } finally {
+        if (employeesInFlightKeyRef.current === requestKey) {
+          employeesInFlightKeyRef.current = null;
+          employeesInFlightPromiseRef.current = null;
+        }
       }
+      })();
+      employeesInFlightKeyRef.current = requestKey;
+      employeesInFlightPromiseRef.current = requestPromise;
+      await requestPromise;
     };
     fetchEmployees();
   }, [
