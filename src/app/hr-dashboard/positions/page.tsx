@@ -69,6 +69,7 @@ export default function PositionsTab() {
 
   const positionsInFlightPromiseRef = useRef<Promise<void> | null>(null);
   const hasLoadedPositionsOnceRef = useRef(false);
+  const prevFilterSnapshotForPageRef = useRef<string | null>(null);
 
   const loadPositions = async () => {
     if (positionsInFlightPromiseRef.current) {
@@ -83,7 +84,8 @@ export default function PositionsTab() {
       }
       try {
         const res = await apiService.getPositions();
-        const normalized: Position[] = (res || []).map((p: any) => ({
+        const list = Array.isArray(res) ? res : [];
+        const normalized: Position[] = list.map((p: any) => ({
           id: Number(p.value),
           label: String(p.label ?? ""),
           createdAt: p.created_at != null ? String(p.created_at) : null,
@@ -143,9 +145,45 @@ export default function PositionsTab() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginated = filteredPositions.slice(startIndex, startIndex + itemsPerPage);
 
+  const emptyStateMessage = useMemo(() => {
+    if (filteredPositions.length > 0) {
+      return "";
+    }
+    if (positions.length === 0) {
+      return "No positions found.";
+    }
+    const q = searchTerm.trim();
+    if (showRecent24h && q) {
+      return "No positions match your search in the last 24 hours.";
+    }
+    if (showRecent24h && !q) {
+      return "No positions were added in the last 24 hours.";
+    }
+    if (q) {
+      return "No positions match your search.";
+    }
+    return "No positions found.";
+  }, [
+    filteredPositions.length,
+    positions.length,
+    searchTerm,
+    showRecent24h,
+  ]);
+
   useEffect(() => {
-    setCurrentPage(1);
+    const snapshot = JSON.stringify({ searchTerm, showRecent24h });
+    if (
+      prevFilterSnapshotForPageRef.current !== null &&
+      prevFilterSnapshotForPageRef.current !== snapshot
+    ) {
+      setCurrentPage(1);
+    }
+    prevFilterSnapshotForPageRef.current = snapshot;
   }, [searchTerm, showRecent24h]);
+
+  useEffect(() => {
+    setCurrentPage((p) => Math.min(p, totalPages));
+  }, [totalPages]);
 
   if (loading) {
     return (
@@ -295,9 +333,9 @@ export default function PositionsTab() {
           <div className="space-y-3">
             {paginated.length === 0 ? (
               <div className="text-center text-gray-500 py-10">
-                {showRecent24h
-                  ? "No positions were added in the last 24 hours."
-                  : "No positions found."}
+                {filteredPositions.length === 0
+                  ? emptyStateMessage
+                  : null}
               </div>
             ) : (
               paginated.map((p) => {

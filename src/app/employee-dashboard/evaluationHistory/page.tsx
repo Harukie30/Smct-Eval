@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Eye, X } from "lucide-react";
 import {
   Card,
@@ -64,108 +64,124 @@ export default function OverviewTab() {
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedQuarter, setSelectedQuarter] = useState("");
   const [years, setYears] = useState<any>([]);
+  const approvedEvalsInFlightKeyRef = useRef<string | null>(null);
+  const approvedEvalsInFlightPromiseRef = useRef<Promise<void> | null>(null);
+  const prevSearchDebouncedRef = useRef<string | null>(null);
 
   // Load approved evaluations from API
   const loadApprovedEvaluations = async (searchValue: string, page?: number) => {
-    try {
-      setIsPaginate(true);
-      
-      // Handle "Probationary" filter - fetch both M3 and M5 data
-      if (selectedQuarter === "Probationary") {
-        // Fetch both M3 and M5 evaluations
-        const [responseM3, responseM5] = await Promise.all([
-          apiService.getMyEvalAuthEmployee(
-            searchValue,
-            page ?? currentPage,
-            itemsPerPage,
-            selectedYear,
-            "3"
-          ),
-          apiService.getMyEvalAuthEmployee(
-            searchValue,
-            page ?? currentPage,
-            itemsPerPage,
-            selectedYear,
-            "5"
-          ),
-        ]);
+    const targetPage = page ?? currentPage;
+    const requestKey = JSON.stringify({
+      searchValue,
+      targetPage,
+      itemsPerPage,
+      selectedYear,
+      selectedQuarter,
+    });
 
-        // Combine results from both calls
-        const combinedData = [
-          ...(responseM3?.myEval_as_Employee?.data || []),
-          ...(responseM5?.myEval_as_Employee?.data || []),
-        ];
+    if (
+      approvedEvalsInFlightKeyRef.current === requestKey &&
+      approvedEvalsInFlightPromiseRef.current
+    ) {
+      await approvedEvalsInFlightPromiseRef.current;
+      return;
+    }
 
-        // Sort by created_at (most recent first)
-        combinedData.sort((a: any, b: any) => {
-          const dateA = new Date(a.created_at).getTime();
-          const dateB = new Date(b.created_at).getTime();
-          return dateB - dateA;
-        });
+    const requestPromise = (async () => {
+      try {
+        setIsPaginate(true);
 
-        // Calculate combined totals
-        const totalM3 = responseM3?.myEval_as_Employee?.total || 0;
-        const totalM5 = responseM5?.myEval_as_Employee?.total || 0;
-        const combinedTotal = totalM3 + totalM5;
+        if (selectedQuarter === "Probationary") {
+          const [responseM3, responseM5] = await Promise.all([
+            apiService.getMyEvalAuthEmployee(
+              searchValue,
+              targetPage,
+              itemsPerPage,
+              selectedYear,
+              "3"
+            ),
+            apiService.getMyEvalAuthEmployee(
+              searchValue,
+              targetPage,
+              itemsPerPage,
+              selectedYear,
+              "5"
+            ),
+          ]);
 
-        // Use years from first response (they should be the same)
-        const years = responseM3?.years || responseM5?.years || [];
+          const combinedData = [
+            ...(responseM3?.myEval_as_Employee?.data || []),
+            ...(responseM5?.myEval_as_Employee?.data || []),
+          ];
 
-        setMyEvaluations(combinedData);
-        setOverviewTotal(combinedTotal);
-        // Calculate pages based on combined total
-        setTotalPages(Math.ceil(combinedTotal / itemsPerPage));
-        setPerPage(itemsPerPage);
-        setIsPaginate(false);
-        setYears(years);
-        return;
-      }
+          combinedData.sort((a: any, b: any) => {
+            const dateA = new Date(a.created_at).getTime();
+            const dateB = new Date(b.created_at).getTime();
+            return dateB - dateA;
+          });
 
-      // Normal API call for other quarters
-      const response = await apiService.getMyEvalAuthEmployee(
-        searchValue,
-        page ?? currentPage,
-        itemsPerPage,
-        selectedYear,
-        selectedQuarter
-      );
+          const totalM3 = responseM3?.myEval_as_Employee?.total || 0;
+          const totalM5 = responseM5?.myEval_as_Employee?.total || 0;
+          const combinedTotal = totalM3 + totalM5;
 
-      // Add safety checks to prevent "Cannot read properties of undefined" error
-      if (!response || !response.myEval_as_Employee) {
-        console.error(
-          "API response is undefined or missing myEval_as_Employee"
+          const yearsData = responseM3?.years || responseM5?.years || [];
+
+          setMyEvaluations(combinedData);
+          setOverviewTotal(combinedTotal);
+          setTotalPages(Math.ceil(combinedTotal / itemsPerPage));
+          setPerPage(itemsPerPage);
+          setYears(yearsData);
+          return;
+        }
+
+        const response = await apiService.getMyEvalAuthEmployee(
+          searchValue,
+          targetPage,
+          itemsPerPage,
+          selectedYear,
+          selectedQuarter
         );
+
+        if (!response || !response.myEval_as_Employee) {
+          console.error(
+            "API response is undefined or missing myEval_as_Employee"
+          );
+          setMyEvaluations([]);
+          setOverviewTotal(0);
+          setTotalPages(1);
+          setPerPage(itemsPerPage);
+          setYears([]);
+          return;
+        }
+
+        setMyEvaluations(response.myEval_as_Employee.data || []);
+        setOverviewTotal(response.myEval_as_Employee.total || 0);
+        setTotalPages(response.myEval_as_Employee.last_page || 1);
+        setPerPage(response.myEval_as_Employee.per_page || itemsPerPage);
+        setYears(response.years || []);
+      } catch (error) {
+        console.error("Error loading approved evaluations:", error);
         setMyEvaluations([]);
         setOverviewTotal(0);
         setTotalPages(1);
         setPerPage(itemsPerPage);
-        setIsPaginate(false);
         setYears([]);
-        return;
+      } finally {
+        setIsPaginate(false);
+        if (approvedEvalsInFlightKeyRef.current === requestKey) {
+          approvedEvalsInFlightKeyRef.current = null;
+          approvedEvalsInFlightPromiseRef.current = null;
+        }
       }
+    })();
 
-      setMyEvaluations(response.myEval_as_Employee.data || []);
-      setOverviewTotal(response.myEval_as_Employee.total || 0);
-      setTotalPages(response.myEval_as_Employee.last_page || 1);
-      setPerPage(response.myEval_as_Employee.per_page || itemsPerPage);
-      setIsPaginate(false);
-      setYears(response.years || []);
-    } catch (error) {
-      console.error("Error loading approved evaluations:", error);
-      // Set default values on error
-      setMyEvaluations([]);
-      setOverviewTotal(0);
-      setTotalPages(1);
-      setPerPage(itemsPerPage);
-      setIsPaginate(false);
-      setYears([]);
-    }
+    approvedEvalsInFlightKeyRef.current = requestKey;
+    approvedEvalsInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
   useEffect(() => {
-    // Reset to first page when filter changes
     setCurrentPage(1);
-    loadApprovedEvaluations(searchTerm, 1);
     const loadDashboard = async () => {
       try {
         const dashboard = await apiService.employeeDashboard();
@@ -195,30 +211,31 @@ export default function OverviewTab() {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (searchTerm !== "" && currentPage !== 1) {
+      if (
+        prevSearchDebouncedRef.current !== null &&
+        prevSearchDebouncedRef.current !== searchTerm
+      ) {
         setCurrentPage(1);
       }
-
+      prevSearchDebouncedRef.current = searchTerm;
       setDebouncedSearchTerm(searchTerm);
     }, 500);
 
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
-  // Fetch API whenever debounced search term changes
   useEffect(() => {
     const debounceData = async () => {
       await loadApprovedEvaluations(debouncedSearchTerm);
     };
     debounceData();
-  }, [debouncedSearchTerm, currentPage]);
+  }, [debouncedSearchTerm, currentPage, selectedQuarter, selectedYear]);
 
   const refresh = async () => {
     setIsRefreshingOverview(true);
     try {
-      // Add delay to show spinner
       await new Promise((resolve) => setTimeout(resolve, 500));
-      loadApprovedEvaluations(searchTerm);
+      await loadApprovedEvaluations(debouncedSearchTerm);
     } catch (error) {
       console.error("Error refreshing on tab click:", error);
     } finally {
@@ -259,13 +276,13 @@ export default function OverviewTab() {
 
   const handleClose = async () => {
     try {
-      let search =
+      const search =
         debouncedSearchTerm !== "" ? debouncedSearchTerm : searchTerm;
-      loadApprovedEvaluations(search);
+      await loadApprovedEvaluations(search);
       setIsViewResultsModalOpen(false);
       setSelectedSubmission(null);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       setIsViewResultsModalOpen(false);
       setSelectedSubmission(null);
     }
@@ -724,7 +741,7 @@ export default function OverviewTab() {
                 </TableBody>
               </Table>
             </div>
-          ) : myEvaluations.length === 0 && searchTerm === "" ? (
+          ) : myEvaluations.length === 0 && debouncedSearchTerm === "" ? (
             <div className="text-center py-8">
               <div className="text-gray-500 text-lg mb-2">
                 No performance reviews yet
@@ -734,7 +751,7 @@ export default function OverviewTab() {
                 your manager.
               </div>
             </div>
-          ) : myEvaluations.length === 0 && searchTerm !== "" ? (
+          ) : myEvaluations.length === 0 && debouncedSearchTerm !== "" ? (
             <div className="text-center py-8">
               <div className="flex flex-col items-center justify-center gap-4 mb-4">
                 <img
@@ -752,21 +769,23 @@ export default function OverviewTab() {
                 <div className="text-gray-500">
                   <p className="text-base font-medium mb-1">No results found</p>
                   <p className="text-sm">
-                    No performance reviews match "{searchTerm}"
+                    No performance reviews match &quot;{debouncedSearchTerm}
+                    &quot;
                   </p>
                 </div>
               </div>
             </div>
           ) : (
             <>
-              {searchTerm && (
+              {debouncedSearchTerm.trim() !== "" && (
                 <div className="mb-3 mx-4 text-sm text-gray-600">
                   Found{" "}
                   <span className="font-semibold text-blue-600">
-                    {myEvaluations.length}
+                    {overviewTotal}
                   </span>{" "}
-                  result{myEvaluations.length !== 1 ? "s" : ""} for "
-                  {searchTerm}"
+                  result{overviewTotal !== 1 ? "s" : ""} for &quot;
+                  {debouncedSearchTerm}
+                  &quot;
                 </div>
               )}
 
@@ -803,6 +822,17 @@ export default function OverviewTab() {
                       const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
                       const isCompleted = submission.status === "completed";
                       const isPending = submission.status === "pending";
+                      const supervisorName = [
+                        submission.evaluator?.fname,
+                        submission.evaluator?.lname,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")
+                        .trim();
+                      const ratingNum = Number(submission.rating);
+                      const ratingDisplay = Number.isFinite(ratingNum)
+                        ? `${ratingNum}/5`
+                        : "—";
 
                       // Determine row background color
                       let rowClassName = "hover:bg-gray-100 transition-colors";
@@ -824,9 +854,7 @@ export default function OverviewTab() {
                           <TableCell className="w-1/6 text-center pr-25">
                             <div className="flex justify-center">
                               <span className="font-medium">
-                                {submission.evaluator.fname +
-                                  " " +
-                                  submission.evaluator.lname}
+                                {supervisorName || "—"}
                               </span>
                             </div>
                           </TableCell>
@@ -862,8 +890,7 @@ export default function OverviewTab() {
                             </div>
                           </TableCell>
                           <TableCell className="w-1/6 text-center">
-                            {submission.rating}
-                            /5
+                            {ratingDisplay}
                           </TableCell>
 
                           <TableCell className="w-1/6">
@@ -897,7 +924,7 @@ export default function OverviewTab() {
               </div>
 
               {/* Pagination Controls */}
-              {overviewTotal > itemsPerPage && (
+              {totalPages > 1 && (
                 <EvaluationsPagination
                   currentPage={currentPage}
                   totalPages={totalPages}

@@ -59,6 +59,7 @@ export default function OverviewTab() {
   const [recentEvaluation, setRecentEvaluation] = useState<any>([]);
   const approvedEvalsInFlightKeyRef = useRef<string | null>(null);
   const approvedEvalsInFlightPromiseRef = useRef<Promise<void> | null>(null);
+  const prevSearchDebouncedRef = useRef<string | null>(null);
 
   const { user } = useAuth();
 
@@ -94,7 +95,6 @@ export default function OverviewTab() {
           setOverviewTotal(0);
           setTotalPages(1);
           setPerPage(itemsPerPage);
-          setIsPaginate(false);
           return;
         }
 
@@ -102,7 +102,6 @@ export default function OverviewTab() {
         setOverviewTotal(response.myEval_as_Employee.total || 0);
         setTotalPages(response.myEval_as_Employee.last_page || 1);
         setPerPage(response.myEval_as_Employee.per_page || itemsPerPage);
-        setIsPaginate(false);
       } catch (error) {
         console.error("Error loading approved evaluations:", error);
         // Set default values on error to prevent crashes
@@ -110,8 +109,8 @@ export default function OverviewTab() {
         setOverviewTotal(0);
         setTotalPages(1);
         setPerPage(itemsPerPage);
-        setIsPaginate(false);
       } finally {
+        setIsPaginate(false);
         if (approvedEvalsInFlightKeyRef.current === requestKey) {
           approvedEvalsInFlightKeyRef.current = null;
           approvedEvalsInFlightPromiseRef.current = null;
@@ -154,15 +153,14 @@ export default function OverviewTab() {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (searchTerm !== "" && currentPage !== 1) {
+      if (
+        prevSearchDebouncedRef.current !== null &&
+        prevSearchDebouncedRef.current !== searchTerm
+      ) {
         setCurrentPage(1);
       }
-
+      prevSearchDebouncedRef.current = searchTerm;
       setDebouncedSearchTerm(searchTerm);
-      // Reset to page 1 when search term changes (if there's a value)
-      if (searchTerm.trim() !== "") {
-        setCurrentPage(1);
-      }
     }, 500);
 
     return () => clearTimeout(handler);
@@ -179,9 +177,8 @@ export default function OverviewTab() {
   const refresh = async () => {
     setIsRefreshingOverview(true);
     try {
-      // Add delay to show spinner
       await new Promise((resolve) => setTimeout(resolve, 500));
-      loadApprovedEvaluations(searchTerm);
+      await loadApprovedEvaluations(debouncedSearchTerm);
     } catch (error) {
       console.error("Error refreshing on tab click:", error);
     } finally {
@@ -228,13 +225,13 @@ export default function OverviewTab() {
 
   const handleClose = async () => {
     try {
-      let search =
+      const search =
         debouncedSearchTerm !== "" ? debouncedSearchTerm : searchTerm;
-      loadApprovedEvaluations(search);
+      await loadApprovedEvaluations(search);
       setIsViewResultsModalOpen(false);
       setSelectedSubmission(null);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       setIsViewResultsModalOpen(false);
       setSelectedSubmission(null);
     }
@@ -722,13 +719,23 @@ export default function OverviewTab() {
                         rowClassName =
                           "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
                       }
+                      const supervisorName = [
+                        submission.evaluator?.fname,
+                        submission.evaluator?.lname,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")
+                        .trim();
+                      const ratingNum = Number(submission.rating);
+                      const ratingDisplay = Number.isFinite(ratingNum)
+                        ? `${ratingNum}/5`
+                        : "—";
+
                       return (
                         <TableRow key={submission.id} className={rowClassName}>
                           <TableCell className="w-1/6 font-medium pl-4">
                             <div className="flex items-center gap-2">
-                              {submission.evaluator?.fname && submission.evaluator?.lname
-                                ? submission.evaluator.fname + " " + submission.evaluator.lname
-                                : "Not specified"}
+                              {supervisorName || "—"}
                               {isNew && (
                                 <Badge className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 font-semibold">
                                   ⚡ New
@@ -753,8 +760,7 @@ export default function OverviewTab() {
                             </div>
                           </TableCell>
                           <TableCell className="w-1/6 text-right font-semibold pr-25">
-                            {submission.rating}
-                            /5
+                            {ratingDisplay}
                           </TableCell>
                           <TableCell className="w-1/6 pl-6">
                             <div className="flex flex-col">
@@ -817,7 +823,7 @@ export default function OverviewTab() {
               </div>
 
               {/* Pagination Controls */}
-              {overviewTotal > itemsPerPage && (
+              {totalPages > 1 && (
                 <EvaluationsPagination
                   currentPage={currentPage}
                   totalPages={totalPages}

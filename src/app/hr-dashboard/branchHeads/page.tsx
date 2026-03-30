@@ -104,6 +104,7 @@ export default function BranchHeadsTab() {
     Promise<{ id: string; name: string; code: string }[]>
     | null
   >(null);
+  const prevSearchTermForPageRef = useRef<string | null>(null);
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -374,9 +375,15 @@ export default function BranchHeadsTab() {
     branchHeadsEndIndex
   );
 
-  // Reset to page 1 when search term changes
+  // Reset to page 1 only when search text actually changes (skip first run)
   useEffect(() => {
-    setBranchHeadsPage(1);
+    if (
+      prevSearchTermForPageRef.current !== null &&
+      prevSearchTermForPageRef.current !== searchTerm
+    ) {
+      setBranchHeadsPage(1);
+    }
+    prevSearchTermForPageRef.current = searchTerm;
   }, [searchTerm]);
 
   // Filter branches for edit modal based on search term
@@ -445,6 +452,11 @@ export default function BranchHeadsTab() {
     branchesInFlightPromiseRef.current = requestPromise;
     return requestPromise;
   };
+
+  // Preload branch catalog so the table can map ids / names to branch codes
+  useEffect(() => {
+    void loadBranches();
+  }, []);
 
   // Auto-close success dialog after 2 seconds
   useEffect(() => {

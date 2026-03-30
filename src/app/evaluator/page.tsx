@@ -29,7 +29,6 @@ import apiService from "@/lib/apiService";
 import { Progress } from "@/components/ui/progress";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
-import { set } from "date-fns";
 
 interface Review {
   id: number;
@@ -636,9 +635,13 @@ export default function OverviewTab() {
                               <div>
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="font-medium text-gray-900">
-                                    {review.employee?.fname +
-                                      " " +
-                                      review.employee?.lname}
+                                    {[
+                                      review.employee?.fname,
+                                      review.employee?.lname,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" ")
+                                      .trim() || "—"}
                                   </span>
                                   {isNew && (
                                     <Badge className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 font-semibold">

@@ -103,6 +103,7 @@ export default function AreaManagersTab() {
     Promise<{ id: string; name: string; code: string }[]>
     | null
   >(null);
+  const prevSearchTermForPageRef = useRef<string | null>(null);
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -370,9 +371,15 @@ export default function AreaManagersTab() {
     areaManagersEndIndex
   );
 
-  // Reset to page 1 when search term changes
+  // Reset to page 1 only when search text actually changes (skip first run)
   useEffect(() => {
-    setAreaManagersPage(1);
+    if (
+      prevSearchTermForPageRef.current !== null &&
+      prevSearchTermForPageRef.current !== searchTerm
+    ) {
+      setAreaManagersPage(1);
+    }
+    prevSearchTermForPageRef.current = searchTerm;
   }, [searchTerm]);
 
   // Filter branches for edit modal based on search term
@@ -488,6 +495,11 @@ export default function AreaManagersTab() {
     branchesInFlightPromiseRef.current = requestPromise;
     return requestPromise;
   };
+
+  // Preload branch catalog so the table can map ids / names to branch codes
+  useEffect(() => {
+    void loadBranches();
+  }, []);
 
   // Add custom CSS for success dialog content animations (checkmark, ripple, etc.)
   // Note: Container animations are now handled by useDialogAnimation hook

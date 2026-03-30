@@ -55,7 +55,6 @@ export default function performanceReviews() {
   const { user } = useUser();
   const [submissions, setSubmissions] = useState<any>([]);
   const [loading, setLoading] = useState(true);
-  const [isRefreshingReviews, setIsRefreshingReviews] = useState(false);
   const [isPaginate, setIsPaginate] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -367,7 +366,7 @@ export default function performanceReviews() {
 
   return (
     <div className="relative">
-      {isRefreshingReviews || loading ? (
+      {loading ? (
         <div className="relative space-y-6 min-h-[500px]">
           <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
             <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
@@ -875,9 +874,17 @@ export default function performanceReviews() {
                         </TableHeader>
                         <TableBody>
                           {submissions.map((submission: any) => {
-                            const rating = submission.rating;
-                            const isLowPerformance = rating < 3.0;
-                            const isPoorPerformance = rating < 2.5;
+                            const ratingNum = Number(submission.rating);
+                            const hasRating = Number.isFinite(ratingNum);
+                            const isLowPerformance = hasRating && ratingNum < 3.0;
+                            const isPoorPerformance = hasRating && ratingNum < 2.5;
+                            const supervisorName = [
+                              submission.evaluator?.fname,
+                              submission.evaluator?.lname,
+                            ]
+                              .filter(Boolean)
+                              .join(" ")
+                              .trim();
 
                             return (
                               <TableRow
@@ -896,9 +903,7 @@ export default function performanceReviews() {
                               >
                                 <TableCell className="w-1/5 font-medium pl-4">
                                   <div className="flex items-center gap-2">
-                                    {submission.evaluator.fname +
-                                      " " +
-                                      submission.evaluator.lname}
+                                    {supervisorName || "—"}
                                     {submission.status && (
                                       <Badge
                                         variant="secondary"
@@ -927,29 +932,33 @@ export default function performanceReviews() {
                                   >
                                     <span
                                       className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                        isPoorPerformance
+                                        !hasRating
+                                          ? "bg-gray-100 text-gray-700"
+                                          : isPoorPerformance
                                           ? "bg-red-100 text-red-800"
                                           : isLowPerformance
                                           ? "bg-orange-100 text-orange-800"
-                                          : rating >= 4.0
+                                          : ratingNum >= 4.0
                                           ? "bg-green-100 text-green-800"
-                                          : rating >= 3.5
+                                          : ratingNum >= 3.5
                                           ? "bg-blue-100 text-blue-800"
                                           : "bg-blue-100 text-blue-800"
                                       }`}
                                     >
-                                      {isPoorPerformance
+                                      {!hasRating
+                                        ? "N/A"
+                                        : isPoorPerformance
                                         ? "POOR"
                                         : isLowPerformance
                                         ? "LOW"
-                                        : rating >= 4.0
+                                        : ratingNum >= 4.0
                                         ? "EXCELLENT"
-                                        : rating >= 3.5
+                                        : ratingNum >= 3.5
                                         ? "GOOD"
                                         : "FAIR"}
                                     </span>
                                     <span className="font-bold">
-                                      {rating}/5
+                                      {hasRating ? `${ratingNum}/5` : "—"}
                                     </span>
                                   </div>
                                 </TableCell>
@@ -1003,8 +1012,8 @@ export default function performanceReviews() {
                     )}
                   </div>
 
-                  {/* Pagination Controls */}
-                  {userEval.length > itemsPerPage && (
+                  {/* Pagination Controls — use API totals (not userEval, which is dashboard chart data) */}
+                  {totalPages > 1 && (
                     <EvaluationsPagination
                       currentPage={currentPage}
                       totalPages={totalPages}

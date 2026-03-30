@@ -256,7 +256,7 @@ export default function DepartmentsTab() {
   // Function to handle adding a new department
   const handleAddBranch = async () => {
     if (!validation()) {
-      return console.log("nice try");
+      return;
     }
     if (validation()) {
       try {
@@ -624,7 +624,7 @@ export default function DepartmentsTab() {
                 }}
               />
               <div className="text-gray-500 text-center">
-                {searchTerm ? (
+                {debouncedSearchTerm.trim() ? (
                   <>
                     <p className="text-base font-medium mb-1">
                       No results found
@@ -636,10 +636,10 @@ export default function DepartmentsTab() {
                 ) : (
                   <>
                     <p className="text-base font-medium mb-1">
-                      No evaluation records to display
+                      No branches to display
                     </p>
                     <p className="text-sm text-gray-400">
-                      Records will appear here when evaluations are submitted
+                      Add a branch or check back after data is synced
                     </p>
                   </>
                 )}
@@ -647,7 +647,7 @@ export default function DepartmentsTab() {
             </div>
           )}
           {/* Pagination Controls */}
-          {overviewTotal > itemsPerPage && (
+          {totalPages > 1 && (
             <EvaluationsPagination
               currentPage={currentPage}
               totalPages={totalPages}

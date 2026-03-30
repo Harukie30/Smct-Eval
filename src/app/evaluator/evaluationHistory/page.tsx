@@ -68,6 +68,7 @@ export default function OverviewTab() {
   const [years, setYears] = useState<any>([]);
   const approvedEvalsInFlightKeyRef = useRef<string | null>(null);
   const approvedEvalsInFlightPromiseRef = useRef<Promise<void> | null>(null);
+  const prevSearchDebouncedRef = useRef<string | null>(null);
 
   // Load approved evaluations from API
   const loadApprovedEvaluations = async (searchValue: string, page?: number) => {
@@ -138,7 +139,6 @@ export default function OverviewTab() {
           // Calculate pages based on combined total
           setTotalPages(Math.ceil(combinedTotal / itemsPerPage));
           setPerPage(itemsPerPage);
-          setIsPaginate(false);
           setYears(years);
           return;
         }
@@ -161,7 +161,6 @@ export default function OverviewTab() {
           setOverviewTotal(0);
           setTotalPages(1);
           setPerPage(itemsPerPage);
-          setIsPaginate(false);
           setYears([]);
           return;
         }
@@ -170,7 +169,6 @@ export default function OverviewTab() {
         setOverviewTotal(response.myEval_as_Employee.total || 0);
         setTotalPages(response.myEval_as_Employee.last_page || 1);
         setPerPage(response.myEval_as_Employee.per_page || itemsPerPage);
-        setIsPaginate(false);
         setYears(response.years || []);
       } catch (error) {
         console.error("Error loading approved evaluations:", error);
@@ -179,9 +177,9 @@ export default function OverviewTab() {
         setOverviewTotal(0);
         setTotalPages(1);
         setPerPage(itemsPerPage);
-        setIsPaginate(false);
         setYears([]);
       } finally {
+        setIsPaginate(false);
         if (approvedEvalsInFlightKeyRef.current === requestKey) {
           approvedEvalsInFlightKeyRef.current = null;
           approvedEvalsInFlightPromiseRef.current = null;
@@ -226,10 +224,13 @@ export default function OverviewTab() {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (searchTerm !== "" && currentPage !== 1) {
+      if (
+        prevSearchDebouncedRef.current !== null &&
+        prevSearchDebouncedRef.current !== searchTerm
+      ) {
         setCurrentPage(1);
       }
-
+      prevSearchDebouncedRef.current = searchTerm;
       setDebouncedSearchTerm(searchTerm);
     }, 500);
 
@@ -247,9 +248,8 @@ export default function OverviewTab() {
   const refresh = async () => {
     setIsRefreshingOverview(true);
     try {
-      // Add delay to show spinner
       await new Promise((resolve) => setTimeout(resolve, 500));
-      loadApprovedEvaluations(searchTerm);
+      await loadApprovedEvaluations(debouncedSearchTerm);
     } catch (error) {
       console.error("Error refreshing on tab click:", error);
     } finally {
@@ -290,13 +290,13 @@ export default function OverviewTab() {
 
   const handleClose = async () => {
     try {
-      let search =
+      const search =
         debouncedSearchTerm !== "" ? debouncedSearchTerm : searchTerm;
-      loadApprovedEvaluations(search);
+      await loadApprovedEvaluations(search);
       setIsViewResultsModalOpen(false);
       setSelectedSubmission(null);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       setIsViewResultsModalOpen(false);
       setSelectedSubmission(null);
     }
@@ -761,7 +761,7 @@ export default function OverviewTab() {
                 </TableBody>
               </Table>
             </div>
-          ) : myEvaluations.length === 0 && searchTerm === "" ? (
+          ) : myEvaluations.length === 0 && debouncedSearchTerm === "" ? (
             <div className="text-center py-8">
               <div className="text-gray-500 text-lg mb-2">
                 No performance reviews yet
@@ -771,7 +771,7 @@ export default function OverviewTab() {
                 your manager.
               </div>
             </div>
-          ) : myEvaluations.length === 0 && searchTerm !== "" ? (
+          ) : myEvaluations.length === 0 && debouncedSearchTerm !== "" ? (
             <div className="text-center py-8">
               <div className="flex flex-col items-center justify-center gap-4 mb-4">
                 <img
@@ -789,21 +789,23 @@ export default function OverviewTab() {
                 <div className="text-gray-500">
                   <p className="text-base font-medium mb-1">No results found</p>
                   <p className="text-sm">
-                    No performance reviews match "{searchTerm}"
+                    No performance reviews match &quot;{debouncedSearchTerm}
+                    &quot;
                   </p>
                 </div>
               </div>
             </div>
           ) : (
             <>
-              {searchTerm && (
+              {debouncedSearchTerm.trim() !== "" && (
                 <div className="mb-3 mx-4 text-sm text-gray-600">
                   Found{" "}
                   <span className="font-semibold text-blue-600">
-                    {myEvaluations.length}
+                    {overviewTotal}
                   </span>{" "}
-                  result{myEvaluations.length !== 1 ? "s" : ""} for "
-                  {searchTerm}"
+                  result{overviewTotal !== 1 ? "s" : ""} for &quot;
+                  {debouncedSearchTerm}
+                  &quot;
                 </div>
               )}
 
@@ -840,6 +842,17 @@ export default function OverviewTab() {
                       const isRecent = hoursDiff > 24 && hoursDiff <= 168; // 7 days
                       const isCompleted = submission.status === "completed";
                       const isPending = submission.status === "pending";
+                      const supervisorName = [
+                        submission.evaluator?.fname,
+                        submission.evaluator?.lname,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")
+                        .trim();
+                      const ratingNum = Number(submission.rating);
+                      const ratingDisplay = Number.isFinite(ratingNum)
+                        ? `${ratingNum}/5`
+                        : "—";
 
                       // Determine row background color
                       let rowClassName = "hover:bg-gray-100 transition-colors";
@@ -861,9 +874,7 @@ export default function OverviewTab() {
                           <TableCell className="w-1/6 text-center pr-25">
                             <div className="flex justify-center">
                               <span className="font-medium">
-                                {submission.evaluator.fname +
-                                  " " +
-                                  submission.evaluator.lname}
+                                {supervisorName || "—"}
                               </span>
                             </div>
                           </TableCell>
@@ -899,8 +910,7 @@ export default function OverviewTab() {
                             </div>
                           </TableCell>
                           <TableCell className="w-1/6 text-center">
-                            {submission.rating}
-                            /5
+                            {ratingDisplay}
                           </TableCell>
 
                           <TableCell className="w-1/6">
@@ -933,8 +943,8 @@ export default function OverviewTab() {
                 </Table>
               </div>
 
-              {/* Pagination Controls */}
-              {overviewTotal > itemsPerPage && (
+              {/* Pagination Controls — totalPages reflects API / combined Probationary totals */}
+              {totalPages > 1 && (
                 <EvaluationsPagination
                   currentPage={currentPage}
                   totalPages={totalPages}

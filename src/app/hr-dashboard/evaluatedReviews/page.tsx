@@ -3,7 +3,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import clientDataService, { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 
 import {
@@ -143,6 +143,24 @@ export default function OverviewTab() {
   const [debouncedBranchFilter, setDebouncedBranchFilter] =
     useState(branchFilter);
 
+  const hasActiveDebouncedFilters = useMemo(() => {
+    if (debouncedSearchTerm.trim() !== "") return true;
+    const isAll = (v: string) => v === "" || v === "0";
+    if (!isAll(debouncedStatusFilter)) return true;
+    if (!isAll(debouncedQuarterFilter)) return true;
+    if (!isAll(debouncedYearFilter)) return true;
+    if (!isAll(debouncedRatingFilter)) return true;
+    if (!isAll(debouncedBranchFilter)) return true;
+    return false;
+  }, [
+    debouncedSearchTerm,
+    debouncedStatusFilter,
+    debouncedQuarterFilter,
+    debouncedYearFilter,
+    debouncedRatingFilter,
+    debouncedBranchFilter,
+  ]);
+
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -158,6 +176,7 @@ export default function OverviewTab() {
   const [branchesData, setBranchesData] = useState<any[]>([]);
   const submissionsInFlightKeyRef = useRef<string | null>(null);
   const submissionsInFlightPromiseRef = useRef<Promise<void> | null>(null);
+  const prevFilterSnapshotForPageRef = useRef<string | null>(null);
 
   // Helper function to get branch code from branch data
   const getBranchCode = (branch: any): string => {
@@ -329,10 +348,16 @@ export default function OverviewTab() {
           normalizedRating,
           normalizedBranch
         );
-        setEvaluations(response.data);
-        setOverviewTotal(response.total);
-        setTotalPages(response.last_page);
-        setPerPage(response.per_page);
+        setEvaluations(response?.data ?? []);
+        setOverviewTotal(response?.total ?? 0);
+        setTotalPages(response?.last_page ?? 1);
+        setPerPage(response?.per_page ?? itemsPerPage);
+      } catch (error) {
+        console.error("Error loading evaluations:", error);
+        setEvaluations([]);
+        setOverviewTotal(0);
+        setTotalPages(1);
+        setPerPage(itemsPerPage);
       } finally {
         if (submissionsInFlightKeyRef.current === requestKey) {
           submissionsInFlightKeyRef.current = null;
@@ -357,8 +382,7 @@ export default function OverviewTab() {
         setYears(years);
         setBranchesData(branches);
       } catch (error) {
-        console.log(error);
-        setRefreshing(false);
+        console.error("Error loading years/branches:", error);
       } finally {
         setRefreshing(false);
       }
@@ -368,8 +392,22 @@ export default function OverviewTab() {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      // Always reset to page 1 when any filter changes
-      setCurrentPage(1);
+      const snapshot = JSON.stringify({
+        searchTerm,
+        statusFilter,
+        quarterFilter,
+        yearFilter,
+        ratingFilter,
+        branchFilter,
+      });
+      if (
+        prevFilterSnapshotForPageRef.current !== null &&
+        prevFilterSnapshotForPageRef.current !== snapshot
+      ) {
+        setCurrentPage(1);
+      }
+      prevFilterSnapshotForPageRef.current = snapshot;
+
       setDebouncedSearchTerm(searchTerm);
       setDebouncedStatusFilter(statusFilter);
       setDebouncedQuarterFilter(quarterFilter);
@@ -475,7 +513,10 @@ export default function OverviewTab() {
       await clientDataService.deleteSubmission(submission.id);
       await handleRefresh();
       toastMessages.evaluation.deleted(
-        submission.employee?.fname + " " + submission.employee?.lname
+        [submission.employee?.fname, submission.employee?.lname]
+          .filter(Boolean)
+          .join(" ")
+          .trim() || "—"
       );
     } catch (error) {
       console.error("Error deleting submission:", error);
@@ -881,7 +922,7 @@ export default function OverviewTab() {
                             }}
                           />
                           <div className="text-gray-500">
-                            {searchTerm ? (
+                            {hasActiveDebouncedFilters ? (
                               <>
                                 <p className="text-base font-medium mb-1">
                                   No results found
@@ -938,18 +979,20 @@ export default function OverviewTab() {
                             <div>
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="font-medium text-gray-900">
-                                  {review.employee?.fname +
-                                    " " +
-                                    review.employee?.lname}
+                                  {[review.employee?.fname, review.employee?.lname]
+                                    .filter(Boolean)
+                                    .join(" ")
+                                    .trim() || "—"}
                                 </span>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell className="px-6 py-3">
                             <div className="font-medium text-gray-900">
-                              {review.evaluator?.fname +
-                                " " +
-                                review.evaluator?.lname}
+                              {[review.evaluator?.fname, review.evaluator?.lname]
+                                .filter(Boolean)
+                                .join(" ")
+                                .trim() || "—"}
                             </div>
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
@@ -1047,7 +1090,8 @@ export default function OverviewTab() {
                             )}
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
-                            {review.evaluator.roles[0].name === "evaluator" ? (
+                            {review.evaluator?.roles?.[0]?.name ===
+                            "evaluator" ? (
                               <Badge className="bg-green-100 text-green-800 text-xs">
                                 ✓ Signed
                               </Badge>
@@ -1056,7 +1100,7 @@ export default function OverviewTab() {
                             )}
                           </TableCell>
                           <TableCell className="px-6 py-3 text-sm text-gray-600">
-                            {review.evaluator.roles[0].name === "hr" ? (
+                            {review.evaluator?.roles?.[0]?.name === "hr" ? (
                               <Badge className="bg-green-100 text-green-800 text-xs">
                                 ✓ Signed
                               </Badge>
@@ -1096,7 +1140,7 @@ export default function OverviewTab() {
           </div>
 
           {/* Pagination Controls */}
-          {overviewTotal > itemsPerPage && (
+          {totalPages > 1 && (
             <EvaluationsPagination
               currentPage={currentPage}
               totalPages={totalPages}

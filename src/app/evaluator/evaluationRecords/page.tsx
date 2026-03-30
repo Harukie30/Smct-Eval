@@ -880,9 +880,13 @@ export default function OverviewTab() {
               <DialogTitle className="text-red-800 flex items-center gap-2">
                 <span className="text-xl">⚠️</span>
                 Delete Evaluation of{" "}
-                {reviewToDelete?.employee.fname +
-                  " " +
-                  reviewToDelete?.employee.lname}
+                {[
+                  reviewToDelete?.employee?.fname,
+                  reviewToDelete?.employee?.lname,
+                ]
+                  .filter(Boolean)
+                  .join(" ")
+                  .trim() || "—"}
               </DialogTitle>
               <DialogDescription className="text-red-700">
                 This action cannot be undone. Are you sure you want to
@@ -923,15 +927,23 @@ export default function OverviewTab() {
                   <div className="mt-2 space-y-1">
                     <p>
                       <span className="font-medium">Employee Name:</span>{" "}
-                      {reviewToDelete?.employee.fname +
-                        " " +
-                        reviewToDelete?.employee.lname}
+                      {[
+                        reviewToDelete?.employee?.fname,
+                        reviewToDelete?.employee?.lname,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")
+                        .trim() || "—"}
                     </p>
                     <p>
                       <span className="font-medium">Evaluator Name:</span>{" "}
-                      {reviewToDelete?.evaluator.fname +
-                        " " +
-                        reviewToDelete?.evaluator.lname}
+                      {[
+                        reviewToDelete?.evaluator?.fname,
+                        reviewToDelete?.evaluator?.lname,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")
+                        .trim() || "—"}
                     </p>
                     <p>
                       <span className="font-medium">Branch:</span>{" "}

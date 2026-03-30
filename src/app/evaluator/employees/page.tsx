@@ -573,7 +573,13 @@ export default function EmployeesTab() {
                             <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
                                 <span>
-                                  {employee.fname + " " + employee.lname}
+                                  {[
+                                    employee?.fname,
+                                    employee?.lname,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" ")
+                                    .trim() || "—"}
                                 </span>
                                 {isNew && (
                                   <Badge className="bg-green-500 text-white text-xs px-2 py-0.5 font-semibold">
