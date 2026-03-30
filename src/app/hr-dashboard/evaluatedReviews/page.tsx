@@ -43,9 +43,9 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
-import { setQuarter } from "date-fns";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { toastMessages } from "@/lib/toastMessages";
+import { cn } from "@/lib/utils";
 interface Review {
   id: number;
   employee: any;
@@ -58,6 +58,67 @@ interface Review {
   rating: number;
   status: string;
 }
+
+/** Single source of truth for rating colors + legend (matches filter: poor / low / good / excellent). */
+const RATING_DISPLAY_BANDS = [
+  {
+    maxExclusive: 2.5,
+    badgeClass: "bg-red-100 text-red-800",
+    legend: "Poor (<2.5)",
+  },
+  {
+    maxExclusive: 3.0,
+    badgeClass: "bg-orange-100 text-orange-800",
+    legend: "Low (<3.0)",
+  },
+  {
+    maxExclusive: 4.0,
+    badgeClass: "bg-blue-100 text-blue-800",
+    legend: "Good (3.0–3.9)",
+  },
+  {
+    maxExclusive: Number.POSITIVE_INFINITY,
+    badgeClass: "bg-green-100 text-green-800",
+    legend: "Excellent (≥4.0)",
+  },
+] as const;
+
+function parseRatingNumber(
+  rating: number | string | null | undefined
+): number | null {
+  if (rating === null || rating === undefined || rating === "") return null;
+  const n = typeof rating === "string" ? parseFloat(rating) : Number(rating);
+  return Number.isNaN(n) ? null : n;
+}
+
+function getRatingBadgeClassFromBands(
+  rating: number | string | null | undefined
+): string {
+  const n = parseRatingNumber(rating);
+  if (n === null) return "bg-gray-100 text-gray-600";
+  for (const band of RATING_DISPLAY_BANDS) {
+    if (n < band.maxExclusive) return band.badgeClass;
+  }
+  return RATING_DISPLAY_BANDS[RATING_DISPLAY_BANDS.length - 1].badgeClass;
+}
+
+/** List rows may use `rating`, snake_case, or omit until scored — 0 is treated as not rated (same as other HR screens). */
+function getReviewListRating(review: Review | null | undefined): number | null {
+  if (!review) return null;
+  const extended = review as Review & {
+    overall_rating?: number | string | null;
+    overallRating?: number | string | null;
+  };
+  const raw =
+    extended.rating ?? extended.overall_rating ?? extended.overallRating;
+  const n = parseRatingNumber(raw as number | string | null | undefined);
+  if (n === null) return null;
+  if (n === 0) return null;
+  return n;
+}
+
+const ratingPillClass =
+  "inline-flex items-center justify-center rounded-md border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap";
 
 export default function OverviewTab() {
   const [evaluations, setEvaluations] = useState<Review[]>([]);
@@ -389,6 +450,11 @@ export default function OverviewTab() {
     return "bg-purple-100 text-purple-800";
   };
 
+  const formatRatingDisplay = (rating: number | null): string => {
+    if (rating === null) return "—";
+    return rating % 1 === 0 ? String(rating) : rating.toFixed(2);
+  };
+
   const handleViewEvaluation = async (review: Review) => {
     try {
       const submission = await clientDataService.getSubmissionById(review.id);
@@ -701,6 +767,18 @@ export default function OverviewTab() {
                   Completed
                 </Badge>
               </div>
+              <span className="text-sm font-medium text-gray-700 mr-2 w-full sm:w-auto mt-2 sm:mt-0">
+                Rating:
+              </span>
+              {RATING_DISPLAY_BANDS.map((band) => (
+                <div key={band.legend} className="flex items-center gap-1">
+                  <span
+                    className={cn(ratingPillClass, band.badgeClass, "text-xs")}
+                  >
+                    {band.legend}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -854,7 +932,6 @@ export default function OverviewTab() {
                         rowClassName =
                           "bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-500 transition-colors";
                       }
-                      console.log("test", review);
                       return (
                         <TableRow key={review.id} className={rowClassName}>
                           <TableCell className="px-6 py-3">
@@ -924,8 +1001,20 @@ export default function OverviewTab() {
                               }
                             )}
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm text-gray-600">
-                            {review.rating}
+                          <TableCell className="px-6 py-3 text-sm">
+                            {(() => {
+                              const ratingValue = getReviewListRating(review);
+                              return (
+                                <span
+                                  className={cn(
+                                    ratingPillClass,
+                                    getRatingBadgeClassFromBands(ratingValue)
+                                  )}
+                                >
+                                  {formatRatingDisplay(ratingValue)}
+                                </span>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="px-6 py-3">
                             <Badge
