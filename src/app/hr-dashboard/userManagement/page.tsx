@@ -2400,7 +2400,7 @@ export default function UserManagementTab() {
                   </div>
                   <span>Employee Average</span>
                 </DialogTitle>
-                <p className="mt-2 text-sm text-white/90 leading-snug">
+                <p className="mt-4 text-xl font-bold text-white/90 leading-snug">
                   {employeeForAverage
                     ? `${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim()
                     : "Select a year to view averages"}
