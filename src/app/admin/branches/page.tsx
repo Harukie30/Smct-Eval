@@ -51,6 +51,40 @@ interface newBranch {
   acronym: string;
 }
 
+function parseCount(value: unknown): number {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+
+  const raw = String(value).trim();
+  if (!raw) return 0;
+
+  // Handles formats like "1,234", "10 employees", or "5.5"
+  const normalized = raw.replace(/,/g, "");
+  const direct = Number(normalized);
+  if (!Number.isNaN(direct)) return direct;
+
+  const match = normalized.match(/\d+(\.\d+)?/);
+  return match ? Number(match[0]) : 0;
+}
+
+function getEmployeesCount(branch: Partial<Branches> & Record<string, any>): number {
+  return (
+    parseCount(branch.employees_count) ||
+    parseCount(branch.employeesCount) ||
+    parseCount(branch.employee_count) ||
+    parseCount(branch.employees)
+  );
+}
+
+function getManagersCount(branch: Partial<Branches> & Record<string, any>): number {
+  return (
+    parseCount(branch.managers_count) ||
+    parseCount(branch.managersCount) ||
+    parseCount(branch.manager_count) ||
+    parseCount(branch.managers)
+  );
+}
+
 export default function DepartmentsTab() {
   const [branches, setBranches] = useState<Branches[]>([]);
   const [loading, setLoading] = useState(true);
@@ -281,8 +315,8 @@ export default function DepartmentsTab() {
 
     try {
       if (
-        Number(branchesToDelete.employees_count) +
-          Number(branchesToDelete.managers_count) !==
+        getEmployeesCount(branchesToDelete) +
+          getManagersCount(branchesToDelete) !==
         0
       ) {
         toastMessages.generic.warning(
@@ -545,7 +579,7 @@ export default function DepartmentsTab() {
                                 {branch.branch_name + " /" + branch.branch_code}
                                 <div className="flex items-center gap-2">
                                   <Badge variant="outline">
-                                    {branch.employees_count} employees
+                                    {getEmployeesCount(branch)} employees
                                   </Badge>
                                   <Button
                                     variant="ghost"
@@ -572,7 +606,7 @@ export default function DepartmentsTab() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                                   <div className="text-lg font-bold text-blue-600">
-                                    {branch.employees_count}
+                                    {getEmployeesCount(branch)}
                                   </div>
                                   <div className="text-xs text-gray-600">
                                     Employees
@@ -580,7 +614,7 @@ export default function DepartmentsTab() {
                                 </div>
                                 <div className="text-center p-3 bg-green-50 rounded-lg">
                                   <div className="text-lg font-bold text-green-600">
-                                    {branch.managers_count}
+                                    {getManagersCount(branch)}
                                   </div>
                                   <div className="text-xs text-gray-600">
                                     Managers
@@ -848,8 +882,8 @@ export default function DepartmentsTab() {
                   </p>
                   <p>
                     <span className="font-medium">No. of employees:</span>{" "}
-                    {(isNaN(Number(branchesToDelete?.employees_count)) ? 0 : Number(branchesToDelete?.employees_count)) +
-                      (isNaN(Number(branchesToDelete?.managers_count)) ? 0 : Number(branchesToDelete?.managers_count))}
+                    {getEmployeesCount(branchesToDelete ?? {}) +
+                      getManagersCount(branchesToDelete ?? {})}
                   </p>
                 </div>
               </div>

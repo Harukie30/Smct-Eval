@@ -53,6 +53,41 @@ interface newBranch {
   acronym: string;
 }
 
+function parseCount(value: unknown): number {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+
+  const raw = String(value).trim();
+  if (!raw) return 0;
+
+  // Handles formats like "1,234", "10 employees", or "5.5"
+  const normalized = raw.replace(/,/g, "");
+  const direct = Number(normalized);
+  if (!Number.isNaN(direct)) return direct;
+
+  const match = normalized.match(/\d+(\.\d+)?/);
+  return match ? Number(match[0]) : 0;
+}
+
+function getEmployeesCount(branch: Partial<Branches> & Record<string, any>): number {
+  // Backend should provide `employees_count`, but be defensive in case it returns alternate keys.
+  return (
+    parseCount(branch.employees_count) ||
+    parseCount(branch.employeesCount) ||
+    parseCount(branch.employee_count) ||
+    parseCount(branch.employees)
+  );
+}
+
+function getManagersCount(branch: Partial<Branches> & Record<string, any>): number {
+  return (
+    parseCount(branch.managers_count) ||
+    parseCount(branch.managersCount) ||
+    parseCount(branch.manager_count) ||
+    parseCount(branch.managers)
+  );
+}
+
 export default function DepartmentsTab() {
   const [branches, setBranches] = useState<Branches[]>([]);
   const [loading, setLoading] = useState(true);
@@ -287,8 +322,8 @@ export default function DepartmentsTab() {
 
     try {
       if (
-        Number(branchesToDelete.employees_count) +
-          Number(branchesToDelete.managers_count) !==
+        getEmployeesCount(branchesToDelete) +
+          getManagersCount(branchesToDelete) !==
         0
       ) {
         // Close modal and show alert dialog instead of toast
@@ -549,15 +584,15 @@ export default function DepartmentsTab() {
                                 {branch.branch_name + " /" + branch.branch_code}
                                 <div className="flex items-center gap-2">
                                   <Badge variant="outline">
-                                    {branch.employees_count} employees
+                                    {getEmployeesCount(branch)} employees
                                   </Badge>
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => {
-                                      const totalEmployees = 
-                                        (isNaN(Number(branch.employees_count)) ? 0 : Number(branch.employees_count)) +
-                                        (isNaN(Number(branch.managers_count)) ? 0 : Number(branch.managers_count));
+                                      const totalEmployees =
+                                        getEmployeesCount(branch) +
+                                        getManagersCount(branch);
                                       
                                       if (totalEmployees > 0) {
                                         setBranchWithEmployees(branch);
@@ -585,7 +620,7 @@ export default function DepartmentsTab() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                                   <div className="text-lg font-bold text-blue-600">
-                                    {branch.employees_count}
+                                    {getEmployeesCount(branch)}
                                   </div>
                                   <div className="text-xs text-gray-600">
                                     Employees
@@ -593,7 +628,7 @@ export default function DepartmentsTab() {
                                 </div>
                                 <div className="text-center p-3 bg-green-50 rounded-lg">
                                   <div className="text-lg font-bold text-green-600">
-                                    {branch.managers_count}
+                                    {getManagersCount(branch)}
                                   </div>
                                   <div className="text-xs text-gray-600">
                                     Managers
@@ -880,8 +915,8 @@ export default function DepartmentsTab() {
                   </p>
                   <p>
                     <span className="font-medium">No. of employees:</span>{" "}
-                    {(isNaN(Number(branchesToDelete?.employees_count)) ? 0 : Number(branchesToDelete?.employees_count)) +
-                      (isNaN(Number(branchesToDelete?.managers_count)) ? 0 : Number(branchesToDelete?.managers_count))}
+                    {getEmployeesCount(branchesToDelete ?? {}) +
+                      getManagersCount(branchesToDelete ?? {})}
                   </p>
                 </div>
               </div>
@@ -911,8 +946,8 @@ export default function DepartmentsTab() {
 
                   // Check if branch has employees before proceeding
                   const totalEmployees = 
-                    (isNaN(Number(branchesToDelete.employees_count)) ? 0 : Number(branchesToDelete.employees_count)) +
-                    (isNaN(Number(branchesToDelete.managers_count)) ? 0 : Number(branchesToDelete.managers_count));
+                    getEmployeesCount(branchesToDelete) +
+                    getManagersCount(branchesToDelete);
 
                   if (totalEmployees > 0) {
                     // Close delete modal and show alert dialog
@@ -957,7 +992,10 @@ export default function DepartmentsTab() {
           }
         }}
         title="Cannot Delete Branch"
-        description={`The branch "${branchWithEmployees?.branch_name} / ${branchWithEmployees?.branch_code}" cannot be deleted because it has ${(isNaN(Number(branchWithEmployees?.employees_count)) ? 0 : Number(branchWithEmployees?.employees_count)) + (isNaN(Number(branchWithEmployees?.managers_count)) ? 0 : Number(branchWithEmployees?.managers_count))} employee(s) assigned to it. Please remove or reassign all employees before deleting this branch.`}
+        description={`The branch "${branchWithEmployees?.branch_name} / ${branchWithEmployees?.branch_code}" cannot be deleted because it has ${
+          getEmployeesCount(branchWithEmployees ?? {}) +
+          getManagersCount(branchWithEmployees ?? {})
+        } employee(s) assigned to it. Please remove or reassign all employees before deleting this branch.`}
         type="warning"
         confirmText="OK"
         showCancel={false}
