@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -56,78 +56,89 @@ export default function DepartmentsTab() {
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
-  // Function to load data
+  const departmentsInFlightKeyRef = useRef<string | null>(null);
+  const departmentsInFlightPromiseRef = useRef<Promise<void> | null>(null);
+  const prevSearchTermForDebounceRef = useRef<string | null>(null);
+
   const loadData = async (search: string) => {
-    try {
-      const response = await apiService.getTotalEmployeesDepartments(
-        search,
-        currentPage,
-        itemsPerPage
-      );
+    const requestKey = JSON.stringify({
+      search,
+      currentPage,
+      itemsPerPage,
+    });
 
-      // Handle different response structures
-      let departmentsData: Department[] = [];
-      let total = 0;
-      let lastPage = 1;
-      let perPageValue = itemsPerPage;
-
-      if (response) {
-        // If response has data property (paginated response)
-        if (response.data && Array.isArray(response.data)) {
-          departmentsData = response.data;
-          total = response.total || 0;
-          lastPage = response.last_page || 1;
-          perPageValue = response.per_page || itemsPerPage;
-        }
-        // If response is directly an array
-        else if (Array.isArray(response)) {
-          departmentsData = response;
-          total = response.length;
-          lastPage = 1;
-          perPageValue = response.length;
-        }
-        // If response has departments property
-        else if (response.departments && Array.isArray(response.departments)) {
-          departmentsData = response.departments;
-          total = response.total || response.departments.length;
-          lastPage = response.last_page || 1;
-          perPageValue = response.per_page || itemsPerPage;
-        }
-      }
-
-      setDepartments(departmentsData);
-      setOverviewTotal(total);
-      setTotalPages(lastPage);
-      setPerPage(perPageValue);
-    } catch (error) {
-      console.error("Error loading departments:", error);
-      // Set empty array on error to prevent undefined errors
-      setDepartments([]);
-      setOverviewTotal(0);
-      setTotalPages(1);
-      setPerPage(itemsPerPage);
+    if (
+      departmentsInFlightKeyRef.current === requestKey &&
+      departmentsInFlightPromiseRef.current
+    ) {
+      await departmentsInFlightPromiseRef.current;
+      return;
     }
-  };
 
-  // Load departments and employees when component mounts
-  useEffect(() => {
-    const initializeData = async () => {
-      setLoading(true);
+    const requestPromise = (async () => {
       try {
-        await loadData(searchTerm);
-      } catch (error) {
-        console.error("Error initializing departments:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+        const response = await apiService.getTotalEmployeesDepartments(
+          search,
+          currentPage,
+          itemsPerPage
+        );
 
-    initializeData();
-  }, []);
+        let departmentsData: Department[] = [];
+        let total = 0;
+        let lastPage = 1;
+        let perPageValue = itemsPerPage;
+
+        if (response) {
+          if (response.data && Array.isArray(response.data)) {
+            departmentsData = response.data;
+            total = response.total || 0;
+            lastPage = response.last_page || 1;
+            perPageValue = response.per_page || itemsPerPage;
+          } else if (Array.isArray(response)) {
+            departmentsData = response;
+            total = response.length;
+            lastPage = 1;
+            perPageValue = response.length;
+          } else if (response.departments && Array.isArray(response.departments)) {
+            departmentsData = response.departments;
+            total = response.total || response.departments.length;
+            lastPage = response.last_page || 1;
+            perPageValue = response.per_page || itemsPerPage;
+          }
+        }
+
+        setDepartments(departmentsData);
+        setOverviewTotal(total);
+        setTotalPages(lastPage);
+        setPerPage(perPageValue);
+      } catch (error) {
+        console.error("Error loading departments:", error);
+        setDepartments([]);
+        setOverviewTotal(0);
+        setTotalPages(1);
+        setPerPage(itemsPerPage);
+      } finally {
+        if (departmentsInFlightKeyRef.current === requestKey) {
+          departmentsInFlightKeyRef.current = null;
+          departmentsInFlightPromiseRef.current = null;
+        }
+      }
+    })();
+
+    departmentsInFlightKeyRef.current = requestKey;
+    departmentsInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
+  };
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      searchTerm === "" ? currentPage : setCurrentPage(1);
+      if (
+        prevSearchTermForDebounceRef.current !== null &&
+        prevSearchTermForDebounceRef.current !== searchTerm
+      ) {
+        setCurrentPage(1);
+      }
+      prevSearchTermForDebounceRef.current = searchTerm;
       setDebouncedSearchTerm(searchTerm);
     }, 500);
 
@@ -136,19 +147,26 @@ export default function DepartmentsTab() {
 
   useEffect(() => {
     const fetchData = async () => {
-      await refreshData();
+      setIsRefreshing(true);
+      try {
+        await loadData(debouncedSearchTerm);
+      } catch (error) {
+        console.error("Error fetching departments:", error);
+      } finally {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
     };
 
-    fetchData();
+    void fetchData();
   }, [debouncedSearchTerm, currentPage]);
 
-  // Function to refresh data
   const refreshData = async () => {
     setIsRefreshing(true);
     try {
-      await loadData(searchTerm);
+      await loadData(debouncedSearchTerm);
     } catch (error) {
-      console.error("❌ Error refreshing departments:", error);
+      console.error("Error refreshing departments:", error);
     } finally {
       setIsRefreshing(false);
     }
@@ -158,7 +176,7 @@ export default function DepartmentsTab() {
   const handleAddDepartment = async () => {
     try {
       await apiService.addDepartment(newDepartmentName);
-      loadData(searchTerm);
+      await loadData(debouncedSearchTerm);
       toastMessages.generic.success(
         "Success " + newDepartmentName + " has been added",
         "A new department has been save."
@@ -195,7 +213,7 @@ export default function DepartmentsTab() {
         setIsDeleteModalOpen(false);
         setDepartmentToDelete(null);
         // Refresh data to ensure we have the latest department info
-        await loadData(searchTerm);
+        await loadData(debouncedSearchTerm);
         return;
       } else {
         // Set deleting state to show skeleton animation
@@ -211,7 +229,7 @@ export default function DepartmentsTab() {
         await apiService.deleteDepartment(departmentToDelete.id);
         
         // Refresh data first, then reset deleting state after data loads
-        await loadData(searchTerm);
+        await loadData(debouncedSearchTerm);
         setDeletingDepartmentId(null);
         
         toastMessages.generic.success(

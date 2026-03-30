@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Clock, Lightbulb, Pencil, Plus, Trash2, X } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,23 +67,43 @@ export default function PositionsTab() {
   const [positionToEdit, setPositionToEdit] = useState<Position | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
+  const positionsInFlightPromiseRef = useRef<Promise<void> | null>(null);
+  const hasLoadedPositionsOnceRef = useRef(false);
+
   const loadPositions = async () => {
-    setLoading(true);
-    try {
-      const res = await apiService.getPositions();
-      const normalized: Position[] = (res || []).map((p: any) => ({
-        id: Number(p.value),
-        label: String(p.label ?? ""),
-        createdAt: p.created_at != null ? String(p.created_at) : null,
-        updatedAt: p.updated_at != null ? String(p.updated_at) : null,
-      }));
-      setPositions(normalized);
-    } catch (error) {
-      console.error("Error loading positions:", error);
-      setPositions([]);
-    } finally {
-      setLoading(false);
+    if (positionsInFlightPromiseRef.current) {
+      await positionsInFlightPromiseRef.current;
+      return;
     }
+
+    const requestPromise = (async () => {
+      const showInitialSkeleton = !hasLoadedPositionsOnceRef.current;
+      if (showInitialSkeleton) {
+        setLoading(true);
+      }
+      try {
+        const res = await apiService.getPositions();
+        const normalized: Position[] = (res || []).map((p: any) => ({
+          id: Number(p.value),
+          label: String(p.label ?? ""),
+          createdAt: p.created_at != null ? String(p.created_at) : null,
+          updatedAt: p.updated_at != null ? String(p.updated_at) : null,
+        }));
+        setPositions(normalized);
+      } catch (error) {
+        console.error("Error loading positions:", error);
+        setPositions([]);
+      } finally {
+        if (showInitialSkeleton) {
+          setLoading(false);
+        }
+        hasLoadedPositionsOnceRef.current = true;
+        positionsInFlightPromiseRef.current = null;
+      }
+    })();
+
+    positionsInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
   const refreshPositions = async () => {
@@ -96,8 +116,7 @@ export default function PositionsTab() {
   };
 
   useEffect(() => {
-    loadPositions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    void loadPositions();
   }, []);
 
   const filteredPositions = useMemo(() => {

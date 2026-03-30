@@ -129,74 +129,135 @@ export default function UserManagementTab() {
 
   // Track when page change started for pending users
   const pendingPageChangeStartTimeRef = useRef<number | null>(null);
+  const pendingUsersInFlightKeyRef = useRef<string | null>(null);
+  const pendingUsersInFlightPromiseRef = useRef<Promise<void> | null>(null);
 
   const loadPendingUsers = async (
     searchValue: string,
-    statusFilter: string
+    statusFilterValue: string
   ) => {
-    try {
-      const response = await apiService.getPendingRegistrations(
-        searchValue,
-        statusFilter,
-        currentPagePending,
-        itemsPerPage
-      );
+    const normalizedStatus = statusFilterValue === "0" ? "" : statusFilterValue;
 
-      setPendingRegistrations(response.data);
-      setPendingTotalItems(response.total);
-      setTotalPendingPages(response.last_page);
-      setPerPage(response.per_page);
-    } catch (error) {
-      console.error("Error loading pending users:", error);
-    } finally {
-      // If this was a page change, ensure minimum display time (2 seconds)
-      if (pendingPageChangeStartTimeRef.current !== null) {
-        const elapsed = Date.now() - pendingPageChangeStartTimeRef.current;
-        const minDisplayTime = 2000; // 2 seconds
-        const remainingTime = Math.max(0, minDisplayTime - elapsed);
+    const requestKey = JSON.stringify({
+      searchValue,
+      normalizedStatus,
+      currentPagePending,
+      itemsPerPage,
+    });
 
-        setTimeout(() => {
-          setIsPageLoading(false);
-          pendingPageChangeStartTimeRef.current = null;
-        }, remainingTime);
-      }
+    if (
+      pendingUsersInFlightKeyRef.current === requestKey &&
+      pendingUsersInFlightPromiseRef.current
+    ) {
+      await pendingUsersInFlightPromiseRef.current;
+      return;
     }
+
+    const requestPromise = (async () => {
+      try {
+        const response = await apiService.getPendingRegistrations(
+          searchValue,
+          normalizedStatus,
+          currentPagePending,
+          itemsPerPage
+        );
+
+        setPendingRegistrations(response.data);
+        setPendingTotalItems(response.total);
+        setTotalPendingPages(response.last_page);
+        setPerPage(response.per_page);
+      } catch (error) {
+        console.error("Error loading pending users:", error);
+      } finally {
+        if (pendingPageChangeStartTimeRef.current !== null) {
+          const elapsed = Date.now() - pendingPageChangeStartTimeRef.current;
+          const minDisplayTime = 2000;
+          const remainingTime = Math.max(0, minDisplayTime - elapsed);
+
+          setTimeout(() => {
+            setIsPageLoading(false);
+            pendingPageChangeStartTimeRef.current = null;
+          }, remainingTime);
+        }
+
+        if (pendingUsersInFlightKeyRef.current === requestKey) {
+          pendingUsersInFlightKeyRef.current = null;
+          pendingUsersInFlightPromiseRef.current = null;
+        }
+      }
+    })();
+
+    pendingUsersInFlightKeyRef.current = requestKey;
+    pendingUsersInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
   // Track when page change started for active users
   const activePageChangeStartTimeRef = useRef<number | null>(null);
+  const activeUsersInFlightKeyRef = useRef<string | null>(null);
+  const activeUsersInFlightPromiseRef = useRef<Promise<void> | null>(null);
 
-  const loadActiveUsers = async (searchValue: string, roleFilter: string) => {
-    try {
-      const response = await apiService.getActiveRegistrations(
-        searchValue,
-        roleFilter,
-        currentPageActive,
-        itemsPerPage
-      );
+  const loadActiveUsers = async (searchValue: string, roleFilterValue: string) => {
+    const normalizedRole = roleFilterValue === "0" ? "" : roleFilterValue;
 
-      setActiveRegistrations(response.data);
-      setActiveTotalItems(response.total);
-      setTotalActivePages(response.last_page);
-      setPerPage(response.per_page);
-    } catch (error) {
-      console.error("Error loading active users:", error);
-    } finally {
-      // If this was a page change, ensure minimum display time (2 seconds)
-      if (activePageChangeStartTimeRef.current !== null) {
-        const elapsed = Date.now() - activePageChangeStartTimeRef.current;
-        const minDisplayTime = 2000; // 2 seconds
-        const remainingTime = Math.max(0, minDisplayTime - elapsed);
+    const requestKey = JSON.stringify({
+      searchValue,
+      normalizedRole,
+      currentPageActive,
+      itemsPerPage,
+    });
 
-        setTimeout(() => {
-          setIsPageLoading(false);
-          activePageChangeStartTimeRef.current = null;
-        }, remainingTime);
-      }
+    if (
+      activeUsersInFlightKeyRef.current === requestKey &&
+      activeUsersInFlightPromiseRef.current
+    ) {
+      await activeUsersInFlightPromiseRef.current;
+      return;
     }
+
+    const requestPromise = (async () => {
+      try {
+        const response = await apiService.getActiveRegistrations(
+          searchValue,
+          normalizedRole,
+          currentPageActive,
+          itemsPerPage
+        );
+
+        setActiveRegistrations(response.data);
+        setActiveTotalItems(response.total);
+        setTotalActivePages(response.last_page);
+        setPerPage(response.per_page);
+      } catch (error) {
+        console.error("Error loading active users:", error);
+      } finally {
+        if (activePageChangeStartTimeRef.current !== null) {
+          const elapsed = Date.now() - activePageChangeStartTimeRef.current;
+          const minDisplayTime = 2000;
+          const remainingTime = Math.max(0, minDisplayTime - elapsed);
+
+          setTimeout(() => {
+            setIsPageLoading(false);
+            activePageChangeStartTimeRef.current = null;
+          }, remainingTime);
+        }
+
+        if (activeUsersInFlightKeyRef.current === requestKey) {
+          activeUsersInFlightKeyRef.current = null;
+          activeUsersInFlightPromiseRef.current = null;
+        }
+      }
+    })();
+
+    activeUsersInFlightKeyRef.current = requestKey;
+    activeUsersInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
-  //render when page reload not loading not everySearch or Filters
+  const prevActiveFiltersFingerprintRef = useRef<string | null>(null);
+  const prevPendingFiltersFingerprintRef = useRef<string | null>(null);
+
+  // Mount: metadata only (list loads from debounced effects — avoids duplicate API calls)
   useEffect(() => {
     const mountData = async () => {
       setRefresh(true);
@@ -211,8 +272,6 @@ export default function UserManagementTab() {
         setDepartmentData(departments);
         const roles = await apiService.getAllRoles();
         setRoles(roles);
-        await loadActiveUsers(activeSearchTerm, roleFilter);
-        await loadPendingUsers(pendingSearchTerm, statusFilter);
       } catch (error) {
         console.error("Error refreshing data:", error);
         setRefresh(false);
@@ -224,80 +283,68 @@ export default function UserManagementTab() {
   }, []);
 
   useEffect(() => {
-    const load = async () => {
-      if (tab === "active") {
-        await loadActiveUsers(activeSearchTerm, roleFilter);
-      }
-      if (tab === "new") {
-        await loadPendingUsers(pendingSearchTerm, statusFilter);
-      }
-    };
-
-    load();
-  }, [tab]);
-
-  //mount every activeSearchTerm changes and RoleFilter
-  useEffect(() => {
     const handler = setTimeout(() => {
-      if (tab === "active") {
-        activeSearchTerm === "" ? currentPageActive : setCurrentPageActive(1);
-        setDebouncedActiveSearchTerm(activeSearchTerm);
-        setDebouncedRoleFilter(roleFilter);
+      const fingerprint = `${activeSearchTerm}|${roleFilter}`;
+      if (
+        prevActiveFiltersFingerprintRef.current !== null &&
+        prevActiveFiltersFingerprintRef.current !== fingerprint
+      ) {
+        setCurrentPageActive(1);
       }
+      prevActiveFiltersFingerprintRef.current = fingerprint;
+      setDebouncedActiveSearchTerm(activeSearchTerm);
+      setDebouncedRoleFilter(roleFilter);
     }, 500);
 
     return () => clearTimeout(handler);
   }, [activeSearchTerm, roleFilter]);
 
-  // Fetch API whenever debounced active search term changes
-  useEffect(() => {
-    const fetchData = async () => {
-      if (tab === "active") {
-        await loadActiveUsers(debouncedActiveSearchTerm, debouncedRoleFilter);
-      }
-    };
-
-    fetchData();
-  }, [debouncedActiveSearchTerm, debouncedRoleFilter, currentPageActive]);
-
-  //mount every pendingSearchTerm changes and statusFilter
   useEffect(() => {
     const handler = setTimeout(() => {
-      if (tab === "new") {
-        pendingSearchTerm === ""
-          ? currentPagePending
-          : setCurrentPagePending(1);
-        setDebouncedPendingSearchTerm(pendingSearchTerm);
-        setDebouncedStatusFilter(statusFilter);
+      const fingerprint = `${pendingSearchTerm}|${statusFilter}`;
+      if (
+        prevPendingFiltersFingerprintRef.current !== null &&
+        prevPendingFiltersFingerprintRef.current !== fingerprint
+      ) {
+        setCurrentPagePending(1);
       }
+      prevPendingFiltersFingerprintRef.current = fingerprint;
+      setDebouncedPendingSearchTerm(pendingSearchTerm);
+      setDebouncedStatusFilter(statusFilter);
     }, 500);
 
     return () => clearTimeout(handler);
   }, [pendingSearchTerm, statusFilter]);
 
-  // Fetch API whenever debounced pending search term changes
   useEffect(() => {
-    const fetchData = async () => {
+    if (tab !== "active") return;
+    const run = async () => {
+      await loadActiveUsers(debouncedActiveSearchTerm, debouncedRoleFilter);
+    };
+    void run();
+  }, [tab, debouncedActiveSearchTerm, debouncedRoleFilter, currentPageActive]);
+
+  useEffect(() => {
+    if (tab !== "new") return;
+    const run = async () => {
+      await loadPendingUsers(
+        debouncedPendingSearchTerm,
+        debouncedStatusFilter
+      );
+    };
+    void run();
+  }, [tab, debouncedPendingSearchTerm, debouncedStatusFilter, currentPagePending]);
+
+  const refreshUserData = async (showLoading = false) => {
+    try {
+      setRefresh(true);
       if (tab === "new") {
         await loadPendingUsers(
           debouncedPendingSearchTerm,
           debouncedStatusFilter
         );
-      }
-    };
-
-    fetchData();
-  }, [debouncedPendingSearchTerm, debouncedStatusFilter, currentPagePending]);
-
-  // Function to refresh user data
-  const refreshUserData = async (showLoading = false) => {
-    try {
-      setRefresh(true);
-      if (tab === "new") {
-        await loadPendingUsers(pendingSearchTerm, statusFilter);
-      }
-      if (tab === "active") {
-        await loadActiveUsers(activeSearchTerm, roleFilter);
+      } else if (tab === "active") {
+        await loadActiveUsers(debouncedActiveSearchTerm, debouncedRoleFilter);
       }
 
       if (showLoading) {
@@ -425,7 +472,7 @@ export default function UserManagementTab() {
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Refresh data first, then reset deleting state after data loads
-      await loadActiveUsers(activeSearchTerm, roleFilter);
+      await loadActiveUsers(debouncedActiveSearchTerm, debouncedRoleFilter);
       setDeletingUserId(null);
 
       toastMessages.user.deleted(employee.fname);
@@ -449,7 +496,7 @@ export default function UserManagementTab() {
   ) => {
     try {
       await apiService.approveRegistration(registrationId);
-      await loadPendingUsers(pendingSearchTerm, statusFilter);
+      await loadPendingUsers(debouncedPendingSearchTerm, debouncedStatusFilter);
       toastMessages.user.approved(registrationName);
     } catch (error) {
       console.error("Error approving registration:", error);
@@ -475,7 +522,7 @@ export default function UserManagementTab() {
       await apiService.deleteUser(registrationId);
       
       // Remove from list after deletion
-      await loadPendingUsers(pendingSearchTerm, statusFilter);
+      await loadPendingUsers(debouncedPendingSearchTerm, debouncedStatusFilter);
       
       // Clear rejecting state
       setRejectingUserId(null);
@@ -563,16 +610,8 @@ export default function UserManagementTab() {
     }
   };
 
-  // Handle tab change with refresh
-  const handleTabChange = async (tab: "active" | "new") => {
-    try {
-      setTab(tab);
-      await refreshUserData(true);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setRefresh(false);
-    }
+  const handleTabChange = (nextTab: "active" | "new") => {
+    setTab(nextTab);
   };
 
   return (

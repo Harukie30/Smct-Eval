@@ -111,26 +111,66 @@ export default function BranchHeadsTab() {
     }
 
     return data.map((item: any) => {
-      // Handle branches - API returns branches array
+      // Handle branches — align with HR dashboard (nested branch, branch_code, id fallbacks)
       let branchValue = "";
+
+      const extractBranchToken = (b: any): string => {
+        if (b === null || b === undefined || b === "") return "";
+        if (typeof b === "string" || typeof b === "number") return String(b).trim();
+        if (typeof b !== "object") return "";
+
+        const nested = b.branch && typeof b.branch === "object" ? b.branch : null;
+        const src = nested ?? b;
+
+        const code = String(src.branch_code ?? src.code ?? src.acronym ?? "").trim();
+        const name = String(src.branch_name ?? src.name ?? src.label ?? "").trim();
+        const id = String(src.id ?? src.branch_id ?? "").trim();
+
+        return code || name || id || "";
+      };
+
       if (item.branches && Array.isArray(item.branches)) {
-        branchValue = item.branches
-          .map((b: any) => b.name || b.branch_name || b.label || b.code || b)
-          .filter((b: any) => b) // Remove empty values
+        const extracted = item.branches
+          .map((b: any) => extractBranchToken(b))
+          .filter((b: any) => b)
           .join(", ");
-      } else if (item.branch) {
+        if (extracted) branchValue = extracted;
+      }
+
+      if (!branchValue && item.branch) {
         if (Array.isArray(item.branch)) {
           branchValue = item.branch
-            .map((b: any) => b.name || b.label || b)
+            .map((b: any) => extractBranchToken(b))
+            .filter((b: any) => b)
             .join(", ");
         } else if (typeof item.branch === "object") {
-          branchValue =
-            item.branch.name ||
-            item.branch.branch_name ||
-            item.branch.label ||
-            "";
+          branchValue = extractBranchToken(item.branch);
         } else {
-          branchValue = String(item.branch);
+          branchValue = String(item.branch).trim();
+        }
+      }
+
+      if (
+        !branchValue &&
+        (item.branch_id !== undefined ||
+          item.branchId !== undefined ||
+          item.branch_code !== undefined ||
+          item.branchCode !== undefined ||
+          item.acronym !== undefined)
+      ) {
+        const rootBranchId = item.branch_id ?? item.branchId;
+        if (
+          rootBranchId !== undefined &&
+          rootBranchId !== null &&
+          rootBranchId !== ""
+        ) {
+          branchValue = String(rootBranchId);
+        } else {
+          const rootCode = (item.branch_code ?? item.branchCode ?? item.acronym ?? "")
+            .toString()
+            .trim();
+          const rootName = (item.branch_name ?? item.branchName ?? "").toString().trim();
+          branchValue = rootCode || rootName || "";
         }
       }
 
@@ -277,16 +317,18 @@ export default function BranchHeadsTab() {
     return branchHeadsData;
   }, [branchHeadsData]);
 
-  // Helper function to get branch code from branch name/code string
+  // Helper: resolve display token (name, code, or numeric id from API) to branch code for badges
   const getBranchCode = (branchValue: string): string => {
     if (!branchValue || branches.length === 0) return branchValue;
-    
-    // Try to find matching branch by name or code
+
+    const t = branchValue.trim();
     const foundBranch = branches.find(
-      (b) => b.name === branchValue.trim() || b.code === branchValue.trim()
+      (b) =>
+        b.name === t ||
+        b.code === t ||
+        String(b.id) === t
     );
-    
-    // Return code if found, otherwise return the original value
+
     return foundBranch?.code || foundBranch?.name || branchValue;
   };
 
@@ -373,6 +415,11 @@ export default function BranchHeadsTab() {
       setBranchesLoading(false);
     }
   };
+
+  // Preload branch catalog so the table can map ids / names to branch codes (same idea as HR dashboard)
+  useEffect(() => {
+    void loadBranches();
+  }, []);
 
   // Auto-close success dialog after 2 seconds
   useEffect(() => {
@@ -667,10 +714,12 @@ export default function BranchHeadsTab() {
                                   const existingBranches = head.branch
                                     .split(", ")
                                     .map((name: string) => {
-                                      // Try to find matching branch from loaded branches (match by name or code)
+                                      const t = name.trim();
                                       const branch = loadedBranches.find(
                                         (b: { id: string; name: string; code: string }) =>
-                                          b.name === name.trim() || b.code === name.trim()
+                                          b.name === t ||
+                                          b.code === t ||
+                                          String(b.id) === t
                                       );
                                       return (
                                         branch || { id: "", name: name.trim(), code: name.trim() }

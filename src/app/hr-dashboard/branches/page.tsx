@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import {
   Card,
@@ -137,78 +137,89 @@ export default function DepartmentsTab() {
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
 
-  // Function to load data
+  const branchesInFlightKeyRef = useRef<string | null>(null);
+  const branchesInFlightPromiseRef = useRef<Promise<void> | null>(null);
+  const prevSearchTermForDebounceRef = useRef<string | null>(null);
+
   const loadData = async (search: string) => {
-    try {
-      const response = await apiService.getTotalEmployeesBranch(
-        search,
-        currentPage,
-        itemsPerPage
-      );
+    const requestKey = JSON.stringify({
+      search,
+      currentPage,
+      itemsPerPage,
+    });
 
-      // Handle different response structures
-      let branchesData: Branches[] = [];
-      let total = 0;
-      let lastPage = 1;
-      let perPageValue = itemsPerPage;
-
-      if (response) {
-        // If response has data property (paginated response)
-        if (response.data && Array.isArray(response.data)) {
-          branchesData = response.data;
-          total = response.total || 0;
-          lastPage = response.last_page || 1;
-          perPageValue = response.per_page || itemsPerPage;
-        }
-        // If response is directly an array
-        else if (Array.isArray(response)) {
-          branchesData = response;
-          total = response.length;
-          lastPage = 1;
-          perPageValue = response.length;
-        }
-        // If response has branches property
-        else if (response.branches && Array.isArray(response.branches)) {
-          branchesData = response.branches;
-          total = response.total || response.branches.length;
-          lastPage = response.last_page || 1;
-          perPageValue = response.per_page || itemsPerPage;
-        }
-      }
-
-      setBranches(branchesData);
-      setOverviewTotal(total);
-      setTotalPages(lastPage);
-      setPerPage(perPageValue);
-    } catch (error) {
-      console.error("Error loading branches:", error);
-      // Set empty array on error to prevent undefined errors
-      setBranches([]);
-      setOverviewTotal(0);
-      setTotalPages(1);
-      setPerPage(itemsPerPage);
+    if (
+      branchesInFlightKeyRef.current === requestKey &&
+      branchesInFlightPromiseRef.current
+    ) {
+      await branchesInFlightPromiseRef.current;
+      return;
     }
-  };
 
-  // Load departments and employees when component mounts
-  useEffect(() => {
-    const initializeData = async () => {
-      setLoading(true);
+    const requestPromise = (async () => {
       try {
-        await loadData(searchTerm);
-      } catch (error) {
-        console.error("Error initializing departments:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+        const response = await apiService.getTotalEmployeesBranch(
+          search,
+          currentPage,
+          itemsPerPage
+        );
 
-    initializeData();
-  }, []);
+        let branchesData: Branches[] = [];
+        let total = 0;
+        let lastPage = 1;
+        let perPageValue = itemsPerPage;
+
+        if (response) {
+          if (response.data && Array.isArray(response.data)) {
+            branchesData = response.data;
+            total = response.total || 0;
+            lastPage = response.last_page || 1;
+            perPageValue = response.per_page || itemsPerPage;
+          } else if (Array.isArray(response)) {
+            branchesData = response;
+            total = response.length;
+            lastPage = 1;
+            perPageValue = response.length;
+          } else if (response.branches && Array.isArray(response.branches)) {
+            branchesData = response.branches;
+            total = response.total || response.branches.length;
+            lastPage = response.last_page || 1;
+            perPageValue = response.per_page || itemsPerPage;
+          }
+        }
+
+        setBranches(branchesData);
+        setOverviewTotal(total);
+        setTotalPages(lastPage);
+        setPerPage(perPageValue);
+      } catch (error) {
+        console.error("Error loading branches:", error);
+        setBranches([]);
+        setOverviewTotal(0);
+        setTotalPages(1);
+        setPerPage(itemsPerPage);
+      } finally {
+        if (branchesInFlightKeyRef.current === requestKey) {
+          branchesInFlightKeyRef.current = null;
+          branchesInFlightPromiseRef.current = null;
+        }
+      }
+    })();
+
+    branchesInFlightKeyRef.current = requestKey;
+    branchesInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
+  };
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      searchTerm === "" ? currentPage : setCurrentPage(1);
+      if (
+        prevSearchTermForDebounceRef.current !== null &&
+        prevSearchTermForDebounceRef.current !== searchTerm
+      ) {
+        setCurrentPage(1);
+      }
+      prevSearchTermForDebounceRef.current = searchTerm;
       setDebouncedSearchTerm(searchTerm);
     }, 500);
 
@@ -217,19 +228,26 @@ export default function DepartmentsTab() {
 
   useEffect(() => {
     const fetchData = async () => {
-      await refreshData();
+      setIsRefreshing(true);
+      try {
+        await loadData(debouncedSearchTerm);
+      } catch (error) {
+        console.error("Error fetching branches:", error);
+      } finally {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
     };
 
-    fetchData();
+    void fetchData();
   }, [debouncedSearchTerm, currentPage]);
 
-  // Function to refresh data
   const refreshData = async () => {
     setIsRefreshing(true);
     try {
-      await loadData(searchTerm);
+      await loadData(debouncedSearchTerm);
     } catch (error) {
-      console.error("❌ Error refreshing branches:", error);
+      console.error("Error refreshing branches:", error);
     } finally {
       setIsRefreshing(false);
     }
@@ -243,7 +261,7 @@ export default function DepartmentsTab() {
     if (validation()) {
       try {
         await apiService.addBranch(formData);
-        loadData(searchTerm);
+        await loadData(debouncedSearchTerm);
         toastMessages.generic.success(
           "Success " + formData.branch_name + " has been added",
           "A new department has been save."
@@ -279,7 +297,7 @@ export default function DepartmentsTab() {
         setIsAlertDialogOpen(true);
         setBranchesToDelete(null);
         // Refresh data to ensure we have the latest branch info
-        await loadData(searchTerm);
+        await loadData(debouncedSearchTerm);
         return;
       } else {
         // Set deleting state to show skeleton animation
@@ -295,7 +313,7 @@ export default function DepartmentsTab() {
         await apiService.deleteBranches(branchesToDelete.id);
 
         // Refresh data first, then reset deleting state after data loads
-        await loadData(searchTerm);
+        await loadData(debouncedSearchTerm);
         setDeletingBranchId(null);
 
         toastMessages.generic.success(

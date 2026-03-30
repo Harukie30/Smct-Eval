@@ -40,7 +40,6 @@ import {
 } from "@/components/ui/select";
 
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
-import { setQuarter } from "date-fns";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import { toastMessages } from "@/lib/toastMessages";
 import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
@@ -88,44 +87,77 @@ export default function OverviewTab() {
   const [years, setYears] = useState<any[]>([]);
   const [branchesData, setBranchesData] = useState<any[]>([]);
 
+  const submissionsInFlightKeyRef = useRef<string | null>(null);
+  const submissionsInFlightPromiseRef = useRef<Promise<void> | null>(null);
+
   const loadEvaluations = async (
     searchValue: string,
     status: string,
     quarter: string,
     year: string
   ) => {
-    try {
-      const response = await clientDataService.getSubmissions(
-        searchValue,
-        currentPage,
-        itemsPerPage,
-        status,
-        quarter,
-        year
-      );
-      
-      // Add safety checks to prevent "Cannot read properties of undefined" error
-      if (!response) {
-        console.error("API response is undefined");
+    const normalizedStatus = status === "0" ? "" : status;
+    const normalizedQuarter = quarter === "0" ? "" : quarter;
+    const normalizedYear = year === "0" ? "" : year;
+
+    const requestKey = JSON.stringify({
+      searchValue,
+      currentPage,
+      itemsPerPage,
+      normalizedStatus,
+      normalizedQuarter,
+      normalizedYear,
+    });
+
+    if (
+      submissionsInFlightKeyRef.current === requestKey &&
+      submissionsInFlightPromiseRef.current
+    ) {
+      await submissionsInFlightPromiseRef.current;
+      return;
+    }
+
+    const requestPromise = (async () => {
+      try {
+        const response = await clientDataService.getSubmissions(
+          searchValue,
+          currentPage,
+          itemsPerPage,
+          normalizedStatus,
+          normalizedQuarter,
+          normalizedYear
+        );
+
+        if (!response) {
+          console.error("API response is undefined");
+          setEvaluations([]);
+          setOverviewTotal(0);
+          setTotalPages(1);
+          setPerPage(itemsPerPage);
+          return;
+        }
+
+        setEvaluations(response.data || []);
+        setOverviewTotal(response.total || 0);
+        setTotalPages(response.last_page || 1);
+        setPerPage(response.per_page || itemsPerPage);
+      } catch (error) {
+        console.error("Error loading evaluations:", error);
         setEvaluations([]);
         setOverviewTotal(0);
         setTotalPages(1);
         setPerPage(itemsPerPage);
-        return;
+      } finally {
+        if (submissionsInFlightKeyRef.current === requestKey) {
+          submissionsInFlightKeyRef.current = null;
+          submissionsInFlightPromiseRef.current = null;
+        }
       }
+    })();
 
-      setEvaluations(response.data || []);
-      setOverviewTotal(response.total || 0);
-      setTotalPages(response.last_page || 1);
-      setPerPage(response.per_page || itemsPerPage);
-    } catch (error) {
-      console.error("Error loading evaluations:", error);
-      // Set default values on error to prevent crashes
-      setEvaluations([]);
-      setOverviewTotal(0);
-      setTotalPages(1);
-      setPerPage(itemsPerPage);
-    }
+    submissionsInFlightKeyRef.current = requestKey;
+    submissionsInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
   useEffect(() => {
@@ -138,12 +170,6 @@ export default function OverviewTab() {
         ]);
         setYears(years);
         setBranchesData(branches);
-        await loadEvaluations(
-          searchTerm,
-          statusFilter,
-          quarterFilter,
-          yearFilter
-        );
       } catch (error) {
         console.log(error);
         setRefreshing(false);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -87,6 +87,14 @@ export default function SignatureResetRequestsTab() {
 
   const { success, error: showError } = useToast();
 
+  const signatureResetFetchKeyRef = useRef<string | null>(null);
+  const signatureResetFetchPromiseRef = useRef<Promise<SignatureResetRequest[]> | null>(
+    null
+  );
+  const prevSearchDebouncedRef = useRef<string | null>(null);
+  const prevStatusDebouncedRef = useRef<string | null>(null);
+  const prevPageRef = useRef<number | null>(null);
+
   // Date filter options for combobox
   const statusOptions = [
     { value: "0", label: "All Requests" },
@@ -94,6 +102,45 @@ export default function SignatureResetRequestsTab() {
     { value: "recent", label: "Recent" },
     { value: "old", label: "Old" },
   ];
+
+  const fetchSignatureResetList = async (
+    searchValue: string
+  ): Promise<SignatureResetRequest[]> => {
+    const key = searchValue;
+    if (
+      signatureResetFetchKeyRef.current === key &&
+      signatureResetFetchPromiseRef.current
+    ) {
+      return signatureResetFetchPromiseRef.current;
+    }
+
+    const requestPromise = (async () => {
+      try {
+        const response = await apiService.getSignatureResetRequests(searchValue);
+
+        let allRequests: SignatureResetRequest[] = [];
+
+        if (response) {
+          if (response.data && Array.isArray(response.data)) {
+            allRequests = response.data;
+          } else if (Array.isArray(response)) {
+            allRequests = response;
+          }
+        }
+
+        return allRequests;
+      } finally {
+        if (signatureResetFetchKeyRef.current === key) {
+          signatureResetFetchKeyRef.current = null;
+          signatureResetFetchPromiseRef.current = null;
+        }
+      }
+    })();
+
+    signatureResetFetchKeyRef.current = key;
+    signatureResetFetchPromiseRef.current = requestPromise;
+    return requestPromise;
+  };
 
   const loadRequests = async (
     searchValue: string,
@@ -104,20 +151,7 @@ export default function SignatureResetRequestsTab() {
       if (isPageChange) {
         setIsPageLoading(true);
       }
-      const response = await apiService.getSignatureResetRequests(searchValue);
-
-      // Handle different response structures
-      let allRequests: SignatureResetRequest[] = [];
-
-      if (response) {
-        // If response has data property (paginated response)
-        if (response.data && Array.isArray(response.data)) {
-          allRequests = response.data;
-        } else if (Array.isArray(response)) {
-          // If response is a plain array
-          allRequests = response;
-        }
-      }
+      const allRequests = await fetchSignatureResetList(searchValue);
 
       // Apply client-side filtering
       let filteredRequests = allRequests;
@@ -199,24 +233,17 @@ export default function SignatureResetRequestsTab() {
     }
   };
 
-  useEffect(() => {
-    const mount = async () => {
-      setRefresh(true);
-      try {
-        await loadRequests(searchTerm, statusFilter);
-      } catch (err) {
-        console.error(err);
-        setRefresh(false);
-      }
-    };
-    mount();
-  }, []);
-
   // Debounce search term
   useEffect(() => {
     const handler = setTimeout(() => {
+      if (
+        prevSearchDebouncedRef.current !== null &&
+        prevSearchDebouncedRef.current !== searchTerm
+      ) {
+        setCurrentPage(1);
+      }
+      prevSearchDebouncedRef.current = searchTerm;
       setDebouncedSearchTerm(searchTerm);
-      setCurrentPage(1);
     }, 500);
     return () => clearTimeout(handler);
   }, [searchTerm]);
@@ -224,25 +251,36 @@ export default function SignatureResetRequestsTab() {
   // Debounce status filter
   useEffect(() => {
     const handler = setTimeout(() => {
+      if (
+        prevStatusDebouncedRef.current !== null &&
+        prevStatusDebouncedRef.current !== statusFilter
+      ) {
+        setCurrentPage(1);
+      }
+      prevStatusDebouncedRef.current = statusFilter;
       setDebouncedStatusFilter(statusFilter);
-      setCurrentPage(1);
     }, 300);
     return () => clearTimeout(handler);
   }, [statusFilter]);
 
-  // Load data when filters or page changes
+  // Single fetch path: debounced filters + page (no duplicate mount load)
   useEffect(() => {
+    const pageChanged =
+      prevPageRef.current !== null && prevPageRef.current !== currentPage;
+    prevPageRef.current = currentPage;
+
     const fetchData = async () => {
-      const isPageChange =
-        debouncedSearchTerm === searchTerm &&
-        debouncedStatusFilter === statusFilter;
-      await loadRequests(
-        debouncedSearchTerm,
-        debouncedStatusFilter,
-        isPageChange
-      );
+      try {
+        await loadRequests(
+          debouncedSearchTerm,
+          debouncedStatusFilter,
+          pageChanged
+        );
+      } catch (err) {
+        console.error(err);
+      }
     };
-    fetchData();
+    void fetchData();
   }, [debouncedSearchTerm, debouncedStatusFilter, currentPage]);
 
   const handleRefresh = async () => {

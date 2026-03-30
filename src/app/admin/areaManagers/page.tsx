@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -99,6 +99,10 @@ export default function AreaManagersTab() {
   const [isSavingAreaManagerEdit, setIsSavingAreaManagerEdit] = useState(false);
   const [isDeletingAreaManager, setIsDeletingAreaManager] = useState(false);
   const [editBranchSearchTerm, setEditBranchSearchTerm] = useState("");
+  const areaManagersInFlightPromiseRef = useRef<Promise<void> | null>(null);
+  const branchesInFlightPromiseRef = useRef<
+    Promise<{ id: string; name: string; code: string }[]> | null
+  >(null);
 
   // Use dialog animation hook (0.4s to match EditUserModal speed)
   const dialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -113,24 +117,68 @@ export default function AreaManagersTab() {
     return data.map((item: any) => {
       // Handle branches - API returns branches array
       let branchValue = "";
+
+      // Extract a single branch token (code/name/id) into a string.
+      // This supports multiple API shapes, including the new nested:
+      //   branch: { branch_code, branch_name, acronym, id, ... }
+      const extractBranchToken = (b: any): string => {
+        if (b === null || b === undefined || b === "") return "";
+        if (typeof b === "string" || typeof b === "number") return String(b).trim();
+        if (typeof b !== "object") return "";
+
+        const nested = b.branch && typeof b.branch === "object" ? b.branch : null;
+        const src = nested ?? b;
+
+        const code = String(src.branch_code ?? src.code ?? src.acronym ?? "").trim();
+        const name = String(src.branch_name ?? src.name ?? src.label ?? "").trim();
+        const id = String(src.id ?? src.branch_id ?? "").trim();
+
+        return code || name || id || "";
+      };
+
       if (item.branches && Array.isArray(item.branches)) {
-        branchValue = item.branches
-          .map((b: any) => b.name || b.branch_name || b.label || b.code || b)
-          .filter((b: any) => b) // Remove empty values
+        const extracted = item.branches
+          .map((b: any) => extractBranchToken(b))
+          .filter((b: any) => b)
           .join(", ");
-      } else if (item.branch) {
+        if (extracted) branchValue = extracted;
+      }
+
+      if (!branchValue && item.branch) {
         if (Array.isArray(item.branch)) {
           branchValue = item.branch
-            .map((b: any) => b.name || b.label || b)
+            .map((b: any) => extractBranchToken(b))
+            .filter((b: any) => b)
             .join(", ");
         } else if (typeof item.branch === "object") {
-          branchValue =
-            item.branch.name ||
-            item.branch.branch_name ||
-            item.branch.label ||
-            "";
+          branchValue = extractBranchToken(item.branch);
         } else {
-          branchValue = String(item.branch);
+          branchValue = String(item.branch).trim();
+        }
+      }
+
+      if (
+        !branchValue &&
+        (item.branch_id !== undefined ||
+          item.branchId !== undefined ||
+          item.branch_code !== undefined ||
+          item.branchCode !== undefined ||
+          item.acronym !== undefined)
+      ) {
+        // Root-level branch data (id/code/acronym) fallback
+        const rootBranchId = item.branch_id ?? item.branchId;
+        if (
+          rootBranchId !== undefined &&
+          rootBranchId !== null &&
+          rootBranchId !== ""
+        ) {
+          branchValue = String(rootBranchId);
+        } else {
+          const rootCode = (item.branch_code ?? item.branchCode ?? item.acronym ?? "")
+            .toString()
+            .trim();
+          const rootName = (item.branch_name ?? item.branchName ?? "").toString().trim();
+          branchValue = rootCode || rootName || "";
         }
       }
 
@@ -242,22 +290,29 @@ export default function AreaManagersTab() {
 
   // Load area managers from API
   const loadAreaManagers = async () => {
-    setLoadingAreaManagers(true);
-    try {
-      const data = await apiService.getAllAreaManager();
-      console.log("Area Managers API Response:", data);
-
-      const normalizedData = normalizeAreaManagerData(data);
-      console.log("Normalized Area Managers Data:", normalizedData);
-
-      setAreaManagersData(normalizedData);
-    } catch (error) {
-      console.error("Error loading area managers:", error);
-      // Set empty array if API fails - no fallback needed
-      setAreaManagersData([]);
-    } finally {
-      setLoadingAreaManagers(false);
+    if (areaManagersInFlightPromiseRef.current) {
+      await areaManagersInFlightPromiseRef.current;
+      return;
     }
+
+    const requestPromise = (async () => {
+      setLoadingAreaManagers(true);
+      try {
+        const data = await apiService.getAllAreaManager();
+        const normalizedData = normalizeAreaManagerData(data);
+        setAreaManagersData(normalizedData);
+      } catch (error) {
+        console.error("Error loading area managers:", error);
+        // Set empty array if API fails - no fallback needed
+        setAreaManagersData([]);
+      } finally {
+        setLoadingAreaManagers(false);
+        areaManagersInFlightPromiseRef.current = null;
+      }
+    })();
+
+    areaManagersInFlightPromiseRef.current = requestPromise;
+    await requestPromise;
   };
 
   // Load area managers on mount
@@ -286,7 +341,10 @@ export default function AreaManagersTab() {
     
     // Try to find matching branch by name or code
     const foundBranch = branches.find(
-      (b) => b.name === branchValue.trim() || b.code === branchValue.trim()
+      (b) =>
+        b.name === branchValue.trim() ||
+        b.code === branchValue.trim() ||
+        String(b.id) === branchValue.trim()
     );
     
     // Return code if found, otherwise return the original value
@@ -379,47 +437,67 @@ export default function AreaManagersTab() {
       return branches;
     }
 
-    setBranchesLoading(true);
+    if (branchesInFlightPromiseRef.current) {
+      return branchesInFlightPromiseRef.current;
+    }
 
-    const result = await withErrorHandling(
-      async () => {
-        const branchesData = await apiService.getBranches();
-        // Normalize the data format - handle both {id, name} and {value, label} formats
-        const normalizedBranches = branchesData.map((branch: any) => {
-          if ("id" in branch && "name" in branch) {
-            return { 
-              id: branch.id, 
-              name: branch.name,
-              code: branch.code || branch.branch_code || ""
-            };
-          } else if ("value" in branch && "label" in branch) {
-            // Extract branch name and code from label if it contains " /"
-            const labelParts = branch.label.split(" /");
-            return {
-              id: branch.value,
-              name: labelParts[0] || branch.label,
-              code: labelParts[1] || labelParts[0] || branch.label, // Use code if available, fallback to name
-            };
+    const requestPromise = (async () => {
+      setBranchesLoading(true);
+
+      try {
+        const result = await withErrorHandling(
+          async () => {
+            const branchesData = await apiService.getBranches();
+            // Normalize the data format - handle both {id, name} and {value, label} formats
+            const normalizedBranches = branchesData.map((branch: any) => {
+              if ("id" in branch && "name" in branch) {
+                return {
+                  id: branch.id,
+                  name: branch.name,
+                  code: branch.code || branch.branch_code || "",
+                };
+              } else if ("value" in branch && "label" in branch) {
+                // Extract branch name and code from label if it contains " /"
+                const labelParts = branch.label.split(" /");
+                return {
+                  id: branch.value,
+                  name: labelParts[0] || branch.label,
+                  code: labelParts[1] || labelParts[0] || branch.label, // Use code if available, fallback to name
+                };
+              }
+              return {
+                id: String(branch.id || branch.value || ""),
+                name: String(branch.name || branch.label || ""),
+                code: String(
+                  branch.code || branch.branch_code || branch.name || branch.label || ""
+                ),
+              };
+            });
+            setBranches(normalizedBranches);
+            return normalizedBranches;
+          },
+          {
+            errorTitle: "Failed to Load Branches",
+            errorMessage: "Unable to load branches. Please try again.",
+            showSuccessToast: false,
           }
-          return {
-            id: String(branch.id || branch.value || ""),
-            name: String(branch.name || branch.label || ""),
-            code: String(branch.code || branch.branch_code || branch.name || branch.label || ""),
-          };
-        });
-        setBranches(normalizedBranches);
-        return normalizedBranches;
-      },
-      {
-        errorTitle: "Failed to Load Branches",
-        errorMessage: "Unable to load branches. Please try again.",
-        showSuccessToast: false,
-      }
-    );
+        );
 
-    setBranchesLoading(false);
-    return result || [];
+        return result || [];
+      } finally {
+        setBranchesLoading(false);
+        branchesInFlightPromiseRef.current = null;
+      }
+    })();
+
+    branchesInFlightPromiseRef.current = requestPromise;
+    return requestPromise;
   };
+
+  // Preload branch catalog so the table can map ids / names to branch codes (same idea as admin branch heads)
+  useEffect(() => {
+    void loadBranches();
+  }, []);
 
   // Add custom CSS for success dialog content animations (checkmark, ripple, etc.)
   // Note: Container animations are now handled by useDialogAnimation hook
