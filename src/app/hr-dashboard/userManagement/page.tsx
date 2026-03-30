@@ -373,6 +373,10 @@ export default function UserManagementTab() {
       }[]
     | null
   >(null);
+
+  const branchQuarterItemsPerPage = 10;
+  const [branchQuarterCurrentPage, setBranchQuarterCurrentPage] = useState(1);
+
   const [selectedEmployeeForEvaluation, setSelectedEmployeeForEvaluation] =
     useState<User | null>(null);
   const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
@@ -893,6 +897,29 @@ export default function UserManagementTab() {
       setBranchQuarterDepartmentId("");
     }
   }, [showDepartmentInBranchQuarter, branchQuarterDepartmentId]);
+
+  // Reset branch-quarter table pagination when filters change.
+  useEffect(() => {
+    if (!isBranchQuarterModalOpen) return;
+    setBranchQuarterCurrentPage(1);
+  }, [
+    isBranchQuarterModalOpen,
+    branchQuarterYear,
+    branchQuarterBranchId,
+    branchQuarterDepartmentId,
+    showDepartmentInBranchQuarter,
+  ]);
+
+  // Clamp page if the row count shrinks (e.g., switching year/branch).
+  useEffect(() => {
+    if (!isBranchQuarterModalOpen) return;
+    const totalRows = branchQuarterTableRows?.length ?? 0;
+    const totalPages = Math.max(
+      1,
+      Math.ceil(totalRows / branchQuarterItemsPerPage)
+    );
+    setBranchQuarterCurrentPage((p) => Math.min(p, totalPages));
+  }, [branchQuarterTableRows?.length, isBranchQuarterModalOpen]);
 
   // Load the quarterly table when Year+Branch are selected.
   useEffect(() => {
@@ -2656,6 +2683,8 @@ export default function UserManagementTab() {
             setBranchQuarterTableRows(null);
             setBranchQuarterYear("");
             setBranchQuarterBranchId("");
+            setBranchQuarterDepartmentId("");
+            setBranchQuarterCurrentPage(1);
           }
         }}
       >
@@ -2680,6 +2709,8 @@ export default function UserManagementTab() {
                   setBranchQuarterTableRows(null);
                   setBranchQuarterYear("");
                   setBranchQuarterBranchId("");
+                  setBranchQuarterDepartmentId("");
+                  setBranchQuarterCurrentPage(1);
                 }}
                 className="cursor-pointer hover:bg-white/20 text-white h-8 w-8 rounded-full shrink-0"
               >
@@ -2881,7 +2912,13 @@ export default function UserManagementTab() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        branchQuarterTableRows.map((row) => (
+                        branchQuarterTableRows
+                          .slice(
+                            (branchQuarterCurrentPage - 1) *
+                              branchQuarterItemsPerPage,
+                            branchQuarterCurrentPage * branchQuarterItemsPerPage
+                          )
+                          .map((row) => (
                           <TableRow
                             key={row.employeeId}
                             className="hover:bg-gray-50 transition-colors"
@@ -2921,6 +2958,22 @@ export default function UserManagementTab() {
                     </TableBody>
                   </Table>
                 </div>
+
+                {branchQuarterTableRows.length >
+                  branchQuarterItemsPerPage && (
+                  <EvaluationsPagination
+                    currentPage={branchQuarterCurrentPage}
+                    totalPages={Math.max(
+                      1,
+                      Math.ceil(
+                        branchQuarterTableRows.length / branchQuarterItemsPerPage
+                      )
+                    )}
+                    total={branchQuarterTableRows.length}
+                    perPage={branchQuarterItemsPerPage}
+                    onPageChange={(page) => setBranchQuarterCurrentPage(page)}
+                  />
+                )}
               </div>
             ) : null}
           </div>
