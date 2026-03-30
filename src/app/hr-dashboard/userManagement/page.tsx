@@ -2688,7 +2688,7 @@ export default function UserManagementTab() {
           }
         }}
       >
-        <DialogContent className={`p-0 ${dialogAnimationClass} max-w-5xl max-h-[85vh] overflow-hidden relative`}>
+        <DialogContent className={`p-0 ${dialogAnimationClass} max-w-5xl max-h-[95vh] overflow-hidden relative`}>
           {/* Header — same pattern as notification modal (DashboardShell) */}
           <div
             className="relative overflow-hidden px-6 py-5"
