@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 
 import {
@@ -375,7 +375,41 @@ export default function UserManagementTab() {
   >(null);
 
   const branchQuarterItemsPerPage = 10;
+  /** Minimum time to show branch-quarter loading UI (ms). */
+  const branchQuarterLoadingDurationMs = 2500;
   const [branchQuarterCurrentPage, setBranchQuarterCurrentPage] = useState(1);
+  const [loadingBranchQuarterPage, setLoadingBranchQuarterPage] = useState(false);
+  const branchQuarterPagingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+
+  const handleBranchQuarterPageChange = (page: number) => {
+    if (page === branchQuarterCurrentPage) return;
+    setBranchQuarterCurrentPage(page);
+    setLoadingBranchQuarterPage(true);
+    if (branchQuarterPagingTimerRef.current) {
+      clearTimeout(branchQuarterPagingTimerRef.current);
+    }
+    branchQuarterPagingTimerRef.current = setTimeout(() => {
+      setLoadingBranchQuarterPage(false);
+      branchQuarterPagingTimerRef.current = null;
+    }, branchQuarterLoadingDurationMs);
+  };
+
+  const branchQuarterPageSkeletonRows = useMemo(() => {
+    if (!branchQuarterTableRows?.length) return branchQuarterItemsPerPage;
+    const sliceStart =
+      (branchQuarterCurrentPage - 1) * branchQuarterItemsPerPage;
+    const n = Math.min(
+      branchQuarterItemsPerPage,
+      Math.max(0, branchQuarterTableRows.length - sliceStart)
+    );
+    return Math.max(1, n);
+  }, [
+    branchQuarterTableRows,
+    branchQuarterCurrentPage,
+    branchQuarterItemsPerPage,
+  ]);
 
   const [selectedEmployeeForEvaluation, setSelectedEmployeeForEvaluation] =
     useState<User | null>(null);
@@ -700,7 +734,13 @@ export default function UserManagementTab() {
 
     if (!targetYear || !targetBranchId) return;
 
+    const loadStartedAt = Date.now();
     setLoadingBranchQuarterTable(true);
+    setLoadingBranchQuarterPage(false);
+    if (branchQuarterPagingTimerRef.current) {
+      clearTimeout(branchQuarterPagingTimerRef.current);
+      branchQuarterPagingTimerRef.current = null;
+    }
     setBranchQuarterTableRows(null);
 
     try {
@@ -849,6 +889,10 @@ export default function UserManagementTab() {
       console.error("Error loading branch quarter table:", error);
       setBranchQuarterTableRows([]);
     } finally {
+      const elapsed = Date.now() - loadStartedAt;
+      await new Promise((r) =>
+        setTimeout(r, Math.max(0, branchQuarterLoadingDurationMs - elapsed))
+      );
       setLoadingBranchQuarterTable(false);
     }
   };
@@ -920,6 +964,16 @@ export default function UserManagementTab() {
     );
     setBranchQuarterCurrentPage((p) => Math.min(p, totalPages));
   }, [branchQuarterTableRows?.length, isBranchQuarterModalOpen]);
+
+  // Clear pagination loading when branch-quarter modal closes.
+  useEffect(() => {
+    if (isBranchQuarterModalOpen) return;
+    if (branchQuarterPagingTimerRef.current) {
+      clearTimeout(branchQuarterPagingTimerRef.current);
+      branchQuarterPagingTimerRef.current = null;
+    }
+    setLoadingBranchQuarterPage(false);
+  }, [isBranchQuarterModalOpen]);
 
   // Load the quarterly table when Year+Branch are selected.
   useEffect(() => {
@@ -2733,7 +2787,7 @@ export default function UserManagementTab() {
           </div>
 
           {/* Scrollable content */}
-          <div className="overflow-y-auto p-6 space-y-4">
+          <div className="relative overflow-y-auto p-6 space-y-4">
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-4">
@@ -2832,7 +2886,9 @@ export default function UserManagementTab() {
               </div>
             </div>
 
-            {branchQuarterTableRows && !loadingBranchQuarterTable && (
+            {branchQuarterTableRows &&
+              !loadingBranchQuarterTable &&
+              !loadingBranchQuarterPage && (
               <div className="flex justify-end">
                 <Button
                   onClick={handleExportBranchQuarterCSV}
@@ -2854,11 +2910,81 @@ export default function UserManagementTab() {
               </div>
             ) : null}
 
-            {/* Loading */}
+            {/* Loading — skeleton table (spinner: overlay below) */}
             {loadingBranchQuarterTable ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-10 text-gray-500">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                <p className="text-sm font-medium">Loading quarterly data...</p>
+              <div className="space-y-3">
+                <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gradient-to-r from-blue-50 to-blue-100">
+                        <TableHead className="font-semibold text-blue-800">
+                          Name
+                        </TableHead>
+                        <TableHead className="font-semibold text-blue-800">
+                          Position
+                        </TableHead>
+                        <TableHead className="font-semibold text-blue-800">
+                          Branch
+                        </TableHead>
+                        {showDepartmentInBranchQuarter && (
+                          <TableHead className="font-semibold text-blue-800">
+                            Department
+                          </TableHead>
+                        )}
+                        <TableHead className="font-semibold text-blue-800">
+                          Q1
+                        </TableHead>
+                        <TableHead className="font-semibold text-blue-800">
+                          Q2
+                        </TableHead>
+                        <TableHead className="font-semibold text-blue-800">
+                          Q3
+                        </TableHead>
+                        <TableHead className="font-semibold text-blue-800">
+                          Q4
+                        </TableHead>
+                        <TableHead className="font-semibold text-blue-800">
+                          Average
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <TableRow key={i} className="hover:bg-transparent">
+                          <TableCell>
+                            <Skeleton className="h-4 w-36 max-w-full" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-28 max-w-full" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-24 max-w-full" />
+                          </TableCell>
+                          {showDepartmentInBranchQuarter && (
+                            <TableCell>
+                              <Skeleton className="h-4 w-28 max-w-full" />
+                            </TableCell>
+                          )}
+                          <TableCell>
+                            <Skeleton className="h-4 w-10" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-10" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-10" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-10" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-12" />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             ) : null}
 
@@ -2911,6 +3037,45 @@ export default function UserManagementTab() {
                             No employees found for this branch/year.
                           </TableCell>
                         </TableRow>
+                      ) : loadingBranchQuarterPage ? (
+                        Array.from({ length: branchQuarterPageSkeletonRows }).map(
+                          (_, i) => (
+                            <TableRow
+                              key={`bq-skel-${i}`}
+                              className="hover:bg-transparent"
+                            >
+                              <TableCell>
+                                <Skeleton className="h-4 w-36 max-w-full" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-28 max-w-full" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-24 max-w-full" />
+                              </TableCell>
+                              {showDepartmentInBranchQuarter && (
+                                <TableCell>
+                                  <Skeleton className="h-4 w-28 max-w-full" />
+                                </TableCell>
+                              )}
+                              <TableCell>
+                                <Skeleton className="h-4 w-10" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-10" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-10" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-10" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-12" />
+                              </TableCell>
+                            </TableRow>
+                          )
+                        )
                       ) : (
                         branchQuarterTableRows
                           .slice(
@@ -2961,21 +3126,47 @@ export default function UserManagementTab() {
 
                 {branchQuarterTableRows.length >
                   branchQuarterItemsPerPage && (
-                  <EvaluationsPagination
-                    currentPage={branchQuarterCurrentPage}
-                    totalPages={Math.max(
-                      1,
-                      Math.ceil(
-                        branchQuarterTableRows.length / branchQuarterItemsPerPage
-                      )
-                    )}
-                    total={branchQuarterTableRows.length}
-                    perPage={branchQuarterItemsPerPage}
-                    onPageChange={(page) => setBranchQuarterCurrentPage(page)}
-                  />
+                  <div
+                    className={
+                      loadingBranchQuarterPage
+                        ? "pointer-events-none opacity-60"
+                        : ""
+                    }
+                  >
+                    <EvaluationsPagination
+                      currentPage={branchQuarterCurrentPage}
+                      totalPages={Math.max(
+                        1,
+                        Math.ceil(
+                          branchQuarterTableRows.length / branchQuarterItemsPerPage
+                        )
+                      )}
+                      total={branchQuarterTableRows.length}
+                      perPage={branchQuarterItemsPerPage}
+                      onPageChange={handleBranchQuarterPageChange}
+                    />
+                  </div>
                 )}
               </div>
             ) : null}
+
+            {/* Loading overlay — dialog-style spinner (must be last child to sit above content) */}
+            {(loadingBranchQuarterTable || loadingBranchQuarterPage) && (
+              <div
+                className="absolute inset-0 z-50 flex items-center justify-center rounded-b-lg bg-white/75 backdrop-blur-[2px]"
+                aria-busy="true"
+                aria-live="polite"
+              >
+                <div className="flex flex-col items-center gap-3 rounded-xl border border-gray-200 bg-white px-8 py-6 shadow-lg">
+                  <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+                  <p className="text-sm font-medium text-gray-700">
+                    {loadingBranchQuarterTable
+                      ? "Loading quarterly data..."
+                      : "Loading page..."}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
