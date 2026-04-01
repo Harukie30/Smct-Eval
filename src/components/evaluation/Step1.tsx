@@ -19,14 +19,21 @@ import {
   getCurrentYear,
 } from "@/lib/quarterlyReviewUtils";
 import { User, useAuth } from "@/contexts/UserContext";
-import { Item } from "@radix-ui/react-select";
 import apiService from "@/lib/apiService";
+import {
+  getEmployeeBranchCodeDisplay,
+  type BranchOption,
+} from "./employeeBranchLabel";
 
 interface Step1Props {
   data: EvaluationPayload;
   updateDataAction: (updates: Partial<EvaluationPayload>) => void;
   employee?: User | null;
   evaluationType?: 'rankNfile' | 'basic' | 'areaManager' | 'default';
+  /** From EvaluationForm; used to resolve branch IDs into readable codes. */
+  branchOptions?: BranchOption[];
+  /** While true, ID-only branch payloads show "Loading…" */
+  branchListLoading?: boolean;
 }
 
 // Score Dropdown Component
@@ -109,6 +116,8 @@ export default function Step1({
   updateDataAction,
   employee,
   evaluationType = 'default',
+  branchOptions,
+  branchListLoading = false,
 }: Step1Props) {
   const [probitionary3, setProbitionary3] = useState(false);
   const [probitionary5, setProbitionary5] = useState(false);
@@ -868,7 +877,11 @@ export default function Step1({
             </Label>
             <Input
               id="branch"
-              value={employee?.branches?.branch_name || employee?.branches?.[0]?.branch_name || (employee as any)?.branch || ""}
+              value={getEmployeeBranchCodeDisplay(
+                employee ?? null,
+                branchOptions,
+                branchListLoading
+              )}
               readOnly
               className="bg-gray-100 border-gray-300 cursor-not-allowed"
             />

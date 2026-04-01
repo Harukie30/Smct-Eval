@@ -66,6 +66,7 @@ import BranchManagerEvaluationForm from "@/components/evaluation/BranchManagerEv
 import AreaManagerEvaluationForm from "@/components/evaluation/AreaManagerEvaluationForm";
 import RankNfileHo from "@/components/evaluation/RankNfileHo";
 import BasicHo from "@/components/evaluation/BasicHo";
+import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
 
 interface Employee {
   id: number;
@@ -1821,7 +1822,13 @@ export default function UserManagementTab() {
                                 <TableCell>
                                   {employee.positions?.label || "N/A"}
                                 </TableCell>
-                                <TableCell>{getUserBranchCode(employee)}</TableCell>
+                                <TableCell>
+                                  {getEmployeeBranchCodeDisplay(
+                                    employee,
+                                    branchesData,
+                                    branchesData.length === 0
+                                  )}
+                                </TableCell>
                                 <TableCell>
                                   <Badge
                                     variant="outline"
@@ -2387,7 +2394,11 @@ export default function UserManagementTab() {
                   </p>
                   <p>
                     <span className="font-medium">Branch:</span>{" "}
-                    {getUserBranchCode(employeeToDelete)}
+                    {getEmployeeBranchCodeDisplay(
+                      employeeToDelete,
+                      branchesData,
+                      branchesData.length === 0
+                    )}
                   </p>
                 </div>
               </div>

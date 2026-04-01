@@ -183,6 +183,7 @@ export const apiService = {
     }));
   },
 
+  /** `branch` may be a comma-separated list of branch ids when filtering by multiple branches. */
   getSubmissions: async (
     searchTerm?: string,
     page?: number,

@@ -1138,6 +1138,11 @@ export default function EvaluationForm({
                     if (step.id === 1 || step.id === 2 || step.id === 7) {
                       stepProps.evaluationType = evaluationType;
                     }
+                    // Pass branch lookup props so Step1 can render the same branch text as WelcomeStep
+                    if (step.id === 1) {
+                      stepProps.branchOptions = branchOptions;
+                      stepProps.branchListLoading = branchListLoading;
+                    }
                     return <StepComponent {...stepProps} />;
                   })()}
                 </CardContent>

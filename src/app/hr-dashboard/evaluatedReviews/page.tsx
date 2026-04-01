@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import clientDataService, { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 
 import {
   Card,
@@ -40,7 +40,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Combobox } from "@/components/ui/combobox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 import ViewResultsModal from "@/components/evaluation/ViewResultsModal";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
@@ -130,7 +134,8 @@ export default function OverviewTab() {
   const [quarterFilter, setQuarterFilter] = useState("");
   const [yearFilter, setYearFilter] = useState("");
   const [ratingFilter, setRatingFilter] = useState("");
-  const [branchFilter, setBranchFilter] = useState("");
+  /** Selected branch ids (from `getBranches`); empty = all branches */
+  const [branchFilterIds, setBranchFilterIds] = useState<string[]>([]);
   //debounce filters
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
   const [debouncedStatusFilter, setDebouncedStatusFilter] =
@@ -140,8 +145,9 @@ export default function OverviewTab() {
   const [debouncedYearFilter, setDebouncedYearFilter] = useState(yearFilter);
   const [debouncedRatingFilter, setDebouncedRatingFilter] =
     useState(ratingFilter);
-  const [debouncedBranchFilter, setDebouncedBranchFilter] =
-    useState(branchFilter);
+  const [debouncedBranchFilterIds, setDebouncedBranchFilterIds] = useState<
+    string[]
+  >(branchFilterIds);
 
   const hasActiveDebouncedFilters = useMemo(() => {
     if (debouncedSearchTerm.trim() !== "") return true;
@@ -150,7 +156,7 @@ export default function OverviewTab() {
     if (!isAll(debouncedQuarterFilter)) return true;
     if (!isAll(debouncedYearFilter)) return true;
     if (!isAll(debouncedRatingFilter)) return true;
-    if (!isAll(debouncedBranchFilter)) return true;
+    if (debouncedBranchFilterIds.length > 0) return true;
     return false;
   }, [
     debouncedSearchTerm,
@@ -158,7 +164,7 @@ export default function OverviewTab() {
     debouncedQuarterFilter,
     debouncedYearFilter,
     debouncedRatingFilter,
-    debouncedBranchFilter,
+    debouncedBranchFilterIds,
   ]);
 
   const [isViewResultsModalOpen, setIsViewResultsModalOpen] = useState(false);
@@ -309,13 +315,14 @@ export default function OverviewTab() {
     quarter: string,
     year: string,
     rating: string,
-    branch: string
+    branchIds: string[]
   ) => {
     const normalizedStatus = status === "0" ? "" : status;
     const normalizedQuarter = quarter === "0" ? "" : quarter;
     const normalizedYear = year === "0" ? "" : year;
     const normalizedRating = rating === "0" ? "" : rating;
-    const normalizedBranch = branch === "0" ? "" : branch;
+    const normalizedBranch =
+      branchIds.length === 0 ? "" : [...branchIds].sort().join(",");
 
     const requestKey = JSON.stringify({
       searchValue,
@@ -398,7 +405,7 @@ export default function OverviewTab() {
         quarterFilter,
         yearFilter,
         ratingFilter,
-        branchFilter,
+        branchFilterIds: [...branchFilterIds].sort(),
       });
       if (
         prevFilterSnapshotForPageRef.current !== null &&
@@ -413,11 +420,18 @@ export default function OverviewTab() {
       setDebouncedQuarterFilter(quarterFilter);
       setDebouncedYearFilter(yearFilter);
       setDebouncedRatingFilter(ratingFilter);
-      setDebouncedBranchFilter(branchFilter);
+      setDebouncedBranchFilterIds([...branchFilterIds]);
     }, 500);
 
     return () => clearTimeout(handler);
-  }, [searchTerm, statusFilter, quarterFilter, yearFilter, ratingFilter, branchFilter]);
+  }, [
+    searchTerm,
+    statusFilter,
+    quarterFilter,
+    yearFilter,
+    ratingFilter,
+    branchFilterIds,
+  ]);
 
   // Track when page change started
   const pageChangeStartTimeRef = useRef<number | null>(null);
@@ -432,7 +446,7 @@ export default function OverviewTab() {
           debouncedQuarterFilter,
           debouncedYearFilter,
           debouncedRatingFilter,
-          debouncedBranchFilter
+          debouncedBranchFilterIds
         );
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -459,7 +473,7 @@ export default function OverviewTab() {
     debouncedQuarterFilter,
     debouncedYearFilter,
     debouncedRatingFilter,
-    debouncedBranchFilter,
+    debouncedBranchFilterIds,
   ]);
 
   const handleRefresh = async () => {
@@ -472,7 +486,7 @@ export default function OverviewTab() {
         debouncedQuarterFilter,
         debouncedYearFilter,
         debouncedRatingFilter,
-        debouncedBranchFilter
+        debouncedBranchFilterIds
       );
     } catch (error) {
       console.error("Error refreshing data:", error);
@@ -701,26 +715,97 @@ export default function OverviewTab() {
                 </Select>
               </div>
 
-              {/* Branch Filter */}
-              <div className="w-full md:w-48">
+              {/* Branch Filter (multi-select checkboxes) */}
+              <div className="w-full md:w-56">
                 <Label
-                  htmlFor="records-branch"
+                  htmlFor="records-branch-trigger"
                   className="text-sm font-medium"
                 >
                   Branch
                 </Label>
-                <Combobox
-                  options={[
-                    { value: "0", label: "All Branches" },
-                    ...branchesData,
-                  ]}
-                  value={branchFilter}
-                  onValueChangeAction={(value) => setBranchFilter(String(value))}
-                  placeholder="Filter by branch"
-                  searchPlaceholder="Search branches..."
-                  emptyText="No branch found."
-                  className="w-48 mt-1"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="records-branch-trigger"
+                      type="button"
+                      variant="outline"
+                      className="w-full md:w-56 mt-1 h-9 justify-between font-normal px-3"
+                    >
+                      <span className="truncate text-left">
+                        {branchFilterIds.length === 0
+                          ? "All branches"
+                          : `${branchFilterIds.length} branch${
+                              branchFilterIds.length === 1 ? "" : "es"
+                            } selected`}
+                      </span>
+                      <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-0" align="start">
+                    <div className="flex items-center justify-between gap-2 border-b px-2 py-1.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-xs"
+                        onClick={() => setBranchFilterIds([])}
+                      >
+                        Clear
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-xs"
+                        onClick={() =>
+                          setBranchFilterIds(
+                            branchesData.map((b: { value: string | number }) =>
+                              String(b.value)
+                            )
+                          )
+                        }
+                      >
+                        Select all
+                      </Button>
+                    </div>
+                    <div
+                      className="max-h-64 overflow-y-auto p-2 space-y-2"
+                      role="group"
+                      aria-label="Branches"
+                    >
+                      {branchesData.length === 0 ? (
+                        <p className="text-sm text-muted-foreground px-1 py-2">
+                          No branches loaded.
+                        </p>
+                      ) : (
+                        branchesData.map((b: { value: string | number; label: string }) => {
+                          const id = String(b.value);
+                          const checked = branchFilterIds.includes(id);
+                          return (
+                            <label
+                              key={id}
+                              className="flex items-start gap-2 cursor-pointer text-sm leading-tight rounded-sm px-1 py-0.5 hover:bg-muted/60"
+                            >
+                              <input
+                                type="checkbox"
+                                className="mt-0.5 rounded border-input"
+                                checked={checked}
+                                onChange={() => {
+                                  setBranchFilterIds((prev) =>
+                                    checked
+                                      ? prev.filter((v) => v !== id)
+                                      : [...prev, id]
+                                  );
+                                }}
+                              />
+                              <span className="break-words">{b.label}</span>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Refresh Button */}
