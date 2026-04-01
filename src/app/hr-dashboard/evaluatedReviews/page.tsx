@@ -364,10 +364,85 @@ export default function OverviewTab() {
           normalizedRating,
           normalizedBranch
         );
-        setEvaluations(response?.data ?? []);
-        setOverviewTotal(response?.total ?? 0);
-        setTotalPages(response?.last_page ?? 1);
-        setPerPage(response?.per_page ?? itemsPerPage);
+        const serverRows: Review[] = response?.data ?? [];
+        const selectedBranchIds = new Set(
+          branchIds.map((id) => String(id).trim()).filter(Boolean)
+        );
+
+        // Fallback: if API still treats `branch` as single value, apply client-side
+        // filtering when multiple branches are selected so UI matches selection.
+        const clientFilteredRows =
+          selectedBranchIds.size > 1
+            ? serverRows.filter((review) => {
+                const employee: any = (review as any)?.employee ?? {};
+                const directId = employee?.branch_id ?? employee?.branch?.id;
+                if (
+                  directId !== undefined &&
+                  directId !== null &&
+                  String(directId).trim() !== ""
+                ) {
+                  return selectedBranchIds.has(String(directId).trim());
+                }
+
+                const branchesValue = employee?.branches;
+                if (Array.isArray(branchesValue) && branchesValue.length > 0) {
+                  return branchesValue.some((b: any) => {
+                    const idCandidate = b?.id ?? b?.value ?? b?.branch_id;
+                    return (
+                      idCandidate !== undefined &&
+                      idCandidate !== null &&
+                      selectedBranchIds.has(String(idCandidate).trim())
+                    );
+                  });
+                }
+
+                const singleBranchObj =
+                  branchesValue && !Array.isArray(branchesValue)
+                    ? branchesValue
+                    : employee?.branch;
+                const objIdCandidate =
+                  singleBranchObj?.id ??
+                  singleBranchObj?.value ??
+                  singleBranchObj?.branch_id;
+                if (
+                  objIdCandidate !== undefined &&
+                  objIdCandidate !== null &&
+                  String(objIdCandidate).trim() !== ""
+                ) {
+                  return selectedBranchIds.has(String(objIdCandidate).trim());
+                }
+
+                const code = getEmployeeBranchCode(employee);
+                if (code && code !== "N/A") {
+                  const matchedByCode = branchesData.find((b: any) => {
+                    const label = String(b?.label ?? "");
+                    const labelParts = label.split(" /");
+                    const codePart = labelParts[1]?.trim() || "";
+                    return (
+                      codePart !== "" &&
+                      codePart.toLowerCase() === String(code).toLowerCase()
+                    );
+                  });
+                  if (matchedByCode?.value !== undefined) {
+                    return selectedBranchIds.has(String(matchedByCode.value));
+                  }
+                }
+
+                return false;
+              })
+            : serverRows;
+
+        setEvaluations(clientFilteredRows);
+        if (selectedBranchIds.size > 1) {
+          const localTotal = clientFilteredRows.length;
+          setOverviewTotal(localTotal);
+          setTotalPages(Math.max(1, Math.ceil(localTotal / itemsPerPage)));
+          setPerPage(itemsPerPage);
+        } else {
+          setOverviewTotal(response?.total ?? 0);
+          setTotalPages(response?.last_page ?? 1);
+          setPerPage(response?.per_page ?? itemsPerPage);
+        }
       } catch (error) {
         console.error("Error loading evaluations:", error);
         setEvaluations([]);

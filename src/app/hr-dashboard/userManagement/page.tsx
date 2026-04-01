@@ -3158,19 +3158,31 @@ export default function UserManagementTab() {
                               </TableCell>
                             )}
                             <TableCell>
-                              {row.q1 != null ? row.q1.toFixed(2) : "—"}
+                              {row.q1 != null
+                                ? `${row.q1.toFixed(2)} (${performanceScorePercent(row.q1)})`
+                                : "—"}
                             </TableCell>
                             <TableCell>
-                              {row.q2 != null ? row.q2.toFixed(2) : "—"}
+                              {row.q2 != null
+                                ? `${row.q2.toFixed(2)} (${performanceScorePercent(row.q2)})`
+                                : "—"}
                             </TableCell>
                             <TableCell>
-                              {row.q3 != null ? row.q3.toFixed(2) : "—"}
+                              {row.q3 != null
+                                ? `${row.q3.toFixed(2)} (${performanceScorePercent(row.q3)})`
+                                : "—"}
                             </TableCell>
                             <TableCell>
-                              {row.q4 != null ? row.q4.toFixed(2) : "—"}
+                              {row.q4 != null
+                                ? `${row.q4.toFixed(2)} (${performanceScorePercent(row.q4)})`
+                                : "—"}
                             </TableCell>
                             <TableCell>
-                              {row.average != null ? row.average.toFixed(2) : "—"}
+                              {row.average != null
+                                ? `${row.average.toFixed(2)} (${performanceScorePercent(
+                                    row.average
+                                  )})`
+                                : "—"}
                             </TableCell>
                           </TableRow>
                         ))
