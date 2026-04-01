@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import clientDataService, { apiService } from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2, Search } from "lucide-react";
 
 import {
   Card,
@@ -180,9 +180,18 @@ export default function OverviewTab() {
   const [years, setYears] = useState<any[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [branchesData, setBranchesData] = useState<any[]>([]);
+  const [branchPopoverSearch, setBranchPopoverSearch] = useState("");
   const submissionsInFlightKeyRef = useRef<string | null>(null);
   const submissionsInFlightPromiseRef = useRef<Promise<void> | null>(null);
   const prevFilterSnapshotForPageRef = useRef<string | null>(null);
+
+  const filteredBranchesForPopover = useMemo(() => {
+    const q = branchPopoverSearch.trim().toLowerCase();
+    if (!q) return branchesData;
+    return branchesData.filter((b: { label?: string }) =>
+      String(b.label ?? "").toLowerCase().includes(q)
+    );
+  }, [branchesData, branchPopoverSearch]);
 
   // Helper function to get branch code from branch data
   const getBranchCode = (branch: any): string => {
@@ -723,7 +732,11 @@ export default function OverviewTab() {
                 >
                   Branch
                 </Label>
-                <Popover>
+                <Popover
+                  onOpenChange={(open) => {
+                    if (!open) setBranchPopoverSearch("");
+                  }}
+                >
                   <PopoverTrigger asChild>
                     <Button
                       id="records-branch-trigger"
@@ -742,6 +755,27 @@ export default function OverviewTab() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-56 p-0" align="start">
+                    <div className="p-2 pb-1 border-b">
+                      <Label htmlFor="branch-popover-search" className="sr-only">
+                        Search branches
+                      </Label>
+                      <div className="relative">
+                        <Search
+                          className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                          aria-hidden
+                        />
+                        <Input
+                          id="branch-popover-search"
+                          type="search"
+                          value={branchPopoverSearch}
+                          onChange={(e) => setBranchPopoverSearch(e.target.value)}
+                          placeholder="Search branches..."
+                          className="h-8 pl-8 text-sm"
+                          autoComplete="off"
+                          onKeyDown={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    </div>
                     <div className="flex items-center justify-between gap-2 border-b px-2 py-1.5">
                       <Button
                         type="button"
@@ -757,13 +791,17 @@ export default function OverviewTab() {
                         variant="ghost"
                         size="sm"
                         className="h-8 px-2 text-xs"
-                        onClick={() =>
+                        onClick={() => {
+                          const source =
+                            branchPopoverSearch.trim().length > 0
+                              ? filteredBranchesForPopover
+                              : branchesData;
                           setBranchFilterIds(
-                            branchesData.map((b: { value: string | number }) =>
+                            source.map((b: { value: string | number }) =>
                               String(b.value)
                             )
-                          )
-                        }
+                          );
+                        }}
                       >
                         Select all
                       </Button>
@@ -777,31 +815,37 @@ export default function OverviewTab() {
                         <p className="text-sm text-muted-foreground px-1 py-2">
                           No branches loaded.
                         </p>
+                      ) : filteredBranchesForPopover.length === 0 ? (
+                        <p className="text-sm text-muted-foreground px-1 py-2">
+                          No branches match your search.
+                        </p>
                       ) : (
-                        branchesData.map((b: { value: string | number; label: string }) => {
-                          const id = String(b.value);
-                          const checked = branchFilterIds.includes(id);
-                          return (
-                            <label
-                              key={id}
-                              className="flex items-start gap-2 cursor-pointer text-sm leading-tight rounded-sm px-1 py-0.5 hover:bg-muted/60"
-                            >
-                              <input
-                                type="checkbox"
-                                className="mt-0.5 rounded border-input"
-                                checked={checked}
-                                onChange={() => {
-                                  setBranchFilterIds((prev) =>
-                                    checked
-                                      ? prev.filter((v) => v !== id)
-                                      : [...prev, id]
-                                  );
-                                }}
-                              />
-                              <span className="break-words">{b.label}</span>
-                            </label>
-                          );
-                        })
+                        filteredBranchesForPopover.map(
+                          (b: { value: string | number; label: string }) => {
+                            const id = String(b.value);
+                            const checked = branchFilterIds.includes(id);
+                            return (
+                              <label
+                                key={id}
+                                className="flex items-start gap-2 cursor-pointer text-sm leading-tight rounded-sm px-1 py-0.5 hover:bg-muted/60"
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="mt-0.5 rounded border-input"
+                                  checked={checked}
+                                  onChange={() => {
+                                    setBranchFilterIds((prev) =>
+                                      checked
+                                        ? prev.filter((v) => v !== id)
+                                        : [...prev, id]
+                                    );
+                                  }}
+                                />
+                                <span className="break-words">{b.label}</span>
+                              </label>
+                            );
+                          }
+                        )
                       )}
                     </div>
                   </PopoverContent>

@@ -68,6 +68,14 @@ import RankNfileHo from "@/components/evaluation/RankNfileHo";
 import BasicHo from "@/components/evaluation/BasicHo";
 import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
 
+/** Evaluation ratings use a 0–5 scale (same as the Employee Average chart axes). */
+const PERFORMANCE_RATING_MAX = 5;
+
+function performanceScorePercent(rating: number): string {
+  if (rating <= 0 || Number.isNaN(rating)) return "—";
+  return `${((rating / PERFORMANCE_RATING_MAX) * 100).toFixed(1)}%`;
+}
+
 interface Employee {
   id: number;
   fname: string;
@@ -2459,7 +2467,7 @@ export default function UserManagementTab() {
           }
         }}
       >
-        <DialogContent className={`p-0 ${dialogAnimationClass} ${averageTableData ? "max-w-2xl" : "max-w-md"} relative overflow-hidden`}>
+        <DialogContent className={`p-0 ${dialogAnimationClass} ${averageTableData ? "max-w-3xl" : "max-w-md"} relative overflow-hidden`}>
           {/* Header — same pattern as notification modal (DashboardShell) */}
           <div
             className="relative overflow-hidden px-6 py-5"
@@ -2552,14 +2560,29 @@ export default function UserManagementTab() {
                       const employeeName = `${employeeForAverage.fname || ""} ${employeeForAverage.lname || ""}`.trim();
                       const branch = getEmployeeBranchDisplay(employeeForAverage);
                       const csvRows = [
-                        ["Name", "Branch", "Quarters", "Rating"],
+                        [
+                          "Name",
+                          "Branch",
+                          "Quarters",
+                          "Rating",
+                          "Performance score (%)",
+                        ],
                         ...averageTableData.rows.map((row) => [
                           employeeName,
                           branch,
                           row.quarter,
                           row.rating > 0 ? row.rating.toString() : "—",
+                          row.rating > 0
+                            ? performanceScorePercent(row.rating)
+                            : "—",
                         ]),
-                        ["", "", "Average", averageTableData.average.toFixed(2)],
+                        [
+                          "",
+                          "",
+                          "Overall average",
+                          averageTableData.average.toFixed(2),
+                          performanceScorePercent(averageTableData.average),
+                        ],
                       ];
                       const csvContent = csvRows.map((row) => row.join(",")).join("\n");
                       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -2612,12 +2635,18 @@ export default function UserManagementTab() {
                         <TableHead className="font-semibold text-blue-800">Branch</TableHead>
                         <TableHead className="font-semibold text-blue-800">Quarter</TableHead>
                         <TableHead className="font-semibold text-blue-800">Rating</TableHead>
+                        <TableHead
+                          className="font-semibold text-blue-800 whitespace-nowrap"
+                          title="Rating ÷ 5 × 100 (same scale as the chart)"
+                        >
+                          Performance score
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {averageTableData.rows.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-gray-500 py-8">
+                          <TableCell colSpan={5} className="text-center text-gray-500 py-8">
                             <p className="font-medium">No evaluations recorded</p>
                             <p className="text-xs mt-1">No data available for {averageModalYear}</p>
                           </TableCell>
@@ -2646,6 +2675,16 @@ export default function UserManagementTab() {
                                   {row.rating > 0 ? row.rating.toFixed(2) : "—"}
                                 </span>
                               </TableCell>
+                              <TableCell>
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  row.rating <= 0 ? "bg-gray-100 text-gray-600" :
+                                  row.rating >= 4 ? "bg-green-100 text-green-800" :
+                                  row.rating >= 3 ? "bg-blue-100 text-blue-800" :
+                                  row.rating >= 2.5 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"
+                                }`}>
+                                  {performanceScorePercent(row.rating)}
+                                </span>
+                              </TableCell>
                             </TableRow>
                           ))}
                           <TableRow className="bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold">
@@ -2653,6 +2692,11 @@ export default function UserManagementTab() {
                             <TableCell>
                               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-white/20">
                                 {averageTableData.average.toFixed(2)}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-white/20">
+                                {performanceScorePercent(averageTableData.average)}
                               </span>
                             </TableCell>
                           </TableRow>
