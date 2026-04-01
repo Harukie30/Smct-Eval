@@ -76,6 +76,29 @@ function performanceScorePercent(rating: number): string {
   return `${((rating / PERFORMANCE_RATING_MAX) * 100).toFixed(1)}%`;
 }
 
+function normalizePerformanceScore(raw: unknown): number | null {
+  if (raw === null || raw === undefined || raw === "") return null;
+  const parsed =
+    typeof raw === "string"
+      ? Number.parseFloat(raw.replace("%", "").trim())
+      : Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  // Backward-compatible: if payload sends 0-5 instead of 0-100, convert it.
+  return parsed <= PERFORMANCE_RATING_MAX ? (parsed / PERFORMANCE_RATING_MAX) * 100 : parsed;
+}
+
+function formatScoreWithPercent(
+  score: number | null,
+  explicitPercent?: number | null
+): string {
+  if (score == null || Number.isNaN(score)) return "—";
+  const percentText =
+    explicitPercent != null && Number.isFinite(explicitPercent)
+      ? `${explicitPercent.toFixed(1)}%`
+      : performanceScorePercent(score);
+  return `${score.toFixed(2)} (${percentText})`;
+}
+
 interface Employee {
   id: number;
   fname: string;
@@ -379,6 +402,11 @@ export default function UserManagementTab() {
         q3: number | null;
         q4: number | null;
         average: number | null;
+        q1Performance?: number | null;
+        q2Performance?: number | null;
+        q3Performance?: number | null;
+        q4Performance?: number | null;
+        averagePerformance?: number | null;
       }[]
     | null
   >(null);
@@ -795,7 +823,16 @@ export default function UserManagementTab() {
 
       const quarterMap: Record<
         number,
-        { q1: number | null; q2: number | null; q3: number | null; q4: number | null }
+        {
+          q1: number | null;
+          q2: number | null;
+          q3: number | null;
+          q4: number | null;
+          q1Performance: number | null;
+          q2Performance: number | null;
+          q3Performance: number | null;
+          q4Performance: number | null;
+        }
       > = {};
 
       const getQuarter = (ev: any): "Q1" | "Q2" | "Q3" | "Q4" | null => {
@@ -821,7 +858,16 @@ export default function UserManagementTab() {
 
       const ensureBucket = (employeeId: number) => {
         if (!quarterMap[employeeId]) {
-          quarterMap[employeeId] = { q1: null, q2: null, q3: null, q4: null };
+          quarterMap[employeeId] = {
+            q1: null,
+            q2: null,
+            q3: null,
+            q4: null,
+            q1Performance: null,
+            q2Performance: null,
+            q3Performance: null,
+            q4Performance: null,
+          };
         }
         return quarterMap[employeeId];
       };
@@ -846,12 +892,27 @@ export default function UserManagementTab() {
         const ratingVal = Number(ev?.rating);
         // Treat missing/0 as no rating => render as "-"
         if (!Number.isFinite(ratingVal) || ratingVal <= 0) return;
+        const performanceVal = normalizePerformanceScore(
+          ev?.performanceScore ?? ev?.performance_score
+        );
 
         const bucket = ensureBucket(employeeId);
-        if (quarter === "Q1") bucket.q1 = ratingVal;
-        if (quarter === "Q2") bucket.q2 = ratingVal;
-        if (quarter === "Q3") bucket.q3 = ratingVal;
-        if (quarter === "Q4") bucket.q4 = ratingVal;
+        if (quarter === "Q1") {
+          bucket.q1 = ratingVal;
+          bucket.q1Performance = performanceVal;
+        }
+        if (quarter === "Q2") {
+          bucket.q2 = ratingVal;
+          bucket.q2Performance = performanceVal;
+        }
+        if (quarter === "Q3") {
+          bucket.q3 = ratingVal;
+          bucket.q3Performance = performanceVal;
+        }
+        if (quarter === "Q4") {
+          bucket.q4 = ratingVal;
+          bucket.q4Performance = performanceVal;
+        }
       });
 
       const rows = employeesList.map((emp: any) => {
@@ -862,6 +923,10 @@ export default function UserManagementTab() {
             q2: null,
             q3: null,
             q4: null,
+            q1Performance: null,
+            q2Performance: null,
+            q3Performance: null,
+            q4Performance: null,
           };
 
         const ratings = [bucket.q1, bucket.q2, bucket.q3, bucket.q4].filter(
@@ -869,6 +934,19 @@ export default function UserManagementTab() {
         );
         const averageVal =
           ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
+        const availablePerformance = [
+          bucket.q1Performance,
+          bucket.q2Performance,
+          bucket.q3Performance,
+          bucket.q4Performance,
+        ].filter((v): v is number => typeof v === "number" && !Number.isNaN(v));
+        const averagePerformanceVal =
+          availablePerformance.length > 0
+            ? availablePerformance.reduce((a, b) => a + b, 0) /
+              availablePerformance.length
+            : averageVal != null
+            ? Number.parseFloat(performanceScorePercent(averageVal).replace("%", ""))
+            : null;
 
         return {
           employeeId,
@@ -890,6 +968,14 @@ export default function UserManagementTab() {
           q4: bucket.q4,
           average:
             averageVal != null ? Number(averageVal.toFixed(2)) : null,
+          q1Performance: bucket.q1Performance,
+          q2Performance: bucket.q2Performance,
+          q3Performance: bucket.q3Performance,
+          q4Performance: bucket.q4Performance,
+          averagePerformance:
+            averagePerformanceVal != null
+              ? Number(averagePerformanceVal.toFixed(1))
+              : null,
         };
       });
 
@@ -1020,21 +1106,47 @@ export default function UserManagementTab() {
                 row.branch,
                 row.department,
                 row.position,
-                row.q1 != null ? row.q1.toFixed(2) : "-",
-                row.q2 != null ? row.q2.toFixed(2) : "-",
-                row.q3 != null ? row.q3.toFixed(2) : "-",
-                row.q4 != null ? row.q4.toFixed(2) : "-",
-                row.average != null ? row.average.toFixed(2) : "-",
+                row.q1 != null
+                  ? formatScoreWithPercent(row.q1, row.q1Performance)
+                  : "-",
+                row.q2 != null
+                  ? formatScoreWithPercent(row.q2, row.q2Performance)
+                  : "-",
+                row.q3 != null
+                  ? formatScoreWithPercent(row.q3, row.q3Performance)
+                  : "-",
+                row.q4 != null
+                  ? formatScoreWithPercent(row.q4, row.q4Performance)
+                  : "-",
+                row.average != null
+                  ? formatScoreWithPercent(
+                      row.average,
+                      row.averagePerformance
+                    )
+                  : "-",
               ]
             : [
                 row.name,
                 row.branch,
                 row.position,
-                row.q1 != null ? row.q1.toFixed(2) : "-",
-                row.q2 != null ? row.q2.toFixed(2) : "-",
-                row.q3 != null ? row.q3.toFixed(2) : "-",
-                row.q4 != null ? row.q4.toFixed(2) : "-",
-                row.average != null ? row.average.toFixed(2) : "-",
+                row.q1 != null
+                  ? formatScoreWithPercent(row.q1, row.q1Performance)
+                  : "-",
+                row.q2 != null
+                  ? formatScoreWithPercent(row.q2, row.q2Performance)
+                  : "-",
+                row.q3 != null
+                  ? formatScoreWithPercent(row.q3, row.q3Performance)
+                  : "-",
+                row.q4 != null
+                  ? formatScoreWithPercent(row.q4, row.q4Performance)
+                  : "-",
+                row.average != null
+                  ? formatScoreWithPercent(
+                      row.average,
+                      row.averagePerformance
+                    )
+                  : "-",
               ]
         ),
       ];
@@ -3159,29 +3271,42 @@ export default function UserManagementTab() {
                             )}
                             <TableCell>
                               {row.q1 != null
-                                ? `${row.q1.toFixed(2)} (${performanceScorePercent(row.q1)})`
+                                ? formatScoreWithPercent(
+                                    row.q1,
+                                    row.q1Performance
+                                  )
                                 : "—"}
                             </TableCell>
                             <TableCell>
                               {row.q2 != null
-                                ? `${row.q2.toFixed(2)} (${performanceScorePercent(row.q2)})`
+                                ? formatScoreWithPercent(
+                                    row.q2,
+                                    row.q2Performance
+                                  )
                                 : "—"}
                             </TableCell>
                             <TableCell>
                               {row.q3 != null
-                                ? `${row.q3.toFixed(2)} (${performanceScorePercent(row.q3)})`
+                                ? formatScoreWithPercent(
+                                    row.q3,
+                                    row.q3Performance
+                                  )
                                 : "—"}
                             </TableCell>
                             <TableCell>
                               {row.q4 != null
-                                ? `${row.q4.toFixed(2)} (${performanceScorePercent(row.q4)})`
+                                ? formatScoreWithPercent(
+                                    row.q4,
+                                    row.q4Performance
+                                  )
                                 : "—"}
                             </TableCell>
                             <TableCell>
                               {row.average != null
-                                ? `${row.average.toFixed(2)} (${performanceScorePercent(
-                                    row.average
-                                  )})`
+                                ? formatScoreWithPercent(
+                                    row.average,
+                                    row.averagePerformance
+                                  )
                                 : "—"}
                             </TableCell>
                           </TableRow>

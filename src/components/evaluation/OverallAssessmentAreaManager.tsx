@@ -113,7 +113,10 @@ export default function OverallAssessmentAreaManager({
 
   useEffect(() => {
     const load = async () => {
-      updateDataAction({ rating: overallWeightedScore });
+      updateDataAction({
+        rating: overallWeightedScore,
+        performanceScore: overallPercentage,
+      });
     };
     load();
   }, []);

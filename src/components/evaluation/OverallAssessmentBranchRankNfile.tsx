@@ -570,7 +570,10 @@ export default function OverallAssessmentBranchRankNfile({
 
   // Update rating in data after calculation
   useEffect(() => {
-    updateDataAction({ rating: overallWeightedScore });
+    updateDataAction({
+      rating: overallWeightedScore,
+      performanceScore: overallPercentage,
+    });
   }, [overallWeightedScore]);
 
   // Close loading dialog when submission completes
