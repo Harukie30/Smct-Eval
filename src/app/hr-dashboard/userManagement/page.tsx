@@ -1526,9 +1526,9 @@ export default function UserManagementTab() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap gap-4 flex-1 min-w-0">
-                  <div className="relative flex-1">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-4">
+                <div className="flex min-w-0 w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                  <div className="relative min-w-0 w-full sm:min-w-[12rem] sm:flex-1">
                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                       <svg
                         className="h-5 w-5 text-gray-400"
@@ -1543,7 +1543,7 @@ export default function UserManagementTab() {
                     </span>
                     <Input
                       placeholder="Search users..."
-                      className=" pl-10"
+                      className="w-full min-w-0 pl-10 pr-10"
                       value={activeSearchTerm}
                       onChange={(e) => setActiveSearchTerm(e.target.value)}
                     />
@@ -1568,14 +1568,14 @@ export default function UserManagementTab() {
                       </button>
                     )}
                   </div>
-                  <div>
+                  <div className="w-full min-w-0 sm:w-auto">
                     <Select
                       value={roleFilter}
                       onValueChange={(value) => {
                         setRoleFilter(value);
                       }}
                     >
-                      <SelectTrigger className="w-[180px]">
+                      <SelectTrigger className="w-full min-w-[10rem] sm:w-[180px]">
                         <SelectValue placeholder="All Roles" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1596,7 +1596,7 @@ export default function UserManagementTab() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
+                  <div className="w-full min-w-0 sm:w-auto">
                     <Combobox
                       options={[
                         { value: "all", label: "All Branches" },
@@ -1612,10 +1612,10 @@ export default function UserManagementTab() {
                       placeholder="All Branches"
                       searchPlaceholder="Search branches..."
                       emptyText="No branches found."
-                      className="w-[220px]"
+                      className="w-full min-w-0 sm:w-[220px]"
                     />
                   </div>
-                  <div>
+                  <div className="w-full sm:w-auto">
                     {(roleFilter !== "0" || activeBranchFilter !== "all") && (
                       <Button
                         variant="outline"
@@ -1630,7 +1630,7 @@ export default function UserManagementTab() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center justify-end gap-2 flex-nowrap">
+                <div className="flex w-full min-w-0 flex-wrap items-center justify-start gap-2 lg:w-auto lg:justify-end lg:shrink-0">
                     <Button
                       variant="outline"
                       onClick={() => refreshUserData(true)}
@@ -2080,9 +2080,9 @@ export default function UserManagementTab() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex space-x-4">
-                    <div className="relative flex-1 max-w-md">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="flex min-w-0 w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
+                    <div className="relative min-w-0 w-full max-w-full sm:max-w-md sm:flex-1">
                       <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                         <svg
                           className="h-5 w-5 text-gray-400"
@@ -2097,7 +2097,7 @@ export default function UserManagementTab() {
                       </span>
                       <Input
                         placeholder="Search new registrations..."
-                        className="w-64 pl-10"
+                        className="w-full min-w-0 pl-10 pr-10"
                         value={pendingSearchTerm}
                         onChange={(e) => setPendingSearchTerm(e.target.value)}
                       />
@@ -2123,23 +2123,25 @@ export default function UserManagementTab() {
                         </button>
                       )}
                     </div>
-                    <Select
-                      value={statusFilter}
-                      onValueChange={(value) => setStatusFilter(value)}
-                    >
-                      <SelectTrigger className="w-48 cursor-pointer">
-                        <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0">All Status</SelectItem>
-                        <SelectItem value="pending">
-                          Pending Verification
-                        </SelectItem>
-                        <SelectItem value="declined">Rejected</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="w-full min-w-0 sm:w-auto">
+                      <Select
+                        value={statusFilter}
+                        onValueChange={(value) => setStatusFilter(value)}
+                      >
+                        <SelectTrigger className="w-full min-w-[10rem] cursor-pointer sm:w-48">
+                          <SelectValue placeholder="Filter by status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">All Status</SelectItem>
+                          <SelectItem value="pending">
+                            Pending Verification
+                          </SelectItem>
+                          <SelectItem value="declined">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="flex space-x-2">
+                  <div className="flex shrink-0 flex-wrap gap-2">
                     <Button
                       variant="outline"
                       onClick={() => refreshUserData(true)}

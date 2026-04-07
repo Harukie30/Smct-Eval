@@ -24,6 +24,12 @@ function EmployeeLayout({ children }: { children: React.ReactNode }) {
         path: "/employee-dashboard/performanceReviews",
       },
       {
+        id: "my-violations",
+        label: "My Violations",
+        icon: "📋",
+        path: "/employee-dashboard/myViolations",
+      },
+      {
         id: "history",
         label: "My Evaluations",
         icon: "📈",

@@ -356,10 +356,32 @@ export const apiService = {
 
   /**
    * Record a memorandum violation. Send `FormData` with: user_id, violation_date,
-   * title, optional document (Word file: .doc / .docx).
+   * title, document (required: image or PDF).
    */
   addMemorandumViolation: async (formData: FormData): Promise<any> => {
     const response = await api.post("/addMemorandumViolation", formData);
+    return response.data;
+  },
+
+  /**
+   * Logged-in employee: list memorandum violations recorded against them.
+   * Query: search (title etc.), month (YYYY-MM, optional), page, per_page.
+   * Backend should return a Laravel-style paginator or { data: [], total, ... }.
+   */
+  getMyMemorandumViolations: async (params: {
+    search?: string;
+    month?: string;
+    page?: number;
+    per_page?: number;
+  }): Promise<any> => {
+    const response = await api.get("/myMemorandumViolations", {
+      params: {
+        search: params.search?.trim() ?? "",
+        month: params.month?.trim() ?? "",
+        page: params.page ?? 1,
+        per_page: params.per_page ?? 10,
+      },
+    });
     return response.data;
   },
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Loader2, FileWarning, X, Eye, Upload } from "lucide-react";
-import { format, parseISO, subDays } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 import {
   Dialog,
@@ -60,8 +60,19 @@ export interface MemorandumViolationModalProps {
   shouldHideAdminUsers?: boolean;
 }
 
-const WORD_ACCEPT =
-  ".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+/** Image or PDF only (required attachment). */
+const ATTACHMENT_ACCEPT =
+  "image/jpeg,image/png,image/gif,image/webp,image/bmp,.jpg,.jpeg,.png,.gif,.webp,.bmp,.pdf,application/pdf";
+
+function isAllowedAttachmentFile(f: File): boolean {
+  const lower = f.name.toLowerCase();
+  const extOk = /\.(jpe?g|png|gif|webp|bmp|pdf)$/i.test(lower);
+  const typeOk =
+    f.type.startsWith("image/") ||
+    f.type === "application/pdf" ||
+    f.type === "";
+  return extOk && typeOk;
+}
 
 /** Formatted violation date for the Date column. */
 function formatViolationDateCell(row: MemorandumSessionRow): string {
@@ -94,11 +105,6 @@ export default function MemorandumViolationModal({
   const [addTitle, setAddTitle] = useState("");
   const [addDateStr, setAddDateStr] = useState(() => localDateInputValue());
   const [addFile, setAddFile] = useState<File | null>(null);
-  const [quickDateKey, setQuickDateKey] = useState("today");
-  /** Preset = quick combobox only; manual = HTML date only (one active at a time). */
-  const [violationDateMode, setViolationDateMode] = useState<"preset" | "manual">(
-    "preset"
-  );
   const [submittingAdd, setSubmittingAdd] = useState(false);
   /** Brief loading after file chooser closes (attachment handling). */
   const [fileHandling, setFileHandling] = useState(false);
@@ -108,8 +114,6 @@ export default function MemorandumViolationModal({
     setAddTitle("");
     setAddDateStr(localDateInputValue());
     setAddFile(null);
-    setQuickDateKey("today");
-    setViolationDateMode("preset");
     setFileHandling(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, []);
@@ -191,32 +195,6 @@ export default function MemorandumViolationModal({
     );
   };
 
-  const quickDateOptions = [
-    {
-      value: "today",
-      label: `Today (${format(new Date(), "MMM d, yyyy")})`,
-    },
-    {
-      value: "yesterday",
-      label: `Yesterday (${format(subDays(new Date(), 1), "MMM d, yyyy")})`,
-    },
-    {
-      value: "week_ago",
-      label: `One week ago (${format(subDays(new Date(), 7), "MMM d, yyyy")})`,
-    },
-  ];
-
-  const applyQuickDate = (key: string | number) => {
-    const k = String(key);
-    setQuickDateKey(k);
-    const d = new Date();
-    if (k === "today") setAddDateStr(localDateInputValue(d));
-    else if (k === "yesterday")
-      setAddDateStr(localDateInputValue(subDays(d, 1)));
-    else if (k === "week_ago")
-      setAddDateStr(localDateInputValue(subDays(d, 7)));
-  };
-
   const handleAddViolationSubmit = async () => {
     const target = resolveTargetUser();
     if (!target?.id) {
@@ -224,7 +202,7 @@ export default function MemorandumViolationModal({
       return;
     }
     const t = addTitle.trim();
-    if (!t || !addDateStr) {
+    if (!t || !addDateStr || !addFile) {
       toastMessages.form.validationError();
       return;
     }
@@ -236,9 +214,7 @@ export default function MemorandumViolationModal({
       fd.append("user_id", String(target.id));
       fd.append("violation_date", violation_date);
       fd.append("title", t);
-      if (addFile) {
-        fd.append("document", addFile);
-      }
+      fd.append("document", addFile);
 
       await apiService.addMemorandumViolation(fd);
 
@@ -513,8 +489,8 @@ export default function MemorandumViolationModal({
                   Add memorandum violation
                 </DialogTitle>
                 <DialogDescription className="text-sm leading-relaxed text-gray-600">
-                  Give this record a clear title and the date it applies to. Add a
-                  Word document only if HR already has a file to store with it.
+                  Enter a title, the violation date, and one supporting file (image
+                  or PDF). All fields are required.
                 </DialogDescription>
               </DialogHeader>
             </div>
@@ -568,97 +544,30 @@ export default function MemorandumViolationModal({
                     2
                   </span>
                   <div>
-                    <p className="text-base font-semibold text-gray-900">
+                    <Label
+                      htmlFor="add-violation-date"
+                      className="text-base font-semibold text-gray-900"
+                    >
                       Violation date{" "}
                       <span className="text-red-500" aria-hidden>
                         *
                       </span>
-                    </p>
+                    </Label>
                     <p className="mt-0.5 text-xs text-gray-500">
-                      Quick pick and manual date are not used at the same time:
-                      choosing a preset uses the dropdown; click the date field to
-                      type a date yourself. Pick a preset again anytime to switch
-                      back.
+                      Use the calendar control to pick the date of the violation.
                     </p>
                   </div>
                 </div>
-                <div className="ml-0 space-y-4 rounded-xl border border-gray-200 bg-gray-50/70 p-4 sm:ml-9">
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-gray-800">
-                        Quick pick
-                      </span>
-                      {violationDateMode === "preset" ? (
-                        <span className="text-xs font-medium text-amber-700">
-                          Active
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">Off</span>
-                      )}
-                    </div>
-                    <Combobox
-                      options={quickDateOptions}
-                      value={quickDateKey}
-                      onValueChangeAction={(v) => {
-                        setViolationDateMode("preset");
-                        applyQuickDate(v);
-                      }}
-                      placeholder="Choose today, yesterday, or a week ago"
-                      searchPlaceholder="Search presets…"
-                      emptyText="No preset found."
-                      className="w-full"
-                      disabled={submittingAdd}
-                    />
-                  </div>
-                  <div className="h-px bg-gray-200/90" />
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <Label
-                        htmlFor="add-violation-date"
-                        className="text-sm text-gray-800 mb-0"
-                      >
-                        Date (manual)
-                      </Label>
-                      {violationDateMode === "manual" ? (
-                        <span className="text-xs font-medium text-amber-700">
-                          Active
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">Off</span>
-                      )}
-                    </div>
-                    <div className="relative w-full max-w-xs">
-                      <Input
-                        id="add-violation-date"
-                        type="date"
-                        value={addDateStr}
-                        onChange={(e) => {
-                          setViolationDateMode("manual");
-                          setAddDateStr(e.target.value);
-                        }}
-                        disabled={submittingAdd || violationDateMode === "preset"}
-                        className={cn(
-                          "h-11 w-full bg-white",
-                          violationDateMode === "preset" &&
-                            "cursor-pointer opacity-75"
-                        )}
-                        aria-required
-                      />
-                      {violationDateMode === "preset" && !submittingAdd && (
-                        <button
-                          type="button"
-                          aria-label="Use manual date entry"
-                          className="absolute inset-0 z-10 cursor-pointer rounded-md bg-transparent"
-                          onClick={() => setViolationDateMode("manual")}
-                        />
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      {violationDateMode === "preset"
-                        ? "Click the date above to enter a manual date (quick pick turns off)."
-                        : "Quick pick is off. Open the dropdown above and choose a preset to use it again."}
-                    </p>
-                  </div>
+                <div className="sm:ml-9">
+                  <Input
+                    id="add-violation-date"
+                    type="date"
+                    value={addDateStr}
+                    onChange={(e) => setAddDateStr(e.target.value)}
+                    disabled={submittingAdd}
+                    className="h-11 max-w-full sm:max-w-xs bg-white"
+                    aria-required
+                  />
                 </div>
               </li>
 
@@ -667,27 +576,27 @@ export default function MemorandumViolationModal({
               <li className="space-y-3">
                 <div className="flex items-baseline gap-2">
                   <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-400 text-xs font-bold text-white"
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white"
                     aria-hidden
                   >
                     3
                   </span>
                   <div>
                     <p className="text-base font-semibold text-gray-900">
-                      Supporting document{" "}
-                      <span className="text-sm font-normal text-gray-500">
-                        (optional)
+                      Supporting file{" "}
+                      <span className="text-red-500" aria-hidden>
+                        *
                       </span>
                     </p>
                     <p className="mt-0.5 text-xs text-gray-500">
-                      Attach a signed memo or letter in Word format if applicable.
+                      Upload one image (JPG, PNG, GIF, WebP, BMP) or a PDF.
                     </p>
                   </div>
                 </div>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept={WORD_ACCEPT}
+                  accept={ATTACHMENT_ACCEPT}
                   className="hidden"
                   disabled={submittingAdd || fileHandling}
                   onChange={async (e) => {
@@ -699,15 +608,10 @@ export default function MemorandumViolationModal({
                     setFileHandling(true);
                     try {
                       await new Promise((r) => setTimeout(r, 500));
-                      const extOk = /\.(doc|docx)$/i.test(f.name);
-                      const typeOk =
-                        !f.type ||
-                        f.type.includes("wordprocessingml") ||
-                        f.type.includes("msword");
-                      if (!extOk && !typeOk) {
+                      if (!isAllowedAttachmentFile(f)) {
                         toastMessages.generic.warning(
                           "Unsupported file",
-                          "Please choose a Word document (.doc or .docx)."
+                          "Please choose an image (e.g. JPG, PNG) or a PDF."
                         );
                         e.target.value = "";
                         setAddFile(null);
@@ -740,10 +644,10 @@ export default function MemorandumViolationModal({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-800">
-                        Word document
+                        Image or PDF
                       </p>
                       <p className="text-xs text-gray-500">
-                        .doc or .docx — one file per violation
+                        One file — required to save
                       </p>
                     </div>
                     <Button
@@ -762,8 +666,8 @@ export default function MemorandumViolationModal({
                       <span className="font-medium">Selected:</span> {addFile.name}
                     </p>
                   ) : !fileHandling ? (
-                    <p className="mt-3 text-xs text-gray-500">
-                      No file selected — you can save without an attachment.
+                    <p className="mt-3 text-xs text-amber-800/90">
+                      No file selected — attach an image or PDF to continue.
                     </p>
                   ) : null}
                 </div>
@@ -786,7 +690,12 @@ export default function MemorandumViolationModal({
             </Button>
             <Button
               type="button"
-              disabled={submittingAdd || !addTitle.trim() || !addDateStr}
+              disabled={
+                submittingAdd ||
+                !addTitle.trim() ||
+                !addDateStr ||
+                !addFile
+              }
               className="cursor-pointer w-full bg-amber-600 hover:bg-amber-700 text-white sm:w-auto min-w-[160px]"
               onClick={handleAddViolationSubmit}
             >
@@ -838,8 +747,16 @@ export default function MemorandumViolationModal({
             </div>
             {viewingRow?.fileName ? (
               <div>
-                <span className="font-medium text-gray-600">Attachment</span>
+                <span className="font-medium text-gray-600">Supporting file</span>
                 <p className="mt-1 text-gray-900">{viewingRow.fileName}</p>
+                {viewFileUrl &&
+                  viewingRow.file?.type?.startsWith("image/") && (
+                    <img
+                      src={viewFileUrl}
+                      alt=""
+                      className="mt-2 max-h-52 w-auto max-w-full rounded-md border border-gray-200 object-contain"
+                    />
+                  )}
                 {viewFileUrl && (
                   <a
                     href={viewFileUrl}

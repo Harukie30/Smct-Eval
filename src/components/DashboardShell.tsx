@@ -93,14 +93,19 @@ export default function DashboardShell(props: DashboardShellProps) {
   const [selectedNotification, setSelectedNotification] =
     useState<Notification | null>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const sidebarAsideRef = useRef<HTMLElement>(null);
+  /** Full padded block above bottom art (collapse, heading, nav). */
+  const sidebarMainBlockRef = useRef<HTMLDivElement>(null);
+  /** Hide bottom decorative artwork when nav extends into that area (overlap). */
+  const [hideSidebarBottomArt, setHideSidebarBottomArt] = useState(false);
 
   // Collapsible states for sidebar groups
   const [isManagementOpen, setIsManagementOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [isLeadershipOpen, setIsLeadershipOpen] = useState(false);
 
-  // Toggle state for help buttons (Contact Devs & Dashboard Guide)
-  const [isHelpButtonsVisible, setIsHelpButtonsVisible] = useState(true);
+  /** Help floaters (Guide + Contact) start hidden; footer toggle shows them. */
+  const [isHelpButtonsVisible, setIsHelpButtonsVisible] = useState(false);
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [isDeletingNotification, setIsDeletingNotification] = useState(false);
   const { user, logout, setIsRefreshing } = useUser();
@@ -272,6 +277,46 @@ export default function DashboardShell(props: DashboardShellProps) {
     isEmployeeDashboard,
     isEvaluatorDashboard,
     isAdminDashboard,
+  ]);
+
+  /** Bottom ~200px of sidebar is reserved for faded role art; hide art if nav overlaps. */
+  useEffect(() => {
+    const aside = sidebarAsideRef.current;
+    const mainBlock = sidebarMainBlockRef.current;
+    if (!aside || !mainBlock) return;
+
+    const DECORATION_ZONE_PX = 200;
+
+    const updateOverlap = () => {
+      if (!isSidebarOpen) {
+        setHideSidebarBottomArt(false);
+        return;
+      }
+      const asideRect = aside.getBoundingClientRect();
+      const blockRect = mainBlock.getBoundingClientRect();
+      const decorationZoneTop = asideRect.bottom - DECORATION_ZONE_PX;
+      setHideSidebarBottomArt(blockRect.bottom > decorationZoneTop);
+    };
+
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(updateOverlap);
+    });
+    ro.observe(aside);
+    ro.observe(mainBlock);
+    window.addEventListener("resize", updateOverlap);
+    updateOverlap();
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", updateOverlap);
+    };
+  }, [
+    isSidebarOpen,
+    activeItemId,
+    isManagementOpen,
+    isAnalyticsOpen,
+    isLeadershipOpen,
+    sidebarItems,
+    dashboardType,
   ]);
 
   const handleEditProfile = () => {
@@ -713,8 +758,12 @@ export default function DashboardShell(props: DashboardShellProps) {
             isSidebarOpen ? "w-64" : "w-0"
           }`}
         >
-          <aside className="relative bg-blue-600 text-blue-50 min-h-[calc(100vh-5rem)] w-64 rounded-bl-lg">
+          <aside
+            ref={sidebarAsideRef}
+            className="relative bg-blue-600 text-blue-50 min-h-[calc(100vh-5rem)] w-64 rounded-bl-lg"
+          >
             <div
+              ref={sidebarMainBlockRef}
               className={`relative p-6 transition-opacity duration-400 ${
                 isSidebarOpen ? "opacity-100" : "opacity-0"
               }`}
@@ -769,13 +818,14 @@ export default function DashboardShell(props: DashboardShellProps) {
                             ].includes(id)
                         )
                     : isEmployeeDashboard
-                    ? ["overview", "reviews", "history"]
+                    ? ["overview", "reviews", "my-violations", "history"]
                     : isEvaluatorDashboard
                     ? [
                         "overview",
                         "employees",
                         "feedback",
                         "reviews",
+                        "my-violations",
                         "history",
                       ]
                     : ["overview", "evaluation-records", "employees"];
@@ -1084,8 +1134,8 @@ export default function DashboardShell(props: DashboardShellProps) {
                 })()}
               </nav>
             </div>
-            {/* Faded employee icon at bottom - employee dashboard only */}
-            {isEmployeeDashboard && (
+            {/* Faded role art at bottom — hidden when nav overlaps this zone */}
+            {!hideSidebarBottomArt && isEmployeeDashboard && (
               <div
                 className="absolute bottom-2 left-0 right-0 h-50 bg-no-repeat bg-center bg-contain pointer-events-none"
                 style={{
@@ -1095,8 +1145,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                 aria-hidden
               />
             )}
-            {/* Faded evaluator icon at bottom - evaluator dashboard only */}
-            {isEvaluatorDashboard && (
+            {!hideSidebarBottomArt && isEvaluatorDashboard && (
               <div
                 className="absolute bottom-3 left-0 right-0 h-50 bg-no-repeat bg-center bg-contain pointer-events-none"
                 style={{
@@ -1106,8 +1155,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                 aria-hidden
               />
             )}
-            {/* Faded HR icon at bottom - HR dashboard only */}
-            {isHRDashboard && (
+            {!hideSidebarBottomArt && isHRDashboard && (
               <div
                 className="absolute bottom-1 left-0 right-0 h-45 bg-no-repeat bg-center bg-contain pointer-events-none"
                 style={{
@@ -1117,8 +1165,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                 aria-hidden
               />
             )}
-            {/* Faded Admin icon at bottom - Admin dashboard only */}
-            {isAdminDashboard && (
+            {!hideSidebarBottomArt && isAdminDashboard && (
               <div
                 className="absolute bottom-3 left-0 right-0 h-50 bg-no-repeat bg-center bg-contain pointer-events-none"
                 style={{

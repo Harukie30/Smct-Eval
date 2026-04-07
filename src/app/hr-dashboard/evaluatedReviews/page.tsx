@@ -636,7 +636,7 @@ export default function OverviewTab() {
       <div className="relative  overflow-y-auto">
         <Card className="">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 w-100">
+            <CardTitle className="flex flex-wrap items-center gap-2">
               All Evaluation Records
               <Badge variant="outline" className="text-xs font-normal">
                 {overviewTotal} Total Records
@@ -647,14 +647,14 @@ export default function OverviewTab() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="mb-6 flex flex-col flex-wrap gap-4 lg:flex-row lg:items-end">
               {/* Search */}
-              <div className="flex-1">
+              <div className="min-w-0 w-full flex-1 lg:min-w-[min(100%,14rem)]">
                 <Label htmlFor="records-search" className="text-sm font-medium">
                   Search
                 </Label>
-                <div className=" relative ">
-                  <div className="relative ">
+                <div className="relative">
+                  <div className="relative w-full min-w-0">
                     <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                       <svg
                         className="h-5 w-5 text-gray-400"
@@ -668,10 +668,11 @@ export default function OverviewTab() {
                       </svg>
                     </span>
                     <Input
+                      id="records-search"
                       placeholder="Search by employee, evaluator"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pr-10 pl-10"
+                      className="w-full min-w-0 pl-10 pr-10"
                     />
                     {searchTerm && (
                       <button
@@ -698,7 +699,7 @@ export default function OverviewTab() {
               </div>
 
               {/* Approval Status Filter */}
-              <div className="w-full md:w-48">
+              <div className="w-full min-w-0 sm:min-w-[10rem] sm:max-w-[12rem] lg:w-48 lg:max-w-none">
                 <Label
                   htmlFor="records-approval-status"
                   className="text-sm font-medium"
@@ -709,7 +710,10 @@ export default function OverviewTab() {
                   value={statusFilter}
                   onValueChange={(value) => setStatusFilter(value)}
                 >
-                  <SelectTrigger className="w-48 cursor-pointer">
+                  <SelectTrigger
+                    id="records-approval-status"
+                    className="w-full cursor-pointer"
+                  >
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -725,7 +729,7 @@ export default function OverviewTab() {
               </div>
 
               {/* Quarter Filter */}
-              <div className="w-full md:w-48">
+              <div className="w-full min-w-0 sm:min-w-[10rem] sm:max-w-[12rem] lg:w-48 lg:max-w-none">
                 <Label
                   htmlFor="records-quarter"
                   className="text-sm font-medium"
@@ -736,7 +740,10 @@ export default function OverviewTab() {
                   value={quarterFilter}
                   onValueChange={(value) => setQuarterFilter(value)}
                 >
-                  <SelectTrigger className="w-48 cursor-pointer">
+                  <SelectTrigger
+                    id="records-quarter"
+                    className="w-full cursor-pointer"
+                  >
                     <SelectValue placeholder="Filter by quarter" />
                   </SelectTrigger>
                   <SelectContent>
@@ -752,7 +759,7 @@ export default function OverviewTab() {
               </div>
 
               {/* Year Filter */}
-              <div className="w-full md:w-48">
+              <div className="w-full min-w-0 sm:min-w-[10rem] sm:max-w-[12rem] lg:w-48 lg:max-w-none">
                 <Label htmlFor="records-year" className="text-sm font-medium">
                   Year
                 </Label>
@@ -760,7 +767,10 @@ export default function OverviewTab() {
                   value={yearFilter}
                   onValueChange={(value) => setYearFilter(value)}
                 >
-                  <SelectTrigger className="mt-1 cursor-pointer">
+                  <SelectTrigger
+                    id="records-year"
+                    className="mt-1 w-full cursor-pointer"
+                  >
                     <SelectValue placeholder="Select a year" />
                   </SelectTrigger>
                   <SelectContent>
@@ -775,7 +785,7 @@ export default function OverviewTab() {
               </div>
 
               {/* Rating Filter */}
-              <div className="w-full md:w-48">
+              <div className="w-full min-w-0 sm:min-w-[10rem] sm:max-w-[12rem] lg:w-48 lg:max-w-none">
                 <Label
                   htmlFor="records-rating"
                   className="text-sm font-medium"
@@ -786,7 +796,10 @@ export default function OverviewTab() {
                   value={ratingFilter}
                   onValueChange={(value) => setRatingFilter(value)}
                 >
-                  <SelectTrigger className="w-48 cursor-pointer">
+                  <SelectTrigger
+                    id="records-rating"
+                    className="w-full cursor-pointer"
+                  >
                     <SelectValue placeholder="Filter by rating" />
                   </SelectTrigger>
                   <SelectContent>
@@ -800,7 +813,7 @@ export default function OverviewTab() {
               </div>
 
               {/* Branch Filter (multi-select checkboxes) */}
-              <div className="w-full md:w-56">
+              <div className="w-full min-w-0 sm:min-w-[12rem] sm:max-w-[14rem] lg:w-56 lg:max-w-none">
                 <Label
                   htmlFor="records-branch-trigger"
                   className="text-sm font-medium"
@@ -817,7 +830,7 @@ export default function OverviewTab() {
                       id="records-branch-trigger"
                       type="button"
                       variant="outline"
-                      className="w-full md:w-56 mt-1 h-9 justify-between font-normal px-3"
+                      className="mt-1 h-9 w-full justify-between px-3 font-normal"
                     >
                       <span className="truncate text-left">
                         {branchFilterIds.length === 0
@@ -928,8 +941,8 @@ export default function OverviewTab() {
               </div>
 
               {/* Refresh Button */}
-              <div className="w-full md:w-auto flex gap-2">
-                <div className="w-full md:w-32">
+              <div className="flex w-full min-w-0 gap-2 lg:w-auto lg:shrink-0">
+                <div className="w-full min-w-0 sm:w-auto sm:min-w-[8rem]">
                   <Label className="text-sm font-medium opacity-0">
                     Refresh
                   </Label>

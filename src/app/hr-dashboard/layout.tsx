@@ -39,6 +39,12 @@ function HRLayout({ children }: { children: React.ReactNode }) {
         path: "/hr-dashboard/evaluationHistory",
       },
       {
+        id: "my-violations",
+        label: "My Violations",
+        icon: "📋",
+        path: "/hr-dashboard/myViolations",
+      },
+      {
         id: "departments",
         label: "Departments",
         icon: "🏢",

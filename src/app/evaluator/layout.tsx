@@ -34,6 +34,12 @@ function EvaluatorLayout({ children }: { children: React.ReactNode }) {
         path: "/evaluator/performanceReviews",
       },
       {
+        id: "my-violations",
+        label: "My Violations",
+        icon: "📋",
+        path: "/evaluator/myViolations",
+      },
+      {
         id: "history",
         label: "My Evaluation History",
         icon: "📈",
