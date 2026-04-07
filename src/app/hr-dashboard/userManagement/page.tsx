@@ -41,6 +41,7 @@ import {
 import {
   Eye,
   FileText,
+  FileWarning,
   Pencil,
   Plus,
   Trash2,
@@ -67,6 +68,7 @@ import AreaManagerEvaluationForm from "@/components/evaluation/AreaManagerEvalua
 import RankNfileHo from "@/components/evaluation/RankNfileHo";
 import BasicHo from "@/components/evaluation/BasicHo";
 import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
+import MemorandumViolationModal from "@/components/MemorandumViolationModal";
 
 /** Evaluation ratings use a 0–5 scale (same as the Employee Average chart axes). */
 const PERFORMANCE_RATING_MAX = 5;
@@ -450,6 +452,13 @@ export default function UserManagementTab() {
 
   const [selectedEmployeeForEvaluation, setSelectedEmployeeForEvaluation] =
     useState<User | null>(null);
+  const [isMemorandumViolationModalOpen, setIsMemorandumViolationModalOpen] =
+    useState(false);
+  const [employeeForMemorandumViolation, setEmployeeForMemorandumViolation] =
+    useState<User | null>(null);
+  const [memorandumPickerBranchId, setMemorandumPickerBranchId] = useState<
+    string | undefined
+  >(undefined);
   const [isDeletingEmployee, setIsDeletingEmployee] = useState(false);
   const activeFilterHighlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -1988,6 +1997,20 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
+                                      className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 cursor-pointer hover:scale-110 transition-transform duration-200"
+                                      onClick={() => {
+                                        setEmployeeForMemorandumViolation(employee);
+                                        setMemorandumPickerBranchId(undefined);
+                                        setIsMemorandumViolationModalOpen(true);
+                                      }}
+                                      disabled={deletingUserId !== null}
+                                      title="Add memorandum violation"
+                                    >
+                                      <FileWarning className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                       className="text-blue-600 hover:text-blue-700 hover:bg-blue-200 cursor-pointer hover:scale-110 transition-transform duration-200"
                                       onClick={() => {
                                         setEmployeeForAverage(employee);
@@ -2569,6 +2592,20 @@ export default function UserManagementTab() {
         </DialogContent>
       </Dialog>
 
+      <MemorandumViolationModal
+        open={isMemorandumViolationModalOpen}
+        onOpenChangeAction={(next) => {
+          if (!next) {
+            setIsMemorandumViolationModalOpen(false);
+            setEmployeeForMemorandumViolation(null);
+            setMemorandumPickerBranchId(undefined);
+          }
+        }}
+        dialogAnimationClass={dialogAnimationClass}
+        employee={employeeForMemorandumViolation}
+        branchFilterForEmployeePicker={memorandumPickerBranchId}
+      />
+
       {/* Employee Average Modal */}
       <Dialog
         open={isAverageModalOpen}
@@ -3058,12 +3095,18 @@ export default function UserManagementTab() {
               !loadingBranchQuarterPage && (
               <div className="flex justify-end">
                 <Button
-                  onClick={handleExportBranchQuarterCSV}
-                  disabled={isExporting}
-                  className="cursor-pointer bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  type="button"
+                  onClick={() => {
+                    const b = branchQuarterBranchId;
+                    setIsBranchQuarterModalOpen(false);
+                    setEmployeeForMemorandumViolation(null);
+                    setMemorandumPickerBranchId(b || undefined);
+                    setIsMemorandumViolationModalOpen(true);
+                  }}
+                  className="cursor-pointer bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md"
                 >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export CSV
+                  <FileWarning className="h-4 w-4 mr-2" />
+                  Add memorandum
                 </Button>
               </div>
             )}

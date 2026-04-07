@@ -354,6 +354,15 @@ export const apiService = {
     return response.data;
   },
 
+  /**
+   * Record a memorandum violation. Send `FormData` with: user_id, violation_date,
+   * title, optional document (Word file: .doc / .docx).
+   */
+  addMemorandumViolation: async (formData: FormData): Promise<any> => {
+    const response = await api.post("/addMemorandumViolation", formData);
+    return response.data;
+  },
+
   // Bulk register users (Excel/CSV upload)
   bulkRegisterUser: async (payload: Record<string, any>): Promise<any> => {
     const response = await api.post("/bulkRegisterUser", payload);
