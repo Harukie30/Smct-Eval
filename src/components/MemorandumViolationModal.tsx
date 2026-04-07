@@ -1,13 +1,26 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-import { Loader2, FileWarning, X, Eye, Upload } from "lucide-react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import {
+  Loader2,
+  FileWarning,
+  X,
+  Eye,
+  Upload,
+  ExternalLink,
+  RefreshCw,
+  Calendar,
+  FileText,
+  FileType2,
+  Download,
+} from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -27,6 +40,8 @@ import { cn } from "@/lib/utils";
 import { User } from "@/contexts/UserContext";
 import apiService from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
+import { CONFIG } from "../../config/config";
+import { memorandumDocumentTypeLabel } from "@/lib/memorandumDocumentType";
 
 function localDateInputValue(d = new Date()): string {
   const y = d.getFullYear();
@@ -49,13 +64,22 @@ export type MemorandumSessionRow = {
   fileName?: string | null;
   /** Present only for same-session uploads; used for download preview. */
   file?: File | null;
+  /** From API when loaded from server */
+  document_url?: string | null;
+  document_path?: string | null;
 };
 
 export interface MemorandumViolationModalProps {
   open: boolean;
   onOpenChangeAction: (open: boolean) => void;
   dialogAnimationClass?: string;
+  /** Employee row from HR (optional — omit when picking from branch-scoped list). */
   employee: User | null;
+  /**
+   * Explicit user id for `/showUserMemorandumViolation/{id}` when `employee.id`
+   * is missing but another field (e.g. `user_id`) is present on the row.
+   */
+  targetEmployeeUserId?: string | number | null;
   branchFilterForEmployeePicker?: string;
   shouldHideAdminUsers?: boolean;
 }
@@ -74,6 +98,145 @@ function isAllowedAttachmentFile(f: File): boolean {
   return extOk && typeOk;
 }
 
+function mapApiRowToSession(r: Record<string, unknown>): MemorandumSessionRow {
+  const id = String(r.id ?? `tmp-${Math.random()}`);
+  const vd = String(
+    r.violation_date ?? r.date ?? r.violationDate ?? ""
+  );
+  const violation_date = vd.includes("T") ? vd.split("T")[0] : vd;
+  const docStr = (v: unknown) =>
+    typeof v === "string" ? v : v != null ? String(v) : null;
+  const documentRaw = r.document;
+  const documentPath =
+    docStr(r.document_path) ??
+    docStr(r.support_document) ??
+    (typeof documentRaw === "string" ? documentRaw : null) ??
+    docStr(r.file_path) ??
+    docStr(r.attachment) ??
+    null;
+  let fileName =
+    (r.document_name as string) ??
+    (r.file_name as string) ??
+    (r.original_name as string) ??
+    (r.filename as string) ??
+    null;
+  if (!fileName && documentPath) {
+    const seg = documentPath.split(/[/\\]/).filter(Boolean).pop();
+    if (seg) fileName = decodeURIComponent(seg);
+  }
+  const titleRaw =
+    r.title ??
+    r.subject ??
+    r.violation_title ??
+    r["violaion_title"] ??
+    r["violation_tittle"];
+  return {
+    id,
+    title: String(titleRaw ?? "—"),
+    violation_date,
+    fileName,
+    file: undefined,
+    document_url: docStr(r.document_url) ?? docStr(r.url) ?? null,
+    document_path: documentPath,
+  };
+}
+
+/** Accepts many Laravel / JSON shapes: raw array, { data }, { violations }, paginator, single row. */
+function extractViolationRowsFromApi(raw: unknown): unknown[] {
+  if (raw == null) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== "object") return [];
+  const root = raw as Record<string, unknown>;
+
+  /** Backend: `{ memos: [...] }` — plain array (not Laravel paginator). */
+  if (Array.isArray(root.memos)) return root.memos;
+
+  /** Backend: `{ memos: { data: [...], current_page, ... } }` */
+  const memosRoot = root.memos;
+  if (memosRoot && typeof memosRoot === "object" && !Array.isArray(memosRoot)) {
+    const m = memosRoot as Record<string, unknown>;
+    if (Array.isArray(m.data)) return m.data;
+  }
+
+  const tryArrays = [
+    root.data,
+    root.violations,
+    root.violation,
+    root.memorandum_violations,
+    root.memorandumViolations,
+    root.memorandum_violation,
+    root.items,
+    root.records,
+    root.results,
+  ];
+
+  for (const c of tryArrays) {
+    if (Array.isArray(c) && c.length > 0) return c;
+  }
+  for (const c of tryArrays) {
+    if (Array.isArray(c)) return c;
+  }
+
+  // Laravel paginator: { data: { data: [...] } } or { data: [...] }
+  const d = root.data;
+  if (Array.isArray(d)) return d;
+  if (d && typeof d === "object" && !Array.isArray(d)) {
+    const inner = d as Record<string, unknown>;
+    if (Array.isArray(inner.data)) return inner.data;
+    if (Array.isArray(inner.violations)) return inner.violations;
+  }
+
+  // success: true, payload nested
+  if (Array.isArray(root.payload)) return root.payload as unknown[];
+
+  // Single violation object
+  if (
+    root.id != null &&
+    (root.violation_date != null ||
+      root.title != null ||
+      root["violaion_title"] != null)
+  ) {
+    return [raw];
+  }
+
+  return [];
+}
+
+function normalizeViolationsListFromApi(raw: unknown): MemorandumSessionRow[] {
+  const rowsRaw = extractViolationRowsFromApi(raw);
+  return rowsRaw.map((x) =>
+    mapApiRowToSession(
+      x && typeof x === "object" ? (x as Record<string, unknown>) : {}
+    )
+  );
+}
+
+function resolveDocumentHrefForRow(row: MemorandumSessionRow): string | null {
+  const u = row.document_url?.trim();
+  if (u) {
+    if (/^https?:\/\//i.test(u)) return u;
+    const base = CONFIG.API_URL?.replace(/\/$/, "") ?? "";
+    return `${base}${u.startsWith("/") ? u : `/${u}`}`;
+  }
+  const p = row.document_path?.trim();
+  if (p) {
+    const storage = (CONFIG.API_URL_STORAGE ?? CONFIG.API_URL)?.replace(
+      /\/$/,
+      ""
+    );
+    return `${storage}/${p.replace(/^\//, "")}`;
+  }
+  return null;
+}
+
+function isLikelyImageHref(href: string): boolean {
+  return /\.(jpe?g|png|gif|webp|bmp)(\?|$)/i.test(href);
+}
+
+function isLikelyPdfHref(href: string): boolean {
+  return /\.pdf(\?|$)/i.test(href);
+}
+
 /** Formatted violation date for the Date column. */
 function formatViolationDateCell(row: MemorandumSessionRow): string {
   if (!row.violation_date) return "—";
@@ -84,11 +247,22 @@ function formatViolationDateCell(row: MemorandumSessionRow): string {
   }
 }
 
+/** Same idea as Employee Average modal: stable id from list row (`id`, `user_id`, …). */
+function resolveUserRecordId(u: User | null | undefined): string | null {
+  if (!u) return null;
+  const o = u as unknown as Record<string, unknown>;
+  const alt = o.id ?? o.user_id ?? o.userId;
+  if (alt === undefined || alt === null || String(alt).trim() === "")
+    return null;
+  return String(alt);
+}
+
 export default function MemorandumViolationModal({
   open,
   onOpenChangeAction,
   dialogAnimationClass = "",
   employee,
+  targetEmployeeUserId = null,
   branchFilterForEmployeePicker,
   shouldHideAdminUsers = true,
 }: MemorandumViolationModalProps) {
@@ -97,6 +271,7 @@ export default function MemorandumViolationModal({
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
 
   const [sessionRows, setSessionRows] = useState<MemorandumSessionRow[]>([]);
+  const [loadingViolations, setLoadingViolations] = useState(false);
   const [viewingRow, setViewingRow] = useState<MemorandumSessionRow | null>(
     null
   );
@@ -123,23 +298,72 @@ export default function MemorandumViolationModal({
     setPickerUsers([]);
     setSelectedEmployeeId("");
     setSessionRows([]);
+    setLoadingViolations(false);
     setViewingRow(null);
     setAddModalOpen(false);
     resetAddForm();
   }, [onOpenChangeAction, resetAddForm]);
 
-  useEffect(() => {
-    if (!open) return;
-
-    if (employee?.id != null) {
-      setSelectedEmployeeId(String(employee.id));
+  const fetchViolationsForUser = useCallback(async (userId: string) => {
+    if (!userId) {
       setSessionRows([]);
       return;
     }
+    setLoadingViolations(true);
+    try {
+      const raw = await apiService.getUserMemorandumViolations(userId);
+      const rows = normalizeViolationsListFromApi(raw);
+      setSessionRows(rows);
+    } catch (e: unknown) {
+      console.error(e);
+      setSessionRows([]);
+      const msg =
+        e && typeof e === "object" && "response" in e
+          ? (e as { response?: { data?: { message?: string } } }).response?.data
+              ?.message
+          : undefined;
+      toastMessages.generic.error(
+        "Could not load memorandum violations",
+        msg ?? "Check the network or your session and try again."
+      );
+    } finally {
+      setLoadingViolations(false);
+    }
+  }, []);
 
-    setSelectedEmployeeId("");
-    setSessionRows([]);
+  /** Who to load violations for — mirrors Employee Average’s “this employee only” behavior. */
+  const effectiveFetchUserId = useMemo(() => {
+    const explicit =
+      targetEmployeeUserId != null &&
+      String(targetEmployeeUserId).trim() !== ""
+        ? String(targetEmployeeUserId).trim()
+        : "";
+    if (explicit) return explicit;
+    const fromEmployee = resolveUserRecordId(employee);
+    if (fromEmployee) return fromEmployee;
+    if (selectedEmployeeId.trim()) return selectedEmployeeId.trim();
+    return "";
+  }, [targetEmployeeUserId, employee, selectedEmployeeId]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (employee) {
+      const id = resolveUserRecordId(employee);
+      if (id) setSelectedEmployeeId(id);
+    } else {
+      setSelectedEmployeeId("");
+    }
   }, [open, employee]);
+
+  useEffect(() => {
+    if (!open) return;
+    const uid = effectiveFetchUserId;
+    if (!uid) {
+      setSessionRows([]);
+      return;
+    }
+    void fetchViolationsForUser(uid);
+  }, [open, effectiveFetchUserId, fetchViolationsForUser]);
 
   useEffect(() => {
     if (!open || employee) return;
@@ -187,17 +411,19 @@ export default function MemorandumViolationModal({
   }, [open, employee, branchFilterForEmployeePicker, shouldHideAdminUsers]);
 
   const resolveTargetUser = (): User | null => {
-    if (employee?.id != null) return employee;
+    if (employee) return employee;
     if (!selectedEmployeeId) return null;
     return (
-      pickerUsers.find((u) => String(u.id) === String(selectedEmployeeId)) ||
-      null
+      pickerUsers.find(
+        (u) => resolveUserRecordId(u) === selectedEmployeeId
+      ) || null
     );
   };
 
   const handleAddViolationSubmit = async () => {
     const target = resolveTargetUser();
-    if (!target?.id) {
+    const targetUid = target ? resolveUserRecordId(target) : null;
+    if (!target || !targetUid) {
       toastMessages.form.validationError();
       return;
     }
@@ -211,7 +437,7 @@ export default function MemorandumViolationModal({
     setSubmittingAdd(true);
     try {
       const fd = new FormData();
-      fd.append("user_id", String(target.id));
+      fd.append("user_id", targetUid);
       fd.append("violation_date", violation_date);
       fd.append("title", t);
       fd.append("document", addFile);
@@ -224,16 +450,7 @@ export default function MemorandumViolationModal({
         `${name}: violation has been saved.`
       );
 
-      setSessionRows((prev) => [
-        {
-          id: `local-${Date.now()}`,
-          title: t,
-          violation_date,
-          fileName: addFile?.name ?? null,
-          file: addFile,
-        },
-        ...prev,
-      ]);
+      await fetchViolationsForUser(targetUid);
       setAddModalOpen(false);
       resetAddForm();
     } catch (e: unknown) {
@@ -262,29 +479,67 @@ export default function MemorandumViolationModal({
   };
 
   const showEmployeePicker = !employee;
-  const pickerOptions = pickerUsers.map((u) => ({
-    value: String(u.id),
-    label: `${u.fname || ""} ${u.lname || ""} (${u.email || "no email"})`.trim(),
-  }));
+  const pickerOptions = pickerUsers
+    .map((u) => {
+      const vid = resolveUserRecordId(u);
+      if (!vid) return null;
+      return {
+        value: vid,
+        label: `${u.fname || ""} ${u.lname || ""} (${u.email || "no email"})`.trim(),
+      };
+    })
+    .filter((o): o is { value: string; label: string } => o != null);
 
-  const employeeSubtitle = employee
-    ? `${employee.fname} ${employee.lname}`
-    : "Select an employee and manage memorandum violations";
+  const selectedPickerUser = useMemo(() => {
+    if (!selectedEmployeeId) return null;
+    return (
+      pickerUsers.find((u) => resolveUserRecordId(u) === selectedEmployeeId) ??
+      null
+    );
+  }, [pickerUsers, selectedEmployeeId]);
+
+  const headerEmployeeName = employee
+    ? `${employee.fname || ""} ${employee.lname || ""}`.trim()
+    : selectedPickerUser
+      ? `${selectedPickerUser.fname || ""} ${selectedPickerUser.lname || ""}`.trim()
+      : "";
+
+  const employeeSubtitle = headerEmployeeName
+    ? "Memorandum violations for this employee"
+    : "Select an employee to load and manage memorandum violations";
 
   const addViolationDisabled =
     submittingAdd ||
     (showEmployeePicker && (!selectedEmployeeId || loadingPicker));
 
-  const viewFileUrl =
-    viewingRow?.file && viewingRow.file instanceof File
-      ? URL.createObjectURL(viewingRow.file)
-      : null;
+  const viewFileUrl = useMemo(() => {
+    if (!viewingRow) return null;
+    if (viewingRow.file instanceof File) {
+      return URL.createObjectURL(viewingRow.file);
+    }
+    return resolveDocumentHrefForRow(viewingRow);
+  }, [viewingRow]);
 
   useEffect(() => {
+    if (!viewingRow?.file || !(viewingRow.file instanceof File)) return;
+    const url = viewFileUrl;
     return () => {
-      if (viewFileUrl) URL.revokeObjectURL(viewFileUrl);
+      if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
     };
-  }, [viewFileUrl]);
+  }, [viewingRow, viewFileUrl]);
+
+  const viewAttachmentKind = useMemo((): "image" | "pdf" | "other" | null => {
+    if (!viewingRow) return null;
+    const f = viewingRow.file;
+    if (f instanceof File) {
+      if (f.type.startsWith("image/")) return "image";
+      if (f.type === "application/pdf") return "pdf";
+    }
+    if (!viewFileUrl) return null;
+    if (isLikelyImageHref(viewFileUrl)) return "image";
+    if (isLikelyPdfHref(viewFileUrl)) return "pdf";
+    return "other";
+  }, [viewingRow, viewFileUrl]);
 
   return (
     <>
@@ -326,7 +581,14 @@ export default function MemorandumViolationModal({
                   </div>
                   <span>Memorandum Violation</span>
                 </DialogTitle>
-                <p className="mt-2 text-sm text-white/90 leading-snug">
+                {headerEmployeeName ? (
+                  <p className="mt-4 text-xl font-bold text-white/90 leading-snug">
+                    {headerEmployeeName}
+                  </p>
+                ) : null}
+                <p
+                  className={`text-sm text-white/90 leading-snug ${headerEmployeeName ? "mt-2" : "mt-4"}`}
+                >
                   {employeeSubtitle}
                 </p>
               </DialogHeader>
@@ -358,7 +620,24 @@ export default function MemorandumViolationModal({
               </div>
             )}
 
-            <div className="flex justify-end">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!effectiveFetchUserId || loadingViolations}
+                onClick={() => {
+                  if (effectiveFetchUserId) {
+                    void fetchViolationsForUser(effectiveFetchUserId);
+                  }
+                }}
+                className="cursor-pointer border-amber-300 bg-white hover:bg-amber-50"
+                title="Reload violations for this employee from the server"
+              >
+                <RefreshCw
+                  className={`mr-2 inline h-4 w-4 ${loadingViolations ? "animate-spin" : ""}`}
+                />
+                Refresh list
+              </Button>
               <Button
                 type="button"
                 onClick={() => {
@@ -378,38 +657,64 @@ export default function MemorandumViolationModal({
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gradient-to-r from-amber-50 to-amber-100">
-                      <TableHead className="font-semibold text-amber-900 min-w-[140px]">
+                      <TableHead className="font-semibold text-amber-900 min-w-[min(40%,12rem)]">
                         Title
                       </TableHead>
-                      <TableHead className="font-semibold text-amber-900 min-w-[120px] whitespace-nowrap">
+                      <TableHead className="font-semibold text-amber-900 min-w-[7.5rem] whitespace-nowrap">
                         Date
                       </TableHead>
-                      <TableHead className="font-semibold text-amber-900 w-[120px] text-right">
+                      <TableHead className="font-semibold text-amber-900 min-w-[6rem] whitespace-nowrap">
+                        Type
+                      </TableHead>
+                      <TableHead className="font-semibold text-amber-900 w-[1%] whitespace-nowrap text-right">
                         Action
                       </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sessionRows.length === 0 ? (
+                    {loadingViolations ? (
                       <TableRow>
                         <TableCell
-                          colSpan={3}
+                          colSpan={4}
+                          className="py-10 text-center text-gray-600"
+                        >
+                          <Loader2 className="mr-2 inline h-5 w-5 animate-spin text-amber-600" />
+                          Loading violations…
+                        </TableCell>
+                      </TableRow>
+                    ) : sessionRows.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={4}
                           className="text-center text-gray-500 py-10"
                         >
                           No violations yet. Use Add Violation to create one.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      sessionRows.map((row) => (
+                      sessionRows.map((row) => {
+                        const docHref = resolveDocumentHrefForRow(row);
+                        const docType = memorandumDocumentTypeLabel(
+                          row.fileName,
+                          row.document_path,
+                          row.document_url,
+                          docHref
+                        );
+                        return (
                         <TableRow
                           key={row.id}
                           className="hover:bg-gray-50 transition-colors"
                         >
-                          <TableCell className="text-gray-900 text-sm font-medium">
-                            {row.title}
+                          <TableCell className="max-w-[14rem] text-gray-900 text-sm font-medium">
+                            <span className="line-clamp-2" title={row.title}>
+                              {row.title}
+                            </span>
                           </TableCell>
                           <TableCell className="text-gray-700 text-sm whitespace-nowrap">
                             {formatViolationDateCell(row)}
+                          </TableCell>
+                          <TableCell className="text-gray-800 text-sm font-medium">
+                            {docType}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
@@ -424,7 +729,8 @@ export default function MemorandumViolationModal({
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -712,73 +1018,175 @@ export default function MemorandumViolationModal({
         </DialogContent>
       </Dialog>
 
-      {/* View details */}
+      {/* View details — memorandum preview */}
       <Dialog
         open={!!viewingRow}
         onOpenChangeAction={(next) => {
           if (!next) setViewingRow(null);
         }}
       >
-        <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
-          <DialogHeader>
-            <DialogTitle className="text-lg">Memorandum</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 pt-2 text-sm">
-            <div>
-              <span className="font-medium text-gray-600">Title</span>
-              <p className="mt-1 text-gray-900">{viewingRow?.title}</p>
+        <DialogContent
+          className={`max-w-lg gap-0 overflow-hidden p-0 sm:max-w-xl ${dialogAnimationClass}`}
+        >
+          <div
+            className="relative overflow-hidden px-6 pt-6 pb-5 text-white"
+            style={{
+              backgroundImage: "url(/smct.png)",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-600/95 via-orange-600/92 to-amber-800/95" />
+            <div className="relative flex gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/20 shadow-inner ring-1 ring-white/30 backdrop-blur-sm">
+                <FileWarning className="h-6 w-6 text-white" />
+              </div>
+              <div className="min-w-0 flex-1 space-y-1">
+                <DialogTitle className="text-left text-xl font-semibold tracking-tight text-white drop-shadow-sm">
+                  Memorandum details
+                </DialogTitle>
+                <DialogDescription className="text-left text-sm leading-relaxed text-amber-50/95">
+                  Violation title, date, and supporting document for this record.
+                </DialogDescription>
+              </div>
             </div>
-            <div>
-              <span className="font-medium text-gray-600">Date</span>
-              <p className="mt-1 text-gray-900">
-                {viewingRow?.violation_date
-                  ? (() => {
-                      try {
-                        return format(
-                          parseISO(viewingRow.violation_date),
-                          "MMMM d, yyyy"
-                        );
-                      } catch {
-                        return viewingRow.violation_date;
-                      }
-                    })()
-                  : "—"}
-              </p>
+          </div>
+
+          <div className="space-y-4 bg-gradient-to-b from-slate-50/90 to-white px-6 py-5">
+            <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
+              <div className="flex gap-3">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Title
+                  </p>
+                  <p className="mt-1 text-base font-semibold leading-snug text-slate-900">
+                    {viewingRow?.title ?? "—"}
+                  </p>
+                </div>
+              </div>
             </div>
-            {viewingRow?.fileName ? (
-              <div>
-                <span className="font-medium text-gray-600">Supporting file</span>
-                <p className="mt-1 text-gray-900">{viewingRow.fileName}</p>
-                {viewFileUrl &&
-                  viewingRow.file?.type?.startsWith("image/") && (
-                    <img
-                      src={viewFileUrl}
-                      alt=""
-                      className="mt-2 max-h-52 w-auto max-w-full rounded-md border border-gray-200 object-contain"
-                    />
-                  )}
-                {viewFileUrl && (
-                  <a
-                    href={viewFileUrl}
-                    download={viewingRow.fileName}
-                    className="inline-block mt-2 text-amber-700 underline text-sm"
-                  >
-                    Download file
-                  </a>
-                )}
+
+            <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
+              <div className="flex gap-3">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 ring-1 ring-slate-200/80">
+                  <Calendar className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Violation date
+                  </p>
+                  <p className="mt-1 text-base font-semibold text-slate-900">
+                    {viewingRow?.violation_date
+                      ? (() => {
+                          try {
+                            return format(
+                              parseISO(viewingRow.violation_date),
+                              "MMMM d, yyyy"
+                            );
+                          } catch {
+                            return viewingRow.violation_date;
+                          }
+                        })()
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {viewingRow?.fileName || viewFileUrl ? (
+              <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+                <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Supporting document
+                  </p>
+                  <p className="mt-0.5 truncate text-sm font-medium text-slate-800">
+                    {viewingRow?.fileName || "Attachment"}
+                  </p>
+                </div>
+                <div className="p-4">
+                  {!viewFileUrl && viewingRow?.fileName ? (
+                    <p className="text-sm text-slate-600">
+                      Preview link unavailable for this attachment.
+                    </p>
+                  ) : null}
+                  {viewFileUrl && viewAttachmentKind === "image" ? (
+                    <div className="overflow-hidden rounded-lg bg-slate-100/80 ring-1 ring-slate-200/60">
+                      <img
+                        src={viewFileUrl}
+                        alt=""
+                        className="mx-auto max-h-[min(320px,50vh)] w-full object-contain"
+                      />
+                    </div>
+                  ) : null}
+                  {viewFileUrl && viewAttachmentKind === "pdf" ? (
+                    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-amber-200/90 bg-amber-50/50 px-4 py-8 text-center">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-amber-100">
+                        <FileType2 className="h-7 w-7 text-amber-700" />
+                      </div>
+                      <p className="text-sm font-medium text-slate-800">
+                        PDF document
+                      </p>
+                      <p className="max-w-xs text-xs text-slate-600">
+                        Open in a new tab to view or use download to save a copy.
+                      </p>
+                    </div>
+                  ) : null}
+                  {viewFileUrl && viewAttachmentKind === "other" ? (
+                    <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700">
+                      <FileType2 className="h-5 w-5 shrink-0 text-slate-500" />
+                      <span>Preview not available — open or download the file.</span>
+                    </div>
+                  ) : null}
+                  {viewFileUrl ? (
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="cursor-pointer border-amber-200 bg-white text-amber-900 hover:bg-amber-50"
+                        asChild
+                      >
+                        <a
+                          href={viewFileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Open in new tab
+                        </a>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="cursor-pointer"
+                        asChild
+                      >
+                        <a
+                          href={viewFileUrl}
+                          download={viewingRow?.fileName || undefined}
+                        >
+                          <Download className="h-4 w-4" />
+                          Download
+                        </a>
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             ) : null}
           </div>
-          <div className="flex justify-end pt-4">
+
+          <DialogFooter className="border-t border-slate-200/80 bg-slate-50/90 px-6 py-4">
             <Button
               type="button"
-              variant="secondary"
-              className="cursor-pointer"
+              className="cursor-pointer bg-amber-600 text-white hover:bg-amber-700"
               onClick={() => setViewingRow(null)}
             >
               Close
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

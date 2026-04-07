@@ -363,7 +363,7 @@ export const apiService = {
     return response.data;
   },
 
-  /**
+  /*
    * Logged-in employee: list memorandum violations recorded against them.
    * Query: search (title etc.), month (YYYY-MM, optional), page, per_page.
    * Backend should return a Laravel-style paginator or { data: [], total, ... }.
@@ -382,6 +382,19 @@ export const apiService = {
         per_page: params.per_page ?? 10,
       },
     });
+    return response.data;
+  },
+
+  /**
+   * HR (or authorized role): list memorandum violations for a specific user.
+   * Backend: GET /showUserMemorandumViolation/{userId}
+   */
+  getUserMemorandumViolations: async (
+    userId: string | number
+  ): Promise<any> => {
+    const response = await api.get(
+      `/showUserMemorandumViolation/${encodeURIComponent(String(userId))}`
+    );
     return response.data;
   },
 
