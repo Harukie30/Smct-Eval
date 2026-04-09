@@ -42,6 +42,8 @@ import apiService from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { CONFIG } from "../../config/config";
 import { memorandumDocumentTypeLabel } from "@/lib/memorandumDocumentType";
+import EvaluationsPagination from "@/components/paginationComponent";
+import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 
 function localDateInputValue(d = new Date()): string {
   const y = d.getFullYear();
@@ -83,6 +85,15 @@ export interface MemorandumViolationModalProps {
   branchFilterForEmployeePicker?: string;
   shouldHideAdminUsers?: boolean;
 }
+
+/** When total rows exceed this, paginate at `VIOLATIONS_PAGE_SIZE` per page. */
+const VIOLATIONS_PAGE_SIZE = 10;
+
+/** Body rows visible on the current page before the table scrolls (header stays sticky). */
+const VIOLATIONS_SCROLL_AFTER_ROWS = 7;
+
+/** Auto-dismiss save-success dialog after this many milliseconds. */
+const SAVE_SUCCESS_DIALOG_AUTO_CLOSE_MS = 2500;
 
 /** Image or PDF only (required attachment). */
 const ATTACHMENT_ACCEPT =
@@ -271,6 +282,8 @@ export default function MemorandumViolationModal({
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
 
   const [sessionRows, setSessionRows] = useState<MemorandumSessionRow[]>([]);
+  /** 1-based page index when `sessionRows.length` exceeds `VIOLATIONS_PAGE_SIZE`. */
+  const [violationsPage, setViolationsPage] = useState(1);
   const [loadingViolations, setLoadingViolations] = useState(false);
   const [viewingRow, setViewingRow] = useState<MemorandumSessionRow | null>(
     null
@@ -285,6 +298,19 @@ export default function MemorandumViolationModal({
   const [fileHandling, setFileHandling] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /** Same entrance animation as Branch Quarterly Report / user-management modals. */
+  const saveSuccessDialogAnimationClass = useDialogAnimation({ duration: 0.4 });
+  const [showSaveSuccessDialog, setShowSaveSuccessDialog] = useState(false);
+  const [saveSuccessEmployeeLabel, setSaveSuccessEmployeeLabel] = useState("");
+
+  useEffect(() => {
+    if (!showSaveSuccessDialog) return;
+    const id = window.setTimeout(() => {
+      setShowSaveSuccessDialog(false);
+    }, SAVE_SUCCESS_DIALOG_AUTO_CLOSE_MS);
+    return () => window.clearTimeout(id);
+  }, [showSaveSuccessDialog]);
+
   const resetAddForm = useCallback(() => {
     setAddTitle("");
     setAddDateStr(localDateInputValue());
@@ -298,11 +324,31 @@ export default function MemorandumViolationModal({
     setPickerUsers([]);
     setSelectedEmployeeId("");
     setSessionRows([]);
+    setViolationsPage(1);
+    setShowSaveSuccessDialog(false);
+    setSaveSuccessEmployeeLabel("");
     setLoadingViolations(false);
     setViewingRow(null);
     setAddModalOpen(false);
     resetAddForm();
   }, [onOpenChangeAction, resetAddForm]);
+
+  const violationsUsePagination = sessionRows.length > VIOLATIONS_PAGE_SIZE;
+  const violationsTotalPages = Math.max(
+    1,
+    Math.ceil(sessionRows.length / VIOLATIONS_PAGE_SIZE)
+  );
+
+  const violationsDisplayedRows = useMemo(() => {
+    if (!violationsUsePagination) return sessionRows;
+    const start = (violationsPage - 1) * VIOLATIONS_PAGE_SIZE;
+    return sessionRows.slice(start, start + VIOLATIONS_PAGE_SIZE);
+  }, [sessionRows, violationsPage, violationsUsePagination]);
+
+  useEffect(() => {
+    const tp = Math.max(1, Math.ceil(sessionRows.length / VIOLATIONS_PAGE_SIZE));
+    setViolationsPage((p) => Math.min(p, tp));
+  }, [sessionRows.length]);
 
   const fetchViolationsForUser = useCallback(async (userId: string) => {
     if (!userId) {
@@ -445,10 +491,8 @@ export default function MemorandumViolationModal({
       await apiService.addMemorandumViolation(fd);
 
       const name = `${target.fname || ""} ${target.lname || ""}`.trim();
-      toastMessages.generic.success(
-        "Memorandum violation recorded",
-        `${name}: violation has been saved.`
-      );
+      setSaveSuccessEmployeeLabel(name);
+      setShowSaveSuccessDialog(true);
 
       await fetchViolationsForUser(targetUid);
       setAddModalOpen(false);
@@ -654,8 +698,25 @@ export default function MemorandumViolationModal({
 
             <div className="space-y-3">
               <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                <Table>
-                  <TableHeader>
+                <div
+                  className={cn(
+                    violationsDisplayedRows.length > VIOLATIONS_SCROLL_AFTER_ROWS &&
+                      "max-h-[min(23rem,48vh)] overflow-y-auto overflow-x-auto"
+                  )}
+                >
+                <Table
+                  wrapperClassName={
+                    violationsDisplayedRows.length > VIOLATIONS_SCROLL_AFTER_ROWS
+                      ? "overflow-visible"
+                      : undefined
+                  }
+                >
+                  <TableHeader
+                    className={cn(
+                      violationsDisplayedRows.length > VIOLATIONS_SCROLL_AFTER_ROWS &&
+                        "sticky top-0 z-10 shadow-[0_1px_0_0_rgb(229_231_235)] bg-gradient-to-r from-amber-50 to-amber-100"
+                    )}
+                  >
                     <TableRow className="bg-gradient-to-r from-amber-50 to-amber-100">
                       <TableHead className="font-semibold text-amber-900 min-w-[min(40%,12rem)]">
                         Title
@@ -692,7 +753,7 @@ export default function MemorandumViolationModal({
                         </TableCell>
                       </TableRow>
                     ) : (
-                      sessionRows.map((row) => {
+                      violationsDisplayedRows.map((row) => {
                         const docHref = resolveDocumentHrefForRow(row);
                         const docType = memorandumDocumentTypeLabel(
                           row.fileName,
@@ -734,7 +795,17 @@ export default function MemorandumViolationModal({
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </div>
+              {violationsUsePagination && !loadingViolations && sessionRows.length > 0 ? (
+                <EvaluationsPagination
+                  currentPage={violationsPage}
+                  totalPages={violationsTotalPages}
+                  total={sessionRows.length}
+                  perPage={VIOLATIONS_PAGE_SIZE}
+                  onPageChange={setViolationsPage}
+                />
+              ) : null}
             </div>
           </div>
         </DialogContent>
@@ -1186,6 +1257,58 @@ export default function MemorandumViolationModal({
             >
               Close
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save success — same pattern as Branch Quarterly Report CSV export success (userManagement) */}
+      <Dialog
+        open={showSaveSuccessDialog}
+        onOpenChangeAction={setShowSaveSuccessDialog}
+      >
+        <DialogContent
+          className={`max-w-sm w-[90vw] px-6 py-6 text-center ${saveSuccessDialogAnimationClass}`}
+        >
+          <DialogHeader className="border-0 pb-0 text-center sm:text-center">
+            <div className="relative mx-auto mb-5 flex h-[5.75rem] w-[5.75rem] items-center justify-center">
+              <span
+                className="absolute inset-0 rounded-full bg-emerald-400/30 motion-safe:animate-ping"
+                style={{ animationDuration: "2.4s" }}
+                aria-hidden
+              />
+              <div
+                className="absolute inset-[3px] rounded-full bg-gradient-to-br from-emerald-100/90 to-green-50 blur-[1px]"
+                aria-hidden
+              />
+              <div className="relative flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 via-green-500 to-emerald-700 shadow-[0_12px_40px_-8px_rgba(16,185,129,0.55)] ring-4 ring-white animate-success-badge-pop">
+                <svg
+                  className="h-11 w-11 text-white drop-shadow-sm"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden
+                >
+                  <path
+                    className="animate-success-check-draw"
+                    d="M6.5 12.5l3.8 3.8L17.8 8.8"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+            </div>
+            <DialogTitle className="text-xl font-bold text-gray-900">
+              Saved successfully
+            </DialogTitle>
+            <DialogDescription className="text-gray-700">
+              {saveSuccessEmployeeLabel
+                ? `${saveSuccessEmployeeLabel}: the memorandum violation has been saved.`
+                : "The memorandum violation has been saved."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
           </DialogFooter>
         </DialogContent>
       </Dialog>
