@@ -58,6 +58,7 @@ import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewEmployeeModal from "@/components/ViewEmployeeModal";
 import { User, useAuth } from "@/contexts/UserContext";
+import { sortUsersAlphabeticallyByName } from "@/lib/sortUsersByName";
 import { Combobox } from "@/components/ui/combobox";
 import EvaluationForm from "@/components/evaluation";
 import EvaluationTypeModal from "@/components/EvaluationTypeModal";
@@ -477,7 +478,7 @@ export default function UserManagementTab() {
         itemsPerPage
       );
 
-      setPendingRegistrations(response.data);
+      setPendingRegistrations(sortUsersAlphabeticallyByName(response.data));
       setPendingTotalItems(response.total);
       setTotalPendingPages(response.last_page);
       setPerPage(response.per_page);
@@ -536,7 +537,7 @@ export default function UserManagementTab() {
           normalizedBranch
         );
 
-        setActiveRegistrations(response.data);
+        setActiveRegistrations(sortUsersAlphabeticallyByName(response.data));
         setActiveTotalItems(response.total);
         setTotalActivePages(response.last_page);
         setPerPage(response.per_page);
@@ -806,13 +807,15 @@ export default function UserManagementTab() {
         : userResp?.data || userResp?.users || [];
 
       const allowedRoleNames = new Set(["employee", "hr", "evaluator"]);
-      const employeesList = usersList.filter((u: any) => {
-        if (shouldHideAdminUsers && userHasAdminRole(u)) return false;
-        const rolesArr = u?.roles && Array.isArray(u.roles) ? u.roles : [];
-        return rolesArr.some((r: { name?: string }) =>
-          allowedRoleNames.has(String(r?.name || "").toLowerCase())
-        );
-      });
+      const employeesList = sortUsersAlphabeticallyByName(
+        usersList.filter((u: any) => {
+          if (shouldHideAdminUsers && userHasAdminRole(u)) return false;
+          const rolesArr = u?.roles && Array.isArray(u.roles) ? u.roles : [];
+          return rolesArr.some((r: { name?: string }) =>
+            allowedRoleNames.has(String(r?.name || "").toLowerCase())
+          );
+        })
+      );
 
       // 2) Fetch all evaluations for this branch+year.
       const evalResp = await apiService.getSubmissions(

@@ -37,6 +37,7 @@ import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 import {
   getEmployeeBranchCodeDisplay,
 } from "@/components/evaluation/employeeBranchLabel";
+import { sortUsersAlphabeticallyByName } from "@/lib/sortUsersByName";
 
 export default function EmployeesTab() {
   const { user } = useAuth();
@@ -225,7 +226,7 @@ export default function EmployeesTab() {
           perPageValue = itemsPerPage;
         }
 
-        setEmployees(employeesData);
+        setEmployees(sortUsersAlphabeticallyByName(employeesData));
         setOverviewTotal(total);
         setTotalPages(lastPage);
         setPerPage(perPageValue);
