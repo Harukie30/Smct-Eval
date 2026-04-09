@@ -19,4 +19,4 @@ jobs:
         ssh-private-key: ${{ secrets.GANA }}
 
     - name: Deploy to server
-      run: ssh -o StrictHostKeyChecking=no webserver@192.168.1.100 "echo 'Hello from GitHub Actions' > /home/webserver/hello.txt"
+      run: ssh -o StrictHostKeyChecking=no webserver@192.168.1.100 "cd /home/webserver/systems/Performance_Evaluation/Smct_Eval && COMPOSE_HTTP_TIMEOUT=120 git pull && docker-compose down && docker-compose up --build -d "
