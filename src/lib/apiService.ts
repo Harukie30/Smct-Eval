@@ -1,4 +1,10 @@
 import { api, sanctum } from "./api";
+
+/** Ask API for stable name order so OFFSET pagination does not overlap pages (backend may ignore). */
+const USER_LIST_SORT_PARAMS = {
+  sort: "lname",
+  direction: "asc",
+} as const;
 import { EvaluationPayload } from "../components/evaluation/types";
 // Helper function to get CSRF cookie from Sanctum
 export const sanctum_csrf = async () => {
@@ -99,6 +105,7 @@ export const apiService = {
         status: status || "",
         page: page,
         per_page: perPage,
+        ...USER_LIST_SORT_PARAMS,
       },
     });
     return response.data.users || [];
@@ -120,6 +127,7 @@ export const apiService = {
         per_page: perPage,
         branch: branch || "",
         department: department || "",
+        ...USER_LIST_SORT_PARAMS,
       },
     });
     return response.data.users || [];
@@ -328,6 +336,7 @@ export const apiService = {
         per_page: per_page || 10,
         page: page || 1,
         position_filter: position_filter || "",
+        ...USER_LIST_SORT_PARAMS,
       },
     });
     const data = response.data;

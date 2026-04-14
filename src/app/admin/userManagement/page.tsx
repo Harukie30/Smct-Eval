@@ -40,7 +40,7 @@ import EditUserModal from "@/components/EditUserModal";
 import AddEmployeeModal from "@/components/AddEmployeeModal";
 import { toastMessages } from "@/lib/toastMessages";
 import apiService from "@/lib/apiService";
-import { sortUsersAlphabeticallyByName } from "@/lib/sortUsersByName";
+import { dedupeUsersById } from "@/lib/sortUsersByName";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewEmployeeModal from "@/components/ViewEmployeeModal";
@@ -163,7 +163,9 @@ export default function UserManagementTab() {
           itemsPerPage
         );
 
-        setPendingRegistrations(sortUsersAlphabeticallyByName(response.data));
+        setPendingRegistrations(
+          dedupeUsersById(Array.isArray(response.data) ? response.data : [])
+        );
         setPendingTotalItems(response.total);
         setTotalPendingPages(response.last_page);
         setPerPage(response.per_page);
@@ -225,7 +227,9 @@ export default function UserManagementTab() {
           itemsPerPage
         );
 
-        setActiveRegistrations(sortUsersAlphabeticallyByName(response.data));
+        setActiveRegistrations(
+          dedupeUsersById(Array.isArray(response.data) ? response.data : [])
+        );
         setActiveTotalItems(response.total);
         setTotalActivePages(response.last_page);
         setPerPage(response.per_page);
