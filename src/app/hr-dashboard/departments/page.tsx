@@ -663,7 +663,7 @@ export default function DepartmentsTab() {
                                     className="cursor-pointer hover:bg-green-500 bg-green-500 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                                   >
                                     <Users className="h-4 w-4 mr-1 " />
-                                    Managers
+                                    Evaluators  
                                   </Button>
                                   <Button
                                     variant="ghost"
