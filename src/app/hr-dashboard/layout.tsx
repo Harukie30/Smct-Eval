@@ -45,6 +45,12 @@ function HRLayout({ children }: { children: React.ReactNode }) {
         path: "/hr-dashboard/myViolations",
       },
       {
+        id: "signature-reset",
+        label: "Signature Requests",
+        icon: "✍️",
+        path: "/hr-dashboard/signatureResetRequests",
+      },
+      {
         id: "departments",
         label: "Departments",
         icon: "🏢",
@@ -73,12 +79,6 @@ function HRLayout({ children }: { children: React.ReactNode }) {
         label: "Area Managers",
         icon: "🎯",
         path: "/hr-dashboard/areaManagers",
-      },
-      {
-        id: "signature-reset",
-        label: "Signature Requests",
-        icon: "✍️",
-        path: "/hr-dashboard/signatureResetRequests",
       },
     ];
   }, [user?.position_id]);
