@@ -30,12 +30,14 @@ import {
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Users } from "lucide-react";
 import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import apiService from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { AlertDialog } from "@/components/ui/alert-dialog";
+import BranchEmployeesModal from "@/components/hr/BranchEmployeesModal";
+import BranchManagersModal from "@/components/hr/BranchManagersModal";
 
 interface Branches {
   id: number;
@@ -110,6 +112,12 @@ export default function DepartmentsTab() {
   const [isAddingBranch, setIsAddingBranch] = useState(false);
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [branchWithEmployees, setBranchWithEmployees] = useState<Branches | null>(null);
+  const [isEmployeesModalOpen, setIsEmployeesModalOpen] = useState(false);
+  const [selectedBranchForEmployees, setSelectedBranchForEmployees] =
+    useState<Branches | null>(null);
+  const [isManagersModalOpen, setIsManagersModalOpen] = useState(false);
+  const [selectedBranchForManagers, setSelectedBranchForManagers] =
+    useState<Branches | null>(null);
 
   //add inputs
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -370,6 +378,16 @@ export default function DepartmentsTab() {
     }
   };
 
+  const openBranchEmployeesModal = (branch: Branches) => {
+    setSelectedBranchForEmployees(branch);
+    setIsEmployeesModalOpen(true);
+  };
+
+  const openBranchManagersModal = (branch: Branches) => {
+    setSelectedBranchForManagers(branch);
+    setIsManagersModalOpen(true);
+  };
+
   // Show loading skeleton on initial load
   if (loading) {
     return (
@@ -586,6 +604,24 @@ export default function DepartmentsTab() {
                                   <Badge variant="outline">
                                     {getEmployeesCount(branch)} employees
                                   </Badge>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openBranchEmployeesModal(branch)}
+                                    className="cursor-pointer hover:bg-blue-500 hover:text-blue-700 "
+                                  >
+                                    <Users className="h-4 w-4 mr-1 " />
+                                    Employees
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openBranchManagersModal(branch)}
+                                    className="cursor-pointer hover:bg-green-500 hover:text-green-700 "
+                                  >
+                                    <Users className="h-4 w-4 mr-1 " />
+                                    Managers
+                                  </Button>
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -1007,6 +1043,32 @@ export default function DepartmentsTab() {
           setIsAlertDialogOpen(false);
           setBranchWithEmployees(null);
         }}
+      />
+
+      <BranchEmployeesModal
+        open={isEmployeesModalOpen}
+        onOpenChange={(open) => {
+          setIsEmployeesModalOpen(open);
+          if (!open) {
+            setSelectedBranchForEmployees(null);
+          }
+        }}
+        selectedBranch={selectedBranchForEmployees}
+        expectedCount={getEmployeesCount(selectedBranchForEmployees ?? {})}
+        dialogAnimationClass={dialogAnimationClass}
+      />
+
+      <BranchManagersModal
+        open={isManagersModalOpen}
+        onOpenChange={(open) => {
+          setIsManagersModalOpen(open);
+          if (!open) {
+            setSelectedBranchForManagers(null);
+          }
+        }}
+        selectedBranch={selectedBranchForManagers}
+        expectedCount={getManagersCount(selectedBranchForManagers ?? {})}
+        dialogAnimationClass={dialogAnimationClass}
       />
     </div>
   );

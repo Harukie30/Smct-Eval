@@ -23,12 +23,18 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Users } from "lucide-react";
 import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import apiService from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { AlertDialog } from "@/components/ui/alert-dialog";
+import DepartmentEmployeesModal, {
+  DepartmentEmployee,
+} from "@/components/hr/DepartmentEmployeesModal";
+import DepartmentManagersModal, {
+  DepartmentManager,
+} from "@/components/hr/DepartmentManagersModal";
 
 interface Department {
   id: number;
@@ -64,6 +70,20 @@ export default function DepartmentsTab() {
   const [isAddingDepartment, setIsAddingDepartment] = useState(false);
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [departmentWithEmployees, setDepartmentWithEmployees] = useState<Department | null>(null);
+  const [isEmployeesModalOpen, setIsEmployeesModalOpen] = useState(false);
+  const [selectedDepartmentForEmployees, setSelectedDepartmentForEmployees] =
+    useState<Department | null>(null);
+  const [departmentEmployees, setDepartmentEmployees] = useState<
+    DepartmentEmployee[]
+  >([]);
+  const [isEmployeesLoading, setIsEmployeesLoading] = useState(false);
+  const [isManagersModalOpen, setIsManagersModalOpen] = useState(false);
+  const [selectedDepartmentForManagers, setSelectedDepartmentForManagers] =
+    useState<Department | null>(null);
+  const [departmentManagers, setDepartmentManagers] = useState<
+    DepartmentManager[]
+  >([]);
+  const [isManagersLoading, setIsManagersLoading] = useState(false);
 
   const departmentsInFlightKeyRef = useRef<string | null>(null);
   const departmentsInFlightPromiseRef = useRef<Promise<void> | null>(null);
@@ -254,6 +274,148 @@ export default function DepartmentsTab() {
       );
     } finally {
       setDepartmentToDelete(null);
+    }
+  };
+
+  const getDisplayRole = (roles: any): string => {
+    if (!roles || !Array.isArray(roles) || roles.length === 0) {
+      return "N/A";
+    }
+
+    const nonAdminRole = roles.find(
+      (role: { name?: string }) =>
+        String(role?.name ?? "").toLowerCase() !== "admin"
+    );
+
+    return String((nonAdminRole ?? roles[0])?.name ?? "N/A");
+  };
+
+  const isManagerUser = (user: any): boolean => {
+    const roleNames = Array.isArray(user?.roles)
+      ? user.roles.map((role: any) => String(role?.name ?? "").toLowerCase())
+      : [];
+    const positionLabel = String(
+      user?.positions?.label ?? user?.position ?? ""
+    ).toLowerCase();
+
+    const managerKeywords = [
+      "manager",
+      "head",
+      "supervisor",
+      "lead",
+      "chief",
+      "officer",
+      "director",
+      "evaluator",
+    ];
+
+    const roleSuggestsManager = roleNames.some((roleName: string) =>
+      managerKeywords.some((keyword) => roleName.includes(keyword))
+    );
+    const positionSuggestsManager = managerKeywords.some((keyword) =>
+      positionLabel.includes(keyword)
+    );
+
+    return roleSuggestsManager || positionSuggestsManager;
+  };
+
+  const getDepartmentUsers = async (departmentId: number): Promise<any[]> => {
+    const allUsers: any[] = [];
+    let page = 1;
+    let lastPage = 1;
+
+    do {
+      const response = await apiService.getActiveRegistrations(
+        "",
+        0,
+        page,
+        300,
+        "",
+        String(departmentId)
+      );
+
+      const pageUsers = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response)
+          ? response
+          : [];
+
+      allUsers.push(...pageUsers);
+      lastPage =
+        typeof response?.last_page === "number" && response.last_page > 0
+          ? response.last_page
+          : 1;
+      page += 1;
+    } while (page <= lastPage);
+
+    return allUsers;
+  };
+
+  const normalizeDepartmentUsers = (users: any[]) => {
+    return users.map((user: any) => {
+      const firstName = String(user?.fname ?? "").trim();
+      const lastName = String(user?.lname ?? "").trim();
+      const fullName = `${firstName} ${lastName}`.trim() || "N/A";
+      const role = getDisplayRole(user?.roles);
+
+      return {
+        id: user?.id ?? `${fullName}-${user?.email ?? "unknown"}`,
+        fullName,
+        email: String(user?.email ?? "N/A"),
+        role,
+        position: String(user?.positions?.label ?? user?.position ?? "N/A"),
+        userType: isManagerUser(user) ? "Manager" : "Employee",
+      };
+    });
+  };
+
+  const openDepartmentEmployeesModal = async (department: Department) => {
+    setSelectedDepartmentForEmployees(department);
+    setIsEmployeesModalOpen(true);
+    setIsEmployeesLoading(true);
+    setDepartmentEmployees([]);
+
+    try {
+      const users = await getDepartmentUsers(department.id);
+      const normalizedUsers = normalizeDepartmentUsers(users);
+      const employeesOnly = normalizedUsers.filter(
+        (user) => user.userType === "Employee"
+      );
+      setDepartmentEmployees(employeesOnly);
+    } catch (error) {
+      console.error("Error loading department employees:", error);
+      toastMessages.generic.error(
+        "Error",
+        "Failed to load department employees. Please try again."
+      );
+      setDepartmentEmployees([]);
+    } finally {
+      setIsEmployeesLoading(false);
+    }
+  };
+
+  const openDepartmentManagersModal = async (department: Department) => {
+    setSelectedDepartmentForManagers(department);
+    setIsManagersModalOpen(true);
+    setIsManagersLoading(true);
+    setDepartmentManagers([]);
+
+    try {
+      const users = await getDepartmentUsers(department.id);
+      const normalizedUsers = normalizeDepartmentUsers(users);
+      const managersOnly = normalizedUsers.filter(
+        (user) => user.userType === "Manager"
+      );
+      setDepartmentManagers(managersOnly);
+    } catch (error) {
+      console.error("Error loading department managers:", error);
+      toastMessages.generic.error(
+        "Error",
+        "Failed to load department managers. Please try again."
+      );
+      setDepartmentManagers([]);
+    } finally {
+      setIsManagersLoading(false);
     }
   };
 
@@ -474,6 +636,28 @@ export default function DepartmentsTab() {
                                   <Badge variant="outline">
                                     {dept.employees_count} employees
                                   </Badge>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      void openDepartmentEmployeesModal(dept)
+                                    }
+                                    className="cursor-pointer hover:bg-blue-500 hover:text-blue-700 "
+                                  >
+                                    <Users className="h-4 w-4 mr-1 " />
+                                    Employees
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      void openDepartmentManagersModal(dept)
+                                    }
+                                    className="cursor-pointer hover:bg-green-500 hover:text-green-700 "
+                                  >
+                                    <Users className="h-4 w-4 mr-1 " />
+                                    Managers
+                                  </Button>
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -811,6 +995,36 @@ export default function DepartmentsTab() {
           setIsAlertDialogOpen(false);
           setDepartmentWithEmployees(null);
         }}
+      />
+
+      <DepartmentEmployeesModal
+        open={isEmployeesModalOpen}
+        onOpenChange={(open) => {
+          setIsEmployeesModalOpen(open);
+          if (!open) {
+            setSelectedDepartmentForEmployees(null);
+            setDepartmentEmployees([]);
+          }
+        }}
+        selectedDepartment={selectedDepartmentForEmployees}
+        employees={departmentEmployees}
+        isLoading={isEmployeesLoading}
+        dialogAnimationClass={dialogAnimationClass}
+      />
+
+      <DepartmentManagersModal
+        open={isManagersModalOpen}
+        onOpenChange={(open) => {
+          setIsManagersModalOpen(open);
+          if (!open) {
+            setSelectedDepartmentForManagers(null);
+            setDepartmentManagers([]);
+          }
+        }}
+        selectedDepartment={selectedDepartmentForManagers}
+        managers={departmentManagers}
+        isLoading={isManagersLoading}
+        dialogAnimationClass={dialogAnimationClass}
       />
     </div>
   );
