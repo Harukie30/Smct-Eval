@@ -364,6 +364,13 @@ export default function DepartmentsTab() {
         email: String(user?.email ?? "N/A"),
         role,
         position: String(user?.positions?.label ?? user?.position ?? "N/A"),
+        section: String(
+          user?.section?.name ??
+            user?.sections?.name ??
+            user?.section_name ??
+            user?.section ??
+            "Unassigned"
+        ),
         userType: isManagerUser(user) ? "Manager" : "Employee",
       };
     });

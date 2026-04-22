@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { Loader2, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Combobox } from "@/components/ui/combobox";
 
 export interface DepartmentForEmployeesModal {
   id: number;
@@ -32,6 +34,7 @@ export interface DepartmentEmployee {
   email: string;
   role: string;
   position: string;
+  section?: string;
 }
 
 interface DepartmentEmployeesModalProps {
@@ -51,6 +54,28 @@ export default function DepartmentEmployeesModal({
   isLoading,
   dialogAnimationClass = "",
 }: DepartmentEmployeesModalProps) {
+  const [selectedSection, setSelectedSection] = useState<string>("all");
+
+  const sectionOptions = useMemo(() => {
+    const uniqueSections = Array.from(
+      new Set(
+        employees.map((employee) => employee.section?.trim() || "Unassigned")
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
+    return [
+      { value: "all", label: "All Sections" },
+      ...uniqueSections.map((section) => ({ value: section, label: section })),
+    ];
+  }, [employees]);
+
+  const filteredEmployees = useMemo(() => {
+    if (selectedSection === "all") return employees;
+    return employees.filter(
+      (employee) => (employee.section?.trim() || "Unassigned") === selectedSection
+    );
+  }, [employees, selectedSection]);
+
   return (
     <Dialog open={open} onOpenChangeAction={onOpenChange}>
       <DialogContent className={`max-w-5xl p-0 overflow-hidden ${dialogAnimationClass}`}>
@@ -68,15 +93,26 @@ export default function DepartmentEmployeesModal({
         </DialogHeader>
 
         <div className="px-6 py-4">
+          <div className="mb-4 w-full sm:w-72">
+            <Combobox
+              options={sectionOptions}
+              value={selectedSection}
+              onValueChangeAction={(value) => setSelectedSection(String(value))}
+              placeholder="Filter by section"
+              searchPlaceholder="Search section..."
+              emptyText="No section found."
+            />
+          </div>
+
           <div className="max-h-[60vh] overflow-y-auto border rounded-lg bg-white">
           {isLoading ? (
             <div className="flex items-center justify-center py-16 text-gray-500 gap-2">
               <Loader2 className="h-5 w-5 animate-spin" />
               Loading employees...
             </div>
-          ) : employees.length === 0 ? (
+          ) : filteredEmployees.length === 0 ? (
             <div className="py-16 text-center text-gray-500">
-              No employees found for this department.
+              No employees found for the selected section.
             </div>
           ) : (
             <Table wrapperClassName="rounded-lg">
@@ -89,7 +125,7 @@ export default function DepartmentEmployeesModal({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {employees.map((employee) => (
+                {filteredEmployees.map((employee) => (
                   <TableRow key={employee.id} className="hover:bg-blue-50/40">
                     <TableCell className="font-medium px-4">{employee.fullName}</TableCell>
                     <TableCell className="px-4">{employee.email}</TableCell>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { UserCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Combobox } from "@/components/ui/combobox";
 
 export interface BranchForManagersModal {
   id: number;
@@ -42,6 +44,18 @@ export default function BranchManagersModal({
   expectedCount,
   dialogAnimationClass = "",
 }: BranchManagersModalProps) {
+  const [selectedSection, setSelectedSection] = useState<string>("all");
+  const sectionOptions = useMemo(
+    () => [
+      { value: "all", label: "All Sections" },
+      { value: "Sales", label: "Sales" },
+      { value: "Service", label: "Service" },
+      { value: "Operations", label: "Operations" },
+      { value: "Admin", label: "Admin" },
+    ],
+    []
+  );
+
   return (
     <Dialog open={open} onOpenChangeAction={onOpenChange}>
       <DialogContent className={`max-w-5xl p-0 overflow-hidden ${dialogAnimationClass}`}>
@@ -59,6 +73,17 @@ export default function BranchManagersModal({
         </DialogHeader>
 
         <div className="px-6 py-4">
+          <div className="mb-4 w-full sm:w-72">
+            <Combobox
+              options={sectionOptions}
+              value={selectedSection}
+              onValueChangeAction={(value) => setSelectedSection(String(value))}
+              placeholder="Filter by section"
+              searchPlaceholder="Search section..."
+              emptyText="No section found."
+            />
+          </div>
+
           <div className="max-h-[60vh] overflow-y-auto border rounded-lg bg-white">
             <Table wrapperClassName="rounded-lg">
               <TableHeader className="sticky top-0 z-10 bg-slate-50">
@@ -72,7 +97,8 @@ export default function BranchManagersModal({
               <TableBody>
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-16 text-gray-500">
-                    Manager list API for branches is not available yet.
+                    Manager list API for branches is not available yet. Current
+                    section filter: {selectedSection === "all" ? "All Sections" : selectedSection}.
                   </TableCell>
                 </TableRow>
               </TableBody>
