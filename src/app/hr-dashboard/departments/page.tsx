@@ -642,7 +642,7 @@ export default function DepartmentsTab() {
                                     onClick={() =>
                                       void openDepartmentEmployeesModal(dept)
                                     }
-                                    className="cursor-pointer hover:bg-blue-500 hover:text-blue-700 "
+                                    className="cursor-pointer hover:bg-blue-500 bg-blue-500 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                                   >
                                     <Users className="h-4 w-4 mr-1 " />
                                     Employees
@@ -653,7 +653,7 @@ export default function DepartmentsTab() {
                                     onClick={() =>
                                       void openDepartmentManagersModal(dept)
                                     }
-                                    className="cursor-pointer hover:bg-green-500 hover:text-green-700 "
+                                    className="cursor-pointer hover:bg-green-500 bg-green-500 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                                   >
                                     <Users className="h-4 w-4 mr-1 " />
                                     Managers
