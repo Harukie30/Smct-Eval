@@ -688,9 +688,6 @@ export default function DepartmentsTab() {
                               <CardTitle className="flex justify-between items-center">
                                 {branch.branch_name + " /" + branch.branch_code}
                                 <div className="flex items-center gap-2">
-                                  <Badge variant="outline">
-                                    {getEmployeesCount(branch)} employees
-                                  </Badge>
                                   <Button
                                     variant="ghost"
                                     size="sm"
