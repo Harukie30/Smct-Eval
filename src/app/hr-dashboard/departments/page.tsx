@@ -586,28 +586,6 @@ export default function DepartmentsTab() {
                                     {dept.employees_count} employees
                                   </Badge>
                                   <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      void openDepartmentEmployeesModal(dept)
-                                    }
-                                    className="cursor-pointer hover:bg-blue-500 bg-blue-500 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
-                                  >
-                                    <Users className="h-4 w-4 mr-1 " />
-                                    Employees
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      void openDepartmentManagersModal(dept)
-                                    }
-                                    className="cursor-pointer hover:bg-green-500 bg-green-500 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
-                                  >
-                                    <Users className="h-4 w-4 mr-1 " />
-                                    Evaluators  
-                                  </Button>
-                                  <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => {
@@ -643,6 +621,17 @@ export default function DepartmentsTab() {
                                   <div className="text-xs text-gray-600">
                                     Employees
                                   </div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      void openDepartmentEmployeesModal(dept)
+                                    }
+                                    className="mt-3 w-1/2 cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white transition-transform duration-200 hover:scale-105"
+                                  >
+                                    <Users className="h-4 w-4 mr-1" />
+                                    Employees
+                                  </Button>
                                 </div>
                                 <div className="text-center p-3 bg-green-50 rounded-lg">
                                   <div className="text-lg font-bold text-green-600">
@@ -651,6 +640,17 @@ export default function DepartmentsTab() {
                                   <div className="text-xs text-gray-600">
                                     Managers
                                   </div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      void openDepartmentManagersModal(dept)
+                                    }
+                                    className="mt-3 w-1/2 cursor-pointer bg-green-500 text-white hover:bg-green-600 hover:text-white transition-transform duration-200 hover:scale-105"
+                                  >
+                                    <Users className="h-4 w-4 mr-1" />
+                                    Evaluators
+                                  </Button>
                                 </div>
                               </div>
                             </CardContent>
