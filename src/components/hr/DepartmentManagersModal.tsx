@@ -51,9 +51,15 @@ export default function DepartmentManagersModal({
   isLoading,
   dialogAnimationClass = "",
 }: DepartmentManagersModalProps) {
+  const shouldEnableTableScroll = managers.length > 8;
+
   return (
     <Dialog open={open} onOpenChangeAction={onOpenChange}>
       <DialogContent className={`max-w-5xl p-0 overflow-hidden ${dialogAnimationClass}`}>
+        <div
+          className="pointer-events-none absolute left-6 right-6 top-24 bottom-6 bg-center bg-no-repeat opacity-[0.07]"
+          style={{ backgroundImage: "url('/smct.png')", backgroundSize: "55%" }}
+        />
         <DialogHeader className="px-6 pt-6 pb-4 border-b bg-green-50/60">
           <DialogTitle className="flex items-center gap-2 text-green-800">
             <UserCheck className="h-5 w-5" />
@@ -67,8 +73,12 @@ export default function DepartmentManagersModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 py-4">
-          <div className="max-h-[60vh] overflow-y-auto border rounded-lg bg-white">
+        <div className="relative px-6 py-4">
+          <div
+            className={`border rounded-lg bg-white ${
+              shouldEnableTableScroll ? "max-h-[60vh] overflow-y-auto" : "overflow-visible"
+            }`}
+          >
           {isLoading ? (
             <div className="flex items-center justify-center py-16 text-gray-500 gap-2">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -85,7 +95,6 @@ export default function DepartmentManagersModal({
                   <TableHead className="px-4">Name</TableHead>
                   <TableHead className="px-4">Email</TableHead>
                   <TableHead className="px-4">Position</TableHead>
-                  <TableHead className="px-4">Role</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -94,9 +103,6 @@ export default function DepartmentManagersModal({
                     <TableCell className="font-medium px-4">{manager.fullName}</TableCell>
                     <TableCell className="px-4">{manager.email}</TableCell>
                     <TableCell className="px-4">{manager.position}</TableCell>
-                    <TableCell className="px-4">
-                      <Badge variant="outline">{manager.role}</Badge>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -105,7 +111,7 @@ export default function DepartmentManagersModal({
           </div>
         </div>
 
-        <DialogFooter className="px-6 pb-6 pt-2 border-t bg-gray-50">
+        <DialogFooter className="relative px-6 pb-6 pt-2 border-t bg-gray-50/95">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}

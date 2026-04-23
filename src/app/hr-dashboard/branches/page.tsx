@@ -36,8 +36,12 @@ import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import apiService from "@/lib/apiService";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { AlertDialog } from "@/components/ui/alert-dialog";
-import BranchEmployeesModal from "@/components/hr/BranchEmployeesModal";
-import BranchManagersModal from "@/components/hr/BranchManagersModal";
+import BranchEmployeesModal, {
+  BranchEmployee,
+} from "@/components/hr/BranchEmployeesModal";
+import BranchManagersModal, {
+  BranchManager,
+} from "@/components/hr/BranchManagersModal";
 
 interface Branches {
   id: number;
@@ -115,9 +119,13 @@ export default function DepartmentsTab() {
   const [isEmployeesModalOpen, setIsEmployeesModalOpen] = useState(false);
   const [selectedBranchForEmployees, setSelectedBranchForEmployees] =
     useState<Branches | null>(null);
+  const [branchEmployees, setBranchEmployees] = useState<BranchEmployee[]>([]);
+  const [isBranchEmployeesLoading, setIsBranchEmployeesLoading] = useState(false);
   const [isManagersModalOpen, setIsManagersModalOpen] = useState(false);
   const [selectedBranchForManagers, setSelectedBranchForManagers] =
     useState<Branches | null>(null);
+  const [branchManagers, setBranchManagers] = useState<BranchManager[]>([]);
+  const [isBranchManagersLoading, setIsBranchManagersLoading] = useState(false);
 
   //add inputs
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -378,14 +386,93 @@ export default function DepartmentsTab() {
     }
   };
 
-  const openBranchEmployeesModal = (branch: Branches) => {
-    setSelectedBranchForEmployees(branch);
-    setIsEmployeesModalOpen(true);
+  const getDisplayRole = (roles: any): string => {
+    if (!roles || !Array.isArray(roles) || roles.length === 0) {
+      return "N/A";
+    }
+    const nonAdminRole = roles.find(
+      (role: { name?: string }) =>
+        String(role?.name ?? "").toLowerCase() !== "admin"
+    );
+    return String((nonAdminRole ?? roles[0])?.name ?? "N/A");
   };
 
-  const openBranchManagersModal = (branch: Branches) => {
+  const getBranchUsers = async (
+    branchId: number
+  ): Promise<{ employees: any[]; evaluators: any[] }> => {
+    const response = await apiService.getSubordinate({
+      branch_id: branchId,
+      per_page: 300,
+    });
+
+    const employees = Array.isArray(response?.employees) ? response.employees : [];
+    const evaluators = Array.isArray(response?.evaluators) ? response.evaluators : [];
+    return { employees, evaluators };
+  };
+
+  const normalizeBranchUser = (user: any) => {
+    const firstName = String(user?.fname ?? "").trim();
+    const lastName = String(user?.lname ?? "").trim();
+    const fullName =
+      String(user?.full_name ?? "").trim() || `${firstName} ${lastName}`.trim() || "N/A";
+    const role = getDisplayRole(user?.roles);
+
+    return {
+      id: user?.id ?? `${fullName}-${user?.email ?? "unknown"}`,
+      fullName,
+      email: String(user?.email ?? "N/A"),
+      role,
+      position: String(user?.positions?.label ?? user?.position ?? "N/A"),
+      section: String(
+        user?.section?.name ??
+          user?.sections?.name ??
+          user?.section_name ??
+          user?.section ??
+          "Unassigned"
+      ),
+    };
+  };
+
+  const openBranchEmployeesModal = async (branch: Branches) => {
+    setSelectedBranchForEmployees(branch);
+    setIsEmployeesModalOpen(true);
+    setIsBranchEmployeesLoading(true);
+    setBranchEmployees([]);
+
+    try {
+      const { employees } = await getBranchUsers(branch.id);
+      setBranchEmployees(employees.map((user: any) => normalizeBranchUser(user)));
+    } catch (error) {
+      console.error("Error loading branch employees:", error);
+      toastMessages.generic.error(
+        "Error",
+        "Failed to load branch employees. Please try again."
+      );
+      setBranchEmployees([]);
+    } finally {
+      setIsBranchEmployeesLoading(false);
+    }
+  };
+
+  const openBranchManagersModal = async (branch: Branches) => {
     setSelectedBranchForManagers(branch);
     setIsManagersModalOpen(true);
+    setIsBranchManagersLoading(true);
+    setBranchManagers([]);
+
+    try {
+      const { evaluators } = await getBranchUsers(branch.id);
+      setBranchManagers(evaluators.map((user: any) => normalizeBranchUser(user)));
+    } catch (error) {
+      console.error("Error loading branch managers:", error);
+      toastMessages.generic.error(
+        "Error",
+        "Failed to load branch managers. Please try again."
+      );
+      setBranchManagers([]);
+    } finally {
+      setIsBranchManagersLoading(false);
+    }
   };
 
   // Show loading skeleton on initial load
@@ -607,7 +694,7 @@ export default function DepartmentsTab() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => openBranchEmployeesModal(branch)}
+                                    onClick={() => void openBranchEmployeesModal(branch)}
                                     className="cursor-pointer hover:bg-blue-500 bg-blue-500 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                                   >
                                     <Users className="h-4 w-4 mr-1 " />
@@ -616,7 +703,7 @@ export default function DepartmentsTab() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => openBranchManagersModal(branch)}
+                                    onClick={() => void openBranchManagersModal(branch)}
                                     className="cursor-pointer hover:bg-green-500 bg-green-500 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                                   >
                                     <Users className="h-4 w-4 mr-1 " />
@@ -1051,10 +1138,12 @@ export default function DepartmentsTab() {
           setIsEmployeesModalOpen(open);
           if (!open) {
             setSelectedBranchForEmployees(null);
+            setBranchEmployees([]);
           }
         }}
         selectedBranch={selectedBranchForEmployees}
-        expectedCount={getEmployeesCount(selectedBranchForEmployees ?? {})}
+        employees={branchEmployees}
+        isLoading={isBranchEmployeesLoading}
         dialogAnimationClass={dialogAnimationClass}
       />
 
@@ -1064,10 +1153,12 @@ export default function DepartmentsTab() {
           setIsManagersModalOpen(open);
           if (!open) {
             setSelectedBranchForManagers(null);
+            setBranchManagers([]);
           }
         }}
         selectedBranch={selectedBranchForManagers}
-        expectedCount={getManagersCount(selectedBranchForManagers ?? {})}
+        managers={branchManagers}
+        isLoading={isBranchManagersLoading}
         dialogAnimationClass={dialogAnimationClass}
       />
     </div>

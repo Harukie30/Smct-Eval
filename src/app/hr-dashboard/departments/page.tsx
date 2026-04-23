@@ -290,90 +290,40 @@ export default function DepartmentsTab() {
     return String((nonAdminRole ?? roles[0])?.name ?? "N/A");
   };
 
-  const isManagerUser = (user: any): boolean => {
-    const roleNames = Array.isArray(user?.roles)
-      ? user.roles.map((role: any) => String(role?.name ?? "").toLowerCase())
-      : [];
-    const positionLabel = String(
-      user?.positions?.label ?? user?.position ?? ""
-    ).toLowerCase();
-
-    const managerKeywords = [
-      "manager",
-      "head",
-      "supervisor",
-      "lead",
-      "chief",
-      "officer",
-      "director",
-      "evaluator",
-    ];
-
-    const roleSuggestsManager = roleNames.some((roleName: string) =>
-      managerKeywords.some((keyword) => roleName.includes(keyword))
-    );
-    const positionSuggestsManager = managerKeywords.some((keyword) =>
-      positionLabel.includes(keyword)
-    );
-
-    return roleSuggestsManager || positionSuggestsManager;
-  };
-
-  const getDepartmentUsers = async (departmentId: number): Promise<any[]> => {
-    const allUsers: any[] = [];
-    let page = 1;
-    let lastPage = 1;
-
-    do {
-      const response = await apiService.getActiveRegistrations(
-        "",
-        0,
-        page,
-        300,
-        "",
-        String(departmentId)
-      );
-
-      const pageUsers = Array.isArray(response?.data)
-        ? response.data
-        : Array.isArray(response)
-          ? response
-          : [];
-
-      allUsers.push(...pageUsers);
-      lastPage =
-        typeof response?.last_page === "number" && response.last_page > 0
-          ? response.last_page
-          : 1;
-      page += 1;
-    } while (page <= lastPage);
-
-    return allUsers;
-  };
-
-  const normalizeDepartmentUsers = (users: any[]) => {
-    return users.map((user: any) => {
-      const firstName = String(user?.fname ?? "").trim();
-      const lastName = String(user?.lname ?? "").trim();
-      const fullName = `${firstName} ${lastName}`.trim() || "N/A";
-      const role = getDisplayRole(user?.roles);
-
-      return {
-        id: user?.id ?? `${fullName}-${user?.email ?? "unknown"}`,
-        fullName,
-        email: String(user?.email ?? "N/A"),
-        role,
-        position: String(user?.positions?.label ?? user?.position ?? "N/A"),
-        section: String(
-          user?.section?.name ??
-            user?.sections?.name ??
-            user?.section_name ??
-            user?.section ??
-            "Unassigned"
-        ),
-        userType: isManagerUser(user) ? "Manager" : "Employee",
-      };
+  const getDepartmentUsers = async (
+    departmentId: number
+  ): Promise<{ employees: any[]; evaluators: any[] }> => {
+    const response = await apiService.getSubordinate({
+      department_id: departmentId,
+      per_page: 300,
     });
+
+    const employees = Array.isArray(response?.employees) ? response.employees : [];
+    const evaluators = Array.isArray(response?.evaluators) ? response.evaluators : [];
+    return { employees, evaluators };
+  };
+
+  const normalizeDepartmentUser = (user: any) => {
+    const firstName = String(user?.fname ?? "").trim();
+    const lastName = String(user?.lname ?? "").trim();
+    const fullName =
+      String(user?.full_name ?? "").trim() || `${firstName} ${lastName}`.trim() || "N/A";
+    const role = getDisplayRole(user?.roles);
+
+    return {
+      id: user?.id ?? `${fullName}-${user?.email ?? "unknown"}`,
+      fullName,
+      email: String(user?.email ?? "N/A"),
+      role,
+      position: String(user?.positions?.label ?? user?.position ?? "N/A"),
+      section: String(
+        user?.section?.name ??
+          user?.sections?.name ??
+          user?.section_name ??
+          user?.section ??
+          "Unassigned"
+      ),
+    };
   };
 
   const openDepartmentEmployeesModal = async (department: Department) => {
@@ -383,12 +333,8 @@ export default function DepartmentsTab() {
     setDepartmentEmployees([]);
 
     try {
-      const users = await getDepartmentUsers(department.id);
-      const normalizedUsers = normalizeDepartmentUsers(users);
-      const employeesOnly = normalizedUsers.filter(
-        (user) => user.userType === "Employee"
-      );
-      setDepartmentEmployees(employeesOnly);
+      const { employees } = await getDepartmentUsers(department.id);
+      setDepartmentEmployees(employees.map((user: any) => normalizeDepartmentUser(user)));
     } catch (error) {
       console.error("Error loading department employees:", error);
       toastMessages.generic.error(
@@ -408,12 +354,8 @@ export default function DepartmentsTab() {
     setDepartmentManagers([]);
 
     try {
-      const users = await getDepartmentUsers(department.id);
-      const normalizedUsers = normalizeDepartmentUsers(users);
-      const managersOnly = normalizedUsers.filter(
-        (user) => user.userType === "Manager"
-      );
-      setDepartmentManagers(managersOnly);
+      const { evaluators } = await getDepartmentUsers(department.id);
+      setDepartmentManagers(evaluators.map((user: any) => normalizeDepartmentUser(user)));
     } catch (error) {
       console.error("Error loading department managers:", error);
       toastMessages.generic.error(

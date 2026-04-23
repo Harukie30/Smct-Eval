@@ -444,6 +444,24 @@ export const apiService = {
     return response.data.branches;
   },
 
+  // Get subordinates by branch or department
+  getSubordinate: async (params: {
+    branch_id?: number | string;
+    department_id?: number | string;
+    page?: number;
+    per_page?: number;
+  }): Promise<any> => {
+    const response = await api.get("/getSubordinate", {
+      params: {
+        branch_id: params.branch_id ?? "",
+        department_id: params.department_id ?? "",
+        page: params.page ?? 1,
+        per_page: params.per_page ?? 300,
+      },
+    });
+    return response.data;
+  },
+
   // Get specific branch
   getBranch: async (branchId: string | number): Promise<any> => {
     const response = await api.get(`/branch/${branchId}`);

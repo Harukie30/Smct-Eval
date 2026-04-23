@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { Loader2, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Combobox } from "@/components/ui/combobox";
 
 export interface DepartmentForEmployeesModal {
   id: number;
@@ -54,31 +52,15 @@ export default function DepartmentEmployeesModal({
   isLoading,
   dialogAnimationClass = "",
 }: DepartmentEmployeesModalProps) {
-  const [selectedSection, setSelectedSection] = useState<string>("all");
-
-  const sectionOptions = useMemo(() => {
-    const uniqueSections = Array.from(
-      new Set(
-        employees.map((employee) => employee.section?.trim() || "Unassigned")
-      )
-    ).sort((a, b) => a.localeCompare(b));
-
-    return [
-      { value: "all", label: "All Sections" },
-      ...uniqueSections.map((section) => ({ value: section, label: section })),
-    ];
-  }, [employees]);
-
-  const filteredEmployees = useMemo(() => {
-    if (selectedSection === "all") return employees;
-    return employees.filter(
-      (employee) => (employee.section?.trim() || "Unassigned") === selectedSection
-    );
-  }, [employees, selectedSection]);
+  const shouldEnableTableScroll = employees.length > 8;
 
   return (
     <Dialog open={open} onOpenChangeAction={onOpenChange}>
       <DialogContent className={`max-w-5xl p-0 overflow-hidden ${dialogAnimationClass}`}>
+        <div
+          className="pointer-events-none absolute left-6 right-6 top-24 bottom-6 bg-center bg-no-repeat opacity-[0.07]"
+          style={{ backgroundImage: "url('/smct.png')", backgroundSize: "55%" }}
+        />
         <DialogHeader className="px-6 pt-6 pb-4 border-b bg-blue-50/60">
           <DialogTitle className="flex items-center gap-2 text-blue-800">
             <Users className="h-5 w-5" />
@@ -92,27 +74,20 @@ export default function DepartmentEmployeesModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 py-4">
-          <div className="mb-4 w-full sm:w-72">
-            <Combobox
-              options={sectionOptions}
-              value={selectedSection}
-              onValueChangeAction={(value) => setSelectedSection(String(value))}
-              placeholder="Filter by section"
-              searchPlaceholder="Search section..."
-              emptyText="No section found."
-            />
-          </div>
-
-          <div className="max-h-[60vh] overflow-y-auto border rounded-lg bg-white">
+        <div className="relative px-6 py-4">
+          <div
+            className={`border rounded-lg bg-white ${
+              shouldEnableTableScroll ? "max-h-[60vh] overflow-y-auto" : "overflow-visible"
+            }`}
+          >
           {isLoading ? (
             <div className="flex items-center justify-center py-16 text-gray-500 gap-2">
               <Loader2 className="h-5 w-5 animate-spin" />
               Loading employees...
             </div>
-          ) : filteredEmployees.length === 0 ? (
+          ) : employees.length === 0 ? (
             <div className="py-16 text-center text-gray-500">
-              No employees found for the selected section.
+              No employees found for this department.
             </div>
           ) : (
             <Table wrapperClassName="rounded-lg">
@@ -121,18 +96,14 @@ export default function DepartmentEmployeesModal({
                   <TableHead className="px-4">Name</TableHead>
                   <TableHead className="px-4">Email</TableHead>
                   <TableHead className="px-4">Position</TableHead>
-                  <TableHead className="px-4">Role</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEmployees.map((employee) => (
+                {employees.map((employee) => (
                   <TableRow key={employee.id} className="hover:bg-blue-50/40">
                     <TableCell className="font-medium px-4">{employee.fullName}</TableCell>
                     <TableCell className="px-4">{employee.email}</TableCell>
                     <TableCell className="px-4">{employee.position}</TableCell>
-                    <TableCell className="px-4">
-                      <Badge variant="outline">{employee.role}</Badge>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -141,7 +112,7 @@ export default function DepartmentEmployeesModal({
           </div>
         </div>
 
-        <DialogFooter className="px-6 pb-6 pt-2 border-t bg-gray-50">
+        <DialogFooter className="relative px-6 pb-6 pt-2 border-t bg-gray-50/95">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
