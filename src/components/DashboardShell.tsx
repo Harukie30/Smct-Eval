@@ -245,7 +245,7 @@ export default function DashboardShell(props: DashboardShellProps) {
 
     if (isHRDashboard) {
       if (
-        ["departments", "branches", "branch-heads", "area-managers"].includes(
+        ["departments", "branches", "branch-heads", "area-managers", "subordinates"].includes(
           activeItemId
         ) &&
         !isManagementOpen
@@ -810,6 +810,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                         .filter(
                           (id) =>
                             ![
+                              "subordinates",
                               "departments",
                               "branches",
                               "branch-heads",
@@ -837,6 +838,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                   // leadership includes branch-heads and area-managers.
                   const managementItems = isHRDashboard
                     ? [
+                        "subordinates",
                         "departments",
                         "branches",
                         "branch-heads",

@@ -45,6 +45,12 @@ function HRLayout({ children }: { children: React.ReactNode }) {
         path: "/hr-dashboard/myViolations",
       },
       {
+        id: "subordinates",
+        label: "Subordinates",
+        icon: "🧾",
+        path: "/hr-dashboard/subordinates",
+      },
+      {
         id: "signature-reset",
         label: "Signature Requests",
         icon: "✍️",
