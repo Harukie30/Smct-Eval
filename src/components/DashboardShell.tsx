@@ -891,7 +891,13 @@ export default function DashboardShell(props: DashboardShellProps) {
                               />
                             </button>
                           </CollapsibleTrigger>
-                          <CollapsibleContent className="pl-4 mt-2 space-y-1">
+                          <CollapsibleContent
+                            className={`pl-4 mt-2 space-y-1 ${
+                              isHRDashboard
+                                ? "max-h-[220px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-transparent scrollbar-track-transparent"
+                                : ""
+                            }`}
+                          >
                             {sidebarItems
                               .filter((i) => managementItems.includes(i.id))
                               .map((subItem) => (
@@ -948,7 +954,13 @@ export default function DashboardShell(props: DashboardShellProps) {
                               />
                             </button>
                           </CollapsibleTrigger>
-                          <CollapsibleContent className="pl-4 mt-2 space-y-1">
+                          <CollapsibleContent
+                            className={`pl-4 mt-2 space-y-1 ${
+                              isHRDashboard
+                                ? "max-h-[220px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-transparent scrollbar-track-transparent"
+                                : ""
+                            }`}
+                          >
                             {sidebarItems
                               .filter((i) => leadershipItems.includes(i.id))
                               .map((subItem) => (

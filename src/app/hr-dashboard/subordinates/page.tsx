@@ -27,6 +27,7 @@ type EvaluatorRow = {
   email: string;
   position: string;
   role: string;
+  branch: string;
   branchId?: string;
   departmentId?: string;
 };
@@ -36,7 +37,8 @@ type StaffRow = {
   name: string;
   email: string;
   position: string;
-  section: string;
+  branch: string;
+  role: string;
 };
 
 function getDisplayRole(roles: unknown): string {
@@ -61,6 +63,14 @@ function normalizeEvaluator(raw: Record<string, unknown>): EvaluatorRow {
       (raw.positions as { label?: string } | undefined)?.label ?? raw.position ?? "N/A"
     ),
     role: getDisplayRole(raw.roles),
+    branch: String(
+      (raw.branch as { branch_name?: string; branch_code?: string } | undefined)
+        ?.branch_name ??
+        raw.branch_name ??
+        (raw.branches as { branch_name?: string; branch_code?: string } | undefined)
+          ?.branch_name ??
+        "Unassigned"
+    ),
     branchId:
       raw.branch_id != null && String(raw.branch_id).trim() !== ""
         ? String(raw.branch_id)
@@ -85,12 +95,15 @@ function normalizeStaff(raw: Record<string, unknown>): StaffRow {
     position: String(
       (raw.positions as { label?: string } | undefined)?.label ?? raw.position ?? "N/A"
     ),
-    section: String(
-      (raw.section as { name?: string } | undefined)?.name ??
-        (raw.sections as { name?: string } | undefined)?.name ??
-        raw.section_name ??
+    branch: String(
+      (raw.branch as { branch_name?: string; branch_code?: string } | undefined)
+        ?.branch_name ??
+        raw.branch_name ??
+        (raw.branches as { branch_name?: string; branch_code?: string } | undefined)
+          ?.branch_name ??
         "Unassigned"
     ),
+    role: getDisplayRole(raw.roles),
   };
 }
 
@@ -247,6 +260,7 @@ export default function HRSubordinatesPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Position</TableHead>
+                  <TableHead>Branch</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
@@ -260,6 +274,9 @@ export default function HRSubordinatesPage() {
                       </TableCell>
                       <TableCell>
                         <Skeleton className="h-5 w-48" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-32" />
                       </TableCell>
                       <TableCell>
                         <Skeleton className="h-5 w-32" />
@@ -284,6 +301,7 @@ export default function HRSubordinatesPage() {
                       <TableCell className="font-medium text-slate-900">{row.name}</TableCell>
                       <TableCell>{row.email}</TableCell>
                       <TableCell>{row.position}</TableCell>
+                      <TableCell>{row.branch}</TableCell>
                       <TableCell>{row.role}</TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -318,24 +336,28 @@ export default function HRSubordinatesPage() {
           }
         }}
       >
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Corresponding Staff</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-5xl p-0 overflow-hidden">
+          <DialogHeader className="border-b bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 text-white">
+            <DialogTitle className="text-xl font-semibold text-white">
+              Corresponding Staff
+            </DialogTitle>
+            <DialogDescription className="text-blue-100">
               {selectedEvaluator
                 ? `Staff list linked to evaluator: ${selectedEvaluator.name}`
                 : "Staff list for selected evaluator."}
             </DialogDescription>
           </DialogHeader>
 
+          <div className="px-6 py-5 bg-slate-50/60">
           <div className="max-h-[60vh] overflow-auto rounded-xl border border-slate-200/80 bg-white shadow-sm">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-100/80">
+                <TableRow className="bg-slate-100/90">
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Position</TableHead>
-                  <TableHead>Section</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Role</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -354,11 +376,14 @@ export default function HRSubordinatesPage() {
                       <TableCell>
                         <Skeleton className="h-5 w-24" />
                       </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-20" />
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : staffRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="py-10 text-center text-sm text-slate-500">
+                    <TableCell colSpan={5} className="py-10 text-center text-sm text-slate-500">
                       No corresponding staff found.
                     </TableCell>
                   </TableRow>
@@ -368,15 +393,17 @@ export default function HRSubordinatesPage() {
                       <TableCell className="font-medium text-slate-900">{staff.name}</TableCell>
                       <TableCell>{staff.email}</TableCell>
                       <TableCell>{staff.position}</TableCell>
-                      <TableCell>{staff.section}</TableCell>
+                      <TableCell>{staff.branch}</TableCell>
+                      <TableCell>{staff.role}</TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
             </Table>
           </div>
+          </div>
 
-          <DialogFooter>
+          <DialogFooter className="border-t bg-white px-6 py-4">
             <Button
               type="button"
               variant="outline"
