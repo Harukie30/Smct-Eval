@@ -364,10 +364,12 @@ export const apiService = {
   },
 
   /**
-   * Record a memorandum violation. Send `FormData` with: user_id, violation_date,
-   * title, document (required: image or PDF).
+   * Record a memorandum violation. Uses `FormData` fields (text-only now):
+   * user_id, violation_date, title, summary, document.
    */
-  addMemorandumViolation: async (formData: FormData): Promise<any> => {
+  addMemorandumViolation: async (
+    formData: FormData
+  ): Promise<any> => {
     const response = await api.post("/addMemorandumViolation", formData);
     return response.data;
   },

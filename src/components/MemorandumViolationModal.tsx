@@ -6,7 +6,6 @@ import {
   FileWarning,
   X,
   Eye,
-  Upload,
   ExternalLink,
   RefreshCw,
   Calendar,
@@ -27,6 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -41,7 +41,6 @@ import { User } from "@/contexts/UserContext";
 import apiService from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 import { CONFIG } from "../../config/config";
-import { memorandumDocumentTypeLabel } from "@/lib/memorandumDocumentType";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 
@@ -63,6 +62,7 @@ export type MemorandumSessionRow = {
   id: string;
   title: string;
   violation_date: string;
+  summary?: string | null;
   fileName?: string | null;
   /** Present only for same-session uploads; used for download preview. */
   file?: File | null;
@@ -94,20 +94,6 @@ const VIOLATIONS_SCROLL_AFTER_ROWS = 7;
 
 /** Auto-dismiss save-success dialog after this many milliseconds. */
 const SAVE_SUCCESS_DIALOG_AUTO_CLOSE_MS = 2500;
-
-/** Image or PDF only (required attachment). */
-const ATTACHMENT_ACCEPT =
-  "image/jpeg,image/png,image/gif,image/webp,image/bmp,.jpg,.jpeg,.png,.gif,.webp,.bmp,.pdf,application/pdf";
-
-function isAllowedAttachmentFile(f: File): boolean {
-  const lower = f.name.toLowerCase();
-  const extOk = /\.(jpe?g|png|gif|webp|bmp|pdf)$/i.test(lower);
-  const typeOk =
-    f.type.startsWith("image/") ||
-    f.type === "application/pdf" ||
-    f.type === "";
-  return extOk && typeOk;
-}
 
 function mapApiRowToSession(r: Record<string, unknown>): MemorandumSessionRow {
   const id = String(r.id ?? `tmp-${Math.random()}`);
@@ -145,6 +131,7 @@ function mapApiRowToSession(r: Record<string, unknown>): MemorandumSessionRow {
     id,
     title: String(titleRaw ?? "—"),
     violation_date,
+    summary: docStr(r.summary) ?? docStr(r.violation_summary) ?? docStr(r.description),
     fileName,
     file: undefined,
     document_url: docStr(r.document_url) ?? docStr(r.url) ?? null,
@@ -292,11 +279,8 @@ export default function MemorandumViolationModal({
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addTitle, setAddTitle] = useState("");
   const [addDateStr, setAddDateStr] = useState(() => localDateInputValue());
-  const [addFile, setAddFile] = useState<File | null>(null);
+  const [addSummary, setAddSummary] = useState("");
   const [submittingAdd, setSubmittingAdd] = useState(false);
-  /** Brief loading after file chooser closes (attachment handling). */
-  const [fileHandling, setFileHandling] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   /** Same entrance animation as Branch Quarterly Report / user-management modals. */
   const saveSuccessDialogAnimationClass = useDialogAnimation({ duration: 0.4 });
@@ -314,9 +298,7 @@ export default function MemorandumViolationModal({
   const resetAddForm = useCallback(() => {
     setAddTitle("");
     setAddDateStr(localDateInputValue());
-    setAddFile(null);
-    setFileHandling(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    setAddSummary("");
   }, []);
 
   const handleClose = useCallback(() => {
@@ -474,7 +456,8 @@ export default function MemorandumViolationModal({
       return;
     }
     const t = addTitle.trim();
-    if (!t || !addDateStr || !addFile) {
+    const s = addSummary.trim();
+    if (!t || !addDateStr || !s) {
       toastMessages.form.validationError();
       return;
     }
@@ -486,8 +469,8 @@ export default function MemorandumViolationModal({
       fd.append("user_id", targetUid);
       fd.append("violation_date", violation_date);
       fd.append("title", t);
-      fd.append("document", addFile);
-
+      fd.append("summary", s);
+      fd.append("document", s);
       await apiService.addMemorandumViolation(fd);
 
       const name = `${target.fname || ""} ${target.lname || ""}`.trim();
@@ -724,9 +707,6 @@ export default function MemorandumViolationModal({
                       <TableHead className="font-semibold text-amber-900 min-w-[7.5rem] whitespace-nowrap">
                         Date
                       </TableHead>
-                      <TableHead className="font-semibold text-amber-900 min-w-[6rem] whitespace-nowrap">
-                        Type
-                      </TableHead>
                       <TableHead className="font-semibold text-amber-900 w-[1%] whitespace-nowrap text-right">
                         Action
                       </TableHead>
@@ -736,7 +716,7 @@ export default function MemorandumViolationModal({
                     {loadingViolations ? (
                       <TableRow>
                         <TableCell
-                          colSpan={4}
+                          colSpan={3}
                           className="py-10 text-center text-gray-600"
                         >
                           <Loader2 className="mr-2 inline h-5 w-5 animate-spin text-amber-600" />
@@ -746,7 +726,7 @@ export default function MemorandumViolationModal({
                     ) : sessionRows.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={4}
+                          colSpan={3}
                           className="text-center text-gray-500 py-10"
                         >
                           No violations yet. Use Add Violation to create one.
@@ -754,13 +734,6 @@ export default function MemorandumViolationModal({
                       </TableRow>
                     ) : (
                       violationsDisplayedRows.map((row) => {
-                        const docHref = resolveDocumentHrefForRow(row);
-                        const docType = memorandumDocumentTypeLabel(
-                          row.fileName,
-                          row.document_path,
-                          row.document_url,
-                          docHref
-                        );
                         return (
                         <TableRow
                           key={row.id}
@@ -773,9 +746,6 @@ export default function MemorandumViolationModal({
                           </TableCell>
                           <TableCell className="text-gray-700 text-sm whitespace-nowrap">
                             {formatViolationDateCell(row)}
-                          </TableCell>
-                          <TableCell className="text-gray-800 text-sm font-medium">
-                            {docType}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
@@ -866,8 +836,8 @@ export default function MemorandumViolationModal({
                   Add memorandum violation
                 </DialogTitle>
                 <DialogDescription className="text-sm leading-relaxed text-gray-600">
-                  Enter a title, the violation date, and one supporting file (image
-                  or PDF). All fields are required.
+                  Enter a title, the violation date, and a summary for the
+                  violation. All fields are required.
                 </DialogDescription>
               </DialogHeader>
             </div>
@@ -960,93 +930,26 @@ export default function MemorandumViolationModal({
                   </span>
                   <div>
                     <p className="text-base font-semibold text-gray-900">
-                      Supporting file{" "}
+                      Violation summary{" "}
                       <span className="text-red-500" aria-hidden>
                         *
                       </span>
                     </p>
                     <p className="mt-0.5 text-xs text-gray-500">
-                      Upload one image (JPG, PNG, GIF, WebP, BMP) or a PDF.
+                      Add a clear summary of what happened.
                     </p>
                   </div>
                 </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={ATTACHMENT_ACCEPT}
-                  className="hidden"
-                  disabled={submittingAdd || fileHandling}
-                  onChange={async (e) => {
-                    const f = e.target.files?.[0];
-                    if (!f) {
-                      setAddFile(null);
-                      return;
-                    }
-                    setFileHandling(true);
-                    try {
-                      await new Promise((r) => setTimeout(r, 500));
-                      if (!isAllowedAttachmentFile(f)) {
-                        toastMessages.generic.warning(
-                          "Unsupported file",
-                          "Please choose an image (e.g. JPG, PNG) or a PDF."
-                        );
-                        e.target.value = "";
-                        setAddFile(null);
-                        return;
-                      }
-                      setAddFile(f);
-                    } finally {
-                      setFileHandling(false);
-                    }
-                  }}
-                />
-                <div className="relative ml-0 rounded-xl border-2 border-dashed border-amber-200/90 bg-amber-50/40 p-5 sm:ml-9">
-                  {fileHandling && (
-                    <div
-                      className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-[inherit] bg-white/80 backdrop-blur-[1px]"
-                      aria-busy="true"
-                      aria-live="polite"
-                    >
-                      <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full border-4 border-amber-200 bg-amber-50 shadow-sm">
-                        <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
-                      </div>
-                      <p className="text-sm font-medium text-amber-900">
-                        Processing attachment…
-                      </p>
-                      <p className="mt-1 max-w-[14rem] text-center text-xs text-gray-600">
-                        Please wait while the file is checked.
-                      </p>
-                    </div>
-                  )}
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-800">
-                        Image or PDF
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        One file — required to save
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={submittingAdd || fileHandling}
-                      className="cursor-pointer shrink-0 border-amber-300 bg-white hover:bg-amber-50"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Choose file
-                    </Button>
-                  </div>
-                  {addFile && !fileHandling ? (
-                    <p className="mt-3 truncate text-sm text-amber-900">
-                      <span className="font-medium">Selected:</span> {addFile.name}
-                    </p>
-                  ) : !fileHandling ? (
-                    <p className="mt-3 text-xs text-amber-800/90">
-                      No file selected — attach an image or PDF to continue.
-                    </p>
-                  ) : null}
+                <div className="ml-0 sm:ml-9">
+                  <Textarea
+                    id="add-violation-summary"
+                    placeholder="Enter the details and summary of this violation"
+                    value={addSummary}
+                    onChange={(e) => setAddSummary(e.target.value)}
+                    disabled={submittingAdd}
+                    className="min-h-[120px] bg-white text-sm"
+                    aria-required
+                  />
                 </div>
               </li>
             </ol>
@@ -1071,7 +974,7 @@ export default function MemorandumViolationModal({
                 submittingAdd ||
                 !addTitle.trim() ||
                 !addDateStr ||
-                !addFile
+                !addSummary.trim()
               }
               className="cursor-pointer w-full bg-amber-600 hover:bg-amber-700 text-white sm:w-auto min-w-[160px]"
               onClick={handleAddViolationSubmit}
@@ -1162,6 +1065,22 @@ export default function MemorandumViolationModal({
                           }
                         })()
                       : "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
+              <div className="flex gap-3">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Summary
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+                    {viewingRow?.summary?.trim() || "No summary provided."}
                   </p>
                 </div>
               </div>

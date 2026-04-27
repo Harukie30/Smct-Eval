@@ -337,43 +337,28 @@ export default function DepartmentsTab() {
     if (!branchesToDelete) return;
 
     try {
-      if (
-        getEmployeesCount(branchesToDelete) +
-          getManagersCount(branchesToDelete) !==
-        0
-      ) {
-        // Close modal and show alert dialog instead of toast
-        setIsDeleteModalOpen(false);
-        setBranchWithEmployees(branchesToDelete);
-        setIsAlertDialogOpen(true);
-        setBranchesToDelete(null);
-        // Refresh data to ensure we have the latest branch info
-        await loadData(debouncedSearchTerm);
-        return;
-      } else {
-        // Set deleting state to show skeleton animation
-        setDeletingBranchId(branchesToDelete.id);
+      // Set deleting state to show skeleton animation
+      setDeletingBranchId(branchesToDelete.id);
 
-        // Close modal immediately
-        setIsDeleteModalOpen(false);
+      // Close modal immediately
+      setIsDeleteModalOpen(false);
 
-        // Wait 2 seconds to show skeleton animation
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Wait 2 seconds to show skeleton animation
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        // Actually delete the branch
-        await apiService.deleteBranches(branchesToDelete.id);
+      // Actually delete the branch
+      await apiService.deleteBranches(branchesToDelete.id);
 
-        // Refresh data first, then reset deleting state after data loads
-        await loadData(debouncedSearchTerm);
-        setDeletingBranchId(null);
+      // Refresh data first, then reset deleting state after data loads
+      await loadData(debouncedSearchTerm);
+      setDeletingBranchId(null);
 
-        toastMessages.generic.success(
-          "Department Deleted",
-          `"${
-            branchesToDelete.branch_name + "/ " + branchesToDelete.branch_code
-          }" has been deleted successfully.`
-        );
-      }
+      toastMessages.generic.success(
+        "Department Deleted",
+        `"${
+          branchesToDelete.branch_name + "/ " + branchesToDelete.branch_code
+        }" has been deleted successfully.`
+      );
     } catch (error) {
       console.error("Error deleting department:", error);
       setDeletingBranchId(null);
@@ -1063,20 +1048,6 @@ export default function DepartmentsTab() {
   `}
                 onClick={async () => {
                   if (!branchesToDelete) return;
-
-                  // Check if branch has employees before proceeding
-                  const totalEmployees = 
-                    getEmployeesCount(branchesToDelete) +
-                    getManagersCount(branchesToDelete);
-
-                  if (totalEmployees > 0) {
-                    // Close delete modal and show alert dialog
-                    setIsDeleteModalOpen(false);
-                    setBranchWithEmployees(branchesToDelete);
-                    setIsAlertDialogOpen(true);
-                    setBranchesToDelete(null);
-                    return;
-                  }
 
                   // Proceed with deletion if no employees
                   setIsDeletingBranches(true);

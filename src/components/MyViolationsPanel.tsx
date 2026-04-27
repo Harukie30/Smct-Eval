@@ -3,11 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Calendar,
-  Download,
-  ExternalLink,
   Eye,
   FileText,
-  FileType2,
   FileWarning,
   RefreshCw,
   Search,
@@ -43,8 +40,6 @@ import {
 } from "@/components/ui/dialog";
 import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
-import { CONFIG } from "../../config/config";
-import { memorandumDocumentTypeLabel } from "@/lib/memorandumDocumentType";
 
 /** Pages to scan when building the month filter (per_page × this ≈ max rows considered). */
 const MONTH_FILTER_PER_PAGE = 500;
@@ -54,6 +49,7 @@ export type MemorandumViolationRow = {
   id: number | string;
   title: string;
   violation_date: string;
+  summary?: string | null;
   document_url?: string | null;
   document_path?: string | null;
   document_name?: string | null;
@@ -109,6 +105,12 @@ function mapViolationRow(r: Record<string, unknown>): MemorandumViolationRow {
         "—"
     ),
     violation_date: String(r.violation_date ?? r.date ?? ""),
+    summary:
+      (r.summary as string) ??
+      (r.violation_summary as string) ??
+      (r.description as string) ??
+      (r.document as string) ??
+      null,
     document_url: (r.document_url as string) ?? (r.url as string) ?? null,
     document_path: path,
     document_name: docName || fileFromPath || null,
@@ -209,21 +211,6 @@ function normalizeViolationsResponse(raw: unknown): {
   };
 }
 
-function resolveDocumentHref(row: MemorandumViolationRow): string | null {
-  const u = row.document_url?.trim();
-  if (u) {
-    if (/^https?:\/\//i.test(u)) return u;
-    const base = CONFIG.API_URL?.replace(/\/$/, "") ?? "";
-    return `${base}${u.startsWith("/") ? u : `/${u}`}`;
-  }
-  const p = row.document_path?.trim();
-  if (p) {
-    const storage = (CONFIG.API_URL_STORAGE ?? CONFIG.API_URL)?.replace(/\/$/, "") ?? "";
-    return `${storage}/${p.replace(/^\//, "")}`;
-  }
-  return null;
-}
-
 function formatViolationDate(value: string): string {
   if (!value) return "—";
   try {
@@ -251,36 +238,6 @@ function formatViolationDateLong(value: string): string {
       return value;
     }
   }
-}
-
-function displayFileName(row: MemorandumViolationRow, href: string | null): string {
-  if (row.document_name?.trim()) return row.document_name.trim();
-  if (!href) return "";
-  try {
-    const u = new URL(href, "https://example.com");
-    const seg = u.pathname.split("/").filter(Boolean).pop();
-    return seg ? decodeURIComponent(seg) : href;
-  } catch {
-    const seg = href.split("/").filter(Boolean).pop();
-    return seg ? decodeURIComponent(seg) : href;
-  }
-}
-
-function isLikelyImageHref(href: string): boolean {
-  return /\.(jpe?g|png|gif|webp|bmp)(\?|$)/i.test(href);
-}
-
-function isLikelyPdfHref(href: string): boolean {
-  return /\.pdf(\?|#|$)/i.test(href);
-}
-
-function safeDownloadFileName(
-  row: MemorandumViolationRow,
-  href: string
-): string {
-  const raw = displayFileName(row, href).trim() || "memorandum-attachment";
-  const cleaned = raw.replace(/[/\\?%*:|"<>]/g, "-").replace(/\s+/g, " ");
-  return cleaned.slice(0, 180) || "download";
 }
 
 export default function MyViolationsPanel() {
@@ -360,18 +317,6 @@ export default function MyViolationsPanel() {
       setMonthFilter("all");
     }
   }, [monthFilter, availableMonths, monthsLoading]);
-
-  const viewDocumentHref = viewingRow ? resolveDocumentHref(viewingRow) : null;
-  const viewFileLabel = useMemo(() => {
-    if (!viewingRow || !viewDocumentHref) return "";
-    return displayFileName(viewingRow, viewDocumentHref);
-  }, [viewingRow, viewDocumentHref]);
-  const viewAttachmentKind = useMemo((): "image" | "pdf" | "other" | null => {
-    if (!viewDocumentHref) return null;
-    if (isLikelyImageHref(viewDocumentHref)) return "image";
-    if (isLikelyPdfHref(viewDocumentHref)) return "pdf";
-    return "other";
-  }, [viewDocumentHref]);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSearch(searchTerm), 350);
@@ -539,9 +484,6 @@ export default function MyViolationsPanel() {
                   <TableHead className="min-w-[8rem] whitespace-nowrap font-semibold text-white">
                     Violation date
                   </TableHead>
-                  <TableHead className="min-w-[6rem] font-semibold text-white">
-                    Type
-                  </TableHead>
                   <TableHead className="w-[1%] whitespace-nowrap text-right font-semibold text-white">
                     Action
                   </TableHead>
@@ -558,9 +500,6 @@ export default function MyViolationsPanel() {
                         <Skeleton className="h-5 w-24" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-5 w-20" />
-                      </TableCell>
-                      <TableCell>
                         <Skeleton className="ml-auto h-8 w-20" />
                       </TableCell>
                     </TableRow>
@@ -568,7 +507,7 @@ export default function MyViolationsPanel() {
                 ) : rows.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={3}
                       className="py-14 text-center"
                     >
                       <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
@@ -589,13 +528,6 @@ export default function MyViolationsPanel() {
                   </TableRow>
                 ) : (
                   rows.map((row) => {
-                    const href = resolveDocumentHref(row);
-                    const docType = memorandumDocumentTypeLabel(
-                      row.document_name,
-                      row.document_path,
-                      row.document_url,
-                      href
-                    );
                     return (
                       <TableRow
                         key={String(row.id)}
@@ -607,9 +539,6 @@ export default function MyViolationsPanel() {
                         <TableCell className="whitespace-nowrap text-slate-600">
                           {formatViolationDate(row.violation_date)}
                         </TableCell>
-                        <TableCell className="text-slate-800">
-                          <span className="text-sm font-medium">{docType}</span>
-                        </TableCell>
                         <TableCell className="text-right">
                           <Button
                             type="button"
@@ -619,7 +548,7 @@ export default function MyViolationsPanel() {
                             onClick={() => setViewingRow(row)}
                           >
                             <Eye className="h-4 w-4" />
-                            View
+                            View Summary
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -655,7 +584,7 @@ export default function MyViolationsPanel() {
                       Violation details
                     </DialogTitle>
                     <DialogDescription className="text-left text-sm leading-relaxed text-amber-50/95">
-                      Title, date, and supporting document for this memorandum.
+                      Title, date, and violation summary.
                     </DialogDescription>
                   </div>
                 </div>
@@ -696,96 +625,21 @@ export default function MyViolationsPanel() {
                       </div>
                     </div>
 
-                    {viewFileLabel || viewDocumentHref ? (
-                      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
-                        <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+                    <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
+                      <div className="flex gap-3">
+                        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+                          <FileText className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
                           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                            Supporting document
+                            Summary
                           </p>
-                          <p className="mt-0.5 truncate text-sm font-medium text-slate-800">
-                            {viewFileLabel || "Attachment"}
+                          <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+                            {viewingRow.summary?.trim() || "No summary provided."}
                           </p>
                         </div>
-                        <div className="p-4">
-                          {!viewDocumentHref && viewFileLabel ? (
-                            <p className="text-sm text-slate-600">
-                              Preview link unavailable for this attachment.
-                            </p>
-                          ) : null}
-                          {viewDocumentHref && viewAttachmentKind === "image" ? (
-                            <div className="overflow-hidden rounded-lg bg-slate-100/80 ring-1 ring-slate-200/60">
-                              <img
-                                src={viewDocumentHref}
-                                alt={viewFileLabel || "Violation attachment"}
-                                className="mx-auto max-h-[min(320px,45vh)] w-full object-contain"
-                              />
-                            </div>
-                          ) : null}
-                          {viewDocumentHref && viewAttachmentKind === "pdf" ? (
-                            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-amber-200/90 bg-amber-50/50 px-4 py-8 text-center">
-                              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-amber-100">
-                                <FileType2 className="h-7 w-7 text-amber-700" />
-                              </div>
-                              <p className="text-sm font-medium text-slate-800">
-                                PDF document
-                              </p>
-                              <p className="max-w-xs text-xs text-slate-600">
-                                Open in a new tab to view or download a copy.
-                              </p>
-                            </div>
-                          ) : null}
-                          {viewDocumentHref && viewAttachmentKind === "other" ? (
-                            <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700">
-                              <FileType2 className="h-5 w-5 shrink-0 text-slate-500" />
-                              <span>
-                                Preview not available — open or download the
-                                file.
-                              </span>
-                            </div>
-                          ) : null}
-                          {viewDocumentHref ? (
-                            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="cursor-pointer border-amber-200 bg-white text-amber-900 hover:bg-amber-50"
-                                asChild
-                              >
-                                <a
-                                  href={viewDocumentHref}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                  Open in new tab
-                                </a>
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                className="cursor-pointer"
-                                asChild
-                              >
-                                <a
-                                  href={viewDocumentHref}
-                                  download={safeDownloadFileName(
-                                    viewingRow,
-                                    viewDocumentHref
-                                  )}
-                                >
-                                  <Download className="h-4 w-4" />
-                                  Download
-                                </a>
-                              </Button>
-                            </div>
-                          ) : null}
-                        </div>
                       </div>
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-6 text-center text-sm text-slate-600">
-                        No supporting file on record for this violation.
-                      </div>
-                    )}
+                    </div>
                   </div>
 
                   <DialogFooter className="border-t border-slate-200/80 bg-slate-50/90 px-6 py-4">
