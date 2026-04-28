@@ -305,7 +305,7 @@ export default function AddEmployeeToEvaluatorModal({
               type="button"
               onClick={handleAssign}
               disabled={saving || loading || selectedIds.size === 0}
-              className="cursor-pointer min-w-32 bg-blue-600 text-white hover:bg-blue-700"
+              className="cursor-pointer min-w-32 bg-blue-600 text-white hover:bg-blue-700 hover:text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
             >
               {saving ? (
                 <>

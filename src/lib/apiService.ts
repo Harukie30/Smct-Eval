@@ -464,6 +464,19 @@ export const apiService = {
     return response.data;
   },
 
+  getAllEvaluators: async (params?: {
+    page?: number;
+    per_page?: number;
+  }): Promise<any> => {
+    const response = await api.get("/getAllEvaluators", {
+      params: {
+        page: params?.page ?? 1,
+        per_page: params?.per_page ?? 1000,
+      },
+    });
+    return response.data;
+  },
+
   // Get specific branch
   getBranch: async (branchId: string | number): Promise<any> => {
     const response = await api.get(`/branch/${branchId}`);

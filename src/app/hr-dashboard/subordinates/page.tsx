@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toastMessages } from "@/lib/toastMessages";
 import { apiService } from "@/lib/apiService";
-import { Eye, RefreshCw } from "lucide-react";
+import { Eye, RefreshCw, Users2 } from "lucide-react";
 import AddEmployeeToEvaluatorModal, {
   AssignEvaluatorTarget,
 } from "@/components/hr/AddEmployeeToEvaluatorModal";
@@ -126,16 +126,20 @@ export default function HRSubordinatesPage() {
     }
 
     try {
-      const response = await apiService.getSubordinate({
+      const response = await apiService.getAllEvaluators({
         page: 1,
         per_page: 1000,
       });
 
       const evaluatorsRaw = Array.isArray(response?.evaluators)
         ? response.evaluators
-        : Array.isArray(response?.data?.evaluators)
-          ? response.data.evaluators
-          : [];
+        : Array.isArray(response?.evaluators?.data)
+          ? response.evaluators.data
+          : Array.isArray(response?.data?.evaluators)
+            ? response.data.evaluators
+            : Array.isArray(response?.data?.evaluators?.data)
+              ? response.data.evaluators.data
+              : [];
 
       const normalized = evaluatorsRaw
         .map((item: unknown) =>
@@ -226,33 +230,55 @@ export default function HRSubordinatesPage() {
   return (
     <div className="space-y-4">
       <Card className="overflow-hidden border-slate-200/90 shadow-md">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle>Subordinates</CardTitle>
-              <CardDescription>List of evaluator accounts with available actions.</CardDescription>
+        <div
+          className="relative overflow-hidden px-6 py-6 text-white"
+          style={{
+            backgroundImage: "url(/smct.png)",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/95 via-blue-600/92 to-indigo-800/95" />
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/15 shadow-inner ring-1 ring-white/30 backdrop-blur-sm">
+                <Users2 className="h-7 w-7 text-white" />
+              </div>
+              <div className="min-w-0 flex-1 space-y-2">
+                <CardTitle className="border-0 text-2xl font-semibold tracking-tight text-blue-50/95 shadow-none">
+                  Subordinates
+                </CardTitle>
+                <CardDescription className="max-w-2xl text-base leading-relaxed text-blue-50/90">
+                  Review evaluator accounts and open each staff list to manage the
+                  employees assigned under them.
+                </CardDescription>
+              </div>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={loading || refreshing}
-              onClick={() => {
-                void loadEvaluators(true);
-              }}
-              className="cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white"
-            >
-              <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Refreshing..." : "Refresh"}
-            </Button>
+         
           </div>
+        </div>
+        
+        <CardContent className="space-y-4 border-t border-slate-100 bg-gradient-to-b from-slate-50/50 to-white pt-6">
           <Input
             placeholder="Search evaluator by name, email, position, or role..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full sm:max-w-md"
+            
           />
-        </CardHeader>
-        <CardContent>
+         
+          <Button
+              type="button"
+              disabled={loading || refreshing}
+              onClick={() => {
+                void loadEvaluators(true);
+              }}
+              className="cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </Button>
+        
           <div className="rounded-xl border border-slate-200/80 bg-white shadow-sm">
             <Table>
               <TableHeader>
@@ -308,7 +334,7 @@ export default function HRSubordinatesPage() {
                           type="button"
                           size="sm"
                           variant="outline"
-                          className="cursor-pointer"
+                          className="cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                           onClick={() => {
                             void loadStaffForEvaluator(row);
                           }}
@@ -416,7 +442,7 @@ export default function HRSubordinatesPage() {
             </Button>
             <Button
               type="button"
-              className="cursor-pointer bg-blue-600 text-white hover:bg-blue-700"
+              className="cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
               onClick={() => {
                 setIsAddEmployeeModalOpen(true);
               }}
