@@ -754,7 +754,7 @@ export default function DashboardShell(props: DashboardShellProps) {
       <div className="flex overflow-hidden mt-20">
         {/* Sidebar */}
         <div
-          className={`relative overflow-visible bg-blue-600 transition-all duration-400  ${
+          className={`relative overflow-hidden bg-blue-600 transition-all duration-400  ${
             isSidebarOpen ? "w-64" : "w-0"
           }`}
         >
@@ -866,56 +866,6 @@ export default function DashboardShell(props: DashboardShellProps) {
                       isManagementItem &&
                       item.id === "departments"
                     ) {
-                      if (isHRDashboard) {
-                        return (
-                          <div key="management" className="relative">
-                            <button
-                              onClick={() => setIsManagementOpen((prev) => !prev)}
-                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
-                                managementItems.includes(activeItemId)
-                                  ? "bg-white/20 text-white border border-white/30"
-                                  : "text-blue-100 hover:bg-white/10"
-                              }`}
-                            >
-                              <div className="flex items-center space-x-3">
-                                <span className="text-lg">⚙️</span>
-                                <span className="font-medium">Management</span>
-                              </div>
-                              <ChevronRight
-                                className={`h-4 w-4 transition-transform ${
-                                  isManagementOpen ? "transform rotate-90" : ""
-                                }`}
-                              />
-                            </button>
-
-                            {isManagementOpen && (
-                              <div className="absolute left-full top-0 ml-2 w-60 max-h-[190px] overflow-y-auto rounded-lg border border-white/25 bg-blue-700/95 p-2 shadow-xl z-[70]">
-                                {sidebarItems
-                                  .filter((i) => managementItems.includes(i.id))
-                                  .map((subItem) => (
-                                    <button
-                                      key={subItem.id}
-                                      onClick={() => onChangeActive(subItem.id)}
-                                      className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors focus:outline-none focus:ring-2 focus:ring-white/40 cursor-pointer ${
-                                        activeItemId === subItem.id
-                                          ? "bg-white/20 text-white border border-white/30"
-                                          : "text-blue-100 hover:bg-white/10"
-                                      }`}
-                                    >
-                                      <span className="text-lg">
-                                        {subItem.icon}
-                                      </span>
-                                      <span className="font-medium text-sm">
-                                        {subItem.label}
-                                      </span>
-                                    </button>
-                                  ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-
                       return (
                         <Collapsible
                           key="management"
