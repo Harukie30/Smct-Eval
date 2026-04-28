@@ -889,7 +889,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                             </button>
 
                             {isManagementOpen && (
-                              <div className="absolute left-full top-0 ml-2 w-60 max-h-[300px] overflow-y-auto rounded-lg border border-white/25 bg-blue-700/95 p-2 shadow-xl z-30">
+                              <div className="absolute left-full top-0 ml-2 w-60 max-h-[190px] overflow-y-auto rounded-lg border border-white/25 bg-blue-700/95 p-2 shadow-xl z-[70]">
                                 {sidebarItems
                                   .filter((i) => managementItems.includes(i.id))
                                   .map((subItem) => (
