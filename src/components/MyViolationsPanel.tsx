@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Calendar,
   Eye,
@@ -44,6 +44,68 @@ import { toastMessages } from "@/lib/toastMessages";
 /** Pages to scan when building the month filter (per_page × this ≈ max rows considered). */
 const MONTH_FILTER_PER_PAGE = 500;
 const MONTH_FILTER_MAX_PAGES = 40;
+const VIOLATIONS_CACHE_TTL_MS = 30_000;
+
+const violationsResponseCache = new Map<
+  string,
+  { data: unknown; expiresAt: number }
+>();
+const violationsInFlightRequests = new Map<string, Promise<unknown>>();
+
+function getViolationsRequestKey(params: {
+  search?: string;
+  month?: string;
+  page?: number;
+  per_page?: number;
+}): string {
+  return JSON.stringify({
+    search: params.search?.trim() ?? "",
+    month: params.month?.trim() ?? "",
+    page: params.page ?? 1,
+    per_page: params.per_page ?? 10,
+  });
+}
+
+async function getMyViolationsRequest(
+  params: {
+    search?: string;
+    month?: string;
+    page?: number;
+    per_page?: number;
+  },
+  options?: { force?: boolean }
+): Promise<unknown> {
+  const force = options?.force === true;
+  const key = getViolationsRequestKey(params);
+
+  if (!force) {
+    const cached = violationsResponseCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+
+    const inFlight = violationsInFlightRequests.get(key);
+    if (inFlight) {
+      return inFlight;
+    }
+  }
+
+  const request = apiService
+    .getMyMemorandumViolations(params)
+    .then((data) => {
+      violationsResponseCache.set(key, {
+        data,
+        expiresAt: Date.now() + VIOLATIONS_CACHE_TTL_MS,
+      });
+      return data;
+    })
+    .finally(() => {
+      violationsInFlightRequests.delete(key);
+    });
+
+  violationsInFlightRequests.set(key, request);
+  return request;
+}
 
 export type MemorandumViolationRow = {
   id: number | string;
@@ -257,20 +319,24 @@ export default function MyViolationsPanel() {
 
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [monthsLoading, setMonthsLoading] = useState(true);
+  const loadRequestIdRef = useRef(0);
 
-  const fetchAvailableMonths = useCallback(async () => {
+  const fetchAvailableMonths = useCallback(async (options?: { force?: boolean }) => {
     setMonthsLoading(true);
     try {
       const ymSet = new Set<string>();
       let page = 1;
       let lastPage = 1;
       do {
-        const raw = await apiService.getMyMemorandumViolations({
-          search: "",
-          month: "",
-          page,
-          per_page: MONTH_FILTER_PER_PAGE,
-        });
+        const raw = await getMyViolationsRequest(
+          {
+            search: "",
+            month: "",
+            page,
+            per_page: MONTH_FILTER_PER_PAGE,
+          },
+          options
+        );
         const { rows: pageRows, lastPage: lp } =
           normalizeViolationsResponse(raw);
         lastPage = Math.max(1, lp);
@@ -330,24 +396,30 @@ export default function MyViolationsPanel() {
   const load = useCallback(
     async (options?: { softRefresh?: boolean }) => {
       const soft = options?.softRefresh === true;
+      const requestId = ++loadRequestIdRef.current;
       if (soft) {
         setRefreshing(true);
       } else {
         setLoading(true);
       }
       try {
-        const raw = await apiService.getMyMemorandumViolations({
-          search: debouncedSearch,
-          month: monthFilter === "all" ? "" : monthFilter,
-          page: currentPage,
-          per_page: itemsPerPage,
-        });
+        const raw = await getMyViolationsRequest(
+          {
+            search: debouncedSearch,
+            month: monthFilter === "all" ? "" : monthFilter,
+            page: currentPage,
+            per_page: itemsPerPage,
+          },
+          { force: soft }
+        );
+        if (requestId !== loadRequestIdRef.current) return;
         const { rows: next, total: tot, lastPage } =
           normalizeViolationsResponse(raw);
         setRows(next);
         setTotal(tot);
         setTotalPages(lastPage);
       } catch (e: unknown) {
+        if (requestId !== loadRequestIdRef.current) return;
         console.error(e);
         if (!soft) {
           setRows([]);
@@ -458,7 +530,7 @@ export default function MyViolationsPanel() {
                   variant="outline"
                   disabled={loading || refreshing}
                   onClick={() => {
-                    void fetchAvailableMonths();
+                    void fetchAvailableMonths({ force: true });
                     load({ softRefresh: true });
                   }}
                   className="w-full cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white gap-2 sm:w-auto"

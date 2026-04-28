@@ -714,7 +714,7 @@ export default function OverviewTab() {
                     id="records-approval-status"
                     className="w-full cursor-pointer"
                   >
-                    <SelectValue placeholder="Filter by status" />
+                    <SelectValue placeholder="Filter by status " />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="0">All Status</SelectItem>

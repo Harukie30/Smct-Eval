@@ -1578,19 +1578,11 @@ export default function UserManagementTab() {
                       </button>
                     )}
                   </div>
-                  <div className="w-full min-w-0 sm:w-auto">
-                    <Select
-                      value={roleFilter}
-                      onValueChange={(value) => {
-                        setRoleFilter(value);
-                      }}
-                    >
-                      <SelectTrigger className="w-full min-w-[10rem] sm:w-[180px]">
-                        <SelectValue placeholder="All Roles" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0">All Roles</SelectItem>
-                        {roles
+                  <div className="w-full min-w-0 sm:w-auto cursor-pointer">
+                    <Combobox
+                      options={[
+                        { value: "0", label: "All Roles" },
+                        ...roles
                           .filter((role) => {
                             // Hide admin role in HR dashboard
                             if (shouldHideAdminUsers) {
@@ -1598,15 +1590,22 @@ export default function UserManagementTab() {
                             }
                             return true;
                           })
-                          .map((role) => (
-                          <SelectItem key={role.id} value={String(role.id)}>
-                            {role.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          .map((role) => ({
+                            value: String(role.id),
+                            label: role.name,
+                          })),
+                      ]}
+                      value={roleFilter}
+                      onValueChangeAction={(value) => {
+                        setRoleFilter(String(value));
+                      }}
+                      placeholder="All Roles"
+                      searchPlaceholder="Search roles..."
+                      emptyText="No roles found."
+                      className="w-full min-w-[10rem] sm:w-[180px]"
+                    />
                   </div>
-                  <div className="w-full min-w-0 sm:w-auto">
+                  <div className="w-full min-w-0 sm:w-auto cursor-pointer">
                     <Combobox
                       options={[
                         { value: "all", label: "All Branches" },
