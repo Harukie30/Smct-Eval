@@ -601,7 +601,7 @@ export default function DepartmentsTab() {
                                     {dept.employees_count}
                                   </div>
                                   <div className="text-xs text-gray-600">
-                                    Employees
+                                    
                                   </div>
                                   <Button
                                     variant="outline"
@@ -620,7 +620,7 @@ export default function DepartmentsTab() {
                                     {dept.managers_count}
                                   </div>
                                   <div className="text-xs text-gray-600">
-                                    Managers
+                                    
                                   </div>
                                   <Button
                                     variant="outline"
