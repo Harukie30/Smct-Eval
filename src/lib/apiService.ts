@@ -527,16 +527,12 @@ export const apiService = {
     }
   ): Promise<any> => {
     const formData = new FormData();
-    const employeeIdsJson = JSON.stringify(payload.employeeIds);
-    // Support both naming styles depending on backend implementation.
-    formData.append("employeeIds", employeeIdsJson);
-    formData.append("employee_ids", employeeIdsJson);
+    // Backend expects comma-separated ids in form-data (e.g. "1,2,3").
+    const employeeIdsCsv = payload.employeeIds.map(String).join(",");
+
+    // Backend expects `employee_ids` key.
+    formData.append("employee_ids", employeeIdsCsv);
     formData.append("action", payload.action ?? "assign");
-    // Some backends expect singular key:
-    if (payload.employeeIds.length === 1) {
-      formData.append("employeeId", String(payload.employeeIds[0]));
-      formData.append("employee_id", String(payload.employeeIds[0]));
-    }
 
     const response = await api.post(
       `/assignEmployees/${encodeURIComponent(String(userId))}`,
