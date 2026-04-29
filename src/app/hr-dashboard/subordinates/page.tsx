@@ -107,6 +107,41 @@ function normalizeStaff(raw: Record<string, unknown>): StaffRow {
   };
 }
 
+function extractAssignedEmployees(raw: unknown): unknown[] {
+  if (!raw || typeof raw !== "object") return [];
+  const root = raw as Record<string, unknown>;
+  const data =
+    root.data && typeof root.data === "object"
+      ? (root.data as Record<string, unknown>)
+      : null;
+
+  const candidates: unknown[] = [
+    root.employees,
+    (root.employees as Record<string, unknown> | undefined)?.data,
+    root.assignedEmployees,
+    (root.assignedEmployees as Record<string, unknown> | undefined)?.data,
+    root.assigned_employees,
+    (root.assigned_employees as Record<string, unknown> | undefined)?.data,
+    root.users,
+    (root.users as Record<string, unknown> | undefined)?.data,
+    root.data,
+    data?.employees,
+    (data?.employees as Record<string, unknown> | undefined)?.data,
+    data?.assignedEmployees,
+    (data?.assignedEmployees as Record<string, unknown> | undefined)?.data,
+    data?.assigned_employees,
+    (data?.assigned_employees as Record<string, unknown> | undefined)?.data,
+    data?.users,
+    (data?.users as Record<string, unknown> | undefined)?.data,
+    data?.data,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+  return [];
+}
+
 export default function HRSubordinatesPage() {
   const [rows, setRows] = useState<EvaluatorRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -186,25 +221,14 @@ export default function HRSubordinatesPage() {
     setSelectedEvaluator(evaluator);
     setIsStaffModalOpen(true);
     try {
-      const params: {
-        page: number;
-        per_page: number;
-        branch_id?: string;
-        department_id?: string;
-      } = {
-        page: 1,
-        per_page: 500,
-      };
-
-      if (evaluator.branchId) params.branch_id = evaluator.branchId;
-      if (evaluator.departmentId) params.department_id = evaluator.departmentId;
-
-      const response = await apiService.getSubordinate(params);
-      const employeesRaw = Array.isArray(response?.employees)
-        ? response.employees
-        : Array.isArray(response?.data?.employees)
-          ? response.data.employees
-          : [];
+      const response = await apiService.getAllEvaluatorAssignedEmployees(
+        evaluator.id,
+        {
+          page: 1,
+          per_page: 500,
+        }
+      );
+      const employeesRaw = extractAssignedEmployees(response);
 
       const normalized = employeesRaw
         .map((item: unknown) =>

@@ -79,58 +79,103 @@ function normalizeCandidate(raw: Record<string, unknown>): CandidateEmployee {
   };
 }
 
+function extractEmployees(raw: unknown): unknown[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== "object") return [];
+
+  const root = raw as Record<string, unknown>;
+
+  const candidates: unknown[] = [
+    root.employees,
+    (root.employees as Record<string, unknown> | undefined)?.data,
+    root.assignedEmployees,
+    (root.assignedEmployees as Record<string, unknown> | undefined)?.data,
+    root.assigned_employees,
+    (root.assigned_employees as Record<string, unknown> | undefined)?.data,
+    root.users,
+    (root.users as Record<string, unknown> | undefined)?.data,
+    root.data,
+    (root.data as Record<string, unknown> | undefined)?.employees,
+    (root.data as Record<string, unknown> | undefined)?.assignedEmployees,
+    (root.data as Record<string, unknown> | undefined)?.assigned_employees,
+    (root.data as Record<string, unknown> | undefined)?.users,
+    (root.data as Record<string, unknown> | undefined)?.data,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+  return [];
+}
+
 export default function AddEmployeeToEvaluatorModal({
   open,
   onOpenChange,
   evaluator,
   onAssigned,
 }: AddEmployeeToEvaluatorModalProps) {
-  const [rows, setRows] = useState<CandidateEmployee[]>([]);
+  const [assignedRows, setAssignedRows] = useState<CandidateEmployee[]>([]);
+  const [unassignedRows, setUnassignedRows] = useState<CandidateEmployee[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [unassigningIds, setUnassigningIds] = useState<Set<string>>(new Set());
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  const loadCandidates = useCallback(async () => {
+  const loadEmployees = useCallback(async () => {
     if (!evaluator) return;
     setLoading(true);
     try {
-      const response = await apiService.getActiveRegistrations(
-        "",
-        "0",
-        1,
-        2000,
-        evaluator.branchId ?? "",
-        evaluator.departmentId ?? ""
-      );
-      const list = Array.isArray(response)
-        ? response
-        : (response as { data?: unknown[]; users?: unknown[] })?.data ||
-          (response as { users?: unknown[] })?.users ||
-          [];
+      const [assignedResponse, unassignedResponse] = await Promise.all([
+        apiService.getAllEvaluatorAssignedEmployees(evaluator.id, {
+          page: 1,
+          per_page: 500,
+        }),
+        apiService.getAllEvaluatorEmployees(evaluator.id, {
+          page: 1,
+          per_page: 2000,
+        }),
+      ]);
 
-      const normalized = list
-        .filter(
-          (item) =>
-            item &&
-            typeof item === "object" &&
-            isEmployeeRole((item as Record<string, unknown>).roles)
-        )
-        .map((item) =>
-          normalizeCandidate(
-            item && typeof item === "object" ? (item as Record<string, unknown>) : {}
+      const assignedList = extractEmployees(assignedResponse);
+      const unassignedList = extractEmployees(unassignedResponse);
+
+      const normalizeList = (list: unknown[]) =>
+        list
+          .filter(
+            (item) =>
+              item &&
+              typeof item === "object" &&
+              isEmployeeRole((item as Record<string, unknown>).roles)
           )
-        )
-        .sort((a: CandidateEmployee, b: CandidateEmployee) =>
-          a.name.localeCompare(b.name)
-        );
+          .map((item) =>
+            normalizeCandidate(
+              item && typeof item === "object"
+                ? (item as Record<string, unknown>)
+                : ({} as Record<string, unknown>)
+            )
+          )
+          .sort((a: CandidateEmployee, b: CandidateEmployee) =>
+            a.name.localeCompare(b.name)
+          );
 
-      setRows(normalized);
+      const normalizedAssigned = normalizeList(assignedList);
+      const assignedIdSet = new Set(normalizedAssigned.map((x) => x.id));
+
+      const normalizedUnassignedAll = normalizeList(unassignedList);
+      const normalizedUnassigned = normalizedUnassignedAll.filter(
+        (x) => !assignedIdSet.has(x.id)
+      );
+
+      setAssignedRows(normalizedAssigned);
+      setUnassignedRows(normalizedUnassigned);
     } catch (error) {
-      console.error("Failed to load candidate employees:", error);
-      setRows([]);
+      console.error("Failed to load evaluator employees:", error);
+      setAssignedRows([]);
+      setUnassignedRows([]);
       toastMessages.generic.error(
         "Failed to load employees",
         "Please try again."
@@ -144,8 +189,8 @@ export default function AddEmployeeToEvaluatorModal({
     if (!open || !evaluator) return;
     setSelectedIds(new Set());
     setSearch("");
-    void loadCandidates();
-  }, [open, evaluator, loadCandidates]);
+    void loadEmployees();
+  }, [open, evaluator, loadEmployees]);
 
   useEffect(() => {
     if (!isSuccessDialogOpen) return;
@@ -155,17 +200,29 @@ export default function AddEmployeeToEvaluatorModal({
     return () => window.clearTimeout(timeoutId);
   }, [isSuccessDialogOpen]);
 
-  const filteredRows = useMemo(() => {
+  const filteredAssignedRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((row) => {
+    if (!q) return assignedRows;
+    return assignedRows.filter((row) => {
       return (
         row.name.toLowerCase().includes(q) ||
         row.email.toLowerCase().includes(q) ||
         row.position.toLowerCase().includes(q)
       );
     });
-  }, [rows, search]);
+  }, [assignedRows, search]);
+
+  const filteredUnassignedRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return unassignedRows;
+    return unassignedRows.filter((row) => {
+      return (
+        row.name.toLowerCase().includes(q) ||
+        row.email.toLowerCase().includes(q) ||
+        row.position.toLowerCase().includes(q)
+      );
+    });
+  }, [unassignedRows, search]);
 
   const handleToggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -181,7 +238,11 @@ export default function AddEmployeeToEvaluatorModal({
 
   const handleAssign = async () => {
     if (!evaluator) return;
-    if (selectedIds.size === 0) {
+    const unassignedIdSet = new Set(unassignedRows.map((x) => x.id));
+
+    const idsToAssign = Array.from(selectedIds).filter((id) => unassignedIdSet.has(id));
+
+    if (idsToAssign.length === 0) {
       toastMessages.generic.warning(
         "No employee selected",
         "Select at least one employee to assign."
@@ -191,15 +252,13 @@ export default function AddEmployeeToEvaluatorModal({
 
     setSaving(true);
     try {
-      for (const employeeId of selectedIds) {
-        const formData = new FormData();
-        formData.append("evaluator_id", evaluator.id);
-        formData.append("assigned_evaluator_id", evaluator.id);
-        await apiService.updateEmployee(formData, employeeId);
-      }
+      await apiService.assignEmployees(evaluator.id, {
+        employeeIds: idsToAssign,
+        action: "assign",
+      });
 
       setSuccessMessage(
-        `${selectedIds.size} employee(s) assigned to ${evaluator.name}.`
+        `${idsToAssign.length} employee(s) assigned to ${evaluator.name}.`
       );
       onAssigned?.();
       onOpenChange(false);
@@ -208,12 +267,42 @@ export default function AddEmployeeToEvaluatorModal({
       console.error("Failed assigning employees:", error);
       toastMessages.generic.error(
         "Assignment failed",
-        "Please confirm backend supports evaluator assignment on update user."
+        "Please confirm backend supports employee assignment."
       );
     } finally {
       setSaving(false);
     }
   };
+
+  const handleUnassign = useCallback(
+    async (employeeId: string) => {
+      if (!evaluator) return;
+      if (saving) return;
+
+      setUnassigningIds((prev) => {
+        const next = new Set(prev);
+        next.add(employeeId);
+        return next;
+      });
+
+      try {
+        await apiService.assignEmployees(evaluator.id, {
+          employeeIds: [employeeId],
+          action: "unassign",
+        });
+
+        setSelectedIds(new Set());
+        setSearch("");
+        setUnassigningIds(new Set());
+        await loadEmployees();
+      } catch (error) {
+        console.error("Failed to unassign employee:", error);
+        toastMessages.generic.error("Unassign failed", "Please try again.");
+        setUnassigningIds(new Set());
+      }
+    },
+    [evaluator, saving, loadEmployees]
+  );
 
   return (
     <>
@@ -243,53 +332,125 @@ export default function AddEmployeeToEvaluatorModal({
               className="w-full sm:max-w-md"
             />
 
-            <div className="border rounded-lg bg-white max-h-[55vh] overflow-auto">
-              {loading ? (
-                <div className="flex items-center justify-center py-16 gap-2 text-gray-500">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Loading employees...
-                </div>
-              ) : (
-                <Table wrapperClassName="rounded-lg">
-                  <TableHeader className="sticky top-0 z-10 bg-slate-50">
-                    <TableRow>
-                      <TableHead className="w-[64px]">Pick</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Position</TableHead>
-                      <TableHead>Role</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRows.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="py-12 text-center text-sm text-slate-500">
-                          No employees found.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredRows.map((row) => (
-                        <TableRow key={row.id} className="hover:bg-blue-50/40">
-                          <TableCell>
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.has(row.id)}
-                              onChange={() => handleToggleSelect(row.id)}
-                              className="h-4 w-4 cursor-pointer"
-                              disabled={saving}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium">{row.name}</TableCell>
-                          <TableCell>{row.email}</TableCell>
-                          <TableCell>{row.position}</TableCell>
-                          <TableCell className="capitalize">{row.role}</TableCell>
+            {loading ? (
+              <div className="flex items-center justify-center py-16 gap-2 text-gray-500">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Loading employees...
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
+                  <div className="flex items-center justify-between border-b bg-slate-100 px-4 py-2.5">
+                    <p className="text-sm font-semibold text-slate-700">
+                      Already Assigned Employees
+                    </p>
+                    <Badge variant="outline" className="bg-white">
+                      {filteredAssignedRows.length}
+                    </Badge>
+                  </div>
+                  <div className="max-h-[22vh] overflow-auto">
+                    <Table wrapperClassName="rounded-lg">
+                      <TableHeader className="sticky top-0 z-10 bg-slate-50">
+                        <TableRow>
+                          <TableHead className="w-[64px]">Pick</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Position</TableHead>
+                          <TableHead>Role</TableHead>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAssignedRows.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="py-8 text-center text-sm text-slate-500">
+                              No assigned employees found.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredAssignedRows.map((row) => (
+                            <TableRow key={row.id} className="hover:bg-slate-50">
+                              <TableCell>
+                                <input
+                                  type="checkbox"
+                                  checked={!unassigningIds.has(row.id)}
+                                  onChange={(e) => {
+                                    if (!e.target.checked) {
+                                      void handleUnassign(row.id);
+                                    }
+                                  }}
+                                  className="h-4 w-4 cursor-pointer"
+                                  disabled={saving || unassigningIds.has(row.id)}
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">{row.name}</TableCell>
+                              <TableCell>{row.email}</TableCell>
+                              <TableCell>{row.position}</TableCell>
+                              <TableCell className="capitalize">{row.role}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-blue-200 bg-white shadow-sm">
+                  <div className="flex items-center justify-between border-b bg-blue-50 px-4 py-2.5">
+                    <p className="text-sm font-semibold text-blue-900">
+                      Unassigned Employees
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-white text-blue-900">
+                        {filteredUnassignedRows.length}
+                      </Badge>
+                      <Badge variant="outline" className="bg-white">
+                        Selected: {selectedIds.size}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="max-h-[30vh] overflow-auto">
+                    <Table wrapperClassName="rounded-lg">
+                      <TableHeader className="sticky top-0 z-10 bg-slate-50">
+                        <TableRow>
+                          <TableHead className="w-[64px]">Pick</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Position</TableHead>
+                          <TableHead>Role</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredUnassignedRows.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="py-10 text-center text-sm text-slate-500">
+                              No unassigned employees found.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredUnassignedRows.map((row) => (
+                            <TableRow key={row.id} className="hover:bg-blue-50/40">
+                              <TableCell>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIds.has(row.id)}
+                                  onChange={() => handleToggleSelect(row.id)}
+                                  className="h-4 w-4 cursor-pointer"
+                                  disabled={saving}
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">{row.name}</TableCell>
+                              <TableCell>{row.email}</TableCell>
+                              <TableCell>{row.position}</TableCell>
+                              <TableCell className="capitalize">{row.role}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="px-6 pb-6 pt-2 border-t bg-gray-50/95">

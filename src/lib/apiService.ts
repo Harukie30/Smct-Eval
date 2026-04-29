@@ -477,6 +477,74 @@ export const apiService = {
     return response.data;
   },
 
+  getAllEvaluatorAssignedEmployees: async (
+    userId: string | number,
+    params?: {
+      page?: number;
+      per_page?: number;
+    }
+  ): Promise<any> => {
+    const response = await api.get(
+      `/getAllEvaluatorAssignedEmployees/${encodeURIComponent(String(userId))}`,
+      {
+        params: {
+          page: params?.page ?? 1,
+          per_page: params?.per_page ?? 500,
+        },
+      }
+    );
+    return response.data;
+  },
+
+  getAllEvaluatorEmployees: async (
+    userId: string | number,
+    params?: {
+      page?: number;
+      per_page?: number;
+    }
+  ): Promise<any> => {
+    const response = await api.get(
+      `/getAllEvaluatorEmployees/${encodeURIComponent(String(userId))}`,
+      {
+        params: {
+          page: params?.page ?? 1,
+          per_page: params?.per_page ?? 2000,
+        },
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Assign/unassign evaluator employees.
+   * Backend-provided endpoint: POST /assignEmployees/{user}
+   */
+  assignEmployees: async (
+    userId: string | number,
+    payload: {
+      employeeIds: Array<string | number>;
+      action?: "assign" | "unassign";
+    }
+  ): Promise<any> => {
+    const formData = new FormData();
+    const employeeIdsJson = JSON.stringify(payload.employeeIds);
+    // Support both naming styles depending on backend implementation.
+    formData.append("employeeIds", employeeIdsJson);
+    formData.append("employee_ids", employeeIdsJson);
+    formData.append("action", payload.action ?? "assign");
+    // Some backends expect singular key:
+    if (payload.employeeIds.length === 1) {
+      formData.append("employeeId", String(payload.employeeIds[0]));
+      formData.append("employee_id", String(payload.employeeIds[0]));
+    }
+
+    const response = await api.post(
+      `/assignEmployees/${encodeURIComponent(String(userId))}`,
+      formData
+    );
+    return response.data;
+  },
+
   // Get specific branch
   getBranch: async (branchId: string | number): Promise<any> => {
     const response = await api.get(`/branch/${branchId}`);
