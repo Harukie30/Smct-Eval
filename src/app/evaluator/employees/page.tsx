@@ -33,6 +33,7 @@ import RankNfileHo from "@/components/evaluation/RankNfileHo";
 import BasicHo from "@/components/evaluation/BasicHo";
 import EvaluationsPagination from "@/components/paginationComponent";
 import ViewEmployeeModal from "@/components/ViewEmployeeModal";
+import MemorandumViolationModal from "@/components/MemorandumViolationModal";
 import { useBranchesForEvaluation } from "@/hooks/useBranchesForEvaluation";
 import {
   getEmployeeBranchCodeDisplay,
@@ -126,11 +127,15 @@ export default function EmployeesTab() {
     "employee" | "manager" | "areaManager" | null
   >(null);
   const [isViewEmployeeModalOpen, setIsViewEmployeeModalOpen] = useState(false);
+  const [isMemorandumViolationModalOpen, setIsMemorandumViolationModalOpen] =
+    useState(false);
 
   // View Employee Modal states
   const [selectedEmployeeForView, setSelectedEmployeeForView] =
     useState<User | null>(null);
   const [selectedEmployeeForEvaluation, setSelectedEmployeeForEvaluation] =
+    useState<User | null>(null);
+  const [selectedEmployeeForMemorandumViolation, setSelectedEmployeeForMemorandumViolation] =
     useState<User | null>(null);
   const positionsInFlightPromiseRef = useRef<Promise<void> | null>(null);
   const employeesInFlightKeyRef = useRef<string | null>(null);
@@ -633,6 +638,18 @@ export default function EmployeesTab() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  className="text-amber-600 hover:text-amber-700 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                                  onClick={() => {
+                                    setSelectedEmployeeForMemorandumViolation(employee);
+                                    setIsMemorandumViolationModalOpen(true);
+                                  }}
+                                  title="View memorandum violations"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="text-green-600 hover:text-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
                                   onClick={() => {
                                     setIsEvaluationTypeModalOpen(true);
@@ -728,6 +745,18 @@ export default function EmployeesTab() {
             : ""
         }
         employee={selectedEmployeeForEvaluation}
+      />
+
+      <MemorandumViolationModal
+        open={isMemorandumViolationModalOpen}
+        onOpenChangeAction={(next) => {
+          if (!next) {
+            setIsMemorandumViolationModalOpen(false);
+            setSelectedEmployeeForMemorandumViolation(null);
+          }
+        }}
+        employee={selectedEmployeeForMemorandumViolation}
+        hideAddViolationButton
       />
 
       <Dialog

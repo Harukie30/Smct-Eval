@@ -84,6 +84,8 @@ export interface MemorandumViolationModalProps {
   targetEmployeeUserId?: string | number | null;
   branchFilterForEmployeePicker?: string;
   shouldHideAdminUsers?: boolean;
+  /** Hide "Add Violation" button for read-only usage. */
+  hideAddViolationButton?: boolean;
 }
 
 /** When total rows exceed this, paginate at `VIOLATIONS_PAGE_SIZE` per page. */
@@ -263,6 +265,7 @@ export default function MemorandumViolationModal({
   targetEmployeeUserId = null,
   branchFilterForEmployeePicker,
   shouldHideAdminUsers = true,
+  hideAddViolationButton = false,
 }: MemorandumViolationModalProps) {
   const [pickerUsers, setPickerUsers] = useState<User[]>([]);
   const [loadingPicker, setLoadingPicker] = useState(false);
@@ -533,7 +536,9 @@ export default function MemorandumViolationModal({
 
   const employeeSubtitle = headerEmployeeName
     ? "Memorandum violations for this employee"
-    : "Select an employee to load and manage memorandum violations";
+    : hideAddViolationButton
+      ? "Select an employee to view memorandum violations"
+      : "Select an employee to load and manage memorandum violations";
 
   const addViolationDisabled =
     submittingAdd ||
@@ -665,18 +670,20 @@ export default function MemorandumViolationModal({
                 />
                 Refresh list
               </Button>
-              <Button
-                type="button"
-                onClick={() => {
-                  resetAddForm();
-                  setAddModalOpen(true);
-                }}
-                disabled={addViolationDisabled}
-                className="cursor-pointer bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FileWarning className="h-4 w-4 mr-2 inline" />
-                Add Violation
-              </Button>
+              {!hideAddViolationButton && (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    resetAddForm();
+                    setAddModalOpen(true);
+                  }}
+                  disabled={addViolationDisabled}
+                  className="cursor-pointer bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-sm transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FileWarning className="h-4 w-4 mr-2 inline" />
+                  Add Violation
+                </Button>
+              )}
             </div>
 
             <div className="space-y-3">
