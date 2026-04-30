@@ -100,7 +100,7 @@ export default function WelcomeStepBranch({
             variant="ghost"
             size="icon"
             onClick={onBackAction}
-            className="h-10 w-20 text-white hover:text-white hover:bg-red-600 cursor-pointer hover:scale-110 transition-transform duration-200 bg-red-500"
+            className="h-10 w-20 text-white hover:text-white hover:bg-red-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 bg-red-600"
             aria-label="Close"
           >
             Close
@@ -206,7 +206,7 @@ export default function WelcomeStepBranch({
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                           isLastStep
                             ? "bg-green-500 text-white"
-                            : "bg-blue-500 text-white"
+                            : "bg-blue-600 text-white"
                         }`}
                       >
                         {isLastStep ? "End" : step.id}
@@ -232,7 +232,7 @@ export default function WelcomeStepBranch({
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                           isLastStep
                             ? "bg-green-500 text-white"
-                            : "bg-blue-500 text-white"
+                            : "bg-blue-600 text-white"
                         }`}
                       >
                         {isLastStep ? "End" : step.id}
@@ -330,7 +330,7 @@ export default function WelcomeStepBranch({
             disabled={!hasSignature}
             className={`px-8 py-3 text-lg ${
               hasSignature
-                ? "bg-blue-600 hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200"
+                ? "bg-blue-600 hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                 : "bg-gray-400 cursor-not-allowed"
             }`}
           >

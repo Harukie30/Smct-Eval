@@ -528,7 +528,7 @@ export default function AddEmployeeToEvaluatorModal({
                     </div>
                   ) : (
                     <Table wrapperClassName="">
-                      <TableHeader className="sticky top-0 z-10 border-b border-slate-100 bg-white shadow-[0_1px_0_0_rgb(241_245_249)]">
+                      <TableHeader className="sticky top-0 z-10 border-b border-slate-100 bg-white shadow-[0_1px_0_0_rgb(241_245_249)] [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-500">
                         <TableRow className="border-slate-100 hover:bg-transparent">
                           <TableHead className="w-14 pl-4 text-xs font-medium uppercase tracking-wide text-slate-500">
                             On
@@ -636,7 +636,7 @@ export default function AddEmployeeToEvaluatorModal({
                     </div>
                   ) : (
                     <Table wrapperClassName="">
-                      <TableHeader className="sticky top-0 z-10 border-b border-slate-100 bg-white shadow-[0_1px_0_0_rgb(241_245_249)]">
+                      <TableHeader className="sticky top-0 z-10 border-b border-slate-100 bg-white shadow-[0_1px_0_0_rgb(241_245_249)] [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-500">
                         <TableRow className="border-slate-100 hover:bg-transparent">
                           <TableHead className="w-14 pl-4 text-xs font-medium uppercase tracking-wide text-slate-500">
                             Add
@@ -719,7 +719,7 @@ export default function AddEmployeeToEvaluatorModal({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={saving}
-              className="min-w-[100px] border-slate-200 text-white bg-red-600 hover:bg-red-700 cursor-pointer shadow-sm hover:text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+              className="min-w-[100px] border-slate-200 text-white bg-red-600 hover:bg-red-700 cursor-pointer shadow-sm hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
               Cancel
             </Button>
@@ -727,7 +727,7 @@ export default function AddEmployeeToEvaluatorModal({
               type="button"
               onClick={handleAssign}
               disabled={saving || loadingPool || selectedIds.size === 0}
-              className="min-w-[140px] bg-blue-600 text-white shadow-sm hover:bg-blue-800 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+              className="min-w-[140px] bg-blue-600 text-white shadow-sm hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
               {saving ? (
                 <>

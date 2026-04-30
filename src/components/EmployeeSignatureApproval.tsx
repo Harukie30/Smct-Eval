@@ -221,7 +221,7 @@ export default function EmployeeSignatureApproval({
           <Button 
             onClick={handleApprove}
             disabled={!hasSignature || loading}
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-green-600 hover:bg-green-700 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
           >
             {loading ? (
               <>

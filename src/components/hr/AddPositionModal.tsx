@@ -179,12 +179,12 @@ export default function AddPositionModal({
             variant="outline"
             onClick={() => onOpenChangeAction(false)}
             disabled={isSubmitting}
-            className="px-6 bg-red-600 hover:bg-red-700 text-white hover:text-white cursor-pointer hover:scale-110 transition-all duration-200"
+            className="px-6 bg-red-600 hover:bg-red-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
           >
             Cancel
           </Button>
           <Button
-            className="bg-green-600 hover:bg-green-700 text-white cursor-pointer px-6 hover:scale-110 transition-all duration-200"
+            className="bg-green-600 hover:bg-green-700 text-white cursor-pointer px-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             onClick={handleSubmit}
             disabled={isSubmitting}
           >
@@ -219,7 +219,7 @@ export default function AddPositionModal({
 
           <DialogFooter className="border-t border-gray-200 pt-4">
             <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer px-6 hover:scale-110 transition-all duration-200"
+              className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer px-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               onClick={() => setIsValidationDialogOpen(false)}
               disabled={isSubmitting}
             >

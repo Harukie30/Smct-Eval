@@ -346,7 +346,7 @@ export default function HRSubordinatesPage() {
               onClick={() => {
                 void loadEvaluators(true);
               }}
-              className="cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+              className="cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
               {refreshing ? "Refreshing..." : "Refresh"}
@@ -407,7 +407,7 @@ export default function HRSubordinatesPage() {
                           type="button"
                           size="sm"
                           variant="outline"
-                          className="cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                          className="cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                           onClick={() => {
                             void loadStaffForEvaluator(row);
                           }}
@@ -478,7 +478,7 @@ export default function HRSubordinatesPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="cursor-pointer shrink-0 border-slate-200 bg-red-600 text-white hover:bg-red-700 hover:text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                className="cursor-pointer shrink-0 border-slate-200 bg-red-600 text-white hover:bg-red-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                 onClick={() => setStaffSearch("")}
               >
                 <X className="mr-1.5 h-4 w-4" />
@@ -494,7 +494,7 @@ export default function HRSubordinatesPage() {
           </div>
           <div className="max-h-[60vh] overflow-auto rounded-xl border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-950/[0.03]">
             <Table>
-              <TableHeader className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_rgb(226_232_240)]">
+              <TableHeader className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_rgb(226_232_240)] [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                 <TableRow>
                   <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Name</TableHead>
                   <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Email</TableHead>
@@ -559,7 +559,7 @@ export default function HRSubordinatesPage() {
             <Button
               type="button"
               variant="outline"
-              className="cursor-pointer bg-red-600 hover:bg-red-700 text-white hover:text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+              className="cursor-pointer bg-red-600 hover:bg-red-700 text-white hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               onClick={() => {
                 setIsStaffModalOpen(false);
               }}
@@ -568,7 +568,7 @@ export default function HRSubordinatesPage() {
             </Button>
             <Button
               type="button"
-              className="cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+              className="cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               onClick={() => {
                 setIsAddEmployeeModalOpen(true);
               }}

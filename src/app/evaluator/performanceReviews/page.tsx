@@ -412,7 +412,7 @@ export default function performanceReviews() {
 
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <Skeleton className="h-6 w-48" />
                 <Skeleton className="h-8 w-24" />
               </div>
@@ -721,7 +721,7 @@ export default function performanceReviews() {
               
               {/* Year Filter */}
               <div className="mb-6 mt-3">
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                   <span className="text-sm font-medium text-gray-700">
                     Filter by Year:
                   </span>
@@ -729,7 +729,7 @@ export default function performanceReviews() {
                     value={String(selectedYear)}
                     onValueChange={(value: any) => setSelectedYear(value)}
                   >
-                    <SelectTrigger className="w-[180px] cursor-pointer">
+                    <SelectTrigger className="w-full sm:w-[180px] cursor-pointer">
                       <SelectValue placeholder="Select a year " />
                     </SelectTrigger>
                     <SelectContent>
@@ -756,7 +756,7 @@ export default function performanceReviews() {
                     variant="outline"
                     size="sm"
                     onClick={() => setSelectedQuarter("")}
-                    className={`text-xs border transition-all duration-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                    className={`text-xs border transition-all duration-200 cursor-pointer ${
                       selectedQuarter === ""
                         ? "bg-blue-600 text-white border-blue-600 scale-105"
                         : "bg-white text-black border-gray-400 hover:bg-gray-100"
@@ -772,10 +772,10 @@ export default function performanceReviews() {
                       variant="outline"
                       size="sm"
                       onClick={() => setSelectedQuarter(quarter)}
-                      className={`text-xs font-medium border transition-all duration-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                      className={`text-xs font-medium border transition-all duration-200 cursor-pointer ${
                         selectedQuarter === quarter
                           ? "bg-blue-600 text-white border-blue-600 scale-105"
-                          : "bg-white text-black border-gray-400 hover:bg-gray-100 hover:scale-105"
+                          : "bg-white text-black border-gray-400 hover:bg-gray-100 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                       }`}
                     >
                       {quarter}
@@ -787,10 +787,10 @@ export default function performanceReviews() {
                     variant="outline"
                     size="sm"
                     onClick={() => setSelectedQuarter("Others")}
-                    className={`text-xs font-medium border transition-all duration-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                    className={`text-xs font-medium border transition-all duration-200 cursor-pointer ${
                       selectedQuarter === "Others"
                         ? "bg-blue-600 text-white border-blue-600 scale-105"
-                        : "bg-white text-black border-gray-400 hover:bg-gray-100 hover:scale-105"
+                        : "bg-white text-black border-gray-400 hover:bg-gray-100 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                     }`}
                   >
                     Others
@@ -801,24 +801,24 @@ export default function performanceReviews() {
             <CardContent className="p-0">
               {submissions.length > 0 ? (
                 <>
-                  <div className="max-h-[500px] overflow-y-auto overflow-x-hidden rounded-lg border mx-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                  <div className="mx-4 max-h-[min(68vh,32rem)] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                     {isPaginate ? (
-                      <Table className="table-fixed w-full">
-                        <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                      <Table className="table-fixed min-w-[860px] w-full">
+                        <TableHeader className="sticky top-0 z-10 border-b bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                           <TableRow>
                             <TableHead className="w-1/5 pl-4">
                               Immediate Supervisor
                             </TableHead>
-                            <TableHead className="w-1/5 text-right pr-25">
+                            <TableHead className="w-1/5 text-right pr-4">
                               Rating
                             </TableHead>
                             <TableHead className="w-1/5 text-center">
                               Date
                             </TableHead>
-                            <TableHead className="w-1/5 px-4 pr-23 text-center">
+                            <TableHead className="w-1/5 px-4 text-center">
                               Quarter
                             </TableHead>
-                            <TableHead className="w-1/5 text-right pl-1 pr-4">
+                            <TableHead className="w-1/5 text-right pr-4">
                               Actions
                             </TableHead>
                           </TableRow>
@@ -832,7 +832,7 @@ export default function performanceReviews() {
                                   <Skeleton className="h-5 w-12 rounded-full" />
                                 </div>
                               </TableCell>
-                              <TableCell className="w-1/5 text-right pr-25">
+                              <TableCell className="w-1/5 text-right pr-4">
                                 <Skeleton className="h-4 w-12" />
                               </TableCell>
                               <TableCell className="w-1/5 text-center">
@@ -841,7 +841,7 @@ export default function performanceReviews() {
                                   <Skeleton className="h-3 w-16" />
                                 </div>
                               </TableCell>
-                              <TableCell className="w-1/5 px-4 pr-23 text-center">
+                              <TableCell className="w-1/5 px-4 text-center">
                                 <Skeleton className="h-5 w-16 rounded-full mx-auto" />
                               </TableCell>
                               <TableCell className="w-1/5 text-right pl-1 pr-4">
@@ -852,22 +852,22 @@ export default function performanceReviews() {
                         </TableBody>
                       </Table>
                     ) : (
-                      <Table className="table-fixed w-full">
-                        <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+                      <Table className="table-fixed min-w-[860px] w-full">
+                        <TableHeader className="sticky top-0 z-10 border-b bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                           <TableRow>
                             <TableHead className="w-1/5 pl-4">
                               Immediate Supervisor
                             </TableHead>
-                            <TableHead className="w-1/5 text-right pr-25">
+                            <TableHead className="w-1/5 text-right pr-4">
                               Rating
                             </TableHead>
                             <TableHead className="w-1/5 text-center">
                               Date
                             </TableHead>
-                            <TableHead className="w-1/5 px-4 pr-23 text-center">
+                            <TableHead className="w-1/5 px-4 text-center">
                               Quarter
                             </TableHead>
-                            <TableHead className="w-1/5 text-right pl-1 pr-4">
+                            <TableHead className="w-1/5 text-right pr-4">
                               Actions
                             </TableHead>
                           </TableRow>
@@ -920,7 +920,7 @@ export default function performanceReviews() {
                                     )}
                                   </div>
                                 </TableCell>
-                                <TableCell className="w-1/5 text-right font-semibold pr-25">
+                                <TableCell className="w-1/5 text-right font-semibold pr-4">
                                   <div
                                     className={`flex items-center justify-end gap-2 ${
                                       isPoorPerformance
@@ -974,7 +974,7 @@ export default function performanceReviews() {
                                     </span>
                                   </div>
                                 </TableCell>
-                                <TableCell className="w-1/5 px-4 pr-23">
+                                <TableCell className="w-1/5 px-4">
                                   <div className="flex justify-center">
                                     <Badge
                                       className={getQuarterColor(
@@ -998,7 +998,7 @@ export default function performanceReviews() {
                                     onClick={() =>
                                       handleViewEvaluation(submission)
                                     }
-                                    className="text-white bg-blue-500 hover:text-white hover:bg-blue-600 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                                    className="text-white bg-blue-600 hover:text-white hover:bg-blue-700 cursor-pointer"
                                   >
                                     <Eye className="w-4 h-4" />
                                     View

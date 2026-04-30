@@ -335,7 +335,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
                </div>
                <Button
                  onClick={handleConfirmInstructions}
-                 className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 cursor-pointer hover:to-blue-800 text-white px-6 py-2 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 font-semibold"
+                 className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 cursor-pointer hover:to-blue-800 text-white px-6 py-2 shadow-md hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 font-semibold"
                >
                  <CheckCircle className="h-4 w-4 mr-2" />
                  Got it, let's start!
@@ -413,7 +413,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
                   disabled={
                     hasSignature && isSavedSignature && user?.approvedSignatureReset === 0
                   }
-                  className="text-white border-red-300 hover:text-white bg-red-500 hover:bg-red-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 transition-all duration-300"
+                  className="text-white border-red-300 hover:text-white bg-red-600 hover:bg-red-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                 >
                   Clear Signature
                 </Button>
@@ -441,7 +441,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
                       }
                       setShowContactDeveloperDialog(true);
                     }}
-                    className="text-orange-600 bg-orange-500 text-white border-orange-300 hover:text-white hover:bg-orange-500 cursor-pointer disabled:cursor-not-allowed hover:scale-110 transition-all duration-300"
+                    className="text-orange-600 bg-orange-500 text-white border-orange-300 hover:text-white hover:bg-orange-600 cursor-pointer disabled:cursor-not-allowed transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                   >
                     Request Reset
                   </Button>
@@ -553,7 +553,7 @@ const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(({
           <DialogFooter className="bg-gray-50 px-6 py-4 border-t border-gray-200">
             <Button
               onClick={() => setShowContactDeveloperDialog(false)}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-2.5 cursor-pointer hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg font-semibold"
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-2.5 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 shadow-md font-semibold"
             >
               Got it!
             </Button>

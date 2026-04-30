@@ -68,7 +68,7 @@ function ScoreDropdown({
       <DropdownMenuTrigger
         className={`w-15 px-1 py-2 text-lg font-bold border-2 border-yellow-400 rounded-md bg-yellow-100 text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm min-h-[40px] 
           justify-between inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none
-           disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground cursor-pointer hover:scale-110 transition-transform duration-200  ${getScoreColor(
+          disabled:opacity-50 border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0  ${getScoreColor(
           value
         )}`}
       >
@@ -78,31 +78,31 @@ function ScoreDropdown({
       <DropdownMenuContent className="w-32 min-w-[128px] bg-white border-2 border-yellow-400">
         <DropdownMenuItem
           onClick={() => onValueChange("1")}
-          className="text-lg font-bold text-red-700 hover:bg-red-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
+          className="text-lg font-bold text-red-700 hover:bg-red-50 py-2 text-center justify-center cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
         >
           1
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange("2")}
-          className="text-lg font-bold text-orange-700 hover:bg-orange-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200" 
+          className="text-lg font-bold text-orange-700 hover:bg-orange-50 py-2 text-center justify-center cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
         >
           2
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange("3")}
-          className="text-lg font-bold text-yellow-700 hover:bg-yellow-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
+          className="text-lg font-bold text-yellow-700 hover:bg-yellow-50 py-2 text-center justify-center cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
         >
           3
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange("4")}
-          className="text-lg font-bold text-blue-700 hover:bg-blue-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
+          className="text-lg font-bold text-blue-700 hover:bg-blue-50 py-2 text-center justify-center cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
         >
           4
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onValueChange("5")}
-          className="text-lg font-bold text-green-700 hover:bg-green-50 py-2 text-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200"
+          className="text-lg font-bold text-green-700 hover:bg-green-50 py-2 text-center justify-center cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
         >
           5
         </DropdownMenuItem>
@@ -366,7 +366,7 @@ export default function Step1({
                     reviewTypeOthersCustom: "",
                   });
                 }}
-                className="text-xs px-3 py-1 h-7 bg-blue-500 text-white border-gray-300 hover:text-white hover:bg-red-400 cursor-pointer hover:scale-110 transition-transform duration-200"
+              className="text-xs px-3 py-1 h-7 bg-blue-600 text-white border-gray-300 hover:text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               >
                 Clear All
               </Button>
@@ -382,7 +382,7 @@ export default function Step1({
                     type="radio"
                     id="prob3"
                     name="probationaryReview"
-                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
+                    className="rounded cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                     checked={data.reviewTypeProbationary === 3}
                     disabled={
                       probitionary3 ||
@@ -427,7 +427,7 @@ export default function Step1({
                     type="radio"
                     id="prob5"
                     name="probationaryReview"
-                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
+                    className="rounded cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                     checked={data.reviewTypeProbationary === 5}
                     disabled={
                       probitionary5 ||
@@ -484,7 +484,7 @@ export default function Step1({
                     type="radio"
                     id="q1"
                     name="regularReview"
-                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
+                    className="rounded cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                     checked={data.reviewTypeRegular === "Q1"}
                     disabled={
                       regular1 ||
@@ -527,7 +527,7 @@ export default function Step1({
                     type="radio"
                     id="q2"
                     name="regularReview"
-                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
+                    className="rounded cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                     checked={data.reviewTypeRegular === "Q2"}
                     disabled={
                       regular2 ||
@@ -570,7 +570,7 @@ export default function Step1({
                     type="radio"
                     id="q3"
                     name="regularReview"
-                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
+                    className="rounded cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                     checked={data.reviewTypeRegular === "Q3"}
                     disabled={
                       regular3 ||
@@ -613,7 +613,7 @@ export default function Step1({
                     type="radio"
                     id="q4"
                     name="regularReview"
-                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
+                    className="rounded cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                     checked={data.reviewTypeRegular === "Q4"}
                     disabled={
                       regular4 ||
@@ -662,7 +662,7 @@ export default function Step1({
                   <input
                     type="checkbox"
                     id="improvement"
-                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
+                    className="rounded cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                     checked={data.reviewTypeOthersImprovement}
                     disabled={
                       data.reviewTypeProbationary !== "" ||
@@ -707,7 +707,7 @@ export default function Step1({
                   <input
                     type="checkbox"
                     id="othersCustom"
-                    className="rounded cursor-pointer hover:scale-110 transition-transform duration-200"
+                    className="rounded cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                     checked={
                       isOthersCustomEnabled ||
                       (data.reviewTypeOthersCustom !== "" &&
@@ -995,7 +995,7 @@ export default function Step1({
                         : new Date(data.coverageTo).toISOString().split("T")[0]
                       : undefined
                   }
-                  className={`w-full bg-yellow-100 border-yellow-300 hover:bg-yellow-200 cursor-pointer hover:scale-110 transition-transform duration-200 ${
+                  className={`w-full bg-yellow-100 border-yellow-300 hover:bg-yellow-200 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${
                     coverageError && !data.coverageFrom
                       ? "border-red-500"
                       : ""
@@ -1045,7 +1045,7 @@ export default function Step1({
                         : new Date(data.coverageFrom).toISOString().split("T")[0]
                       : undefined
                   }
-                  className={`w-full bg-yellow-100 border-yellow-300 hover:bg-yellow-200 cursor-pointer hover:scale-110 transition-transform duration-200 ${
+                  className={`w-full bg-yellow-100 border-yellow-300 hover:bg-yellow-200 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${
                     coverageError && !data.coverageTo ? "border-red-500" : ""
                   }`}
                 />
@@ -1214,7 +1214,7 @@ export default function Step1({
                   jobKnowledgeScore3: 0,
                 });
               }}
-              className="text-xs px-3 py-1 h-7 bg-blue-500 text-white border-gray-300 hover:text-white hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200 "
+              className="text-xs px-3 py-1 h-7 bg-blue-600 text-white border-gray-300 hover:text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 "
             >
               Clear Job Knowledge Scores
             </Button>

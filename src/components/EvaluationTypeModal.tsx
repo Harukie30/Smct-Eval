@@ -130,7 +130,7 @@ export default function EvaluationTypeModal({
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-blue-600"></div>
               <CardContent className="p-6">
                 <div className="flex flex-col items-center text-center space-y-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md shadow-sm">
                     <Users className="w-8 h-8 text-blue-600" />
                   </div>
                   <div>
@@ -172,7 +172,7 @@ export default function EvaluationTypeModal({
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-green-600"></div>
               <CardContent className="p-6">
                 <div className="flex flex-col items-center text-center space-y-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                  <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md shadow-sm">
                     <Briefcase className="w-8 h-8 text-green-600" />
                   </div>
                   <div>
@@ -215,7 +215,7 @@ export default function EvaluationTypeModal({
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-green-600"></div>
                 <CardContent className="p-6">
                   <div className="flex flex-col items-center text-center space-y-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                    <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl flex items-center justify-center transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md shadow-sm">
                       <Building2 className="w-8 h-8 text-green-600" />
                     </div>
                     <div>

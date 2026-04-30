@@ -640,7 +640,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 placeholder="Select position"
                 searchPlaceholder="Search positions..."
                 emptyText="No positions found."
-                className={errors.position_id ? "border-red-500" : "bg-white cursor-pointer hover:scale-105 transition-all duration-300"}
+                className={errors.position_id ? "border-red-500" : "bg-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"}
               />
               {errors.position_id && (
                 <p className="text-sm text-red-500">{errors.position_id}</p>
@@ -659,7 +659,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 placeholder="Select branch"
                 searchPlaceholder="Search branches..."
                 emptyText="No branches found."
-                className={errors.branch_id ? "border-red-500 cursor-pointer hover:scale-105 transition-all duration-300" : "cursor-pointer hover:scale-105 transition-all duration-300"}
+                className={errors.branch_id ? "border-red-500 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0" : "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"}
               />
               {errors.branch_id && (
                 <p className="text-sm text-red-500">{errors.branch_id}</p>
@@ -680,7 +680,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                   searchPlaceholder="Search departments..."
                   emptyText="No departments found."
                   className={
-                    errors.department_id ? "border-red-500" : "bg-white cursor-pointer hover:scale-105 transition-all duration-300"
+                    errors.department_id ? "border-red-500" : "bg-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                   }
                 />
                 {errors.department_id && (
@@ -695,7 +695,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               <Select
                 onValueChange={(value) => handleInputChange("role_id", value)}
               >
-                <SelectTrigger className="w-48 cursor-pointer hover:scale-105 transition-all duration-300">
+                <SelectTrigger className="w-48 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
@@ -718,7 +718,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               <Button
                 variant="outline"
                 onClick={handleCancel}
-                className="px-6 bg-red-600 hover:bg-red-700 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                className="px-6 bg-red-600 hover:bg-red-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                 disabled={isSaving}
               >
                 Cancel
@@ -727,18 +727,14 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 type="button"
                 variant="outline"
                 onClick={handleBulkUploadClick}
-                className="px-4 bg-blue-500 text-white hover:bg-blue-600 hover:text-white cursor-pointer hover:scale-105 transition-transform duration-200"
+                className="px-4 bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                 disabled={isSaving}
               >
                 Upload User
               </Button>
               <Button
                 onClick={handleSave}
-                className={`bg-green-600 hover:bg-green-700 text-white px-6 
-    cursor-pointer hover:scale-110 transition-transform duration-200 
-    shadow-lg hover:shadow-xl transition-all duration-300
-    ${isSaving ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
-  `}
+                className={`bg-green-600 hover:bg-green-700 text-white px-6 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${isSaving ? "opacity-70 cursor-not-allowed hover:translate-y-0 hover:shadow-none" : ""}`}
                 disabled={isSaving}
               >
                 {isSaving ? (
@@ -883,14 +879,14 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
               type="button"
               variant="outline"
               onClick={() => setIsBulkUploadOpen(false)}
-              className="px-6 cursor-pointer bg-red-600 hover:bg-red-700 text-white hover:text-white hover:scale-110 transition-transform duration-200"
+              className="px-6 cursor-pointer bg-red-600 hover:bg-red-700 text-white hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               disabled={isSaving || isBulkUploading}
             >
               Close
             </Button>
             <Button
               type="button"
-              className="px-6 bg-blue-600 cursor-pointer hover:scale-110 transition-transform duration-200 hover:bg-blue-700 text-white"
+              className="px-6 bg-blue-600 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 hover:bg-blue-700 text-white"
               onClick={() => {
                 submitBulkUpload();
               }}
@@ -950,7 +946,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
           <DialogFooter>
             <Button
               type="button"
-              className="px-6 bg-red-600 hover:bg-red-700 text-white cursor-pointer hover:scale-105 transition-transform duration-200"
+              className="px-6 bg-red-600 hover:bg-red-700 text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               onClick={() => setIsBulkErrorDialogOpen(false)}
             >
               Close

@@ -522,7 +522,7 @@ function LandingLoginPage() {
                       )}
                       <Button
                         type="submit"
-                        className="w-full bg-blue-600 text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-all duration-300"
+                        className="w-full bg-blue-600 text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                         disabled={isLoggingIn}
                       >
                         {isLoggingIn ? (
@@ -563,7 +563,7 @@ function LandingLoginPage() {
                     <Button
                       variant="outline"
                       onClick={() => setShowGoogleLoginModal(true)}
-                      className="w-full cursor-pointer hover:scale-110 transition-all duration-300 relative overflow-hidden group"
+                      className="w-full cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 relative overflow-hidden group"
                       style={{
                         backgroundImage: "url('/chrome.png')",
                         backgroundSize: "cover",
@@ -664,7 +664,7 @@ function LandingLoginPage() {
               sessionStorage.clear();
               window.location.reload();
             }}
-            className="text-base text-white bg-blue-600 hover-text-white hover:bg-blue-700 cursor-pointer hover:scale-110 transition-all duration-300"
+            className="text-base text-white bg-blue-600 hover:text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
           >
             🔄 Clear Session & Start Fresh
           </Button>
@@ -1277,7 +1277,7 @@ function LandingLoginPage() {
           <DialogFooter className="px-6 pb-6 pt-0">
             <Button
               type="button"
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 cursor-pointer hover:scale-110 transition-all duration-300"
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               onClick={() => setShowServerErrorDialog(false)}
             >
               OK

@@ -346,7 +346,7 @@ export default function ProfileModal({
             variant="outline"
             onClick={handleCancel}
             disabled={isLoading}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 hover:text-white text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 hover:text-white text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
           >
             <X className="w-5 h-5 text-white" />
             Cancel
@@ -640,7 +640,7 @@ export default function ProfileModal({
           <Button
             type="button"
             disabled={isLoading}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             onClick={handleSubmit}
           >
             {isLoading ? (

@@ -269,8 +269,8 @@ export default function PositionsTab() {
                   onClick={() => setShowRecent24h((v) => !v)}
                   className={
                     showRecent24h
-                      ? "bg-amber-600 text-white hover:bg-amber-700 border-amber-600 cursor-pointer hover:scale-110 transition-transform duration-200"
-                      : "border-amber-200 text-amber-900 hover:bg-amber-50 cursor-pointer hover:scale-110 transition-transform duration-200"
+                      ? "bg-amber-600 text-white hover:bg-amber-700 border-amber-600 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                      : "border-amber-200 text-amber-900 hover:bg-amber-50 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                   }
                 >
                   <Clock className="h-4 w-4" />
@@ -303,7 +303,7 @@ export default function PositionsTab() {
             <div className="flex items-center gap-2">
               <Button
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200"
+                className="flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               >
                 <Plus className="h-5 w-5" />
                 Add Position
@@ -312,7 +312,7 @@ export default function PositionsTab() {
                 variant="outline"
                 onClick={refreshPositions}
                 disabled={isRefreshing}
-                className="flex items-center gap-2 bg-blue-600 text-white hover:text-white hover:bg-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200"
+                className="flex items-center gap-2 bg-blue-600 text-white hover:text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               >
                 {isRefreshing ? "Refreshing..." : "Refresh"}
               </Button>
@@ -366,7 +366,7 @@ export default function PositionsTab() {
                         setPositionToEdit(p);
                         setIsUpdateModalOpen(true);
                       }}
-                      className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                       disabled={isDeleting || isUpdating}
                     >
                       <Pencil className="h-4 w-4" />
@@ -378,7 +378,7 @@ export default function PositionsTab() {
                         setPositionToDelete(p);
                         setIsDeleteModalOpen(true);
                       }}
-                      className="flex items-center gap-2 cursor-pointer hover:scale-110 transition-transform duration-200"
+                      className="flex items-center gap-2 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                       disabled={isDeleting || isUpdating}
                     >
                       <Trash2 className="h-4 w-4" />

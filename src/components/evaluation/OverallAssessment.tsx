@@ -2895,7 +2895,7 @@ export default function OverallAssessment({
         <Button
           onClick={handlePrevious}
           variant="outline"
-          className="px-8 py-3 text-lg cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+          className="px-8 py-3 text-lg cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
           size="lg"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -2911,7 +2911,7 @@ export default function OverallAssessment({
               setShowConfirmDialog(true);
             }}
             className={`px-8 py-3 text-lg bg-green-600 hover:bg-green-700 text-white
-    flex items-center justify-center cursor-pointer hover:scale-110 transition-transform duration-200
+    flex items-center justify-center cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0
     ${
       isSubmittingEvaluation
         ? "opacity-70 cursor-not-allowed hover:scale-100"
@@ -3012,7 +3012,7 @@ export default function OverallAssessment({
                 }
               }}
               disabled={isSubmittingEvaluation}
-              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
               <div className="flex items-center gap-2">
                 <Send className="w-4 h-4" />

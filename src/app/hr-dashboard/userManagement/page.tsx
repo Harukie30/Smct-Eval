@@ -1644,7 +1644,7 @@ export default function UserManagementTab() {
                       variant="outline"
                       onClick={() => refreshUserData(true)}
                       disabled={refresh}
-                      className="flex items-center bg-blue-500 text-white hover:bg-blue-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200 whitespace-nowrap"
+                      className="flex items-center gap-2 whitespace-nowrap bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                     >
                       {refresh ? (
                         <>
@@ -1690,7 +1690,7 @@ export default function UserManagementTab() {
                     </Button>
                     <Button
                       onClick={() => setIsAddUserModalOpen(true)}
-                      className="flex items-center bg-blue-600 text-white hover:bg-green-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200 whitespace-nowrap"
+                      className="flex items-center gap-2 whitespace-nowrap bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                     >
                       <Plus className="h-5 w-5 font-bold " />
                       Add User
@@ -1706,7 +1706,7 @@ export default function UserManagementTab() {
                             : ""
                         );
                       }}
-                      className="flex items-center bg-green-600 text-white hover:bg-green-700 hover:text-white gap-2 cursor-pointer hover:scale-105 transition-transform duration-200 whitespace-nowrap"
+                      className="flex items-center gap-2 whitespace-nowrap bg-green-600 text-white hover:bg-green-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                     >
                       <Download className="h-5 w-5 font-bold" />
                       Export Users
@@ -1771,7 +1771,7 @@ export default function UserManagementTab() {
 
               <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 <Table>
-                  <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                  <TableHeader className="sticky top-0 z-10 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
@@ -1980,7 +1980,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700 hover:bg-green-200 cursor-pointer hover:scale-110 transition-transform duration-200"
+                                      className="text-green-600 hover:text-green-700 hover:bg-green-200 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                                       onClick={() => {
                                         setEmployeeToView(employee);
                                         setIsViewEmployeeModalOpen(true);
@@ -1992,7 +1992,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700 hover:bg-green-200 cursor-pointer hover:scale-110 transition-transform duration-200"
+                                      className="text-green-600 hover:text-green-700 hover:bg-green-200 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                                       onClick={() => {
                                         setIsEvaluationTypeModalOpen(true);
                                         setSelectedEmployeeForEvaluation(
@@ -2006,7 +2006,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 cursor-pointer hover:scale-110 transition-transform duration-200"
+                                      className="text-amber-600 hover:text-amber-800 hover:bg-amber-100 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                                       onClick={() => {
                                         setEmployeeForMemorandumViolation(employee);
                                         setMemorandumPickerBranchId(undefined);
@@ -2020,7 +2020,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-200 cursor-pointer hover:scale-110 transition-transform duration-200"
+                                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-200 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                                       onClick={() => {
                                         setEmployeeForAverage(employee);
                                         setIsAverageModalOpen(true);
@@ -2033,7 +2033,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-200 cursor-pointer hover:scale-120 transition-transform duration-200"
+                                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-200 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                                       onClick={() => openEditModal(employee)}
                                       disabled={deletingUserId !== null}
                                     >
@@ -2042,7 +2042,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-red-600 hover:text-red-700 hover:bg-red-200 cursor-pointer hover:scale-120 transition-transform duration-200"
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-200 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                                       onClick={() => openDeleteModal(employee)}
                                       disabled={deletingUserId !== null}
                                     >
@@ -2155,7 +2155,7 @@ export default function UserManagementTab() {
                       variant="outline"
                       onClick={() => refreshUserData(true)}
                       disabled={refresh}
-                      className="flex items-center gap-2 cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white hover:scale-105 transition-transform duration-200"
+                      className="flex items-center gap-2 cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                     >
                       {refresh ? (
                         <>
@@ -2231,7 +2231,7 @@ export default function UserManagementTab() {
 
                 <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   <Table>
-                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm border-b border-gray-200">
+                    <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                       <TableRow>
                         <TableHead className="px-6 py-3">Name</TableHead>
                         <TableHead className="px-6 py-3">Email</TableHead>
@@ -2399,7 +2399,7 @@ export default function UserManagementTab() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="text-white bg-green-500 hover:text-white hover:bg-green-600 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                                        className="text-white bg-blue-600 hover:text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                                         onClick={() =>
                                           handleApproveRegistration(
                                             Number(account.id),
@@ -2412,7 +2412,7 @@ export default function UserManagementTab() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="text-white bg-red-500 hover:bg-red-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                                        className="text-white bg-red-600 hover:bg-red-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                                         onClick={() =>
                                           handleRejectRegistration(
                                             Number(account.id),
@@ -2428,7 +2428,7 @@ export default function UserManagementTab() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      className="text-green-600 hover:text-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                                      className="text-green-600 hover:text-green-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                                       onClick={() =>
                                         handleApproveRegistration(
                                           Number(account.id),
@@ -2567,16 +2567,13 @@ export default function UserManagementTab() {
                   setIsDeleteModalOpen(false);
                   setEmployeeToDelete(null);
                 }}
-                className="text-white bg-red-600 hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200"
+                className="text-white bg-red-600 hover:text-white hover:bg-red-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               >
                 Cancel
               </Button>
               <Button
                 disabled={isDeletingEmployee}
-                className={`bg-blue-600 hover:bg-red-700 text-white cursor-pointer
-    hover:scale-110 transition-transform duration-200
-    ${isDeletingEmployee ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
-  `}
+                className={`bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${isDeletingEmployee ? "opacity-70 cursor-not-allowed hover:translate-y-0 hover:shadow-none" : ""}`}
                 onClick={async () => {
                   if (!employeeToDelete) return;
 
@@ -3481,7 +3478,7 @@ export default function UserManagementTab() {
             {/* Button */}
             <Button
               onClick={() => setShowNoDataAlert(false)}
-              className="px-8 py-2 cursor-pointer bg-blue-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+              className="px-8 py-2 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
               Got it
             </Button>
