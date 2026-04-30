@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { X, Eye, FileText } from "lucide-react";
+import { X, Eye, FileText, FileWarning } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -645,7 +645,7 @@ export default function EmployeesTab() {
                                   }}
                                   title="View memorandum violations"
                                 >
-                                  <Eye className="h-4 w-4" />
+                                  <FileWarning className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
