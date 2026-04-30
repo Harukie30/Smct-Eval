@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toastMessages } from "@/lib/toastMessages";
 import { apiService } from "@/lib/apiService";
-import { Eye, RefreshCw, Users2 } from "lucide-react";
+import { Eye, RefreshCw, Users2, X } from "lucide-react";
 import EvaluationsPagination from "@/components/paginationComponent";
 import AddEmployeeToEvaluatorModal, {
   AssignEvaluatorTarget,
@@ -155,6 +155,7 @@ export default function HRSubordinatesPage() {
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [staffSearch, setStaffSearch] = useState("");
   const [staffCurrentPage, setStaffCurrentPage] = useState(1);
+  const [staffPageLoading, setStaffPageLoading] = useState(false);
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
 
   const loadEvaluators = useCallback(async (softRefresh = false) => {
@@ -289,6 +290,15 @@ export default function HRSubordinatesPage() {
       setStaffCurrentPage(staffTotalPages);
     }
   }, [staffCurrentPage, staffTotalPages]);
+
+  useEffect(() => {
+    if (loadingStaff) return;
+    setStaffPageLoading(true);
+    const timeoutId = window.setTimeout(() => {
+      setStaffPageLoading(false);
+    }, 180);
+    return () => window.clearTimeout(timeoutId);
+  }, [staffCurrentPage, loadingStaff]);
 
   return (
     <div className="space-y-4">
@@ -428,39 +438,74 @@ export default function HRSubordinatesPage() {
         }}
       >
         <DialogContent className="max-w-5xl p-0 overflow-hidden">
-          <DialogHeader className="border-b bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 text-white">
-            <DialogTitle className="text-xl font-semibold text-white">
-              Corresponding Staff
-            </DialogTitle>
-            <DialogDescription className="text-blue-100">
-              {selectedEvaluator
-                ? `Staff list linked to evaluator: ${selectedEvaluator.name}`
-                : "Staff list for selected evaluator."}
-            </DialogDescription>
+          <DialogHeader className="relative overflow-hidden border-b border-blue-400/60 bg-blue-600 px-6 py-5 text-white">
+            <div
+              className="pointer-events-none absolute inset-0 bg-center bg-no-repeat opacity-[0.12]"
+              style={{ backgroundImage: "url('/smct.png')", backgroundSize: "100%" }}
+              aria-hidden
+            />
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-white">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-white/20 ring-1 ring-white/30">
+                    <Users2 className="h-4.5 w-4.5" />
+                  </div>
+                  Corresponding Staff
+                </DialogTitle>
+                <DialogDescription className="mt-1 text-blue-100">
+                  {selectedEvaluator
+                    ? `Staff list linked to evaluator: ${selectedEvaluator.name}`
+                    : "Staff list for selected evaluator."}
+                </DialogDescription>
+              </div>
+              <div className="shrink-0 rounded-full border border-white/35 bg-white/20 px-3 py-1 text-xs font-medium text-white">
+                Total: {loadingStaff ? "..." : filteredStaffRows.length}
+              </div>
+            </div>
           </DialogHeader>
 
-          <div className="px-6 py-5 bg-slate-50/60">
-          <Input
-            placeholder="Search staff by name, email, position, branch, or role..."
-            value={staffSearch}
-            onChange={(e) => setStaffSearch(e.target.value)}
-            disabled={loadingStaff}
-            className="mb-4 w-full sm:max-w-md"
-          />
-          <div className="max-h-[60vh] overflow-auto rounded-xl border border-slate-200/80 bg-white shadow-sm">
+          <div className="bg-gradient-to-b from-slate-50/80 to-white px-6 py-5">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex w-full items-center gap-2 sm:max-w-md">
+            <Input
+              placeholder="Search staff by name, email, position, branch, or role..."
+              value={staffSearch}
+              onChange={(e) => setStaffSearch(e.target.value)}
+              disabled={loadingStaff}
+              className="w-full flex-1 border-slate-200 bg-white shadow-sm"
+            />
+            {staffSearch.trim() !== "" && (
+              <Button
+                type="button"
+                variant="outline"
+                className="cursor-pointer shrink-0 border-slate-200 bg-red-600 text-white hover:bg-red-700 hover:text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                onClick={() => setStaffSearch("")}
+              >
+                <X className="mr-1.5 h-4 w-4" />
+                Clear
+              </Button>
+            )}
+            </div>
+            <div className="text-xs text-slate-500">
+              {loadingStaff
+                ? "Loading staff..."
+                : `Showing ${paginatedStaffRows.length} on this page`}
+            </div>
+          </div>
+          <div className="max-h-[60vh] overflow-auto rounded-xl border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-950/[0.03]">
             <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-100/90">
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Role</TableHead>
+              <TableHeader className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_rgb(226_232_240)]">
+                <TableRow>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Name</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Email</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Position</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Branch</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Role</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loadingStaff ? (
-                  Array.from({ length: 5 }).map((_, idx) => (
+                {loadingStaff || staffPageLoading ? (
+                  Array.from({ length: 6 }).map((_, idx) => (
                     <TableRow key={`staff-sk-${idx}`}>
                       <TableCell>
                         <Skeleton className="h-5 w-36" />
@@ -481,13 +526,13 @@ export default function HRSubordinatesPage() {
                   ))
                 ) : filteredStaffRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-10 text-center text-sm text-slate-500">
-                      No corresponding staff found.
+                    <TableCell colSpan={5} className="py-12 text-center text-sm text-slate-500">
+                      No corresponding staff found for this evaluator.
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginatedStaffRows.map((staff) => (
-                    <TableRow key={staff.id} className="hover:bg-slate-50/80">
+                    <TableRow key={staff.id} className="odd:bg-white even:bg-slate-50/40 hover:bg-blue-50/60">
                       <TableCell className="font-medium text-slate-900">{staff.name}</TableCell>
                       <TableCell>{staff.email}</TableCell>
                       <TableCell>{staff.position}</TableCell>
