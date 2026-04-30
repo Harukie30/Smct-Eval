@@ -69,15 +69,12 @@ function normalizeCandidate(raw: Record<string, unknown>): CandidateEmployee {
     String(raw.full_name ?? "").trim() || `${firstName} ${lastName}`.trim() || "N/A";
 
   return {
-    // For assignment/unassignment endpoints, the backend typically expects the employee identifier
-    // (often `emp_id`). Prefer it when available to avoid "no-op" updates.
+    // assignEmployees expects user record `id` (not profile `emp_id`).
     id: String(
-      raw.emp_id ??
-        raw.empId ??
+      raw.id ??
+        raw.user_id ??
         raw.employee_id ??
         raw.employeeId ??
-        raw.id ??
-        raw.user_id ??
         `${fullName}-${raw.email ?? "unknown"}`
     ),
     name: fullName,
@@ -135,9 +132,12 @@ export default function AddEmployeeToEvaluatorModal({
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  const loadEmployees = useCallback(async () => {
+  const loadEmployees = useCallback(async (options?: { silent?: boolean }) => {
     if (!evaluator) return;
-    setLoading(true);
+    const silent = options?.silent === true;
+    if (!silent) {
+      setLoading(true);
+    }
     try {
       const [assignedResponse, unassignedResponse] = await Promise.all([
         apiService.getAllEvaluatorAssignedEmployees(evaluator.id, {
@@ -191,7 +191,9 @@ export default function AddEmployeeToEvaluatorModal({
         "Please try again."
       );
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [evaluator]);
 
@@ -262,8 +264,14 @@ export default function AddEmployeeToEvaluatorModal({
 
     setSaving(true);
     try {
+      // Backend replaces the evaluator’s assignment set with this list — not an “add” merge.
+      // Include everyone already assigned plus the new selections so existing rows stay.
+      const employeeIds = Array.from(
+        new Set([...assignedRows.map((r) => r.id), ...idsToAssign])
+      );
+
       await apiService.assignEmployees(evaluator.id, {
-        employeeIds: idsToAssign,
+        employeeIds,
         action: "assign",
       });
 
@@ -287,7 +295,6 @@ export default function AddEmployeeToEvaluatorModal({
   const handleUnassign = useCallback(
     async (employeeId: string) => {
       if (!evaluator) return;
-      if (saving) return;
 
       setUnassigningIds((prev) => {
         const next = new Set(prev);
@@ -296,22 +303,37 @@ export default function AddEmployeeToEvaluatorModal({
       });
 
       try {
-        await apiService.assignEmployees(evaluator.id, {
-          employeeIds: [employeeId],
-          action: "unassign",
-        });
+        // Sync model: payload lists only who should **stay** assigned. The unchecked
+        // employee is omitted entirely (not sent as unassign / not in employee_ids).
+        const remainingIds = assignedRows
+          .filter((r) => r.id !== employeeId)
+          .map((r) => r.id);
 
-        setSelectedIds(new Set());
-        setSearch("");
+        if (remainingIds.length === 0) {
+          await apiService.assignEmployeesBlank(evaluator.id);
+        } else {
+          await apiService.assignEmployees(evaluator.id, {
+            employeeIds: remainingIds,
+            action: "assign",
+          });
+        }
+
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(employeeId);
+          return next;
+        });
         setUnassigningIds(new Set());
-        await loadEmployees();
+
+        await loadEmployees({ silent: true });
       } catch (error) {
         console.error("Failed to unassign employee:", error);
         toastMessages.generic.error("Unassign failed", "Please try again.");
         setUnassigningIds(new Set());
+        void loadEmployees({ silent: true });
       }
     },
-    [evaluator, saving, loadEmployees]
+    [evaluator, assignedRows, loadEmployees]
   );
 
   return (
@@ -468,7 +490,7 @@ export default function AddEmployeeToEvaluatorModal({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={saving}
-              className="cursor-pointer min-w-24"
+              className="cursor-pointer min-w-24 bg-red-600 hover:bg-red-700 text-white hover:text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
             >
               Cancel
             </Button>
@@ -486,7 +508,7 @@ export default function AddEmployeeToEvaluatorModal({
               ) : (
                 <>
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Employee
+                  Assign Employee
                 </>
               )}
             </Button>

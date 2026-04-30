@@ -516,8 +516,8 @@ export const apiService = {
   },
 
   /**
-   * Assign/unassign evaluator employees.
-   * Backend-provided endpoint: POST /assignEmployees/{user}
+   * Assign evaluator employees.
+   * Backend: POST /assignEmployees/{user} with employee_ids + action.
    */
   assignEmployees: async (
     userId: string | number,
@@ -527,16 +527,27 @@ export const apiService = {
     }
   ): Promise<any> => {
     const formData = new FormData();
-    // Backend expects comma-separated ids in form-data (e.g. "1,2,3").
-    const employeeIdsCsv = payload.employeeIds.map(String).join(",");
+    const employeeIdsCsv = payload.employeeIds.map(String).map((s) => s.trim()).filter(Boolean).join(",");
 
-    // Backend expects `employee_ids` key.
     formData.append("employee_ids", employeeIdsCsv);
     formData.append("action", payload.action ?? "assign");
 
     const response = await api.post(
       `/assignEmployees/${encodeURIComponent(String(userId))}`,
       formData
+    );
+    return response.data;
+  },
+
+  /**
+   * POST /assignEmployees/{user} with empty FormData — many backends treat this as “clear all”
+   * assignments for that evaluator. Do not use for unchecking a single row; use assignEmployees
+   * with action "unassign" and one id instead.
+   */
+  assignEmployeesBlank: async (userId: string | number): Promise<any> => {
+    const response = await api.post(
+      `/assignEmployees/${encodeURIComponent(String(userId))}`,
+      new FormData()
     );
     return response.data;
   },

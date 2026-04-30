@@ -457,7 +457,7 @@ export default function HRSubordinatesPage() {
             <Button
               type="button"
               variant="outline"
-              className="cursor-pointer"
+              className="cursor-pointer bg-red-600 hover:bg-red-700 text-white hover:text-white hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
               onClick={() => {
                 setIsStaffModalOpen(false);
               }}
