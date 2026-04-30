@@ -91,7 +91,7 @@ export default function DepartmentEmployeesModal({
             </div>
           ) : (
             <Table wrapperClassName="rounded-lg">
-              <TableHeader className="sticky top-0 z-10 bg-slate-50">
+              <TableHeader className="sticky top-0 z-10 bg-slate-50 [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                 <TableRow>
                   <TableHead className="px-4">Name</TableHead>
                   <TableHead className="px-4">Email</TableHead>
@@ -116,7 +116,7 @@ export default function DepartmentEmployeesModal({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="cursor-pointer min-w-24 bg-red-600 hover:bg-red-700 text-white hover:text-white hover:scale-110 transition-transform duration-200"
+            className="min-w-24 bg-red-600 hover:bg-red-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
           >
             Close
           </Button>

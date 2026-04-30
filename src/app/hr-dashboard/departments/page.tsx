@@ -440,7 +440,7 @@ export default function DepartmentsTab() {
             <div className="flex space-x-2">
               <Button
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                className="flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               >
                 <Plus className="h-5 w-5" />
                 Add Department
@@ -449,7 +449,7 @@ export default function DepartmentsTab() {
                 variant="outline"
                 onClick={refreshData}
                 disabled={isRefreshing}
-                className="flex items-center gap-2 bg-blue-600 text-white hover:bg-green-700 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               >
                 {isRefreshing ? (
                   <>
@@ -584,7 +584,7 @@ export default function DepartmentsTab() {
                                       }
                                     }}
                                     disabled={deletingDepartmentId !== null}
-                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer hover:scale-120 transition-transform duration-200"
+                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                                   >
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
@@ -609,7 +609,7 @@ export default function DepartmentsTab() {
                                     onClick={() =>
                                       void openDepartmentEmployeesModal(dept)
                                     }
-                                    className="mt-3 w-1/2 cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white transition-transform duration-200 hover:scale-105"
+                                    className="mt-3 w-1/2 cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                                   >
                                     <Users className="h-4 w-4 mr-1" />
                                     Employees
@@ -628,7 +628,7 @@ export default function DepartmentsTab() {
                                     onClick={() =>
                                       void openDepartmentManagersModal(dept)
                                     }
-                                    className="mt-3 w-1/2 cursor-pointer bg-green-500 text-white hover:bg-green-600 hover:text-white transition-transform duration-200 hover:scale-105"
+                                    className="mt-3 w-1/2 cursor-pointer bg-green-600 text-white hover:bg-green-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                                   >
                                     <Users className="h-4 w-4 mr-1" />
                                     Evaluators
@@ -739,14 +739,14 @@ export default function DepartmentsTab() {
                   setNewDepartmentName("");
                   setIsAddModalOpen(false);
                 }}
-                className="cursor-pointer hover:scale-110 transition-transform duration-200 text-white bg-blue-600 hover:text-white hover:bg-red-500"
+                className="cursor-pointer text-white bg-blue-600 hover:text-white hover:bg-blue-700 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               >
                 Cancel
               </Button>
               <Button
                 disabled={isAddingDepartment}
-                className={`bg-green-500 hover:bg-green-600 text-white flex items-center gap-2 
-    cursor-pointer hover:scale-110 transition-transform duration-200
+                className={`bg-green-600 hover:bg-green-700 text-white flex items-center gap-2
+    cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0
     ${isAddingDepartment ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
   `}
                 onClick={async () => {
@@ -849,14 +849,14 @@ export default function DepartmentsTab() {
                   setIsDeleteModalOpen(false);
                   setDepartmentToDelete(null);
                 }}
-                className="text-white bg-red-600 hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200"
+                className="text-white bg-red-600 hover:text-white hover:bg-red-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               >
                 Cancel
               </Button>
               <Button
                 disabled={isDeletingDepartment}
                 className={`bg-blue-600 hover:bg-red-700 text-white cursor-pointer
-    hover:scale-110 transition-transform duration-200
+    transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0
     ${
       isDeletingDepartment
         ? "opacity-70 cursor-not-allowed hover:scale-100"

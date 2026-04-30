@@ -324,7 +324,7 @@ export default function OverviewTab() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:flex-wrap">
               {/* Search */}
               <div className="flex-1">
                 <Label htmlFor="records-search" className="text-sm font-medium">
@@ -375,7 +375,7 @@ export default function OverviewTab() {
               </div>
 
               {/* Approval Status Filter */}
-              <div className="w-full md:w-48">
+              <div className="w-full lg:w-[180px]">
                 <Label
                   htmlFor="records-approval-status"
                   className="text-sm font-medium"
@@ -386,7 +386,7 @@ export default function OverviewTab() {
                   value={statusFilter}
                   onValueChange={(value) => setStatusFilter(value)}
                 >
-                  <SelectTrigger className="w-48 cursor-pointer">
+                  <SelectTrigger className="w-full cursor-pointer">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -402,7 +402,7 @@ export default function OverviewTab() {
               </div>
 
               {/* Quarter Filter */}
-              <div className="w-full md:w-48">
+              <div className="w-full lg:w-[180px]">
                 <Label
                   htmlFor="records-quarter"
                   className="text-sm font-medium"
@@ -413,7 +413,7 @@ export default function OverviewTab() {
                   value={quarterFilter}
                   onValueChange={(value) => setQuarterFilter(value)}
                 >
-                  <SelectTrigger className="w-48 cursor-pointer">
+                  <SelectTrigger className="w-full cursor-pointer">
                     <SelectValue placeholder="Filter by quarter" />
                   </SelectTrigger>
                   <SelectContent>
@@ -430,7 +430,7 @@ export default function OverviewTab() {
               </div>
 
               {/* Year Filter */}
-              <div className="w-full md:w-48">
+              <div className="w-full lg:w-[180px]">
                 <Label htmlFor="records-year" className="text-sm font-medium">
                   Year
                 </Label>
@@ -453,8 +453,8 @@ export default function OverviewTab() {
               </div>
 
               {/* Refresh Button */}
-              <div className="w-full md:w-auto flex gap-2">
-                <div className="w-full md:w-32">
+              <div className="flex w-full gap-2 lg:w-auto">
+                <div className="w-full lg:w-32">
                   <Label className="text-sm font-medium opacity-0">
                     Refresh
                   </Label>
@@ -543,7 +543,7 @@ export default function OverviewTab() {
           {/* Table Section */}
           <div className="border rounded-lg overflow-hidden">
             <div
-              className="relative max-h-[600px] overflow-y-auto overflow-x-auto"
+              className="relative max-h-[min(68vh,34rem)] overflow-y-auto overflow-x-auto"
               style={{
                 scrollbarWidth: "thin",
                 scrollbarColor: "#cbd5e1 #f1f5f9",
@@ -570,53 +570,53 @@ export default function OverviewTab() {
                   </div>
                 </div>
               )}
-              <Table className="min-w-full">
-                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+              <Table className="min-w-[1200px] w-full">
+                <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                   <TableRow>
-                    <TableHead className="px-6 py-3">Employee</TableHead>
-                    <TableHead className="px-6 py-3">Evaluator</TableHead>
-                    <TableHead className="px-6 py-3">Branch</TableHead>
-                    <TableHead className="px-6 py-3">Quarter</TableHead>
-                    <TableHead className="px-6 py-3">Date</TableHead>
-                    <TableHead className="px-6 py-3">Rating</TableHead>
-                    <TableHead className="px-6 py-3">Status</TableHead>
-                    <TableHead className="px-6 py-3">Employee Sign</TableHead>
-                    <TableHead className="px-6 py-3">Evaluator Sign</TableHead>
-                    <TableHead className="px-6 py-3">Actions</TableHead>
+                    <TableHead className="px-6 py-4">Employee</TableHead>
+                    <TableHead className="px-6 py-4">Evaluator</TableHead>
+                    <TableHead className="px-6 py-4">Branch</TableHead>
+                    <TableHead className="px-6 py-4">Quarter</TableHead>
+                    <TableHead className="px-6 py-4">Date</TableHead>
+                    <TableHead className="px-6 py-4">Rating</TableHead>
+                    <TableHead className="px-6 py-4">Status</TableHead>
+                    <TableHead className="px-6 py-4">Employee Sign</TableHead>
+                    <TableHead className="px-6 py-4">Evaluator Sign</TableHead>
+                    <TableHead className="px-6 py-4">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="divide-y divide-gray-200">
                   {refreshing || isPageLoading ? (
                     Array.from({ length: itemsPerPage }).map((_, index) => (
                       <TableRow key={`skeleton-${index}`}>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
                       </TableRow>
@@ -692,7 +692,7 @@ export default function OverviewTab() {
 
                       return (
                         <TableRow key={review.id} className={rowClassName}>
-                          <TableCell className="px-6 py-3">
+                          <TableCell className="px-6 py-4">
                             <div>
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="font-medium text-gray-900">
@@ -703,21 +703,21 @@ export default function OverviewTab() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="px-6 py-3">
+                          <TableCell className="px-6 py-4">
                             <div className="font-medium text-gray-900">
                               {review.evaluator?.fname +
                                 " " +
                                 review.evaluator?.lname}
                             </div>
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                          <TableCell className="px-6 py-4 text-sm text-gray-600">
                             {getEmployeeBranchCodeDisplay(
                               review.employee,
                               branchOptions,
                               branchListLoading
                             )}
                           </TableCell>
-                          <TableCell className="px-6 py-3">
+                          <TableCell className="px-6 py-4">
                             {(() => {
                               // Check if "Others" is selected
                               const isOthersSelected = 
@@ -760,7 +760,7 @@ export default function OverviewTab() {
                               );
                             })()}
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                          <TableCell className="px-6 py-4 text-sm text-gray-600">
                             {new Date(review.created_at).toLocaleString(
                               undefined,
                               {
@@ -772,10 +772,10 @@ export default function OverviewTab() {
                               }
                             )}
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                          <TableCell className="px-6 py-4 text-sm text-gray-600">
                             {review.rating}
                           </TableCell>
-                          <TableCell className="px-6 py-3">
+                          <TableCell className="px-6 py-4">
                             <Badge
                               className={
                                 review.status === "completed"
@@ -792,7 +792,7 @@ export default function OverviewTab() {
                                 : review.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                          <TableCell className="px-6 py-4 text-sm text-gray-600">
                             {review.status === "completed" ? (
                               <Badge className="bg-green-100 text-green-800 text-xs">
                                 ✓ Signed
@@ -805,19 +805,19 @@ export default function OverviewTab() {
                               <span className="text-xs text-gray-400">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="px-6 py-3 text-sm text-gray-600">
+                          <TableCell className="px-6 py-4 text-sm text-gray-600">
                             <Badge className="bg-green-100 text-green-800 text-xs">
                               ✓ Signed
                             </Badge>
                           </TableCell>
 
-                          <TableCell className="px-6 py-3">
+                          <TableCell className="px-6 py-4">
                             <div className="flex gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleViewEvaluation(review)}
-                                className="text-xs px-2 py-1 bg-green-600 hover:bg-green-500 hover:text-white text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                                className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 hover:text-white text-white cursor-pointer"
                               >
                                 ☰ View
                               </Button>
@@ -826,7 +826,7 @@ export default function OverviewTab() {
                                 size="sm"
                                 onClick={() => openDeleteModal(review)}
                                 disabled={deletingReviewId === review.id}
-                                className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="text-xs px-2 py-1 bg-red-100 hover:bg-red-500 text-gray-700 hover:text-white border-red-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                                 title="Delete this evaluation record"
                               >
                                 {deletingReviewId === review.id ? (
@@ -966,12 +966,12 @@ export default function OverviewTab() {
                     setIsDeleteModalOpen(false);
                     setReviewToDelete(null);
                   }}
-                  className="text-white bg-blue-600 hover:text-white hover:bg-green-500 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="text-white bg-blue-600 hover:text-white hover:bg-blue-700 cursor-pointer"
                 >
                   Cancel
                 </Button>
                 <Button
-                  className="bg-red-600 hover:bg-red-700 text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="bg-red-600 hover:bg-red-700 text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={() => handleDeleteClick(reviewToDelete)}
                   disabled={deletingReviewId !== null}
                 >

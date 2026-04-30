@@ -478,8 +478,8 @@ export default function MyViolationsPanel() {
           </div>
         </div>
         <CardContent className="space-y-4 border-t border-slate-100 bg-gradient-to-b from-slate-50/50 to-white pt-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
-            <div className="min-w-0 w-full flex-1 space-y-2 sm:max-w-md">
+          <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
+            <div className="min-w-0 w-full flex-1 space-y-2 lg:max-w-md">
               <Label htmlFor="violations-search" className="text-sm font-medium">
                 Search
               </Label>
@@ -505,7 +505,7 @@ export default function MyViolationsPanel() {
                 ) : null}
               </div>
             </div>
-            <div className="w-full min-w-0 space-y-2 sm:w-auto sm:min-w-[14rem]">
+            <div className="w-full min-w-0 space-y-2 lg:w-auto lg:min-w-[14rem]">
               <Label className="text-sm font-medium">Violation month</Label>
               <Combobox
                 options={monthOptions}
@@ -520,9 +520,9 @@ export default function MyViolationsPanel() {
                 disabled={monthsLoading}
               />
             </div>
-            <div className="flex w-full items-end justify-end sm:w-auto sm:shrink-0">
+            <div className="flex w-full items-end justify-end lg:w-auto lg:shrink-0">
               <div className="space-y-2">
-                <Label className="text-sm font-medium sr-only sm:not-sr-only">
+                <Label className="text-sm font-medium sr-only lg:not-sr-only">
                   Refresh list
                 </Label>
                 <Button
@@ -533,7 +533,7 @@ export default function MyViolationsPanel() {
                     void fetchAvailableMonths({ force: true });
                     load({ softRefresh: true });
                   }}
-                  className="w-full cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white gap-2 sm:w-auto"
+                  className="w-full cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white gap-2 lg:w-auto"
                   title="Refresh violations list"
                 >
                   <RefreshCw
@@ -546,8 +546,8 @@ export default function MyViolationsPanel() {
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
-            <Table>
+          <div className="relative overflow-x-auto overflow-y-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
+            <Table className="min-w-[760px] w-full">
               <TableHeader>
                 <TableRow className="border-b border-blue-900/10 bg-gradient-to-r from-blue-600 to-blue-700 hover:bg-gradient-to-r hover:from-blue-600 hover:to-blue-700">
                   <TableHead className="min-w-[10rem] font-semibold text-white">

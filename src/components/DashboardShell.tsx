@@ -513,7 +513,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                     setIsNotificationPanelClosing(false);
                   }
                 }}
-                className="relative p-2 hover:bg-blue-300 hover:text-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200"
+                className="relative p-2 hover:bg-blue-300 hover:text-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               >
                 <Bell className="h-5 w-5" />
                 {notificationCount > 0 && (
@@ -1246,7 +1246,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                     variant="ghost"
                     size="lg"
                     onClick={() => setIsHelpButtonsVisible(!isHelpButtonsVisible)}
-                    className="h-9 w-9 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 hover:rotate-12 active:scale-95 p-0 cursor-pointer"
+                    className="h-9 w-9 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 hover:rotate-6 active:translate-y-0 p-0 cursor-pointer"
                   >
                     <img
                       src="/question.png"
@@ -1385,7 +1385,7 @@ export default function DashboardShell(props: DashboardShellProps) {
                       setIsNotificationDetailOpen(false);
                       setIsRefreshing(true);
                     }}
-                    className="bg-red-600 hover:bg-red-700 text-white px-8 py-2.5 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-md hover:shadow-lg font-medium"
+                    className="bg-red-600 hover:bg-red-700 text-white px-8 py-2.5 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 font-medium"
                   >
                     Close
                   </Button>
@@ -1404,7 +1404,7 @@ export default function DashboardShell(props: DashboardShellProps) {
           size="lg"
           onClick={isHelpButtonsVisible ? handleManualGuideModalOpen : undefined}
           disabled={!isHelpButtonsVisible}
-          className={`fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+          className={`fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:rotate-6 active:translate-y-0 p-0 ${
             isHelpButtonsVisible
               ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-0 cursor-pointer"
               : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"
@@ -1420,7 +1420,7 @@ export default function DashboardShell(props: DashboardShellProps) {
           <img
             src="/faq.png"
             alt="Help"
-            className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
+            className="h-10 w-10 object-contain transition-transform duration-200 hover:scale-105"
           />
         </Button>
       )}
@@ -1431,7 +1431,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         size="lg"
         onClick={isHelpButtonsVisible ? () => setIsContactDevsModalOpen(true) : undefined}
         disabled={!isHelpButtonsVisible}
-        className={`fixed bottom-40 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-500 ease-in-out hover:scale-110 hover:rotate-12 active:scale-95 p-0 ${
+        className={`fixed bottom-40 right-6 z-50 h-14 w-14 rounded-full bg-blue-100 hover:bg-blue-400 shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:rotate-6 active:translate-y-0 p-0 ${
           isHelpButtonsVisible
             ? "opacity-100 translate-y-0 scale-100 pointer-events-auto delay-100 cursor-pointer"
             : "opacity-0 translate-y-4 scale-0 pointer-events-none delay-0 cursor-default"
@@ -1447,7 +1447,7 @@ export default function DashboardShell(props: DashboardShellProps) {
         <img
           src="/code.png"
           alt="Contact Developers"
-          className="h-10 w-10 object-contain transition-transform duration-300 hover:scale-110"
+          className="h-10 w-10 object-contain transition-transform duration-200 hover:scale-105"
         />
       </Button>
 

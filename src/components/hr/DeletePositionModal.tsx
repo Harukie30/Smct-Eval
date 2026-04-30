@@ -147,12 +147,12 @@ export default function DeletePositionModal({
               variant="outline"
               onClick={() => onOpenChangeAction(false)}
               disabled={isDeleting}
-              className="px-6 border-gray-200 text-gray-700 bg-blue-500 hover:bg-blue-600 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+              className="px-6 border-gray-200 bg-blue-600 hover:bg-blue-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
               Cancel
             </Button>
             <Button
-              className="bg-red-600 hover:bg-red-700 text-white cursor-pointer px-6 hover:scale-110 transition-transform duration-200"
+              className="bg-red-600 hover:bg-red-700 text-white cursor-pointer px-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               onClick={handleDelete}
               disabled={isDeleting || !positionToDelete}
             >
@@ -215,7 +215,7 @@ export default function DeletePositionModal({
 
           <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
             <Button
-              className="bg-green-600 hover:bg-green-700 text-white cursor-pointer px-6 hover:scale-110 transition-all duration-200"
+              className="bg-green-600 hover:bg-green-700 text-white cursor-pointer px-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               onClick={() => setIsSuccessDialogOpen(false)}
             >
               OK

@@ -1437,7 +1437,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 placeholder="Select position"
                 searchPlaceholder="Search positions..."
                 emptyText="No positions found."
-                className={errors.position ? "border-red-500" : "bg-white cursor-pointer hover:scale-105 transition-all duration-300"}
+                className={errors.position ? "border-red-500" : "bg-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"}
               />
               {errors.position && (
                 <p className="text-sm text-red-500">{errors.position}</p>
@@ -1471,7 +1471,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                     placeholder="Select your department"
                     searchPlaceholder="Search departments..."
                     emptyText="No departments found."
-                    className="w-1/2 cursor-pointer hover:scale-105 transition-all duration-300"
+                    className="w-1/2 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"
                   />
                   {errors?.department && (
                     <p className="text-sm text-red-500">{errors?.department}</p>
@@ -1508,7 +1508,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 placeholder="Select branch"
                 searchPlaceholder="Search branches..."
                 emptyText="No branches found."
-                className={errors.branch ? "border-red-500" : "cursor-pointer hover:scale-105 transition-all duration-300"}
+                className={errors.branch ? "border-red-500" : "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"}
               />
               {errors.branch && (
                 <p className="text-sm text-red-500">{errors.branch}</p>
@@ -1532,7 +1532,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 placeholder="Select role"
                 searchPlaceholder="Search roles..."
                 emptyText="No roles found."
-                className={errors.role ? "border-red-500" : "cursor-pointer hover:scale-105 transition-all duration-300"}
+                className={errors.role ? "border-red-500" : "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0"}
               />
               {errors.role && (
                 <p className="text-sm text-red-500">{errors.role}</p>
@@ -1544,7 +1544,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <Button
                 variant="outline"
                 onClick={handleCancel}
-                className="px-6 cursor-pointer hover:scale-110 transition-transform duration-200 bg-red-500 hover:bg-red-600 text-white hover:text-white"
+                className="px-6 cursor-pointer bg-red-600 hover:bg-red-700 text-white hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                 disabled={isSaving}
               >
                 Cancel
@@ -1553,7 +1553,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 onClick={handleSave}
                 disabled={isSaving}
                 className={`bg-blue-600 hover:bg-blue-700 text-white px-6 
-      cursor-pointer hover:scale-110 transition-transform duration-200
+      cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0
       ${isSaving ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
     `}
               >
@@ -1732,7 +1732,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
                 setPasswordError("");
               }}
               disabled={isVerifyingPassword}
-              className="px-6 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 hover:text-white text-white border-0 shadow-md hover:shadow-lg min-w-[100px] cursor-pointer hover:scale-105 transition-all duration-200 font-semibold"
+              className="px-6 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 hover:text-white text-white border-0 shadow-md hover:shadow-lg min-w-[100px] cursor-pointer transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 font-semibold"
             >
               {checkLockoutStatus().isLockedOut ? "Close" : "Cancel"}
             </Button>
@@ -1740,7 +1740,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
               <Button
                 onClick={handleVerifyPassword}
                 disabled={isVerifyingPassword || !adminPassword.trim()}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-green-700 hover:to-green-600 px-6 min-w-[120px] cursor-pointer hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 px-6 min-w-[120px] cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 shadow-md font-semibold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
                 {isVerifyingPassword ? (
                   <div className="flex items-center justify-center space-x-2">
@@ -1805,7 +1805,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({
           <DialogFooter className="pt-4">
             <Button
               onClick={() => setShowSaveReminderDialog(false)}
-              className="bg-blue-600 hover:bg-green-700 text-white px-6 cursor-pointer hover:scale-110 transition-transform duration-200"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
               Confirm
             </Button>

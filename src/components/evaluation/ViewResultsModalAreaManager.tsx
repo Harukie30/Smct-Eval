@@ -2083,14 +2083,14 @@ export default function ViewResultsModalAreaManager({
           <div className="sticky top-0 z-50 flex justify-end gap-2 mb-4 -mr-6 pr-6 py-4 no-print ">
             <Button
               onClick={handlePrint}
-              className="px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 flex items-center gap-2 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 transition-transform duration-200"
+              className="px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 flex items-center gap-2 cursor-pointer shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0"
             >
               <Printer className="h-4 w-4" />
               Print
             </Button>
             <Button
               onClick={onCloseAction}
-              className="px-4 py-2 bg-red-500 text-white hover:bg-red-600 hover:text-white cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 transition-transform duration-200"
+              className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 hover:text-white cursor-pointer shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0"
             >
               🗙 Close
             </Button>
@@ -3921,7 +3921,7 @@ export default function ViewResultsModalAreaManager({
                                   <Button
                                     onClick={handleApproveEvaluation}
                                     disabled={!submission.id || isApproving}
-                                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 text-sm font-medium disabled:bg-gray-400 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-sm"
+                                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 text-sm font-medium disabled:bg-gray-400 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 shadow-sm"
                                   >
                                     {isApproving ? (
                                       <>

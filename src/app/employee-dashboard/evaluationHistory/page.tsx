@@ -318,8 +318,8 @@ export default function OverviewTab() {
 
   return (
     <>
-      <div className="flex flex-row gap-4 space-around mb-5">
-        <Card className="w-1/4 h-50">
+      <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="h-full min-h-[170px]">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Overall Rating
@@ -371,7 +371,7 @@ export default function OverviewTab() {
           </CardContent>
         </Card>
 
-        <Card className="w-1/4 h-50">
+        <Card className="h-full min-h-[170px]">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Reviews Received
@@ -396,7 +396,7 @@ export default function OverviewTab() {
           </CardContent>
         </Card>
 
-        <Card className="w-1/4 h-50">
+        <Card className="h-full min-h-[170px]">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Evaluation Score
@@ -449,7 +449,7 @@ export default function OverviewTab() {
           </CardContent>
         </Card>
 
-        <Card className="w-1/4 h-50">
+        <Card className="h-full min-h-[170px]">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
               Performance Rating
@@ -511,7 +511,7 @@ export default function OverviewTab() {
 
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <CardTitle>Quarterly Performance Summary</CardTitle>
               <CardDescription>
@@ -523,7 +523,7 @@ export default function OverviewTab() {
               size="sm"
               onClick={refresh}
               disabled={isRefreshingOverview}
-              className="flex items-center space-x-2 bg-blue-500 text-white hover:bg-green-700 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+              className="flex w-full items-center justify-center space-x-2 bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer sm:w-auto"
             >
               <svg
                 className="h-4 w-4"
@@ -543,7 +543,7 @@ export default function OverviewTab() {
           </div>
 
           {/* Search Bar */}
-          <div className="mt-4 relative w-2/5">
+          <div className="mt-4 relative w-full sm:max-w-md">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg
                 className="h-5 w-5 text-gray-400"
@@ -611,7 +611,7 @@ export default function OverviewTab() {
                 variant="outline"
                 size="sm"
                 onClick={() => setSelectedQuarter("")}
-                className={`text-xs border transition-all duration-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                className={`text-xs border transition-all duration-200 cursor-pointer ${
                   selectedQuarter === ""
                     ? "bg-blue-600 text-white border-blue-600 scale-105"
                     : "bg-white text-black border-gray-400 hover:bg-gray-100"
@@ -625,10 +625,10 @@ export default function OverviewTab() {
                 variant="outline"
                 size="sm"
                 onClick={() => setSelectedQuarter("Probationary")}
-                className={`text-xs font-medium border transition-all duration-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                className={`text-xs font-medium border transition-all duration-200 cursor-pointer ${
                   selectedQuarter === "Probationary"
                     ? "bg-blue-600 text-white border-blue-600 scale-105"
-                    : "bg-white text-black border-gray-400 hover:bg-gray-100 hover:scale-105"
+                    : "bg-white text-black border-gray-400 hover:bg-gray-100 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                 }`}
               >
                 Probationary
@@ -641,10 +641,10 @@ export default function OverviewTab() {
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedQuarter(quarter)}
-                  className={`text-xs font-medium border transition-all duration-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                  className={`text-xs font-medium border transition-all duration-200 cursor-pointer ${
                     selectedQuarter === quarter
                       ? "bg-blue-600 text-white border-blue-600 scale-105"
-                      : "bg-white text-black border-gray-400 hover:bg-gray-100 hover:scale-105"
+                      : "bg-white text-black border-gray-400 hover:bg-gray-100 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                   }`}
                 >
                   {quarter}
@@ -656,10 +656,10 @@ export default function OverviewTab() {
                 variant="outline"
                 size="sm"
                 onClick={() => setSelectedQuarter("Others")}
-                className={`text-xs font-medium border transition-all duration-200 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300 ${
+                className={`text-xs font-medium border transition-all duration-200 cursor-pointer ${
                   selectedQuarter === "Others"
                     ? "bg-blue-600 text-white border-blue-600 scale-105"
-                    : "bg-white text-black border-gray-400 hover:bg-gray-100 hover:scale-105"
+                    : "bg-white text-black border-gray-400 hover:bg-gray-100 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                 }`}
               >
                 Others
@@ -669,7 +669,7 @@ export default function OverviewTab() {
         </CardHeader>
         <CardContent className="p-0">
           {isRefreshingOverview || isPaginate ? (
-            <div className="relative max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table mx-4">
+            <div className="relative mx-4 max-h-[min(68vh,32rem)] overflow-y-auto overflow-x-auto scrollable-table">
               <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                 <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
                   <div className="relative">
@@ -688,17 +688,17 @@ export default function OverviewTab() {
                 </div>
               </div>
 
-              <Table className="table-fixed w-full">
-                <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+              <Table className="table-fixed min-w-[920px] w-full">
+                <TableHeader className="sticky top-0 z-10 border-b bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                   <TableRow>
                     <TableHead className="w-1/6 pl-4">
                       Immediate Supervisor
                     </TableHead>
-                    <TableHead className="w-1/6 text-right pr-25">
+                    <TableHead className="w-1/6 text-right pr-4">
                       Rating
                     </TableHead>
                     <TableHead className="w-1/6 pl-6">Date</TableHead>
-                    <TableHead className="w-1/6 px-4 pr-23 text-center">
+                    <TableHead className="w-1/6 px-4 text-center">
                       Quarter
                     </TableHead>
                     <TableHead className="w-1/6 text-center">
@@ -718,7 +718,7 @@ export default function OverviewTab() {
                           <Skeleton className="h-5 w-12 rounded-full" />
                         </div>
                       </TableCell>
-                      <TableCell className="w-1/6 text-right pr-25">
+                      <TableCell className="w-1/6 text-right pr-4">
                         <Skeleton className="h-4 w-12" />
                       </TableCell>
                       <TableCell className="w-1/6 pl-6">
@@ -727,7 +727,7 @@ export default function OverviewTab() {
                           <Skeleton className="h-3 w-16" />
                         </div>
                       </TableCell>
-                      <TableCell className="w-1/6 px-4 pr-23">
+                      <TableCell className="w-1/6 px-4">
                         <Skeleton className="h-5 w-16 rounded-full mx-auto" />
                       </TableCell>
                       <TableCell className="w-1/6 text-center">
@@ -789,14 +789,14 @@ export default function OverviewTab() {
                 </div>
               )}
 
-              <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table mx-4">
-                <Table className="table-fixed w-full">
-                  <TableHeader className="sticky top-0 bg-white z-10 border-b shadow-sm">
+              <div className="mx-4 max-h-[min(68vh,32rem)] overflow-y-auto overflow-x-auto scrollable-table">
+                <Table className="table-fixed min-w-[920px] w-full">
+                  <TableHeader className="sticky top-0 z-10 border-b bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                     <TableRow>
-                      <TableHead className="w-1/6 text-center pr-30">
+                      <TableHead className="w-1/6 text-center pr-4">
                         Evaluator
                       </TableHead>
-                      <TableHead className="w-1/6 text-center pr-30">
+                      <TableHead className="w-1/6 text-center pr-4">
                         Quarter
                       </TableHead>
                       <TableHead className="w-1/6 text-center">Date</TableHead>
@@ -851,14 +851,14 @@ export default function OverviewTab() {
                       }
                       return (
                         <TableRow key={submission.id} className={rowClassName}>
-                          <TableCell className="w-1/6 text-center pr-25">
+                          <TableCell className="w-1/6 text-center pr-4">
                             <div className="flex justify-center">
                               <span className="font-medium">
                                 {supervisorName || "—"}
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="w-1/6 text-center pr-25">
+                          <TableCell className="w-1/6 text-center pr-4">
                             <div className="flex justify-center">
                               <Badge
                                 className={getQuarterColor(
@@ -908,7 +908,7 @@ export default function OverviewTab() {
                           </TableCell>
                           <TableCell className="w-1/6 text-center">
                             <Button
-                              className="bg-blue-500 text-white hover:bg-green-700 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                              className="bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer"
                               size="sm"
                               onClick={() => handleViewEvaluation(submission)}
                             >

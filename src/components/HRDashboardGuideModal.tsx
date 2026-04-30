@@ -65,7 +65,7 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
               variant="ghost"
               size="icon"
               onClick={onCloseAction}
-              className="h-8 w-8 rounded-full bg-red-600 hover:bg-red-700 text-white hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
+              className="h-8 w-8 rounded-full bg-red-600 hover:bg-red-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 font-medium"
             >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -118,7 +118,7 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
                     </p>
                     <Button
                       onClick={() => api?.scrollNext()}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 cursor-pointer hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-6 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 cursor-pointer hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-6 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2"
                     >
                       Proceed to Guide
                       <ArrowRight className="w-5 h-5" />
@@ -618,7 +618,7 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
                   size="sm"
                   onClick={() => api?.scrollPrev()}
                   disabled={!canScrollPrev}
-                  className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
+                  className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 font-medium"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -638,7 +638,7 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
                   size="sm"
                   onClick={() => api?.scrollNext()}
                   disabled={!canScrollNext}
-                  className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 font-medium"
+                  className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 font-medium"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -656,7 +656,7 @@ export function HRDashboardGuideModal({ isOpen, onCloseAction }: HRDashboardGuid
               </div>
               <Button
                 onClick={onCloseAction}
-                className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white hover:bg-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-md hover:shadow-lg font-medium"
+                className="bg-blue-600 hover:bg-blue-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 font-medium"
               >
                 Got it!
               </Button>

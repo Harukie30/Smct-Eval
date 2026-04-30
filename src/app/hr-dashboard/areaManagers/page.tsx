@@ -677,7 +677,7 @@ export default function AreaManagersTab() {
           </div>
           <div className="relative max-h-[600px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
             <Table>
-              <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+              <TableHeader className="sticky top-0 z-10 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                 <TableRow>
                   <TableHead className="w-1/3">Name</TableHead>
                   <TableHead className="w-1/3 text-center">Branches</TableHead>
@@ -954,7 +954,7 @@ export default function AreaManagersTab() {
               <div className="border rounded-lg overflow-hidden">
                 <div className="max-h-[60vh] overflow-y-auto">
                   <Table className="w-full">
-                    <TableHeader className="bg-gray-50">
+                    <TableHeader className="bg-gray-50 [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                       <TableRow>
                         <TableHead className="w-2/3 px-6">Name</TableHead>
                         <TableHead className="w-1/3 text-center px-6">
@@ -1190,7 +1190,7 @@ export default function AreaManagersTab() {
               <div className="border rounded-lg overflow-hidden">
                 <div className="max-h-[60vh] overflow-y-auto">
                   <Table>
-                    <TableHeader className="bg-gray-50">
+                    <TableHeader className="bg-gray-50 [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                       <TableRow>
                         <TableHead className="w-2/5">Branch Code</TableHead>
                         <TableHead className="w-2/5 text-center">
@@ -1327,7 +1327,7 @@ export default function AreaManagersTab() {
                   setEditSelectedBranches([]);
                   setEditBranchSearchTerm("");
                 }}
-                className="h-10 w-10 p-0 cursor-pointer hover:scale-110 transition-transform duration-200 bg-blue-600 text-white rounded-full hover:text-white hover:bg-red-700"
+                className="h-10 w-10 p-0 cursor-pointer bg-blue-600 text-white rounded-full hover:text-white hover:bg-red-700 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -1429,7 +1429,7 @@ export default function AreaManagersTab() {
               <div className="border rounded-lg overflow-hidden flex-1 min-h-0 flex flex-col">
                 <div className="flex-1 overflow-y-auto">
                   <Table>
-                    <TableHeader className="bg-gray-50">
+                    <TableHeader className="bg-gray-50 [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                       <TableRow>
                         <TableHead className="w-2/5">Branch Code</TableHead>
                         <TableHead className="w-2/5 text-center">
@@ -1517,7 +1517,7 @@ export default function AreaManagersTab() {
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button
               variant="outline"
-              className="bg-red-600 text-white hover:bg-red-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+              className="bg-red-600 text-white hover:bg-red-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               onClick={() => {
                 setIsEditModalOpen(false);
                 setAreaManagerToEdit(null);
@@ -1528,7 +1528,7 @@ export default function AreaManagersTab() {
               Cancel
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer flex items-center gap-2 hover:scale-110 transition-transform duration-200"
+              className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer flex items-center gap-2 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               disabled={isSavingAreaManager}
               onClick={async () => {
                 if (!areaManagerToEdit) {
@@ -1711,7 +1711,7 @@ export default function AreaManagersTab() {
                   setIsDeleteModalOpen(false);
                   setAreaManagerToDelete(null);
                 }}
-                className="text-white bg-blue-600 hover:text-white hover:bg-green-500 cursor-pointer"
+                className="text-white bg-blue-600 hover:text-white hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               >
                 Cancel
               </Button>

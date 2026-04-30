@@ -759,7 +759,7 @@ export default function MemorandumViolationModal({
                               type="button"
                               variant="outline"
                               size="sm"
-                              className="cursor-pointer"
+                              className="cursor-pointer bg-amber-600 hover:bg-amber-700 text-white hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                               onClick={() => openView(row)}
                             >
                               <Eye className="h-4 w-4 mr-1.5" />

@@ -2687,7 +2687,7 @@ export default function OverallAssessmentRankNfile({
         <Button
           onClick={handlePrevious}
           variant="outline"
-          className="px-8 py-3 text-lg cursor-pointer bg-blue-500 text-white hover:bg-blue-700 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+          className="px-8 py-3 text-lg cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
           size="lg"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -2706,8 +2706,8 @@ export default function OverallAssessmentRankNfile({
     flex items-center justify-center transition-all duration-200
     ${
       isSubmittingEvaluation
-        ? "opacity-70 cursor-not-allowed hover:scale-100"
-        : "cursor-pointer hover:scale-110"
+        ? "opacity-70 cursor-not-allowed hover:translate-y-0 hover:shadow-none"
+        : "cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
     }
   `}
             size="lg"
@@ -2788,7 +2788,7 @@ export default function OverallAssessmentRankNfile({
               variant="outline"
               onClick={() => setShowConfirmDialog(false)}
               disabled={isSubmittingEvaluation}
-              className="px-6 py-2 px-6 py-2 cursor-pointer text-white bg-red-500 hover:bg-red-600 hover:text-white hover:scale-110 transition-transform duration-200"
+              className="px-6 py-2 cursor-pointer text-white bg-red-600 hover:bg-red-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
               Cancel
             </Button>
@@ -2804,7 +2804,7 @@ export default function OverallAssessmentRankNfile({
                 }
               }}
               disabled={isSubmittingEvaluation}
-              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
               <div className="flex items-center gap-2">
                 <Send className="w-4 h-4" />

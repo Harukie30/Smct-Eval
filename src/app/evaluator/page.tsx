@@ -389,7 +389,7 @@ export default function OverviewTab() {
                 setRefreshNonce((prev) => prev + 1);
               }}
               disabled={isRefreshing || isPaginate}
-              className="px-3 py-2 text-white hover:text-white bg-blue-500 hover:bg-green-600 disabled:bg-gray-400 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+              className="px-3 py-2 text-white hover:text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               title="Refresh submissions data"
             >
               {isRefreshing || isPaginate ? (
@@ -459,17 +459,17 @@ export default function OverviewTab() {
               </div>
               {/* Table structure visible in background */}
               <Table className="table-fixed w-full">
-                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                   <TableRow key="overview-header">
                     <TableHead className="w-1/5 pl-4">Employee</TableHead>
                     <TableHead className="w-1/5 text-center pl-4">
                       Rating
                     </TableHead>
                     <TableHead className="w-1/5 text-center">Date</TableHead>
-                    <TableHead className="w-1/5 text-right pr-6">
+                    <TableHead className="w-1/5 text-right pr-4">
                       Quarter
                     </TableHead>
-                    <TableHead className="w-1/5 text-right pl-1 pr-4">
+                    <TableHead className="w-1/5 text-right pr-4">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -538,17 +538,17 @@ export default function OverviewTab() {
               {/* Scrollable Table */}
               <div className="max-h-[350px] md:max-h-[500px] lg:max-h-[700px] xl:max-h-[750px] overflow-y-auto overflow-x-auto scrollable-table overview-table">
                 <Table className="table-fixed w-full">
-                  <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                  <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                     <TableRow key="overview-header">
                       <TableHead className="w-1/5 pl-4">Employee</TableHead>
                       <TableHead className="w-1/5 text-center pl-4">
                         Rating
                       </TableHead>
                       <TableHead className="w-1/5 text-center">Date</TableHead>
-                      <TableHead className="w-1/5 text-right pr-6">
+                      <TableHead className="w-1/5 text-right pr-4">
                         Quarter
                       </TableHead>
-                      <TableHead className="w-1/5 text-right pl-1 pr-4">
+                      <TableHead className="w-1/5 text-right pr-4">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -631,7 +631,7 @@ export default function OverviewTab() {
                         // console.log(review);
                         return (
                           <TableRow key={review.id} className={rowClassName}>
-                            <TableCell className="px-6 py-3">
+                            <TableCell className="px-6 py-4">
                               <div>
                                 <div className="flex items-center gap-2 mb-1">
                                   <span className="font-medium text-gray-900">
@@ -734,7 +734,7 @@ export default function OverviewTab() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleViewEvaluation(review)}
-                                className="bg-blue-500 hover:bg-blue-500 hover:text-white text-white  cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                                className="bg-blue-600 hover:bg-blue-700 hover:text-white text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                               >
                                 <Eye className="w-4 h-4" />
                                 View

@@ -248,7 +248,7 @@ export default function OverviewTab() {
                 {overviewSearchTerm && (
                   <button
                     onClick={() => setOverviewSearchTerm("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-colors hover:scale-120 transition-transform duration-200"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 transition-all duration-200 hover:-translate-y-1 hover:shadow-sm active:translate-y-0"
                     aria-label="Clear search"
                   >
                     <svg
@@ -270,7 +270,7 @@ export default function OverviewTab() {
               <Button
                 onClick={() => setRefreshNonce((prev) => prev + 1)}
                 disabled={isRefreshing}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white hover:scale-105 transition-transform duration-200"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                 title="Refresh evaluation records"
               >
                 {isRefreshing ? (
@@ -336,7 +336,7 @@ export default function OverviewTab() {
               )}
 
               <Table className="min-w-full w-full">
-                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                   <TableRow>
                     <TableHead className="px-3 py-2 md:px-4 md:py-2.5 lg:px-6 lg:py-3 min-w-[140px] md:min-w-[160px] lg:min-w-[180px] xl:min-w-[200px]">
                       <span className="text-sm">
@@ -566,7 +566,7 @@ export default function OverviewTab() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleViewEvaluation(submission)}
-                              className="text-sm px-2 md:px-3 py-1 md:py-1.5 bg-green-600 hover:bg-green-500 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                              className="text-sm px-2 md:px-3 py-1 md:py-1.5 bg-blue-600 hover:bg-blue-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                             >
                               ☰ View
                             </Button>

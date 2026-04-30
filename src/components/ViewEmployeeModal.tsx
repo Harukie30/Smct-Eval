@@ -187,7 +187,7 @@ export default function ViewEmployeeModal({
         <div className="sticky top-0 z-50 flex justify-end mb-4 -mt-6 -mr-6 pt-6 pr-6">
           <Button
             onClick={onCloseAction}
-            className={`bg-blue-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-110 transition-transform duration-200 ${
+            className={`bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all duration-200 cursor-pointer hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 ${
               isAdminVariant ? "bg-red-500 hover:bg-red-600" : ""
             }`}
             size="sm"

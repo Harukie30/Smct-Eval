@@ -282,7 +282,7 @@ export default function EmployeesTab() {
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div>
                 <CardTitle>Employee Directory</CardTitle>
@@ -304,7 +304,7 @@ export default function EmployeesTab() {
                 setRefreshTrigger((prev) => prev + 1); // Trigger refresh by incrementing counter
               }}
               disabled={isRefreshing}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400 cursor-pointer"
               title="Refresh employee data"
             >
               {isRefreshing ? (
@@ -323,7 +323,7 @@ export default function EmployeesTab() {
         </CardHeader>
         <CardContent>
           {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6 w-1/3 ">
+          <div className="mb-6 flex w-1/2 flex-col gap-4 sm:flex-row sm:flex-wrap">
             <div className="relative flex-1">
               <Input
                 placeholder="Search employees..."
@@ -354,7 +354,7 @@ export default function EmployeesTab() {
               placeholder="All Positions"
               searchPlaceholder="Search positions..."
               emptyText="No positions found."
-              className="w-[180px] cursor-pointer "
+              className="w-full cursor-pointer sm:w-[200px]"
             />
             {(employeeSearch || positionFilter) && (
               <Button
@@ -363,7 +363,7 @@ export default function EmployeesTab() {
                   setEmployeeSearch("");
                   setPositionFilter("");
                 }}
-                className="px-4 py-2 text-sm text-red-400"
+                className="px-4 py-2 text-sm text-red-400 sm:w-auto"
                 title="Clear all filters"
               >
                 Clear
@@ -395,7 +395,7 @@ export default function EmployeesTab() {
           </div>
 
           {isRefreshing ? (
-            <div className="relative max-h-[500px] overflow-y-auto">
+            <div className="relative max-h-[min(68vh,32rem)] overflow-y-auto overflow-x-auto">
               {/* Centered Loading Spinner with Logo */}
               <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                 <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
@@ -418,9 +418,9 @@ export default function EmployeesTab() {
               </div>
 
               {/* Table structure visible in background */}
-              <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+              <div className="relative overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <Table className="min-w-[920px] w-full">
+                  <TableHeader className="sticky top-0 z-10 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
@@ -434,22 +434,22 @@ export default function EmployeesTab() {
                     {/* Skeleton loading rows */}
                     {Array.from({ length: itemsPerPage }).map((_, index) => (
                       <TableRow key={`skeleton-employee-${index}`}>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
-                        <TableCell className="px-6 py-3">
+                        <TableCell className="px-6 py-4">
                           <Skeleton className="h-6 w-24" />
                         </TableCell>
                       </TableRow>
@@ -459,9 +459,9 @@ export default function EmployeesTab() {
               </div>
             </div>
           ) : isRefreshing ? (
-            <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-              <Table>
-                <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+            <div className="relative overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              <Table className="min-w-[920px] w-full">
+                <TableHeader className="sticky top-0 z-10 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
@@ -475,22 +475,22 @@ export default function EmployeesTab() {
                   {/* Skeleton loading rows - no spinner for page changes */}
                   {Array.from({ length: itemsPerPage }).map((_, index) => (
                     <TableRow key={`skeleton-employee-page-${index}`}>
-                      <TableCell className="px-6 py-3">
+                      <TableCell className="px-6 py-4">
                         <Skeleton className="h-6 w-24" />
                       </TableCell>
-                      <TableCell className="px-6 py-3">
+                      <TableCell className="px-6 py-4">
                         <Skeleton className="h-6 w-24" />
                       </TableCell>
-                      <TableCell className="px-6 py-3">
+                      <TableCell className="px-6 py-4">
                         <Skeleton className="h-6 w-24" />
                       </TableCell>
-                      <TableCell className="px-6 py-3">
+                      <TableCell className="px-6 py-4">
                         <Skeleton className="h-6 w-24" />
                       </TableCell>
-                      <TableCell className="px-6 py-3">
+                      <TableCell className="px-6 py-4">
                         <Skeleton className="h-6 w-24" />
                       </TableCell>
-                      <TableCell className="px-6 py-3">
+                      <TableCell className="px-6 py-4">
                         <Skeleton className="h-6 w-24" />
                       </TableCell>
                     </TableRow>
@@ -500,9 +500,9 @@ export default function EmployeesTab() {
             </div>
           ) : (
             <>
-              <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+              <div className="relative overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <Table className="min-w-[920px] w-full">
+                  <TableHeader className="sticky top-0 z-10 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
@@ -626,7 +626,7 @@ export default function EmployeesTab() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-blue-600 hover:text-blue-700 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                                  className="text-blue-600 hover:text-blue-700 cursor-pointer"
                                   onClick={() => {
                                     setSelectedEmployeeForView(employee);
                                     setIsViewEmployeeModalOpen(true);
@@ -638,7 +638,7 @@ export default function EmployeesTab() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-amber-600 hover:text-amber-700 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                                  className="text-amber-600 hover:text-amber-700 cursor-pointer"
                                   onClick={() => {
                                     setSelectedEmployeeForMemorandumViolation(employee);
                                     setIsMemorandumViolationModalOpen(true);
@@ -650,7 +650,7 @@ export default function EmployeesTab() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="text-green-600 hover:text-green-700 cursor-pointer hover:scale-110 transition-transform duration-200 shadow-lg hover:shadow-xl transition-all duration-300"
+                                  className="text-green-600 hover:text-green-700 cursor-pointer"
                                   onClick={() => {
                                     setIsEvaluationTypeModalOpen(true);
                                     setSelectedEmployeeForEvaluation(employee);

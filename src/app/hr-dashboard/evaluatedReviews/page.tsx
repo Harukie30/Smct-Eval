@@ -1071,7 +1071,7 @@ export default function OverviewTab() {
                 </div>
               )}
               <Table className="min-w-full">
-                <TableHeader className="sticky top-0 bg-white z-10 border-b border-gray-200">
+                <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                   <TableRow>
                     <TableHead className="px-6 py-3">Employee</TableHead>
                     <TableHead className="px-6 py-3">Evaluator</TableHead>
@@ -1332,7 +1332,7 @@ export default function OverviewTab() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleViewEvaluation(review)}
-                                className="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                                className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                               >
                                 ☰ View
                               </Button>
@@ -1340,7 +1340,7 @@ export default function OverviewTab() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => openDeleteModal(review)}
-                                className="text-xs px-2 py-1 bg-red-300 hover:bg-red-500 text-gray-700 hover:text-white border-red-200 cursor-pointer hover:scale-110 transition-transform duration-200"
+                                className="text-xs px-2 py-1 bg-red-100 hover:bg-red-500 text-gray-700 hover:text-white border-red-200 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                                 title="Delete this evaluation record"
                               >
                                 ❌ Delete
@@ -1463,16 +1463,13 @@ export default function OverviewTab() {
                     setIsDeleteModalOpen(false);
                     setReviewToDelete(null);
                   }}
-                  className="text-white bg-red-600 hover:text-white hover:bg-red-500 cursor-pointer hover:scale-110 transition-transform duration-200"
+                  className="text-white bg-red-600 hover:text-white hover:bg-red-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                 >
                   Cancel
                 </Button>
                 <Button
                   disabled={isDeleting}
-                  className={`bg-blue-600 hover:bg-red-700 text-white cursor-pointer
-    hover:scale-110 transition-all duration-200 shadow-lg hover:shadow-xl
-    ${isDeleting ? "opacity-70 cursor-not-allowed hover:scale-100" : ""}
-  `}
+                  className={`bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 ${isDeleting ? "opacity-70 cursor-not-allowed hover:translate-y-0 hover:shadow-none" : ""}`}
                   onClick={async () => {
                     if (!reviewToDelete) return;
 

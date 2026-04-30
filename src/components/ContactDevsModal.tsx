@@ -121,7 +121,7 @@ export default function ContactDevsModal({
                 rel="noopener noreferrer"
                 className="relative z-10 flex flex-col items-center group cursor-pointer p-3 rounded-lg hover:bg-white/60 backdrop-blur-sm transition-all"
               >
-                <div className="h-15 w-15 mb-2 overflow-hidden bg-white/80 group-hover:bg-blue-50 transition-all transform group-hover:scale-110 shadow-md group-hover:shadow-xl rounded-lg border-2 border-white/50">
+                <div className="h-15 w-15 mb-2 overflow-hidden bg-white/80 group-hover:bg-blue-50 transition-all duration-200 group-hover:-translate-y-0.5 shadow-md group-hover:shadow-lg rounded-lg border-2 border-white/50">
                   <img
                     src={dev.avatar}
                     alt={dev.name}
@@ -137,7 +137,7 @@ export default function ContactDevsModal({
           <div className="flex justify-end mt-6">
             <Button
               type="button"
-              className="bg-red-700 hover:bg-red-400 text-white cursor-pointer hover:scale-110 transition-all duration-300"
+              className="bg-red-700 hover:bg-red-600 text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
               onClick={onCloseAction}
             >
               Close

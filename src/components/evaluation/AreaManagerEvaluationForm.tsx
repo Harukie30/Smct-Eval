@@ -672,7 +672,7 @@ export default function AreaManagerEvaluationForm({
                     variant="outline"
                     onClick={prevStep}
                     disabled={currentStep === 1}
-                    className="px-6 cursor-pointer bg-blue-500 text-white hover:scale-110 transition-transform duration-200 hover:bg-blue-600 hover:text-white"
+                    className="px-6 cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                   >
                     Previous
                   </Button>
@@ -684,7 +684,7 @@ export default function AreaManagerEvaluationForm({
                       e.stopPropagation();
                       setShowCancelDialog(true);
                     }}
-                    className="px-6 text-red-600 bg-red-500 text-white border-red-300 hover:bg-red-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                    className="px-6 bg-red-600 text-white border-red-300 hover:bg-red-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                   >
                     Cancel Evaluation
                   </Button>
@@ -715,7 +715,7 @@ export default function AreaManagerEvaluationForm({
                         <TooltipTrigger asChild>
                           <Button
                             onClick={nextStep}
-                            className="px-6 bg-blue-500 text-white hover:bg-green-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+                            className="px-6 bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
                           >
                             Next
                           </Button>
@@ -761,14 +761,14 @@ export default function AreaManagerEvaluationForm({
                 e.stopPropagation();
                 setShowCancelDialog(false);
               }}
-              className="px-4 bg-blue-500 text-white hover:bg-blue-600 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+              className="px-4 bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
               Keep Editing
             </Button>
             <Button
               variant="destructive"
               disabled={isCancelling}
-              className={`px-4 flex items-center gap-2 cursor-pointer hover:scale-110 transition-transform duration-200
+              className={`px-4 flex items-center gap-2 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0
     ${isCancelling ? "opacity-70 cursor-not-allowed" : ""}`}
               onClick={(e) => {
                 e.preventDefault();
@@ -976,7 +976,7 @@ export default function AreaManagerEvaluationForm({
           <DialogFooter className="flex justify-center">
             <Button
               onClick={handleSuccessDialogClose}
-              className="px-8 py-2 bg-red-600 text-white hover:bg-red-700 hover:text-white cursor-pointer hover:scale-110 transition-transform duration-200"
+              className="px-8 py-2 bg-red-600 text-white hover:bg-red-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
               Close
             </Button>
