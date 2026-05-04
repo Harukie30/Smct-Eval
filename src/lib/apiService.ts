@@ -558,9 +558,9 @@ export const apiService = {
     return response.data;
   },
 
-  // Add new branch
-  addBranch: async (formData: FormData): Promise<any> => {
-    const response = await api.post("/addBranch", formData);
+  // Add new branch (plain object from admin/HR pages, or FormData for multipart)
+  addBranch: async (payload: FormData | object): Promise<any> => {
+    const response = await api.post("/addBranch", payload);
     return response.data;
   },
 
