@@ -20,6 +20,10 @@ export interface User {
   lname: string;
   username: string;
   contact: number;
+  /** Primary role slug from API/session (used for routing; distinct from `roles` array). */
+  role?: string;
+  /** When true, user has not finished role selection after login. */
+  roleSelectionPending?: boolean;
   roles?: any;
   email?: string;
   avatar?: string;
