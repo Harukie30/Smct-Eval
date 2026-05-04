@@ -1,6 +1,8 @@
 'use client';
 
-import { ComponentType } from 'react';
+import React, { ComponentType, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser } from '@/contexts/UserContext';
 import DashboardShell, { SidebarItem } from '@/components/DashboardShell';
 import PageTransition from '@/components/PageTransition';
 import { withAuth } from './withAuth';
@@ -148,14 +150,14 @@ export function withPublicPage<P extends object>(
     // If should redirect authenticated users, wrap with redirect logic
     if (redirectIfAuthenticated) {
       // Create a stable wrapper component outside the render function
-      const RedirectWrapper = ({ children }: { children: React.ReactNode }) => {
-        const { isAuthenticated, user, isLoading } = require('@/contexts/UserContext').useUser();
-        const router = require('next/navigation').useRouter();
-        const hasRedirected = require('react').useRef(false);
-        const hasChecked = require('react').useRef(false);
+        const RedirectWrapper = ({ children }: { children: React.ReactNode }) => {
+        const { isAuthenticated, user, isLoading } = useUser();
+        const router = useRouter();
+        const hasRedirected = useRef(false);
+        const hasChecked = useRef(false);
         
         // Only check once when component mounts or when isLoading changes from true to false
-        require('react').useEffect(() => {
+        useEffect(() => {
           // Only check once after initial load completes
           if (!isLoading && !hasChecked.current) {
             hasChecked.current = true;

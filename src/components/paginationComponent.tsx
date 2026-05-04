@@ -25,7 +25,7 @@ export default function EvaluationsPagination({
 }: EvaluationsPaginationProps) {
   // Function to render page buttons with ellipses
   const renderPages = () => {
-    let pages: (number | "...")[] = [];
+    const pages: (number | "...")[] = [];
 
     // Always show first page
     pages.push(1);

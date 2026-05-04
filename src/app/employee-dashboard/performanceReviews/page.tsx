@@ -56,7 +56,7 @@ interface Review {
   status: string;
 }
 
-export default function performanceReviews() {
+export default function PerformanceReviews() {
   const { user } = useUser();
   const [submissions, setSubmissions] = useState<any>([]);
   const [loading, setLoading] = useState(true);

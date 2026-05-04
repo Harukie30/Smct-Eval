@@ -178,8 +178,6 @@ export default function OverviewTab() {
 
   const handleClose = async () => {
     try {
-      let search =
-        debouncedSearchTerm !== "" ? debouncedSearchTerm : searchTerm;
       setIsRefreshing(true);
       setIsViewResultsModalOpen(false);
       setSelectedSubmission(null);

@@ -559,7 +559,7 @@ export const apiService = {
   },
 
   // Add new branch
-  addBranch: async (formData: {}): Promise<any> => {
+  addBranch: async (formData: FormData): Promise<any> => {
     const response = await api.post("/addBranch", formData);
     return response.data;
   },
