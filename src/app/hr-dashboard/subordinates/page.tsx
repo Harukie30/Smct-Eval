@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,8 @@ type StaffRow = {
   role: string;
 };
 const STAFF_MODAL_PER_PAGE = 13;
+/** Minimum time to show the table skeleton when changing pages in the staff modal (client-side pagination). */
+const STAFF_MODAL_PAGE_LOAD_MS = 2500;
 
 function getDisplayRole(roles: unknown): string {
   if (!Array.isArray(roles) || roles.length === 0) return "N/A";
@@ -156,7 +158,35 @@ export default function HRSubordinatesPage() {
   const [staffSearch, setStaffSearch] = useState("");
   const [staffCurrentPage, setStaffCurrentPage] = useState(1);
   const [staffPageLoading, setStaffPageLoading] = useState(false);
+  const staffPageMinLoadTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
+
+  const clearStaffPageLoadTimer = useCallback(() => {
+    if (staffPageMinLoadTimeoutRef.current !== null) {
+      window.clearTimeout(staffPageMinLoadTimeoutRef.current);
+      staffPageMinLoadTimeoutRef.current = null;
+    }
+  }, []);
+
+  const stopStaffPageSkeleton = useCallback(() => {
+    clearStaffPageLoadTimer();
+    setStaffPageLoading(false);
+  }, [clearStaffPageLoadTimer]);
+
+  const handleStaffModalPageChange = useCallback(
+    (page: number) => {
+      clearStaffPageLoadTimer();
+      setStaffPageLoading(true);
+      setStaffCurrentPage(page);
+      staffPageMinLoadTimeoutRef.current = window.setTimeout(() => {
+        setStaffPageLoading(false);
+        staffPageMinLoadTimeoutRef.current = null;
+      }, STAFF_MODAL_PAGE_LOAD_MS);
+    },
+    [clearStaffPageLoadTimer]
+  );
 
   const loadEvaluators = useCallback(async (softRefresh = false) => {
     if (softRefresh) {
@@ -221,6 +251,7 @@ export default function HRSubordinatesPage() {
   }, [rows, search]);
 
   const loadStaffForEvaluator = useCallback(async (evaluator: EvaluatorRow) => {
+    stopStaffPageSkeleton();
     setLoadingStaff(true);
     setStaffRows([]);
     setStaffSearch("");
@@ -256,7 +287,7 @@ export default function HRSubordinatesPage() {
     } finally {
       setLoadingStaff(false);
     }
-  }, []);
+  }, [stopStaffPageSkeleton]);
 
   const filteredStaffRows = useMemo(() => {
     const q = staffSearch.trim().toLowerCase();
@@ -290,15 +321,6 @@ export default function HRSubordinatesPage() {
       setStaffCurrentPage(staffTotalPages);
     }
   }, [staffCurrentPage, staffTotalPages]);
-
-  useEffect(() => {
-    if (loadingStaff) return;
-    setStaffPageLoading(true);
-    const timeoutId = window.setTimeout(() => {
-      setStaffPageLoading(false);
-    }, 180);
-    return () => window.clearTimeout(timeoutId);
-  }, [staffCurrentPage, loadingStaff]);
 
   return (
     <div className="space-y-4">
@@ -429,6 +451,7 @@ export default function HRSubordinatesPage() {
         open={isStaffModalOpen}
         onOpenChangeAction={(open) => {
           if (!open) {
+            stopStaffPageSkeleton();
             setIsStaffModalOpen(false);
             setSelectedEvaluator(null);
             setStaffRows([]);
@@ -489,7 +512,9 @@ export default function HRSubordinatesPage() {
             <div className="text-xs text-slate-500">
               {loadingStaff
                 ? "Loading staff..."
-                : `Showing ${paginatedStaffRows.length} on this page`}
+                : staffPageLoading
+                  ? "Switching page…"
+                  : `Showing ${paginatedStaffRows.length} on this page`}
             </div>
           </div>
           <div className="max-h-[60vh] overflow-auto rounded-xl border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-950/[0.03]">
@@ -550,7 +575,7 @@ export default function HRSubordinatesPage() {
               totalPages={staffTotalPages}
               total={filteredStaffRows.length}
               perPage={STAFF_MODAL_PER_PAGE}
-              onPageChange={setStaffCurrentPage}
+              onPageChange={handleStaffModalPageChange}
             />
           )}
           </div>
