@@ -492,6 +492,7 @@ export default function MyViolationsPanel() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full min-w-0 pl-9 pr-9"
                   autoComplete="off"
+                  disabled={loading || refreshing}
                 />
                 {searchTerm ? (
                   <button
@@ -517,7 +518,7 @@ export default function MyViolationsPanel() {
                 searchPlaceholder="Search month…"
                 emptyText="No month with violations."
                 className="w-full min-w-0"
-                disabled={monthsLoading}
+                disabled={monthsLoading || loading || refreshing}
               />
             </div>
             <div className="flex w-full items-end justify-end lg:w-auto lg:shrink-0">
@@ -547,88 +548,165 @@ export default function MyViolationsPanel() {
           </div>
 
           <div className="relative overflow-x-auto overflow-y-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
-            <Table className="min-w-[760px] w-full">
-              <TableHeader>
-                <TableRow className="border-b border-blue-900/10 bg-gradient-to-r from-blue-600 to-blue-700 hover:bg-gradient-to-r hover:from-blue-600 hover:to-blue-700">
-                  <TableHead className="min-w-[10rem] font-semibold text-white">
-                    Title
-                  </TableHead>
-                  <TableHead className="min-w-[8rem] whitespace-nowrap font-semibold text-white">
-                    Violation date
-                  </TableHead>
-                  <TableHead className="w-[1%] whitespace-nowrap text-right font-semibold text-white">
-                    Action
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={`sk-${i}`} className="border-slate-100">
-                      <TableCell>
-                        <Skeleton className="h-5 w-full max-w-[240px]" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-5 w-24" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="ml-auto h-8 w-20" />
-                      </TableCell>
+            {loading ? (
+              <div
+                className="px-4 py-6 sm:px-6"
+                aria-busy="true"
+                role="status"
+                aria-live="polite"
+              >
+                <span className="sr-only">Loading violations list</span>
+                <Table className="min-w-[760px] w-full">
+                  <TableHeader>
+                    <TableRow className="border-b border-blue-900/10 bg-gradient-to-r from-blue-600 to-blue-700 hover:bg-gradient-to-r hover:from-blue-600 hover:to-blue-700">
+                      <TableHead className="min-w-[10rem] font-semibold text-white">
+                        Title
+                      </TableHead>
+                      <TableHead className="min-w-[8rem] whitespace-nowrap font-semibold text-white">
+                        Violation date
+                      </TableHead>
+                      <TableHead className="w-[1%] whitespace-nowrap text-right font-semibold text-white">
+                        Action
+                      </TableHead>
                     </TableRow>
-                  ))
-                ) : rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={3}
-                      className="py-14 text-center"
-                    >
-                      <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-                          <FileWarning className="h-6 w-6" />
-                        </div>
-                        <p className="text-sm font-medium text-slate-700">
-                          No violations found
-                          {debouncedSearch || monthFilter !== "all"
-                            ? " for the current filters."
-                            : "."}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          Try adjusting search or month, or refresh the list.
-                        </p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  rows.map((row) => {
-                    return (
-                      <TableRow
-                        key={String(row.id)}
-                        className="border-slate-100 transition-colors hover:bg-blue-50/50"
-                      >
-                        <TableCell className="max-w-[20rem] font-medium text-slate-900">
-                          <span className="line-clamp-2">{row.title}</span>
+                  </TableHeader>
+                  <TableBody>
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <TableRow key={`sk-load-${i}`} className="border-slate-100">
+                        <TableCell>
+                          <Skeleton className="h-5 w-full max-w-[240px]" />
                         </TableCell>
-                        <TableCell className="whitespace-nowrap text-slate-600">
-                          {formatViolationDate(row.violation_date)}
+                        <TableCell>
+                          <Skeleton className="h-5 w-24" />
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="cursor-pointer hover:scale-110 transition-transform duration-200 bg-blue-500 text-white gap-1.5 hover:bg-blue-600 hover:text-white hover:bg-red-500"
-                            onClick={() => setViewingRow(row)}
-                          >
-                            <Eye className="h-4 w-4" />
-                            View Summary
-                          </Button>
+                          <Skeleton className="ml-auto h-8 w-20" />
                         </TableCell>
                       </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="relative min-h-[200px]">
+                {refreshing ? (
+                  <div
+                    className="absolute inset-0 z-10 overflow-auto rounded-xl bg-white/85 px-4 py-6 backdrop-blur-[2px] sm:px-6"
+                    aria-busy="true"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <span className="sr-only">Refreshing violations list</span>
+                    <Table className="min-w-[760px] w-full">
+                      <TableHeader>
+                        <TableRow className="border-b border-blue-900/10 bg-gradient-to-r from-blue-600 to-blue-700 hover:bg-gradient-to-r hover:from-blue-600 hover:to-blue-700">
+                          <TableHead className="min-w-[10rem] font-semibold text-white">
+                            Title
+                          </TableHead>
+                          <TableHead className="min-w-[8rem] whitespace-nowrap font-semibold text-white">
+                            Violation date
+                          </TableHead>
+                          <TableHead className="w-[1%] whitespace-nowrap text-right font-semibold text-white">
+                            Action
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <TableRow
+                            key={`sk-refresh-${i}`}
+                            className="border-slate-100"
+                          >
+                            <TableCell>
+                              <Skeleton className="h-5 w-full max-w-[240px]" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-5 w-24" />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Skeleton className="ml-auto h-8 w-20" />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : null}
+                <Table className="min-w-[760px] w-full">
+                  <TableHeader>
+                    <TableRow className="border-b border-blue-900/10 bg-gradient-to-r from-blue-600 to-blue-700 hover:bg-gradient-to-r hover:from-blue-600 hover:to-blue-700">
+                      <TableHead className="min-w-[10rem] font-semibold text-white">
+                        Title
+                      </TableHead>
+                      <TableHead className="min-w-[8rem] whitespace-nowrap font-semibold text-white">
+                        Violation date
+                      </TableHead>
+                      <TableHead className="w-[1%] whitespace-nowrap text-right font-semibold text-white">
+                        Action
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rows.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={3}
+                          className="py-14 text-center"
+                        >
+                          <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
+                            <img
+                              src="/not-found.gif"
+                              alt=""
+                              width={140}
+                              height={140}
+                              className="mx-auto max-h-36 w-auto max-w-[120px] object-contain select-none"
+                              decoding="async"
+                            />
+                            <p className="text-sm font-medium text-slate-700">
+                              No violations found
+                              {debouncedSearch || monthFilter !== "all"
+                                ? " for the current filters."
+                                : "."}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              Try adjusting search or month, or refresh the list.
+                            </p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      rows.map((row) => {
+                        return (
+                          <TableRow
+                            key={String(row.id)}
+                            className="border-slate-100 transition-colors hover:bg-blue-50/50"
+                          >
+                            <TableCell className="max-w-[20rem] font-medium text-slate-900">
+                              <span className="line-clamp-2">{row.title}</span>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap text-slate-600">
+                              {formatViolationDate(row.violation_date)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="cursor-pointer hover:scale-110 transition-transform duration-200 bg-blue-500 text-white gap-1.5 hover:bg-blue-600 hover:text-white hover:bg-red-500"
+                                onClick={() => setViewingRow(row)}
+                              >
+                                <Eye className="h-4 w-4" />
+                                View Summary
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
 
           <Dialog
@@ -728,7 +806,7 @@ export default function MyViolationsPanel() {
             </DialogContent>
           </Dialog>
 
-          {!loading && total > 0 ? (
+          {!loading && !refreshing && total > 0 ? (
             <EvaluationsPagination
               currentPage={currentPage}
               totalPages={totalPages}
