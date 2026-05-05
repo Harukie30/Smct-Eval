@@ -24,10 +24,103 @@ import {
   UserCircle,
   Calendar,
   MapPin,
-  FileText,
+  Users,
 } from "lucide-react";
 import { User as UserType } from "../contexts/UserContext";
 import apiService from "@/lib/apiService";
+
+type SupervisorDisplay = {
+  name: string;
+  email?: string;
+  position?: string;
+};
+
+function extractSupervisorFromUnknown(raw: unknown): SupervisorDisplay | null {
+  if (raw == null || raw === "") return null;
+  if (typeof raw === "string") {
+    const t = raw.trim();
+    return t ? { name: t } : null;
+  }
+  if (typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const fullName =
+    String(o.full_name ?? "").trim() ||
+    [o.fname, o.lname].filter(Boolean).map(String).join(" ").trim() ||
+    String(o.name ?? "").trim();
+  if (!fullName) return null;
+  const pos =
+    String(
+      (o.positions as { label?: string } | undefined)?.label ??
+        (o.positions as { name?: string } | undefined)?.name ??
+        o.position ??
+        ""
+    ).trim() || undefined;
+  const email = String(o.email ?? "").trim() || undefined;
+  return { name: fullName, email, position: pos };
+}
+
+function pickSupervisorCandidate(raw: unknown): SupervisorDisplay | null {
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      const info = extractSupervisorFromUnknown(item);
+      if (info) return info;
+    }
+    return null;
+  }
+  return extractSupervisorFromUnknown(raw);
+}
+
+function pickSupervisorFromEmployee(
+  emp: UserType | null
+): SupervisorDisplay | null {
+  if (!emp) return null;
+  const e = emp as unknown as Record<string, unknown>;
+  const keys = [
+    "immediate_supervisor",
+    "immediate_head",
+    "immediateHead",
+    "supervisor",
+    "manager",
+    "evaluator",
+    "assigned_evaluator",
+    "assigned_evaluators",
+    "assignedEvaluator",
+    "assignedEvaluators",
+    "reporting_to",
+    "reportingTo",
+    "branch_head",
+    "branchHead",
+  ];
+  for (const k of keys) {
+    const info = pickSupervisorCandidate(e[k]);
+    if (info) return info;
+  }
+  return null;
+}
+
+function pickSupervisorFromDashboard(
+  dashboard: unknown
+): SupervisorDisplay | null {
+  if (!dashboard || typeof dashboard !== "object") return null;
+  const d = dashboard as Record<string, unknown>;
+  const keys = [
+    "immediate_supervisor",
+    "immediate_head",
+    "immediate_supervisor_user",
+    "supervisor",
+    "evaluator",
+    "assigned_evaluator",
+    "assigned_evaluators",
+    "manager",
+    "reporting_manager",
+    "head",
+  ];
+  for (const k of keys) {
+    const info = pickSupervisorCandidate(d[k]);
+    if (info) return info;
+  }
+  return null;
+}
 
 interface ViewEmployeeModalProps {
   isOpen: boolean;
@@ -49,17 +142,33 @@ export default function ViewEmployeeModal({
   const [average, setAverage] = useState<any>(0);
   const [highestRating, setHighestRating] = useState<any>(0);
   const [recentEvaluation, setRecentEvaluation] = useState<any>([]);
+  const [supervisorInfo, setSupervisorInfo] = useState<SupervisorDisplay | null>(
+    null
+  );
 
   useEffect(() => {
-    if (!isOpen || !employee) return;
+    if (!isOpen || !employee) {
+      setSupervisorInfo(null);
+      return;
+    }
+    setSupervisorInfo(pickSupervisorFromEmployee(employee));
     const loadDashboard = async () => {
-      const dashboard = await apiService.employeeDashboard2(
-        Number(employee?.id)
-      );
-      setHighestRating(dashboard.highest_rating);
-      setTotalEvaluations(dashboard.total_evaluations);
-      setAverage(dashboard.average);
-      setRecentEvaluation(dashboard.recent_evaluation);
+      try {
+        const dashboard = await apiService.employeeDashboard2(
+          Number(employee?.id)
+        );
+        setHighestRating(dashboard.highest_rating);
+        setTotalEvaluations(dashboard.total_evaluations);
+        setAverage(dashboard.average);
+        setRecentEvaluation(dashboard.recent_evaluation);
+        const fromDash = pickSupervisorFromDashboard(dashboard);
+        setSupervisorInfo(
+          fromDash ?? pickSupervisorFromEmployee(employee)
+        );
+      } catch (error) {
+        console.error("Failed to load employee dashboard:", error);
+        setSupervisorInfo(pickSupervisorFromEmployee(employee));
+      }
     };
     loadDashboard();
   }, [isOpen, employee]);
@@ -290,6 +399,71 @@ export default function ViewEmployeeModal({
           </Card>
           {/* Employee Information Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Immediate head / Supervisor */}
+            <Card
+              className={`${
+                isAdminVariant
+                  ? "bg-slate-50 border-2 border-slate-300 shadow-md hover:shadow-lg"
+                  : "bg-white border border-gray-200 shadow-sm hover:shadow-md"
+              } transition-shadow`}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      isAdminVariant ? "bg-slate-200" : "bg-indigo-100"
+                    }`}
+                  >
+                    <Users
+                      className={`w-5 h-5 ${
+                        isAdminVariant ? "text-slate-700" : "text-indigo-600"
+                      }`}
+                      aria-hidden
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Label
+                      className={`text-xs font-medium uppercase tracking-wide ${
+                        isAdminVariant ? "text-slate-600" : "text-gray-500"
+                      }`}
+                    >
+                      Immediate head / Supervisor
+                    </Label>
+                    {supervisorInfo ? (
+                      <>
+                        <p
+                          className={`text-lg font-semibold mt-1 truncate ${
+                            isAdminVariant ? "text-slate-800" : "text-black"
+                          }`}
+                        >
+                          {supervisorInfo.name}
+                        </p>
+                        {(supervisorInfo.position || supervisorInfo.email) && (
+                          <p
+                            className={`text-sm font-medium mt-1 truncate ${
+                              isAdminVariant ? "text-slate-600" : "text-gray-600"
+                            }`}
+                          >
+                            {[supervisorInfo.position, supervisorInfo.email]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p
+                        className={`text-lg font-semibold mt-1 ${
+                          isAdminVariant ? "text-slate-800" : "text-black"
+                        }`}
+                      >
+                        Not Assigned
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Employee ID Card */}
             <Card
               className={`${
