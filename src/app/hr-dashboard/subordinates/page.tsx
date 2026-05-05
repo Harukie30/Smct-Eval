@@ -42,6 +42,8 @@ type StaffRow = {
   role: string;
 };
 const STAFF_MODAL_PER_PAGE = 13;
+/** Rows per page for the main evaluators table (client-side pagination). */
+const SUBORDINATES_TABLE_PER_PAGE = 15;
 /** Minimum time to show the table skeleton when changing pages in the staff modal (client-side pagination). */
 const STAFF_MODAL_PAGE_LOAD_MS = 2500;
 
@@ -151,6 +153,7 @@ export default function HRSubordinatesPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
+  const [evaluatorsTablePage, setEvaluatorsTablePage] = useState(1);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const [selectedEvaluator, setSelectedEvaluator] = useState<EvaluatorRow | null>(null);
   const [staffRows, setStaffRows] = useState<StaffRow[]>([]);
@@ -255,6 +258,25 @@ export default function HRSubordinatesPage() {
       );
     });
   }, [rows, search]);
+
+  const evaluatorsTotalPages = Math.max(
+    1,
+    Math.ceil(filteredRows.length / SUBORDINATES_TABLE_PER_PAGE)
+  );
+  const paginatedEvaluatorRows = useMemo(() => {
+    const start = (evaluatorsTablePage - 1) * SUBORDINATES_TABLE_PER_PAGE;
+    return filteredRows.slice(start, start + SUBORDINATES_TABLE_PER_PAGE);
+  }, [filteredRows, evaluatorsTablePage]);
+
+  useEffect(() => {
+    setEvaluatorsTablePage(1);
+  }, [search]);
+
+  useEffect(() => {
+    if (evaluatorsTablePage > evaluatorsTotalPages) {
+      setEvaluatorsTablePage(evaluatorsTotalPages);
+    }
+  }, [evaluatorsTablePage, evaluatorsTotalPages]);
 
   const loadStaffForEvaluator = useCallback(async (evaluator: EvaluatorRow) => {
     stopStaffPageSkeleton();
@@ -437,12 +459,12 @@ export default function HRSubordinatesPage() {
                   ))
                 ) : filteredRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-12 text-center text-sm text-slate-500">
+                    <TableCell colSpan={6} className="py-12 text-center text-sm text-slate-500">
                       No evaluators found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredRows.map((row) => (
+                  paginatedEvaluatorRows.map((row) => (
                     <TableRow key={row.id} className="hover:bg-slate-50/80">
                       <TableCell className="font-medium text-slate-900">{row.name}</TableCell>
                       <TableCell>{row.email}</TableCell>
@@ -469,6 +491,15 @@ export default function HRSubordinatesPage() {
               </TableBody>
             </Table>
           </div>
+          {!loading && filteredRows.length > 0 && (
+            <EvaluationsPagination
+              currentPage={evaluatorsTablePage}
+              totalPages={evaluatorsTotalPages}
+              total={filteredRows.length}
+              perPage={SUBORDINATES_TABLE_PER_PAGE}
+              onPageChange={setEvaluatorsTablePage}
+            />
+          )}
         </CardContent>
       </Card>
 

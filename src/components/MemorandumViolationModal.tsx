@@ -6,6 +6,7 @@ import {
   FileWarning,
   X,
   Eye,
+  Pencil,
   ExternalLink,
   RefreshCw,
   Calendar,
@@ -49,6 +50,15 @@ function localDateInputValue(d = new Date()): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+/** Normalize API date strings to `YYYY-MM-DD` for `<input type="date" />`. */
+function violationDateToInputValue(raw: string): string {
+  if (!raw?.trim()) return localDateInputValue();
+  const v = raw.trim();
+  const ymd = v.includes("T") ? (v.split("T")[0] ?? v) : v;
+  if (/^\d{4}-\d{2}-\d{2}/.test(ymd)) return ymd.slice(0, 10);
+  return localDateInputValue();
 }
 
 function userHasAdminRole(u: User | null | undefined): boolean {
@@ -96,6 +106,19 @@ const VIOLATIONS_SCROLL_AFTER_ROWS = 7;
 
 /** Auto-dismiss save-success dialog after this many milliseconds. */
 const SAVE_SUCCESS_DIALOG_AUTO_CLOSE_MS = 2500;
+
+/** Preview length for the Summary column in the main violations table. */
+const SUMMARY_TABLE_PREVIEW_LEN = 14;
+
+function truncateSummaryPreview(
+  summary: string | null | undefined,
+  maxLen = SUMMARY_TABLE_PREVIEW_LEN
+): string {
+  const t = summary?.trim() ?? "";
+  if (!t) return "—";
+  if (t.length <= maxLen) return t;
+  return `${t.slice(0, maxLen)}…`;
+}
 
 function mapApiRowToSession(r: Record<string, unknown>): MemorandumSessionRow {
   const id = String(r.id ?? `tmp-${Math.random()}`);
@@ -285,10 +308,19 @@ export default function MemorandumViolationModal({
   const [addSummary, setAddSummary] = useState("");
   const [submittingAdd, setSubmittingAdd] = useState(false);
 
+  const [editingSummaryRow, setEditingSummaryRow] =
+    useState<MemorandumSessionRow | null>(null);
+  const [editTitleDraft, setEditTitleDraft] = useState("");
+  const [editDateDraft, setEditDateDraft] = useState("");
+  const [editSummaryDraft, setEditSummaryDraft] = useState("");
+  const [savingSummaryEdit, setSavingSummaryEdit] = useState(false);
+
   /** Same entrance animation as Branch Quarterly Report / user-management modals. */
   const saveSuccessDialogAnimationClass = useDialogAnimation({ duration: 0.4 });
   const [showSaveSuccessDialog, setShowSaveSuccessDialog] = useState(false);
   const [saveSuccessEmployeeLabel, setSaveSuccessEmployeeLabel] = useState("");
+  /** When true, success dialog copy reflects an edit vs a new memorandum. */
+  const [saveSuccessIsEdit, setSaveSuccessIsEdit] = useState(false);
 
   useEffect(() => {
     if (!showSaveSuccessDialog) return;
@@ -312,10 +344,16 @@ export default function MemorandumViolationModal({
     setViolationsPage(1);
     setShowSaveSuccessDialog(false);
     setSaveSuccessEmployeeLabel("");
+    setSaveSuccessIsEdit(false);
     setLoadingViolations(false);
     setViewingRow(null);
     setAddModalOpen(false);
     resetAddForm();
+    setEditingSummaryRow(null);
+    setEditTitleDraft("");
+    setEditDateDraft("");
+    setEditSummaryDraft("");
+    setSavingSummaryEdit(false);
   }, [onOpenChangeAction, resetAddForm]);
 
   const violationsUsePagination = sessionRows.length > VIOLATIONS_PAGE_SIZE;
@@ -335,32 +373,37 @@ export default function MemorandumViolationModal({
     setViolationsPage((p) => Math.min(p, tp));
   }, [sessionRows.length]);
 
-  const fetchViolationsForUser = useCallback(async (userId: string) => {
-    if (!userId) {
-      setSessionRows([]);
-      return;
-    }
-    setLoadingViolations(true);
-    try {
-      const raw = await apiService.getUserMemorandumViolations(userId);
-      const rows = normalizeViolationsListFromApi(raw);
-      setSessionRows(rows);
-    } catch (e: unknown) {
-      console.error(e);
-      setSessionRows([]);
-      const msg =
-        e && typeof e === "object" && "response" in e
-          ? (e as { response?: { data?: { message?: string } } }).response?.data
-              ?.message
-          : undefined;
-      toastMessages.generic.error(
-        "Could not load memorandum violations",
-        msg ?? "Check the network or your session and try again."
-      );
-    } finally {
-      setLoadingViolations(false);
-    }
-  }, []);
+  const fetchViolationsForUser = useCallback(
+    async (userId: string): Promise<MemorandumSessionRow[]> => {
+      if (!userId) {
+        setSessionRows([]);
+        return [];
+      }
+      setLoadingViolations(true);
+      try {
+        const raw = await apiService.getUserMemorandumViolations(userId);
+        const rows = normalizeViolationsListFromApi(raw);
+        setSessionRows(rows);
+        return rows;
+      } catch (e: unknown) {
+        console.error(e);
+        setSessionRows([]);
+        const msg =
+          e && typeof e === "object" && "response" in e
+            ? (e as { response?: { data?: { message?: string } } }).response
+                ?.data?.message
+            : undefined;
+        toastMessages.generic.error(
+          "Could not load memorandum violations",
+          msg ?? "Check the network or your session and try again."
+        );
+        return [];
+      } finally {
+        setLoadingViolations(false);
+      }
+    },
+    []
+  );
 
   /** Who to load violations for — mirrors Employee Average’s “this employee only” behavior. */
   const effectiveFetchUserId = useMemo(() => {
@@ -469,7 +512,7 @@ export default function MemorandumViolationModal({
     setSubmittingAdd(true);
     try {
       const fd = new FormData();
-      fd.append("user_id", targetUid);
+      fd.append("id", targetUid);
       fd.append("violation_date", violation_date);
       fd.append("title", t);
       fd.append("summary", s);
@@ -477,6 +520,7 @@ export default function MemorandumViolationModal({
       await apiService.addMemorandumViolation(fd);
 
       const name = `${target.fname || ""} ${target.lname || ""}`.trim();
+      setSaveSuccessIsEdit(false);
       setSaveSuccessEmployeeLabel(name);
       setShowSaveSuccessDialog(true);
 
@@ -508,6 +552,22 @@ export default function MemorandumViolationModal({
     setViewingRow(row);
   };
 
+  const canEditSummary = !hideAddViolationButton;
+
+  const openEditSummary = (row: MemorandumSessionRow) => {
+    setEditingSummaryRow(row);
+    setEditTitleDraft(row.title?.trim() ?? "");
+    setEditDateDraft(violationDateToInputValue(row.violation_date));
+    setEditSummaryDraft(row.summary?.trim() ?? "");
+  };
+
+  const resetEditViolationForm = useCallback(() => {
+    setEditingSummaryRow(null);
+    setEditTitleDraft("");
+    setEditDateDraft("");
+    setEditSummaryDraft("");
+  }, []);
+
   const showEmployeePicker = !employee;
   const pickerOptions = pickerUsers
     .map((u) => {
@@ -533,6 +593,52 @@ export default function MemorandumViolationModal({
     : selectedPickerUser
       ? `${selectedPickerUser.fname || ""} ${selectedPickerUser.lname || ""}`.trim()
       : "";
+
+  const handleSaveViolationEdit = async () => {
+    if (!editingSummaryRow || !effectiveFetchUserId) return;
+    const title = editTitleDraft.trim();
+    const summary = editSummaryDraft.trim();
+    if (!title || !editDateDraft || !summary) {
+      toastMessages.form.validationError();
+      return;
+    }
+    setSavingSummaryEdit(true);
+    try {
+      await apiService.updateMemorandumViolation({
+        id: editingSummaryRow.id,
+        title,
+        violation_date: editDateDraft,
+        summary,
+      });
+      await fetchViolationsForUser(effectiveFetchUserId);
+      setViewingRow((v) =>
+        v && v.id === editingSummaryRow.id
+          ? {
+              ...v,
+              title,
+              violation_date: editDateDraft,
+              summary,
+            }
+          : v
+      );
+      resetEditViolationForm();
+      setSaveSuccessIsEdit(true);
+      setSaveSuccessEmployeeLabel(headerEmployeeName.trim());
+      setShowSaveSuccessDialog(true);
+    } catch (e: unknown) {
+      const err = e as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        "Could not update the violation.";
+      toastMessages.generic.error("Update failed", msg);
+    } finally {
+      setSavingSummaryEdit(false);
+    }
+  };
 
   const employeeSubtitle = headerEmployeeName
     ? "Memorandum violations for this employee"
@@ -714,7 +820,10 @@ export default function MemorandumViolationModal({
                       <TableHead className="font-semibold text-amber-900 min-w-[7.5rem] whitespace-nowrap">
                         Date
                       </TableHead>
-                      <TableHead className="font-semibold text-amber-900 w-[1%] whitespace-nowrap text-right">
+                      <TableHead className="font-semibold text-amber-900 min-w-[5.5rem] max-w-[7rem]">
+                        Summary
+                      </TableHead>
+                      <TableHead className="font-semibold text-amber-900 w-[1%] min-w-[5.25rem] whitespace-nowrap text-right">
                         Action
                       </TableHead>
                     </TableRow>
@@ -723,7 +832,7 @@ export default function MemorandumViolationModal({
                     {loadingViolations ? (
                       <TableRow>
                         <TableCell
-                          colSpan={3}
+                          colSpan={4}
                           className="py-10 text-center text-gray-600"
                         >
                           <Loader2 className="mr-2 inline h-5 w-5 animate-spin text-amber-600" />
@@ -733,7 +842,7 @@ export default function MemorandumViolationModal({
                     ) : sessionRows.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={3}
+                          colSpan={4}
                           className="text-center text-gray-500 py-10"
                         >
                           No violations yet. Use Add Violation to create one.
@@ -741,6 +850,8 @@ export default function MemorandumViolationModal({
                       </TableRow>
                     ) : (
                       violationsDisplayedRows.map((row) => {
+                        const fullSummary = row.summary?.trim() ?? "";
+                        const preview = truncateSummaryPreview(row.summary);
                         return (
                         <TableRow
                           key={row.id}
@@ -754,17 +865,43 @@ export default function MemorandumViolationModal({
                           <TableCell className="text-gray-700 text-sm whitespace-nowrap">
                             {formatViolationDateCell(row)}
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="cursor-pointer bg-amber-600 hover:bg-amber-700 text-white hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-                              onClick={() => openView(row)}
-                            >
-                              <Eye className="h-4 w-4 mr-1.5" />
-                              View
-                            </Button>
+                          <TableCell
+                            className="max-w-[7rem] text-sm text-gray-700"
+                            title={
+                              fullSummary
+                                ? fullSummary
+                                : "No summary"
+                            }
+                          >
+                            {preview}
+                          </TableCell>
+                          <TableCell className="w-[1%] min-w-[5.25rem] whitespace-nowrap text-right align-middle">
+                            <div className="inline-flex flex-nowrap items-center justify-end gap-1.5">
+                              {canEditSummary ? (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0 cursor-pointer border-amber-300 bg-white text-amber-900 hover:bg-amber-50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                                  aria-label="Edit violation"
+                                  title="Edit violation"
+                                  onClick={() => openEditSummary(row)}
+                                >
+                                  <Pencil className="h-4 w-4" aria-hidden />
+                                </Button>
+                              ) : null}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 shrink-0 cursor-pointer bg-amber-600 text-white hover:bg-amber-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                                aria-label="View details"
+                                title="View details"
+                                onClick={() => openView(row)}
+                              >
+                                <Eye className="h-4 w-4" aria-hidden />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                         );
@@ -999,6 +1136,216 @@ export default function MemorandumViolationModal({
         </DialogContent>
       </Dialog>
 
+      {/* Edit violation — HR / managers who can add violations */}
+      <Dialog
+        open={!!editingSummaryRow}
+        onOpenChangeAction={(next) => {
+          if (!next) {
+            if (savingSummaryEdit) return;
+            resetEditViolationForm();
+          }
+        }}
+      >
+        <DialogContent
+          className={cn(
+            "relative max-w-xl p-0 overflow-hidden border-amber-200/50 shadow-xl",
+            dialogAnimationClass
+          )}
+        >
+          {savingSummaryEdit && (
+            <div
+              className="absolute inset-0 z-[100] flex flex-col items-center justify-center rounded-lg bg-white/85 backdrop-blur-[2px]"
+              aria-busy="true"
+              aria-live="polite"
+            >
+              <div className="relative mb-4 flex h-24 w-24 items-center justify-center rounded-full border-4 border-amber-200 bg-amber-50 shadow-md">
+                <Loader2 className="h-12 w-12 animate-spin text-amber-600" />
+              </div>
+              <h2 className="mb-2 text-xl font-bold text-amber-800">
+                Saving changes…
+              </h2>
+              <p className="mb-2 max-w-xs text-center text-sm text-gray-600">
+                Please wait while the memorandum is being updated.
+              </p>
+            </div>
+          )}
+          <div
+            className="relative border-b border-amber-100/90 bg-gradient-to-br from-amber-50 via-white to-orange-50/40 px-6 py-5"
+            style={{
+              backgroundImage: "url(/smct.png)",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-white/92 via-white/88 to-amber-50/85" />
+            <div className="relative flex gap-4">
+              <div
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-600 text-white shadow-md ring-2 ring-amber-100"
+                aria-hidden
+              >
+                <Pencil className="h-6 w-6" />
+              </div>
+              <DialogHeader className="flex-1 space-y-1.5 text-left">
+                <DialogTitle className="text-xl font-semibold tracking-tight text-gray-900">
+                  Edit memorandum violation
+                </DialogTitle>
+                <DialogDescription className="text-sm leading-relaxed text-gray-600">
+                  Update the title, violation date, and summary. All fields are
+                  required.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+          </div>
+
+          <div className="max-h-[min(70vh,560px)] overflow-y-auto px-6 py-6">
+            <ol className="space-y-6">
+              <li className="space-y-3">
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white"
+                    aria-hidden
+                  >
+                    1
+                  </span>
+                  <div>
+                    <Label
+                      htmlFor="edit-violation-title"
+                      className="text-base font-semibold text-gray-900"
+                    >
+                      Violation title{" "}
+                      <span className="text-red-500" aria-hidden>
+                        *
+                      </span>
+                    </Label>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Shown in the violations table.
+                    </p>
+                  </div>
+                </div>
+                <Input
+                  id="edit-violation-title"
+                  placeholder="Enter a short, descriptive title"
+                  value={editTitleDraft}
+                  onChange={(e) => setEditTitleDraft(e.target.value)}
+                  disabled={savingSummaryEdit}
+                  className="h-11 text-base"
+                  autoComplete="off"
+                  aria-required
+                />
+              </li>
+
+              <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+
+              <li className="space-y-3">
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white"
+                    aria-hidden
+                  >
+                    2
+                  </span>
+                  <div>
+                    <Label
+                      htmlFor="edit-violation-date"
+                      className="text-base font-semibold text-gray-900"
+                    >
+                      Violation date{" "}
+                      <span className="text-red-500" aria-hidden>
+                        *
+                      </span>
+                    </Label>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Date of the violation record.
+                    </p>
+                  </div>
+                </div>
+                <div className="sm:ml-9">
+                  <Input
+                    id="edit-violation-date"
+                    type="date"
+                    value={editDateDraft}
+                    onChange={(e) => setEditDateDraft(e.target.value)}
+                    disabled={savingSummaryEdit}
+                    className="h-11 max-w-full bg-white sm:max-w-xs"
+                    aria-required
+                  />
+                </div>
+              </li>
+
+              <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+
+              <li className="space-y-3">
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white"
+                    aria-hidden
+                  >
+                    3
+                  </span>
+                  <div>
+                    <Label
+                      htmlFor="edit-violation-summary"
+                      className="text-base font-semibold text-gray-900"
+                    >
+                      Violation summary{" "}
+                      <span className="text-red-500" aria-hidden>
+                        *
+                      </span>
+                    </Label>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Clear summary of what happened.
+                    </p>
+                  </div>
+                </div>
+                <div className="ml-0 sm:ml-9">
+                  <Textarea
+                    id="edit-violation-summary"
+                    placeholder="Enter the details and summary of this violation"
+                    value={editSummaryDraft}
+                    onChange={(e) => setEditSummaryDraft(e.target.value)}
+                    disabled={savingSummaryEdit}
+                    className="min-h-[120px] resize-y bg-white text-sm"
+                    aria-required
+                  />
+                </div>
+              </li>
+            </ol>
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 border-t border-gray-100 bg-gray-50/90 px-6 py-4 sm:flex-row sm:justify-end sm:gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={savingSummaryEdit}
+              className="cursor-pointer w-full sm:w-auto"
+              onClick={() => resetEditViolationForm()}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={
+                savingSummaryEdit ||
+                !editTitleDraft.trim() ||
+                !editDateDraft ||
+                !editSummaryDraft.trim()
+              }
+              className="cursor-pointer w-full min-w-[160px] bg-amber-600 text-white hover:bg-amber-700 sm:w-auto"
+              onClick={() => void handleSaveViolationEdit()}
+            >
+              {savingSummaryEdit ? (
+                <>
+                  <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save changes"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* View details — memorandum preview */}
       <Dialog
         open={!!viewingRow}
@@ -1226,12 +1573,16 @@ export default function MemorandumViolationModal({
               </div>
             </div>
             <DialogTitle className="text-xl font-bold text-gray-900">
-              Saved successfully
+              {saveSuccessIsEdit ? "Updated successfully" : "Saved successfully"}
             </DialogTitle>
             <DialogDescription className="text-gray-700">
-              {saveSuccessEmployeeLabel
-                ? `${saveSuccessEmployeeLabel}: the memorandum violation has been saved.`
-                : "The memorandum violation has been saved."}
+              {saveSuccessIsEdit
+                ? saveSuccessEmployeeLabel
+                  ? `${saveSuccessEmployeeLabel}: your changes to this memorandum have been saved.`
+                  : "Your changes to this memorandum have been saved."
+                : saveSuccessEmployeeLabel
+                  ? `${saveSuccessEmployeeLabel}: the memorandum violation has been saved.`
+                  : "The memorandum violation has been saved."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="border-t border-gray-200 pt-4 sm:justify-center">
