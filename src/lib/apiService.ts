@@ -365,12 +365,37 @@ export const apiService = {
 
   /**
    * Record a memorandum violation. Uses `FormData` fields (text-only now):
-   * user_id, violation_date, title, summary, document.
+   * id (target user), violation_date, title, summary, document.
    */
   addMemorandumViolation: async (
     formData: FormData
   ): Promise<any> => {
     const response = await api.post("/addMemorandumViolation", formData);
+    return response.data;
+  },
+
+  /**
+   * Update an existing memorandum violation (HR / authorized).
+   * POST `updateMemorandumViolation/{memorandumViolation}` — Laravel route.
+   * `document` is required by validation (same text-only pattern as `addMemorandumViolation`: duplicate summary).
+   */
+  updateMemorandumViolation: async (params: {
+    id: string | number;
+    title: string;
+    violation_date: string;
+    summary: string;
+  }): Promise<any> => {
+    const routeId = encodeURIComponent(String(params.id));
+    const summary = params.summary.trim();
+    const response = await api.post(
+      `/updateMemorandumViolation/${routeId}`,
+      {
+        title: params.title.trim(),
+        violation_date: params.violation_date,
+        summary,
+        document: summary,
+      }
+    );
     return response.data;
   },
 
