@@ -5,6 +5,7 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -36,6 +37,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
 
@@ -62,6 +64,7 @@ interface AddEmployeeToEvaluatorModalProps {
 }
 
 const ASSIGN_SUCCESS_DIALOG_AUTO_CLOSE_MS = 2800;
+const TABLE_ROW_HIGHLIGHT_MS = 20000;
 
 function pickRoleName(rawRoles: unknown): string {
   if (!Array.isArray(rawRoles) || rawRoles.length === 0) return "N/A";
@@ -140,6 +143,21 @@ function sortCandidatesByName(a: CandidateEmployee, b: CandidateEmployee) {
   return a.name.localeCompare(b.name);
 }
 
+function getRoleBadgeClass(role: string): string {
+  const normalized = role.toLowerCase();
+  if (normalized === "employee") {
+    return "border-blue-200 bg-blue-50/90 text-blue-700";
+  }
+  if (
+    normalized === "evaluator" ||
+    normalized === "evaluation" ||
+    normalized.includes("evaluator")
+  ) {
+    return "border-emerald-200 bg-emerald-50/90 text-emerald-700";
+  }
+  return "border-slate-200 bg-slate-50/90 text-slate-700";
+}
+
 function normalizeAssignableStaffList(list: unknown[]): CandidateEmployee[] {
   return list
     .filter(
@@ -164,6 +182,7 @@ export default function AddEmployeeToEvaluatorModal({
   evaluator,
   onAssigned,
 }: AddEmployeeToEvaluatorModalProps) {
+  const evaluatorId = evaluator?.id ?? null;
   const [assignedRows, setAssignedRows] = useState<CandidateEmployee[]>([]);
   const [unassignedRows, setUnassignedRows] = useState<CandidateEmployee[]>([]);
   /** Smaller request — show “Already assigned” as soon as this finishes. */
@@ -171,14 +190,60 @@ export default function AddEmployeeToEvaluatorModal({
   /** Larger pool — bottom table fills when this finishes. */
   const [loadingPool, setLoadingPool] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [tableActionLoading, setTableActionLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [unassigningIds, setUnassigningIds] = useState<Set<string>>(new Set());
+  const [pendingUnassignIds, setPendingUnassignIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [recentlyAssignedIds, setRecentlyAssignedIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [recentlyUnassignedIds, setRecentlyUnassignedIds] = useState<Set<string>>(
+    new Set()
+  );
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const assignedHighlightTimeoutRef = useRef<number | null>(null);
+  const unassignedHighlightTimeoutRef = useRef<number | null>(null);
+
+  const clearHighlightTimer = useCallback((kind: "assigned" | "unassigned") => {
+    if (kind === "assigned" && assignedHighlightTimeoutRef.current !== null) {
+      window.clearTimeout(assignedHighlightTimeoutRef.current);
+      assignedHighlightTimeoutRef.current = null;
+    }
+    if (kind === "unassigned" && unassignedHighlightTimeoutRef.current !== null) {
+      window.clearTimeout(unassignedHighlightTimeoutRef.current);
+      unassignedHighlightTimeoutRef.current = null;
+    }
+  }, []);
+
+  const markRecentlyAssigned = useCallback(
+    (ids: string[]) => {
+      clearHighlightTimer("assigned");
+      setRecentlyAssignedIds(new Set(ids));
+      assignedHighlightTimeoutRef.current = window.setTimeout(() => {
+        setRecentlyAssignedIds(new Set());
+        assignedHighlightTimeoutRef.current = null;
+      }, TABLE_ROW_HIGHLIGHT_MS);
+    },
+    [clearHighlightTimer]
+  );
+
+  const markRecentlyUnassigned = useCallback(
+    (ids: string[]) => {
+      clearHighlightTimer("unassigned");
+      setRecentlyUnassignedIds(new Set(ids));
+      unassignedHighlightTimeoutRef.current = window.setTimeout(() => {
+        setRecentlyUnassignedIds(new Set());
+        unassignedHighlightTimeoutRef.current = null;
+      }, TABLE_ROW_HIGHLIGHT_MS);
+    },
+    [clearHighlightTimer]
+  );
 
   const loadEmployees = useCallback(async (options?: { silent?: boolean }) => {
-    if (!evaluator) return;
+    if (!evaluatorId) return;
     const silent = options?.silent === true;
     if (!silent) {
       setAssignedRows([]);
@@ -189,7 +254,7 @@ export default function AddEmployeeToEvaluatorModal({
     try {
       // Sequential: assigned payload is small — user sees the top table sooner; then load the big pool.
       const assignedResponse = await apiService.getAllEvaluatorAssignedEmployees(
-        evaluator.id,
+        evaluatorId,
         { page: 1, per_page: 500 }
       );
       const assignedList = extractEmployees(assignedResponse);
@@ -200,12 +265,12 @@ export default function AddEmployeeToEvaluatorModal({
       }
 
       const unassignedResponse = await apiService.getAllEvaluatorEmployees(
-        evaluator.id,
+        evaluatorId,
         { page: 1, per_page: 2000 }
       );
       const unassignedList = extractEmployees(unassignedResponse);
       const assignedIdSet = new Set(normalizedAssigned.map((x) => x.id));
-      const evaluatorIdStr = String(evaluator.id);
+      const evaluatorIdStr = String(evaluatorId);
       const normalizedUnassignedAll = normalizeAssignableStaffList(unassignedList);
       const normalizedUnassigned = normalizedUnassignedAll.filter(
         (x) => x.id !== evaluatorIdStr && !assignedIdSet.has(x.id)
@@ -225,14 +290,26 @@ export default function AddEmployeeToEvaluatorModal({
         setLoadingPool(false);
       }
     }
-  }, [evaluator]);
+  }, [evaluatorId]);
 
   useEffect(() => {
-    if (!open || !evaluator) return;
+    if (!open || !evaluatorId) return;
     setSelectedIds(new Set());
+    setPendingUnassignIds(new Set());
+    setRecentlyAssignedIds(new Set());
+    setRecentlyUnassignedIds(new Set());
+    clearHighlightTimer("assigned");
+    clearHighlightTimer("unassigned");
     setSearch("");
     void loadEmployees();
-  }, [open, evaluator, loadEmployees]);
+  }, [open, evaluatorId, loadEmployees, clearHighlightTimer]);
+
+  useEffect(() => {
+    return () => {
+      clearHighlightTimer("assigned");
+      clearHighlightTimer("unassigned");
+    };
+  }, [clearHighlightTimer]);
 
   useEffect(() => {
     if (!isSuccessDialogOpen) return;
@@ -283,7 +360,7 @@ export default function AddEmployeeToEvaluatorModal({
   };
 
   const handleAssign = async () => {
-    if (!evaluator) return;
+    if (!evaluatorId || !evaluator) return;
     const unassignedIdSet = new Set(unassignedRows.map((x) => x.id));
 
     const idsToAssign = Array.from(selectedIds).filter((id) => unassignedIdSet.has(id));
@@ -297,6 +374,7 @@ export default function AddEmployeeToEvaluatorModal({
     }
 
     setSaving(true);
+    setTableActionLoading(true);
     try {
       // Backend replaces the evaluator’s assignment set with this list — not an “add” merge.
       // Include everyone already assigned plus the new selections so existing rows stay.
@@ -304,16 +382,27 @@ export default function AddEmployeeToEvaluatorModal({
         new Set([...assignedRows.map((r) => r.id), ...idsToAssign])
       );
 
-      await apiService.assignEmployees(evaluator.id, {
+      await apiService.assignEmployees(evaluatorId, {
         employeeIds,
         action: "assign",
       });
+
+      const idsToAssignSet = new Set(idsToAssign);
+      const movedRows = unassignedRows.filter((row) => idsToAssignSet.has(row.id));
+      if (movedRows.length > 0) {
+        setAssignedRows((prev) => [...prev, ...movedRows].sort(sortCandidatesByName));
+      }
+      setUnassignedRows((prev) =>
+        prev.filter((row) => !idsToAssignSet.has(row.id)).sort(sortCandidatesByName)
+      );
+      setSelectedIds(new Set());
 
       setSuccessMessage(
         `${idsToAssign.length} team member(s) assigned to ${evaluator.name}.`
       );
       onAssigned?.();
-      onOpenChange(false);
+      setPendingUnassignIds(new Set());
+      markRecentlyAssigned(idsToAssign);
       setIsSuccessDialogOpen(true);
     } catch (error) {
       console.error("Failed assigning employees:", error);
@@ -323,60 +412,85 @@ export default function AddEmployeeToEvaluatorModal({
       );
     } finally {
       setSaving(false);
+      setTableActionLoading(false);
     }
   };
 
-  const handleUnassign = useCallback(
-    async (employeeId: string) => {
-      if (!evaluator) return;
-
-      setUnassigningIds((prev) => {
-        const next = new Set(prev);
+  const handleTogglePendingUnassign = (employeeId: string) => {
+    setPendingUnassignIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(employeeId)) {
+        next.delete(employeeId);
+      } else {
         next.add(employeeId);
+      }
+      return next;
+    });
+  };
+
+  const handleSaveUnassign = useCallback(async () => {
+    if (!evaluatorId || !evaluator) return;
+    const idsToUnassign = Array.from(pendingUnassignIds);
+    if (idsToUnassign.length === 0) return;
+
+    setSaving(true);
+    setTableActionLoading(true);
+    try {
+      // Sync model: backend stores the full assigned set.
+      const remainingIds = assignedRows
+        .filter((r) => !pendingUnassignIds.has(r.id))
+        .map((r) => r.id);
+
+      if (remainingIds.length === 0) {
+        await apiService.assignEmployeesBlank(evaluatorId);
+      } else {
+        await apiService.assignEmployees(evaluatorId, {
+          employeeIds: remainingIds,
+          action: "assign",
+        });
+      }
+
+      const removedRows = assignedRows.filter((r) => pendingUnassignIds.has(r.id));
+      setAssignedRows((prev) =>
+        prev.filter((r) => !pendingUnassignIds.has(r.id)).sort(sortCandidatesByName)
+      );
+      if (removedRows.length > 0) {
+        setUnassignedRows((prev) =>
+          [...prev, ...removedRows].sort(sortCandidatesByName)
+        );
+      }
+
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const id of pendingUnassignIds) next.delete(id);
         return next;
       });
+      setPendingUnassignIds(new Set());
+      markRecentlyUnassigned(idsToUnassign);
 
-      try {
-        // Sync model: payload lists only who should **stay** assigned. The unchecked
-        // employee is omitted entirely (not sent as unassign / not in employee_ids).
-        const remainingIds = assignedRows
-          .filter((r) => r.id !== employeeId)
-          .map((r) => r.id);
-
-        if (remainingIds.length === 0) {
-          await apiService.assignEmployeesBlank(evaluator.id);
-        } else {
-          await apiService.assignEmployees(evaluator.id, {
-            employeeIds: remainingIds,
-            action: "assign",
-          });
-        }
-
-        const removed = assignedRows.find((r) => r.id === employeeId);
-        setAssignedRows((prev) =>
-          prev.filter((r) => r.id !== employeeId).sort(sortCandidatesByName)
-        );
-        if (removed) {
-          setUnassignedRows((prev) =>
-            [...prev, removed].sort(sortCandidatesByName)
-          );
-        }
-
-        setSelectedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(employeeId);
-          return next;
-        });
-        setUnassigningIds(new Set());
-      } catch (error) {
-        console.error("Failed to unassign employee:", error);
-        toastMessages.generic.error("Unassign failed", "Please try again.");
-        setUnassigningIds(new Set());
-        void loadEmployees({ silent: true });
-      }
-    },
-    [evaluator, assignedRows, loadEmployees]
-  );
+      setSuccessMessage(
+        `${idsToUnassign.length} team member(s) unassigned from ${evaluator.name}.`
+      );
+      setIsSuccessDialogOpen(true);
+      onAssigned?.();
+    } catch (error) {
+      console.error("Failed to unassign employees:", error);
+      toastMessages.generic.error("Unassign failed", "Please try again.");
+      void loadEmployees({ silent: true });
+      setPendingUnassignIds(new Set());
+    } finally {
+      setSaving(false);
+      setTableActionLoading(false);
+    }
+  }, [
+    evaluatorId,
+    evaluator,
+    pendingUnassignIds,
+    assignedRows,
+    loadEmployees,
+    onAssigned,
+    markRecentlyUnassigned,
+  ]);
 
   return (
     <>
@@ -518,7 +632,7 @@ export default function AddEmployeeToEvaluatorModal({
                         Current assignments
                       </h3>
                       <p className="text-xs text-slate-500">
-                        Uncheck to remove from this evaluator&apos;s team
+                        Uncheck and click Unassign to remove from this team
                       </p>
                     </div>
                   </div>
@@ -526,14 +640,26 @@ export default function AddEmployeeToEvaluatorModal({
                     variant="secondary"
                     className="shrink-0 border border-slate-200/80 bg-white font-normal text-slate-700 shadow-sm"
                   >
-                    {loadingAssigned ? "…" : `${filteredAssignedRows.length} shown`}
+                    {loadingAssigned || tableActionLoading
+                      ? "…"
+                      : `${filteredAssignedRows.length} shown`}
                   </Badge>
                 </div>
                 <div className="max-h-[22vh] min-h-[132px] overflow-auto">
-                  {loadingAssigned ? (
-                    <div className="flex flex-col items-center justify-center gap-2 py-14 text-sm text-slate-500">
-                      <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
-                      <span>Loading current team…</span>
+                  {loadingAssigned || tableActionLoading ? (
+                    <div className="space-y-2 p-4">
+                      {Array.from({ length: 4 }).map((_, idx) => (
+                        <div
+                          key={`assigned-sk-${idx}`}
+                          className="grid grid-cols-[56px_1.2fr_1.2fr_1fr_110px] items-center gap-3 rounded-md border border-slate-100 px-3 py-2"
+                        >
+                          <Skeleton className="h-4 w-4 rounded-sm" />
+                          <Skeleton className="h-4 w-36" />
+                          <Skeleton className="h-4 w-44" />
+                          <Skeleton className="h-4 w-28" />
+                          <Skeleton className="h-6 w-20 rounded-full" />
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <Table wrapperClassName="">
@@ -578,19 +704,21 @@ export default function AddEmployeeToEvaluatorModal({
                           filteredAssignedRows.map((row) => (
                             <TableRow
                               key={row.id}
-                              className="border-slate-100 transition-colors hover:bg-slate-50/80"
+                              className={`border-slate-100 transition-colors hover:bg-slate-50/80 ${
+                                pendingUnassignIds.has(row.id)
+                                  ? "bg-red-50/70"
+                                  : recentlyAssignedIds.has(row.id)
+                                    ? "bg-yellow-200/70"
+                                    : ""
+                              }`}
                             >
                               <TableCell className="pl-4">
                                 <input
                                   type="checkbox"
-                                  checked={!unassigningIds.has(row.id)}
-                                  onChange={(e) => {
-                                    if (!e.target.checked) {
-                                      void handleUnassign(row.id);
-                                    }
-                                  }}
+                                  checked={!pendingUnassignIds.has(row.id)}
+                                  onChange={() => handleTogglePendingUnassign(row.id)}
                                   className="h-4 w-4 cursor-pointer rounded border-slate-300 text-slate-900 accent-slate-800 focus:ring-2 focus:ring-slate-400/40"
-                                  disabled={saving || unassigningIds.has(row.id)}
+                                  disabled={saving}
                                 />
                               </TableCell>
                               <TableCell className="font-medium text-slate-900">
@@ -603,7 +731,9 @@ export default function AddEmployeeToEvaluatorModal({
                               <TableCell className="pr-4">
                                 <Badge
                                   variant="outline"
-                                  className="border-slate-200 bg-slate-50/90 font-normal capitalize text-slate-700"
+                                  className={`font-normal capitalize ${getRoleBadgeClass(
+                                    row.role
+                                  )}`}
                                 >
                                   {row.role}
                                 </Badge>
@@ -634,14 +764,26 @@ export default function AddEmployeeToEvaluatorModal({
                     variant="secondary"
                     className="shrink-0 border border-slate-200/80 bg-white font-normal text-slate-700 shadow-sm"
                   >
-                    {loadingPool ? "…" : `${filteredUnassignedRows.length} shown`}
+                    {loadingPool || tableActionLoading
+                      ? "…"
+                      : `${filteredUnassignedRows.length} shown`}
                   </Badge>
                 </div>
                 <div className="max-h-[30vh] min-h-[132px] overflow-auto">
-                  {loadingPool ? (
-                    <div className="flex flex-col items-center justify-center gap-2 py-16 text-sm text-slate-500">
-                      <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
-                      <span>Loading directory…</span>
+                  {loadingPool || tableActionLoading ? (
+                    <div className="space-y-2 p-4">
+                      {Array.from({ length: 5 }).map((_, idx) => (
+                        <div
+                          key={`pool-sk-${idx}`}
+                          className="grid grid-cols-[56px_1.2fr_1.2fr_1fr_110px] items-center gap-3 rounded-md border border-slate-100 px-3 py-2"
+                        >
+                          <Skeleton className="h-4 w-4 rounded-sm" />
+                          <Skeleton className="h-4 w-36" />
+                          <Skeleton className="h-4 w-44" />
+                          <Skeleton className="h-4 w-28" />
+                          <Skeleton className="h-6 w-20 rounded-full" />
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <Table wrapperClassName="">
@@ -685,7 +827,9 @@ export default function AddEmployeeToEvaluatorModal({
                           filteredUnassignedRows.map((row) => (
                             <TableRow
                               key={row.id}
-                              className="border-slate-100 transition-colors hover:bg-slate-50/80"
+                              className={`border-slate-100 transition-colors hover:bg-slate-50/80 ${
+                                recentlyUnassignedIds.has(row.id) ? "bg-yellow-200/70" : ""
+                              }`}
                             >
                               <TableCell className="pl-4">
                                 <input
@@ -706,7 +850,9 @@ export default function AddEmployeeToEvaluatorModal({
                               <TableCell className="pr-4">
                                 <Badge
                                   variant="outline"
-                                  className="border-slate-200 bg-slate-50/90 font-normal capitalize text-slate-700"
+                                  className={`font-normal capitalize ${getRoleBadgeClass(
+                                    row.role
+                                  )}`}
                                 >
                                   {row.role}
                                 </Badge>
@@ -731,6 +877,17 @@ export default function AddEmployeeToEvaluatorModal({
               className="min-w-[100px] border-slate-200 text-white bg-red-600 hover:bg-red-700 cursor-pointer shadow-sm hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
               Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                void handleSaveUnassign();
+              }}
+              disabled={saving || loadingAssigned || pendingUnassignIds.size === 0}
+              className="min-w-[120px] border-amber-200 text-white bg-amber-600 hover:bg-amber-700 cursor-pointer shadow-sm hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+            >
+              {saving ? "Saving..." : "Unassign"}
             </Button>
             <Button
               type="button"
