@@ -41,9 +41,9 @@ type StaffRow = {
   branch: string;
   role: string;
 };
-const STAFF_MODAL_PER_PAGE = 13;
+const STAFF_MODAL_PER_PAGE = 10;
 /** Rows per page for the main evaluators table (requested from the API). */
-const SUBORDINATES_TABLE_PER_PAGE = 15;
+const SUBORDINATES_TABLE_PER_PAGE = 10;
 const EVALUATORS_SEARCH_DEBOUNCE_MS = 400;
 /** Minimum time to show the table skeleton when changing pages in the staff modal (client-side pagination). */
 const STAFF_MODAL_PAGE_LOAD_MS = 2500;
