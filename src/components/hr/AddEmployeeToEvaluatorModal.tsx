@@ -74,7 +74,12 @@ function pickRoleName(rawRoles: unknown): string {
 /** Include employees and evaluators in assignable directory; exclude other roles (e.g. admin-only). */
 function isAssignableStaffRole(rawRoles: unknown): boolean {
   const role = pickRoleName(rawRoles).toLowerCase();
-  return role === "employee" || role === "evaluator";
+  return (
+    role === "employee" ||
+    role === "evaluator" ||
+    role === "evaluation" ||
+    role.includes("evaluator")
+  );
 }
 
 function normalizeCandidate(raw: Record<string, unknown>): CandidateEmployee {
@@ -131,29 +136,6 @@ function extractEmployees(raw: unknown): unknown[] {
   return [];
 }
 
-/** Raw user rows from `/getAllEvaluators` (array or Laravel paginator). */
-function extractEvaluatorsRawArray(raw: unknown): unknown[] {
-  if (!raw || typeof raw !== "object") return [];
-  const root = raw as Record<string, unknown>;
-  const ev = root.evaluators;
-  if (Array.isArray(ev)) return ev;
-  if (ev && typeof ev === "object" && !Array.isArray(ev)) {
-    const inner = (ev as Record<string, unknown>).data;
-    if (Array.isArray(inner)) return inner;
-  }
-  const data = root.data;
-  if (data && typeof data === "object" && !Array.isArray(data)) {
-    const d = data as Record<string, unknown>;
-    const ev2 = d.evaluators;
-    if (Array.isArray(ev2)) return ev2;
-    if (ev2 && typeof ev2 === "object" && !Array.isArray(ev2)) {
-      const inner = (ev2 as Record<string, unknown>).data;
-      if (Array.isArray(inner)) return inner;
-    }
-  }
-  return [];
-}
-
 function sortCandidatesByName(a: CandidateEmployee, b: CandidateEmployee) {
   return a.name.localeCompare(b.name);
 }
@@ -174,14 +156,6 @@ function normalizeAssignableStaffList(list: unknown[]): CandidateEmployee[] {
       )
     )
     .sort(sortCandidatesByName);
-}
-
-function dedupeCandidatesById(list: CandidateEmployee[]): CandidateEmployee[] {
-  const map = new Map<string, CandidateEmployee>();
-  for (const row of list) {
-    map.set(row.id, row);
-  }
-  return Array.from(map.values()).sort(sortCandidatesByName);
 }
 
 export default function AddEmployeeToEvaluatorModal({
@@ -230,27 +204,9 @@ export default function AddEmployeeToEvaluatorModal({
         { page: 1, per_page: 2000 }
       );
       const unassignedList = extractEmployees(unassignedResponse);
-
-      let evaluatorPoolRaw: unknown[] = [];
-      try {
-        const evaluatorsRes = await apiService.getAllEvaluators({
-          page: 1,
-          per_page: 1000,
-        });
-        evaluatorPoolRaw = extractEvaluatorsRawArray(evaluatorsRes);
-      } catch (mergeErr) {
-        console.warn(
-          "Could not merge evaluators into assign pool; showing evaluator-employees only.",
-          mergeErr
-        );
-      }
-
-      const mergedRaw = [...unassignedList, ...evaluatorPoolRaw];
       const assignedIdSet = new Set(normalizedAssigned.map((x) => x.id));
       const evaluatorIdStr = String(evaluator.id);
-      const normalizedUnassignedAll = dedupeCandidatesById(
-        normalizeAssignableStaffList(mergedRaw)
-      );
+      const normalizedUnassignedAll = normalizeAssignableStaffList(unassignedList);
       const normalizedUnassigned = normalizedUnassignedAll.filter(
         (x) => x.id !== evaluatorIdStr && !assignedIdSet.has(x.id)
       );
