@@ -785,7 +785,7 @@ export default function AddEmployeeToEvaluatorModal({
                       : `${filteredUnassignedRows.length} shown`}
                   </Badge>
                 </div>
-                <div className="max-h-[30vh] min-h-[132px] overflow-auto">
+                <div className="max-h-[22vh] min-h-[132px] overflow-auto">
                   {loadingPool || tableActionLoading ? (
                     <div className="space-y-2 p-4">
                       {Array.from({ length: 5 }).map((_, idx) => (
