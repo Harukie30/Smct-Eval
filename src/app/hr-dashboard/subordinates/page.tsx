@@ -42,8 +42,9 @@ type StaffRow = {
   role: string;
 };
 const STAFF_MODAL_PER_PAGE = 13;
-/** Rows per page for the main evaluators table (client-side pagination). */
+/** Rows per page for the main evaluators table (requested from the API). */
 const SUBORDINATES_TABLE_PER_PAGE = 15;
+const EVALUATORS_SEARCH_DEBOUNCE_MS = 400;
 /** Minimum time to show the table skeleton when changing pages in the staff modal (client-side pagination). */
 const STAFF_MODAL_PAGE_LOAD_MS = 2500;
 
@@ -86,6 +87,92 @@ function normalizeEvaluator(raw: Record<string, unknown>): EvaluatorRow {
         ? String(raw.department_id)
         : undefined,
   };
+}
+
+function extractEvaluatorsPaginated(
+  raw: unknown,
+  perPage: number
+): { rows: EvaluatorRow[]; total: number; lastPage: number } {
+  const empty = { rows: [] as EvaluatorRow[], total: 0, lastPage: 1 };
+
+  const normalizeList = (items: unknown[]): EvaluatorRow[] =>
+    items
+      .map((item) =>
+        normalizeEvaluator(
+          item && typeof item === "object" ? (item as Record<string, unknown>) : {}
+        )
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+  const fromPaginator = (
+    p: Record<string, unknown> | null
+  ): { items: unknown[]; total: number; lastPage: number } | null => {
+    if (!p || Array.isArray(p)) return null;
+    if (!Array.isArray(p.data)) return null;
+    const items = p.data as unknown[];
+    const pp = Number(p.per_page ?? perPage) || perPage;
+    const total = Number(p.total ?? items.length);
+    const lastPage = Number(p.last_page ?? Math.max(1, Math.ceil(total / pp)));
+    return { items, total, lastPage: Math.max(1, lastPage) };
+  };
+
+  if (!raw || typeof raw !== "object") return empty;
+  const root = raw as Record<string, unknown>;
+
+  const ev = root.evaluators;
+  if (ev && typeof ev === "object" && !Array.isArray(ev)) {
+    const pg = fromPaginator(ev as Record<string, unknown>);
+    if (pg) {
+      return {
+        rows: normalizeList(pg.items),
+        total: pg.total,
+        lastPage: pg.lastPage,
+      };
+    }
+  }
+
+  if (Array.isArray(ev)) {
+    const total = Number(root.total ?? ev.length);
+    const pp = Number(root.per_page ?? perPage) || perPage;
+    const lastPage = Number(
+      root.last_page ?? Math.max(1, Math.ceil(total / pp))
+    );
+    return {
+      rows: normalizeList(ev),
+      total,
+      lastPage: Math.max(1, lastPage),
+    };
+  }
+
+  const data = root.data;
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    const d = data as Record<string, unknown>;
+    const ev2 = d.evaluators;
+    if (ev2 && typeof ev2 === "object" && !Array.isArray(ev2)) {
+      const pg = fromPaginator(ev2 as Record<string, unknown>);
+      if (pg) {
+        return {
+          rows: normalizeList(pg.items),
+          total: pg.total,
+          lastPage: pg.lastPage,
+        };
+      }
+    }
+    if (Array.isArray(ev2)) {
+      const total = Number(d.total ?? root.total ?? ev2.length);
+      const pp = Number(d.per_page ?? root.per_page ?? perPage) || perPage;
+      const lastPage = Number(
+        d.last_page ?? root.last_page ?? Math.max(1, Math.ceil(total / pp))
+      );
+      return {
+        rows: normalizeList(ev2),
+        total,
+        lastPage: Math.max(1, lastPage),
+      };
+    }
+  }
+
+  return empty;
 }
 
 function normalizeStaff(raw: Record<string, unknown>): StaffRow {
@@ -150,9 +237,12 @@ function extractAssignedEmployees(raw: unknown): unknown[] {
 
 export default function HRSubordinatesPage() {
   const [rows, setRows] = useState<EvaluatorRow[]>([]);
+  const [evaluatorsTotal, setEvaluatorsTotal] = useState(0);
+  const [evaluatorsLastPage, setEvaluatorsLastPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [evaluatorsTablePage, setEvaluatorsTablePage] = useState(1);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const [selectedEvaluator, setSelectedEvaluator] = useState<EvaluatorRow | null>(null);
@@ -197,86 +287,79 @@ export default function HRSubordinatesPage() {
   /** Tracks prior staff search string so we can detect “cleared” without firing on every keystroke. */
   const prevStaffSearchRef = useRef<string | null>(null);
 
-  const loadEvaluators = useCallback(async (softRefresh = false) => {
-    if (softRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
-    try {
-      const response = await apiService.getAllEvaluators({
-        page: 1,
-        per_page: 1000,
-      });
-
-      const evaluatorsRaw = Array.isArray(response?.evaluators)
-        ? response.evaluators
-        : Array.isArray(response?.evaluators?.data)
-          ? response.evaluators.data
-          : Array.isArray(response?.data?.evaluators)
-            ? response.data.evaluators
-            : Array.isArray(response?.data?.evaluators?.data)
-              ? response.data.evaluators.data
-              : [];
-
-      const normalized = evaluatorsRaw
-        .map((item: unknown) =>
-          normalizeEvaluator(
-            item && typeof item === "object" ? (item as Record<string, unknown>) : {}
-          )
-        )
-        .sort((a: EvaluatorRow, b: EvaluatorRow) => a.name.localeCompare(b.name));
-
-      setRows(normalized);
-    } catch (error) {
-      console.error("Failed to load evaluators:", error);
-      setRows([]);
-      toastMessages.generic.error(
-        "Failed to load evaluators",
-        "Please try refreshing the list."
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const prevEvaluatorsDebouncedRef = useRef<string | null>(null);
+  const evaluatorsFirstLoadDoneRef = useRef(false);
 
   useEffect(() => {
-    void loadEvaluators();
-  }, [loadEvaluators]);
-
-  const filteredRows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((row) => {
-      return (
-        row.name.toLowerCase().includes(q) ||
-        row.email.toLowerCase().includes(q) ||
-        row.position.toLowerCase().includes(q) ||
-        row.role.toLowerCase().includes(q)
-      );
-    });
-  }, [rows, search]);
-
-  const evaluatorsTotalPages = Math.max(
-    1,
-    Math.ceil(filteredRows.length / SUBORDINATES_TABLE_PER_PAGE)
-  );
-  const paginatedEvaluatorRows = useMemo(() => {
-    const start = (evaluatorsTablePage - 1) * SUBORDINATES_TABLE_PER_PAGE;
-    return filteredRows.slice(start, start + SUBORDINATES_TABLE_PER_PAGE);
-  }, [filteredRows, evaluatorsTablePage]);
-
-  useEffect(() => {
-    setEvaluatorsTablePage(1);
+    const t = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, EVALUATORS_SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(t);
   }, [search]);
 
+  const fetchEvaluatorsPage = useCallback(
+    async (page: number, softRefresh = false) => {
+      if (!evaluatorsFirstLoadDoneRef.current && !softRefresh) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+      try {
+        const response = await apiService.getAllEvaluators({
+          page,
+          per_page: SUBORDINATES_TABLE_PER_PAGE,
+          search: debouncedSearch || undefined,
+        });
+        const parsed = extractEvaluatorsPaginated(
+          response,
+          SUBORDINATES_TABLE_PER_PAGE
+        );
+        setRows(parsed.rows);
+        setEvaluatorsTotal(parsed.total);
+        setEvaluatorsLastPage(parsed.lastPage);
+      } catch (error) {
+        console.error("Failed to load evaluators:", error);
+        setRows([]);
+        setEvaluatorsTotal(0);
+        setEvaluatorsLastPage(1);
+        toastMessages.generic.error(
+          "Failed to load evaluators",
+          "Please try refreshing the list."
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+        evaluatorsFirstLoadDoneRef.current = true;
+      }
+    },
+    [debouncedSearch]
+  );
+
   useEffect(() => {
-    if (evaluatorsTablePage > evaluatorsTotalPages) {
-      setEvaluatorsTablePage(evaluatorsTotalPages);
+    const isFirstMount = prevEvaluatorsDebouncedRef.current === null;
+    if (isFirstMount) {
+      prevEvaluatorsDebouncedRef.current = debouncedSearch;
+      void fetchEvaluatorsPage(evaluatorsTablePage, false);
+      return;
     }
-  }, [evaluatorsTablePage, evaluatorsTotalPages]);
+
+    const searchChanged =
+      prevEvaluatorsDebouncedRef.current !== debouncedSearch;
+    prevEvaluatorsDebouncedRef.current = debouncedSearch;
+
+    if (searchChanged && evaluatorsTablePage !== 1) {
+      setEvaluatorsTablePage(1);
+      return;
+    }
+
+    void fetchEvaluatorsPage(evaluatorsTablePage, false);
+  }, [evaluatorsTablePage, debouncedSearch, fetchEvaluatorsPage]);
+
+  useEffect(() => {
+    if (evaluatorsTablePage > evaluatorsLastPage && evaluatorsLastPage >= 1) {
+      setEvaluatorsTablePage(evaluatorsLastPage);
+    }
+  }, [evaluatorsTablePage, evaluatorsLastPage]);
 
   const loadStaffForEvaluator = useCallback(async (evaluator: EvaluatorRow) => {
     stopStaffPageSkeleton();
@@ -413,7 +496,7 @@ export default function HRSubordinatesPage() {
               type="button"
               disabled={loading || refreshing}
               onClick={() => {
-                void loadEvaluators(true);
+                void fetchEvaluatorsPage(evaluatorsTablePage, true);
               }}
               className="cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
@@ -457,14 +540,14 @@ export default function HRSubordinatesPage() {
                       </TableCell>
                     </TableRow>
                   ))
-                ) : filteredRows.length === 0 ? (
+                ) : rows.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="py-12 text-center text-sm text-slate-500">
                       No evaluators found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedEvaluatorRows.map((row) => (
+                  rows.map((row) => (
                     <TableRow key={row.id} className="hover:bg-slate-50/80">
                       <TableCell className="font-medium text-slate-900">{row.name}</TableCell>
                       <TableCell>{row.email}</TableCell>
@@ -491,11 +574,11 @@ export default function HRSubordinatesPage() {
               </TableBody>
             </Table>
           </div>
-          {!loading && filteredRows.length > 0 && (
+          {!loading && evaluatorsTotal > 0 && (
             <EvaluationsPagination
               currentPage={evaluatorsTablePage}
-              totalPages={evaluatorsTotalPages}
-              total={filteredRows.length}
+              totalPages={evaluatorsLastPage}
+              total={evaluatorsTotal}
               perPage={SUBORDINATES_TABLE_PER_PAGE}
               onPageChange={setEvaluatorsTablePage}
             />

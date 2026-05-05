@@ -492,11 +492,18 @@ export const apiService = {
   getAllEvaluators: async (params?: {
     page?: number;
     per_page?: number;
+    /** If the backend supports it, narrows results before pagination. */
+    search?: string;
   }): Promise<any> => {
+    const search =
+      params?.search != null && String(params.search).trim() !== ""
+        ? String(params.search).trim()
+        : undefined;
     const response = await api.get("/getAllEvaluators", {
       params: {
         page: params?.page ?? 1,
         per_page: params?.per_page ?? 1000,
+        ...(search ? { search } : {}),
       },
     });
     return response.data;
