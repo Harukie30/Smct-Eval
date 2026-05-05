@@ -158,9 +158,8 @@ export default function HRSubordinatesPage() {
   const [staffSearch, setStaffSearch] = useState("");
   const [staffCurrentPage, setStaffCurrentPage] = useState(1);
   const [staffPageLoading, setStaffPageLoading] = useState(false);
-  const staffPageMinLoadTimeoutRef = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
+  /** Browser timeout id (`window.setTimeout` is a number; Node’s `setTimeout` type would conflict in CI). */
+  const staffPageMinLoadTimeoutRef = useRef<number | null>(null);
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
 
   const clearStaffPageLoadTimer = useCallback(() => {
@@ -175,18 +174,25 @@ export default function HRSubordinatesPage() {
     setStaffPageLoading(false);
   }, [clearStaffPageLoadTimer]);
 
+  const beginStaffPageSkeletonMinDelay = useCallback(() => {
+    clearStaffPageLoadTimer();
+    setStaffPageLoading(true);
+    staffPageMinLoadTimeoutRef.current = window.setTimeout(() => {
+      setStaffPageLoading(false);
+      staffPageMinLoadTimeoutRef.current = null;
+    }, STAFF_MODAL_PAGE_LOAD_MS);
+  }, [clearStaffPageLoadTimer]);
+
   const handleStaffModalPageChange = useCallback(
     (page: number) => {
-      clearStaffPageLoadTimer();
-      setStaffPageLoading(true);
       setStaffCurrentPage(page);
-      staffPageMinLoadTimeoutRef.current = window.setTimeout(() => {
-        setStaffPageLoading(false);
-        staffPageMinLoadTimeoutRef.current = null;
-      }, STAFF_MODAL_PAGE_LOAD_MS);
+      beginStaffPageSkeletonMinDelay();
     },
-    [clearStaffPageLoadTimer]
+    [beginStaffPageSkeletonMinDelay]
   );
+
+  /** Tracks prior staff search string so we can detect “cleared” without firing on every keystroke. */
+  const prevStaffSearchRef = useRef<string | null>(null);
 
   const loadEvaluators = useCallback(async (softRefresh = false) => {
     if (softRefresh) {
@@ -313,8 +319,27 @@ export default function HRSubordinatesPage() {
   }, [filteredStaffRows, staffCurrentPage]);
 
   useEffect(() => {
+    const prev = prevStaffSearchRef.current;
+    prevStaffSearchRef.current = staffSearch;
+
     setStaffCurrentPage(1);
-  }, [staffSearch]);
+
+    const searchEmptied =
+      isStaffModalOpen &&
+      !loadingStaff &&
+      prev !== null &&
+      prev.trim() !== "" &&
+      staffSearch.trim() === "";
+
+    if (searchEmptied) {
+      beginStaffPageSkeletonMinDelay();
+    }
+  }, [
+    staffSearch,
+    isStaffModalOpen,
+    loadingStaff,
+    beginStaffPageSkeletonMinDelay,
+  ]);
 
   useEffect(() => {
     if (staffCurrentPage > staffTotalPages) {
@@ -452,6 +477,7 @@ export default function HRSubordinatesPage() {
         onOpenChangeAction={(open) => {
           if (!open) {
             stopStaffPageSkeleton();
+            prevStaffSearchRef.current = null;
             setIsStaffModalOpen(false);
             setSelectedEvaluator(null);
             setStaffRows([]);
