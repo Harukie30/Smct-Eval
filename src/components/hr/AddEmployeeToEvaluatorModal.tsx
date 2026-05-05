@@ -53,6 +53,7 @@ type CandidateEmployee = {
   name: string;
   email: string;
   position: string;
+  branch: string;
   role: string;
 };
 
@@ -104,6 +105,12 @@ function normalizeCandidate(raw: Record<string, unknown>): CandidateEmployee {
     email: String(raw.email ?? "N/A"),
     position: String(
       (raw.positions as { label?: string } | undefined)?.label ?? raw.position ?? "N/A"
+    ),
+    branch: String(
+      (raw.branch as { branch_name?: string } | undefined)?.branch_name ??
+        raw.branch_name ??
+        (raw.branches as { branch_name?: string } | undefined)?.branch_name ??
+        "Unassigned"
     ),
     role: pickRoleName(raw.roles),
   };
@@ -189,7 +196,8 @@ export default function AddEmployeeToEvaluatorModal({
   const [loadingAssigned, setLoadingAssigned] = useState(false);
   /** Larger pool — bottom table fills when this finishes. */
   const [loadingPool, setLoadingPool] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [savingAssign, setSavingAssign] = useState(false);
+  const [savingUnassign, setSavingUnassign] = useState(false);
   const [tableActionLoading, setTableActionLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -206,6 +214,7 @@ export default function AddEmployeeToEvaluatorModal({
   const [successMessage, setSuccessMessage] = useState("");
   const assignedHighlightTimeoutRef = useRef<number | null>(null);
   const unassignedHighlightTimeoutRef = useRef<number | null>(null);
+  const isAnySaving = savingAssign || savingUnassign;
 
   const clearHighlightTimer = useCallback((kind: "assigned" | "unassigned") => {
     if (kind === "assigned" && assignedHighlightTimeoutRef.current !== null) {
@@ -329,6 +338,7 @@ export default function AddEmployeeToEvaluatorModal({
         row.name.toLowerCase().includes(q) ||
         row.email.toLowerCase().includes(q) ||
         row.position.toLowerCase().includes(q) ||
+        row.branch.toLowerCase().includes(q) ||
         row.role.toLowerCase().includes(q)
       );
     });
@@ -342,6 +352,7 @@ export default function AddEmployeeToEvaluatorModal({
         row.name.toLowerCase().includes(q) ||
         row.email.toLowerCase().includes(q) ||
         row.position.toLowerCase().includes(q) ||
+        row.branch.toLowerCase().includes(q) ||
         row.role.toLowerCase().includes(q)
       );
     });
@@ -373,7 +384,7 @@ export default function AddEmployeeToEvaluatorModal({
       return;
     }
 
-    setSaving(true);
+    setSavingAssign(true);
     setTableActionLoading(true);
     try {
       // Backend replaces the evaluator’s assignment set with this list — not an “add” merge.
@@ -411,7 +422,7 @@ export default function AddEmployeeToEvaluatorModal({
         "Please confirm backend supports employee assignment."
       );
     } finally {
-      setSaving(false);
+      setSavingAssign(false);
       setTableActionLoading(false);
     }
   };
@@ -433,7 +444,7 @@ export default function AddEmployeeToEvaluatorModal({
     const idsToUnassign = Array.from(pendingUnassignIds);
     if (idsToUnassign.length === 0) return;
 
-    setSaving(true);
+    setSavingUnassign(true);
     setTableActionLoading(true);
     try {
       // Sync model: backend stores the full assigned set.
@@ -479,7 +490,7 @@ export default function AddEmployeeToEvaluatorModal({
       void loadEmployees({ silent: true });
       setPendingUnassignIds(new Set());
     } finally {
-      setSaving(false);
+      setSavingUnassign(false);
       setTableActionLoading(false);
     }
   }, [
@@ -524,26 +535,26 @@ export default function AddEmployeeToEvaluatorModal({
                 className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-blue-400/10 blur-3xl"
                 aria-hidden
               />
-              <div className="relative px-6 py-2.5 sm:px-8 sm:py-3">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch lg:justify-between lg:gap-5">
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-blue-100">
+              <div className="relative px-4 py-1.5 sm:px-5 sm:py-2">
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch lg:justify-between lg:gap-3">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-blue-100">
                       HR · Staff assignment
                     </p>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-2.5">
                       <div
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-200/80 bg-white/95 shadow-md shadow-blue-900/5 ring-1 ring-blue-900/[0.04]"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-blue-200/80 bg-white/95 shadow-md shadow-blue-900/5 ring-1 ring-blue-900/[0.04]"
                         aria-hidden
                       >
-                        <UserPlus className="h-5 w-5 text-blue-800" strokeWidth={1.7} />
+                        <UserPlus className="h-4 w-4 text-blue-800" strokeWidth={1.7} />
                       </div>
-                      <div className="min-w-0 space-y-1.5">
-                        <DialogTitle className="bg-gradient-to-r from-blue-950 to-indigo-950 bg-clip-text text-xl font-bold tracking-tight text-white sm:text-[1.35rem] sm:leading-snug">
+                      <div className="min-w-0 space-y-1">
+                        <DialogTitle className="bg-gradient-to-r from-blue-950 to-indigo-950 bg-clip-text text-base font-bold tracking-tight text-white sm:text-[1.02rem] sm:leading-snug">
                           Assign employees
                         </DialogTitle>
                         {evaluator ? (
-                          <div className="space-y-1.5">
-                            <p className="text-xs text-white sm:text-sm">
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-white/95 sm:text-[11px]">
                               Link staff to this evaluator so they appear in coverage and
                               reporting.
                             </p>
@@ -551,18 +562,18 @@ export default function AddEmployeeToEvaluatorModal({
                               <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-white">
                                 Evaluator
                               </span>
-                              <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-blue-200/70 bg-white/90 px-3 py-2 shadow-sm shadow-blue-900/5 backdrop-blur-sm">
+                              <div className="flex min-w-0 items-center gap-2 rounded-xl border border-blue-200/70 bg-white/90 px-2.5 py-1.5 shadow-sm shadow-blue-900/5 backdrop-blur-sm">
                                 <div
-                                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 text-xs font-semibold text-white shadow-inner"
+                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 text-[11px] font-semibold text-white shadow-inner"
                                   aria-hidden
                                 >
                                   {(evaluator.name.trim().charAt(0) || "?").toUpperCase()}
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="truncate text-xs font-semibold text-slate-900 sm:text-sm">
+                                  <p className="truncate text-xs font-semibold text-slate-900">
                                     {evaluator.name}
                                   </p>
-                                  <p className="text-[11px] text-slate-500">
+                                  <p className="text-[10px] text-slate-500">
                                     Current team and available staff are listed below
                                   </p>
                                 </div>
@@ -578,19 +589,19 @@ export default function AddEmployeeToEvaluatorModal({
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 flex-col justify-center border-t border-blue-300/40 pt-3 sm:pt-0 lg:min-w-[180px] lg:border-l lg:border-t-0 lg:border-blue-300/40 lg:pl-6 lg:pt-0">
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-blue-100/90 lg:text-right">
+                  <div className="flex shrink-0 flex-col justify-center border-t border-blue-300/40 pt-2 sm:pt-0 lg:min-w-[152px] lg:border-l lg:border-t-0 lg:border-blue-300/40 lg:pl-3 lg:pt-0">
+                    <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-blue-100/90 lg:text-right">
                       At a glance
                     </p>
-                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:grid lg:max-w-[200px]">
-                      <div className="rounded-lg border border-blue-200/60 bg-white/90 px-3 py-2 text-center shadow-sm shadow-blue-900/5 backdrop-blur-sm sm:flex-1 lg:min-w-0">
-                        <p className="text-xl font-bold tabular-nums text-blue-950">
+                    <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap lg:grid lg:max-w-[180px]">
+                      <div className="rounded-lg border border-blue-200/60 bg-white/90 px-2.5 py-1 text-center shadow-sm shadow-blue-900/5 backdrop-blur-sm sm:flex-1 lg:min-w-0">
+                        <p className="text-base font-bold tabular-nums text-blue-950">
                           {loadingAssigned ? "—" : assignedRows.length}
                         </p>
                         <p className="text-[11px] font-medium text-blue-900/55">On team</p>
                       </div>
-                      <div className="rounded-lg border border-indigo-200/60 bg-white/90 px-3 py-2 text-center shadow-sm shadow-indigo-900/5 backdrop-blur-sm sm:flex-1 lg:min-w-0">
-                        <p className="text-xl font-bold tabular-nums text-indigo-950">
+                      <div className="rounded-lg border border-indigo-200/60 bg-white/90 px-2.5 py-1 text-center shadow-sm shadow-indigo-900/5 backdrop-blur-sm sm:flex-1 lg:min-w-0">
+                        <p className="text-base font-bold tabular-nums text-indigo-950">
                           {selectedIds.size}
                         </p>
                         <p className="text-[11px] font-medium text-indigo-900/55">To add</p>
@@ -614,10 +625,10 @@ export default function AddEmployeeToEvaluatorModal({
                 aria-hidden
               />
               <Input
-                placeholder="Search by name, email, position, or role…"
+                placeholder="Search by name, email, position, branch, or role…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                disabled={saving}
+                disabled={isAnySaving}
                 className="h-10 border-slate-200 bg-white pl-9 shadow-sm placeholder:text-slate-400 focus-visible:ring-slate-400/30"
               />
             </div>
@@ -651,11 +662,12 @@ export default function AddEmployeeToEvaluatorModal({
                       {Array.from({ length: 4 }).map((_, idx) => (
                         <div
                           key={`assigned-sk-${idx}`}
-                          className="grid grid-cols-[56px_1.2fr_1.2fr_1fr_110px] items-center gap-3 rounded-md border border-slate-100 px-3 py-2"
+                          className="grid grid-cols-[56px_1.1fr_1.2fr_1fr_1fr_110px] items-center gap-3 rounded-md border border-slate-100 px-3 py-2"
                         >
                           <Skeleton className="h-4 w-4 rounded-sm" />
                           <Skeleton className="h-4 w-36" />
                           <Skeleton className="h-4 w-44" />
+                          <Skeleton className="h-4 w-28" />
                           <Skeleton className="h-4 w-28" />
                           <Skeleton className="h-6 w-20 rounded-full" />
                         </div>
@@ -677,6 +689,9 @@ export default function AddEmployeeToEvaluatorModal({
                           <TableHead className="text-xs font-medium uppercase tracking-wide text-slate-500">
                             Position
                           </TableHead>
+                          <TableHead className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            Branch
+                          </TableHead>
                           <TableHead className="pr-4 text-xs font-medium uppercase tracking-wide text-slate-500">
                             Role
                           </TableHead>
@@ -685,7 +700,7 @@ export default function AddEmployeeToEvaluatorModal({
                       <TableBody>
                         {filteredAssignedRows.length === 0 ? (
                           <TableRow className="hover:bg-transparent">
-                            <TableCell colSpan={5} className="py-12 text-center">
+                            <TableCell colSpan={6} className="py-12 text-center">
                               <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                                   <Inbox className="h-5 w-5" strokeWidth={1.5} aria-hidden />
@@ -718,7 +733,7 @@ export default function AddEmployeeToEvaluatorModal({
                                   checked={!pendingUnassignIds.has(row.id)}
                                   onChange={() => handleTogglePendingUnassign(row.id)}
                                   className="h-4 w-4 cursor-pointer rounded border-slate-300 text-slate-900 accent-slate-800 focus:ring-2 focus:ring-slate-400/40"
-                                  disabled={saving}
+                                  disabled={isAnySaving}
                                 />
                               </TableCell>
                               <TableCell className="font-medium text-slate-900">
@@ -728,6 +743,7 @@ export default function AddEmployeeToEvaluatorModal({
                                 {row.email}
                               </TableCell>
                               <TableCell className="text-slate-600">{row.position}</TableCell>
+                              <TableCell className="text-slate-600">{row.branch}</TableCell>
                               <TableCell className="pr-4">
                                 <Badge
                                   variant="outline"
@@ -775,11 +791,12 @@ export default function AddEmployeeToEvaluatorModal({
                       {Array.from({ length: 5 }).map((_, idx) => (
                         <div
                           key={`pool-sk-${idx}`}
-                          className="grid grid-cols-[56px_1.2fr_1.2fr_1fr_110px] items-center gap-3 rounded-md border border-slate-100 px-3 py-2"
+                          className="grid grid-cols-[56px_1.1fr_1.2fr_1fr_1fr_110px] items-center gap-3 rounded-md border border-slate-100 px-3 py-2"
                         >
                           <Skeleton className="h-4 w-4 rounded-sm" />
                           <Skeleton className="h-4 w-36" />
                           <Skeleton className="h-4 w-44" />
+                          <Skeleton className="h-4 w-28" />
                           <Skeleton className="h-4 w-28" />
                           <Skeleton className="h-6 w-20 rounded-full" />
                         </div>
@@ -801,6 +818,9 @@ export default function AddEmployeeToEvaluatorModal({
                           <TableHead className="text-xs font-medium uppercase tracking-wide text-slate-500">
                             Position
                           </TableHead>
+                          <TableHead className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            Branch
+                          </TableHead>
                           <TableHead className="pr-4 text-xs font-medium uppercase tracking-wide text-slate-500">
                             Role
                           </TableHead>
@@ -809,7 +829,7 @@ export default function AddEmployeeToEvaluatorModal({
                       <TableBody>
                         {filteredUnassignedRows.length === 0 ? (
                           <TableRow className="hover:bg-transparent">
-                            <TableCell colSpan={5} className="py-12 text-center">
+                            <TableCell colSpan={6} className="py-12 text-center">
                               <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                                   <Search className="h-5 w-5" strokeWidth={1.5} aria-hidden />
@@ -837,7 +857,7 @@ export default function AddEmployeeToEvaluatorModal({
                                   checked={selectedIds.has(row.id)}
                                   onChange={() => handleToggleSelect(row.id)}
                                   className="h-4 w-4 cursor-pointer rounded border-slate-300 text-slate-900 accent-slate-800 focus:ring-2 focus:ring-slate-400/40"
-                                  disabled={saving}
+                                  disabled={isAnySaving}
                                 />
                               </TableCell>
                               <TableCell className="font-medium text-slate-900">
@@ -847,6 +867,7 @@ export default function AddEmployeeToEvaluatorModal({
                                 {row.email}
                               </TableCell>
                               <TableCell className="text-slate-600">{row.position}</TableCell>
+                              <TableCell className="text-slate-600">{row.branch}</TableCell>
                               <TableCell className="pr-4">
                                 <Badge
                                   variant="outline"
@@ -873,7 +894,7 @@ export default function AddEmployeeToEvaluatorModal({
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={saving}
+              disabled={isAnySaving}
               className="min-w-[100px] border-slate-200 text-white bg-red-600 hover:bg-red-700 cursor-pointer shadow-sm hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
               Cancel
@@ -884,18 +905,18 @@ export default function AddEmployeeToEvaluatorModal({
               onClick={() => {
                 void handleSaveUnassign();
               }}
-              disabled={saving || loadingAssigned || pendingUnassignIds.size === 0}
+              disabled={isAnySaving || loadingAssigned || pendingUnassignIds.size === 0}
               className="min-w-[120px] border-amber-200 text-white bg-amber-600 hover:bg-amber-700 cursor-pointer shadow-sm hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
-              {saving ? "Saving..." : "Unassign"}
+              {savingUnassign ? "Saving..." : "Unassign"}
             </Button>
             <Button
               type="button"
               onClick={handleAssign}
-              disabled={saving || loadingPool || selectedIds.size === 0}
+              disabled={isAnySaving || loadingPool || selectedIds.size === 0}
               className="min-w-[140px] bg-blue-600 text-white shadow-sm hover:bg-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
-              {saving ? (
+              {savingAssign ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Assigning…
