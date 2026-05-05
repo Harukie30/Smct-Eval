@@ -71,9 +71,10 @@ function pickRoleName(rawRoles: unknown): string {
   return String(nonAdmin?.name ?? (rawRoles[0] as { name?: string })?.name ?? "N/A");
 }
 
-function isEmployeeRole(rawRoles: unknown): boolean {
+/** Include employees and evaluators in assignable directory; exclude other roles (e.g. admin-only). */
+function isAssignableStaffRole(rawRoles: unknown): boolean {
   const role = pickRoleName(rawRoles).toLowerCase();
-  return role === "employee";
+  return role === "employee" || role === "evaluator";
 }
 
 function normalizeCandidate(raw: Record<string, unknown>): CandidateEmployee {
@@ -130,17 +131,40 @@ function extractEmployees(raw: unknown): unknown[] {
   return [];
 }
 
+/** Raw user rows from `/getAllEvaluators` (array or Laravel paginator). */
+function extractEvaluatorsRawArray(raw: unknown): unknown[] {
+  if (!raw || typeof raw !== "object") return [];
+  const root = raw as Record<string, unknown>;
+  const ev = root.evaluators;
+  if (Array.isArray(ev)) return ev;
+  if (ev && typeof ev === "object" && !Array.isArray(ev)) {
+    const inner = (ev as Record<string, unknown>).data;
+    if (Array.isArray(inner)) return inner;
+  }
+  const data = root.data;
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    const d = data as Record<string, unknown>;
+    const ev2 = d.evaluators;
+    if (Array.isArray(ev2)) return ev2;
+    if (ev2 && typeof ev2 === "object" && !Array.isArray(ev2)) {
+      const inner = (ev2 as Record<string, unknown>).data;
+      if (Array.isArray(inner)) return inner;
+    }
+  }
+  return [];
+}
+
 function sortCandidatesByName(a: CandidateEmployee, b: CandidateEmployee) {
   return a.name.localeCompare(b.name);
 }
 
-function normalizeEmployeeList(list: unknown[]): CandidateEmployee[] {
+function normalizeAssignableStaffList(list: unknown[]): CandidateEmployee[] {
   return list
     .filter(
       (item) =>
         item &&
         typeof item === "object" &&
-        isEmployeeRole((item as Record<string, unknown>).roles)
+        isAssignableStaffRole((item as Record<string, unknown>).roles)
     )
     .map((item) =>
       normalizeCandidate(
@@ -150,6 +174,14 @@ function normalizeEmployeeList(list: unknown[]): CandidateEmployee[] {
       )
     )
     .sort(sortCandidatesByName);
+}
+
+function dedupeCandidatesById(list: CandidateEmployee[]): CandidateEmployee[] {
+  const map = new Map<string, CandidateEmployee>();
+  for (const row of list) {
+    map.set(row.id, row);
+  }
+  return Array.from(map.values()).sort(sortCandidatesByName);
 }
 
 export default function AddEmployeeToEvaluatorModal({
@@ -187,7 +219,7 @@ export default function AddEmployeeToEvaluatorModal({
         { page: 1, per_page: 500 }
       );
       const assignedList = extractEmployees(assignedResponse);
-      const normalizedAssigned = normalizeEmployeeList(assignedList);
+      const normalizedAssigned = normalizeAssignableStaffList(assignedList);
       setAssignedRows(normalizedAssigned);
       if (!silent) {
         setLoadingAssigned(false);
@@ -198,10 +230,29 @@ export default function AddEmployeeToEvaluatorModal({
         { page: 1, per_page: 2000 }
       );
       const unassignedList = extractEmployees(unassignedResponse);
+
+      let evaluatorPoolRaw: unknown[] = [];
+      try {
+        const evaluatorsRes = await apiService.getAllEvaluators({
+          page: 1,
+          per_page: 1000,
+        });
+        evaluatorPoolRaw = extractEvaluatorsRawArray(evaluatorsRes);
+      } catch (mergeErr) {
+        console.warn(
+          "Could not merge evaluators into assign pool; showing evaluator-employees only.",
+          mergeErr
+        );
+      }
+
+      const mergedRaw = [...unassignedList, ...evaluatorPoolRaw];
       const assignedIdSet = new Set(normalizedAssigned.map((x) => x.id));
-      const normalizedUnassignedAll = normalizeEmployeeList(unassignedList);
+      const evaluatorIdStr = String(evaluator.id);
+      const normalizedUnassignedAll = dedupeCandidatesById(
+        normalizeAssignableStaffList(mergedRaw)
+      );
       const normalizedUnassigned = normalizedUnassignedAll.filter(
-        (x) => !assignedIdSet.has(x.id)
+        (x) => x.id !== evaluatorIdStr && !assignedIdSet.has(x.id)
       );
       setUnassignedRows(normalizedUnassigned);
     } catch (error) {
@@ -244,7 +295,8 @@ export default function AddEmployeeToEvaluatorModal({
       return (
         row.name.toLowerCase().includes(q) ||
         row.email.toLowerCase().includes(q) ||
-        row.position.toLowerCase().includes(q)
+        row.position.toLowerCase().includes(q) ||
+        row.role.toLowerCase().includes(q)
       );
     });
   }, [assignedRows, deferredSearch]);
@@ -256,7 +308,8 @@ export default function AddEmployeeToEvaluatorModal({
       return (
         row.name.toLowerCase().includes(q) ||
         row.email.toLowerCase().includes(q) ||
-        row.position.toLowerCase().includes(q)
+        row.position.toLowerCase().includes(q) ||
+        row.role.toLowerCase().includes(q)
       );
     });
   }, [unassignedRows, deferredSearch]);
@@ -281,8 +334,8 @@ export default function AddEmployeeToEvaluatorModal({
 
     if (idsToAssign.length === 0) {
       toastMessages.generic.warning(
-        "No employee selected",
-        "Select at least one employee to assign."
+        "No one selected",
+        "Select at least one employee or evaluator to assign."
       );
       return;
     }
@@ -301,7 +354,7 @@ export default function AddEmployeeToEvaluatorModal({
       });
 
       setSuccessMessage(
-        `${idsToAssign.length} employee(s) assigned to ${evaluator.name}.`
+        `${idsToAssign.length} team member(s) assigned to ${evaluator.name}.`
       );
       onAssigned?.();
       onOpenChange(false);
@@ -491,7 +544,7 @@ export default function AddEmployeeToEvaluatorModal({
                 aria-hidden
               />
               <Input
-                placeholder="Search by name, email, or position…"
+                placeholder="Search by name, email, position, or role…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 disabled={saving}
@@ -617,7 +670,7 @@ export default function AddEmployeeToEvaluatorModal({
                         Available to assign
                       </h3>
                       <p className="text-xs text-slate-500">
-                        Staff not on this evaluator&apos;s team — select to add
+                        Employees and evaluators not on this team — select to add
                       </p>
                     </div>
                   </div>
@@ -737,7 +790,8 @@ export default function AddEmployeeToEvaluatorModal({
               ) : (
                 <>
                   <Plus className="mr-2 h-4 w-4" />
-                  Assign Employee                </>
+                  Assign
+                </>
               )}
             </Button>
           </DialogFooter>
