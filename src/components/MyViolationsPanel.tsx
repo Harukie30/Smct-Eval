@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Calendar,
+  Download,
   Eye,
+  ExternalLink,
   FileText,
+  FileType2,
   FileWarning,
   RefreshCw,
   Search,
@@ -40,6 +43,15 @@ import {
 } from "@/components/ui/dialog";
 import { apiService } from "@/lib/apiService";
 import { toastMessages } from "@/lib/toastMessages";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/UserContext";
+import { CONFIG } from "../../config/config";
+import ViolationRowHighlightLegend from "@/components/ViolationRowHighlightLegend";
+import {
+  effectiveViolationActivityTimeMs,
+  stableViolationRowFingerprint,
+  violationRowHighlightVariant,
+} from "@/lib/memorandumViolationRowHighlight";
 
 /** Pages to scan when building the month filter (per_page × this ≈ max rows considered). */
 const MONTH_FILTER_PER_PAGE = 500;
@@ -115,6 +127,9 @@ export type MemorandumViolationRow = {
   document_url?: string | null;
   document_path?: string | null;
   document_name?: string | null;
+  /** From API when available — drives “new / updated” row tint. */
+  updated_at?: string | null;
+  created_at?: string | null;
 };
 
 /** YYYY-MM from violation_date for grouping; null if unparseable. */
@@ -157,6 +172,13 @@ function mapViolationRow(r: Record<string, unknown>): MemorandumViolationRow {
     path && !docName
       ? decodeURIComponent(path.split(/[/\\]/).filter(Boolean).pop() ?? "")
       : null;
+  const updatedRaw =
+    (r.updated_at as string | undefined) ??
+    (r.updatedAt as string | undefined) ??
+    (r.modified_at as string | undefined);
+  const createdRaw =
+    (r.created_at as string | undefined) ??
+    (r.createdAt as string | undefined);
   return {
     id: (r.id as number | string) ?? Math.random(),
     title: String(
@@ -176,6 +198,8 @@ function mapViolationRow(r: Record<string, unknown>): MemorandumViolationRow {
     document_url: (r.document_url as string) ?? (r.url as string) ?? null,
     document_path: path,
     document_name: docName || fileFromPath || null,
+    updated_at: updatedRaw?.trim() || null,
+    created_at: createdRaw?.trim() || null,
   };
 }
 
@@ -302,7 +326,34 @@ function formatViolationDateLong(value: string): string {
   }
 }
 
+function resolveDocumentHrefForRow(row: MemorandumViolationRow): string | null {
+  const u = row.document_url?.trim();
+  if (u) {
+    if (/^https?:\/\//i.test(u)) return u;
+    const base = CONFIG.API_URL?.replace(/\/$/, "") ?? "";
+    return `${base}${u.startsWith("/") ? u : `/${u}`}`;
+  }
+  const p = row.document_path?.trim();
+  if (p) {
+    const storage = (CONFIG.API_URL_STORAGE ?? CONFIG.API_URL)?.replace(
+      /\/$/,
+      ""
+    );
+    return `${storage}/${p.replace(/^\//, "")}`;
+  }
+  return null;
+}
+
+function isLikelyImageHref(href: string): boolean {
+  return /\.(jpe?g|png|gif|webp|bmp)(\?|$)/i.test(href);
+}
+
+function isLikelyPdfHref(href: string): boolean {
+  return /\.pdf(\?|$)/i.test(href);
+}
+
 export default function MyViolationsPanel() {
+  const { user } = useAuth();
   const [rows, setRows] = useState<MemorandumViolationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -317,9 +368,37 @@ export default function MyViolationsPanel() {
   );
   const itemsPerPage = 10;
 
+  const listContextKey = useMemo(
+    () =>
+      `${currentPage}|${debouncedSearch}|${monthFilter}|${itemsPerPage}`,
+    [currentPage, debouncedSearch, monthFilter, itemsPerPage]
+  );
+
+  const viewerDisplayName = useMemo(() => {
+    if (!user) return null;
+    const full = `${String(user.fname ?? "").trim()} ${String(user.lname ?? "").trim()}`.trim();
+    return full || null;
+  }, [user]);
+
+  const viewFileUrl = useMemo(() => {
+    if (!viewingRow) return null;
+    return resolveDocumentHrefForRow(viewingRow);
+  }, [viewingRow]);
+
+  const viewAttachmentKind = useMemo((): "image" | "pdf" | "other" | null => {
+    if (!viewFileUrl) return null;
+    if (isLikelyImageHref(viewFileUrl)) return "image";
+    if (isLikelyPdfHref(viewFileUrl)) return "pdf";
+    return "other";
+  }, [viewFileUrl]);
+
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [monthsLoading, setMonthsLoading] = useState(true);
   const loadRequestIdRef = useRef(0);
+  const clientActivityAtRef = useRef<Map<string, number>>(new Map());
+  const previousRowsByIdRef = useRef<Map<string, string>>(new Map());
+  const lastListContextRef = useRef<string | null>(null);
+  const [highlightRev, setHighlightRev] = useState(0);
 
   const fetchAvailableMonths = useCallback(async (options?: { force?: boolean }) => {
     setMonthsLoading(true);
@@ -450,6 +529,49 @@ export default function MyViolationsPanel() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const ctx = listContextKey;
+    const prevCtx = lastListContextRef.current;
+    const sameList = prevCtx === ctx;
+    lastListContextRef.current = ctx;
+
+    const prevById = previousRowsByIdRef.current;
+    const actMap = clientActivityAtRef.current;
+    const now = Date.now();
+
+    if (!sameList) {
+      previousRowsByIdRef.current = new Map(
+        rows.map((r) => [String(r.id), stableViolationRowFingerprint(r)])
+      );
+      setHighlightRev((x) => x + 1);
+      return;
+    }
+
+    for (const row of rows) {
+      const id = String(row.id);
+      const fp = stableViolationRowFingerprint(row);
+      const oldFp = prevById.get(id);
+      if (oldFp !== undefined && oldFp !== fp) {
+        actMap.set(id, now);
+      }
+      if (oldFp === undefined && prevById.size > 0) {
+        actMap.set(id, now);
+      }
+      prevById.set(id, fp);
+    }
+    previousRowsByIdRef.current = new Map(prevById);
+
+    setHighlightRev((x) => x + 1);
+  }, [rows, listContextKey]);
+
+  useEffect(() => {
+    const id = window.setInterval(
+      () => setHighlightRev((x) => x + 1),
+      15_000
+    );
+    return () => window.clearInterval(id);
+  }, []);
+
   return (
     <div className="relative min-h-[400px] space-y-4 pb-8">
       <Card className="overflow-hidden border-slate-200/90 shadow-md">
@@ -546,6 +668,8 @@ export default function MyViolationsPanel() {
               </div>
             </div>
           </div>
+
+          <ViolationRowHighlightLegend />
 
           <div className="relative overflow-x-auto overflow-y-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
             {loading ? (
@@ -676,10 +800,26 @@ export default function MyViolationsPanel() {
                       </TableRow>
                     ) : (
                       rows.map((row) => {
+                        void highlightRev;
+                        const now = Date.now();
+                        const hl = violationRowHighlightVariant(
+                          effectiveViolationActivityTimeMs(
+                            row,
+                            clientActivityAtRef.current
+                          ),
+                          now
+                        );
                         return (
                           <TableRow
                             key={String(row.id)}
-                            className="border-slate-100 transition-colors hover:bg-blue-50/50"
+                            className={cn(
+                              "border-slate-100 transition-colors",
+                              hl === "yellow" &&
+                                "bg-yellow-100/95 hover:bg-yellow-100",
+                              hl === "blue" &&
+                                "bg-blue-100/75 hover:bg-blue-100/90",
+                              hl === null && "hover:bg-blue-50/50"
+                            )}
                           >
                             <TableCell className="max-w-[20rem] font-medium text-slate-900">
                               <span className="line-clamp-2">{row.title}</span>
@@ -715,87 +855,203 @@ export default function MyViolationsPanel() {
               if (!open) setViewingRow(null);
             }}
           >
-            <DialogContent className="max-h-[90vh] max-w-lg gap-0 overflow-hidden p-0 sm:max-w-xl">
+            <DialogContent
+              className={cn(
+                "max-h-[min(92vh,900px)] max-w-2xl gap-0 overflow-hidden p-0 shadow-2xl shadow-slate-900/15 sm:max-w-3xl"
+              )}
+            >
               <div
-                className="relative overflow-hidden px-6 pt-6 pb-5 text-white"
+                className="relative overflow-hidden px-6 pt-7 pb-6 text-white sm:px-8 sm:pb-7"
                 style={{
                   backgroundImage: "url(/smct.png)",
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-600/95 via-orange-600/92 to-amber-800/95" />
-                <div className="relative flex gap-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/20 shadow-inner ring-1 ring-white/30 backdrop-blur-sm">
-                    <FileWarning className="h-6 w-6 text-white" />
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-600/96 via-orange-600/93 to-amber-900/96" />
+                <div
+                  className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-white/10 blur-3xl"
+                  aria-hidden
+                />
+                <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex min-w-0 gap-4">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 shadow-inner ring-1 ring-white/35 backdrop-blur-sm">
+                      <FileWarning
+                        className="h-7 w-7 text-white"
+                        strokeWidth={1.75}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-amber-100/95">
+                        Memorandum violation
+                      </p>
+                      <DialogTitle className="text-left text-2xl font-bold tracking-tight text-white drop-shadow-sm sm:text-[1.65rem] sm:leading-tight">
+                        Record details
+                      </DialogTitle>
+                      <DialogDescription className="text-left text-sm leading-relaxed text-amber-50/98">
+                        Title, violation date, summary, and supporting document for this
+                        memorandum record.
+                      </DialogDescription>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <DialogTitle className="text-left text-xl font-semibold tracking-tight text-white drop-shadow-sm">
-                      Violation details
-                    </DialogTitle>
-                    <DialogDescription className="text-left text-sm leading-relaxed text-amber-50/95">
-                      Title, date, and violation summary.
-                    </DialogDescription>
-                  </div>
+                  {viewerDisplayName ? (
+                    <div className="w-full shrink-0 rounded-xl border border-white/25 bg-white/15 px-4 py-3 text-left shadow-sm backdrop-blur-md sm:max-w-[220px] sm:text-right">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-100/90">
+                        Your account
+                      </p>
+                      <p className="mt-1 truncate text-sm font-semibold text-white">
+                        {viewerDisplayName}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
               {viewingRow ? (
                 <>
-                  <div className="max-h-[min(70vh,calc(90vh-12rem))] space-y-4 overflow-y-auto bg-gradient-to-b from-slate-50/90 to-white px-6 py-5">
-                    <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
-                      <div className="flex gap-3">
-                        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100">
-                          <FileText className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <div className="max-h-[min(58vh,560px)] overflow-y-auto border-t border-slate-100 bg-gradient-to-b from-slate-50/95 to-white px-6 py-6 sm:px-8">
+                    <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-950/[0.04] sm:p-6">
+                      <div className="grid gap-8 sm:grid-cols-2 sm:gap-10">
+                        <div className="space-y-2 sm:pr-2">
+                          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+                              <FileText className="h-3.5 w-3.5" aria-hidden />
+                            </span>
                             Title
-                          </p>
-                          <p className="mt-1 text-base font-semibold leading-snug text-slate-900">
-                            {viewingRow.title}
+                          </div>
+                          <p className="text-lg font-semibold leading-snug text-slate-900">
+                            {viewingRow.title ?? "—"}
                           </p>
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
-                      <div className="flex gap-3">
-                        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 ring-1 ring-slate-200/80">
-                          <Calendar className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        <div className="space-y-2 border-t border-slate-100 pt-6 sm:border-l sm:border-t-0 sm:pl-8 sm:pt-0">
+                          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-700 ring-1 ring-slate-200/90">
+                              <Calendar className="h-3.5 w-3.5" aria-hidden />
+                            </span>
                             Violation date
-                          </p>
-                          <p className="mt-1 text-base font-semibold text-slate-900">
+                          </div>
+                          <p className="text-lg font-semibold tabular-nums text-slate-900">
                             {formatViolationDateLong(viewingRow.violation_date)}
                           </p>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm">
-                      <div className="flex gap-3">
-                        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100">
-                          <FileText className="h-4 w-4" />
+                      <div className="mt-8 border-t border-slate-100 pt-8">
+                        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+                            <FileText className="h-3.5 w-3.5" aria-hidden />
+                          </span>
+                          Summary
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                            Summary
-                          </p>
-                          <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+                        <div className="mt-3 rounded-xl border border-amber-100/90 bg-gradient-to-br from-amber-50/80 to-white px-4 py-4 ring-1 ring-amber-100/40">
+                          <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
                             {viewingRow.summary?.trim() || "No summary provided."}
                           </p>
                         </div>
                       </div>
+
+                      {viewingRow.document_name?.trim() || viewFileUrl ? (
+                        <div className="mt-8 overflow-hidden rounded-xl border border-slate-200/90 bg-slate-50/40 shadow-inner ring-1 ring-slate-950/[0.03]">
+                          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200/80 bg-gradient-to-r from-slate-50 to-white px-4 py-3.5 sm:px-5">
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                Supporting document
+                              </p>
+                              <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+                                {viewingRow.document_name?.trim() || "Attachment"}
+                              </p>
+                            </div>
+                            {viewFileUrl ? (
+                              <div className="flex shrink-0 flex-wrap gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="cursor-pointer border-amber-200 bg-white text-amber-900 hover:bg-amber-50"
+                                  asChild
+                                >
+                                  <a
+                                    href={viewFileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2"
+                                  >
+                                    <ExternalLink className="h-4 w-4 shrink-0" />
+                                    Open
+                                  </a>
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  className="cursor-pointer"
+                                  asChild
+                                >
+                                  <a
+                                    href={viewFileUrl}
+                                    download={
+                                      viewingRow.document_name?.trim() || undefined
+                                    }
+                                    className="inline-flex items-center gap-2"
+                                  >
+                                    <Download className="h-4 w-4 shrink-0" />
+                                    Download
+                                  </a>
+                                </Button>
+                              </div>
+                            ) : null}
+                          </div>
+                          <div className="bg-white px-4 py-5 sm:px-5">
+                            {!viewFileUrl &&
+                            viewingRow.document_name?.trim() ? (
+                              <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50/90 px-4 py-3 text-sm text-slate-600">
+                                Preview link unavailable for this attachment.
+                              </p>
+                            ) : null}
+                            {viewFileUrl && viewAttachmentKind === "image" ? (
+                              <div className="overflow-hidden rounded-xl bg-slate-100/90 ring-1 ring-slate-200/70">
+                                <img
+                                  src={viewFileUrl}
+                                  alt=""
+                                  className="mx-auto max-h-[min(340px,52vh)] w-full object-contain"
+                                />
+                              </div>
+                            ) : null}
+                            {viewFileUrl && viewAttachmentKind === "pdf" ? (
+                              <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-amber-200/95 bg-gradient-to-b from-amber-50/90 to-white px-6 py-10 text-center">
+                                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-md ring-1 ring-amber-100">
+                                  <FileType2 className="h-8 w-8 text-amber-700" />
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-base font-semibold text-slate-900">
+                                    PDF document
+                                  </p>
+                                  <p className="max-w-sm text-xs leading-relaxed text-slate-600">
+                                    Use Open or Download above to view this file in your
+                                    browser or save a copy.
+                                  </p>
+                                </div>
+                              </div>
+                            ) : null}
+                            {viewFileUrl && viewAttachmentKind === "other" ? (
+                              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/90 px-4 py-4 text-sm text-slate-700">
+                                <FileType2 className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
+                                <span>
+                                  Preview isn&apos;t available for this file type — use Open
+                                  or Download above.
+                                </span>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 
-                  <DialogFooter className="border-t border-slate-200/80 bg-slate-50/90 px-6 py-4">
+                  <DialogFooter className="flex flex-col-reverse gap-2 border-t border-slate-200/90 bg-slate-50/95 px-6 py-4 sm:flex-row sm:justify-end sm:px-8">
                     <Button
                       type="button"
-                      className="cursor-pointer bg-amber-600 text-white hover:bg-amber-700"
+                      className="cursor-pointer min-w-[120px] bg-amber-600 text-white shadow-sm hover:bg-amber-700"
                       onClick={() => setViewingRow(null)}
                     >
                       Close
