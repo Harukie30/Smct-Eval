@@ -57,6 +57,7 @@ import {
 const MONTH_FILTER_PER_PAGE = 500;
 const MONTH_FILTER_MAX_PAGES = 40;
 const VIOLATIONS_CACHE_TTL_MS = 30_000;
+const SUMMARY_TABLE_PREVIEW_LEN = 10;
 
 const violationsResponseCache = new Map<
   string,
@@ -324,6 +325,16 @@ function formatViolationDateLong(value: string): string {
       return value;
     }
   }
+}
+
+function truncateSummaryPreview(
+  summary: string | null | undefined,
+  maxLen = SUMMARY_TABLE_PREVIEW_LEN
+): string {
+  const t = summary?.trim() ?? "";
+  if (!t) return "—";
+  if (t.length <= maxLen) return t;
+  return `${t.slice(0, maxLen)}…`;
 }
 
 function resolveDocumentHrefForRow(row: MemorandumViolationRow): string | null {
@@ -689,6 +700,9 @@ export default function MyViolationsPanel() {
                       <TableHead className="min-w-[8rem] whitespace-nowrap font-semibold text-white">
                         Violation date
                       </TableHead>
+                      <TableHead className="min-w-[7rem] font-semibold text-white">
+                        Summary
+                      </TableHead>
                       <TableHead className="w-[1%] whitespace-nowrap text-right font-semibold text-white">
                         Action
                       </TableHead>
@@ -702,6 +716,9 @@ export default function MyViolationsPanel() {
                         </TableCell>
                         <TableCell>
                           <Skeleton className="h-5 w-24" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-20" />
                         </TableCell>
                         <TableCell className="text-right">
                           <Skeleton className="ml-auto h-8 w-20" />
@@ -730,6 +747,9 @@ export default function MyViolationsPanel() {
                           <TableHead className="min-w-[8rem] whitespace-nowrap font-semibold text-white">
                             Violation date
                           </TableHead>
+                          <TableHead className="min-w-[7rem] font-semibold text-white">
+                            Summary
+                          </TableHead>
                           <TableHead className="w-[1%] whitespace-nowrap text-right font-semibold text-white">
                             Action
                           </TableHead>
@@ -746,6 +766,9 @@ export default function MyViolationsPanel() {
                             </TableCell>
                             <TableCell>
                               <Skeleton className="h-5 w-24" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-5 w-20" />
                             </TableCell>
                             <TableCell className="text-right">
                               <Skeleton className="ml-auto h-8 w-20" />
@@ -765,6 +788,9 @@ export default function MyViolationsPanel() {
                       <TableHead className="min-w-[8rem] whitespace-nowrap font-semibold text-white">
                         Violation date
                       </TableHead>
+                      <TableHead className="min-w-[7rem] font-semibold text-white">
+                        Summary
+                      </TableHead>
                       <TableHead className="w-[1%] whitespace-nowrap text-right font-semibold text-white">
                         Action
                       </TableHead>
@@ -774,7 +800,7 @@ export default function MyViolationsPanel() {
                     {rows.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={3}
+                          colSpan={4}
                           className="py-14 text-center"
                         >
                           <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
@@ -801,6 +827,8 @@ export default function MyViolationsPanel() {
                     ) : (
                       rows.map((row) => {
                         void highlightRev;
+                        const fullSummary = row.summary?.trim() ?? "";
+                        const previewSummary = truncateSummaryPreview(row.summary);
                         const now = Date.now();
                         const hl = violationRowHighlightVariant(
                           effectiveViolationActivityTimeMs(
@@ -826,6 +854,12 @@ export default function MyViolationsPanel() {
                             </TableCell>
                             <TableCell className="whitespace-nowrap text-slate-600">
                               {formatViolationDate(row.violation_date)}
+                            </TableCell>
+                            <TableCell
+                              className="max-w-[7rem] text-slate-700"
+                              title={fullSummary || "No summary"}
+                            >
+                              {previewSummary}
                             </TableCell>
                             <TableCell className="text-right">
                               <Button
