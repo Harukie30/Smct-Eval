@@ -35,6 +35,7 @@ import DepartmentEmployeesModal, {
 import DepartmentManagersModal, {
   DepartmentManager,
 } from "@/components/hr/DepartmentManagersModal";
+import { parseSubordinateEmployeesAndEvaluators } from "@/lib/subordinateLists";
 
 interface Department {
   id: number;
@@ -280,12 +281,12 @@ export default function DepartmentsTab() {
   ): Promise<{ employees: any[]; evaluators: any[] }> => {
     const response = await apiService.getSubordinate({
       department_id: departmentId,
+      page: 1,
       per_page: 300,
     });
-
-    const employees = Array.isArray(response?.employees) ? response.employees : [];
-    const evaluators = Array.isArray(response?.evaluators) ? response.evaluators : [];
-    return { employees, evaluators };
+    const { employees, evaluators } =
+      parseSubordinateEmployeesAndEvaluators(response);
+    return { employees: employees as any[], evaluators: evaluators as any[] };
   };
 
   const normalizeDepartmentUser = (user: any) => {
