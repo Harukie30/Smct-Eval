@@ -34,6 +34,7 @@ import { Plus, Trash2, Users } from "lucide-react";
 import { toastMessages } from "@/lib/toastMessages";
 import { useDialogAnimation } from "@/hooks/useDialogAnimation";
 import apiService from "@/lib/apiService";
+import { parseSubordinateEmployeesAndEvaluators } from "@/lib/subordinateLists";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import BranchEmployeesModal, {
@@ -387,12 +388,12 @@ export default function DepartmentsTab() {
   ): Promise<{ employees: any[]; evaluators: any[] }> => {
     const response = await apiService.getSubordinate({
       branch_id: branchId,
+      page: 1,
       per_page: 300,
     });
-
-    const employees = Array.isArray(response?.employees) ? response.employees : [];
-    const evaluators = Array.isArray(response?.evaluators) ? response.evaluators : [];
-    return { employees, evaluators };
+    const { employees, evaluators } =
+      parseSubordinateEmployeesAndEvaluators(response);
+    return { employees: employees as any[], evaluators: evaluators as any[] };
   };
 
   const normalizeBranchUser = (user: any) => {
