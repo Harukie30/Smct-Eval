@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Loader2, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -52,7 +53,13 @@ export default function DepartmentEmployeesModal({
   isLoading,
   dialogAnimationClass = "",
 }: DepartmentEmployeesModalProps) {
-  const shouldEnableTableScroll = employees.length > 8;
+  const uniqueEmployees = useMemo(() => {
+    const map = new Map<string, DepartmentEmployee>();
+    for (const e of employees) map.set(String(e.id), e);
+    return Array.from(map.values());
+  }, [employees]);
+
+  const shouldEnableTableScroll = uniqueEmployees.length > 8;
 
   return (
     <Dialog open={open} onOpenChangeAction={onOpenChange}>
@@ -69,7 +76,7 @@ export default function DepartmentEmployeesModal({
           <DialogDescription className="flex items-center justify-between">
             Employees assigned to this department.
             <Badge variant="outline" className="bg-white">
-              Total: {employees.length}
+              Total: {uniqueEmployees.length}
             </Badge>
           </DialogDescription>
         </DialogHeader>
@@ -85,9 +92,19 @@ export default function DepartmentEmployeesModal({
               <Loader2 className="h-5 w-5 animate-spin" />
               Loading employees...
             </div>
-          ) : employees.length === 0 ? (
-            <div className="py-16 text-center text-gray-500">
-              No employees found for this department.
+          ) : uniqueEmployees.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-12 px-4">
+              <img
+                src="/not-found.gif"
+                alt=""
+                width={140}
+                height={140}
+                className="mx-auto max-h-36 w-auto max-w-[120px] select-none object-contain"
+                decoding="async"
+              />
+              <p className="text-sm font-medium text-slate-700">
+                No employees found for this department.
+              </p>
             </div>
           ) : (
             <Table wrapperClassName="rounded-lg">
@@ -99,7 +116,7 @@ export default function DepartmentEmployeesModal({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {employees.map((employee) => (
+                {uniqueEmployees.map((employee) => (
                   <TableRow key={employee.id} className="hover:bg-blue-50/40">
                     <TableCell className="font-medium px-4">{employee.fullName}</TableCell>
                     <TableCell className="px-4">{employee.email}</TableCell>

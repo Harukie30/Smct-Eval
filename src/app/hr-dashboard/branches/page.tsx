@@ -97,6 +97,9 @@ function getManagersCount(branch: Partial<Branches> & Record<string, any>): numb
 
 export default function DepartmentsTab() {
   const [branches, setBranches] = useState<Branches[]>([]);
+  const [cardSplitCounts, setCardSplitCounts] = useState<
+    Record<number, { employees: number; evaluators: number }>
+  >({});
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -389,7 +392,7 @@ export default function DepartmentsTab() {
     const response = await apiService.getSubordinate({
       branch_id: branchId,
       page: 1,
-      per_page: 300,
+      per_page: 1000,
     });
     const { employees, evaluators } =
       parseSubordinateEmployeesAndEvaluators(response);
@@ -404,7 +407,7 @@ export default function DepartmentsTab() {
     const role = getDisplayRole(user?.roles);
 
     return {
-      id: user?.id ?? `${fullName}-${user?.email ?? "unknown"}`,
+      id: user?.id ?? user?.user_id ?? `${fullName}-${user?.email ?? "unknown"}`,
       fullName,
       email: String(user?.email ?? "N/A"),
       role,
@@ -418,6 +421,62 @@ export default function DepartmentsTab() {
       ),
     };
   };
+
+  // Derive card counts from the same `/getSubordinate` + split logic used by the modals.
+  // This keeps the Employees/Evaluators numbers consistent with what the user sees.
+  useEffect(() => {
+    if (!branches || branches.length === 0) {
+      setCardSplitCounts({});
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const next: Record<number, { employees: number; evaluators: number }> = {};
+
+      await Promise.all(
+        branches.map(async (branch) => {
+          try {
+            const resp = await apiService.getSubordinate({
+              branch_id: branch.id,
+              page: 1,
+              per_page: 1000,
+            });
+            const { employees, evaluators } =
+              parseSubordinateEmployeesAndEvaluators(resp);
+
+            const empUnique = new Map<string, BranchEmployee>();
+            for (const u of employees as any[]) {
+              const norm = normalizeBranchUser(u);
+              empUnique.set(String(norm.id), norm);
+            }
+
+            const evalUnique = new Map<string, BranchEmployee>();
+            for (const u of evaluators as any[]) {
+              const norm = normalizeBranchUser(u);
+              evalUnique.set(String(norm.id), norm);
+            }
+
+            next[branch.id] = {
+              employees: empUnique.size,
+              evaluators: evalUnique.size,
+            };
+          } catch {
+            next[branch.id] = {
+              employees: getEmployeesCount(branch),
+              evaluators: getManagersCount(branch),
+            };
+          }
+        })
+      );
+
+      if (!cancelled) setCardSplitCounts(next);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [branches]);
 
   const openBranchEmployeesModal = async (branch: Branches) => {
     setSelectedBranchForEmployees(branch);
@@ -678,9 +737,12 @@ export default function DepartmentsTab() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => {
+                                      const split = cardSplitCounts[branch.id];
                                       const totalEmployees =
-                                        getEmployeesCount(branch) +
-                                        getManagersCount(branch);
+                                        split != null
+                                          ? split.employees + split.evaluators
+                                          : getEmployeesCount(branch) +
+                                            getManagersCount(branch);
                                       
                                       if (totalEmployees > 0) {
                                         setBranchWithEmployees(branch);
@@ -708,7 +770,8 @@ export default function DepartmentsTab() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                                   <div className="text-lg font-bold text-blue-600">
-                                    {getEmployeesCount(branch)}
+                                    {cardSplitCounts[branch.id]?.employees ??
+                                      getEmployeesCount(branch)}
                                   </div>
                                   <div className="text-xs text-gray-600">
                                     Employees
@@ -725,7 +788,8 @@ export default function DepartmentsTab() {
                                 </div>
                                 <div className="text-center p-3 bg-green-50 rounded-lg">
                                   <div className="text-lg font-bold text-green-600">
-                                    {getManagersCount(branch)}
+                                    {cardSplitCounts[branch.id]?.evaluators ??
+                                      getManagersCount(branch)}
                                   </div>
                                   <div className="text-xs text-gray-600">
                                     Managers
@@ -1085,8 +1149,12 @@ export default function DepartmentsTab() {
         }}
         title="Cannot Delete Branch"
         description={`The branch "${branchWithEmployees?.branch_name} / ${branchWithEmployees?.branch_code}" cannot be deleted because it has ${
-          getEmployeesCount(branchWithEmployees ?? {}) +
-          getManagersCount(branchWithEmployees ?? {})
+          branchWithEmployees?.id != null &&
+          cardSplitCounts[branchWithEmployees.id] != null
+            ? cardSplitCounts[branchWithEmployees.id]!.employees +
+              cardSplitCounts[branchWithEmployees.id]!.evaluators
+            : getEmployeesCount(branchWithEmployees ?? {}) +
+              getManagersCount(branchWithEmployees ?? {})
         } employee(s) assigned to it. Please remove or reassign all employees before deleting this branch.`}
         type="warning"
         confirmText="OK"

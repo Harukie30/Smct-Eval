@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Loader2, UserCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,13 @@ export default function DepartmentManagersModal({
   isLoading,
   dialogAnimationClass = "",
 }: DepartmentManagersModalProps) {
-  const shouldEnableTableScroll = managers.length > 8;
+  const uniqueManagers = useMemo(() => {
+    const map = new Map<string, DepartmentManager>();
+    for (const m of managers) map.set(String(m.id), m);
+    return Array.from(map.values());
+  }, [managers]);
+
+  const shouldEnableTableScroll = uniqueManagers.length > 8;
 
   return (
     <Dialog open={open} onOpenChangeAction={onOpenChange}>
@@ -68,7 +75,7 @@ export default function DepartmentManagersModal({
           <DialogDescription className="flex items-center justify-between">
             Managers assigned to this department.
             <Badge variant="outline" className="bg-white">
-              Total: {managers.length}
+              Total: {uniqueManagers.length}
             </Badge>
           </DialogDescription>
         </DialogHeader>
@@ -84,9 +91,19 @@ export default function DepartmentManagersModal({
               <Loader2 className="h-5 w-5 animate-spin" />
               Loading managers...
             </div>
-          ) : managers.length === 0 ? (
-            <div className="py-16 text-center text-gray-500">
-              No managers found for this department.
+          ) : uniqueManagers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-12 px-4">
+              <img
+                src="/not-found.gif"
+                alt=""
+                width={140}
+                height={140}
+                className="mx-auto max-h-36 w-auto max-w-[120px] select-none object-contain"
+                decoding="async"
+              />
+              <p className="text-sm font-medium text-slate-700">
+                No managers found for this department.
+              </p>
             </div>
           ) : (
             <Table wrapperClassName="rounded-lg">
@@ -98,7 +115,7 @@ export default function DepartmentManagersModal({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {managers.map((manager) => (
+                {uniqueManagers.map((manager) => (
                   <TableRow key={manager.id} className="hover:bg-green-50/40">
                     <TableCell className="font-medium px-4">{manager.fullName}</TableCell>
                     <TableCell className="px-4">{manager.email}</TableCell>

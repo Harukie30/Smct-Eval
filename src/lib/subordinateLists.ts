@@ -5,26 +5,45 @@
 
 function getUserId(user: unknown): string | null {
   if (!user || typeof user !== "object") return null;
-  const id = (user as { id?: unknown }).id;
+  const o = user as Record<string, unknown>;
+  const id = o.id ?? o.user_id ?? o.userId;
   if (id === undefined || id === null || String(id).trim() === "") return null;
   return String(id);
 }
 
-function mergeUniqueById(primary: unknown[], extra: unknown[]): unknown[] {
+/**
+ * Rows without `id` were previously dropped entirely when merging (e.g. only `user_id`
+ * present), which hid most branch/department employees in modals.
+ */
+function getDedupeKey(user: unknown): string {
+  const idPart = getUserId(user);
+  if (idPart) return `id:${idPart}`;
+  if (!user || typeof user !== "object") return `opaque:${Object.prototype.toString.call(user)}`;
+
+  const o = user as Record<string, unknown>;
+  const email = String(o.email ?? "").trim().toLowerCase();
+  if (email) return `email:${email}`;
+  const fn = String(o.fname ?? "").trim().toLowerCase();
+  const ln = String(o.lname ?? "").trim().toLowerCase();
+  const empId = String(
+    o.employee_id ?? o.employeeId ?? o.registration_id ?? ""
+  ).trim();
+  return `name:${fn}|${ln}|${empId}`;
+}
+
+function mergeUniqueUsers(primary: unknown[], extra: unknown[]): unknown[] {
   const seen = new Set<string>();
   const out: unknown[] = [];
-  for (const u of primary) {
-    const id = getUserId(u);
-    if (id) seen.add(id);
+
+  const append = (u: unknown) => {
+    const key = getDedupeKey(u);
+    if (seen.has(key)) return;
+    seen.add(key);
     out.push(u);
-  }
-  for (const u of extra) {
-    const id = getUserId(u);
-    if (!id) continue;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    out.push(u);
-  }
+  };
+
+  for (const u of primary) append(u);
+  for (const u of extra) append(u);
   return out;
 }
 
@@ -35,12 +54,15 @@ function coerceUserList(value: unknown): unknown[] {
   if (typeof value === "object") {
     const o = value as Record<string, unknown>;
     if (Array.isArray(o.data)) return o.data;
+    const hasPk =
+      "id" in o || "user_id" in o || "userId" in o || "registration_id" in o;
     if (
-      "id" in o &&
+      hasPk &&
       ("email" in o || "fname" in o || "lname" in o || "roles" in o)
     ) {
       return [value];
     }
+
   }
   return [];
 }
@@ -58,16 +80,54 @@ function roleNamesLower(user: unknown): string[] {
     .filter(Boolean);
 }
 
+function positionLabelLower(user: unknown): string {
+  if (!user || typeof user !== "object") return "";
+  const u = user as Record<string, unknown>;
+  const pos = u.positions;
+  if (typeof pos === "string") return pos.toLowerCase().trim();
+  if (pos && typeof pos === "object") {
+    const p = pos as Record<string, unknown>;
+    return String(p.label ?? p.name ?? "").toLowerCase().trim();
+  }
+  return String(u.position ?? "").toLowerCase().trim();
+}
+
 export function userIsAdmin(user: unknown): boolean {
   return roleNamesLower(user).some(
     (n) => n === "admin" || n === "super admin" || n === "superadmin"
   );
 }
 
-/** Evaluator-style roles (department “Evaluators” column). */
+/** Role name suggests evaluator account (Spatie / Laravel). */
 export function userIsLikelyEvaluator(user: unknown): boolean {
   return roleNamesLower(user).some(
     (n) => n === "evaluator" || n.includes("evaluator")
+  );
+}
+
+/**
+ * Branch/department “Managers · Evaluators” column when we only have a flat user list
+ * (same bucket the green card / modal use for `managers_count` + evaluators).
+ */
+function userBelongsManagersOrEvaluatorsModal(user: unknown): boolean {
+  if (userIsAdmin(user)) return false;
+  if (userIsLikelyEvaluator(user)) return true;
+
+  const roles = roleNamesLower(user);
+  for (const n of roles) {
+    if (n === "branch head" || n.includes("branch head")) return true;
+    if (n.includes("area manager")) return true;
+    if (n.includes("branch") && n.includes("supervisor")) return true;
+    if (n.includes("branch") && n.includes("manager")) return true;
+  }
+
+  const pl = positionLabelLower(user);
+  if (!pl) return false;
+  return (
+    pl.includes("area manager") ||
+    pl.includes("branch manager") ||
+    pl.includes("branch supervisor") ||
+    pl.includes("branch head")
   );
 }
 
@@ -79,7 +139,7 @@ export function splitUsersByEvaluatorRole(users: unknown[]): {
   const evaluators: unknown[] = [];
   for (const u of users) {
     if (userIsAdmin(u)) continue;
-    if (userIsLikelyEvaluator(u)) evaluators.push(u);
+    if (userBelongsManagersOrEvaluatorsModal(u)) evaluators.push(u);
     else employees.push(u);
   }
   return { employees, evaluators };
@@ -93,7 +153,7 @@ function collectFromKeys(
   for (const k of keys) {
     out.push(...coerceUserList(container[k]));
   }
-  return mergeUniqueById([], out);
+  return mergeUniqueUsers([], out);
 }
 
 function tryCombinedUserArray(root: Record<string, unknown>): unknown[] {
@@ -134,18 +194,35 @@ export function parseSubordinateEmployeesAndEvaluators(raw: unknown): {
       ? (root.data as Record<string, unknown>)
       : null;
 
-  const employeeKeys = ["employees", "employee", "staff", "employee_list"];
-  const evaluatorKeys = ["evaluators", "evaluator", "managers", "manager"];
+  const employeeKeys = [
+    "employees",
+    "employee",
+    "staff",
+    "employee_list",
+    "branch_employees",
+    "branchEmployees",
+  ];
+  const evaluatorKeys = [
+    "evaluators",
+    "evaluator",
+    "managers",
+    "manager",
+    "branch_managers",
+    "branchManagers",
+    "branch_heads",
+    "branchHeads",
+    "supervisors",
+  ];
 
   let employees = collectFromKeys(root, employeeKeys);
   let evaluators = collectFromKeys(root, evaluatorKeys);
 
   if (nested) {
-    employees = mergeUniqueById(
+    employees = mergeUniqueUsers(
       employees,
       collectFromKeys(nested, employeeKeys)
     );
-    evaluators = mergeUniqueById(
+    evaluators = mergeUniqueUsers(
       evaluators,
       collectFromKeys(nested, evaluatorKeys)
     );
@@ -157,8 +234,8 @@ export function parseSubordinateEmployeesAndEvaluators(raw: unknown): {
     (employees.length === 0 || evaluators.length === 0)
   ) {
     const split = splitUsersByEvaluatorRole(combined);
-    employees = mergeUniqueById(employees, split.employees);
-    evaluators = mergeUniqueById(evaluators, split.evaluators);
+    employees = mergeUniqueUsers(employees, split.employees);
+    evaluators = mergeUniqueUsers(evaluators, split.evaluators);
   }
 
   return { employees, evaluators };

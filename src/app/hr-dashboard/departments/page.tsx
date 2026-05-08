@@ -46,6 +46,9 @@ interface Department {
 
 export default function DepartmentsTab() {
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [cardSplitCounts, setCardSplitCounts] = useState<
+    Record<number, { employees: number; evaluators: number }>
+  >({});
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -282,7 +285,7 @@ export default function DepartmentsTab() {
     const response = await apiService.getSubordinate({
       department_id: departmentId,
       page: 1,
-      per_page: 300,
+      per_page: 1000,
     });
     const { employees, evaluators } =
       parseSubordinateEmployeesAndEvaluators(response);
@@ -297,7 +300,7 @@ export default function DepartmentsTab() {
     const role = getDisplayRole(user?.roles);
 
     return {
-      id: user?.id ?? `${fullName}-${user?.email ?? "unknown"}`,
+      id: user?.id ?? user?.user_id ?? `${fullName}-${user?.email ?? "unknown"}`,
       fullName,
       email: String(user?.email ?? "N/A"),
       role,
@@ -311,6 +314,69 @@ export default function DepartmentsTab() {
       ),
     };
   };
+
+  // Derive card counts from the same `/getSubordinate` + split logic used by the modals,
+  // so Employees/Evaluators numbers cannot drift.
+  useEffect(() => {
+    if (!departments || departments.length === 0) {
+      setCardSplitCounts({});
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const next: Record<number, { employees: number; evaluators: number }> = {};
+
+      await Promise.all(
+        departments.map(async (dept) => {
+          try {
+            const resp = await apiService.getSubordinate({
+              department_id: dept.id,
+              page: 1,
+              per_page: 1000,
+            });
+            const { employees, evaluators } =
+              parseSubordinateEmployeesAndEvaluators(resp);
+
+            const empUnique = new Map<string, DepartmentEmployee>();
+            for (const u of employees as any[]) {
+              const norm = normalizeDepartmentUser(u);
+              empUnique.set(String(norm.id), norm);
+            }
+
+            const evalUnique = new Map<string, DepartmentEmployee>();
+            for (const u of evaluators as any[]) {
+              const norm = normalizeDepartmentUser(u);
+              evalUnique.set(String(norm.id), norm);
+            }
+
+            next[dept.id] = {
+              employees: empUnique.size,
+              evaluators: evalUnique.size,
+            };
+          } catch {
+            const fbEmployees = isNaN(Number(dept.employees_count))
+              ? 0
+              : Number(dept.employees_count);
+            const fbEvaluators = isNaN(Number(dept.managers_count))
+              ? 0
+              : Number(dept.managers_count);
+
+            next[dept.id] = {
+              employees: fbEmployees,
+              evaluators: fbEvaluators,
+            };
+          }
+        })
+      );
+
+      if (!cancelled) setCardSplitCounts(next);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [departments]);
 
   const openDepartmentEmployeesModal = async (department: Department) => {
     setSelectedDepartmentForEmployees(department);
@@ -572,9 +638,16 @@ export default function DepartmentsTab() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => {
-                                      const totalEmployees = 
-                                        (isNaN(Number(dept.employees_count)) ? 0 : Number(dept.employees_count)) +
-                                        (isNaN(Number(dept.managers_count)) ? 0 : Number(dept.managers_count));
+                                      const split = cardSplitCounts[dept.id];
+                                      const totalEmployees =
+                                        split != null
+                                          ? split.employees + split.evaluators
+                                          : (isNaN(Number(dept.employees_count))
+                                              ? 0
+                                              : Number(dept.employees_count)) +
+                                            (isNaN(Number(dept.managers_count))
+                                              ? 0
+                                              : Number(dept.managers_count));
                                       
                                       if (totalEmployees > 0) {
                                         setDepartmentWithEmployees(dept);
@@ -599,7 +672,8 @@ export default function DepartmentsTab() {
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="text-center p-3 bg-blue-50 rounded-lg">
                                   <div className="text-lg font-bold text-blue-600">
-                                    {dept.employees_count}
+                                    {cardSplitCounts[dept.id]?.employees ??
+                                      dept.employees_count}
                                   </div>
                                   <div className="text-xs text-gray-600">
                                     
@@ -618,7 +692,8 @@ export default function DepartmentsTab() {
                                 </div>
                                 <div className="text-center p-3 bg-green-50 rounded-lg">
                                   <div className="text-lg font-bold text-green-600">
-                                    {dept.managers_count}
+                                    {cardSplitCounts[dept.id]?.evaluators ??
+                                      dept.managers_count}
                                   </div>
                                   <div className="text-xs text-gray-600">
                                     
@@ -901,7 +976,14 @@ export default function DepartmentsTab() {
           }
         }}
         title="Cannot Delete Department"
-        description={`The department "${departmentWithEmployees?.department_name}" cannot be deleted because it has ${(isNaN(Number(departmentWithEmployees?.employees_count)) ? 0 : Number(departmentWithEmployees?.employees_count)) + (isNaN(Number(departmentWithEmployees?.managers_count)) ? 0 : Number(departmentWithEmployees?.managers_count))} employee(s) assigned to it. Please remove or reassign all employees before deleting this department.`}
+        description={`The department "${departmentWithEmployees?.department_name}" cannot be deleted because it has ${
+          departmentWithEmployees?.id != null &&
+          cardSplitCounts[departmentWithEmployees.id] != null
+            ? cardSplitCounts[departmentWithEmployees.id]!.employees +
+              cardSplitCounts[departmentWithEmployees.id]!.evaluators
+            : (isNaN(Number(departmentWithEmployees?.employees_count)) ? 0 : Number(departmentWithEmployees?.employees_count)) +
+              (isNaN(Number(departmentWithEmployees?.managers_count)) ? 0 : Number(departmentWithEmployees?.managers_count))
+        } employee(s) assigned to it. Please remove or reassign all employees before deleting this department.`}
         type="warning"
         confirmText="OK"
         showCancel={false}
