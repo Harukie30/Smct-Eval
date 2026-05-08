@@ -331,11 +331,19 @@ export default function PositionsTab() {
           )}
 
           <div className="space-y-3">
-            {paginated.length === 0 ? (
-              <div className="text-center text-gray-500 py-10">
-                {filteredPositions.length === 0
-                  ? emptyStateMessage
-                  : null}
+            {filteredPositions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 py-12 px-4">
+                <img
+                  src="/not-found.gif"
+                  alt=""
+                  width={140}
+                  height={140}
+                  className="mx-auto max-h-36 w-auto max-w-[120px] select-none object-contain"
+                  decoding="async"
+                />
+                <p className="text-sm font-medium text-slate-700">
+                  {emptyStateMessage}
+                </p>
               </div>
             ) : (
               paginated.map((p) => {

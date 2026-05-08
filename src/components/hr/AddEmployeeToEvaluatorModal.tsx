@@ -897,7 +897,7 @@ export default function AddEmployeeToEvaluatorModal({
               disabled={isAnySaving}
               className="min-w-[100px] border-slate-200 text-white bg-red-600 hover:bg-red-700 cursor-pointer shadow-sm hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
             >
-              Closef
+              Close
             </Button>
             <Button
               type="button"
