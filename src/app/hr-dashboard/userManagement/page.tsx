@@ -48,6 +48,7 @@ import {
   BarChart2,
   X,
   Download,
+  RefreshCw,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import EditUserModal from "@/components/EditUserModal";
@@ -73,6 +74,7 @@ import RankNfileHo from "@/components/evaluation/RankNfileHo";
 import BasicHo from "@/components/evaluation/BasicHo";
 import { getEmployeeBranchCodeDisplay } from "@/components/evaluation/employeeBranchLabel";
 import MemorandumViolationModal from "@/components/MemorandumViolationModal";
+import { cn } from "@/lib/utils";
 
 /** Evaluation ratings use a 0–5 scale (same as the Employee Average chart axes). */
 const PERFORMANCE_RATING_MAX = 5;
@@ -103,6 +105,42 @@ function formatScoreWithPercent(
       ? `${explicitPercent.toFixed(1)}%`
       : performanceScorePercent(score);
   return `${score.toFixed(2)} (${percentText})`;
+}
+
+function SmctLoadingOverlay({
+  label,
+  className,
+}: {
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "absolute inset-0 z-[70] flex items-center justify-center rounded-lg bg-white/55 backdrop-blur-[1px]",
+        className
+      )}
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="pointer-events-none flex flex-col items-center gap-3 rounded-lg bg-white/90 px-8 py-6 shadow-lg ring-1 ring-gray-200/80">
+        <div className="relative">
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img
+              src="/smct.png"
+              alt=""
+              className="h-10 w-10 object-contain"
+              width={40}
+              height={40}
+              decoding="async"
+            />
+          </div>
+        </div>
+        <p className="text-sm font-medium text-gray-600">{label ?? "Loading..."}</p>
+      </div>
+    </div>
+  );
 }
 
 interface Employee {
@@ -1497,6 +1535,8 @@ export default function UserManagementTab() {
     }
   };
 
+  const userTableBusy = refresh || isPageLoading;
+
   return (
     <div className="relative overflow-y-auto pr-2 min-h-[400px]">
       <Card>
@@ -1643,49 +1683,35 @@ export default function UserManagementTab() {
                     <Button
                       variant="outline"
                       onClick={() => refreshUserData(true)}
-                      disabled={refresh}
-                      className="flex items-center gap-2 whitespace-nowrap bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                      disabled={userTableBusy}
+                      className="flex items-center gap-2 whitespace-nowrap bg-blue-600 text-white hover:bg-blue-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0"
                     >
-                      {refresh ? (
-                        <>
-                          <svg
-                            className="animate-spin h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                          Refreshing...
-                        </>
+                      {userTableBusy ? (
+                        <span className="flex items-center gap-2">
+                          <span className="relative h-8 w-8 shrink-0">
+                            <span className="absolute inset-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            <span className="absolute inset-0 flex items-center justify-center">
+                              <img
+                                src="/smct.png"
+                                alt=""
+                                className="h-4 w-4 object-contain opacity-95"
+                                width={16}
+                                height={16}
+                                decoding="async"
+                              />
+                            </span>
+                          </span>
+                          <span>
+                            {refresh
+                              ? "Refreshing..."
+                              : "Loading page..."}
+                          </span>
+                        </span>
                       ) : (
-                        <>
-                          <svg
-                            className="h-5 w-5 font-bold"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                            />
-                          </svg>
+                        <span className="flex items-center gap-2">
+                          <RefreshCw className="h-5 w-5 shrink-0" aria-hidden />
                           Refresh
-                        </>
+                        </span>
                       )}
                     </Button>
                     <Button
@@ -1769,7 +1795,22 @@ export default function UserManagementTab() {
                 </div>
               </div>
 
-              <div className="relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              <div
+                className={cn(
+                  "relative overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100",
+                  userTableBusy &&
+                    "min-h-[280px] border-blue-100 bg-gray-50/40"
+                )}
+              >
+                {userTableBusy ? (
+                  <SmctLoadingOverlay
+                    label={
+                      isPageLoading && !refresh
+                        ? "Loading page..."
+                        : "Updating users..."
+                    }
+                  />
+                ) : null}
                 <Table>
                   <TableHeader className="sticky top-0 z-10 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                     <TableRow>
@@ -1782,7 +1823,7 @@ export default function UserManagementTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {refresh || isPageLoading ? (
+                    {userTableBusy ? (
                       Array.from({ length: itemsPerPage }).map((_, index) => (
                         <TableRow key={`skeleton-${index}`}>
                           <TableCell className="px-6 py-3">
@@ -2060,7 +2101,7 @@ export default function UserManagementTab() {
                 </Table>
               </div>
               <div>
-                {tab === "active" && (
+                {tab === "active" && !userTableBusy && (
                   <div>
                     <EvaluationsPagination
                       currentPage={currentPageActive}
@@ -2154,49 +2195,35 @@ export default function UserManagementTab() {
                     <Button
                       variant="outline"
                       onClick={() => refreshUserData(true)}
-                      disabled={refresh}
-                      className="flex items-center gap-2 cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+                      disabled={userTableBusy}
+                      className="flex items-center gap-2 cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0"
                     >
-                      {refresh ? (
-                        <>
-                          <svg
-                            className="animate-spin h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                          Refreshing...
-                        </>
+                      {userTableBusy ? (
+                        <span className="flex items-center gap-2">
+                          <span className="relative h-8 w-8 shrink-0">
+                            <span className="absolute inset-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            <span className="absolute inset-0 flex items-center justify-center">
+                              <img
+                                src="/smct.png"
+                                alt=""
+                                className="h-4 w-4 object-contain opacity-95"
+                                width={16}
+                                height={16}
+                                decoding="async"
+                              />
+                            </span>
+                          </span>
+                          <span>
+                            {refresh
+                              ? "Refreshing..."
+                              : "Loading page..."}
+                          </span>
+                        </span>
                       ) : (
-                        <>
-                          <svg
-                            className="h-5 w-5 font-bold"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                            />
-                          </svg>
+                        <span className="flex items-center gap-2">
+                          <RefreshCw className="h-5 w-5 shrink-0" aria-hidden />
                           Refresh
-                        </>
+                        </span>
                       )}
                     </Button>
                   </div>
@@ -2229,7 +2256,22 @@ export default function UserManagementTab() {
                   </div>
                 </div>
 
-                <div className="relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div
+                  className={cn(
+                    "relative max-h-[500px] overflow-y-auto overflow-x-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100",
+                    userTableBusy &&
+                      "min-h-[280px] border-blue-100 bg-gray-50/40"
+                  )}
+                >
+                  {userTableBusy ? (
+                    <SmctLoadingOverlay
+                      label={
+                        isPageLoading && !refresh
+                          ? "Loading page..."
+                          : "Updating users..."
+                      }
+                    />
+                  ) : null}
                   <Table>
                     <TableHeader className="sticky top-0 z-10 border-b border-gray-200 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                       <TableRow>
@@ -2244,12 +2286,9 @@ export default function UserManagementTab() {
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-gray-200">
-                      {refresh || isPageLoading ? (
+                      {userTableBusy ? (
                         Array.from({ length: itemsPerPage }).map((_, index) => (
                           <TableRow key={`skeleton-${index}`}>
-                            <TableCell className="px-6 py-3">
-                              <Skeleton className="h-6 w-24" />
-                            </TableCell>
                             <TableCell className="px-6 py-3">
                               <Skeleton className="h-6 w-24" />
                             </TableCell>
@@ -2449,7 +2488,7 @@ export default function UserManagementTab() {
                   </Table>
                 </div>
                 <div>
-                  {tab === "new" && (
+                  {tab === "new" && !userTableBusy && (
                     <div>
                       <EvaluationsPagination
                         currentPage={currentPagePending}

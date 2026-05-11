@@ -235,6 +235,34 @@ function extractAssignedEmployees(raw: unknown): unknown[] {
   return [];
 }
 
+/** Spinner + SMCT logo over card content while table loads or refreshes. */
+function SmctLoadingOverlay({ label }: { label?: string }) {
+  return (
+    <div
+      className="absolute inset-0 z-[70] flex items-center justify-center rounded-lg bg-white/55 backdrop-blur-[1px]"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="pointer-events-none flex flex-col items-center gap-3 rounded-lg bg-white/90 px-8 py-6 shadow-lg ring-1 ring-gray-200/80">
+        <div className="relative">
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img
+              src="/smct.png"
+              alt=""
+              className="h-10 w-10 object-contain"
+              width={40}
+              height={40}
+              decoding="async"
+            />
+          </div>
+        </div>
+        <p className="text-sm font-medium text-gray-600">{label ?? "Loading..."}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function HRSubordinatesPage() {
   const [rows, setRows] = useState<EvaluatorRow[]>([]);
   const [evaluatorsTotal, setEvaluatorsTotal] = useState(0);
@@ -483,28 +511,63 @@ export default function HRSubordinatesPage() {
           </div>
         </div>
         
-        <CardContent className="space-y-4 border-t border-slate-100 bg-gradient-to-b from-slate-50/50 to-white pt-6">
-          <Input
-            placeholder="Search evaluator by name, email, position, or role..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:max-w-md"
-            
-          />
-         
-          <Button
+        <CardContent className="relative space-y-4 border-t border-slate-100 bg-gradient-to-b from-slate-50/50 to-white pt-6">
+          {(loading || refreshing) && (
+            <SmctLoadingOverlay
+              label={
+                refreshing && !loading
+                  ? "Refreshing evaluators..."
+                  : "Loading evaluators..."
+              }
+            />
+          )}
+          <div
+            className={`space-y-4 ${loading || refreshing ? "pointer-events-none opacity-40" : ""}`}
+          >
+            <Input
+              placeholder="Search evaluator by name, email, position, or role..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full sm:max-w-md"
+            />
+
+            <Button
               type="button"
               disabled={loading || refreshing}
               onClick={() => {
                 void fetchEvaluatorsPage(evaluatorsTablePage, true);
               }}
-              className="cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+              className="cursor-pointer bg-blue-600 text-white hover:bg-blue-700 hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0"
             >
-              <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Refreshing..." : "Refresh"}
+              {loading || refreshing ? (
+                <span className="flex items-center space-x-2">
+                  <span className="relative h-8 w-8 shrink-0">
+                    <span className="absolute inset-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <img
+                        src="/smct.png"
+                        alt=""
+                        className="h-4 w-4 object-contain opacity-95"
+                        width={16}
+                        height={16}
+                        decoding="async"
+                      />
+                    </span>
+                  </span>
+                  <span>{refreshing ? "Refreshing..." : "Loading..."}</span>
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Refresh
+                </span>
+              )}
             </Button>
-        
-          <div className="rounded-xl border border-slate-200/80 bg-white shadow-sm">
+          </div>
+
+          <div
+            className={`rounded-xl border border-slate-200/80 bg-white shadow-sm ${loading || refreshing ? "min-h-[280px] border-blue-100 bg-slate-50/40" : ""}`}
+          >
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-100/80">
@@ -517,7 +580,7 @@ export default function HRSubordinatesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {loading || refreshing ? (
                   Array.from({ length: 6 }).map((_, idx) => (
                     <TableRow key={`sk-${idx}`}>
                       <TableCell>
@@ -574,7 +637,7 @@ export default function HRSubordinatesPage() {
               </TableBody>
             </Table>
           </div>
-          {!loading && evaluatorsTotal > 0 && (
+          {!loading && !refreshing && evaluatorsTotal > 0 && (
             <EvaluationsPagination
               currentPage={evaluatorsTablePage}
               totalPages={evaluatorsLastPage}

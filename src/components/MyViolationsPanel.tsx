@@ -363,6 +363,42 @@ function isLikelyPdfHref(href: string): boolean {
   return /\.pdf(\?|$)/i.test(href);
 }
 
+function SmctLoadingOverlay({
+  label,
+  className,
+}: {
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "absolute inset-0 z-[70] flex items-center justify-center rounded-xl bg-white/55 backdrop-blur-[1px]",
+        className
+      )}
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="pointer-events-none flex flex-col items-center gap-3 rounded-lg bg-white/90 px-8 py-6 shadow-lg ring-1 ring-gray-200/80">
+        <div className="relative">
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img
+              src="/smct.png"
+              alt=""
+              className="h-10 w-10 object-contain"
+              width={40}
+              height={40}
+              decoding="async"
+            />
+          </div>
+        </div>
+        <p className="text-sm font-medium text-gray-600">{label ?? "Loading..."}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function MyViolationsPanel() {
   const { user } = useAuth();
   const [rows, setRows] = useState<MemorandumViolationRow[]>([]);
@@ -410,6 +446,8 @@ export default function MyViolationsPanel() {
   const previousRowsByIdRef = useRef<Map<string, string>>(new Map());
   const lastListContextRef = useRef<string | null>(null);
   const [highlightRev, setHighlightRev] = useState(0);
+
+  const listBusy = loading || refreshing;
 
   const fetchAvailableMonths = useCallback(async (options?: { force?: boolean }) => {
     setMonthsLoading(true);
@@ -612,47 +650,48 @@ export default function MyViolationsPanel() {
         </div>
         <CardContent className="space-y-4 border-t border-slate-100 bg-gradient-to-b from-slate-50/50 to-white pt-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
-            <div className="min-w-0 w-full flex-1 space-y-2 lg:max-w-md">
-              <Label htmlFor="violations-search" className="text-sm font-medium">
-                Search
-              </Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                <Input
-                  id="violations-search"
-                  placeholder="Search by title…"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full min-w-0 pl-9 pr-9"
-                  autoComplete="off"
-                  disabled={loading || refreshing}
-                />
-                {searchTerm ? (
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
-                    onClick={() => setSearchTerm("")}
-                    aria-label="Clear search"
-                  >
-                    ×
-                  </button>
-                ) : null}
+            <div className="flex min-w-0 w-full flex-1 flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
+              <div className="min-w-0 w-full flex-1 space-y-2 lg:max-w-md">
+                <Label htmlFor="violations-search" className="text-sm font-medium">
+                  Search
+                </Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <Input
+                    id="violations-search"
+                    placeholder="Search by title…"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full min-w-0 pl-9 pr-9"
+                    autoComplete="off"
+                  />
+                  {searchTerm ? (
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                      onClick={() => setSearchTerm("")}
+                      aria-label="Clear search"
+                    >
+                      ×
+                    </button>
+                  ) : null}
+                </div>
               </div>
-            </div>
-            <div className="w-full min-w-0 space-y-2 lg:w-auto lg:min-w-[14rem]">
-              <Label className="text-sm font-medium">Violation month</Label>
-              <Combobox
-                options={monthOptions}
-                value={monthFilter}
-                onValueChangeAction={(v) => setMonthFilter(String(v))}
-                placeholder={
-                  monthsLoading ? "Loading months…" : "Pick a month"
-                }
-                searchPlaceholder="Search month…"
-                emptyText="No month with violations."
-                className="w-full min-w-0"
-                disabled={monthsLoading || loading || refreshing}
-              />
+              <div className="w-full min-w-0 space-y-2 lg:w-auto lg:min-w-[14rem]">
+                <Label className="text-sm font-medium">Violation month</Label>
+                <Combobox
+                  options={monthOptions}
+                  value={monthFilter}
+                  onValueChangeAction={(v) => setMonthFilter(String(v))}
+                  placeholder={
+                    monthsLoading ? "Loading months…" : "Pick a month"
+                  }
+                  searchPlaceholder="Search month…"
+                  emptyText="No month with violations."
+                  className="w-full min-w-0"
+                  disabled={monthsLoading}
+                />
+              </div>
             </div>
             <div className="flex w-full items-end justify-end lg:w-auto lg:shrink-0">
               <div className="space-y-2">
@@ -662,19 +701,37 @@ export default function MyViolationsPanel() {
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={loading || refreshing}
+                  disabled={listBusy}
                   onClick={() => {
                     void fetchAvailableMonths({ force: true });
                     load({ softRefresh: true });
                   }}
-                  className="w-full cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white gap-2 lg:w-auto"
+                  className="w-full cursor-pointer bg-blue-500 text-white hover:bg-blue-600 hover:text-white gap-2 lg:w-auto disabled:opacity-70"
                   title="Refresh violations list"
                 >
-                  <RefreshCw
-                    className={`h-4 w-4 shrink-0 ${refreshing ? "animate-spin" : ""}`}
-                    aria-hidden
-                  />
-                  {refreshing ? "Refreshing…" : "Refresh"}
+                  {listBusy ? (
+                    <span className="flex items-center gap-2">
+                      <span className="relative h-8 w-8 shrink-0">
+                        <span className="absolute inset-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <img
+                            src="/smct.png"
+                            alt=""
+                            className="h-4 w-4 object-contain opacity-95"
+                            width={16}
+                            height={16}
+                            decoding="async"
+                          />
+                        </span>
+                      </span>
+                      <span>{refreshing ? "Refreshing…" : "Loading..."}</span>
+                    </span>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
+                      Refresh
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -682,16 +739,33 @@ export default function MyViolationsPanel() {
 
           <ViolationRowHighlightLegend />
 
-          <div className="relative overflow-x-auto overflow-y-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm">
-            {loading ? (
-              <div
-                className="px-4 py-6 sm:px-6"
-                aria-busy="true"
-                role="status"
-                aria-live="polite"
-              >
-                <span className="sr-only">Loading violations list</span>
-                <Table className="min-w-[760px] w-full">
+          <div
+            className={cn(
+              "relative overflow-x-auto overflow-y-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm",
+              listBusy && "min-h-[280px] border-blue-100 bg-gray-50/40"
+            )}
+          >
+            {listBusy ? (
+              <>
+                <SmctLoadingOverlay
+                  label={
+                    loading && !refreshing
+                      ? "Loading violations..."
+                      : "Refreshing violations..."
+                  }
+                />
+                <div
+                  className="px-4 py-6 sm:px-6"
+                  aria-busy="true"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span className="sr-only">
+                    {loading && !refreshing
+                      ? "Loading violations list"
+                      : "Refreshing violations list"}
+                  </span>
+                  <Table className="min-w-[760px] w-full">
                   <TableHeader>
                     <TableRow className="border-b border-blue-900/10 bg-gradient-to-r from-blue-600 to-blue-700 hover:bg-gradient-to-r hover:from-blue-600 hover:to-blue-700">
                       <TableHead className="min-w-[10rem] font-semibold text-white">
@@ -709,8 +783,8 @@ export default function MyViolationsPanel() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Array.from({ length: 8 }).map((_, i) => (
-                      <TableRow key={`sk-load-${i}`} className="border-slate-100">
+                    {Array.from({ length: itemsPerPage }).map((_, i) => (
+                      <TableRow key={`sk-busy-${i}`} className="border-slate-100">
                         <TableCell>
                           <Skeleton className="h-5 w-full max-w-[240px]" />
                         </TableCell>
@@ -727,58 +801,10 @@ export default function MyViolationsPanel() {
                     ))}
                   </TableBody>
                 </Table>
-              </div>
+                </div>
+              </>
             ) : (
               <div className="relative min-h-[200px]">
-                {refreshing ? (
-                  <div
-                    className="absolute inset-0 z-10 overflow-auto rounded-xl bg-white/85 px-4 py-6 backdrop-blur-[2px] sm:px-6"
-                    aria-busy="true"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <span className="sr-only">Refreshing violations list</span>
-                    <Table className="min-w-[760px] w-full">
-                      <TableHeader>
-                        <TableRow className="border-b border-blue-900/10 bg-gradient-to-r from-blue-600 to-blue-700 hover:bg-gradient-to-r hover:from-blue-600 hover:to-blue-700">
-                          <TableHead className="min-w-[10rem] font-semibold text-white">
-                            Title
-                          </TableHead>
-                          <TableHead className="min-w-[8rem] whitespace-nowrap font-semibold text-white">
-                            Violation date
-                          </TableHead>
-                          <TableHead className="min-w-[7rem] font-semibold text-white">
-                            Summary
-                          </TableHead>
-                          <TableHead className="w-[1%] whitespace-nowrap text-right font-semibold text-white">
-                            Action
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <TableRow
-                            key={`sk-refresh-${i}`}
-                            className="border-slate-100"
-                          >
-                            <TableCell>
-                              <Skeleton className="h-5 w-full max-w-[240px]" />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-5 w-24" />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-5 w-20" />
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Skeleton className="ml-auto h-8 w-20" />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ) : null}
                 <Table className="min-w-[760px] w-full">
                   <TableHeader>
                     <TableRow className="border-b border-blue-900/10 bg-gradient-to-r from-blue-600 to-blue-700 hover:bg-gradient-to-r hover:from-blue-600 hover:to-blue-700">

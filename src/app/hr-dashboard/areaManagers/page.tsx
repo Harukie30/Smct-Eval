@@ -55,6 +55,36 @@ interface Employee {
   role: string;
 }
 
+/** Spinner + SMCT logo over card content while refreshing (matches Branch Heads). */
+function SmctLoadingOverlay({ label }: { label?: string }) {
+  return (
+    <div
+      className="absolute inset-0 z-[70] flex items-center justify-center rounded-lg bg-white/55 backdrop-blur-[1px]"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="pointer-events-none flex flex-col items-center gap-3 rounded-lg bg-white/90 px-8 py-6 shadow-lg ring-1 ring-gray-200/80">
+        <div className="relative">
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img
+              src="/smct.png"
+              alt=""
+              className="h-10 w-10 object-contain"
+              width={40}
+              height={40}
+              decoding="async"
+            />
+          </div>
+        </div>
+        <p className="text-sm font-medium text-gray-600">
+          {label ?? "Loading..."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function AreaManagersTab() {
   const { withErrorHandling } = useErrorHandler({
     showToast: true,
@@ -604,26 +634,43 @@ export default function AreaManagersTab() {
             <Button
               onClick={handleRefresh}
               disabled={areaManagersRefreshing || loadingAreaManagers}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0"
               title="Refresh area managers data"
             >
               {areaManagersRefreshing ? (
                 <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span className="cursor-pointer">Refreshing...</span>
+                  <div className="relative h-8 w-8 shrink-0">
+                    <div className="absolute inset-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <img
+                        src="/smct.png"
+                        alt=""
+                        className="h-4 w-4 object-contain opacity-95"
+                        width={16}
+                        height={16}
+                        decoding="async"
+                      />
+                    </span>
+                  </div>
+                  <span>Refreshing...</span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <span>🔄</span>
-                  <span className="cursor-pointer">Refresh</span>
+                  <span aria-hidden>🔄</span>
+                  <span>Refresh</span>
                 </div>
               )}
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative">
+          {areaManagersRefreshing && (
+            <SmctLoadingOverlay label="Refreshing area managers..." />
+          )}
           {/* Search Bar */}
-          <div className="mb-6">
+          <div
+            className={`mb-6 ${areaManagersRefreshing ? "pointer-events-none opacity-40" : ""}`}
+          >
             <div className="relative w-full md:w-1/3">
               <Label
                 htmlFor="area-managers-search"
@@ -675,7 +722,9 @@ export default function AreaManagersTab() {
               </div>
             </div>
           </div>
-          <div className="relative max-h-[600px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+          <div
+            className={`relative max-h-[600px] min-h-[280px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 ${areaManagersRefreshing ? "border-blue-100 bg-gray-50/40" : ""}`}
+          >
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                 <TableRow>
@@ -685,7 +734,7 @@ export default function AreaManagersTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loadingAreaManagers ? (
+                {loadingAreaManagers || areaManagersRefreshing ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
                       <TableCell className="py-4">
@@ -833,7 +882,7 @@ export default function AreaManagersTab() {
           </div>
 
           {/* Pagination Controls */}
-          {areaManagersTotal > itemsPerPage && (
+          {!areaManagersRefreshing && areaManagersTotal > itemsPerPage && (
             <div className="flex items-center justify-between mt-4 px-2">
               <div className="text-sm text-gray-600">
                 Showing {areaManagersStartIndex + 1} to{" "}
