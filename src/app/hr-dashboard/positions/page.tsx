@@ -320,18 +320,46 @@ export default function PositionsTab() {
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="relative">
           {isRefreshing && (
-            <div className="absolute inset-0 bg-white/70 rounded-lg flex items-center justify-center pointer-events-none z-10">
-              <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-4 w-24" />
+            <div className="absolute inset-0 z-50 flex items-center justify-center rounded-lg bg-white/55 backdrop-blur-[1px] pointer-events-none">
+              <div className="flex flex-col items-center gap-3 rounded-lg bg-white/90 px-8 py-6 shadow-lg ring-1 ring-gray-200/80">
+                <div className="relative">
+                  <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <img
+                      src="/smct.png"
+                      alt="SMCT"
+                      className="h-10 w-10 object-contain"
+                      width={40}
+                      height={40}
+                      decoding="async"
+                    />
+                  </div>
+                </div>
+                <p className="text-sm font-medium text-gray-600">Refreshing...</p>
               </div>
             </div>
           )}
 
-          <div className="space-y-3">
-            {filteredPositions.length === 0 ? (
+          <div className={cn("space-y-3", isRefreshing && "min-h-[280px]")}>
+            {isRefreshing ? (
+              Array.from({ length: itemsPerPage }).map((_, i) => (
+                <div
+                  key={`refresh-skel-${i}`}
+                  className="flex animate-pulse items-center justify-between rounded-lg border border-gray-200 bg-gray-50/80 px-4 py-3"
+                >
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-44 sm:w-56" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Skeleton className="h-9 w-[5.5rem]" />
+                    <Skeleton className="h-9 w-[5.25rem]" />
+                  </div>
+                </div>
+              ))
+            ) : filteredPositions.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-12 px-4">
                 <img
                   src="/not-found.gif"
@@ -399,7 +427,7 @@ export default function PositionsTab() {
             )}
           </div>
 
-          {totalPages > 1 && (
+          {!isRefreshing && totalPages > 1 && (
             <EvaluationsPagination
               currentPage={currentPage}
               totalPages={totalPages}

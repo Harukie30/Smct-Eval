@@ -37,6 +37,7 @@ import apiService from "@/lib/apiService";
 import { parseSubordinateEmployeesAndEvaluators } from "@/lib/subordinateLists";
 import EvaluationsPagination from "@/components/paginationComponent";
 import { AlertDialog } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 import BranchEmployeesModal, {
   BranchEmployee,
 } from "@/components/hr/BranchEmployeesModal";
@@ -663,34 +664,59 @@ export default function DepartmentsTab() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="relative">
-            {isRefreshing && (
-              <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/80">
-                <div className="flex flex-col items-center gap-3 bg-white/95 px-8 py-6 rounded-lg shadow-lg">
-                  <div className="relative">
-                    {/* Spinning ring */}
-                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
-                    {/* Logo in center */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <img
-                        src="/smct.png"
-                        alt="SMCT Logo"
-                        className="h-10 w-10 object-contain"
-                      />
-                    </div>
+        <CardContent className="relative">
+          {isRefreshing && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center rounded-lg bg-white/55 backdrop-blur-[1px] pointer-events-none">
+              <div className="flex flex-col items-center gap-3 rounded-lg bg-white/90 px-8 py-6 shadow-lg ring-1 ring-gray-200/80">
+                <div className="relative">
+                  <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <img
+                      src="/smct.png"
+                      alt="SMCT Logo"
+                      className="h-10 w-10 object-contain"
+                      width={40}
+                      height={40}
+                      decoding="async"
+                    />
                   </div>
-                  <p className="text-sm text-gray-600 font-medium">
-                    Refreshing...
-                  </p>
                 </div>
+                <p className="text-sm font-medium text-gray-600">Refreshing...</p>
               </div>
-            )}
+            </div>
+          )}
 
+          <div className={cn(isRefreshing && "min-h-[420px]")}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Render all branches in their original order */}
-              {branches && Array.isArray(branches) && branches.length > 0
-                ? branches.map((branch) => {
+              {isRefreshing ? (
+                Array.from({ length: itemsPerPage }).map((_, index) => (
+                  <Card
+                    key={`branch-refresh-skel-${index}`}
+                    className="animate-pulse border-gray-200 bg-gray-50/50"
+                  >
+                    <CardHeader>
+                      <div className="flex justify-between items-center">
+                        <Skeleton className="h-6 w-32" />
+                        <Skeleton className="h-5 w-20 rounded-full" />
+                      </div>
+                      <Skeleton className="h-4 w-40 mt-2" />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-3 bg-gray-100 rounded-lg">
+                          <Skeleton className="h-6 w-12 mx-auto mb-2" />
+                          <Skeleton className="h-3 w-16 mx-auto" />
+                        </div>
+                        <div className="text-center p-3 bg-gray-100 rounded-lg">
+                          <Skeleton className="h-6 w-12 mx-auto mb-2" />
+                          <Skeleton className="h-3 w-16 mx-auto" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : branches && Array.isArray(branches) && branches.length > 0 ? (
+                branches.map((branch) => {
                     const isDeleting = deletingBranchId === branch.id;
                     return (
                       <Card
@@ -811,10 +837,13 @@ export default function DepartmentsTab() {
                       </Card>
                     );
                   })
-                : null}
+              ) : null}
             </div>
           </div>
-          {branches && Array.isArray(branches) && branches.length === 0 && (
+          {!isRefreshing &&
+            branches &&
+            Array.isArray(branches) &&
+            branches.length === 0 && (
             <div className="flex flex-col items-center justify-center gap-4">
               <img
                 src="/not-found.gif"
@@ -852,7 +881,7 @@ export default function DepartmentsTab() {
             </div>
           )}
           {/* Pagination Controls */}
-          {totalPages > 1 && (
+          {!isRefreshing && totalPages > 1 && (
             <EvaluationsPagination
               currentPage={currentPage}
               totalPages={totalPages}

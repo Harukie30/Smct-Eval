@@ -54,6 +54,59 @@ interface Employee {
   isActive?: boolean;
 }
 
+/** Faint SMCT logo behind dialog body — same pattern as other HR branch/department modals. */
+function SmctDialogBackdrop({
+  layout,
+}: {
+  layout: "scrollable" | "centered";
+}) {
+  const isScrollable = layout === "scrollable";
+  return (
+    <div
+      className={
+        isScrollable
+          ? "pointer-events-none absolute left-4 right-4 top-[6.75rem] bottom-4 z-0 bg-center bg-no-repeat opacity-[0.08]"
+          : "pointer-events-none absolute inset-0 z-0 bg-center bg-no-repeat opacity-[0.08]"
+      }
+      style={{
+        backgroundImage: "url('/smct.png')",
+        backgroundSize: isScrollable ? "55%" : "42%",
+      }}
+      aria-hidden
+    />
+  );
+}
+
+/** Spinner + SMCT logo while modal content loads (matches Positions/Branches refresh overlay). */
+function SmctLoadingOverlay({ label }: { label?: string }) {
+  return (
+    <div
+      className="absolute inset-0 z-[70] flex items-center justify-center rounded-lg bg-white/55 backdrop-blur-[1px]"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="flex flex-col items-center gap-3 rounded-lg bg-white/90 px-8 py-6 shadow-lg ring-1 ring-gray-200/80 pointer-events-none">
+        <div className="relative">
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img
+              src="/smct.png"
+              alt=""
+              className="h-10 w-10 object-contain"
+              width={40}
+              height={40}
+              decoding="async"
+            />
+          </div>
+        </div>
+        <p className="text-sm font-medium text-gray-600">
+          {label ?? "Loading..."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function BranchHeadsTab() {
   const { withErrorHandling } = useErrorHandler({
     showToast: true,
@@ -91,6 +144,8 @@ export default function BranchHeadsTab() {
   const [branchHeadToDelete, setBranchHeadToDelete] = useState<Employee | null>(
     null
   );
+  /** True while opening Branches modal from list — branches API is in flight. */
+  const [isAssignBranchesLoading, setIsAssignBranchesLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [branchHeadsPage, setBranchHeadsPage] = useState(1);
   const [branchHeadsData, setBranchHeadsData] = useState<Employee[]>([]);
@@ -561,26 +616,43 @@ export default function BranchHeadsTab() {
             <Button
               onClick={handleRefresh}
               disabled={branchHeadsRefreshing || loadingBranchHeads}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0"
               title="Refresh branch heads data"
             >
               {branchHeadsRefreshing ? (
                 <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span className="cursor-pointer">Refreshing...</span>
+                  <div className="relative h-8 w-8 shrink-0">
+                    <div className="absolute inset-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <img
+                        src="/smct.png"
+                        alt=""
+                        className="h-4 w-4 object-contain opacity-95"
+                        width={16}
+                        height={16}
+                        decoding="async"
+                      />
+                    </span>
+                  </div>
+                  <span>Refreshing...</span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <span>🔄</span>
-                  <span className="cursor-pointer">Refresh</span>
+                  <span aria-hidden>🔄</span>
+                  <span>Refresh</span>
                 </div>
               )}
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative">
+          {branchHeadsRefreshing && (
+            <SmctLoadingOverlay label="Refreshing branch heads..." />
+          )}
           {/* Search Bar */}
-          <div className="mb-6">
+          <div
+            className={`mb-6 ${branchHeadsRefreshing ? "pointer-events-none opacity-40" : ""}`}
+          >
             <div className="relative w-full md:w-1/3">
               <Label
                 htmlFor="branch-heads-search"
@@ -632,7 +704,9 @@ export default function BranchHeadsTab() {
               </div>
             </div>
           </div>
-          <div className="relative max-h-[600px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+          <div
+            className={`relative max-h-[600px] min-h-[280px] overflow-y-auto rounded-lg border scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 ${branchHeadsRefreshing ? "border-blue-100 bg-gray-50/40" : ""}`}
+          >
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-white shadow-sm [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                 <TableRow>
@@ -642,7 +716,7 @@ export default function BranchHeadsTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loadingBranchHeads ? (
+                {loadingBranchHeads || branchHeadsRefreshing ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <TableRow key={`skeleton-${index}`}>
                       <TableCell className="py-4">
@@ -794,7 +868,7 @@ export default function BranchHeadsTab() {
           </div>
 
           {/* Pagination Controls */}
-          {branchHeadsTotal > itemsPerPage && (
+          {!branchHeadsRefreshing && branchHeadsTotal > itemsPerPage && (
             <div className="flex items-center justify-between mt-4 px-2">
               <div className="text-sm text-gray-600">
                 Showing {branchHeadsStartIndex + 1} to{" "}
@@ -905,9 +979,10 @@ export default function BranchHeadsTab() {
       {/* Branch Heads List Modal */}
       <Dialog open={isListModalOpen} onOpenChangeAction={setIsListModalOpen}>
         <DialogContent
-          className={`max-w-xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}
+          className={`relative overflow-hidden max-w-xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}
         >
-          <DialogHeader className="pb-2">
+          <SmctDialogBackdrop layout="scrollable" />
+          <DialogHeader className="relative z-10 pb-2">
             <div className="flex items-center justify-between">
               <div>
                 <DialogTitle>Branch Heads List</DialogTitle>
@@ -937,75 +1012,90 @@ export default function BranchHeadsTab() {
             </div>
           </DialogHeader>
 
-          <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
-            {branchHeads.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                <img
-                  src="/not-found.gif"
-                  alt="No data"
-                  className="w-25 h-25 object-contain mb-4"
-                  style={{
-                    imageRendering: "auto",
-                    willChange: "auto",
-                    transform: "translateZ(0)",
-                    backfaceVisibility: "hidden",
-                    WebkitBackfaceVisibility: "hidden",
-                  }}
-                />
-                <p className="text-base font-medium mb-1">
-                  No branch heads found
-                </p>
-                <p className="text-sm text-gray-400">
-                  Branch heads will appear here once added
-                </p>
-              </div>
-            ) : (
-              <div className="border rounded-lg overflow-hidden">
-                <div className="max-h-[60vh] overflow-y-auto">
-                  <Table className="w-full">
-                    <TableHeader className="bg-gray-50 [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
-                      <TableRow>
-                        <TableHead className="w-2/3 px-6">Name</TableHead>
-                        <TableHead className="w-1/3 text-center px-6">
-                          Actions
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {branchHeads.map((head: Employee) => (
-                        <TableRow key={head.id} className="hover:bg-gray-50">
-                          <TableCell className="font-medium py-3 px-6">
-                            {head.name}
-                          </TableCell>
-                          <TableCell className="py-3 text-center px-6">
-                            <Button
-                              className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
-                              size="sm"
-                              onClick={async () => {
-                                // Store the selected branch head
-                                setSelectedBranchHead(head);
-                                // Load branches first (in background) to prevent loading state flicker
-                                await loadBranches();
-                                // Close the Branch Heads modal
-                                setIsListModalOpen(false);
-                                // Use double requestAnimationFrame for smoother transition (allows DOM to update)
-                                requestAnimationFrame(() => {
-                                  requestAnimationFrame(() => {
-                                    setIsBranchesModalOpen(true);
-                                  });
-                                });
-                              }}
-                            >
-                              Add
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
+          <div className="relative z-10 flex-1 min-h-[280px] min-h-0 flex flex-col">
+            {(loadingBranchHeads || isAssignBranchesLoading) && (
+              <SmctLoadingOverlay
+                label={
+                  isAssignBranchesLoading
+                    ? "Loading branches..."
+                    : "Loading branch heads..."
+                }
+              />
             )}
+            {!(
+              loadingBranchHeads ||
+              isAssignBranchesLoading
+            ) &&
+              (branchHeads.length === 0 ? (
+                <div className="flex flex-col flex-1 items-center justify-center py-12 text-gray-500">
+                  <img
+                    src="/not-found.gif"
+                    alt="No data"
+                    className="w-25 h-25 object-contain mb-4"
+                    style={{
+                      imageRendering: "auto",
+                      willChange: "auto",
+                      transform: "translateZ(0)",
+                      backfaceVisibility: "hidden",
+                      WebkitBackfaceVisibility: "hidden",
+                    }}
+                  />
+                  <p className="text-base font-medium mb-1">
+                    No branch heads found
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    Branch heads will appear here once added
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-1 flex-col overflow-hidden border rounded-lg">
+                  <div className="max-h-[60vh] min-h-0 flex-1 overflow-y-auto">
+                    <Table className="w-full">
+                      <TableHeader className="bg-gray-50 [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
+                        <TableRow>
+                          <TableHead className="w-2/3 px-6">Name</TableHead>
+                          <TableHead className="w-1/3 text-center px-6">
+                            Actions
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {branchHeads.map((head: Employee) => (
+                          <TableRow key={head.id} className="hover:bg-gray-50">
+                            <TableCell className="font-medium py-3 px-6">
+                              {head.name}
+                            </TableCell>
+                            <TableCell className="py-3 text-center px-6">
+                              <Button
+                                className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                                size="sm"
+                                disabled={isAssignBranchesLoading}
+                                onClick={async () => {
+                                  setSelectedBranchHead(head);
+                                  setIsAssignBranchesLoading(true);
+                                  try {
+                                    await loadBranches();
+                                    setIsListModalOpen(false);
+                                    requestAnimationFrame(() => {
+                                      requestAnimationFrame(() => {
+                                        setIsBranchesModalOpen(true);
+                                      });
+                                    });
+                                  } finally {
+                                    setIsAssignBranchesLoading(false);
+                                  }
+                                }}
+                              >
+                                Add
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              ))}
           </div>
         </DialogContent>
       </Dialog>
@@ -1016,9 +1106,10 @@ export default function BranchHeadsTab() {
         onOpenChangeAction={setIsBranchesModalOpen}
       >
         <DialogContent
-          className={`max-w-xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}
+          className={`relative overflow-hidden max-w-xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}
         >
-          <DialogHeader className="pb-2">
+          <SmctDialogBackdrop layout="scrollable" />
+          <DialogHeader className="relative z-10 pb-2">
             <div className="flex items-center justify-between">
               <div>
                 <DialogTitle>Branches List</DialogTitle>
@@ -1052,7 +1143,12 @@ export default function BranchHeadsTab() {
             </div>
           </DialogHeader>
 
-          <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
+          <div className="relative z-10 flex flex-1 flex-col min-h-[280px] min-h-0">
+            {branchesLoading && (
+              <SmctLoadingOverlay label="Loading branches..." />
+            )}
+            {!branchesLoading && (
+              <div className="flex min-h-0 flex-1 flex-col space-y-2 overflow-y-auto">
             {/* Confirmation Indicator */}
             {showConfirmation &&
               selectedBranches.length > 0 &&
@@ -1186,11 +1282,7 @@ export default function BranchHeadsTab() {
                 </div>
               )}
 
-            {branchesLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              </div>
-            ) : branches.length === 0 ? (
+            {branches.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No branches found
               </div>
@@ -1270,6 +1362,8 @@ export default function BranchHeadsTab() {
                 </div>
               </div>
             )}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -1279,8 +1373,11 @@ export default function BranchHeadsTab() {
         open={showSuccessDialog}
         onOpenChangeAction={setShowSuccessDialog}
       >
-        <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
-          <div className="flex flex-col items-center justify-center py-6 space-y-4">
+        <DialogContent
+          className={`relative overflow-hidden max-w-md p-6 ${dialogAnimationClass}`}
+        >
+          <SmctDialogBackdrop layout="centered" />
+          <div className="relative z-10 flex flex-col items-center justify-center py-6 space-y-4">
             {/* Success Animation */}
             <div className="relative">
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center animate-success-scale">
@@ -1333,9 +1430,10 @@ export default function BranchHeadsTab() {
       {/* Edit Branch Head Modal */}
       <Dialog open={isEditModalOpen} onOpenChangeAction={setIsEditModalOpen}>
         <DialogContent
-          className={`max-w-xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}
+          className={`relative overflow-hidden max-w-xl max-h-[90vh] p-4 flex flex-col ${dialogAnimationClass}`}
         >
-          <DialogHeader className="pb-2">
+          <SmctDialogBackdrop layout="scrollable" />
+          <DialogHeader className="relative z-10 pb-2">
             <div className="flex items-center justify-between">
               <div>
                 <DialogTitle>Edit Branch Assignment</DialogTitle>
@@ -1370,7 +1468,12 @@ export default function BranchHeadsTab() {
             </div>
           </DialogHeader>
 
-          <div className="space-y-2 flex-1 flex flex-col min-h-0">
+          <div className="relative z-10 flex flex-1 flex-col min-h-[320px] min-h-0">
+            {branchesLoading && (
+              <SmctLoadingOverlay label="Loading branches..." />
+            )}
+            {!branchesLoading && (
+            <div className="flex min-h-0 flex-1 flex-col space-y-2">
             {/* Current Assignment Display */}
             {branchHeadToEdit && (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex-shrink-0">
@@ -1438,11 +1541,7 @@ export default function BranchHeadsTab() {
             </div>
 
             {/* Branches Selection */}
-            {branchesLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              </div>
-            ) : branches.length === 0 ? (
+            {branches.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No branches found
               </div>
@@ -1533,10 +1632,12 @@ export default function BranchHeadsTab() {
                 </div>
               </div>
             )}
+            </div>
+            )}
           </div>
 
           {/* Footer Actions */}
-          <div className="flex justify-end gap-2 pt-4 border-t">
+          <div className="relative z-10 flex justify-end gap-2 pt-4 border-t">
             <Button
               variant="outline"
               className="bg-red-600 text-white hover:bg-red-700 hover:text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
@@ -1551,7 +1652,7 @@ export default function BranchHeadsTab() {
             </Button>
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer flex items-center gap-2 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-              disabled={isSaving}
+              disabled={isSaving || branchesLoading}
               onClick={async () => {
                 if (!branchHeadToEdit) {
                   toastMessages.generic.error(
@@ -1648,8 +1749,11 @@ export default function BranchHeadsTab() {
         open={showEditSuccessDialog}
         onOpenChangeAction={setShowEditSuccessDialog}
       >
-        <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
-          <div className="flex flex-col items-center justify-center py-6 space-y-4">
+        <DialogContent
+          className={`relative overflow-hidden max-w-md p-6 ${dialogAnimationClass}`}
+        >
+          <SmctDialogBackdrop layout="centered" />
+          <div className="relative z-10 flex flex-col items-center justify-center py-6 space-y-4">
             {/* Success Animation */}
             <div className="relative">
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center animate-success-scale">
@@ -1713,8 +1817,11 @@ export default function BranchHeadsTab() {
           }
         }}
       >
-        <DialogContent className={`max-w-md p-6 ${dialogAnimationClass}`}>
-          <DialogHeader className="pb-4 bg-red-50 rounded-lg">
+        <DialogContent
+          className={`relative overflow-hidden max-w-md p-6 ${dialogAnimationClass}`}
+        >
+          <SmctDialogBackdrop layout="centered" />
+          <DialogHeader className="relative z-10 pb-4 bg-red-50 rounded-lg">
             <DialogTitle className="text-red-800 flex items-center gap-2">
               <span className="text-xl">⚠️</span>
               Delete Branch Assignment

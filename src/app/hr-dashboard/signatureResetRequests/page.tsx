@@ -59,6 +59,33 @@ interface SignatureResetRequest {
   processed_by?: number;
 }
 
+function SmctLoadingOverlay({ label }: { label?: string }) {
+  return (
+    <div
+      className="absolute inset-0 z-[70] flex items-center justify-center rounded-lg bg-white/55 backdrop-blur-[1px]"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="pointer-events-none flex flex-col items-center gap-3 rounded-lg bg-white/90 px-8 py-6 shadow-lg ring-1 ring-gray-200/80">
+        <div className="relative">
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img
+              src="/smct.png"
+              alt=""
+              className="h-10 w-10 object-contain"
+              width={40}
+              height={40}
+              decoding="async"
+            />
+          </div>
+        </div>
+        <p className="text-sm font-medium text-gray-600">{label ?? "Loading..."}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function SignatureResetRequestsTab() {
   const [requests, setRequests] = useState<SignatureResetRequest[]>([]);
   const [refresh, setRefresh] = useState(true);
@@ -412,19 +439,49 @@ export default function SignatureResetRequestsTab() {
               variant="outline"
               size="sm"
               onClick={handleRefresh}
-              disabled={refresh}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white hover:text-white border-blue-600 hover:border-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+              disabled={refresh || isPageLoading}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white hover:text-white border-blue-600 hover:border-blue-700 cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0"
             >
-              <RefreshCw
-                className={`h-4 w-4 ${refresh ? "animate-spin" : ""}`}
-              />
-              <span className="cursor-pointer">Refresh</span>
+              {refresh || isPageLoading ? (
+                <span className="flex items-center gap-2">
+                  <span className="relative h-8 w-8 shrink-0">
+                    <span className="absolute inset-0 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <img
+                        src="/smct.png"
+                        alt=""
+                        className="h-4 w-4 object-contain opacity-95"
+                        width={16}
+                        height={16}
+                        decoding="async"
+                      />
+                    </span>
+                  </span>
+                  <span>{refresh ? "Refreshing..." : "Loading..."}</span>
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh
+                </span>
+              )}
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative">
+          {(refresh || isPageLoading) && (
+            <SmctLoadingOverlay
+              label={
+                isPageLoading && !refresh
+                  ? "Loading page..."
+                  : "Updating signature reset requests..."
+              }
+            />
+          )}
           {/* Filters */}
-          <div className="flex gap-4 mb-6">
+          <div
+            className={`flex gap-4 mb-6 ${refresh || isPageLoading ? "pointer-events-none opacity-40" : ""}`}
+          >
             <div className="flex-1">
               <Input
                 placeholder="Search by name, email, or username..."
@@ -445,7 +502,9 @@ export default function SignatureResetRequestsTab() {
           </div>
 
           {/* Table */}
-          <div className="rounded-md border">
+          <div
+            className={`rounded-md border ${refresh || isPageLoading ? "min-h-[280px] border-blue-100 bg-gray-50/40" : ""}`}
+          >
             <Table>
               <TableHeader>
                 <TableRow>
@@ -614,7 +673,7 @@ export default function SignatureResetRequestsTab() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
+          {!refresh && !isPageLoading && totalPages > 1 && (
             <div className="mt-4">
               <EvaluationsPagination
                 currentPage={currentPage}
