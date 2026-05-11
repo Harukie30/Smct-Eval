@@ -707,6 +707,45 @@ function LandingLoginPage() {
               }
             }
 
+            @keyframes aboutContentReveal {
+              from {
+                opacity: 0;
+                transform: translateY(10px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+
+            .about-modal-stack > :global(*) {
+              animation: aboutContentReveal 0.45s cubic-bezier(0.22, 1, 0.36, 1)
+                backwards;
+            }
+            .about-modal-stack > :global(*:nth-child(1)) {
+              animation-delay: 0.04s;
+            }
+            .about-modal-stack > :global(*:nth-child(2)) {
+              animation-delay: 0.1s;
+            }
+            .about-modal-stack > :global(*:nth-child(3)) {
+              animation-delay: 0.16s;
+            }
+            .about-modal-stack > :global(*:nth-child(4)) {
+              animation-delay: 0.22s;
+            }
+            .about-modal-stack > :global(*:nth-child(5)) {
+              animation-delay: 0.28s;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+              .about-modal-stack > :global(*) {
+                animation: none !important;
+                opacity: 1 !important;
+                transform: none !important;
+              }
+            }
+
             .custom-scrollbar::-webkit-scrollbar {
               width: 8px;
             }
@@ -773,7 +812,7 @@ function LandingLoginPage() {
 
           {/* Scrollable Content */}
           <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-6 py-3">
-            <div className="space-y-4">
+            <div className="space-y-4 about-modal-stack">
             {/* What is the Evaluation App */}
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-md border border-blue-100">
               <h3 className="text-base font-semibold text-gray-800 mb-2 flex items-center">
@@ -825,9 +864,9 @@ function LandingLoginPage() {
                 Key Features
               </h3>
               <div className="grid grid-cols-1 gap-3">
-                <div className="bg-white p-3 rounded-md border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="group bg-white p-3 rounded-md border border-gray-200 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-blue-200/70">
                   <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-105">
                       <span className="text-base">📋</span>
                   </div>
                     <div className="flex-1">
@@ -841,49 +880,52 @@ function LandingLoginPage() {
                     </div>
                   </div>
                 </div>
-                <div className="bg-white p-3 rounded-md border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="group bg-white p-3 rounded-md border border-gray-200 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-blue-200/70">
                   <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-105">
                       <span className="text-base">📊</span>
                     </div>
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-800 mb-1 text-sm">
-                        Real-time Analytics
+                        Performance Analytics
                       </h4>
                       <p className="text-gray-600 text-xs">
-                        Track performance trends and generate insightful reports
+                        Track rating trends over time and review summaries from
+                        completed evaluations.
                       </p>
                     </div>
                   </div>
                 </div>
-                <div className="bg-white p-3 rounded-md border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="group bg-white p-3 rounded-md border border-gray-200 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-blue-200/70">
                   <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-105">
                       <span className="text-base">🎯</span>
                     </div>
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-800 mb-1 text-sm">
-                        Goal Setting & Tracking
+                        Job Targets &amp; Priority Areas
                       </h4>
                       <p className="text-gray-600 text-xs">
-                        Set SMART goals and monitor progress throughout the
-                        evaluation period
+                        Record job targets (including branch metrics where
+                        applicable) and priority development areas within each
+                        evaluation cycle.
                       </p>
                     </div>
                   </div>
                 </div>
-                <div className="bg-white p-3 rounded-md border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="group bg-white p-3 rounded-md border border-gray-200 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-blue-200/70">
                   <div className="flex items-start space-x-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0">
-                      <span className="text-base">🤝</span>
+                    <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-105">
+                      <span className="text-base">📝</span>
                     </div>
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-800 mb-1 text-sm">
-                        360° Feedback
+                        Structured Evaluations
                       </h4>
                       <p className="text-gray-600 text-xs">
-                        Collect feedback from peers, managers, and direct
-                        reports
+                        Standardized criteria and step-by-step workflows so
+                        designated evaluators complete consistent, auditable
+                        reviews.
                       </p>
                     </div>
                   </div>
@@ -1022,8 +1064,8 @@ function LandingLoginPage() {
                 How It Works
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="text-center p-3 bg-white rounded-md border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                <div className="group text-center p-3 bg-white rounded-md border border-gray-200 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-blue-200/70">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-2 transition-transform duration-200 group-hover:scale-105">
                     <span className="text-white font-bold text-xs">1</span>
                   </div>
                   <h4 className="font-medium text-gray-800 mb-1 text-xs">
@@ -1034,8 +1076,8 @@ function LandingLoginPage() {
                     organization
                   </p>
                 </div>
-                <div className="text-center p-3 bg-white rounded-md border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                <div className="group text-center p-3 bg-white rounded-md border border-gray-200 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-blue-200/70">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-2 transition-transform duration-200 group-hover:scale-105">
                     <span className="text-white font-bold text-xs">2</span>
                   </div>
                   <h4 className="font-medium text-gray-800 mb-1 text-xs">
@@ -1046,8 +1088,8 @@ function LandingLoginPage() {
                     feedback
                   </p>
                 </div>
-                <div className="text-center p-3 bg-white rounded-md border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                <div className="group text-center p-3 bg-white rounded-md border border-gray-200 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-blue-200/70">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-2 transition-transform duration-200 group-hover:scale-105">
                     <span className="text-white font-bold text-xs">3</span>
                   </div>
                   <h4 className="font-medium text-gray-800 mb-1 text-xs">
