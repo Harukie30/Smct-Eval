@@ -11,6 +11,7 @@ import {
   FileWarning,
   RefreshCw,
   Search,
+  Scale,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
@@ -57,7 +58,7 @@ import {
 const MONTH_FILTER_PER_PAGE = 500;
 const MONTH_FILTER_MAX_PAGES = 40;
 const VIOLATIONS_CACHE_TTL_MS = 30_000;
-const SUMMARY_TABLE_PREVIEW_LEN = 10;
+const TABLE_CELL_PREVIEW_LEN = 10;
 
 const violationsResponseCache = new Map<
   string,
@@ -125,6 +126,7 @@ export type MemorandumViolationRow = {
   title: string;
   violation_date: string;
   summary?: string | null;
+  sanction?: string | null;
   document_url?: string | null;
   document_path?: string | null;
   document_name?: string | null;
@@ -180,6 +182,12 @@ function mapViolationRow(r: Record<string, unknown>): MemorandumViolationRow {
   const createdRaw =
     (r.created_at as string | undefined) ??
     (r.createdAt as string | undefined);
+  const sanction =
+    (r.sanction as string | undefined) ??
+    (r.penalty as string | undefined) ??
+    (r.disciplinary_action as string | undefined) ??
+    (r.punishment as string | undefined) ??
+    null;
   return {
     id: (r.id as number | string) ?? Math.random(),
     title: String(
@@ -196,6 +204,7 @@ function mapViolationRow(r: Record<string, unknown>): MemorandumViolationRow {
       (r.description as string) ??
       (r.document as string) ??
       null,
+    sanction,
     document_url: (r.document_url as string) ?? (r.url as string) ?? null,
     document_path: path,
     document_name: docName || fileFromPath || null,
@@ -327,11 +336,11 @@ function formatViolationDateLong(value: string): string {
   }
 }
 
-function truncateSummaryPreview(
-  summary: string | null | undefined,
-  maxLen = SUMMARY_TABLE_PREVIEW_LEN
+function truncateCellPreview(
+  text: string | null | undefined,
+  maxLen = TABLE_CELL_PREVIEW_LEN
 ): string {
-  const t = summary?.trim() ?? "";
+  const t = text?.trim() ?? "";
   if (!t) return "—";
   if (t.length <= maxLen) return t;
   return `${t.slice(0, maxLen)}…`;
@@ -765,7 +774,7 @@ export default function MyViolationsPanel() {
                       ? "Loading violations list"
                       : "Refreshing violations list"}
                   </span>
-                  <Table className="min-w-[760px] w-full">
+                  <Table className="min-w-[880px] w-full">
                   <TableHeader>
                     <TableRow className="border-b border-blue-900/10 bg-gradient-to-r from-blue-600 to-blue-700 hover:bg-gradient-to-r hover:from-blue-600 hover:to-blue-700">
                       <TableHead className="min-w-[10rem] font-semibold text-white">
@@ -775,7 +784,10 @@ export default function MyViolationsPanel() {
                         Violation date
                       </TableHead>
                       <TableHead className="min-w-[7rem] font-semibold text-white">
-                        Summary
+                        Offense
+                      </TableHead>
+                      <TableHead className="min-w-[7rem] font-semibold text-white">
+                        Sanction
                       </TableHead>
                       <TableHead className="w-[1%] whitespace-nowrap text-right font-semibold text-white">
                         Action
@@ -794,6 +806,9 @@ export default function MyViolationsPanel() {
                         <TableCell>
                           <Skeleton className="h-5 w-20" />
                         </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-20" />
+                        </TableCell>
                         <TableCell className="text-right">
                           <Skeleton className="ml-auto h-8 w-20" />
                         </TableCell>
@@ -805,7 +820,7 @@ export default function MyViolationsPanel() {
               </>
             ) : (
               <div className="relative min-h-[200px]">
-                <Table className="min-w-[760px] w-full">
+                <Table className="min-w-[880px] w-full">
                   <TableHeader>
                     <TableRow className="border-b border-blue-900/10 bg-gradient-to-r from-blue-600 to-blue-700 hover:bg-gradient-to-r hover:from-blue-600 hover:to-blue-700">
                       <TableHead className="min-w-[10rem] font-semibold text-white">
@@ -815,7 +830,10 @@ export default function MyViolationsPanel() {
                         Violation date
                       </TableHead>
                       <TableHead className="min-w-[7rem] font-semibold text-white">
-                        Summary
+                        Offense
+                      </TableHead>
+                      <TableHead className="min-w-[7rem] font-semibold text-white">
+                        Sanction
                       </TableHead>
                       <TableHead className="w-[1%] whitespace-nowrap text-right font-semibold text-white">
                         Action
@@ -826,7 +844,7 @@ export default function MyViolationsPanel() {
                     {rows.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={4}
+                          colSpan={5}
                           className="py-14 text-center"
                         >
                           <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
@@ -853,8 +871,10 @@ export default function MyViolationsPanel() {
                     ) : (
                       rows.map((row) => {
                         void highlightRev;
-                        const fullSummary = row.summary?.trim() ?? "";
-                        const previewSummary = truncateSummaryPreview(row.summary);
+                        const fullOffense = row.summary?.trim() ?? "";
+                        const offensePreview = truncateCellPreview(row.summary);
+                        const fullSanction = row.sanction?.trim() ?? "";
+                        const sanctionPreview = truncateCellPreview(row.sanction);
                         const now = Date.now();
                         const hl = violationRowHighlightVariant(
                           effectiveViolationActivityTimeMs(
@@ -883,9 +903,21 @@ export default function MyViolationsPanel() {
                             </TableCell>
                             <TableCell
                               className="max-w-[7rem] text-slate-700"
-                              title={fullSummary || "No summary"}
+                              title={
+                                fullOffense ? fullOffense : "No offense recorded"
+                              }
                             >
-                              {previewSummary}
+                              {offensePreview}
+                            </TableCell>
+                            <TableCell
+                              className="max-w-[7rem] text-slate-700"
+                              title={
+                                fullSanction
+                                  ? fullSanction
+                                  : "No sanction recorded"
+                              }
+                            >
+                              {sanctionPreview}
                             </TableCell>
                             <TableCell className="text-right">
                               <Button
@@ -896,7 +928,7 @@ export default function MyViolationsPanel() {
                                 onClick={() => setViewingRow(row)}
                               >
                                 <Eye className="h-4 w-4" />
-                                View Summary
+                                View details
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -949,8 +981,8 @@ export default function MyViolationsPanel() {
                         Record details
                       </DialogTitle>
                       <DialogDescription className="text-left text-sm leading-relaxed text-amber-50/98">
-                        Title, violation date, summary, and supporting document for this
-                        memorandum record.
+                        Title, violation date, offense, sanction, and supporting document
+                        for this memorandum record.
                       </DialogDescription>
                     </div>
                   </div>
@@ -1001,11 +1033,25 @@ export default function MyViolationsPanel() {
                           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100">
                             <FileText className="h-3.5 w-3.5" aria-hidden />
                           </span>
-                          Summary
+                          Offense
                         </div>
                         <div className="mt-3 rounded-xl border border-amber-100/90 bg-gradient-to-br from-amber-50/80 to-white px-4 py-4 ring-1 ring-amber-100/40">
                           <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
-                            {viewingRow.summary?.trim() || "No summary provided."}
+                            {viewingRow.summary?.trim() || "No offense recorded."}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-8 border-t border-slate-100 pt-8">
+                        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-700 ring-1 ring-slate-200/90">
+                            <Scale className="h-3.5 w-3.5" aria-hidden />
+                          </span>
+                          Sanction
+                        </div>
+                        <div className="mt-3 rounded-xl border border-slate-200/90 bg-gradient-to-br from-slate-50/90 to-white px-4 py-4 ring-1 ring-slate-200/60">
+                          <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+                            {viewingRow.sanction?.trim() || "No sanction recorded."}
                           </p>
                         </div>
                       </div>

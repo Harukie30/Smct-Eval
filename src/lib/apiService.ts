@@ -364,8 +364,9 @@ export const apiService = {
   },
 
   /**
-   * Record a memorandum violation. Uses `FormData` fields (text-only now):
-   * id (target user), violation_date, title, summary, document.
+   * Record a memorandum violation. Uses `FormData` fields:
+   * id (target user), violation_date, title, summary, document (duplicate of summary),
+   * optional sanction.
    */
   addMemorandumViolation: async (
     formData: FormData
@@ -384,9 +385,11 @@ export const apiService = {
     title: string;
     violation_date: string;
     summary: string;
+    sanction?: string;
   }): Promise<any> => {
     const routeId = encodeURIComponent(String(params.id));
     const summary = params.summary.trim();
+    const sanction = (params.sanction ?? "").trim();
     const response = await api.post(
       `/updateMemorandumViolation/${routeId}`,
       {
@@ -394,6 +397,7 @@ export const apiService = {
         violation_date: params.violation_date,
         summary,
         document: summary,
+        sanction,
       }
     );
     return response.data;
