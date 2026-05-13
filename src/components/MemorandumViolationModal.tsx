@@ -13,6 +13,7 @@ import {
   FileText,
   FileType2,
   Download,
+  Scale,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -79,6 +80,8 @@ export type MemorandumSessionRow = {
   title: string;
   violation_date: string;
   summary?: string | null;
+  /** Disciplinary action / penalty text when provided by API or HR. */
+  sanction?: string | null;
   fileName?: string | null;
   /** Present only for same-session uploads; used for download preview. */
   file?: File | null;
@@ -115,14 +118,14 @@ const VIOLATIONS_SCROLL_AFTER_ROWS = 7;
 /** Auto-dismiss save-success dialog after this many milliseconds. */
 const SAVE_SUCCESS_DIALOG_AUTO_CLOSE_MS = 2500;
 
-/** Preview length for the Summary column in the main violations table. */
-const SUMMARY_TABLE_PREVIEW_LEN = 14;
+/** Preview length for Offense / Sanction columns in the violations table. */
+const TABLE_CELL_PREVIEW_LEN = 14;
 
-function truncateSummaryPreview(
-  summary: string | null | undefined,
-  maxLen = SUMMARY_TABLE_PREVIEW_LEN
+function truncateCellPreview(
+  text: string | null | undefined,
+  maxLen = TABLE_CELL_PREVIEW_LEN
 ): string {
-  const t = summary?.trim() ?? "";
+  const t = text?.trim() ?? "";
   if (!t) return "—";
   if (t.length <= maxLen) return t;
   return `${t.slice(0, maxLen)}…`;
@@ -160,11 +163,17 @@ function mapApiRowToSession(r: Record<string, unknown>): MemorandumSessionRow {
     r.violation_title ??
     r["violaion_title"] ??
     r["violation_tittle"];
+  const sanctionRaw =
+    docStr(r.sanction) ??
+    docStr(r.penalty) ??
+    docStr(r.disciplinary_action) ??
+    docStr(r.punishment);
   return {
     id,
     title: String(titleRaw ?? "—"),
     violation_date,
     summary: docStr(r.summary) ?? docStr(r.violation_summary) ?? docStr(r.description),
+    sanction: sanctionRaw,
     fileName,
     file: undefined,
     document_url: docStr(r.document_url) ?? docStr(r.url) ?? null,
@@ -320,6 +329,7 @@ export default function MemorandumViolationModal({
   const [addTitle, setAddTitle] = useState("");
   const [addDateStr, setAddDateStr] = useState(() => localDateInputValue());
   const [addSummary, setAddSummary] = useState("");
+  const [addSanction, setAddSanction] = useState("");
   const [submittingAdd, setSubmittingAdd] = useState(false);
 
   const [editingSummaryRow, setEditingSummaryRow] =
@@ -327,6 +337,7 @@ export default function MemorandumViolationModal({
   const [editTitleDraft, setEditTitleDraft] = useState("");
   const [editDateDraft, setEditDateDraft] = useState("");
   const [editSummaryDraft, setEditSummaryDraft] = useState("");
+  const [editSanctionDraft, setEditSanctionDraft] = useState("");
   const [savingSummaryEdit, setSavingSummaryEdit] = useState(false);
 
   const clientActivityAtRef = useRef<Map<string, number>>(new Map());
@@ -353,6 +364,7 @@ export default function MemorandumViolationModal({
     setAddTitle("");
     setAddDateStr(localDateInputValue());
     setAddSummary("");
+    setAddSanction("");
   }, []);
 
   const handleClose = useCallback(() => {
@@ -372,6 +384,7 @@ export default function MemorandumViolationModal({
     setEditTitleDraft("");
     setEditDateDraft("");
     setEditSummaryDraft("");
+    setEditSanctionDraft("");
     setSavingSummaryEdit(false);
   }, [onOpenChangeAction, resetAddForm]);
 
@@ -590,12 +603,14 @@ export default function MemorandumViolationModal({
 
     setSubmittingAdd(true);
     try {
+      /** POST /addMemorandumViolation — align backend with these FormData keys. */
       const fd = new FormData();
       fd.append("id", targetUid);
       fd.append("violation_date", violation_date);
       fd.append("title", t);
       fd.append("summary", s);
       fd.append("document", s);
+      fd.append("sanction", addSanction.trim());
       await apiService.addMemorandumViolation(fd);
 
       const name = `${target.fname || ""} ${target.lname || ""}`.trim();
@@ -638,6 +653,7 @@ export default function MemorandumViolationModal({
     setEditTitleDraft(row.title?.trim() ?? "");
     setEditDateDraft(violationDateToInputValue(row.violation_date));
     setEditSummaryDraft(row.summary?.trim() ?? "");
+    setEditSanctionDraft(row.sanction?.trim() ?? "");
   };
 
   const resetEditViolationForm = useCallback(() => {
@@ -645,6 +661,7 @@ export default function MemorandumViolationModal({
     setEditTitleDraft("");
     setEditDateDraft("");
     setEditSummaryDraft("");
+    setEditSanctionDraft("");
   }, []);
 
   const showEmployeePicker = !employee;
@@ -677,6 +694,7 @@ export default function MemorandumViolationModal({
     if (!editingSummaryRow || !effectiveFetchUserId) return;
     const title = editTitleDraft.trim();
     const summary = editSummaryDraft.trim();
+    const sanction = editSanctionDraft.trim();
     if (!title || !editDateDraft || !summary) {
       toastMessages.form.validationError();
       return;
@@ -688,6 +706,7 @@ export default function MemorandumViolationModal({
         title,
         violation_date: editDateDraft,
         summary,
+        sanction,
       });
       await fetchViolationsForUser(effectiveFetchUserId);
       setViewingRow((v) =>
@@ -697,6 +716,7 @@ export default function MemorandumViolationModal({
               title,
               violation_date: editDateDraft,
               summary,
+              sanction: sanction || null,
             }
           : v
       );
@@ -903,7 +923,10 @@ export default function MemorandumViolationModal({
                         Date
                       </TableHead>
                       <TableHead className="font-semibold text-amber-900 min-w-[5.5rem] max-w-[7rem]">
-                        Summary
+                        Offense
+                      </TableHead>
+                      <TableHead className="font-semibold text-amber-900 min-w-[5.5rem] max-w-[7rem]">
+                        Sanction
                       </TableHead>
                       <TableHead className="font-semibold text-amber-900 w-[1%] min-w-[5.25rem] whitespace-nowrap text-right">
                         Action
@@ -914,7 +937,7 @@ export default function MemorandumViolationModal({
                     {loadingViolations ? (
                       <TableRow>
                         <TableCell
-                          colSpan={4}
+                          colSpan={5}
                           className="py-10 text-center text-gray-600"
                         >
                           <Loader2 className="mr-2 inline h-5 w-5 animate-spin text-amber-600" />
@@ -924,7 +947,7 @@ export default function MemorandumViolationModal({
                     ) : sessionRows.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={4}
+                          colSpan={5}
                           className="text-center text-gray-500 py-10"
                         >
                           No violations yet. Use Add Violation to create one.
@@ -933,8 +956,10 @@ export default function MemorandumViolationModal({
                     ) : (
                       violationsDisplayedRows.map((row) => {
                         void highlightRev;
-                        const fullSummary = row.summary?.trim() ?? "";
-                        const preview = truncateSummaryPreview(row.summary);
+                        const fullOffense = row.summary?.trim() ?? "";
+                        const offensePreview = truncateCellPreview(row.summary);
+                        const fullSanction = row.sanction?.trim() ?? "";
+                        const sanctionPreview = truncateCellPreview(row.sanction);
                         const now = Date.now();
                         const hl = violationRowHighlightVariant(
                           effectiveViolationActivityTimeMs(
@@ -966,12 +991,22 @@ export default function MemorandumViolationModal({
                           <TableCell
                             className="max-w-[7rem] text-sm text-gray-700"
                             title={
-                              fullSummary
-                                ? fullSummary
-                                : "No summary"
+                              fullOffense
+                                ? fullOffense
+                                : "No offense recorded"
                             }
                           >
-                            {preview}
+                            {offensePreview}
+                          </TableCell>
+                          <TableCell
+                            className="max-w-[7rem] text-sm text-gray-700"
+                            title={
+                              fullSanction
+                                ? fullSanction
+                                : "No sanction recorded"
+                            }
+                          >
+                            {sanctionPreview}
                           </TableCell>
                           <TableCell className="w-[1%] min-w-[5.25rem] whitespace-nowrap text-right align-middle">
                             <div className="inline-flex flex-nowrap items-center justify-end gap-1.5">
@@ -1036,25 +1071,39 @@ export default function MemorandumViolationModal({
       >
         <DialogContent
           className={cn(
-            "relative max-w-xl p-0 overflow-hidden border-amber-200/50 shadow-xl",
+            "relative max-w-2xl p-0 overflow-hidden border-amber-200/50 shadow-xl",
             dialogAnimationClass
           )}
         >
           {submittingAdd && (
             <div
-              className="absolute inset-0 z-[100] flex flex-col items-center justify-center rounded-lg bg-white/85 backdrop-blur-[2px]"
+              className="absolute inset-0 z-[100] flex flex-col items-center justify-center rounded-lg bg-white/80 backdrop-blur-[2px]"
               aria-busy="true"
               aria-live="polite"
             >
-              <div className="relative mb-4 flex h-24 w-24 items-center justify-center rounded-full border-4 border-amber-200 bg-amber-50 shadow-md">
-                <Loader2 className="h-12 w-12 animate-spin text-amber-600" />
+              <div className="pointer-events-none mb-5 flex flex-col items-center gap-3 rounded-xl bg-white/95 px-8 py-6 shadow-lg ring-1 ring-amber-200/80">
+                <div className="relative h-16 w-16">
+                  <div className="absolute inset-0 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <img
+                      src="/smct.png"
+                      alt=""
+                      className="h-10 w-10 object-contain"
+                      width={40}
+                      height={40}
+                      decoding="async"
+                    />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <h2 className="text-lg font-semibold text-amber-900">
+                    Saving violation…
+                  </h2>
+                  <p className="mt-1 max-w-[260px] text-sm text-gray-600">
+                    Please wait while your memorandum is being saved.
+                  </p>
+                </div>
               </div>
-              <h2 className="mb-2 text-xl font-bold text-amber-800">
-                Saving violation…
-              </h2>
-              <p className="mb-2 max-w-xs text-center text-sm text-gray-600">
-                Please wait while your memorandum is being saved.
-              </p>
             </div>
           )}
           <div
@@ -1078,14 +1127,20 @@ export default function MemorandumViolationModal({
                   Add memorandum violation
                 </DialogTitle>
                 <DialogDescription className="text-sm leading-relaxed text-gray-600">
-                  Enter a title, the violation date, and a summary for the
-                  violation. All fields are required.
+                  Enter title, violation date, and offense (required). Sanction is
+                  optional.
                 </DialogDescription>
+                {headerEmployeeName ? (
+                  <p className="mt-2 rounded-lg border border-amber-200/80 bg-amber-50/90 px-3 py-2 text-xs font-medium text-amber-950">
+                    Recording for:{" "}
+                    <span className="font-semibold">{headerEmployeeName}</span>
+                  </p>
+                ) : null}
               </DialogHeader>
             </div>
           </div>
 
-          <div className="max-h-[min(70vh,560px)] overflow-y-auto px-6 py-6">
+          <div className="max-h-[min(75vh,640px)] overflow-y-auto px-6 py-6">
             <ol className="space-y-6">
               <li className="space-y-3">
                 <div className="flex items-baseline gap-2">
@@ -1171,26 +1226,65 @@ export default function MemorandumViolationModal({
                     3
                   </span>
                   <div>
-                    <p className="text-base font-semibold text-gray-900">
-                      Violation summary{" "}
+                    <Label
+                      htmlFor="add-violation-offense"
+                      className="text-base font-semibold text-gray-900"
+                    >
+                      Offense{" "}
                       <span className="text-red-500" aria-hidden>
                         *
                       </span>
-                    </p>
+                    </Label>
                     <p className="mt-0.5 text-xs text-gray-500">
-                      Add a clear summary of what happened.
+                      One line — shown in the violations table as Offense.
+                    </p>
+                  </div>
+                </div>
+                <div className="ml-0 sm:ml-9">
+                  <Input
+                    id="add-violation-offense"
+                    placeholder="e.g. Unauthorized absence on scheduled shift"
+                    value={addSummary}
+                    onChange={(e) => setAddSummary(e.target.value)}
+                    disabled={submittingAdd}
+                    className="h-11 bg-white text-base"
+                    autoComplete="off"
+                    aria-required
+                  />
+                </div>
+              </li>
+
+              <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+
+              <li className="space-y-3">
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white"
+                    aria-hidden
+                  >
+                    4
+                  </span>
+                  <div>
+                    <Label
+                      htmlFor="add-violation-sanction"
+                      className="text-base font-semibold text-gray-900"
+                    >
+                      Sanction{" "}
+                      <span className="font-normal text-gray-500">(optional)</span>
+                    </Label>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Disciplinary action or penalty, if applicable.
                     </p>
                   </div>
                 </div>
                 <div className="ml-0 sm:ml-9">
                   <Textarea
-                    id="add-violation-summary"
-                    placeholder="Enter the details and summary of this violation"
-                    value={addSummary}
-                    onChange={(e) => setAddSummary(e.target.value)}
+                    id="add-violation-sanction"
+                    placeholder="e.g. Written warning, suspension, …"
+                    value={addSanction}
+                    onChange={(e) => setAddSanction(e.target.value)}
                     disabled={submittingAdd}
-                    className="min-h-[120px] bg-white text-sm"
-                    aria-required
+                    className="min-h-[88px] bg-white text-sm"
                   />
                 </div>
               </li>
@@ -1288,8 +1382,8 @@ export default function MemorandumViolationModal({
                   Edit memorandum violation
                 </DialogTitle>
                 <DialogDescription className="text-sm leading-relaxed text-gray-600">
-                  Update the title, violation date, and summary. All fields are
-                  required.
+                  Update title, violation date, and offense (required). Sanction is
+                  optional.
                 </DialogDescription>
               </DialogHeader>
             </div>
@@ -1382,28 +1476,63 @@ export default function MemorandumViolationModal({
                   </span>
                   <div>
                     <Label
-                      htmlFor="edit-violation-summary"
+                      htmlFor="edit-violation-offense"
                       className="text-base font-semibold text-gray-900"
                     >
-                      Violation summary{" "}
+                      Offense{" "}
                       <span className="text-red-500" aria-hidden>
                         *
                       </span>
                     </Label>
                     <p className="mt-0.5 text-xs text-gray-500">
-                      Clear summary of what happened.
+                      One line — shown in the violations table as Offense.
+                    </p>
+                  </div>
+                </div>
+                <div className="ml-0 sm:ml-9">
+                  <Input
+                    id="edit-violation-offense"
+                    placeholder="e.g. Unauthorized absence on scheduled shift"
+                    value={editSummaryDraft}
+                    onChange={(e) => setEditSummaryDraft(e.target.value)}
+                    disabled={savingSummaryEdit}
+                    className="h-11 bg-white text-base"
+                    autoComplete="off"
+                    aria-required
+                  />
+                </div>
+              </li>
+
+              <li className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+
+              <li className="space-y-3">
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600 text-xs font-bold text-white"
+                    aria-hidden
+                  >
+                    4
+                  </span>
+                  <div>
+                    <Label
+                      htmlFor="edit-violation-sanction"
+                      className="text-base font-semibold text-gray-900"
+                    >
+                      Sanction
+                    </Label>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Disciplinary action or penalty, if applicable.
                     </p>
                   </div>
                 </div>
                 <div className="ml-0 sm:ml-9">
                   <Textarea
-                    id="edit-violation-summary"
-                    placeholder="Enter the details and summary of this violation"
-                    value={editSummaryDraft}
-                    onChange={(e) => setEditSummaryDraft(e.target.value)}
+                    id="edit-violation-sanction"
+                    placeholder="e.g. Written warning, suspension, …"
+                    value={editSanctionDraft}
+                    onChange={(e) => setEditSanctionDraft(e.target.value)}
                     disabled={savingSummaryEdit}
-                    className="min-h-[120px] resize-y bg-white text-sm"
-                    aria-required
+                    className="min-h-[88px] resize-y bg-white text-sm"
                   />
                 </div>
               </li>
@@ -1480,8 +1609,8 @@ export default function MemorandumViolationModal({
                     Record details
                   </DialogTitle>
                   <DialogDescription className="text-left text-sm leading-relaxed text-amber-50/98">
-                    Title, violation date, summary, and supporting document for this
-                    memorandum record.
+                    Title, violation date, offense, sanction, and supporting document
+                    for this memorandum record.
                   </DialogDescription>
                 </div>
               </div>
@@ -1543,11 +1672,25 @@ export default function MemorandumViolationModal({
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-100">
                     <FileText className="h-3.5 w-3.5" aria-hidden />
                   </span>
-                  Summary
+                  Offense
                 </div>
                 <div className="mt-3 rounded-xl border border-amber-100/90 bg-gradient-to-br from-amber-50/80 to-white px-4 py-4 ring-1 ring-amber-100/40">
                   <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
-                    {viewingRow?.summary?.trim() || "No summary provided."}
+                    {viewingRow?.summary?.trim() || "No offense recorded."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-8 border-t border-slate-100 pt-8">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-700 ring-1 ring-slate-200/90">
+                    <Scale className="h-3.5 w-3.5" aria-hidden />
+                  </span>
+                  Sanction
+                </div>
+                <div className="mt-3 rounded-xl border border-slate-200/90 bg-gradient-to-br from-slate-50/90 to-white px-4 py-4 ring-1 ring-slate-200/60">
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+                    {viewingRow?.sanction?.trim() || "No sanction recorded."}
                   </p>
                 </div>
               </div>

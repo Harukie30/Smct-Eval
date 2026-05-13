@@ -10,6 +10,7 @@ export type ViolationHighlightFingerprintRow = {
   title: string;
   violation_date: string;
   summary?: string | null;
+  sanction?: string | null;
   document_url?: string | null;
   document_path?: string | null;
   document_name?: string | null;
@@ -27,6 +28,7 @@ export function stableViolationRowFingerprint(
     id: row.id,
     title: row.title,
     summary: row.summary ?? "",
+    sanction: row.sanction ?? "",
     violation_date: row.violation_date,
     document_url: row.document_url ?? "",
     document_path: row.document_path ?? "",
