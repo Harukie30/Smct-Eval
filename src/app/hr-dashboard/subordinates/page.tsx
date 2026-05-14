@@ -43,6 +43,8 @@ type StaffRow = {
   role: string;
   /** Shown in Corresponding Staff table; from API when backend sends it. */
   lastQuarterEvaluated: string | null;
+  /** ISO timestamp from `employee_last_evaluation.created_at` when present. */
+  lastQuarterEvaluatedAt: string | null;
 };
 const STAFF_MODAL_PER_PAGE = 10;
 /** Rows per page for the main evaluators table (requested from the API). */
@@ -246,6 +248,39 @@ function formatProbationaryQuarterLabel(value: string): string {
   return t;
 }
 
+function formatEvaluationCreatedAt(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(d);
+  } catch {
+    return iso;
+  }
+}
+
+function pickLastQuarterEvaluatedAt(raw: Record<string, unknown>): string | null {
+  const empLast =
+    raw.employee_last_evaluation && typeof raw.employee_last_evaluation === "object"
+      ? (raw.employee_last_evaluation as Record<string, unknown>)
+      : null;
+  const nested =
+    raw.last_evaluation && typeof raw.last_evaluation === "object"
+      ? (raw.last_evaluation as Record<string, unknown>)
+      : null;
+  const v =
+    empLast?.created_at ??
+    empLast?.createdAt ??
+    nested?.created_at ??
+    nested?.createdAt;
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s === "" || s.toLowerCase() === "null" ? null : s;
+}
+
 function pickLastQuarterEvaluated(raw: Record<string, unknown>): string | null {
   const asTrimmed = (v: unknown): string | null => {
     if (v == null) return null;
@@ -314,7 +349,13 @@ function normalizeStaff(raw: Record<string, unknown>): StaffRow {
     ),
     role: getDisplayRole(raw.roles),
     lastQuarterEvaluated: pickLastQuarterEvaluated(raw),
+    lastQuarterEvaluatedAt: pickLastQuarterEvaluatedAt(raw),
   };
+}
+
+/** Used to detect quarter column changes (label or evaluation record time). */
+function staffQuarterHighlightSnapshot(row: StaffRow): string {
+  return `${row.lastQuarterEvaluated ?? ""}\u001f${row.lastQuarterEvaluatedAt ?? ""}`;
 }
 
 function extractAssignedEmployees(raw: unknown): unknown[] {
@@ -562,7 +603,7 @@ export default function HRSubordinatesPage() {
 
     for (const staff of staffRows) {
       const id = String(staff.id);
-      const curr = staff.lastQuarterEvaluated ?? "";
+      const curr = staffQuarterHighlightSnapshot(staff);
       const old = prev.get(id);
       if (old !== undefined && old !== curr) {
         changed.push(id);
@@ -594,13 +635,17 @@ export default function HRSubordinatesPage() {
     if (!q) return staffRows;
     return staffRows.filter((row) => {
       const quarter = (row.lastQuarterEvaluated ?? "").toLowerCase();
+      const atRaw = (row.lastQuarterEvaluatedAt ?? "").toLowerCase();
+      const atFmt = (formatEvaluationCreatedAt(row.lastQuarterEvaluatedAt) ?? "").toLowerCase();
       return (
         row.name.toLowerCase().includes(q) ||
         row.email.toLowerCase().includes(q) ||
         row.position.toLowerCase().includes(q) ||
         row.branch.toLowerCase().includes(q) ||
         row.role.toLowerCase().includes(q) ||
-        quarter.includes(q)
+        quarter.includes(q) ||
+        atRaw.includes(q) ||
+        atFmt.includes(q)
       );
     });
   }, [staffRows, staffSearch]);
@@ -856,8 +901,8 @@ export default function HRSubordinatesPage() {
           }
         }}
       >
-        <DialogContent className="max-w-5xl p-0 overflow-hidden">
-          <DialogHeader className="relative overflow-hidden border-b border-blue-400/60 bg-blue-600 px-6 py-5 text-white">
+        <DialogContent className="flex max-h-[90dvh] w-full max-w-[min(100vw-2rem,64rem)] flex-col overflow-hidden p-0">
+          <DialogHeader className="relative shrink-0 overflow-hidden border-b border-blue-400/60 bg-blue-600 px-4 py-4 text-white sm:px-6 sm:py-5">
             <div
               className="pointer-events-none absolute inset-0 bg-center bg-no-repeat opacity-[0.12]"
               style={{ backgroundImage: "url('/smct.png')", backgroundSize: "100%" }}
@@ -883,8 +928,8 @@ export default function HRSubordinatesPage() {
             </div>
           </DialogHeader>
 
-          <div className="bg-gradient-to-b from-slate-50/80 to-white px-6 py-5">
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-b from-slate-50/80 to-white px-4 py-4 sm:px-6 sm:py-5">
+          <div className="mb-4 flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex w-full items-center gap-2 sm:max-w-md">
             <Input
               placeholder="Search staff by name, email, position, branch, role, or last quarter evaluated..."
@@ -914,7 +959,7 @@ export default function HRSubordinatesPage() {
             </div>
           </div>
           <div
-            className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-slate-200/90 bg-slate-50/95 px-3 py-2.5 text-xs text-slate-600 shadow-sm"
+            className="mb-3 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-slate-200/90 bg-slate-50/95 px-3 py-2.5 text-xs text-slate-600 shadow-sm"
             role="note"
           >
             <span className="inline-flex items-center gap-1.5 font-medium text-slate-700">
@@ -928,8 +973,9 @@ export default function HRSubordinatesPage() {
                 aria-hidden
               />
               <span>
-                Amber means the quarter value changed after a refresh. Highlights stay for 24
-                hours, including after you close this window.
+                Amber means the quarter value changed after a refresh; the line below is the
+                evaluation record time when the API sends it. Highlights stay for 24 hours,
+                including after you close this window.
               </span>
             </span>
             {staffQuarterHighlightState.visibleCount > 0 ? (
@@ -952,8 +998,11 @@ export default function HRSubordinatesPage() {
               </>
             ) : null}
           </div>
-          <div className="max-h-[60vh] overflow-auto rounded-xl border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-950/[0.03]">
-            <Table className="[&_th]:h-auto [&_th]:min-h-12 [&_th]:px-4 [&_th]:py-3.5 [&_th]:align-middle [&_td]:px-4 [&_td]:py-4 [&_td]:align-middle [&_td]:leading-relaxed">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm ring-1 ring-slate-950/[0.03]">
+            <Table
+              wrapperClassName="min-h-0 flex-1 overflow-auto overscroll-contain"
+              className="min-w-[52rem] [&_th]:h-auto [&_th]:min-h-12 [&_th]:px-3 [&_th]:py-3.5 sm:[&_th]:px-4 [&_th]:align-middle [&_td]:min-w-0 [&_td]:px-3 [&_td]:py-4 sm:[&_td]:px-4 [&_td]:align-middle [&_td]:leading-relaxed"
+            >
               <TableHeader className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_rgb(226_232_240)] [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-slate-600">
                 <TableRow>
                   <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Name</TableHead>
@@ -961,7 +1010,7 @@ export default function HRSubordinatesPage() {
                   <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Position</TableHead>
                   <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Branch</TableHead>
                   <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Role</TableHead>
-                  <TableHead className="text-center text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  <TableHead className="text-center text-[10px] font-semibold uppercase leading-tight tracking-wide text-slate-600 whitespace-normal sm:text-xs">
                     Last Quarter Evaluated
                   </TableHead>
                 </TableRow>
@@ -985,8 +1034,11 @@ export default function HRSubordinatesPage() {
                       <TableCell>
                         <Skeleton className="h-6 w-20" />
                       </TableCell>
-                      <TableCell className="text-center">
-                        <Skeleton className="mx-auto h-6 w-28" />
+                      <TableCell className="text-center align-top">
+                        <div className="mx-auto flex w-full max-w-[11rem] flex-col items-center gap-1 py-0.5">
+                          <Skeleton className="h-4 w-16" />
+                          <Skeleton className="h-3 w-28" />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -999,19 +1051,68 @@ export default function HRSubordinatesPage() {
                 ) : (
                   paginatedStaffRows.map((staff) => (
                     <TableRow key={staff.id} className="odd:bg-white even:bg-slate-50/40 hover:bg-blue-50/60">
-                      <TableCell className="font-medium text-slate-900">{staff.name}</TableCell>
-                      <TableCell className="max-w-[240px] break-words">{staff.email}</TableCell>
-                      <TableCell>{staff.position}</TableCell>
-                      <TableCell>{staff.branch}</TableCell>
-                      <TableCell>{staff.role}</TableCell>
+                      <TableCell className="max-w-[10rem] min-w-0 break-words font-medium text-slate-900 sm:max-w-[14rem]">
+                        {staff.name}
+                      </TableCell>
+                      <TableCell className="max-w-[180px] min-w-0 break-words sm:max-w-[220px] lg:max-w-[260px]">
+                        {staff.email}
+                      </TableCell>
+                      <TableCell className="max-w-[9rem] min-w-0 break-words sm:max-w-[11rem]">
+                        {staff.position}
+                      </TableCell>
+                      <TableCell className="max-w-[8rem] min-w-0 break-words sm:max-w-[10rem]">
+                        {staff.branch}
+                      </TableCell>
+                      <TableCell className="max-w-[7rem] min-w-0 break-words sm:max-w-[9rem]">
+                        {staff.role}
+                      </TableCell>
                       <TableCell
                         className={cn(
-                          "text-center text-slate-700 transition-colors duration-500",
-                          staffQuarterHighlightState.activeIds.has(String(staff.id)) &&
-                            "bg-amber-100/95 text-amber-950 ring-1 ring-inset ring-amber-200/90"
+                          "text-center align-top transition-colors duration-500",
+                          staffQuarterHighlightState.activeIds.has(String(staff.id))
+                            ? "bg-amber-100/95 ring-1 ring-inset ring-amber-200/90"
+                            : "text-slate-700"
                         )}
                       >
-                        {staff.lastQuarterEvaluated ?? "—"}
+                        {(() => {
+                          const highlighted = staffQuarterHighlightState.activeIds.has(
+                            String(staff.id)
+                          );
+                          const label = staff.lastQuarterEvaluated;
+                          const atFmt = formatEvaluationCreatedAt(staff.lastQuarterEvaluatedAt);
+                          if (!label && !atFmt) {
+                            return (
+                              <span className={highlighted ? "text-amber-950" : "text-slate-500"}>
+                                —
+                              </span>
+                            );
+                          }
+                          return (
+                            <div className="mx-auto flex w-full min-w-0 max-w-[9.5rem] flex-col items-center gap-1 py-0.5 leading-tight break-words sm:max-w-[11rem] lg:max-w-[14rem]">
+                              {label ? (
+                                <span
+                                  className={cn(
+                                    "text-sm font-semibold",
+                                    highlighted ? "text-amber-950" : "text-slate-900"
+                                  )}
+                                >
+                                  {label}
+                                </span>
+                              ) : null}
+                              {atFmt ? (
+                                <span
+                                  className={cn(
+                                    "text-[11px] sm:text-xs",
+                                    highlighted ? "text-amber-900/85" : "text-slate-500"
+                                  )}
+                                  title={staff.lastQuarterEvaluatedAt ?? undefined}
+                                >
+                                  {atFmt}
+                                </span>
+                              ) : null}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                     </TableRow>
                   ))
@@ -1020,6 +1121,7 @@ export default function HRSubordinatesPage() {
             </Table>
           </div>
           {!loadingStaff && filteredStaffRows.length > 0 && (
+            <div className="mt-3 shrink-0">
             <EvaluationsPagination
               currentPage={staffCurrentPage}
               totalPages={staffTotalPages}
@@ -1027,10 +1129,11 @@ export default function HRSubordinatesPage() {
               perPage={STAFF_MODAL_PER_PAGE}
               onPageChange={handleStaffModalPageChange}
             />
+            </div>
           )}
           </div>
 
-          <DialogFooter className="border-t bg-white px-6 py-4">
+          <DialogFooter className="shrink-0 border-t bg-white px-4 py-3 sm:px-6 sm:py-4">
             <Button
               type="button"
               variant="outline"
