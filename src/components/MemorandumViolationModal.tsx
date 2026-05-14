@@ -172,7 +172,11 @@ function mapApiRowToSession(r: Record<string, unknown>): MemorandumSessionRow {
     id,
     title: String(titleRaw ?? "—"),
     violation_date,
-    summary: docStr(r.summary) ?? docStr(r.violation_summary) ?? docStr(r.description),
+    summary:
+      docStr(r.offense) ??
+      docStr(r.summary) ??
+      docStr(r.violation_summary) ??
+      docStr(r.description),
     sanction: sanctionRaw,
     fileName,
     file: undefined,
@@ -603,13 +607,12 @@ export default function MemorandumViolationModal({
 
     setSubmittingAdd(true);
     try {
-      /** POST /addMemorandumViolation — align backend with these FormData keys. */
+      /** POST /addMemorandumViolation — FormData: id, violation_date, title, offense, sanction */
       const fd = new FormData();
       fd.append("id", targetUid);
       fd.append("violation_date", violation_date);
       fd.append("title", t);
-      fd.append("summary", s);
-      fd.append("document", s);
+      fd.append("offense", s);
       fd.append("sanction", addSanction.trim());
       await apiService.addMemorandumViolation(fd);
 
@@ -693,9 +696,9 @@ export default function MemorandumViolationModal({
   const handleSaveViolationEdit = async () => {
     if (!editingSummaryRow || !effectiveFetchUserId) return;
     const title = editTitleDraft.trim();
-    const summary = editSummaryDraft.trim();
+    const offense = editSummaryDraft.trim();
     const sanction = editSanctionDraft.trim();
-    if (!title || !editDateDraft || !summary) {
+    if (!title || !editDateDraft || !offense) {
       toastMessages.form.validationError();
       return;
     }
@@ -705,17 +708,30 @@ export default function MemorandumViolationModal({
         id: editingSummaryRow.id,
         title,
         violation_date: editDateDraft,
-        summary,
+        offense,
         sanction,
       });
+      setSessionRows((prev) =>
+        prev.map((r) =>
+          String(r.id) === String(editingSummaryRow.id)
+            ? {
+                ...r,
+                title,
+                violation_date: editDateDraft,
+                summary: offense,
+                sanction: sanction || null,
+              }
+            : r
+        )
+      );
       await fetchViolationsForUser(effectiveFetchUserId);
       setViewingRow((v) =>
-        v && v.id === editingSummaryRow.id
+        v && String(v.id) === String(editingSummaryRow.id)
           ? {
               ...v,
               title,
               violation_date: editDateDraft,
-              summary,
+              summary: offense,
               sanction: sanction || null,
             }
           : v
