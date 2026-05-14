@@ -43,7 +43,7 @@ type StaffRow = {
   role: string;
   /** Shown in Corresponding Staff table; from API when backend sends it. */
   lastQuarterEvaluated: string | null;
-  /** ISO timestamp from `employee_last_evaluation.created_at` when present. */
+  /** ISO timestamp from `employee_last_evaluation.created_at` (UI: date only, no time). */
   lastQuarterEvaluatedAt: string | null;
 };
 const STAFF_MODAL_PER_PAGE = 10;
@@ -248,6 +248,7 @@ function formatProbationaryQuarterLabel(value: string): string {
   return t;
 }
 
+/** Evaluation `created_at`: full date, no time of day. */
 function formatEvaluationCreatedAt(iso: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
@@ -255,10 +256,9 @@ function formatEvaluationCreatedAt(iso: string | null): string | null {
   try {
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
-      timeStyle: "short",
     }).format(d);
   } catch {
-    return iso;
+    return iso.split("T")[0] ?? null;
   }
 }
 
@@ -353,7 +353,7 @@ function normalizeStaff(raw: Record<string, unknown>): StaffRow {
   };
 }
 
-/** Used to detect quarter column changes (label or evaluation record time). */
+/** Used to detect quarter column changes (label or evaluation record date). */
 function staffQuarterHighlightSnapshot(row: StaffRow): string {
   return `${row.lastQuarterEvaluated ?? ""}\u001f${row.lastQuarterEvaluatedAt ?? ""}`;
 }
@@ -974,7 +974,7 @@ export default function HRSubordinatesPage() {
               />
               <span>
                 Amber means the quarter value changed after a refresh; the line below is the
-                evaluation record time when the API sends it. Highlights stay for 24 hours,
+                evaluation record date when the API sends it (no time of day). Highlights stay for 24 hours,
                 including after you close this window.
               </span>
             </span>
