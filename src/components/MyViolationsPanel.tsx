@@ -199,10 +199,10 @@ function mapViolationRow(r: Record<string, unknown>): MemorandumViolationRow {
     ),
     violation_date: String(r.violation_date ?? r.date ?? ""),
     summary:
+      (r.offense as string) ??
       (r.summary as string) ??
       (r.violation_summary as string) ??
       (r.description as string) ??
-      (r.document as string) ??
       null,
     sanction,
     document_url: (r.document_url as string) ?? (r.url as string) ?? null,
