@@ -445,7 +445,9 @@ export const apiService = {
     per_page?: number;
     month?: string | number;
     year?: string | number;
+    page?: number;
   }): Promise<any> => {
+    const pageNum = params.page != null ? Number(params.page) : NaN;
     const response = await api.get("/memorandumViolations", {
       params: {
         search: params.search?.trim() ?? "",
@@ -458,6 +460,7 @@ export const apiService = {
           params.year === undefined || params.year === ""
             ? ""
             : String(params.year),
+        ...(Number.isFinite(pageNum) && pageNum >= 1 ? { page: pageNum } : {}),
       },
     });
     return response.data;
