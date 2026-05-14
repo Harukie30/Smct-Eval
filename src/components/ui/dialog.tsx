@@ -35,6 +35,23 @@ export function DialogContent({ className, children, ...props }: DialogContentPr
   const [shouldRender, setShouldRender] = React.useState(false)
 
   React.useEffect(() => {
+    if (!shouldRender || typeof document === "undefined") return
+    const html = document.documentElement
+    const body = document.body
+    const prevOverflow = body.style.overflow
+    const prevPaddingRight = body.style.paddingRight
+    const scrollbarWidth = Math.max(0, window.innerWidth - html.clientWidth)
+    body.style.overflow = "hidden"
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`
+    }
+    return () => {
+      body.style.overflow = prevOverflow
+      body.style.paddingRight = prevPaddingRight
+    }
+  }, [shouldRender])
+
+  React.useEffect(() => {
     if (ctx?.open) {
       setShouldRender(true)
       // Trigger animation after render
@@ -62,7 +79,7 @@ export function DialogContent({ className, children, ...props }: DialogContentPr
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50"
+      className="fixed inset-0 z-50 overflow-hidden overscroll-none"
     >
       {/* Backdrop with fade animation and blur effect */}
       <div
@@ -73,7 +90,7 @@ export function DialogContent({ className, children, ...props }: DialogContentPr
         )}
         onClick={() => ctx.onOpenChangeAction(false)}
       />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
+      <div className="fixed inset-0 flex items-center justify-center overflow-y-auto overscroll-contain p-4">
         <div
           className={cn(
             "relative w-full max-w-2xl rounded-lg bg-white shadow-2xl outline-none",
